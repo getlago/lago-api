@@ -13,21 +13,17 @@ RSpec.describe ::V1::PaymentSerializer do
     it "serializes the object" do
       result = JSON.parse(serializer.to_json)
 
-      aggregate_failures do
-        expect(result["payment"]).to include(
-          "lago_id" => payment.id,
-          "invoice_id" => payment.payable.id,
-          "amount_cents" => payment.amount_cents,
-          "amount_currency" => payment.amount_currency,
-          "payment_status" => payment.payable_payment_status,
-          "type" => payment.payment_type,
-          "reference" => payment.reference,
-          "payment_provider_id" => payment.payment_provider_id,
-          "payment_provider_customer_id" => payment.payment_provider_customer_id,
-          "external_payment_id" => payment.provider_payment_id,
-          "created_at" => payment.created_at.iso8601
-        )
-      end
+      expect(result["payment"]).to include(
+        "lago_id" => payment.id,
+        "invoice_ids" => [payment.payable.id],
+        "amount_cents" => payment.amount_cents,
+        "amount_currency" => payment.amount_currency,
+        "payment_status" => payment.payable_payment_status,
+        "type" => payment.payment_type,
+        "reference" => payment.reference,
+        "external_payment_id" => payment.provider_payment_id,
+        "created_at" => payment.created_at.iso8601
+      )
     end
   end
 
@@ -42,21 +38,17 @@ RSpec.describe ::V1::PaymentSerializer do
     it "serializes the object" do
       result = JSON.parse(serializer.to_json)
 
-      aggregate_failures do
-        expect(result["payment"]).to include(
-          "lago_id" => payment.id,
-          "invoice_id" => payment_request.invoice_ids,
-          "amount_cents" => payment.amount_cents,
-          "amount_currency" => payment.amount_currency,
-          "payment_status" => payment.payable_payment_status,
-          "type" => payment.payment_type,
-          "reference" => payment.reference,
-          "payment_provider_id" => payment.payment_provider_id,
-          "payment_provider_customer_id" => payment.payment_provider_customer_id,
-          "external_payment_id" => payment.provider_payment_id,
-          "created_at" => payment.created_at.iso8601
-        )
-      end
+      expect(result["payment"]).to include(
+        "lago_id" => payment.id,
+        "invoice_ids" => payment_request.invoice_ids,
+        "amount_cents" => payment.amount_cents,
+        "amount_currency" => payment.amount_currency,
+        "payment_status" => payment.payable_payment_status,
+        "type" => payment.payment_type,
+        "reference" => payment.reference,
+        "external_payment_id" => payment.provider_payment_id,
+        "created_at" => payment.created_at.iso8601
+      )
     end
   end
 end

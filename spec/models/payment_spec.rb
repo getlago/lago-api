@@ -281,4 +281,35 @@ RSpec.describe Payment, type: :model do
       end
     end
   end
+
+  describe ".for_organization" do
+    subject(:result) { described_class.for_organization(organization) }
+
+    let(:organization) { create(:organization) }
+    let(:invoice) { create(:invoice, organization:) }
+    let(:payment_request) { create(:payment_request, organization:) }
+    let(:other_org_payment_request) { create(:payment_request) }
+
+    let(:invoice_payment) { create(:payment, payable: invoice) }
+    let(:payment_request_payment) { create(:payment, payable: payment_request) }
+    let(:other_org_invoice_payment) { create(:payment) }
+    let(:other_org_payment_request_payment) { create(:payment, payable: other_org_payment_request) }
+
+    before do
+      invoice_payment
+      payment_request_payment
+
+      other_org_invoice_payment
+      other_org_payment_request_payment
+    end
+
+    it "returns organization's payments" do
+      payments = subject
+
+      expect(payments).to include(invoice_payment)
+      expect(payments).to include(payment_request_payment)
+      expect(payments).not_to include(other_org_invoice_payment)
+      expect(payments).not_to include(other_org_payment_request_payment)
+    end
+  end
 end

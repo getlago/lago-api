@@ -12,19 +12,35 @@ class Payment < ApplicationRecord
   has_many :refunds
   has_many :integration_resources, as: :syncable
 
-  PAYMENT_TYPES = {provider: "provider", manual: "manual"}
+  PAYMENT_TYPES = {provider: 'provider', manual: 'manual'}.freeze
   attribute :payment_type, :string
   enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
   validates :payment_type, presence: true
   validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
   validates :reference, absence: true, if: -> { payment_type_provider? }
+  validate :max_invoice_paid_amount_cents, on: :create
+  validate :payment_request_succeeded, on: :create
 
   delegate :customer, to: :payable
 
   enum payable_payment_status: PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h
 
-  validate :max_invoice_paid_amount_cents, on: :create
-  validate :payment_request_succeeded, on: :create
+  scope :for_organization, lambda { |organization|
+    payables_join = ActiveRecord::Base.sanitize_sql_array([
+      <<~SQL,
+        LEFT JOIN invoices
+          ON invoices.id = payments.payable_id
+          AND payments.payable_type = 'Invoice'
+          AND invoices.organization_id = :org_id
+        LEFT JOIN payment_requests
+          ON payment_requests.id = payments.payable_id
+          AND payments.payable_type = 'PaymentRequest'
+          AND payment_requests.organization_id = :org_id
+      SQL
+      {org_id: organization.id}
+    ])
+    joins(payables_join).where('invoices.id IS NOT NULL OR payment_requests.id IS NOT NULL')
+  }
 
   def should_sync_payment?
     return false unless payable.is_a?(Invoice)
@@ -44,9 +60,9 @@ class Payment < ApplicationRecord
   def payment_request_succeeded
     return if !payable.is_a?(Invoice) || payment_type_provider?
 
-    if payable.payment_requests.where(payment_status: 'succeeded').exists?
-      errors.add(:base, :payment_request_is_already_succeeded)
-    end
+    return unless payable.payment_requests.where(payment_status: 'succeeded').exists?
+
+    errors.add(:base, :payment_request_is_already_succeeded)
   end
 end
 
