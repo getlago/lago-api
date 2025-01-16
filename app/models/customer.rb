@@ -230,6 +230,7 @@ end
 # Table name: customers
 #
 #  id                               :uuid             not null, primary key
+#  account_type                     :enum             default("customer"), not null
 #  address_line1                    :string
 #  address_line2                    :string
 #  city                             :string
@@ -278,6 +279,7 @@ end
 #
 # Indexes
 #
+#  index_customers_on_account_type                     (account_type)
 #  index_customers_on_applied_dunning_campaign_id      (applied_dunning_campaign_id)
 #  index_customers_on_deleted_at                       (deleted_at)
 #  index_customers_on_external_id_and_organization_id  (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)

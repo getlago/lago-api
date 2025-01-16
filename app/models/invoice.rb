@@ -474,6 +474,7 @@ end
 #  progressive_billing_credit_amount_cents :bigint           default(0), not null
 #  ready_for_payment_processing            :boolean          default(TRUE), not null
 #  ready_to_be_refreshed                   :boolean          default(FALSE), not null
+#  self_billed                             :boolean          default(FALSE), not null
 #  skip_charges                            :boolean          default(FALSE), not null
 #  status                                  :integer          default("finalized"), not null
 #  sub_total_excluding_taxes_amount_cents  :bigint           default(0), not null
@@ -502,6 +503,7 @@ end
 #  index_invoices_on_organization_id                (organization_id)
 #  index_invoices_on_payment_overdue                (payment_overdue)
 #  index_invoices_on_ready_to_be_refreshed          (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)
+#  index_invoices_on_self_billed                    (self_billed)
 #  index_invoices_on_sequential_id                  (sequential_id)
 #  index_invoices_on_status                         (status)
 #
