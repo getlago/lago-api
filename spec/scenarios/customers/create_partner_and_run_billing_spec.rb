@@ -12,6 +12,8 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     {code: metric.code, transaction_id: SecureRandom.uuid}
   end
 
+  around { |test| lago_premium!(&test) }
+
   it 'allows to switch customer to partner before customer has assigned plans' do
     expect do
       create_or_update_customer(
@@ -97,14 +99,18 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
       perform_all_enqueued_jobs
     end
 
-    # May 1st: Billing run
+    # May 1st: Billing run; check invoice numbering
     may1 = Time.zone.parse('2024-05-1')
     travel_to(may1) do
+      organization.update(created_at: 1.month.ago)
       perform_billing
       expect(organization.invoices.count).to eq(3)
       expect(partner.invoices.count).to eq(1)
+
       partner_invoice = partner.invoices.first
       expect(partner_invoice.self_billed).to eq(true)
+      expect(partner_invoice.number).to eq("#{organization.document_number_prefix}-001-001")
+
       organization_invoices = customers.map(&:invoices).flatten
       expect(organization_invoices.map(&:self_billed).uniq).to eq([false])
       expect(organization_invoices.map do |inv|
@@ -112,5 +118,39 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
       end.uniq.sort).to eq(['001', '002'])
     end
 
+    # June 1st: Billing run; check invoice numbering
+    june1 = Time.zone.parse('2024-06-1')
+    travel_to(june1) do
+      perform_billing
+      expect(organization.invoices.count).to eq(6)
+      expect(partner.invoices.count).to eq(2)
+
+      partner_invoice = partner.invoices.where(created_at: june1).first
+      expect(partner_invoice.self_billed).to eq(true)
+      expect(partner_invoice.number).to eq("#{organization.document_number_prefix}-001-002")
+
+      organization_invoices = customers.map{ |c| c.invoices.where(created_at: june1) }.flatten
+      expect(organization_invoices.map(&:self_billed).uniq).to eq([false])
+      expect(organization_invoices.map do |inv|
+        inv.number.gsub("#{organization.document_number_prefix}-202406-", '')
+      end.uniq.sort).to eq(['003', '004'])
+    end
+    update_overdue_balance
+
+    # check payments
+    # partner_invoice = partner.invoices.where(created_at: may1).first
+    expect(partner.invoices.map(&:payments).flatten.count).to be(0)
+
+    #check analytics
+    # invoice_collection
+    get_analytics(organization:, analytics_type: 'invoice_collection')
+    collection = json[:invoice_collections]
+    may_stats = collection.find {|el| el[:month] == "2024-05-01T00:00:00.000Z"}
+    june_stats = collection.find {|el| el[:month] == "2024-06-01T00:00:00.000Z"}
+    expect(may_stats[:invoices_count]).to eq(2)
+    expect(may_stats[:amount_cents]).to eq(organization.invoices.where(self_billed: false, created_at: may1).sum(:sub_total_including_taxes_amount_cents))
+
+    expect(june_stats[:invoices_count]).to eq(2)
+    expect(may_stats[:amount_cents]).to eq(organization.invoices.where(self_billed: false, created_at: june1).sum(:sub_total_including_taxes_amount_cents))
   end
 end

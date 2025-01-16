@@ -414,6 +414,7 @@ class Invoice < ApplicationRecord
       else
         organization
           .invoices
+          .where(self_billed: false)
           .where.not(organization_sequential_id: 0)
           .order(organization_sequential_id: :desc)
           .limit(1)
