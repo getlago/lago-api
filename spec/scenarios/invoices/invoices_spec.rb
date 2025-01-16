@@ -351,6 +351,18 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         )
       end
 
+      travel_to(Time.zone.parse("2022-12-16T10:12")) do
+        create_event(
+          {
+            external_subscription_id: customer.external_id,
+            transaction_id: SecureRandom.uuid,
+            code: metric.code,
+            timestamp: Time.current.to_i,
+            properties: {metric.field_name => 0}
+          }
+        )
+      end
+
       subscription = customer.subscriptions.first
 
       ### 20 Dec: Terminate subscription + refresh.
@@ -399,6 +411,18 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
       end
 
       subscription = customer.subscriptions.first
+
+      travel_to(Time.zone.parse("2022-12-16T10:12")) do
+        create_event(
+          {
+            external_subscription_id: customer.external_id,
+            transaction_id: SecureRandom.uuid,
+            code: metric.code,
+            timestamp: Time.current.to_i,
+            properties: {metric.field_name => 0}
+          }
+        )
+      end
 
       ### 20 Dec: Terminate subscription + refresh.
       dec20 = Time.zone.parse('2022-12-20 06:00:00')
@@ -482,6 +506,18 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
       end
 
       subscription = customer.subscriptions.first
+
+      travel_to(Time.zone.parse("2022-12-16T10:12")) do
+        create_event(
+          {
+            external_subscription_id: customer.external_id,
+            transaction_id: SecureRandom.uuid,
+            code: metric.code,
+            timestamp: Time.current.to_i,
+            properties: {metric.field_name => 0}
+          }
+        )
+      end
 
       ### 20 Dec: Upgrade subscription
       dec20 = Time.zone.parse('2022-12-20 06:00:00')

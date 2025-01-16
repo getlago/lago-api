@@ -102,7 +102,7 @@ module Invoices
       applied_boundaries = applied_boundaries.merge(charges_to_datetime: max_to_datetime) if max_to_datetime
 
       Fees::ChargeService
-        .call(invoice:, charge:, subscription:, boundaries: applied_boundaries, current_usage: true, cache_middleware:)
+        .call(invoice:, charge:, subscription:, boundaries: applied_boundaries, context: :current_usage, cache_middleware:)
         .raise_if_error!
         .fees
     end
