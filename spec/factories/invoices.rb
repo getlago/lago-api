@@ -56,5 +56,9 @@ FactoryBot.define do
         end
       end
     end
+
+    trait :self_billed do
+      self_billed { true }
+    end
   end
 end
