@@ -56,6 +56,12 @@ module Customers
         customer.firstname = params[:firstname] if params.key?(:firstname)
         customer.lastname = params[:lastname] if params.key?(:lastname)
         customer.customer_type = params[:customer_type] if params.key?(:customer_type)
+
+        if customer.organization.revenue_share_enabled?
+          customer.account_type = params[:account_type] if params.key?(:account_type)
+          customer.exclude_from_dunning_campaign = customer.partner_account?
+        end
+
         if params.key?(:tax_identification_number)
           customer.tax_identification_number = params[:tax_identification_number]
         end
@@ -168,6 +174,11 @@ module Customers
         lastname: args[:lastname],
         customer_type: args[:customer_type]
       )
+
+      if customer&.organization&.revenue_share_enabled?
+        customer.account_type = args[:account_type] if args.key?(:account_type)
+        customer.exclude_from_dunning_campaign = customer.partner_account?
+      end
 
       if args.key?(:finalize_zero_amount_invoice)
         customer.finalize_zero_amount_invoice = args[:finalize_zero_amount_invoice]
