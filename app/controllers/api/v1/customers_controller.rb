@@ -100,6 +100,7 @@ module Api
 
       def create_params
         params.require(:customer).permit(
+          :account_type,
           :external_id,
           :name,
           :firstname,
