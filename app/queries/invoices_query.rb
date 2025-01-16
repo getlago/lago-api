@@ -94,10 +94,8 @@ class InvoicesQuery < BaseQuery
 
     if partially_paid
       scope.where("total_amount_cents > total_paid_amount_cents AND total_paid_amount_cents > 0")
-    elsif partially_paid == false
-      scope.where("total_amount_cents = total_paid_amount_cents OR total_paid_amount_cents = 0")
     else
-      scope
+      scope.where("total_amount_cents = total_paid_amount_cents OR total_paid_amount_cents = 0")
     end
   end
 
