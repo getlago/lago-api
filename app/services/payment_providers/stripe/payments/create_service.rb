@@ -33,7 +33,7 @@ module PaymentProviders
         # TODO: global refactor of the error handling
         # identified processing errors should mark it as failed to allow reprocess via a new payment
         # other should be reprocessed
-        rescue ::Stripe::AuthenticationError, ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::PermissionError, ::Stripe::IdempotencyError => e
+        rescue ::Stripe::AuthenticationError, ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
           # NOTE: Do not mark the invoice as failed if the amount is too small for Stripe
           #       For now we keep it as pending, the user can still update it manually
           if e.code == "amount_too_small"
@@ -41,6 +41,8 @@ module PaymentProviders
           end
 
           prepare_failed_result(e)
+        rescue ::Stripe::IdempotencyError => e
+          prepare_failed_result(e, payable_payment_status: :pending)
         rescue ::Stripe::RateLimitError => e
           # Allow auto-retry with idempotency key
           raise Invoices::Payments::RateLimitError, e
