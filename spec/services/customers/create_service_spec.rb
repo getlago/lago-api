@@ -8,7 +8,7 @@ RSpec.describe Customers::CreateService, type: :service do
   let(:user) { nil }
 
   let(:membership) { create(:membership, organization:) }
-  let(:organization) { create(:organization)}
+  let(:organization) { create(:organization) }
   let(:external_id) { SecureRandom.uuid }
 
   describe 'create_from_api' do
