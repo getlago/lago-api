@@ -51,6 +51,7 @@ RSpec.describe ::V1::InvoiceSerializer do
           }
         ],
         "version_number" => 4,
+        "self_billed" => invoice.self_billed,
         "created_at" => invoice.created_at.iso8601,
         "updated_at" => invoice.updated_at.iso8601
       )
