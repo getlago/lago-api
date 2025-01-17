@@ -321,11 +321,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         it 'creates a charge fee' do
           result = invoice_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-
-            expect(Fee.charge.where(invoice_id: nil).count).to eq(1)
-          end
+          expect(result).to be_success
+          expect(Fee.charge.where(invoice_id: nil).count).to eq(1)
         end
       end
 

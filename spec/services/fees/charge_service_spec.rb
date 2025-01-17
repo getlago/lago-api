@@ -4,12 +4,13 @@ require "rails_helper"
 
 RSpec.describe Fees::ChargeService do
   subject(:charge_subscription_service) do
-    described_class.new(invoice:, charge:, subscription:, boundaries:, current_usage:)
+    described_class.new(invoice:, charge:, subscription:, boundaries:, current_usage:, apply_taxes:)
   end
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
   let(:current_usage) { false }
+  let(:apply_taxes) { false }
 
   let(:subscription) do
     create(
@@ -2047,6 +2048,35 @@ RSpec.describe Fees::ChargeService do
           expect(BillableMetrics::Aggregations::MaxService).to have_received(:new)
           expect(aggregator_service).to have_received(:aggregate)
         end
+      end
+    end
+
+    context "when apply taxes" do
+      let(:apply_taxes) { true }
+
+      before { create(:tax, organization:, rate: 20) }
+
+      it "creates a fee with applied taxes" do
+        result = charge_subscription_service.call
+        expect(result).to be_success
+        expect(result.fees.first).to have_attributes(
+          id: String,
+          invoice_id: invoice.id,
+          charge_id: charge.id,
+          amount_cents: 0,
+          precise_amount_cents: 0.0,
+          amount_currency: "EUR",
+          units: 0,
+          unit_amount_cents: 0,
+          precise_unit_amount: 0.0,
+          events_count: 0,
+          payment_status: "pending",
+
+          taxes_rate: 20.0,
+          taxes_amount_cents: 0,
+          taxes_precise_amount_cents: 0.0
+        )
+        expect(result.fees.first.applied_taxes.count).to eq(1)
       end
     end
   end

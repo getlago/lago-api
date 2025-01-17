@@ -184,7 +184,13 @@ module Invoices
         .find_each do |charge|
         next if should_not_create_charge_fee?(charge, subscription)
 
-        fee_result = Fees::ChargeService.call(invoice: nil, charge:, subscription:, boundaries:).raise_if_error!
+        fee_result = Fees::ChargeService.call(
+          invoice: nil,
+          charge:,
+          subscription:,
+          boundaries:,
+          apply_taxes: invoice.customer.anrok_customer.blank?
+        ).raise_if_error!
 
         result.non_invoiceable_fees.concat(fee_result.fees)
       end

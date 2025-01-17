@@ -2,12 +2,13 @@
 
 module Fees
   class ChargeService < BaseService
-    def initialize(invoice:, charge:, subscription:, boundaries:, current_usage: false, cache_middleware: nil, bypass_aggregation: false)
+    def initialize(invoice:, charge:, subscription:, boundaries:, current_usage: false, cache_middleware: nil, bypass_aggregation: false, apply_taxes: false)
       @invoice = invoice
       @charge = charge
       @subscription = subscription
       @boundaries = OpenStruct.new(boundaries)
       @currency = subscription.plan.amount.currency
+      @apply_taxes = apply_taxes
 
       @current_usage = current_usage
       @cache_middleware = cache_middleware || Subscriptions::ChargeCacheMiddleware.new(
@@ -55,7 +56,7 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries, :current_usage, :currency, :cache_middleware, :bypass_aggregation
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -162,6 +163,11 @@ module Fees
 
       if (adjusted = adjusted_fee(charge_filter:, grouped_by: amount_result.grouped_by))&.adjusted_display_name?
         new_fee.invoice_display_name = adjusted.invoice_display_name
+      end
+
+      if apply_taxes
+        taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
+        taxes_result.raise_if_error!
       end
 
       new_fee
