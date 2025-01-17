@@ -15,20 +15,22 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
   around { |test| lago_premium!(&test) }
 
   it 'allows to switch customer to partner before customer has assigned plans' do
+    customer = customers.first
     expect do
       create_or_update_customer(
         {
-          external_id: partner.external_id,
+          external_id: customer.external_id,
           account_type: 'partner'
         }
       )
-    end.to change(partner.reload, :account_type).from('customer').to('partner')
-      .and change(partner, :exclude_from_dunning_campaign).from(false).to(true)
+      customer.reload
+    end.to change(customer, :account_type).from('customer').to('partner')
+      .and change(customer, :exclude_from_dunning_campaign).from(false).to(true)
 
     create_subscription(
       {
-        external_customer_id: partner.external_id,
-        external_id: partner.external_id,
+        external_customer_id: customer.external_id,
+        external_id: customer.external_id,
         plan_code: plan.code
       }
     )
@@ -36,11 +38,11 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     expect do
       create_or_update_customer(
         {
-          external_id: partner.external_id,
+          external_id: customer.external_id,
           account_type: 'customer'
         }
       )
-    end.not_to change(partner.reload, :account_type)
+    end.not_to change(customer.reload, :account_type)
   end
 
   it 'creates partner-specific invoices without payments, with partner numbering, excluded from analytics' do

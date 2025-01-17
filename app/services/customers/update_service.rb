@@ -184,7 +184,6 @@ module Customers
     private
 
     attr_reader :customer, :args
-    def_delegators :customer, :organization
 
     def valid_metadata_count?(metadata:)
       return true if metadata.blank?

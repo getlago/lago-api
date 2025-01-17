@@ -105,7 +105,6 @@ module Api
           :name,
           :firstname,
           :lastname,
-          :account_type,
           :customer_type,
           :country,
           :address_line1,
