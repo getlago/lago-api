@@ -4,7 +4,7 @@ require 'rails_helper'
 
 describe 'Create partner and run billing Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil, document_numbering: 'per_organization') }
-  let(:partner) { create(:customer, organization:,) }
+  let(:partner) { create(:customer, organization:) }
   let(:customers) { create_list(:customer, 2, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:metric) { create(:latest_billable_metric, organization:) }
@@ -129,7 +129,7 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
       expect(partner_invoice.self_billed).to eq(true)
       expect(partner_invoice.number).to eq("#{organization.document_number_prefix}-001-002")
 
-      organization_invoices = customers.map{ |c| c.invoices.where(created_at: june1) }.flatten
+      organization_invoices = customers.map { |c| c.invoices.where(created_at: june1) }.flatten
       expect(organization_invoices.map(&:self_billed).uniq).to eq([false])
       expect(organization_invoices.map do |inv|
         inv.number.gsub("#{organization.document_number_prefix}-202406-", '')
