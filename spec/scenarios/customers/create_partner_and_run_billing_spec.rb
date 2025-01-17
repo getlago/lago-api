@@ -15,22 +15,21 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
   around { |test| lago_premium!(&test) }
 
   it 'allows to switch customer to partner before customer has assigned plans' do
-    customer = customers.first
     expect do
       create_or_update_customer(
         {
-          external_id: customer.external_id,
+          external_id: partner.external_id,
           account_type: 'partner'
         }
       )
-      customer.reload
-    end.to change(customer, :account_type).from('customer').to('partner')
-      .and change(customer, :exclude_from_dunning_campaign).from(false).to(true)
+      partner.reload
+    end.to change(partner, :account_type).from('customer').to('partner')
+      .and change(partner, :exclude_from_dunning_campaign).from(false).to(true)
 
     create_subscription(
       {
-        external_customer_id: customer.external_id,
-        external_id: customer.external_id,
+        external_customer_id: partner.external_id,
+        external_id: partner.external_id,
         plan_code: plan.code
       }
     )
@@ -38,11 +37,11 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     expect do
       create_or_update_customer(
         {
-          external_id: customer.external_id,
+          external_id: partner.external_id,
           account_type: 'customer'
         }
       )
-    end.not_to change(customer.reload, :account_type)
+    end.not_to change(partner.reload, :account_type)
   end
 
   it 'creates partner-specific invoices without payments, with partner numbering, excluded from analytics' do
@@ -184,9 +183,9 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000Z" }
     june_stats = collection.find { |el| el[:month] == "2024-06-01T00:00:00.000Z" }
 
-    expect(may_stats[:lago_invoice_ids]).to match(may_org_invoices.map(&:id))
+    expect(may_stats[:lago_invoice_ids].sort).to match(may_org_invoices.map(&:id).sort)
     expect(may_stats[:amount_cents].to_i).to eq(may_org_invoices.sum(:sub_total_including_taxes_amount_cents))
-    expect(june_stats[:lago_invoice_ids]).to match(june_org_invoices.map(&:id))
+    expect(june_stats[:lago_invoice_ids].sort).to match(june_org_invoices.map(&:id).sort)
     expect(june_stats[:amount_cents].to_i).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
   end
 end

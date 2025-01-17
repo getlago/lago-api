@@ -436,7 +436,7 @@ class Invoice < ApplicationRecord
   end
 
   def switched_from_customer_numbering?
-    last_invoice = organization.invoices.order(created_at: :desc).with_generated_number.first
+    last_invoice = organization.invoices.where(self_billed: false).order(created_at: :desc).with_generated_number.first
 
     return false unless last_invoice
 

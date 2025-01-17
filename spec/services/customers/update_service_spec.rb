@@ -658,10 +658,12 @@ RSpec.describe Customers::UpdateService, type: :service do
       let(:dunning_campaign) { create(:dunning_campaign) }
 
       let(:organization) do
-        create(:organization, premium_integrations: ["auto_dunning"])
+        create(:organization, premium_integrations: ["auto_dunning", "revenue_share"])
       end
 
       let(:account_type) { "partner" }
+
+      around { |test| lago_premium!(&test) }
 
       it "updates the customer" do
         result = customers_service.call
