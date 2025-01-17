@@ -20492,6 +20492,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "revenue_share",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -30487,6 +30493,12 @@
             },
             {
               "name": "api_permissions",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "revenue_share",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
