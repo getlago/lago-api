@@ -1830,12 +1830,17 @@ input CreateAddOnInput {
 Create Adjusted Fee Input
 """
 input CreateAdjustedFeeInput {
+  chargeFilterId: ID
+  chargeId: ID
+
   """
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  feeId: ID!
+  feeId: ID
   invoiceDisplayName: String
+  invoiceId: ID!
+  subscriptionId: ID
   unitPreciseAmount: String
   units: Float
 }
