@@ -189,7 +189,7 @@ module Invoices
           charge:,
           subscription:,
           boundaries:,
-          apply_taxes: !invoice.customer.anrok_customer.present?
+          apply_taxes: invoice.customer.anrok_customer.blank?
         ).raise_if_error!
 
         result.non_invoiceable_fees.concat(fee_result.fees)
