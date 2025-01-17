@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe AppliedCoupons::AmountService do
   subject(:amount_service) do
-    described_class.new(applied_coupon: , base_amount_cents:)
+    described_class.new(applied_coupon:, base_amount_cents:)
   end
 
   let(:organization) { create(:organization) }
