@@ -2,27 +2,30 @@
 
 module Fees
   class SubscriptionService < BaseService
-    def initialize(invoice:, subscription:, boundaries:)
+    def initialize(invoice:, subscription:, boundaries:, context: nil)
       @invoice = invoice
       @subscription = subscription
       @boundaries = OpenStruct.new(boundaries)
+      @context = context
 
       super(nil)
     end
 
-    def create
+    def call
       return result if already_billed?
 
       new_precise_amount_cents = compute_amount
       new_amount_cents = new_precise_amount_cents.round
       new_fee = initialize_fee(new_amount_cents, new_precise_amount_cents)
 
+      result.fee = new_fee
+      return result if context == :preview
+
       ActiveRecord::Base.transaction do
         new_fee.save!
         adjusted_fee.update!(fee: new_fee) if invoice.draft? && adjusted_fee
       end
 
-      result.fee = new_fee
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -30,7 +33,7 @@ module Fees
 
     private
 
-    attr_reader :invoice, :subscription, :boundaries
+    attr_reader :invoice, :subscription, :boundaries, :context
 
     delegate :customer, :organization, to: :invoice
     delegate :previous_subscription, :plan, to: :subscription
