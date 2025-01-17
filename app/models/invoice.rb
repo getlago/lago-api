@@ -331,7 +331,7 @@ class Invoice < ApplicationRecord
   end
 
   def should_sync_invoice?
-    finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
+    !self_billed && finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_invoices }
   end
 
   def should_sync_hubspot_invoice?
@@ -339,11 +339,11 @@ class Invoice < ApplicationRecord
   end
 
   def should_sync_salesforce_invoice?
-    finalized? && customer.integration_customers.salesforce_kind.any?
+    f!self_billed && inalized? && customer.integration_customers.salesforce_kind.any?
   end
 
   def should_update_hubspot_invoice?
-    customer.integration_customers.hubspot_kind.any? { |c| c.integration.sync_invoices }
+    !self_billed && customer.integration_customers.hubspot_kind.any? { |c| c.integration.sync_invoices }
   end
 
   def document_invoice_name

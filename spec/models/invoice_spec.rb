@@ -265,6 +265,15 @@ RSpec.describe Invoice, type: :model do
             expect(method_call).to eq(false)
           end
         end
+
+        context 'when the invoice is self_billed' do
+          let(:invoice) { create(:invoice, customer:, organization:, status:, self_billed: true) }
+          let(:sync_invoices) { true }
+
+          it 'returns false' do
+            expect(method_call).to eq(false)
+          end
+        end
       end
     end
   end
@@ -283,6 +292,14 @@ RSpec.describe Invoice, type: :model do
 
       it 'returns true' do
         expect(method_call).to eq(true)
+      end
+
+      context 'when the invoice is self-billed' do
+        let(:invoice) { create(:invoice, customer:, organization:, status: :finalized, self_billed: true) }
+
+        it 'returns false' do
+          expect(method_call).to eq(false)
+        end
       end
     end
 
@@ -369,6 +386,14 @@ RSpec.describe Invoice, type: :model do
             expect(method_call).to eq(false)
           end
         end
+
+        context 'when invoice is self_billed' do
+          let(:invoice) { create(:invoice, customer:, organization:, status:, self_billed: true) }
+
+          it 'returns false' do
+            expect(method_call).to eq(false)
+          end
+        end
       end
     end
   end
@@ -437,6 +462,14 @@ RSpec.describe Invoice, type: :model do
 
           it 'returns true' do
             expect(method_call).to eq(true)
+          end
+
+          context 'when invoice is self_billed' do
+            let(:invoice) { create(:invoice, customer:, organization:, status:, self_billed: true) }
+
+            it 'returns false' do
+              expect(method_call).to eq(false)
+            end
           end
         end
 
