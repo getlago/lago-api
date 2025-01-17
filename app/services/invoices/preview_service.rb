@@ -2,9 +2,10 @@
 
 module Invoices
   class PreviewService < BaseService
-    def initialize(customer:, subscription:)
+    def initialize(customer:, subscription:, applied_coupons: [])
       @customer = customer
       @subscription = subscription
+      @applied_coupons = applied_coupons
 
       super
     end
@@ -25,7 +26,7 @@ module Invoices
         created_at: Time.current,
         updated_at: Time.current
       )
-
+      invoice.credits = []
       invoice.subscriptions = [subscription]
 
       add_subscription_fee
@@ -37,7 +38,7 @@ module Invoices
 
     private
 
-    attr_accessor :customer, :subscription, :invoice
+    attr_accessor :customer, :subscription, :invoice, :applied_coupons
 
     def boundaries
       {
@@ -83,6 +84,12 @@ module Invoices
 
     def compute_tax_and_totals
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
+      invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
+
+      if invoice.fees_amount_cents&.positive? && applied_coupons.present?
+        Coupons::PreviewService.call(invoice:, applied_coupons:)
+      end
+
       invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents - invoice.coupons_amount_cents
 
       invoice.fees.each do |fee|

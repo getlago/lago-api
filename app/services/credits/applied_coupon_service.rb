@@ -18,7 +18,7 @@ module Credits
       return result if already_applied?
       return result unless fees.any?
 
-      credit_amount = compute_amount
+      credit_amount = AppliedCoupons::AmountService.call(applied_coupon:, base_amount_cents:).amount
 
       new_credit = Credit.create!(
         invoice:,
@@ -30,9 +30,7 @@ module Credits
 
       fees.reload.each do |fee|
         unless base_amount_cents.zero?
-          fee.precise_coupons_amount_cents += (
-            credit_amount * (fee.amount_cents - fee.precise_coupons_amount_cents)
-          ).fdiv(base_amount_cents)
+          fee.precise_coupons_amount_cents += fee.compute_precise_credit_amount_cents(credit_amount, base_amount_cents)
         end
 
         fee.precise_coupons_amount_cents = fee.amount_cents if fee.amount_cents < fee.precise_coupons_amount_cents
@@ -72,36 +70,11 @@ module Credits
       invoice.credits.where(applied_coupon_id: applied_coupon.id).exists?
     end
 
-    def compute_amount
-      if applied_coupon.coupon.percentage?
-        discounted_value = base_amount_cents * applied_coupon.percentage_rate.fdiv(100)
-
-        return (discounted_value >= base_amount_cents) ? base_amount_cents : discounted_value.round
-      end
-
-      if applied_coupon.recurring? || applied_coupon.forever?
-        return base_amount_cents if applied_coupon.amount_cents > base_amount_cents
-
-        applied_coupon.amount_cents
-      else
-        return base_amount_cents if remaining_amount > base_amount_cents
-
-        remaining_amount
-      end
-    end
-
-    def remaining_amount
-      return @remaining_amount if @remaining_amount
-
-      already_applied_amount = applied_coupon.credits.sum(:amount_cents)
-      @remaining_amount = applied_coupon.amount_cents - already_applied_amount
-    end
-
     def should_terminate_applied_coupon?(credit_amount)
       return false if applied_coupon.forever?
 
       if applied_coupon.once?
-        applied_coupon.coupon.percentage? || credit_amount >= remaining_amount
+        applied_coupon.coupon.percentage? || credit_amount >= applied_coupon.remaining_amount
       else
         applied_coupon.frequency_duration_remaining <= 0
       end

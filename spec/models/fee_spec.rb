@@ -403,6 +403,14 @@ RSpec.describe Fee, type: :model do
     end
   end
 
+  describe 'compute_precise_credit_amount_cents' do
+    subject(:fee) { create(:add_on_fee, amount_cents: 500, precise_coupons_amount_cents: 100) }
+
+    it 'returns correct value' do
+      expect(fee.compute_precise_credit_amount_cents(10, 5)).to eq(800)
+    end
+  end
+
   describe '#creditable_amount_cents' do
     let(:fee) { create(:fee, fee_type:, amount_cents:, invoice:) }
     let(:invoice) { create(:invoice, invoice_type: :credit) }
