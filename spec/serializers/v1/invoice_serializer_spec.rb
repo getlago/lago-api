@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe ::V1::InvoiceSerializer do
-  subject(:serializer) { described_class.new(invoice, root_name: "invoice", includes: %i[metadata error_details]) }
+  subject(:serializer) { described_class.new(invoice, root_name: "invoice", includes:) }
+
+  let(:includes) { %i[metadata error_details] }
 
   let(:invoice) { create(:invoice) }
   let(:metadata) { create(:invoice_metadata, invoice:) }
@@ -73,6 +75,19 @@ RSpec.describe ::V1::InvoiceSerializer do
       result = JSON.parse(serializer.to_json)
 
       expect(result["invoice"]["applied_usage_thresholds"].count).to eq(1)
+    end
+  end
+
+  context 'when including billing periods' do
+    let(:includes) { %i[billing_periods] }
+    let(:invoice_subscription) { create(:invoice_subscription, :boundaries, invoice:) }
+
+    before { invoice_subscription }
+
+    it 'serializes the invoice_subscription' do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result['invoice']['billing_periods']).to be_present
     end
   end
 end
