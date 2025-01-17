@@ -78,7 +78,7 @@ module Invoices
 
     def create_fees
       charges.find_each do |charge|
-        Fees::ChargeService.call(invoice:, charge:, subscription:, boundaries:).raise_if_error!
+        Fees::ChargeService.call(invoice:, charge:, subscription:, context: :finalize, boundaries:).raise_if_error!
       end
     end
 

@@ -2,7 +2,7 @@
 
 module Fees
   class ChargeService < BaseService
-    def initialize(invoice:, charge:, subscription:, boundaries:, current_usage: false, cache_middleware: nil, bypass_aggregation: false, apply_taxes: false)
+    def initialize(invoice:, charge:, subscription:, boundaries:, context: nil, cache_middleware: nil, bypass_aggregation: false, apply_taxes: false)
       @invoice = invoice
       @charge = charge
       @subscription = subscription
@@ -10,7 +10,8 @@ module Fees
       @currency = subscription.plan.amount.currency
       @apply_taxes = apply_taxes
 
-      @current_usage = current_usage
+      @context = context
+      @current_usage = context == :current_usage
       @cache_middleware = cache_middleware || Subscriptions::ChargeCacheMiddleware.new(
         subscription:, charge:, to_datetime: boundaries[:charges_to_datetime], cache: false
       )
@@ -29,7 +30,7 @@ module Fees
 
       if invoice.nil? || !invoice.progressive_billing?
         init_true_up_fee(
-          fee: result.fees.first,
+          fee: result.fees.find { |f| f.charge_filter_id.nil? },
           amount_cents: result.fees.sum(&:amount_cents),
           precise_amount_cents: result.fees.sum(&:precise_amount_cents)
         )
@@ -37,6 +38,8 @@ module Fees
       return result unless result.success?
 
       ActiveRecord::Base.transaction do
+        result.fees.reject! { |f| !should_persit_fee?(f, result.fees) }
+
         result.fees.each do |fee|
           fee.save!
 
@@ -56,7 +59,7 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -171,6 +174,15 @@ module Fees
       end
 
       new_fee
+    end
+
+    def should_persit_fee?(fee, fees)
+      return true if context == :recurring
+      return true if fee.units != 0 || fee.amount_cents != 0 || fee.events_count != 0
+      return true if adjusted_fee(charge_filter: fee.charge_filter, grouped_by: fee.grouped_by).present?
+      return true if fee.true_up_parent_fee.present?
+
+      fees.any? { |f| f.true_up_parent_fee == fee }
     end
 
     def adjusted_fee(charge_filter:, grouped_by:)
