@@ -13,10 +13,10 @@ module Integrations
           retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
 
           def perform(invoice:)
-            result = Integrations::Aggregator::Invoices::Hubspot::CreateService.call(invoice:)
+            # result = Integrations::Aggregator::Invoices::Hubspot::CreateService.call(invoice:)
 
             if result.success?
-              Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssociationJob.perform_later(invoice:)
+              # Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssociationJob.perform_later(invoice:)
             end
 
             result.raise_if_error!

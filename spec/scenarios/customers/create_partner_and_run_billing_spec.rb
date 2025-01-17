@@ -5,7 +5,7 @@ require 'rails_helper'
 describe 'Create partner and run billing Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil, document_numbering: 'per_organization') }
   let(:partner) { create(:customer, organization:,) }
-  let(:customers) { create_list(:customer, 2, organization:,) }
+  let(:customers) { create_list(:customer, 2, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:metric) { create(:latest_billable_metric, organization:) }
   let(:params) do
@@ -43,7 +43,7 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     end.not_to change(partner.reload, :account_type)
   end
 
-  it 'creates partner-specific invoices without integrations, payments, with partner numbering, excluded from analytics' do
+  it 'creates partner-specific invoices without payments, with partner numbering, excluded from analytics' do
     create_or_update_customer(
       {
         external_id: partner.external_id,
