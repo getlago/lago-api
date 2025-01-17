@@ -7,6 +7,7 @@ RSpec.describe Types::Customers::UpdateCustomerInput do
 
   it { is_expected.to accept_argument(:id).of_type('ID!') }
 
+  it { is_expected.to accept_argument(:account_type).of_type(Types::Customers::AccountTypeEnum) }
   it { is_expected.to accept_argument(:address_line1).of_type('String') }
   it { is_expected.to accept_argument(:address_line2).of_type('String') }
   it { is_expected.to accept_argument(:city).of_type('String') }

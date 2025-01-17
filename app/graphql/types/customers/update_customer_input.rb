@@ -7,6 +7,7 @@ module Types
 
       argument :id, ID, required: true
 
+      argument :account_type, Types::Customers::AccountTypeEnum, required: false
       argument :address_line1, String, required: false, permission: 'customers:update'
       argument :address_line2, String, required: false, permission: 'customers:update'
       argument :city, String, required: false, permission: 'customers:update'
