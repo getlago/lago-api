@@ -526,6 +526,19 @@ RSpec.describe Invoice, type: :model do
 
           expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
         end
+
+        context 'when invoice is self_billed' do
+          let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: 0, status: :generating, self_billed: true) }
+
+          it 'generates the invoice number based on customer sequence' do
+            invoice.customer.update(sequential_id: 27)
+            invoice.save!
+            invoice.finalized!
+            organization_id_substring = organization.id.last(4).upcase
+
+            expect(invoice.number).to eq("LAG-#{organization_id_substring}-027-006")
+          end
+        end
       end
 
       context 'with existing invoices in previous month' do
