@@ -22,8 +22,8 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
           account_type: 'partner'
         }
       )
-    end.to change {partner.reload.account_type }.from('customer').to('partner')
-      .and change {partner.exclude_from_dunning_campaign }.from(false).to(true)
+    end.to change(partner.reload, :account_type).from('customer').to('partner')
+      .and change(partner, :exclude_from_dunning_campaign).from(false).to(true)
 
     create_subscription(
       {
@@ -147,8 +147,8 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     # invoice_collection
     get_analytics(organization:, analytics_type: 'invoice_collection')
     collection = json[:invoice_collections]
-    may_stats = collection.find {|el| el[:month] == "2024-05-01T00:00:00.000Z"}
-    june_stats = collection.find {|el| el[:month] == "2024-06-01T00:00:00.000Z"}
+    may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000Z" }
+    june_stats = collection.find { |el| el[:month] == "2024-06-01T00:00:00.000Z" }
 
     expect(may_stats[:invoices_count]).to eq(2)
     expect(may_stats[:amount_cents]).to eq(may_org_invoices.sum(:sub_total_including_taxes_amount_cents))
@@ -158,8 +158,8 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     # gross_revenue
     get_analytics(organization:, analytics_type: 'gross_revenue')
     collection = json[:gross_revenues]
-    may_stats = collection.find {|el| el[:month] == "2024-05-01T00:00:00.000Z"}
-    june_stats = collection.find {|el| el[:month] == "2024-06-01T00:00:00.000Z"}
+    may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000Z" }
+    june_stats = collection.find { |el| el[:month] == "2024-06-01T00:00:00.000Z" }
 
     expect(may_stats[:invoices_count].to_i).to eq(2)
     expect(may_stats[:amount_cents]).to eq(may_org_invoices.sum(:sub_total_including_taxes_amount_cents))
@@ -170,8 +170,8 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     get_analytics(organization:, analytics_type: 'mrr')
     collection = json[:mrrs]
     # We have different time format for mrr - is it alright?
-    may_stats = collection.find {|el| el[:month] == "2024-05-01T00:00:00.000+00:00"}
-    june_stats = collection.find {|el| el[:month] == "2024-06-01T00:00:00.000+00:00"}
+    may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000+00:00" }
+    june_stats = collection.find { |el| el[:month] == "2024-06-01T00:00:00.000+00:00" }
 
     expect(may_stats[:amount_cents].to_i).to eq(may_org_invoices.sum(:sub_total_including_taxes_amount_cents))
     expect(june_stats[:amount_cents].to_i).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
@@ -179,8 +179,8 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     # overdue_balance
     get_analytics(organization:, analytics_type: 'overdue_balance')
     collection = json[:overdue_balances]
-    may_stats = collection.find {|el| el[:month] == "2024-05-01T00:00:00.000Z"}
-    june_stats = collection.find {|el| el[:month] == "2024-06-01T00:00:00.000Z"}
+    may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000Z" }
+    june_stats = collection.find { |el| el[:month] == "2024-06-01T00:00:00.000Z" }
 
     expect(may_stats[:lago_invoice_ids]).to match(may_org_invoices.map(&:id))
     expect(may_stats[:amount_cents].to_i).to eq(may_org_invoices.sum(:sub_total_including_taxes_amount_cents))
