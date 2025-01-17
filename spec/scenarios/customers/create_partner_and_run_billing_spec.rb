@@ -141,16 +141,50 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     # partner_invoice = partner.invoices.where(created_at: may1).first
     expect(partner.invoices.map(&:payments).flatten.count).to be(0)
 
-    #check analytics
+    # check analytics
+    may_org_invoices = organization.invoices.where(self_billed: false, created_at: may1)
+    june_org_invoices = organization.invoices.where(self_billed: false, created_at: june1)
     # invoice_collection
     get_analytics(organization:, analytics_type: 'invoice_collection')
     collection = json[:invoice_collections]
     may_stats = collection.find {|el| el[:month] == "2024-05-01T00:00:00.000Z"}
     june_stats = collection.find {|el| el[:month] == "2024-06-01T00:00:00.000Z"}
-    expect(may_stats[:invoices_count]).to eq(2)
-    expect(may_stats[:amount_cents]).to eq(organization.invoices.where(self_billed: false, created_at: may1).sum(:sub_total_including_taxes_amount_cents))
 
+    expect(may_stats[:invoices_count]).to eq(2)
+    expect(may_stats[:amount_cents]).to eq(may_org_invoices.sum(:sub_total_including_taxes_amount_cents))
     expect(june_stats[:invoices_count]).to eq(2)
-    expect(may_stats[:amount_cents]).to eq(organization.invoices.where(self_billed: false, created_at: june1).sum(:sub_total_including_taxes_amount_cents))
+    expect(june_stats[:amount_cents]).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
+
+    # gross_revenue
+    get_analytics(organization:, analytics_type: 'gross_revenue')
+    collection = json[:gross_revenues]
+    may_stats = collection.find {|el| el[:month] == "2024-05-01T00:00:00.000Z"}
+    june_stats = collection.find {|el| el[:month] == "2024-06-01T00:00:00.000Z"}
+
+    expect(may_stats[:invoices_count].to_i).to eq(2)
+    expect(may_stats[:amount_cents]).to eq(may_org_invoices.sum(:sub_total_including_taxes_amount_cents))
+    expect(june_stats[:invoices_count].to_i).to eq(2)
+    expect(june_stats[:amount_cents]).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
+
+    # mrr
+    get_analytics(organization:, analytics_type: 'mrr')
+    collection = json[:mrrs]
+    # We have different time format for mrr - is it alright?
+    may_stats = collection.find {|el| el[:month] == "2024-05-01T00:00:00.000+00:00"}
+    june_stats = collection.find {|el| el[:month] == "2024-06-01T00:00:00.000+00:00"}
+
+    expect(may_stats[:amount_cents].to_i).to eq(may_org_invoices.sum(:sub_total_including_taxes_amount_cents))
+    expect(june_stats[:amount_cents].to_i).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
+
+    # overdue_balance
+    get_analytics(organization:, analytics_type: 'overdue_balance')
+    collection = json[:overdue_balances]
+    may_stats = collection.find {|el| el[:month] == "2024-05-01T00:00:00.000Z"}
+    june_stats = collection.find {|el| el[:month] == "2024-06-01T00:00:00.000Z"}
+
+    expect(may_stats[:lago_invoice_ids]).to match(may_org_invoices.map(&:id))
+    expect(may_stats[:amount_cents].to_i).to eq(may_org_invoices.sum(:sub_total_including_taxes_amount_cents))
+    expect(june_stats[:lago_invoice_ids]).to match(june_org_invoices.map(&:id))
+    expect(june_stats[:amount_cents].to_i).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
   end
 end
