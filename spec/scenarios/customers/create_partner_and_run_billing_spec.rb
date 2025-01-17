@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 describe 'Create partner and run billing Scenarios', :scenarios, type: :request do
-  let(:organization) { create(:organization, webhook_url: nil, document_numbering: 'per_organization') }
+  let(:organization) { create(:organization, webhook_url: nil, document_numbering: 'per_organization', premium_integrations: ['revenue_share']) }
   let(:partner) { create(:customer, organization:) }
   let(:customers) { create_list(:customer, 2, organization:) }
   let(:plan) { create(:plan, organization:) }
