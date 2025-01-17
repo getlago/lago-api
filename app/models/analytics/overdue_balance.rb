@@ -54,6 +54,7 @@ module Analytics
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.id
             WHERE i.organization_id = :organization_id
+            AND i.self_billed IS FALSE
             AND i.payment_overdue IS TRUE
             #{and_external_customer_id_sql}
             GROUP BY month, i.currency, total_amount_cents

@@ -56,6 +56,7 @@ module Analytics
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.id
             WHERE i.organization_id = :organization_id
+            AND i.self_billed IS FALSE
             AND i.status = 1
             AND i.payment_dispute_lost_at IS NULL
             #{and_external_customer_id_sql}
