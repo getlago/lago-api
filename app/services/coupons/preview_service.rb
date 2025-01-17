@@ -26,7 +26,6 @@ module Coupons
         base_amount_cents = base_amount_cents(applied_coupon, fees)
         credit = add_credit(applied_coupon, fees, base_amount_cents)
 
-        applied_coupon.credits << credit
         result.credits << credit
         invoice.credits << credit
       end
