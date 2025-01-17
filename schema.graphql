@@ -1951,6 +1951,7 @@ input CreateCreditNoteInput {
 Create Customer input arguments
 """
 input CreateCustomerInput {
+  accountType: CustomerAccountTypeEnum
   addressLine1: String
   addressLine2: String
   billingConfiguration: CustomerBillingConfigurationInput
@@ -3207,6 +3208,8 @@ type CurrentVersion {
 }
 
 type Customer {
+  accountType: CustomerAccountTypeEnum!
+
   """
   Number of active subscriptions per customer
   """
@@ -3322,6 +3325,11 @@ type Customer {
   url: String
   xeroCustomer: XeroCustomer
   zipcode: String
+}
+
+enum CustomerAccountTypeEnum {
+  customer
+  partner
 }
 
 type CustomerAddress {
@@ -4436,6 +4444,7 @@ enum IntegrationTypeEnum {
   okta
   progressive_billing
   revenue_analytics
+  revenue_share
   salesforce
   xero
 }
@@ -6418,6 +6427,7 @@ enum PremiumIntegrationTypeEnum {
   okta
   progressive_billing
   revenue_analytics
+  revenue_share
   salesforce
   xero
 }

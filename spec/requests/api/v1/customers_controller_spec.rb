@@ -28,17 +28,16 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
       expect(response).to have_http_status(:success)
 
-      aggregate_failures do
-        expect(json[:customer][:lago_id]).to be_present
-        expect(json[:customer][:external_id]).to eq(create_params[:external_id])
-        expect(json[:customer][:name]).to eq(create_params[:name])
-        expect(json[:customer][:firstname]).to eq(create_params[:firstname])
-        expect(json[:customer][:lastname]).to eq(create_params[:lastname])
-        expect(json[:customer][:customer_type]).to eq(create_params[:customer_type])
-        expect(json[:customer][:created_at]).to be_present
-        expect(json[:customer][:currency]).to eq(create_params[:currency])
-        expect(json[:customer][:external_salesforce_id]).to eq(create_params[:external_salesforce_id])
-      end
+      expect(json[:customer][:lago_id]).to be_present
+      expect(json[:customer][:external_id]).to eq(create_params[:external_id])
+      expect(json[:customer][:name]).to eq(create_params[:name])
+      expect(json[:customer][:firstname]).to eq(create_params[:firstname])
+      expect(json[:customer][:lastname]).to eq(create_params[:lastname])
+      expect(json[:customer][:customer_type]).to eq(create_params[:customer_type])
+      expect(json[:customer][:created_at]).to be_present
+      expect(json[:customer][:currency]).to eq(create_params[:currency])
+      expect(json[:customer][:external_salesforce_id]).to eq(create_params[:external_salesforce_id])
+      expect(json[:customer][:account_type]).to eq("customer")
     end
 
     context 'with premium features' do
@@ -190,6 +189,29 @@ RSpec.describe Api::V1::CustomersController, type: :request do
             expect(billing[:provider_payment_methods]).to eq(%w[sepa_debit])
           end
         end
+      end
+    end
+
+    context "with account_type partner" do
+      let(:organization) { create(:organization, premium_integrations: ["revenue_share"]) }
+
+      let(:create_params) do
+        {
+          external_id: SecureRandom.uuid,
+          name: "Foo Bar",
+          account_type: "partner"
+        }
+      end
+
+      around { |test| lago_premium!(&test) }
+
+      it 'returns a success' do
+        subject
+        expect(response).to have_http_status(:success)
+
+        expect(json[:customer][:lago_id]).to be_present
+        expect(json[:customer][:external_id]).to eq(create_params[:external_id])
+        expect(json[:customer][:account_type]).to eq(create_params[:account_type])
       end
     end
 

@@ -236,6 +236,36 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe "account_type enum" do
+    subject(:customer) { build_stubbed(:customer, account_type:) }
+
+    context "when account_type is customer" do
+      let(:account_type) { "customer" }
+
+      it "identifies the customer as a customer" do
+        expect(customer.account_type).to eq("customer")
+        expect(customer).to be_customer_account
+      end
+    end
+
+    context "when account_type is partner" do
+      let(:account_type) { "partner" }
+
+      it "identifies the customer as partner" do
+        expect(customer.account_type).to eq("partner")
+        expect(customer).to be_partner_account
+      end
+    end
+
+    context "when account_type is nil" do
+      subject(:customer) { build(:customer) }
+
+      it "defaults to customer for existing customers" do
+        expect(customer.account_type).to eq "customer"
+      end
+    end
+  end
+
   describe 'preferred_document_locale' do
     subject(:customer) do
       described_class.new(

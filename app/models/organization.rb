@@ -63,7 +63,7 @@ class Organization < ApplicationRecord
   ].freeze
 
   INTEGRATIONS = %w[
-    netsuite okta anrok xero progressive_billing hubspot auto_dunning revenue_analytics salesforce api_permissions
+    netsuite okta anrok xero progressive_billing hubspot auto_dunning revenue_analytics salesforce api_permissions revenue_share
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 
@@ -138,6 +138,10 @@ class Organization < ApplicationRecord
 
   def auto_dunning_enabled?
     License.premium? && premium_integrations.include?("auto_dunning")
+  end
+
+  def revenue_share_enabled?
+    License.premium? && premium_integrations.include?("revenue_share")
   end
 
   def reset_customers_last_dunning_campaign_attempt

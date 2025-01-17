@@ -6,6 +6,7 @@ module V1
       payload = {
         lago_id: model.id,
         external_id: model.external_id,
+        account_type: model.account_type,
         name: model.name,
         firstname: model.firstname,
         lastname: model.lastname,
