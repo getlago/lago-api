@@ -12,7 +12,7 @@ RSpec.describe Types::Payments::Object do
 
   it { is_expected.to have_field(:payable).of_type('Payable!') }
   it { is_expected.to have_field(:payable_payment_status).of_type('PayablePaymentStatusEnum') }
-  it { is_expected.to have_field(:payment_provider).of_type('ProviderTypeEnum') }
+  it { is_expected.to have_field(:payment_provider_type).of_type('ProviderTypeEnum') }
   it { is_expected.to have_field(:payment_type).of_type('PaymentTypeEnum!') }
   it { is_expected.to have_field(:provider_payment_id).of_type('String') }
   it { is_expected.to have_field(:reference).of_type('String') }

@@ -51,6 +51,23 @@ class Payment < ApplicationRecord
     payable.finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_payments }
   end
 
+  def payment_provider_type
+    return nil unless payment_provider
+
+    case payment_provider.type.to_s
+    when 'PaymentProviders::AdyenProvider'
+      'adyen'
+    when 'PaymentProviders::CashfreeProvider'
+      'cashfree'
+    when 'PaymentProviders::GocardlessProvider'
+      'gocardless'
+    when 'PaymentProviders::StripeProvider'
+      'stripe'
+    else
+      raise(NotImplementedError)
+    end
+  end
+
   private
 
   def manual_payment_credit_invoice_amount_cents

@@ -12,7 +12,7 @@ module Types
 
       field :payable, Types::Payables::Object, null: false
       field :payable_payment_status, Types::Payments::PayablePaymentStatusEnum, null: true
-      field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true
+      field :payment_provider_type, Types::PaymentProviders::ProviderTypeEnum, null: true
       field :payment_type, Types::Payments::PaymentTypeEnum, null: false
       field :provider_payment_id, GraphQL::Types::String, null: true
       field :reference, GraphQL::Types::String, null: true
