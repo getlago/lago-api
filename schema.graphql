@@ -6257,7 +6257,7 @@ type Payment {
   id: ID!
   payable: Payable!
   payablePaymentStatus: PayablePaymentStatusEnum
-  paymentProvider: ProviderTypeEnum
+  paymentProviderType: ProviderTypeEnum
   paymentType: PaymentTypeEnum!
   providerPaymentId: String
   reference: String

@@ -28550,7 +28550,7 @@
               "args": []
             },
             {
-              "name": "paymentProvider",
+              "name": "paymentProviderType",
               "description": null,
               "type": {
                 "kind": "ENUM",
