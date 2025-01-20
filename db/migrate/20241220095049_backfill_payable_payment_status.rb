@@ -43,7 +43,7 @@ class BackfillPayablePaymentStatus < ActiveRecord::Migration[7.1]
       provider_class = provider_type.constantize
 
       payments = Payment.joins(:payment_provider)
-        .where(payment_providers: {type: provider_type}, status: provider_class::PENDING_STATUSES)
+        .where(payment_providers: {type: provider_type}, status: provider_class::PROCESSING_STATUSES)
       payments.update_all(payable_payment_status: :pending) # rubocop:disable Rails/SkipsModelValidations
 
       payments = Payment.joins(:payment_provider)
