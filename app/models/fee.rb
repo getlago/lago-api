@@ -257,19 +257,20 @@ end
 #
 # Indexes
 #
-#  index_fees_on_add_on_id                            (add_on_id)
-#  index_fees_on_applied_add_on_id                    (applied_add_on_id)
-#  index_fees_on_charge_filter_id                     (charge_filter_id)
-#  index_fees_on_charge_id                            (charge_id)
-#  index_fees_on_charge_id_and_invoice_id             (charge_id,invoice_id) WHERE (deleted_at IS NULL)
-#  index_fees_on_deleted_at                           (deleted_at)
-#  index_fees_on_group_id                             (group_id)
-#  index_fees_on_invoice_id                           (invoice_id)
-#  index_fees_on_invoiceable                          (invoiceable_type,invoiceable_id)
-#  index_fees_on_organization_id                      (organization_id)
-#  index_fees_on_pay_in_advance_event_transaction_id  (pay_in_advance_event_transaction_id) WHERE (deleted_at IS NULL)
-#  index_fees_on_subscription_id                      (subscription_id)
-#  index_fees_on_true_up_parent_fee_id                (true_up_parent_fee_id)
+#  idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167  (pay_in_advance_event_transaction_id,charge_id,charge_filter_id) UNIQUE WHERE (created_at > '2025-01-20 15:26:22'::timestamp without time zone)
+#  index_fees_on_add_on_id                                         (add_on_id)
+#  index_fees_on_applied_add_on_id                                 (applied_add_on_id)
+#  index_fees_on_charge_filter_id                                  (charge_filter_id)
+#  index_fees_on_charge_id                                         (charge_id)
+#  index_fees_on_charge_id_and_invoice_id                          (charge_id,invoice_id) WHERE (deleted_at IS NULL)
+#  index_fees_on_deleted_at                                        (deleted_at)
+#  index_fees_on_group_id                                          (group_id)
+#  index_fees_on_invoice_id                                        (invoice_id)
+#  index_fees_on_invoiceable                                       (invoiceable_type,invoiceable_id)
+#  index_fees_on_organization_id                                   (organization_id)
+#  index_fees_on_pay_in_advance_event_transaction_id               (pay_in_advance_event_transaction_id) WHERE (deleted_at IS NULL)
+#  index_fees_on_subscription_id                                   (subscription_id)
+#  index_fees_on_true_up_parent_fee_id                             (true_up_parent_fee_id)
 #
 # Foreign Keys
 #
