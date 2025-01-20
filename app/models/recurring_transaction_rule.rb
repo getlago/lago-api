@@ -22,9 +22,9 @@ class RecurringTransactionRule < ApplicationRecord
     :threshold
   ].freeze
 
-  enum interval: INTERVALS
-  enum method: METHODS
-  enum trigger: TRIGGERS
+  enum :interval, INTERVALS
+  enum :method, METHODS
+  enum :trigger, TRIGGERS
 end
 
 # == Schema Information

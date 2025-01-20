@@ -26,11 +26,11 @@ class Customer < ApplicationRecord
   }.freeze
 
   attribute :finalize_zero_amount_invoice, :integer
-  enum finalize_zero_amount_invoice: FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, _prefix: :finalize_zero_amount_invoice
+  enum :finalize_zero_amount_invoice, FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, prefix: :finalize_zero_amount_invoice
   attribute :customer_type, :string
-  enum customer_type: CUSTOMER_TYPES, _prefix: :customer_type
+  enum :customer_type, CUSTOMER_TYPES, prefix: :customer_type
   attribute :account_type, :string
-  enum account_type: ACCOUNT_TYPES, _suffix: :account
+  enum :account_type, ACCOUNT_TYPES, suffix: :account
 
   before_save :ensure_slug
 

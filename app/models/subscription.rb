@@ -32,8 +32,8 @@ class Subscription < ApplicationRecord
     anniversary
   ].freeze
 
-  enum status: STATUSES
-  enum billing_time: BILLING_TIME
+  enum :status, STATUSES
+  enum :billing_time, BILLING_TIME
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
 

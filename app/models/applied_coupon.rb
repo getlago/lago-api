@@ -20,8 +20,8 @@ class AppliedCoupon < ApplicationRecord
     :forever
   ].freeze
 
-  enum status: STATUSES
-  enum frequency: FREQUENCIES
+  enum :status, STATUSES
+  enum :frequency, FREQUENCIES
 
   monetize :amount_cents, disable_validation: true, allow_nil: true
 

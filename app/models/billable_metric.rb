@@ -31,9 +31,9 @@ class BillableMetric < ApplicationRecord
 
   WEIGHTED_INTERVAL = {seconds: "seconds"}.freeze
 
-  enum aggregation_type: AGGREGATION_TYPES
-  enum rounding_function: ROUNDING_FUNCTIONS
-  enum weighted_interval: WEIGHTED_INTERVAL
+  enum :aggregation_type, AGGREGATION_TYPES
+  enum :rounding_function, ROUNDING_FUNCTIONS
+  enum :weighted_interval, WEIGHTED_INTERVAL
 
   validate :validate_recurring
   validate :validate_expression

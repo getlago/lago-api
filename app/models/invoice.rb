@@ -73,12 +73,12 @@ class Invoice < ApplicationRecord
   STATUS = VISIBLE_STATUS.merge(INVISIBLE_STATUS).freeze
   GENERATED_INVOICE_STATUSES = %w[finalized closed].freeze
 
-  enum invoice_type: INVOICE_TYPES
-  enum payment_status: PAYMENT_STATUS, _prefix: :payment
-  enum status: STATUS
+  enum :invoice_type, INVOICE_TYPES
+  enum :payment_status, PAYMENT_STATUS, prefix: :payment
+  enum :status, STATUS
 
   attribute :tax_status, :string
-  enum tax_status: TAX_STATUSES, _prefix: :tax
+  enum :tax_status, TAX_STATUSES, prefix: :tax
 
   aasm column: 'status', timestamps: true do
     state :generating

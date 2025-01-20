@@ -11,7 +11,7 @@ class IntegrationItem < ApplicationRecord
     :account
   ].freeze
 
-  enum item_type: ITEM_TYPES
+  enum :item_type, ITEM_TYPES
 
   validates :external_id, presence: true, uniqueness: {scope: %i[integration_id item_type]}
 
