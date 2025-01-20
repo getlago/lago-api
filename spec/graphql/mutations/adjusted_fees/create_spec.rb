@@ -4,11 +4,21 @@ require 'rails_helper'
 
 RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
   let(:required_permission) { 'invoices:update' }
-  let(:membership) { create(:membership) }
-  let(:fee) { create(:charge_fee) }
+  let(:organization) { create(:organization) }
+  let(:membership) { create(:membership, organization:) }
+  let(:invoice) { create(:invoice, organization:) }
+
+  let(:plan) { create(:plan, organization:) }
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:charge) { create(:standard_charge, plan:, billable_metric:) }
+  let(:customer) { create(:customer, organization:) }
+  let(:subscription) { create(:subscription, customer:, plan:) }
+  let(:fee) { create(:charge_fee, subscription:, invoice:, charge:) }
+
   let(:input) do
     {
       feeId: fee.id,
+      invoiceId: invoice.id,
       units: 4,
       unitPreciseAmount: '10.00001',
       invoiceDisplayName: 'Hello'
@@ -27,7 +37,7 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
     GQL
   end
 
-  before { fee.invoice.draft! }
+  before {  fee.invoice.draft! }
 
   around { |test| lago_premium!(&test) }
 

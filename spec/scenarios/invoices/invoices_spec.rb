@@ -1191,7 +1191,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
         # In terminated invoice there is only one fee that is charge kind
         fee = terminated_invoice.fees.charge.first
 
-        AdjustedFees::CreateService.call(organization:, fee:, params: adjusted_fee_params)
+        AdjustedFees::CreateService.call(invoice: terminated_invoice, params: adjusted_fee_params.merge(fee_id: fee.id))
         credit_note = credit_note.reload
         terminated_invoice = terminated_invoice.reload
 
@@ -1272,7 +1272,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           # There is only one fee that is subscription kind
           fee = first_invoice.fees.subscription.first
 
-          AdjustedFees::CreateService.call(organization:, fee:, params: adjusted_fee_params)
+          AdjustedFees::CreateService.call(invoice: first_invoice, params: adjusted_fee_params.merge(fee_id: fee.id))
           credit_note = credit_note.reload
           first_invoice = first_invoice.reload
 
@@ -1353,7 +1353,7 @@ describe 'Invoices Scenarios', :scenarios, type: :request do
           # There is only one fee that is subscription kind
           fee = first_invoice.fees.subscription.first
 
-          AdjustedFees::CreateService.call(organization:, fee:, params: adjusted_fee_params)
+          AdjustedFees::CreateService.call(invoice: first_invoice, params: adjusted_fee_params.merge(fee_id: fee.id))
           credit_note = credit_note.reload
           first_invoice = first_invoice.reload
 
