@@ -48,10 +48,10 @@ class CreditNote < ApplicationRecord
   REASON = %i[duplicated_charge product_unsatisfactory order_change order_cancellation fraudulent_charge other].freeze
   STATUS = %i[draft finalized].freeze
 
-  enum credit_status: CREDIT_STATUS
-  enum refund_status: REFUND_STATUS
-  enum reason: REASON
-  enum status: STATUS
+  enum :credit_status, CREDIT_STATUS
+  enum :refund_status, REFUND_STATUS
+  enum :reason, REASON
+  enum :status, STATUS
 
   sequenced scope: ->(credit_note) { CreditNote.where(invoice_id: credit_note.invoice_id) },
     lock_key: ->(credit_note) { credit_note.invoice_id }

@@ -12,8 +12,8 @@ class Invite < ApplicationRecord
     revoked
   ].freeze
 
-  enum status: INVITE_STATUS
-  enum role: Membership::ROLES
+  enum :status, INVITE_STATUS
+  enum :role, Membership::ROLES
 
   validates :email, email: true
   validates :token, uniqueness: true

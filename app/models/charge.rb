@@ -31,8 +31,8 @@ class Charge < ApplicationRecord
 
   REGROUPING_PAID_FEES_OPTIONS = %i[invoice].freeze
 
-  enum charge_model: CHARGE_MODELS
-  enum regroup_paid_fees: REGROUPING_PAID_FEES_OPTIONS
+  enum :charge_model, CHARGE_MODELS
+  enum :regroup_paid_fees, REGROUPING_PAID_FEES_OPTIONS
 
   validate :validate_amount, if: -> { standard? }
   validate :validate_graduated, if: -> { graduated? }

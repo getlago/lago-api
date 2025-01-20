@@ -23,7 +23,7 @@ class Wallet < ApplicationRecord
     :terminated
   ].freeze
 
-  enum status: STATUSES
+  enum :status, STATUSES
 
   def mark_as_terminated!(timestamp = Time.zone.now)
     self.terminated_at ||= timestamp

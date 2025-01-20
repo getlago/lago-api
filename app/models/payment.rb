@@ -23,7 +23,7 @@ class Payment < ApplicationRecord
 
   delegate :customer, to: :payable
 
-  enum payable_payment_status: PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h
+  enum :payable_payment_status, PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h
 
   scope :for_organization, lambda { |organization|
     payables_join = ActiveRecord::Base.sanitize_sql_array([

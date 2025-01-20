@@ -8,7 +8,7 @@ class IntegrationResource < ApplicationRecord
 
   RESOURCE_TYPES = %i[invoice sales_order_deprecated payment credit_note subscription].freeze
 
-  enum resource_type: RESOURCE_TYPES
+  enum :resource_type, RESOURCE_TYPES
 end
 
 # == Schema Information
