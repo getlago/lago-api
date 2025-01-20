@@ -65,8 +65,12 @@ module AdjustedFees
 
     def find_existing_fee
       fee = invoice.fees.find_by(id: params[:fee_id])
-      result.not_found_failure!(resource: 'fee') if fee.blank?
-      return fee
+      if fee.blank?
+        result.not_found_failure!(resource: 'fee')
+        return
+      end
+
+      fee
     end
 
     def create_empty_fee
@@ -102,12 +106,16 @@ module AdjustedFees
     def create_fee(subscription, charge)
       invoice_subscription = invoice.invoice_subscriptions.find_by(subscription_id: subscription.id)
 
-      # TODO: fee in advance & boundaries? + amount details
+      boundaries = {
+        timestamp: invoice_subscription.timestamp,
+        charges_from_datetime: invoice_subscription.charges_from_datetime,
+        charges_to_datetime: invoice_subscription.charges_to_datetime
+      }
 
-      Fee.create(
+      Fee.create!(
         organization:,
-        invoice: ,
-        subscription: ,
+        invoice:,
+        subscription:,
         invoiceable: charge,
         charge:,
         charge_filter_id: params[:charge_filter_id],
@@ -124,7 +132,7 @@ module AdjustedFees
         taxes_precise_amount_cents: 0.to_d,
         units: 0,
         total_aggregated_units: 0,
-        properties: {}
+        properties: boundaries
       )
     end
 

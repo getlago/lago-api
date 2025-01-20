@@ -168,7 +168,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
             invoice_display_name: 'new-dis-name',
             subscription_id: subscription.id,
             charge_id: charge.id,
-            charge_filter_id: charge_filter.id,
+            charge_filter_id: charge_filter.id
           }
         end
 
@@ -205,8 +205,8 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
             .to be_a(Fee)
             .and have_attributes(
               organization:,
-              invoice: ,
-              subscription: ,
+              invoice:,
+              subscription:,
               invoiceable: charge,
               charge:,
               charge_filter:,
@@ -244,7 +244,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
               invoice_display_name: 'new-dis-name',
               subscription_id: subscription.id,
               charge_id: fee.charge_id,
-              charge_filter_id: fee.charge_filter_id,
+              charge_filter_id: fee.charge_filter_id
             }
           end
 
@@ -265,7 +265,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
               invoice_display_name: 'new-dis-name',
               subscription_id: 'invalid_id',
               charge_id: fee.charge_id,
-              charge_filter_id: fee.charge_filter_id,
+              charge_filter_id: fee.charge_filter_id
             }
           end
 
@@ -289,7 +289,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
               invoice_display_name: 'new-dis-name',
               subscription_id: subscription.id,
               charge_id: 'invalid_id',
-              charge_filter_id: fee.charge_filter_id,
+              charge_filter_id: fee.charge_filter_id
             }
           end
 
@@ -313,7 +313,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
               invoice_display_name: 'new-dis-name',
               subscription_id: subscription.id,
               charge_id: charge.id,
-              charge_filter_id: 'invalid_id',
+              charge_filter_id: 'invalid_id'
             }
           end
 

@@ -4493,6 +4493,7 @@ enum InviteStatusTypeEnum {
 Invoice
 """
 type Invoice {
+  allChargesHaveFees: Boolean!
   appliedTaxes: [InvoiceAppliedTax!]
   associatedActiveWalletPresent: Boolean!
   availableToCreditAmountCents: BigInt!

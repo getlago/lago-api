@@ -11,8 +11,8 @@ module Types
       argument :fee_id, ID, required: false
 
       # NOTE: adjust a empty charge fee
-      argument :charge_id, ID, required: false
       argument :charge_filter_id, ID, required: false
+      argument :charge_id, ID, required: false
       argument :subscription_id, ID, required: false
 
       argument :invoice_display_name, String, required: false

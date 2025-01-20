@@ -6281,7 +6281,7 @@
               "deprecationReason": null
             },
             {
-              "name": "chargeId",
+              "name": "chargeFilterId",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -6293,7 +6293,7 @@
               "deprecationReason": null
             },
             {
-              "name": "chargeFilterId",
+              "name": "chargeId",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -20813,6 +20813,22 @@
           "interfaces": [],
           "possibleTypes": null,
           "fields": [
+            {
+              "name": "allChargesHaveFees",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
             {
               "name": "appliedTaxes",
               "description": null,
