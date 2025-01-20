@@ -22,7 +22,6 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
 
     filter_value
 
-    allow(SegmentTrackJob).to receive(:perform_later)
     allow(BillableMetrics::DeleteEventsJob).to receive(:perform_later).and_call_original
     allow(Invoices::RefreshDraftService).to receive(:call)
   end
@@ -59,23 +58,6 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
       create(:invoice_subscription, subscription:, invoice:)
 
       expect { destroy_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
-    end
-
-    it 'calls SegmentTrackJob' do
-      destroy_service.call
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'billable_metric_deleted',
-        properties: {
-          code: billable_metric.code,
-          name: billable_metric.name,
-          description: billable_metric.description,
-          aggregation_type: billable_metric.aggregation_type,
-          aggregation_property: billable_metric.field_name,
-          organization_id: billable_metric.organization_id
-        }
-      )
     end
 
     context 'when billable metric is not found' do

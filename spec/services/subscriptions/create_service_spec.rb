@@ -30,10 +30,6 @@ RSpec.describe Subscriptions::CreateService, type: :service do
   end
 
   describe '#call' do
-    before do
-      allow(SegmentTrackJob).to receive(:perform_later)
-    end
-
     it 'creates a subscription with subscription date set to current date' do
       result = create_service.call
 
@@ -53,24 +49,6 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         expect(subscription.lifetime_usage.recalculate_invoiced_usage).to eq(false)
         expect(subscription.lifetime_usage.recalculate_current_usage).to eq(false)
       end
-    end
-
-    it 'calls SegmentTrackJob' do
-      subscription = create_service.call.subscription
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'subscription_created',
-        properties: {
-          created_at: subscription.created_at,
-          customer_id: subscription.customer_id,
-          plan_code: subscription.plan.code,
-          plan_name: subscription.plan.name,
-          subscription_type: 'create',
-          organization_id: subscription.organization.id,
-          billing_time: 'anniversary'
-        }
-      )
     end
 
     context 'when subscription should sync with Hubspot' do

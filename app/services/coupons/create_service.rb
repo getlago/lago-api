@@ -56,7 +56,6 @@ module Coupons
       end
 
       result.coupon = coupon
-      track_coupon_created(result.coupon)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -65,18 +64,6 @@ module Coupons
     private
 
     attr_reader :args, :limitations, :organization_id
-
-    def track_coupon_created(coupon)
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: "coupon_created",
-        properties: {
-          coupon_code: coupon.code,
-          coupon_name: coupon.name,
-          organization_id:
-        }
-      )
-    end
 
     def plan_identifiers
       key = api_context? ? :plan_codes : :plan_ids
