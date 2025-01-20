@@ -32,8 +32,8 @@ class PaymentsQuery < BaseQuery
     external_customer_id = filters.external_customer_id
 
     scope.joins(<<~SQL)
-      LEFT JOIN customers ON 
-        (payments.payable_type = 'Invoice' AND customers.id = invoices.customer_id) OR 
+      LEFT JOIN customers ON
+        (payments.payable_type = 'Invoice' AND customers.id = invoices.customer_id) OR
         (payments.payable_type = 'PaymentRequest' AND customers.id = payment_requests.customer_id)
     SQL
       .where("customers.external_id = :external_customer_id", external_customer_id:)
@@ -43,7 +43,7 @@ class PaymentsQuery < BaseQuery
     invoice_id = filters.invoice_id
 
     scope.joins(<<~SQL)
-      LEFT JOIN invoices_payment_requests 
+      LEFT JOIN invoices_payment_requests
       ON invoices_payment_requests.payment_request_id = payment_requests.id
     SQL
       .where("invoices.id = :invoice_id OR invoices_payment_requests.invoice_id = :invoice_id", invoice_id:)

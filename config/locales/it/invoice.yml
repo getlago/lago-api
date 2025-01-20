@@ -90,7 +90,9 @@ it:
     total_credits: Crediti totali
     total_credits_with_value: 'Crediti totali: %{credit_amount} crediti'
     total_due: Totale dovuto
+    total_due_amount: Importo dovuto
     total_events: 'Eventi totali: %{count}'
+    total_paid_amount: Importo pagato
     total_unit: 'Unità totale: %{units}'
     total_unit_interval: 'Unità totale: %{events_count} eventi per %{units}'
     true_up_details: Spesa minima di %{min_amount} proporzionata sui giorni di utilizzo

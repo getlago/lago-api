@@ -12,6 +12,7 @@ en:
     breakdown: Breakdown
     breakdown_for_days: Used %{breakdown_duration} out of %{breakdown_total_duration} days
     breakdown_of: Breakdown of %{fee_filter_display_name}
+    charges_paid_in_advance: Charges paid in advance
     coupons: Coupons
     credit_notes: Credit notes
     date_from: From
@@ -90,7 +91,9 @@ en:
     total_credits: Total credits
     total_credits_with_value: 'Total credits: %{credit_amount} credits'
     total_due: Total due
+    total_due_amount: Amount due
     total_events: 'Total events: %{count}'
+    total_paid_amount: Amount paid
     total_unit: 'Total unit: %{units}'
     total_unit_interval: 'Total unit: %{events_count} events for %{units}'
     true_up_details: Minimum spend of %{min_amount} prorated on days of usage

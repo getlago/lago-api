@@ -30,8 +30,9 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
     )
   end
 
-  let(:invoice) { create(:invoice, total_amount_cents: 120) }
+  let(:invoice) { create(:invoice, total_amount_cents: 120, total_paid_amount_cents:) }
   let(:customer) { invoice.customer }
+  let(:total_paid_amount_cents) { 0 }
 
   let(:fee) do
     create(
@@ -54,14 +55,23 @@ RSpec.describe CreditNotes::ValidateService, type: :service do
 
     context "when invoice is not paid" do
       let(:invoice_status) { "pending" }
-      let(:refund_amount_cents) { 2 }
 
-      it "fails the validation" do
-        aggregate_failures do
+      context "when paid amount equals the total amount" do
+        let(:refund_amount_cents) { 2 }
+        let(:total_paid_amount_cents) { 120 }
+
+        it "fails the validation" do
           expect(validator).not_to be_valid
-
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:refund_amount_cents]).to eq(["cannot_refund_unpaid_invoice"])
+        end
+      end
+
+      context "when paid amount does not equal the total amount" do
+        let(:refund_amount_cents) { 0 }
+
+        it "validates the credit_note" do
+          expect(validator).to be_valid
         end
       end
     end

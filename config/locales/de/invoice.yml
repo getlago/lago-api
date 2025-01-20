@@ -90,7 +90,9 @@ de:
     total_credits: Gesamtguthaben
     total_credits_with_value: 'Gesamtguthaben: %{credit_amount} Credits'
     total_due: Insgesamt fällig
+    total_due_amount: Betrag fällig
     total_events: 'Ereignisse insgesamt: %{count}'
+    total_paid_amount: Betrag bezahlt
     total_unit: 'Gesamte Einheiten: %{units}'
     total_unit_interval: 'Gesamte Einheiten: %{events_count} Ereignisse für %{units}'
     true_up_details: Mindestausgabe von %{min_amount} anteilig an den Nutzungstagen

@@ -25,6 +25,7 @@ module Integrations
                   "lago_invoice_payment_status" => invoice.payment_status,
                   "lago_invoice_currency" => invoice.currency,
                   "lago_invoice_total_amount" => total_amount,
+                  "lago_invoice_total_due_amount" => total_due_amount,
                   "lago_invoice_subtotal_excluding_taxes" => subtotal_excluding_taxes,
                   "lago_invoice_file_url" => invoice.file_url
                 }
@@ -52,6 +53,7 @@ module Integrations
                   "lago_invoice_payment_status" => invoice.payment_status,
                   "lago_invoice_currency" => invoice.currency,
                   "lago_invoice_total_amount" => total_amount,
+                  "lago_invoice_total_due_amount" => total_due_amount,
                   "lago_invoice_subtotal_excluding_taxes" => subtotal_excluding_taxes,
                   "lago_invoice_file_url" => invoice.file_url
                 }
@@ -73,6 +75,10 @@ module Integrations
 
           def total_amount
             amount(invoice.total_amount_cents, resource: invoice)
+          end
+
+          def total_due_amount
+            amount(invoice.total_due_amount_cents, resource: invoice)
           end
 
           def subtotal_excluding_taxes

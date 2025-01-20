@@ -16,6 +16,11 @@ module Types
 
       field :customer, Types::Customers::Object, null: false
       field :invoices, [Types::Invoices::Object], null: false
+      field :payable_type, GraphQL::Types::String, null: false
+
+      def payable_type
+        'PaymentRequest'
+      end
     end
   end
 end

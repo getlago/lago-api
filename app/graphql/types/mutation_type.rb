@@ -114,6 +114,8 @@ module Types
     field :revoke_membership, mutation: Mutations::Memberships::Revoke
     field :update_membership, mutation: Mutations::Memberships::Update
 
+    field :create_payment, mutation: Mutations::Payments::Create
+
     field :create_payment_request, mutation: Mutations::PaymentRequests::Create
 
     field :create_password_reset, mutation: Mutations::PasswordResets::Create

@@ -53,8 +53,12 @@ module CreditNotes
       if credit_note.refund_amount_cents.positive?
         return true if invoice.payment_succeeded?
 
-        add_error(field: :refund_amount_cents, error_code: "cannot_refund_unpaid_invoice")
-        return false
+        if !invoice.payment_succeeded? &&
+            invoice.total_paid_amount_cents == invoice.total_amount_cents && invoice.total_amount_cents > 0
+          add_error(field: :refund_amount_cents, error_code: 'cannot_refund_unpaid_invoice')
+
+          return false
+        end
       end
 
       true

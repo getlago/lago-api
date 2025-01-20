@@ -36,6 +36,8 @@ module Types
       field :sub_total_including_taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
+      field :total_due_amount_cents, GraphQL::Types::BigInt, null: false
+      field :total_paid_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
       field :payment_due_date, GraphQL::Types::ISO8601Date, null: false
@@ -67,7 +69,12 @@ module Types
       field :integration_hubspot_syncable, GraphQL::Types::Boolean, null: false
       field :integration_salesforce_syncable, GraphQL::Types::Boolean, null: false
       field :integration_syncable, GraphQL::Types::Boolean, null: false
+      field :payable_type, GraphQL::Types::String, null: false
       field :tax_provider_voidable, GraphQL::Types::Boolean, null: false
+
+      def payable_type
+        'Invoice'
+      end
 
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)

@@ -102,7 +102,10 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
     expect(fee2.precise_coupons_amount_cents).to eq(25_000)
 
     travel_to(DateTime.new(2023, 10, 23)) do
-      update_invoice(invoice, payment_status: :succeeded)
+      Payments::ManualCreateService.call(
+        organization:,
+        params: {invoice_id: invoice.id, amount_cents: 1_200, reference: 'ref1'}
+      )
 
       # Estimate the credit notes amount on full fees
       estimate_credit_note(
@@ -123,7 +126,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       expect(estimate[:taxes_amount_cents]).to eq(4_770)
       expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(32_800)
       expect(estimate[:max_creditable_amount_cents]).to eq(37_570)
-      expect(estimate[:max_refundable_amount_cents]).to eq(37_570)
+      expect(estimate[:max_refundable_amount_cents]).to eq(1_200)
       expect(estimate[:coupons_adjustment_amount_cents]).to eq(250_00)
       expect(estimate[:taxes_rate]).to eq(14.54268)
 
@@ -142,7 +145,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       expect(estimate[:taxes_amount_cents]).to eq(1961)
       expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(9_806)
       expect(estimate[:max_creditable_amount_cents]).to eq(11_768)
-      expect(estimate[:max_refundable_amount_cents]).to eq(11_768)
+      expect(estimate[:max_refundable_amount_cents]).to eq(1_200)
       expect(estimate[:coupons_adjustment_amount_cents]).to eq(16_454)
       expect(estimate[:taxes_rate]).to eq(20)
 
@@ -296,7 +299,10 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       expect(fee6.precise_coupons_amount_cents).to eq(9.66216)
 
       travel_to(DateTime.new(2023, 10, 23)) do
-        update_invoice(invoice, payment_status: :succeeded)
+        Payments::ManualCreateService.call(
+          organization:,
+          params: {invoice_id: invoice.id, amount_cents: 40, reference: 'ref2'}
+        )
 
         estimate_credit_note(
           invoice_id: invoice.id,
@@ -329,7 +335,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
         expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(498)
         expect(estimate[:taxes_amount_cents]).to eq(50)
         expect(estimate[:max_creditable_amount_cents]).to eq(547)
-        expect(estimate[:max_refundable_amount_cents]).to eq(547)
+        expect(estimate[:max_refundable_amount_cents]).to eq(40)
         expect(estimate[:taxes_rate]).to eq(10)
       end
     end
@@ -350,7 +356,11 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           expect(invoice.total_amount_cents).to eq(163_99)
           expect(invoice.taxes_amount_cents).to eq(27_33)
           fees = invoice.fees
-          invoice.update(payment_status: "succeeded")
+
+          Payments::ManualCreateService.call(
+            organization:,
+            params: {invoice_id: invoice.id, amount_cents: 500, reference: 'ref3'}
+          )
 
           # estimate and create credit notes for first item - full refund; the taxes are rounded to higher number
           estimate_credit_note(
@@ -370,7 +380,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
             precise_taxes_amount_cents: "1366.6",
             sub_total_excluding_taxes_amount_cents: 6833,
             max_creditable_amount_cents: 8200,
-            max_refundable_amount_cents: 8200,
+            max_refundable_amount_cents: 500,
             taxes_rate: 20.0
           )
 
@@ -398,6 +408,11 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           expect(credit_note.precise_total).to eq(8199.6)
           expect(credit_note.taxes_rounding_adjustment).to eq(0.4)
 
+          Payments::ManualCreateService.call(
+            organization:,
+            params: {invoice_id: invoice.id, amount_cents: 8_000, reference: 'ref3'}
+          )
+
           # when issuing second credit note, it should be rounded to lower number
           estimate_credit_note(
             invoice_id: invoice.id,
@@ -410,12 +425,13 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           )
 
           estimate = json[:estimated_credit_note]
+
           expect(estimate).to include(
             taxes_amount_cents: 13_66,
             precise_taxes_amount_cents: "1366.2",
             sub_total_excluding_taxes_amount_cents: 6833,
             max_creditable_amount_cents: 8199,
-            max_refundable_amount_cents: 8199,
+            max_refundable_amount_cents: 300,
             taxes_rate: 20.0
           )
 
@@ -457,6 +473,12 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           expect(invoice.taxes_amount_cents).to eq(54_66)
           fees = invoice.fees
           invoice.update(payment_status: "succeeded")
+
+          Payments::ManualCreateService.call(
+            organization:,
+            params: {invoice_id: invoice.id, amount_cents: 300_00, reference: 'ref3'}
+          )
+          invoice.reload
 
           # estimate and create credit notes for first three items - full refund; the taxes are rounded to higher number
           3.times do |i|
@@ -625,7 +647,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
             precise_taxes_amount_cents: "645.4",
             sub_total_excluding_taxes_amount_cents: 3233,
             max_creditable_amount_cents: 3878,
-            max_refundable_amount_cents: 3878,
+            max_refundable_amount_cents: 1080, # invoice.total_paid_amount_cents - invoice.credit_notes.sum(:refund_amount_cents)
             taxes_rate: 20.0
           )
 
@@ -937,6 +959,13 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       perform_all_enqueued_jobs
       wallet.reload
       expect(wallet.balance_cents).to eq 1500
+
+      Payments::ManualCreateService.call(
+        organization:,
+        params: {invoice_id: invoice.id, amount_cents: 1500, reference: 'ref3'}
+      )
+
+      invoice.reload
 
       # it allows to estimate a credit notes on credit invoices with payment status succeeded
       estimate_credit_note(

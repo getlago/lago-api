@@ -31,10 +31,10 @@ table style="width: 100%; border-collapse: collapse;"
     td style="font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0em; text-align: left; color: #66758F; white-space: nowrap; padding: 16px 0;"
       = I18n.t("email.credit_note.created.invoice_number")
     td style="font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0em; text-align: right; color: #66758F; white-space: nowrap; padding: 16px 0;"
-      = I18n.t("invoice.amount")
+      = I18n.t("invoice.total_due_amount")
   - @invoices.each do |invoice|
     tr style="border-bottom: 1px solid #d9dee7;"
       td style="font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0em; text-align: left; padding-right: 16px; white-space: nowrap; padding: 16px 0;"
         = link_to invoice.number, invoice.file_url, {style: "text-decoration: none; color: #006cfa"}
       td style="font-size: 14px; font-weight: 400; line-height: 20px; letter-spacing: 0em; text-align: right; color: #19212e; white-space: nowrap; padding: 16px 0;"
-        = MoneyHelper.format(invoice.total_amount)
+        = MoneyHelper.format(invoice.total_due_amount)
