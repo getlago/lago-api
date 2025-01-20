@@ -58,7 +58,6 @@ module Customers
         customer.firstname = args[:firstname] if args.key?(:firstname)
         customer.lastname = args[:lastname] if args.key?(:lastname)
         customer.customer_type = args[:customer_type] if args.key?(:customer_type)
-        customer.exclude_from_dunning_campaign = true if customer.partner_account?
 
         if args.key?(:finalize_zero_amount_invoice)
           customer.finalize_zero_amount_invoice = args[:finalize_zero_amount_invoice]
@@ -184,6 +183,7 @@ module Customers
     private
 
     attr_reader :customer, :args
+    def_delegators :customer, :organization
 
     def valid_metadata_count?(metadata:)
       return true if metadata.blank?
