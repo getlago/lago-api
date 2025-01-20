@@ -97,6 +97,7 @@ module Invoices
       end
 
       def should_process_payment?
+        return false if invoice.self_billed?
         return false if invoice.payment_succeeded? || invoice.voided?
         return false if current_payment_provider.blank?
 

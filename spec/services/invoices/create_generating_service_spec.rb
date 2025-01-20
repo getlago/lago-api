@@ -118,5 +118,15 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
         end
       end
     end
+
+    context "when customer is a partner account" do
+      let(:customer) { create(:customer, account_type: "partner") }
+
+      it "creates an invoice with self billed" do
+        result = create_service.call
+
+        expect(result.invoice.self_billed).to eq(true)
+      end
+    end
   end
 end

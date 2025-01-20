@@ -97,6 +97,21 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       end
     end
 
+    context "when invoice is self_billed" do
+      let(:invoice) do
+        create(:invoice, :self_billed, customer:, organization:, total_amount_cents: 100)
+      end
+
+      it "does not creates a payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+        expect(result.invoice).to eq(invoice)
+        expect(result.payment).to be_nil
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
     context "when invoice is payment_succeeded" do
       before { invoice.payment_succeeded! }
 
