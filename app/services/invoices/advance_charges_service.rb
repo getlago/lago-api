@@ -22,6 +22,7 @@ module Invoices
 
       if invoice && !invoice.closed?
         SendWebhookJob.perform_later('invoice.created', invoice)
+        create_manual_payment(invoice)
         Invoices::GeneratePdfAndNotifyJob.perform_later(invoice:, email: false)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -49,6 +50,16 @@ module Invoices
     def has_charges_with_statement?
       plan_ids = subscriptions.pluck(:plan_id)
       Charge.where(plan_id: plan_ids, pay_in_advance: true, invoiceable: false, regroup_paid_fees: :invoice).any?
+    end
+
+    def create_manual_payment(invoice)
+      amount_cents = invoice.total_amount_cents
+      reference = I18n.t("invoice.charges_paid_in_advance")
+      created_at = invoice.created_at
+
+      params = {amount_cents:, reference:, created_at:}
+
+      ManualPayments::CreateJob.perform_later(invoice:, params:)
     end
 
     def create_group_invoice
