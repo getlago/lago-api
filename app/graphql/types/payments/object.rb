@@ -10,7 +10,6 @@ module Types
       field :amount_cents, GraphQL::Types::BigInt, null: false
       field :amount_currency, Types::CurrencyEnum, null: false
 
-      field :invoice, Types::Invoices::Object, null: false
       field :payable, Types::Payables::Object, null: false
       field :payable_payment_status, Types::Payments::PayablePaymentStatusEnum, null: true
       field :payment_provider, Types::PaymentProviders::ProviderTypeEnum, null: true

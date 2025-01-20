@@ -15,9 +15,7 @@ module Mutations
       type Types::Payments::Object
 
       def resolve(**args)
-        invoice = current_organization.invoices.find_by(id: args[:invoice_id])
-
-        result = ::ManualPayments::CreateService.call(invoice:, params: args)
+        result = ::ManualPayments::CreateService.call(organization: current_organization, params: args)
         result.success? ? result.payment : result_error(result)
       end
     end

@@ -11,7 +11,10 @@ RSpec.describe Resolvers::PaymentsResolver, type: :graphql do
           collection {
             id
             amountCents
-            payable
+            payable {
+              ... on Invoice { id }
+              ... on PaymentRequest { id }
+            }
           }
           metadata { currentPage, totalCount }
         }

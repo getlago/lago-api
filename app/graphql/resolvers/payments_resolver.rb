@@ -9,7 +9,7 @@ module Resolvers
 
     description "Query payments of an organization"
 
-    argument :invoice_id, String, required: false
+    argument :invoice_id, ID, required: false
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
 
