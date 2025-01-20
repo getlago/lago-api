@@ -146,7 +146,6 @@ RSpec.describe Customers::UpdateService, type: :service do
             expect(updated_customer).to be_customer_account
           end
         end
-
       end
     end
 
