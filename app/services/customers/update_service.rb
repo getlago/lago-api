@@ -2,6 +2,7 @@
 
 module Customers
   class UpdateService < BaseService
+    extend Forwardable
     include Customers::PaymentProviderFinder
 
     def initialize(customer:, args:)
@@ -90,10 +91,16 @@ module Customers
         Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
       end
 
-      # NOTE: external_id is not editable if customer is attached to subscriptions
-      customer.external_id = args[:external_id] if customer.editable? && args.key?(:external_id)
+      # NOTE: external_id and account_type are not editable if customer is attached to subscriptions
+      if customer.editable?
+        customer.external_id = args[:external_id] if args.key?(:external_id)
 
-      if customer.organization.auto_dunning_enabled?
+        if organization.revenue_share_enabled?
+          customer.account_type = args[:account_type] if args.key?(:account_type)
+        end
+      end
+
+      if organization.auto_dunning_enabled?
         if args.key?(:applied_dunning_campaign_id)
           customer.applied_dunning_campaign = applied_dunning_campaign
           customer.exclude_from_dunning_campaign = false
@@ -104,6 +111,12 @@ module Customers
           customer.exclude_from_dunning_campaign = args[:exclude_from_dunning_campaign]
           customer.applied_dunning_campaign = nil if args[:exclude_from_dunning_campaign]
         end
+      end
+
+      # NOTE: partner accounts are excluded from dunning campaigns
+      if customer.partner_account?
+        customer.exclude_from_dunning_campaign = true
+        customer.applied_dunning_campaign = nil
       end
 
       ActiveRecord::Base.transaction do
@@ -125,7 +138,7 @@ module Customers
         customer.save!
         customer.reload
 
-        if customer.organization.eu_tax_management
+        if organization.eu_tax_management
           eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
 
           args[:tax_codes] ||= []
@@ -170,6 +183,7 @@ module Customers
     private
 
     attr_reader :customer, :args
+    def_delegators :customer, :organization
 
     def valid_metadata_count?(metadata:)
       return true if metadata.blank?

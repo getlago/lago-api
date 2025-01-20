@@ -25,9 +25,12 @@ RSpec.describe Customers::UpdateService, type: :service do
         external_id:,
         shipping_address: {
           city: 'Paris'
-        }
+        },
+        account_type: account_type
       }
     end
+
+    let(:account_type) { "customer" }
 
     it 'updates a customer and calls SendWebhookJob' do
       allow(SendWebhookJob).to receive(:perform_later)
@@ -47,16 +50,47 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
+    context "when updating account_type to partner" do
+      let(:customer) do
+        create(
+          :customer,
+          organization:,
+          exclude_from_dunning_campaign: false,
+          applied_dunning_campaign: dunning_campaign
+        )
+      end
+
+      let(:dunning_campaign) { create(:dunning_campaign) }
+
+      let(:organization) do
+        create(:organization, premium_integrations: ["auto_dunning"])
+      end
+
+      let(:account_type) { "partner" }
+
+      it "does not change the account_type" do
+        result = customers_service.call
+
+        updated_customer = result.customer
+        expect(updated_customer.name).to eq(update_args[:name])
+        expect(updated_customer).to be_customer_account
+        expect(updated_customer).not_to be_exclude_from_dunning_campaign
+        expect(updated_customer.applied_dunning_campaign).to eq dunning_campaign
+      end
+    end
+
     context 'with premium features' do
       around { |test| lago_premium!(&test) }
 
       let(:update_args) do
         {
           id: customer.id,
+          name: "Updated customer name",
           timezone: 'Europe/Paris',
           billing_configuration: {
             invoice_grace_period: 3
-          }
+          },
+          account_type:
         }
       end
 
@@ -69,6 +103,48 @@ RSpec.describe Customers::UpdateService, type: :service do
 
           billing = update_args[:billing_configuration]
           expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
+        end
+      end
+
+      context "when revenue_share feature is enabled and updates account_type to partner" do
+        let(:organization) do
+          create(:organization, premium_integrations: %w[revenue_share auto_dunning])
+        end
+
+        let(:customer) do
+          create(
+            :customer,
+            organization:,
+            exclude_from_dunning_campaign: false,
+            applied_dunning_campaign: dunning_campaign
+          )
+        end
+
+        let(:dunning_campaign) { create(:dunning_campaign) }
+
+        let(:account_type) { "partner" }
+
+        it "updates the customer as partner" do
+          result = customers_service.call
+
+          updated_customer = result.customer
+          expect(updated_customer.name).to eq(update_args[:name])
+          expect(updated_customer).to be_partner_account
+          expect(updated_customer).to be_exclude_from_dunning_campaign
+          expect(updated_customer.applied_dunning_campaign).to be_nil
+        end
+
+        context "when customer is attached to a subscription" do
+          before do
+            create(:subscription, customer:)
+          end
+
+          it "does not update the account_type" do
+            result = customers_service.call
+
+            updated_customer = result.customer
+            expect(updated_customer).to be_customer_account
+          end
         end
       end
     end
@@ -129,6 +205,8 @@ RSpec.describe Customers::UpdateService, type: :service do
     end
 
     context 'when attached to a subscription' do
+      let(:account_type) { "partner" }
+
       before do
         subscription = create(:subscription, customer:)
         customer.update!(currency: subscription.plan.amount_currency)
@@ -138,10 +216,9 @@ RSpec.describe Customers::UpdateService, type: :service do
         result = customers_service.call
 
         updated_customer = result.customer
-        aggregate_failures do
-          expect(updated_customer.name).to eq('Updated customer name')
-          expect(updated_customer.external_id).to eq(customer.external_id)
-        end
+        expect(updated_customer.name).to eq('Updated customer name')
+        expect(updated_customer.external_id).to eq(customer.external_id)
+        expect(updated_customer.account_type).to eq customer.account_type
       end
 
       context 'when updating the currency' do

@@ -8376,6 +8376,7 @@ input UpdateCreditNoteInput {
 Update Customer input arguments
 """
 input UpdateCustomerInput {
+  accountType: CustomerAccountTypeEnum
   addressLine1: String
   addressLine2: String
   applicableInvoiceCustomSectionIds: [ID!]
