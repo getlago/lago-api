@@ -1,14 +1,16 @@
+# frozen_string_literal: true
+
 module Types
   module Payables
     class Object < Types::BaseUnion
       graphql_name 'Payable'
 
-      possible_types Types::Payments::Object, Types::PaymentRequests::Object
+      possible_types Types::Invoices::Object, Types::PaymentRequests::Object
 
       def self.resolve_type(object, _context)
         case object.class.to_s
-        when 'Payment'
-          Types::Payments::Object
+        when 'Invoice'
+          Types::Invoices::Object
         when 'PaymentRequest'
           Types::PaymentRequests::Object
         else

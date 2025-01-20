@@ -6241,7 +6241,7 @@ type OverdueBalanceCollection {
   metadata: CollectionMetadata!
 }
 
-union Payable = Payment | PaymentRequest
+union Payable = Invoice | PaymentRequest
 
 enum PayablePaymentStatusEnum {
   failed
@@ -6255,13 +6255,27 @@ type Payment {
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
   id: ID!
-  invoice: Invoice!
   payable: Payable!
   payablePaymentStatus: PayablePaymentStatusEnum
   paymentProvider: ProviderTypeEnum
   paymentType: PaymentTypeEnum!
   providerPaymentId: String
   reference: String
+}
+
+"""
+PaymentCollection type
+"""
+type PaymentCollection {
+  """
+  A collection of paginated PaymentCollection
+  """
+  collection: [Payment!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
 }
 
 union PaymentProvider = AdyenProvider | CashfreeProvider | GocardlessProvider | StripeProvider
@@ -6971,6 +6985,11 @@ type Query {
   Query payment requests of an organization
   """
   paymentRequests(externalCustomerId: String, limit: Int, page: Int): PaymentRequestCollection!
+
+  """
+  Query payments of an organization
+  """
+  payments(invoiceId: ID, limit: Int, page: Int): PaymentCollection!
 
   """
   Query a single plan of an organization
