@@ -68,7 +68,7 @@ RSpec.describe Customers::UpdateService, type: :service do
 
       let(:account_type) { "partner" }
 
-      it "updates the customer without changing the account_type" do
+      it "does not change the account_type" do
         result = customers_service.call
 
         updated_customer = result.customer
