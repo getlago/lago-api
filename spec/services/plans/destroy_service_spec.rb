@@ -36,32 +36,6 @@ RSpec.describe Plans::DestroyService, type: :service do
       end
     end
 
-    it 'calls SegmentTrackJob' do
-      allow(SegmentTrackJob).to receive(:perform_later)
-
-      destroy_service.call
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'plan_deleted',
-        properties: {
-          code: plan.code,
-          name: plan.name,
-          description: plan.description,
-          plan_interval: plan.interval,
-          plan_amount_cents: plan.amount_cents,
-          plan_period: 'arrears',
-          trial: plan.trial_period,
-          nb_charges: plan.charges.count,
-          nb_standard_charges: 0,
-          nb_percentage_charges: 0,
-          nb_graduated_charges: 0,
-          nb_package_charges: 0,
-          organization_id: plan.organization_id
-        }
-      )
-    end
-
     context 'with active subscriptions' do
       let(:subscriptions) { create_list(:subscription, 2, plan:) }
 

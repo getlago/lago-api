@@ -38,7 +38,6 @@ module AppliedCoupons
       end
 
       result.applied_coupon = applied_coupon
-      track_applied_coupon_created(result.applied_coupon)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -93,19 +92,6 @@ module AppliedCoupons
         .joins(:billable_metric)
         .where(billable_metric: {id: coupon.coupon_targets.select(:billable_metric_id)})
         .select(:plan_id)
-    end
-
-    def track_applied_coupon_created(applied_coupon)
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: 'applied_coupon_created',
-        properties: {
-          customer_id: applied_coupon.customer.id,
-          coupon_code: applied_coupon.coupon.code,
-          coupon_name: applied_coupon.coupon.name,
-          organization_id: applied_coupon.coupon.organization_id
-        }
-      )
     end
   end
 end

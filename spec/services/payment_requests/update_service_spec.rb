@@ -16,28 +16,10 @@ RSpec.describe PaymentRequests::UpdateService do
   let(:update_args) { {payment_status: "succeeded"} }
 
   describe "#call" do
-    before do
-      allow(SegmentTrackJob).to receive(:perform_later)
-    end
-
     it "updates the invoice", :aggregate_failures do
       expect(result).to be_success
       expect(result.payable).to eq(payment_request)
       expect(result.payable).to be_payment_succeeded
-    end
-
-    it "calls SegmentTrackJob" do
-      result
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: "payment_status_changed",
-        properties: {
-          organization_id: payment_request.organization.id,
-          payment_request_id: payment_request.id,
-          payment_status: payment_request.payment_status
-        }
-      )
     end
 
     context "when payment_request does not exist" do

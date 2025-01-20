@@ -21,7 +21,6 @@ RSpec.describe Invoices::UpdateService do
 
   describe 'call' do
     before do
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
     end
 
@@ -73,20 +72,6 @@ RSpec.describe Invoices::UpdateService do
             .and change(customer, :last_dunning_campaign_attempt_at).to(nil)
         end
       end
-    end
-
-    it 'calls SegmentTrackJob' do
-      result
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'payment_status_changed',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          payment_status: invoice.payment_status
-        }
-      )
     end
 
     context 'when updating payment status' do

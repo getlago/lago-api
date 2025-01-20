@@ -40,7 +40,6 @@ module Subscriptions
         result.subscription = handle_subscription
       end
 
-      track_subscription_created(result.subscription)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -182,22 +181,6 @@ module Subscriptions
       return 'upgrade' if upgrade?
 
       'create'
-    end
-
-    def track_subscription_created(subscription)
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: 'subscription_created',
-        properties: {
-          created_at: subscription.created_at,
-          customer_id: subscription.customer_id,
-          plan_code: subscription.plan.code,
-          plan_name: subscription.plan.name,
-          subscription_type:,
-          organization_id: subscription.organization.id,
-          billing_time: subscription.billing_time
-        }
-      )
     end
 
     def currency_missmatch?(old_plan, new_plan)

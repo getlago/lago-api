@@ -26,22 +26,6 @@ RSpec.describe Customers::DestroyService, type: :service do
         .with(customer_id: customer.id)
     end
 
-    it 'calls SegmentTrackJob' do
-      allow(SegmentTrackJob).to receive(:perform_later)
-
-      customer = destroy_service.call.customer
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'customer_deleted',
-        properties: {
-          customer_id: customer.id,
-          deleted_at: customer.deleted_at,
-          organization_id: customer.organization_id
-        }
-      )
-    end
-
     context 'when customer is not found' do
       let(:customer) { nil }
 

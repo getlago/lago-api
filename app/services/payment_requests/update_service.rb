@@ -25,7 +25,6 @@ module PaymentRequests
       payable.save!
 
       if payable.saved_change_to_payment_status?
-        track_payment_status_changed
         deliver_webhook if webhook_notification
       end
 
@@ -41,18 +40,6 @@ module PaymentRequests
 
     def valid_payment_status?(payment_status)
       PaymentRequest::PAYMENT_STATUS.include?(payment_status&.to_sym)
-    end
-
-    def track_payment_status_changed
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: "payment_status_changed",
-        properties: {
-          organization_id: payable.organization.id,
-          payment_request_id: payable.id,
-          payment_status: payable.payment_status
-        }
-      )
     end
 
     def deliver_webhook

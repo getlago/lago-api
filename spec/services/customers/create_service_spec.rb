@@ -35,7 +35,6 @@ RSpec.describe Customers::CreateService, type: :service do
     end
 
     before do
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(SendWebhookJob).to receive(:perform_later)
       allow(CurrentContext).to receive(:source).and_return('api')
     end
@@ -101,24 +100,6 @@ RSpec.describe Customers::CreateService, type: :service do
       ).customer
 
       expect(SendWebhookJob).to have_received(:perform_later).with('customer.created', customer)
-    end
-
-    it 'calls SegmentTrackJob' do
-      customer = customers_service.create_from_api(
-        organization:,
-        params: create_args
-      ).customer
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'customer_created',
-        properties: {
-          customer_id: customer.id,
-          created_at: customer.created_at,
-          payment_provider: customer.payment_provider,
-          organization_id: customer.organization_id
-        }
-      )
     end
 
     context "with account_type 'partner'" do
@@ -1119,7 +1100,6 @@ RSpec.describe Customers::CreateService, type: :service do
     end
 
     before do
-      allow(SegmentTrackJob).to receive(:perform_later)
       allow(SendWebhookJob).to receive(:perform_later)
       allow(CurrentContext).to receive(:source).and_return('graphql')
     end
@@ -1152,21 +1132,6 @@ RSpec.describe Customers::CreateService, type: :service do
     it 'calls SendWebhookJob with customer.created' do
       customer = customers_service.create(**create_args).customer
       expect(SendWebhookJob).to have_received(:perform_later).with('customer.created', customer)
-    end
-
-    it 'calls SegmentTrackJob' do
-      customer = customers_service.create(**create_args).customer
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: 'customer_created',
-        properties: {
-          customer_id: customer.id,
-          created_at: customer.created_at,
-          payment_provider: customer.payment_provider,
-          organization_id: customer.organization_id
-        }
-      )
     end
 
     context 'with premium features' do

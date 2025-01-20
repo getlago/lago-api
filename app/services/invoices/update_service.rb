@@ -55,7 +55,6 @@ module Invoices
 
       if params.key?(:payment_status)
         handle_prepaid_credits(params[:payment_status])
-        track_payment_status_changed
         deliver_webhook if old_payment_status != params[:payment_status] && invoice.visible?
         Invoices::UpdateFeesPaymentStatusJob.perform_later(invoice)
       end
@@ -73,18 +72,6 @@ module Invoices
 
     def valid_payment_status?(payment_status)
       Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
-    end
-
-    def track_payment_status_changed
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: 'payment_status_changed',
-        properties: {
-          organization_id: invoice.organization.id,
-          invoice_id: invoice.id,
-          payment_status: invoice.payment_status
-        }
-      )
     end
 
     def handle_prepaid_credits(payment_status)

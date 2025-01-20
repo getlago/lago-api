@@ -12,7 +12,6 @@ module Customers
       return result.not_found_failure!(resource: 'customer') unless customer
 
       customer.discard!
-      track_customer_deleted
 
       Customers::TerminateRelationsJob.perform_later(customer_id: customer.id)
 
@@ -23,17 +22,5 @@ module Customers
     private
 
     attr_reader :customer
-
-    def track_customer_deleted
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: 'customer_deleted',
-        properties: {
-          customer_id: customer.id,
-          organization_id: customer.organization_id,
-          deleted_at: customer.deleted_at
-        }
-      )
-    end
   end
 end

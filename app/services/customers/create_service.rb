@@ -118,7 +118,6 @@ module Customers
         SendWebhookJob.perform_later('customer.updated', customer)
       end
 
-      track_customer_created(customer)
       result
     rescue BaseService::ServiceFailure => e
       result.single_validation_failure!(error_code: e.code)
@@ -220,7 +219,6 @@ module Customers
       )
 
       SendWebhookJob.perform_later('customer.created', customer)
-      track_customer_created(customer)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -336,19 +334,6 @@ module Customers
         params: billing_configuration,
         async: !(billing_configuration || {})[:sync]
       ).call.raise_if_error!
-    end
-
-    def track_customer_created(customer)
-      SegmentTrackJob.perform_later(
-        membership_id: CurrentContext.membership,
-        event: "customer_created",
-        properties: {
-          customer_id: customer.id,
-          created_at: customer.created_at,
-          payment_provider: customer.payment_provider,
-          organization_id: customer.organization_id
-        }
-      )
     end
 
     def should_create_billing_configuration?(billing, customer)
