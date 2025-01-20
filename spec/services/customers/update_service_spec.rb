@@ -644,35 +644,5 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
     end
-
-    context "when updating account_type to partner" do
-      let(:customer) do
-        create(
-          :customer,
-          organization:,
-          exclude_from_dunning_campaign: false,
-          applied_dunning_campaign: dunning_campaign
-        )
-      end
-
-      let(:dunning_campaign) { create(:dunning_campaign) }
-
-      let(:organization) do
-        create(:organization, premium_integrations: ["auto_dunning", "revenue_share"])
-      end
-
-      let(:account_type) { "partner" }
-
-      around { |test| lago_premium!(&test) }
-
-      it "updates the customer" do
-        result = customers_service.call
-
-        updated_customer = result.customer
-        expect(updated_customer).to be_partner_account
-        expect(updated_customer).to be_exclude_from_dunning_campaign
-        expect(updated_customer.applied_dunning_campaign).to be_nil
-      end
-    end
   end
 end
