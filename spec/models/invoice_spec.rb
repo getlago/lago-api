@@ -389,6 +389,7 @@ RSpec.describe Invoice, type: :model do
 
         context 'when invoice is self_billed' do
           let(:invoice) { create(:invoice, customer:, organization:, status:, self_billed: true) }
+          let(:sync_invoices) { true }
 
           it 'returns false' do
             expect(method_call).to eq(false)
