@@ -18,7 +18,6 @@ en:
     date_to: to
     details: "%{resource} details"
     document_name: Invoice
-    document_name_self_billed: Self billing invoice
     document_tax_name: Tax invoice
     due_date: Due %{date}
     fee_prorated: The fee is prorated on days of usage, the displayed unit price is an average
@@ -38,6 +37,9 @@ en:
     monthly: Monthly
     notice_full: Regardless of when an event is received, the unit is not prorated, we charge the full price.
     notice_prorated: If a unit is added or removed during the monthly plan, we calculate the prorated price based on the ratio of days remaining or used to the total number of days in the plan. For instance, if 15 days are left in the plan, we multiply the price by 15/%{days_in_month}, and if a unit was used for 10 days, we multiply the price by 10/%{days_in_month}.
+    self_billed:
+      document_name: Self billing invoice
+      footer: Self-billed invoice. The partner has agreed not to issue their own invoice for this transaction.
     package:
       fee_per_package: Fee per package
       fee_per_package_unit_price: "%{amount} per %{package_size}"
