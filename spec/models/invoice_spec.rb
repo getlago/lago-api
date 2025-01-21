@@ -1493,7 +1493,7 @@ RSpec.describe Invoice, type: :model do
         allow(invoice).to receive(:available_to_credit_amount_cents).and_return(1000)
       end
 
-      fit 'returns the minimum of refundable amount and wallet balance' do
+      it 'returns the minimum of refundable amount and wallet balance' do
         expect(invoice.refundable_amount_cents).to eq(500)
       end
 

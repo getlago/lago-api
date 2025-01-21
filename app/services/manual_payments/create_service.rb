@@ -25,14 +25,16 @@ module ManualPayments
           payment_type: :manual,
           created_at: parsed_paid_at
         )
-
-        invoice.update!(total_paid_amount_cents: invoice.total_paid_amount_cents + amount_cents)
-
         result.payment = payment
 
-        if invoice.payments.where(payable_payment_status: 'succeeded').sum(:amount_cents) == invoice.total_amount_cents
-          payment.payable.update!(payment_status: 'succeeded')
+        total_paid_amount_cents = invoice.payments.where(payable_payment_status: :succeeded).sum(:amount_cents)
+        invoice.total_paid_amount_cents = total_paid_amount_cents
+
+        if total_paid_amount_cents == invoice.total_amount_cents
+          invoice.payment_status = 'succeeded'
         end
+
+        invoice.save!
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment&.should_sync_payment?
       end

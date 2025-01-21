@@ -13,7 +13,8 @@ RSpec.describe Invoices::UpdateService do
 
   let(:update_args) do
     {
-      payment_status: 'succeeded'
+      payment_status: 'succeeded',
+      total_paid_amount_cents: 100
     }
   end
 
@@ -30,7 +31,8 @@ RSpec.describe Invoices::UpdateService do
         expect(result.invoice).to eq(invoice)
         expect(result.invoice).to have_attributes(
           payment_overdue: false,
-          payment_status: update_args[:payment_status]
+          payment_status: update_args[:payment_status],
+          total_paid_amount_cents: update_args[:total_paid_amount_cents]
         )
       end
     end

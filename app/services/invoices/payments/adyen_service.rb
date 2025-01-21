@@ -72,7 +72,7 @@ module Invoices
           payable: invoice,
           payment_provider_id: adyen_payment_provider.id,
           payment_provider_customer_id: customer.adyen_customer.id,
-          amount_cents: invoice.total_amount_cents,
+          amount_cents: invoice.total_due_amount_cents,
           amount_currency: invoice.currency.upcase,
           provider_payment_id:
         )
@@ -177,12 +177,19 @@ module Invoices
       end
 
       def update_invoice_payment_status(payment_status:, deliver_webhook: true)
+        params = {
+          payment_status:,
+          ready_for_payment_processing: payment_status.to_sym != :succeeded
+        }
+
+        if payment_status.to_sym == :succeeded
+          total_paid_amount_cents = invoice.payments.where(payable_payment_status: :succeeded).sum(:amount_cents)
+          params[:total_paid_amount_cents] = total_paid_amount_cents
+        end
+
         result = Invoices::UpdateService.call(
           invoice:,
-          params: {
-            payment_status:,
-            ready_for_payment_processing: payment_status.to_sym != :succeeded
-          },
+          params:,
           webhook_notification: deliver_webhook
         )
         result.raise_if_error!
