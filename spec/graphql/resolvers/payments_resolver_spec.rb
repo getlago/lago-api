@@ -11,6 +11,7 @@ RSpec.describe Resolvers::PaymentsResolver, type: :graphql do
           collection {
             id
             amountCents
+            customer { id }
             paymentProviderType
             payable {
               ... on Invoice { id }
@@ -56,5 +57,6 @@ RSpec.describe Resolvers::PaymentsResolver, type: :graphql do
     expect(payments_response["collection"].first["amountCents"]).to eq(payment.amount_cents.to_s)
     expect(payments_response["collection"].first["paymentProviderType"]).to eq("stripe")
     expect(payments_response["collection"].first["payable"]["id"]).to eq(invoice1.id)
+    expect(payments_response["collection"].first["customer"]["id"]).to eq(customer.id)
   end
 end

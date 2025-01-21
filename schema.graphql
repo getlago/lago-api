@@ -6254,6 +6254,7 @@ type Payment {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
+  customer: Customer!
   id: ID!
   payable: Payable!
   payablePaymentStatus: PayablePaymentStatusEnum
