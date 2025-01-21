@@ -298,8 +298,13 @@ class Invoice < ApplicationRecord
   def refundable_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft? || !payment_succeeded?
 
-    amount = total_paid_amount_cents -
-      credit_notes.sum(:refund_amount_cents) -
+    base_amount = if credit?
+      available_to_credit_amount_cents
+    else
+      total_paid_amount_cents - credit_notes.sum("refund_amount_cents + credit_amount_cents")
+    end
+
+    amount = base_amount -
       credits.where(before_taxes: false).sum(:amount_cents) -
       prepaid_credit_amount_cents
     amount = amount.negative? ? 0 : amount
