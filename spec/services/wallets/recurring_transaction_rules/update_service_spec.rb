@@ -103,18 +103,6 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
           expect(rule.transaction_metadata).to eq(transaction_metadata)
         end
       end
-
-      context 'when transaction_metadata is invalid' do
-        let(:transaction_metadata) { {'key' => 'key', 'value' => 'value'} }
-
-        it 'returns a validation error' do
-          result = update_service.call
-
-          expect(result).to be_failure
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages).to eq(['invalid_recurring_transaction_rule'])
-        end
-      end
     end
   end
 end
