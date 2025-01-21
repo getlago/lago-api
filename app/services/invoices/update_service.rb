@@ -39,6 +39,10 @@ module Invoices
         invoice.ready_for_payment_processing = params[:ready_for_payment_processing]
       end
 
+      if params.key?(:total_paid_amount_cents) && params[:total_paid_amount_cents].present?
+        invoice.total_paid_amount_cents = params[:total_paid_amount_cents]
+      end
+
       ActiveRecord::Base.transaction do
         if invoice.payment_overdue? && invoice.payment_succeeded?
           invoice.payment_overdue = false
