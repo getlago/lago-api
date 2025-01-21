@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_01_14_172823) do
+ActiveRecord::Schema[7.1].define(version: 2025_01_20_151959) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -679,6 +679,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_01_14_172823) do
     t.index ["invoice_id"], name: "index_fees_on_invoice_id"
     t.index ["invoiceable_type", "invoiceable_id"], name: "index_fees_on_invoiceable"
     t.index ["organization_id"], name: "index_fees_on_organization_id"
+    t.index ["pay_in_advance_event_transaction_id", "charge_id", "charge_filter_id"], name: "idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167", unique: true, where: "((created_at > '2025-01-21 00:00:00'::timestamp without time zone) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true))"
     t.index ["pay_in_advance_event_transaction_id"], name: "index_fees_on_pay_in_advance_event_transaction_id", where: "(deleted_at IS NULL)"
     t.index ["subscription_id"], name: "index_fees_on_subscription_id"
     t.index ["true_up_parent_fee_id"], name: "index_fees_on_true_up_parent_fee_id"
