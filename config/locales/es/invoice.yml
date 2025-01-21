@@ -36,9 +36,6 @@ es:
     monthly: Mensual
     notice_full: Independientemente de cuándo se reciba un evento, la unidad no se prorratea, cobramos el precio completo.
     notice_prorated: Si se agrega o se elimina una unidad durante el plan mensual, calculamos el precio prorrateado en función de la proporción de días restantes o utilizados con respecto al número total de días en el plan. Por ejemplo, si quedan 15 días en el plan, multiplicamos el precio por 15/%{days_in_month}, y si una unidad se usó durante 10 días, multiplicamos el precio por 10/%{days_in_month}.
-    self_billed:
-      document_name: Factura de autofacturación
-      footer: Factura autofacturada. El socio ha aceptado no emitir su propia factura para esta transacción.
     package:
       fee_per_package: Tarifa por paquete
       fee_per_package_unit_price: "%{amount} por %{package_size}"
@@ -63,6 +60,9 @@ es:
     quarterly: Trimestral
     reached_usage_threshold: Esta facturación progresiva se genera porque su uso acumulado ha alcanzado los %{usage_amount}, superando el umbral de %{threshold_amount}.
     see_breakdown: Consulte el desglose a continuación
+    self_billed:
+      document_name: Factura de autofacturación
+      footer: Factura autofacturada. El socio ha aceptado no emitir su propia factura para esta transacción.
     sub_total: Subtotal
     sub_total_with_tax: Subtotal (impuestos incl.)
     sub_total_without_tax: Subtotal (impuestos excl.)
