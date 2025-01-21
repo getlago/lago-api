@@ -60,7 +60,8 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
       expect(result.payment.payable_payment_status).to eq("succeeded")
       expect(result.invoice.reload).to have_attributes(
         payment_status: "succeeded",
-        ready_for_payment_processing: false
+        ready_for_payment_processing: false,
+        total_paid_amount_cents: 200
       )
     end
 

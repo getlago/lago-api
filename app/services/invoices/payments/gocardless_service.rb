@@ -41,12 +41,19 @@ module Invoices
       delegate :organization, :customer, to: :invoice
 
       def update_invoice_payment_status(payment_status:, deliver_webhook: true)
+        params = {
+          payment_status:,
+          ready_for_payment_processing: payment_status.to_sym != :succeeded
+        }
+
+        if payment_status.to_sym == :succeeded
+          total_paid_amount_cents = result.invoice.payments.where(payable_payment_status: :succeeded).sum(:amount_cents)
+          params[:total_paid_amount_cents] = total_paid_amount_cents
+        end
+
         update_invoice_result = Invoices::UpdateService.call(
           invoice: result.invoice,
-          params: {
-            payment_status:,
-            ready_for_payment_processing: payment_status.to_sym != :succeeded
-          },
+          params:,
           webhook_notification: deliver_webhook
         )
         update_invoice_result.raise_if_error!

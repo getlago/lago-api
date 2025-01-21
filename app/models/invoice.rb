@@ -50,12 +50,14 @@ class Invoice < ApplicationRecord
     :sub_total_excluding_taxes_amount_cents,
     :sub_total_including_taxes_amount_cents,
     :total_amount_cents,
+    :total_paid_amount_cents,
     :taxes_amount_cents,
     with_model_currency: :currency
 
   # NOTE: Readonly fields
   monetize :charge_amount_cents,
     :subscription_amount_cents,
+    :total_due_amount_cents,
     disable_validation: true,
     allow_nil: true,
     with_model_currency: :currency
@@ -255,6 +257,10 @@ class Invoice < ApplicationRecord
       number_of_days:,
       period_duration: date_service.charges_duration_in_days
     }
+  end
+
+  def total_due_amount_cents
+    total_amount_cents - total_paid_amount_cents
   end
 
   # amount cents onto which we can issue a credit note
