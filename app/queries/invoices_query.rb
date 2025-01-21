@@ -21,6 +21,7 @@ class InvoicesQuery < BaseQuery
     invoices = with_amount_range(invoices) if filters.amount_from.present? || filters.amount_to.present?
     invoices = with_metadata(invoices) if filters.metadata.present?
     invoices = with_partially_paid(invoices) unless filters.partially_paid.nil?
+    invoices = with_positive_due_amount(invoices) unless filters.positive_due_amount.nil?
     invoices = with_self_billed(invoices) unless filters.self_billed.nil?
 
     result.invoices = invoices
@@ -88,6 +89,15 @@ class InvoicesQuery < BaseQuery
 
   def with_payment_overdue(scope)
     scope.where(payment_overdue: filters.payment_overdue)
+  end
+
+  def with_positive_due_amount(scope)
+    positive_due_amount = ActiveModel::Type::Boolean.new.cast(filters.positive_due_amount)
+
+    if positive_due_amount
+      scope = scope.where("total_amount_cents - total_paid_amount_cents > 0")
+    end
+    scope
   end
 
   def with_partially_paid(scope)

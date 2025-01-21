@@ -4461,6 +4461,7 @@ enum IntegrationTypeEnum {
   api_permissions
   auto_dunning
   hubspot
+  manual_payments
   netsuite
   okta
   progressive_billing
@@ -6500,6 +6501,7 @@ enum PremiumIntegrationTypeEnum {
   api_permissions
   auto_dunning
   hubspot
+  manual_payments
   netsuite
   okta
   progressive_billing
@@ -6924,9 +6926,11 @@ type Query {
     issuingDateTo: ISO8601Date
     limit: Int
     page: Int
+    partiallyPaid: Boolean
     paymentDisputeLost: Boolean
     paymentOverdue: Boolean
     paymentStatus: [InvoicePaymentStatusTypeEnum!]
+    positiveDueAmount: Boolean
     searchTerm: String
     selfBilled: Boolean
     status: [InvoiceStatusTypeEnum!]

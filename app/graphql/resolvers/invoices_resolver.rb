@@ -19,9 +19,11 @@ module Resolvers
     argument :issuing_date_to, GraphQL::Types::ISO8601Date, required: false
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
+    argument :partially_paid, Boolean, required: false
     argument :payment_dispute_lost, Boolean, required: false
     argument :payment_overdue, Boolean, required: false
     argument :payment_status, [Types::Invoices::PaymentStatusTypeEnum], required: false
+    argument :positive_due_amount, Boolean, required: false
     argument :search_term, String, required: false
     argument :self_billed, Boolean, required: false
     argument :status, [Types::Invoices::StatusTypeEnum], required: false
@@ -41,6 +43,8 @@ module Resolvers
       page: nil,
       payment_dispute_lost: nil,
       payment_overdue: nil,
+      partially_paid: nil,
+      positive_due_amount: nil
       payment_status: nil,
       search_term: nil,
       self_billed: nil,
@@ -53,6 +57,12 @@ module Resolvers
         filters: {
           amount_from:,
           amount_to:,
+          partially_paid:,
+          payment_status:,
+          payment_dispute_lost:,
+          payment_overdue:,
+          positive_due_amount:,
+          status:,
           currency:,
           customer_external_id:,
           customer_id:,
