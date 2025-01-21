@@ -68,12 +68,10 @@ RSpec.describe Coupons::PreviewService do
     it 'updates the invoice accordingly' do
       result = preview_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.invoice.coupons_amount_cents).to eq(28)
-        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(72)
-        expect(result.invoice.credits.length).to eq(2)
-      end
+      expect(result).to be_success
+      expect(result.invoice.coupons_amount_cents).to eq(28)
+      expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(72)
+      expect(result.invoice.credits.length).to eq(2)
     end
 
     context 'when first coupon covers the invoice' do
@@ -92,12 +90,10 @@ RSpec.describe Coupons::PreviewService do
       it 'updates the invoice accordingly and spends only the first coupon' do
         result = preview_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(5)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(0)
-          expect(result.invoice.credits.length).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(5)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(0)
+        expect(result.invoice.credits.length).to eq(1)
       end
     end
 
@@ -116,12 +112,10 @@ RSpec.describe Coupons::PreviewService do
       it 'updates the invoice accordingly' do
         result = preview_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(30)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
-          expect(result.invoice.credits.length).to eq(2)
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(30)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
+        expect(result.invoice.credits.length).to eq(2)
       end
     end
 
@@ -139,12 +133,10 @@ RSpec.describe Coupons::PreviewService do
       it 'updates the invoice accordingly' do
         result = preview_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(32)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(68)
-          expect(result.invoice.credits.length).to eq(2)
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(32)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(68)
+        expect(result.invoice.credits.length).to eq(2)
       end
     end
 
@@ -199,12 +191,10 @@ RSpec.describe Coupons::PreviewService do
       it 'ignores coupons' do
         result = preview_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(0)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(100)
-          expect(result.invoice.credits.length).to be_zero
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(0)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(100)
+        expect(result.invoice.credits.length).to be_zero
       end
     end
 
@@ -242,12 +232,10 @@ RSpec.describe Coupons::PreviewService do
       it 'ignores only one coupon and applies the other one' do
         result = preview_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(20)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(80)
-          expect(result.invoice.credits.length).to eq(1)
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(20)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(80)
+        expect(result.invoice.credits.length).to eq(1)
       end
     end
 
@@ -285,12 +273,10 @@ RSpec.describe Coupons::PreviewService do
       it 'applies two coupons' do
         result = preview_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.coupons_amount_cents).to eq(30)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
-          expect(result.invoice.credits.length).to eq(2)
-        end
+        expect(result).to be_success
+        expect(result.invoice.coupons_amount_cents).to eq(30)
+        expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(70)
+        expect(result.invoice.credits.length).to eq(2)
       end
     end
   end

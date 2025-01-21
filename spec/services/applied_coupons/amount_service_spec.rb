@@ -17,10 +17,8 @@ RSpec.describe AppliedCoupons::AmountService do
     it 'calculates amount' do
       result = amount_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.amount).to eq(12)
-      end
+      expect(result).to be_success
+      expect(result.amount).to eq(12)
     end
 
     context 'when base_amount_cents is equal to 0' do
@@ -57,10 +55,8 @@ RSpec.describe AppliedCoupons::AmountService do
       it 'applies the remaining amount' do
         result = amount_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.amount).to eq(6)
-        end
+        expect(result).to be_success
+        expect(result.amount).to eq(6)
       end
     end
 
@@ -74,10 +70,8 @@ RSpec.describe AppliedCoupons::AmountService do
       it 'calculates amount' do
         result = amount_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.amount).to eq(60)
-        end
+        expect(result).to be_success
+        expect(result.amount).to eq(60)
       end
     end
 
@@ -98,10 +92,8 @@ RSpec.describe AppliedCoupons::AmountService do
       it 'calculates amount' do
         result = amount_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.amount).to eq(12)
-        end
+        expect(result).to be_success
+        expect(result.amount).to eq(12)
       end
 
       context 'when coupon amount is higher than invoice amount' do
@@ -133,10 +125,8 @@ RSpec.describe AppliedCoupons::AmountService do
       it 'calculates amount' do
         result = amount_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.amount).to eq(12)
-        end
+        expect(result).to be_success
+        expect(result.amount).to eq(12)
       end
 
       context 'when coupon amount is higher than invoice amount' do
@@ -170,10 +160,8 @@ RSpec.describe AppliedCoupons::AmountService do
       it 'calculates amount' do
         result = amount_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.amount).to eq(60)
-        end
+        expect(result).to be_success
+        expect(result.amount).to eq(60)
       end
     end
   end

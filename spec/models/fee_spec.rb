@@ -409,6 +409,12 @@ RSpec.describe Fee, type: :model do
     it 'returns correct value' do
       expect(fee.compute_precise_credit_amount_cents(10, 5)).to eq(800)
     end
+
+    context 'when base_amount_cents is zero' do
+      it 'returns zero' do
+        expect(fee.compute_precise_credit_amount_cents(10, 0)).to eq(0)
+      end
+    end
   end
 
   describe '#creditable_amount_cents' do
