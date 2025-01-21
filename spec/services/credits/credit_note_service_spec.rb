@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Credits::CreditNoteService do
-  subject(:credit_service) { described_class.new(invoice:) }
+  subject(:credit_service) { described_class.new(invoice:, context:) }
 
   let(:invoice) do
     create(
@@ -16,6 +16,7 @@ RSpec.describe Credits::CreditNoteService do
 
   let(:amount_cents) { 100 }
   let(:customer) { create(:customer) }
+  let(:context) { nil }
 
   let(:credit_note1) do
     create(
@@ -69,6 +70,18 @@ RSpec.describe Credits::CreditNoteService do
         expect(credit_note1).to be_consumed
 
         expect(invoice.credit_notes_amount_cents).to eq(70)
+      end
+    end
+
+    it 'creates credits in the database' do
+      expect { credit_service.call }.to change(Credit, :count).by(2)
+    end
+
+    context 'when preview mode' do
+      let(:context) { :preview }
+
+      it 'does not create credits in the database' do
+        expect { credit_service.call }.not_to change(Credit, :count)
       end
     end
 

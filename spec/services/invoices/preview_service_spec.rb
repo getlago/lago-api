@@ -93,6 +93,82 @@ RSpec.describe Invoices::PreviewService, type: :service do
           end
         end
       end
+
+      context 'with credit note credits' do
+        let(:credit_note) do
+          create(
+            :credit_note,
+            customer:,
+            total_amount_cents: 2,
+            total_amount_currency: plan.amount_currency,
+            balance_amount_cents: 2,
+            balance_amount_currency: plan.amount_currency,
+            credit_amount_cents: 2,
+            credit_amount_currency: plan.amount_currency
+          )
+        end
+
+        before { credit_note }
+
+        it 'creates preview invoice for 2 days with credits included' do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.subscriptions.first).to eq(subscription)
+            expect(result.invoice.fees.length).to eq(1)
+            expect(result.invoice.invoice_type).to eq('subscription')
+            expect(result.invoice.issuing_date.to_s).to eq('2024-04-01')
+            expect(result.invoice.fees_amount_cents).to eq(6)
+            expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(6)
+            expect(result.invoice.taxes_amount_cents).to eq(3)
+            expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(9)
+            expect(result.invoice.credit_notes_amount_cents).to eq(2)
+            expect(result.invoice.total_amount_cents).to eq(7)
+          end
+        end
+      end
+
+      context 'with wallet credits' do
+        let(:wallet) { build(:wallet, customer:, balance: '0.03', credits_balance: '0.03') }
+
+        before { wallet }
+
+        context 'with customer that is not persisted' do
+          it 'does not apply credits' do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.total_amount_cents).to eq(9)
+              expect(result.invoice.prepaid_credit_amount_cents).to eq(0)
+            end
+          end
+        end
+
+        context 'with customer that is persisted' do
+          let(:customer) { create(:customer, organization:) }
+          let(:wallet) { create(:wallet, customer:, balance: '0.03', credits_balance: '0.03') }
+
+          it 'applies credits' do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.subscriptions.first).to eq(subscription)
+              expect(result.invoice.fees.length).to eq(1)
+              expect(result.invoice.invoice_type).to eq('subscription')
+              expect(result.invoice.issuing_date.to_s).to eq('2024-04-01')
+              expect(result.invoice.fees_amount_cents).to eq(6)
+              expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(6)
+              expect(result.invoice.taxes_amount_cents).to eq(3)
+              expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(9)
+              expect(result.invoice.prepaid_credit_amount_cents).to eq(3)
+              expect(result.invoice.total_amount_cents).to eq(6)
+            end
+          end
+        end
+      end
     end
 
     context 'with anniversary billing' do
