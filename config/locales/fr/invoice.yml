@@ -37,6 +37,9 @@ fr:
     monthly: mensuel
     notice_full: Peu importe quand l’évènement de consommation est reçu, l'unité n'est pas proratisée et nous facturons le prix complet.
     notice_prorated: Si une unité est ajoutée ou supprimée pendant la période de facturation, nous calculons le prix au prorata en fonction du ratio des jours restants ou utilisés. Par exemple, s'il reste 15 jours dans le plan, nous multiplions le prix par 15/%{days_in_month}, et si une unité a été utilisée pendant 10 jours, nous multiplions le prix par 10/%{days_in_month}.
+    self_billed:
+      document_name: Facture d'autofacturation
+      footer: Facture autofacturée. Le partenaire a accepté de ne pas émettre sa propre facture pour cette transaction.
     package:
       fee_per_package: Frais par tranche
       fee_per_package_unit_price: "%{amount} par tranche de %{package_size}"

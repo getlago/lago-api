@@ -37,6 +37,9 @@ de:
     monthly: Monatlich
     notice_full: Unabhängig davon, wann ein Ereignis empfangen wird, wird die Einheit nicht anteilig berechnet, wir berechnen den vollen Preis.
     notice_prorated: Wenn eine Einheit während des Abrechnungszeitraums hinzugefügt oder entfernt wird, berechnen wir den anteiligen Preis basierend auf dem Verhältnis der verbleibenden oder genutzten Tage zur Gesamtzahl der Tage im Plan. Zum Beispiel, wenn noch 15 Tage im Plan verbleiben, multiplizieren wir den Preis mit 15/%{days_in_month}, und wenn eine Einheit für 10 Tage genutzt wurde, multiplizieren wir den Preis mit 10/%{days_in_month}.
+    self_billed:
+      document_name: Selbstabrechnungsrechnung
+      footer: Selbstabgerechnete Rechnung. Der Partner hat zugestimmt, für diese Transaktion keine eigene Rechnung auszustellen.
     package:
       fee_per_package: Gebühr pro Paket
       fee_per_package_unit_price: "%{amount} pro %{package_size}"

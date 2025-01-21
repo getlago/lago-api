@@ -37,6 +37,9 @@ it:
     monthly: Mensile
     notice_full: Indipendentemente da quando un evento viene ricevuto, l'unità non è prorata, addebitiamo il prezzo intero.
     notice_prorated: Se un'unità viene aggiunta o rimossa durante il piano mensile, calcoliamo il prezzo proporzionato in base al rapporto tra i giorni rimanenti o utilizzati e il numero totale di giorni nel piano. Ad esempio, se restano 15 giorni nel piano, moltiplichiamo il prezzo per 15/%{days_in_month}, e se un'unità è stata utilizzata per 10 giorni, moltiplichiamo il prezzo per 10/%{days_in_month}.
+    self_billed:
+      document_name: Fattura di autofatturazione
+      footer: Fattura autofatturata. Il partner ha accettato di non emettere la propria fattura per questa transazione.
     package:
       fee_per_package: Tassa per pacchetto
       fee_per_package_unit_price: "%{amount} per %{package_size}"

@@ -37,6 +37,9 @@ nb:
     monthly: Månedlig
     notice_full: Uavhengig av når en hendelse mottas, blir enheten ikke forholdsmessig priset, vi belaster full pris.
     notice_prorated: Hvis en enhet legges til eller fjernes i løpet av faktureringsperioden, beregner vi den proporsjonale prisen basert på forholdet mellom gjenværende eller brukte dager og det totale antallet dager i planen. For eksempel, hvis det er 15 dager igjen i planen, multipliserer vi prisen med 15/%{days_in_month}, og hvis en enhet ble brukt i 10 dager, multipliserer vi prisen med 10/%{days_in_month}.
+    self_billed:
+      document_name: Selvfakturering
+      footer: Selvfakturert faktura. Partneren har gått med på å ikke utstede sin egen faktura for denne transaksjonen.
     package:
       fee_per_package: Gebyr per pakke
       fee_per_package_unit_price: "%{amount} per %{package_size}"
