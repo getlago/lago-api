@@ -612,21 +612,50 @@ RSpec.describe InvoicesQuery, type: :query do
     let(:filters) { {metadata:} }
 
     context "when single filter provided" do
-      let(:metadata) { {red: 5} }
+      context "when value is present" do
+        let(:metadata) { {red: 5} }
+        let(:matching_invoice) { create(:invoice, organization:) }
 
-      let!(:matching_invoice) { create(:invoice, organization:) }
+        before do
+          create(:invoice_metadata, invoice: matching_invoice, key: :red, value: 5)
 
-      before do
-        create(:invoice_metadata, invoice: matching_invoice, key: :red, value: 5)
+          create(:invoice, organization:) do |invoice|
+            create(:invoice_metadata, invoice:)
+          end
+        end
 
-        create(:invoice, organization:) do |invoice|
-          create(:invoice_metadata, invoice:)
+        it "returns invoices with matching metadata filters" do
+          expect(result).to be_success
+          expect(result.invoices.pluck(:id)).to contain_exactly matching_invoice.id
         end
       end
 
-      it "returns invoices with matching metadata filters" do
-        expect(result).to be_success
-        expect(result.invoices.pluck(:id)).to contain_exactly matching_invoice.id
+      context "when value is absent" do
+        let(:metadata) { {red: ""} }
+
+        let!(:matching_invoices) do
+          [
+            create(:invoice, organization:),
+            create(:invoice, organization:) do |invoice|
+              create(:invoice_metadata, invoice:, key: :orange, value: 3)
+            end
+          ]
+        end
+
+        before do
+          create(:invoice, organization:) do |invoice|
+            create(:invoice_metadata, invoice:, key: :red, value: 5)
+          end
+
+          [invoice_first, invoice_second, invoice_third, invoice_fourth, invoice_fifth, invoice_sixth].each do |invoice|
+            create(:invoice_metadata, invoice:, key: :red, value: 5)
+          end
+        end
+
+        it "returns invoices without provided key metadata or without metadata at all" do
+          expect(result).to be_success
+          expect(result.invoices.pluck(:id)).to match_array matching_invoices.pluck(:id)
+        end
       end
     end
 
@@ -634,7 +663,8 @@ RSpec.describe InvoicesQuery, type: :query do
       let(:metadata) do
         {
           red: 5,
-          orange: 3
+          orange: 3,
+          green: ""
         }
       end
 
@@ -642,13 +672,21 @@ RSpec.describe InvoicesQuery, type: :query do
 
       before do
         matching_invoices.each do |invoice|
-          metadata.each do |key, value|
-            create(:invoice_metadata, invoice:, key:, value:)
-          end
+          create(:invoice_metadata, invoice:, key: :red, value: 5)
+          create(:invoice_metadata, invoice:, key: :orange, value: 3)
         end
 
         create(:invoice, organization:) do |invoice|
           create(:invoice_metadata, invoice:, key: :red, value: 5)
+          create(:invoice_metadata, invoice:, key: :pink, value: 7)
+        end
+
+        create(:invoice, organization:)
+
+        create(:invoice, organization:) do |invoice|
+          create(:invoice_metadata, invoice:, key: :red, value: 5)
+          create(:invoice_metadata, invoice:, key: :orange, value: 3)
+          create(:invoice_metadata, invoice:, key: :green, value: 1)
         end
       end
 
