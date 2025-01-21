@@ -18,6 +18,7 @@ en:
     date_to: to
     details: "%{resource} details"
     document_name: Invoice
+    document_name_self_billed: Self billing invoice
     document_tax_name: Tax invoice
     due_date: Due %{date}
     fee_prorated: The fee is prorated on days of usage, the displayed unit price is an average
