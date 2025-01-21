@@ -32,6 +32,13 @@ class AppliedCoupon < ApplicationRecord
     self.terminated_at ||= timestamp
     terminated!
   end
+
+  def remaining_amount
+    return @remaining_amount if defined?(@remaining_amount)
+
+    already_applied_amount = credits.sum(&:amount_cents)
+    @remaining_amount = amount_cents - already_applied_amount
+  end
 end
 
 # == Schema Information

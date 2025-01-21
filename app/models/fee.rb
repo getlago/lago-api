@@ -162,6 +162,12 @@ class Fee < ApplicationRecord
     end
   end
 
+  def compute_precise_credit_amount_cents(credit_amount, base_amount_cents)
+    return 0 if base_amount_cents.zero?
+
+    (credit_amount * (amount_cents - precise_coupons_amount_cents)).fdiv(base_amount_cents)
+  end
+
   def sub_total_excluding_taxes_amount_cents
     amount_cents - precise_coupons_amount_cents
   end
