@@ -57,6 +57,10 @@ jobs:
         run: bin/rails db:migrate:primary
       - name: dump schema
         run: LAGO_DISABLE_SCHEMA_DUMP="" bin/rails db:schema:dump:primary
+      - name: Remove dates
+        run: |
+          sed -i 's/[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\} [0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}//g' db/schema.rb
+          sed -i 's/[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\} [0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}//g' db/schema-before-dump.rb
       - name: Ensure no changes to schema.rb
         run: diff db/schema.rb db/schema-before-dump.rb
       - name: Ensure annotations are up to date
