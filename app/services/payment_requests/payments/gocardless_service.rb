@@ -32,9 +32,14 @@ module PaymentRequests
         result.payable = payment.payable
         return result if payment.payable.payment_succeeded?
 
-        payment.update!(status:)
+        payment.status = status
 
-        payable_payment_status = payment.payment_provider.determine_payment_status(status)
+        payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
+        if Payment::PAYABLE_PAYMENT_STATUS.include?(payable_payment_status)
+          payment.payable_payment_status = payable_payment_status
+        end
+        payment.save!
+
         update_payable_payment_status(payment_status: payable_payment_status)
         update_invoices_payment_status(payment_status: payable_payment_status)
         reset_customer_dunning_campaign_status(payable_payment_status)

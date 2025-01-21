@@ -15,38 +15,6 @@ module PaymentRequests
         super
       end
 
-      def call
-        result.payable = payable
-        return result unless should_process_payment?
-
-        unless payable.total_amount_cents.positive?
-          update_payable_payment_status(payment_status: :succeeded)
-          return result
-        end
-
-        payable.increment_payment_attempts!
-
-        payment = Payment.new(
-          payable: payable,
-          payment_provider_id: cashfree_payment_provider.id,
-          payment_provider_customer_id: customer.cashfree_customer.id,
-          amount_cents: payable.total_amount_cents,
-          amount_currency: payable.currency.upcase,
-          provider_payment_id: payable.id, # NOTE: We are not creating a resource on cashfree's sude.
-          status: :pending
-        )
-        payment.save!
-
-        payable_payment_status = payable_payment_status(payment.status)
-        update_payable_payment_status(payment_status: payable_payment_status)
-        update_invoices_payment_status(payment_status: payable_payment_status)
-
-        Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if payment.should_sync_payment?
-
-        result.payment = payment
-        result
-      end
-
       def generate_payment_url
         return result unless should_process_payment?
 
@@ -71,9 +39,14 @@ module PaymentRequests
         result.payable = payment.payable
         return result if payment.payable.payment_succeeded?
 
-        payment.update!(status:)
+        payment.status = status
 
-        payable_payment_status = payable_payment_status(status)
+        payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
+        if Payment::PAYABLE_PAYMENT_STATUS.include?(payable_payment_status)
+          payment.payable_payment_status = payable_payment_status
+        end
+        payment.save!
+
         update_payable_payment_status(payment_status: payable_payment_status)
         update_invoices_payment_status(payment_status: payable_payment_status)
         reset_customer_dunning_campaign_status(payable_payment_status)
@@ -150,14 +123,6 @@ module PaymentRequests
           link_partial_payments: false,
           link_auto_reminders: false
         }
-      end
-
-      def payable_payment_status(payment_status)
-        return :pending if PENDING_STATUSES.include?(payment_status)
-        return :succeeded if SUCCESS_STATUSES.include?(payment_status)
-        return :failed if FAILED_STATUSES.include?(payment_status)
-
-        payment_status
       end
 
       def update_payable_payment_status(payment_status:, deliver_webhook: true)
