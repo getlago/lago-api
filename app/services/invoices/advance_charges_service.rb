@@ -57,9 +57,9 @@ module Invoices
       reference = I18n.t("invoice.charges_paid_in_advance")
       created_at = invoice.created_at
 
-      params = {amount_cents:, reference:, created_at:}
+      params = {invoice_id: invoice.id, amount_cents:, reference:, created_at:}
 
-      ManualPayments::CreateJob.perform_later(invoice:, params:)
+      ManualPayments::CreateJob.perform_later(organization:, params:, skip_checks: true)
     end
 
     def create_group_invoice

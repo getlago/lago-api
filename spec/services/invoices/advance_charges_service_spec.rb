@@ -113,8 +113,9 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         expect(ManualPayments::CreateJob)
           .to have_been_enqueued
           .with(
-            invoice: result.invoice,
+            organization:,
             params: {
+              invoice_id: result.invoice.id,
               reference:,
               amount_cents: result.invoice.total_amount_cents,
               created_at: result.invoice.created_at
