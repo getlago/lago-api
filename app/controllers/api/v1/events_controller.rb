@@ -95,7 +95,7 @@ module Api
           render(
             json: ::CollectionSerializer.new(
               result.fees,
-              ::V1::FeesSerializer,
+              ::V1::FeeSerializer,
               collection_name: 'fees'
             )
           )

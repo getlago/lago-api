@@ -384,4 +384,86 @@ RSpec.describe Api::V1::EventsController, type: :request do
       end
     end
   end
+
+  describe 'POST /api/v1/events/estimate_instant_fees' do
+    subject do
+      post_with_token(organization, '/api/v1/events/estimate_instant_fees', event: event_params)
+    end
+
+    let(:metric) { create(:sum_billable_metric, organization:) }
+    let(:charge) { create(:percentage_charge, :pay_in_advance, plan:, billable_metric: metric, properties: {rate: '0.1', fixed_amount: '0'}) }
+
+    let(:event_params) do
+      {
+        code: metric.code,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        transaction_id: SecureRandom.uuid,
+        properties: {
+          metric.field_name => 400
+        }
+      }
+    end
+
+    before do
+      charge
+    end
+
+    include_examples 'requires API permission', 'event', 'write'
+
+    it 'returns a success' do
+      subject
+
+      expect(response).to have_http_status(:success)
+
+      expect(json[:fees].count).to eq(1)
+
+      fee = json[:fees].first
+      expect(fee[:lago_id]).to be_nil
+      expect(fee[:lago_group_id]).to be_nil
+      expect(fee[:item][:type]).to eq('charge')
+      expect(fee[:item][:code]).to eq(metric.code)
+      expect(fee[:item][:name]).to eq(metric.name)
+      expect(fee[:amount_cents]).to be_an(Integer)
+      expect(fee[:amount_currency]).to eq('EUR')
+      expect(fee[:units]).to eq('400.0')
+      expect(fee[:events_count]).to eq(1)
+    end
+
+    context 'with missing subscription id' do
+      let(:event_params) do
+        {
+          code: metric.code,
+          external_subscription_id: nil,
+          properties: {
+            foo: 'bar'
+          }
+        }
+      end
+
+      it 'returns a not found error' do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when metric code does not match an percentage charge' do
+      let(:charge) { create(:standard_charge, plan:, billable_metric: metric) }
+
+      let(:event_params) do
+        {
+          code: metric.code,
+          external_subscription_id: subscription.external_id,
+          properties: {
+            foo: 'bar'
+          }
+        }
+      end
+
+      it 'returns a validation error' do
+        subject
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+  end
 end
