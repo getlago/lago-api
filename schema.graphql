@@ -4521,6 +4521,7 @@ type Invoice {
   prepaidCreditAmountCents: BigInt!
   progressiveBillingCreditAmountCents: BigInt!
   refundableAmountCents: BigInt!
+  selfBilled: Boolean!
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
   subTotalExcludingTaxesAmountCents: BigInt!
