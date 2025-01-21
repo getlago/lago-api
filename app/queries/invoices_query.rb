@@ -116,20 +116,20 @@ class InvoicesQuery < BaseQuery
     subquery = base_scope
 
     presence_filters = filters.metadata.select { |_k, v| v.present? }
-    absence_filters = filters.metadata.select { |_k, v| !v.present? }
+    absence_filters = filters.metadata.select { |_k, v| v.blank? }
 
     presence_filters.each_with_index do |(key, value), index|
       subquery = if index.zero?
-                   subquery.where(metadata: {key:, value:})
-                 else
-                   subquery.or(base_scope.where(metadata: {key:, value:}))
-                 end
+        subquery.where(metadata: {key:, value:})
+      else
+        subquery.or(base_scope.where(metadata: {key:, value:}))
+      end
     end
 
     if presence_filters.any?
       subquery = subquery
-                   .group("invoices.id")
-                   .having("COUNT(DISTINCT metadata.key) = ?", presence_filters.size)
+        .group("invoices.id")
+        .having("COUNT(DISTINCT metadata.key) = ?", presence_filters.size)
     end
 
     if absence_filters.any?
