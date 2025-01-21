@@ -112,9 +112,9 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
       expect(partner_invoice.self_billed).to eq(true)
       expect(partner_invoice.number).to eq("#{organization.document_number_prefix}-001-001")
 
-      organization_invoices = customers.map(&:invoices).flatten
-      expect(organization_invoices.map(&:self_billed).uniq).to eq([false])
-      expect(organization_invoices.map do |inv|
+      customers_invoices = customers.map(&:invoices).flatten
+      expect(customers_invoices.map(&:self_billed)).not_to include(true)
+      expect(customers_invoices.map do |inv|
         inv.number.gsub("#{organization.document_number_prefix}-202405-", '')
       end.uniq.sort).to eq(['001', '002'])
     end
@@ -130,17 +130,16 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
       expect(partner_invoice.self_billed).to eq(true)
       expect(partner_invoice.number).to eq("#{organization.document_number_prefix}-001-002")
 
-      organization_invoices = customers.map { |c| c.invoices.where(created_at: june1) }.flatten
-      expect(organization_invoices.map(&:self_billed).uniq).to eq([false])
-      expect(organization_invoices.map do |inv|
+      customers_invoices = customers.map { |c| c.invoices.where(created_at: june1) }.flatten
+      expect(customers_invoices.map(&:self_billed).uniq).to eq([false])
+      expect(customers_invoices.map do |inv|
         inv.number.gsub("#{organization.document_number_prefix}-202406-", '')
       end.uniq.sort).to eq(['003', '004'])
     end
     update_overdue_balance
 
     # check payments
-    # partner_invoice = partner.invoices.where(created_at: may1).first
-    expect(partner.invoices.map(&:payments).flatten.count).to be(0)
+    expect(partner.invoices.map(&:payments).flatten).to be_empty
 
     # check analytics
     may_org_invoices = organization.invoices.where(self_billed: false, created_at: may1)
