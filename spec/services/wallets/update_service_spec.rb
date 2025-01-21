@@ -94,13 +94,15 @@ RSpec.describe Wallets::UpdateService, type: :service do
       around { |test| lago_premium!(&test) }
 
       let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
+      let(:transaction_metadata) { [] }
       let(:rules) do
         [
           {
             trigger: 'interval',
             interval: 'weekly',
             paid_credits: '105',
-            granted_credits: '105'
+            granted_credits: '105',
+            transaction_metadata:
           }
         ]
       end
@@ -269,6 +271,17 @@ RSpec.describe Wallets::UpdateService, type: :service do
             }
           ]
         end
+
+        it 'returns an error' do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:recurring_transaction_rules]).to eq(['invalid_recurring_rule'])
+        end
+      end
+
+      context 'when transaction_rule.transaction_metadata is hash' do
+        let(:transaction_metadata) { {} }
 
         it 'returns an error' do
           result = update_service.call

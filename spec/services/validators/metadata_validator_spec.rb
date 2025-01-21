@@ -85,5 +85,14 @@ RSpec.describe Validators::MetadataValidator, type: :validator do
         expect(metadata_validator).to be_valid
       end
     end
+
+    context 'when metadata is an empty hash' do
+      let(:metadata) { {} }
+
+      it 'returns false' do
+        expect(metadata_validator).not_to be_valid
+        expect(metadata_validator.errors[:metadata]).to include('invalid_type')
+      end
+    end
   end
 end

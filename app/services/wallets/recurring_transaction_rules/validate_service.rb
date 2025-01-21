@@ -59,7 +59,7 @@ module Wallets
       end
 
       def valid_metadata?
-        ::Validators::MetadataValidator.new(params[:metadata]).valid?
+        ::Validators::MetadataValidator.new(params[:transaction_metadata]).valid?
       end
     end
   end

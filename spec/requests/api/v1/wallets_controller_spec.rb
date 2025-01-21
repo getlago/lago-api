@@ -76,6 +76,27 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           )
         )
       end
+
+      context 'when transaction metadata is a hash' do
+        let(:create_params) do
+          {
+            external_customer_id: customer.external_id,
+            rate_amount: '1',
+            name: 'Wallet1',
+            currency: 'EUR',
+            paid_credits: '10',
+            granted_credits: '10',
+            expiration_at:,
+            invoice_requires_successful_payment: true,
+            transaction_metadata: {}
+          }
+        end
+
+        it 'returns a validation error' do
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details][:metadata]).to include('invalid_type')
+        end
+      end
     end
 
     context 'with recurring transaction rules' do
@@ -215,6 +236,16 @@ RSpec.describe Api::V1::WalletsController, type: :request do
             expect(response).to have_http_status(:success)
             expect(recurring_rules).to be_present
             expect(recurring_rules.first[:transaction_metadata]).to eq(transaction_metadata)
+          end
+        end
+
+        context 'when transaction metadata is a hash' do
+          let(:transaction_metadata) { {key: 'valid_value', value: 'also_valid'} }
+
+          it 'returns a validation error' do
+            subject
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(json[:error_details][:recurring_transaction_rules]).to include('invalid_recurring_rule')
           end
         end
       end
