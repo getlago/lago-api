@@ -6927,9 +6927,11 @@ type Query {
     issuingDateTo: ISO8601Date
     limit: Int
     page: Int
+    partiallyPaid: Boolean
     paymentDisputeLost: Boolean
     paymentOverdue: Boolean
     paymentStatus: [InvoicePaymentStatusTypeEnum!]
+    positiveDueAmount: Boolean
     searchTerm: String
     selfBilled: Boolean
     status: [InvoiceStatusTypeEnum!]
