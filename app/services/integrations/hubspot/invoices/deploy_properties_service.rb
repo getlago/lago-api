@@ -4,7 +4,7 @@ module Integrations
   module Hubspot
     module Invoices
       class DeployPropertiesService < Integrations::Aggregator::BaseService
-        VERSION = 1
+        VERSION = 2
 
         def action_path
           "v1/hubspot/properties"
@@ -46,10 +46,10 @@ module Integrations
             inputs: [
               {
                 groupName: "lagoinvoices_information",
-                name: "example",
-                label: "example label",
-                type: "string",
-                fieldType: "text"
+                name: "lago_invoice_total_due_amount",
+                label: "Lago Invoice Total Due Amount",
+                type: "number",
+                fieldType: "number"
               }
             ]
           }
