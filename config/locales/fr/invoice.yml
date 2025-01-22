@@ -63,7 +63,7 @@ fr:
     see_breakdown: Consultez le détail ci-après
     self_billed:
       document_name: Facture d'autofacturation
-      footer: Facture autofacturée. Le partenaire a accepté de ne pas émettre sa propre facture pour cette transaction.
+      footer: Cette facture d'autofacturation a été émise par le client au nom du partenaire, avec son consentement. Le partenaire a accepté de ne pas établir sa propre facture pour cette transaction.
     sub_total: Sous total
     sub_total_with_tax: Sous total (TTC)
     sub_total_without_tax: Sous total (HT)
