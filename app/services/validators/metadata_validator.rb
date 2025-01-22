@@ -17,7 +17,8 @@ module Validators
     end
 
     def valid?
-      return true if metadata.empty?
+      validate_type
+      return true if metadata.empty? && errors.empty?
 
       validate_size
       metadata.each { |item| validate_item(item) }
@@ -26,6 +27,10 @@ module Validators
     end
 
     private
+
+    def validate_type
+      errors[:metadata] = 'invalid_type' unless metadata.is_a?(Array)
+    end
 
     def validate_size
       errors[:metadata] = 'too_many_keys' if metadata.size > config[:max_keys]

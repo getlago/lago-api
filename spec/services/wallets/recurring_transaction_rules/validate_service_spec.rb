@@ -58,12 +58,26 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
       end
     end
 
-    context "when invalid metadata" do
+    context "when valid transaction_metadata" do
       let(:params) do
         {
           trigger: "interval",
           interval: "weekly",
-          metadata: [{'key' => 'valid_key', 'value_1' => 'invalid_value'}]
+          transaction_metadata: [{'key' => 'valid_key', 'value' => 'invalid_value'}]
+        }
+      end
+
+      it "returns true" do
+        expect(validate_service.call).to eq true
+      end
+    end
+
+    context "when invalid transaction_metadata" do
+      let(:params) do
+        {
+          trigger: "interval",
+          interval: "weekly",
+          transaction_metadata: {'key' => 'valid_key', 'value' => 'invalid_value'}
         }
       end
 

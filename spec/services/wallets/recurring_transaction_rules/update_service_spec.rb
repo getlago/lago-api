@@ -15,10 +15,12 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         interval: "weekly",
         paid_credits: "105",
         granted_credits: "105",
-        started_at: "2024-05-30T12:48:26Z"
+        started_at: "2024-05-30T12:48:26Z",
+        transaction_metadata:
       }
     ]
   end
+  let(:transaction_metadata) { [] }
 
   describe "#call" do
     before { recurring_transaction_rule }
@@ -87,6 +89,19 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
         result = update_service.call
 
         expect(result.wallet.reload.recurring_transaction_rules.count).to eq(0)
+      end
+    end
+
+    context 'when sending transaction_metadata' do
+      context 'when transaction_metadata is valid' do
+        let(:transaction_metadata) { [{'key' => 'key'}, {'value' => 'value'}] }
+
+        it 'updates existing recurring transaction rule with new transaction_metadata' do
+          result = update_service.call
+
+          rule = result.wallet.reload.recurring_transaction_rules.first
+          expect(rule.transaction_metadata).to eq(transaction_metadata)
+        end
       end
     end
   end
