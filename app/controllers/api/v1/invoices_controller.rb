@@ -53,17 +53,18 @@ module Api
           filters: {
             amount_from: params[:amount_from],
             amount_to: params[:amount_to],
-            payment_status: (params[:payment_status] if valid_payment_status?(params[:payment_status])),
-            payment_dispute_lost: params[:payment_dispute_lost],
-            payment_overdue: (params[:payment_overdue] if %w[true false].include?(params[:payment_overdue])),
-            partially_paid: (params[:partially_paid] if %w[true false].include?(params[:partially_paid])),
-            status: (params[:status] if valid_status?(params[:status])),
             currency: params[:currency],
             customer_external_id: params[:external_customer_id],
             invoice_type: params[:invoice_type],
             issuing_date_from: (Date.strptime(params[:issuing_date_from]) if valid_date?(params[:issuing_date_from])),
             issuing_date_to: (Date.strptime(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to])),
-            metadata: params[:metadata]&.permit!.to_h
+            metadata: params[:metadata]&.permit!.to_h,
+            partially_paid: (params[:partially_paid] if %w[true false].include?(params[:partially_paid])),
+            payment_dispute_lost: params[:payment_dispute_lost],
+            payment_overdue: (params[:payment_overdue] if %w[true false].include?(params[:payment_overdue])),
+            payment_status: (params[:payment_status] if valid_payment_status?(params[:payment_status])),
+            self_billed: (params[:self_billed] if %w[true false].include?(params[:self_billed])),
+            status: (params[:status] if valid_status?(params[:status]))
           }
         )
 
