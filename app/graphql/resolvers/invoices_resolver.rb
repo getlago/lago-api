@@ -23,6 +23,7 @@ module Resolvers
     argument :payment_overdue, Boolean, required: false
     argument :payment_status, [Types::Invoices::PaymentStatusTypeEnum], required: false
     argument :search_term, String, required: false
+    argument :self_billed, Boolean, required: false
     argument :status, [Types::Invoices::StatusTypeEnum], required: false
 
     type Types::Invoices::Object.collection_type, null: false
@@ -36,13 +37,14 @@ module Resolvers
       invoice_type: nil,
       issuing_date_from: nil,
       issuing_date_to: nil,
-      page: nil,
       limit: nil,
-      payment_status: nil,
-      status: nil,
-      search_term: nil,
+      page: nil,
       payment_dispute_lost: nil,
-      payment_overdue: nil
+      payment_overdue: nil,
+      payment_status: nil,
+      search_term: nil,
+      self_billed: nil,
+      status: nil
     )
       result = InvoicesQuery.call(
         organization: current_organization,
@@ -51,16 +53,17 @@ module Resolvers
         filters: {
           amount_from:,
           amount_to:,
-          payment_status:,
-          payment_dispute_lost:,
-          payment_overdue:,
-          status:,
           currency:,
           customer_external_id:,
           customer_id:,
           invoice_type:,
           issuing_date_from:,
-          issuing_date_to:
+          issuing_date_to:,
+          payment_dispute_lost:,
+          payment_overdue:,
+          payment_status:,
+          self_billed:,
+          status:
         }
       )
 
