@@ -21,6 +21,7 @@ class InvoicesQuery < BaseQuery
     invoices = with_amount_range(invoices) if filters.amount_from.present? || filters.amount_to.present?
     invoices = with_metadata(invoices) if filters.metadata.present?
     invoices = with_partially_paid(invoices) unless filters.partially_paid.nil?
+    invoices = with_self_billed(invoices) unless filters.self_billed.nil?
 
     result.invoices = invoices
     result
@@ -128,6 +129,10 @@ class InvoicesQuery < BaseQuery
       .having("COUNT(DISTINCT metadata.key) = ?", filters.metadata.size)
 
     scope.where(id: subquery.select(:id))
+  end
+
+  def with_self_billed(scope)
+    scope.where(self_billed: ActiveModel::Type::Boolean.new.cast(filters.self_billed))
   end
 
   def issuing_date_from

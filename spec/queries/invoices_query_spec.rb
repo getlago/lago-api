@@ -689,4 +689,62 @@ RSpec.describe InvoicesQuery, type: :query do
       expect(result.invoices.pluck(:id)).to contain_exactly invoice.id
     end
   end
+
+  context "when filtering by self_billed" do
+    let(:invoice_first) do
+      create(
+        :invoice,
+        :self_billed,
+        organization:,
+        status: "finalized",
+        payment_status: "succeeded",
+        customer: customer_first,
+        number: "1111111111",
+        issuing_date: 1.week.ago,
+        total_amount_cents: 2000,
+        total_paid_amount_cents: 2000,
+      )
+    end
+    let(:invoice_second) do
+      create(
+        :invoice,
+        organization:,
+        status: "finalized",
+        payment_status: "pending",
+        customer: customer_second,
+        number: "2222222222",
+        issuing_date: 2.weeks.ago,
+        total_amount_cents: 2000,
+        total_paid_amount_cents: 1500,
+        self_billed: false
+      )
+    end
+
+    context "when self_billed is true" do
+      let(:filters) { {self_billed: true} }
+
+      it "returns only self billed invoices" do
+        expect(returned_ids).to include(invoice_first.id)
+        expect(returned_ids).not_to include(invoice_second.id)
+      end
+
+      context "when self_billed is false" do
+        let(:filters) { {self_billed: false} }
+
+        it "returns only non self billed invoices" do
+          expect(returned_ids).not_to include(invoice_first.id)
+          expect(returned_ids).to include(invoice_second.id)
+        end
+      end
+
+      context "when self_billed is nil" do
+        let(:filters) { {self_billed: nil} }
+
+        it "returns all invoices" do
+          expect(returned_ids).to include(invoice_first.id)
+          expect(returned_ids).to include(invoice_second.id)
+        end
+      end
+    end
+  end
 end
