@@ -29,13 +29,10 @@ module ManualPayments
         result.payment = payment
 
         total_paid_amount_cents = invoice.payments.where(payable_payment_status: :succeeded).sum(:amount_cents)
-        invoice.total_paid_amount_cents = total_paid_amount_cents
 
-        if total_paid_amount_cents == invoice.total_amount_cents
-          invoice.payment_status = 'succeeded'
-        end
-
-        invoice.save!
+        params = {total_paid_amount_cents:}
+        params[:payment_status] = 'succeeded' if total_paid_amount_cents == invoice.total_amount_cents
+        Invoices::UpdateService.call!(invoice:, params:)
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment&.should_sync_payment?
       end
