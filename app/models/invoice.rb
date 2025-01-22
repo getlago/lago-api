@@ -11,7 +11,7 @@ class Invoice < ApplicationRecord
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
 
-  before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? }
+  before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
@@ -374,7 +374,7 @@ class Invoice < ApplicationRecord
 
     return unless status_changed_to_finalized?
 
-    if organization.per_customer?
+    if organization.per_customer? || self_billed
       # NOTE: Example of expected customer slug format is ORG_PREFIX-005
       customer_slug = "#{organization.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
       formatted_sequential_id = format('%03d', sequential_id)
@@ -401,7 +401,7 @@ class Invoice < ApplicationRecord
       "date_trunc('month', created_at::timestamptz AT TIME ZONE ?)::date = ?",
       timezone,
       Time.now.in_time_zone(timezone).beginning_of_month.to_date
-    )
+    ).where(self_billed: false)
 
     result = Invoice.with_advisory_lock(
       organization_id,
@@ -414,6 +414,7 @@ class Invoice < ApplicationRecord
       else
         organization
           .invoices
+          .where(self_billed: false)
           .where.not(organization_sequential_id: 0)
           .order(organization_sequential_id: :desc)
           .limit(1)
@@ -435,7 +436,7 @@ class Invoice < ApplicationRecord
   end
 
   def switched_from_customer_numbering?
-    last_invoice = organization.invoices.order(created_at: :desc).with_generated_number.first
+    last_invoice = organization.invoices.where(self_billed: false).order(created_at: :desc).with_generated_number.first
 
     return false unless last_invoice
 

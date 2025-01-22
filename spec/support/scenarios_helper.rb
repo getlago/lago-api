@@ -138,6 +138,16 @@ module ScenariosHelper
     post_with_token(organization, '/api/v1/credit_notes/estimate', {credit_note: params})
   end
 
+  ### Analytics
+
+  def get_analytics(organization:, analytics_type:)
+    get_with_token(
+      organization,
+      "/api/v1/analytics/#{analytics_type}",
+      months: 20
+    )
+  end
+
   ### Payment methods
 
   def setup_stripe_for(customer:)
@@ -181,6 +191,11 @@ module ScenariosHelper
   def perform_usage_update
     Clock::ComputeAllDailyUsagesJob.perform_later
     Clock::RefreshLifetimeUsagesJob.perform_later
+    perform_all_enqueued_jobs
+  end
+
+  def update_overdue_balance
+    Clock::MarkInvoicesAsPaymentOverdueJob.perform_later
     perform_all_enqueued_jobs
   end
 end

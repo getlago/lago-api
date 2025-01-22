@@ -13,6 +13,7 @@ module IntegrationCustomers
 
     def call
       return if integration_customers.nil? || customer.nil?
+      return if customer.partner_account?
 
       sanitize_integration_customers
 
