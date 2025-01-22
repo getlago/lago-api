@@ -11,18 +11,22 @@ module Resolvers
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
+
     argument :search_term, String, required: false
+
+    argument :account_type, [Types::Customers::AccountTypeEnum], required: false
 
     type Types::Customers::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil, search_term: nil)
+    def resolve(**args)
       result = CustomersQuery.call(
         organization: current_organization,
-        search_term:,
+        search_term: args[:search_term],
         pagination: {
-          page:,
-          limit:
-        }
+          page: args[:page],
+          limit: args[:limit]
+        },
+        filters: args.slice(:account_type)
       )
 
       result.customers
