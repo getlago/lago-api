@@ -41,7 +41,8 @@ module Api
           pagination: {
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
-          }
+          },
+          filters: params.slice(:account_type)
         )
 
         if result.success?
