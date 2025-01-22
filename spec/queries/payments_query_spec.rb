@@ -13,9 +13,10 @@ RSpec.describe PaymentsQuery, type: :query do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, organization:) }
+  let(:invoice2) { create(:invoice, organization:) }
   let(:payment_request) { create(:payment_request, organization:) }
   let(:payment_one) { create(:payment, payable: invoice) }
-  let(:payment_two) { create(:payment, payable: invoice) }
+  let(:payment_two) { create(:payment, payable: invoice2) }
   let(:payment_three) { create(:payment, payable: payment_request) }
 
   before do
@@ -51,9 +52,9 @@ RSpec.describe PaymentsQuery, type: :query do
 
     it "returns only payments for the specified invoice" do
       expect(result).to be_success
-      expect(returned_ids.count).to eq(2)
+      expect(returned_ids.count).to eq(1)
       expect(returned_ids).to include(payment_one.id)
-      expect(returned_ids).to include(payment_two.id)
+      expect(returned_ids).not_to include(payment_two.id)
       expect(returned_ids).not_to include(payment_three.id)
     end
   end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_01_22_112050) do
+ActiveRecord::Schema[7.1].define(version: 2025_01_22_130735) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1126,7 +1126,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_01_22_112050) do
     t.enum "payment_type", default: "provider", null: false, enum_type: "payment_type"
     t.string "reference"
     t.index ["invoice_id"], name: "index_payments_on_invoice_id"
-    t.index ["payable_id", "payable_type"], name: "index_payments_on_payable_id_and_payable_type", unique: true, where: "(payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status]))"
+    t.index ["payable_id", "payable_type"], name: "index_payments_on_payable_id_and_payable_type", unique: true, where: "((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))"
     t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
     t.index ["payment_provider_customer_id"], name: "index_payments_on_payment_provider_customer_id"
     t.index ["payment_provider_id"], name: "index_payments_on_payment_provider_id"
