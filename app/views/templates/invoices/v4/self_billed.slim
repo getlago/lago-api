@@ -451,7 +451,9 @@ html
         .body-1 = I18n.t('invoice.due_date', date: I18n.l(payment_due_date, format: :default))
 
       .invoice-resume.mb-24.overflow-auto
-        - if credit?
+        - if one_off?
+          == SlimHelper.render('templates/invoices/v4/_one_off', self)
+        - elsif credit?
           == SlimHelper.render('templates/invoices/v4/_credit', self)
         - elsif progressive_billing?
           == SlimHelper.render('templates/invoices/v4/_progressive_billing_details', self)
