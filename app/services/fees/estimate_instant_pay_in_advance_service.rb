@@ -35,7 +35,10 @@ module Fees
       charge_filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
       properties = charge_filter&.properties || charge.properties
 
-      units = event.properties[charge.billable_metric.field_name] || 0
+      # fetch value and apply rounding
+      units = BigDecimal(event.properties[charge.billable_metric.field_name] || 0)
+      units = BillableMetrics::Aggregations::ApplyRoundingService.call!(billable_metric: charge.billable_metric, units:).units
+
       estimate_result = Charges::EstimateInstant::PercentageService.call!(properties:, units:)
 
       amount = estimate_result.amount
