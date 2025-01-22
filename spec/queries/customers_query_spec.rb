@@ -21,7 +21,17 @@ RSpec.describe CustomersQuery, type: :query do
     create(:customer, organization:, name: "abcde", firstname: "Jane", lastname: "Smith", legal_name: "other name", external_id: "22", email: "2@example.com")
   end
   let(:customer_third) do
-    create(:customer, organization:, name: "presuv", firstname: "Mary", lastname: "Johnson", legal_name: "Company name", external_id: "33", email: "3@example.com")
+    create(
+      :customer,
+      organization:,
+      account_type: "partner",
+      email: "3@example.com",
+      external_id: "33",
+      firstname: "Mary",
+      lastname: "Johnson",
+      legal_name: "Company name",
+      name: "presuv"
+    )
   end
 
   before do
@@ -36,6 +46,25 @@ RSpec.describe CustomersQuery, type: :query do
     expect(returned_ids).to include(customer_first.id)
     expect(returned_ids).to include(customer_second.id)
     expect(returned_ids).to include(customer_third.id)
+  end
+
+  context "when filtering by partner account_type" do
+    let(:filters) { {account_type: %w[partner]} }
+
+    it "returns partner accounts" do
+      expect(returned_ids.count).to eq(1)
+      expect(returned_ids).to eq [customer_third.id]
+    end
+  end
+
+  context "when filtering by customer account_type" do
+    let(:filters) { {account_type: %w[customer]} }
+
+    it "returns customer accounts" do
+      expect(returned_ids.count).to eq(2)
+      expect(returned_ids).to include customer_first.id
+      expect(returned_ids).to include customer_second.id
+    end
   end
 
   context "when customers have the same values for the ordering criteria" do
@@ -119,6 +148,15 @@ RSpec.describe CustomersQuery, type: :query do
       expect(returned_ids).not_to include(customer_first.id)
       expect(returned_ids).not_to include(customer_second.id)
       expect(returned_ids).to include(customer_third.id)
+    end
+  end
+
+  context "when filters validation fails" do
+    let(:filters) { {account_type: %w[random]} }
+
+    it "captures all validation errors" do
+      expect(result).not_to be_success
+      expect(result.error.messages[:filters][:account_type]).to eq({0 => ["must be one of: customer, partner"]})
     end
   end
 end
