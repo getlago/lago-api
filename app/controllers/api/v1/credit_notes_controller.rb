@@ -118,7 +118,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.credit_notes.includes(:items, :applied_taxes),
+              result.credit_notes.includes(:items, :applied_taxes, :invoice),
               ::V1::CreditNoteSerializer,
               collection_name: "credit_notes",
               meta: pagination_metadata(result.credit_notes),

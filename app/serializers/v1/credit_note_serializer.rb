@@ -25,7 +25,8 @@ module V1
         taxes_rate: model.taxes_rate,
         created_at: model.created_at.iso8601,
         updated_at: model.updated_at.iso8601,
-        file_url: model.file_url
+        file_url: model.file_url,
+        self_billed: model.invoice.self_billed
       }
 
       payload.merge!(customer) if include?(:customer)

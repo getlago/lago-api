@@ -47,7 +47,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         balance_amount_cents: credit_note.balance_amount_cents,
         created_at: credit_note.created_at.iso8601,
         updated_at: credit_note.updated_at.iso8601,
-        applied_taxes: []
+        applied_taxes: [],
+        self_billed: invoice.self_billed
       )
 
       expect(json[:credit_note][:items].count).to eq(2)
