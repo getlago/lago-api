@@ -668,6 +668,17 @@ RSpec.describe Customer, type: :model do
         expect(customer.overdue_balance_cents).to eq 2_00
       end
     end
+
+    context "when invoices are self billed" do
+      before do
+        create(:invoice, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 2_00)
+        create(:invoice, :self_billed, customer: customer, payment_overdue: true, currency: "USD", total_amount_cents: 3_00)
+      end
+
+      it "ignores self billed invoices" do
+        expect(customer.overdue_balance_cents).to eq 2_00
+      end
+    end
   end
 
   describe "#reset_dunning_campaign!" do
