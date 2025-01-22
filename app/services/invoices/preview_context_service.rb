@@ -39,7 +39,9 @@ module Invoices
           shipping_city: customer_params.dig(:shipping_address, :city),
           shipping_zipcode: customer_params.dig(:shipping_address, :zipcode),
           shipping_state: customer_params.dig(:shipping_address, :state),
-          shipping_country: customer_params.dig(:shipping_address, :country)
+          shipping_country: customer_params.dig(:shipping_address, :country),
+          created_at: Time.current,
+          updated_at: Time.current
         ) do |customer|
           customer.integration_customers = Array(customer_params[:integration_customers]).map do |integration_params|
             build_customer_integration(customer, integration_params)
@@ -81,12 +83,27 @@ module Invoices
     end
 
     def find_or_build_applied_coupons
-      applied_coupons = result.customer.applied_coupons.presence
+      applied_coupons = result.customer
+        .applied_coupons.active
+        .joins(:coupon)
+        .order('coupons.limited_billable_metrics DESC, coupons.limited_plans DESC, applied_coupons.created_at ASC')
+        .presence
 
       applied_coupons || Array(params[:coupons]).map do |coupon_attr|
         coupon = coupon_attr.key?(:code) && organization.coupons.find_by(code: coupon_attr[:code])
         coupon || Coupon.new(coupon_attr)
-      end.map { |coupon| AppliedCoupon.new(coupon:, customer: result.customer) }
+      end.map do |coupon|
+        AppliedCoupon.new(
+          coupon:,
+          customer: result.customer,
+          amount_cents: coupon.amount_cents,
+          amount_currency: coupon.amount_currency,
+          percentage_rate: coupon.percentage_rate,
+          frequency: coupon.frequency,
+          frequency_duration: coupon.frequency_duration,
+          frequency_duration_remaining: coupon.frequency_duration
+        )
+      end
     end
 
     def integration_type(type)
