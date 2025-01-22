@@ -111,14 +111,15 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
 
         expect(ManualPayments::CreateJob)
-          .to have_been_enqueued
+          .to have_been_enqueued.once
           .with(
             organization:,
             params: {
               invoice_id: result.invoice.id,
-              reference:,
               amount_cents: result.invoice.total_amount_cents,
-              created_at: result.invoice.created_at
+              reference:,
+              created_at: result.invoice.created_at,
+              skip_checks: true
             }
           )
       end
