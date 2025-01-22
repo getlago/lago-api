@@ -101,16 +101,17 @@ module Api
           },
           search_term: params[:search_term],
           filters: {
+            amount_from: params[:amount_from],
+            amount_to: params[:amount_to],
+            credit_status: params[:credit_status],
             currency: params[:currency],
             customer_external_id: params[:external_customer_id],
-            reason: params[:reason],
-            credit_status: params[:credit_status],
-            refund_status: params[:refund_status],
             invoice_number: params[:invoice_number],
             issuing_date_from: (Date.strptime(params[:issuing_date_from]) if valid_date?(params[:issuing_date_from])),
             issuing_date_to: (Date.strptime(params[:issuing_date_to]) if valid_date?(params[:issuing_date_to])),
-            amount_from: params[:amount_from],
-            amount_to: params[:amount_to]
+            reason: params[:reason],
+            refund_status: params[:refund_status],
+            self_billed: params[:self_billed]
           }
         )
 

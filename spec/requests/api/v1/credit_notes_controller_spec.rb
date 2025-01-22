@@ -394,6 +394,56 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
+    context "with self billed invoice filter" do
+      let(:params) { {self_billed: true} }
+
+      let(:self_billed_credit_note) do
+        invoice = create(:invoice, :self_billed, customer:, organization:)
+
+        create(:credit_note, invoice:, customer:)
+      end
+
+      let(:non_self_billed_credit_note) do
+        create(:credit_note, customer:)
+      end
+
+      before do
+        self_billed_credit_note
+        non_self_billed_credit_note
+      end
+
+      it "returns self billed credit_notes" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_notes].count).to eq(1)
+        expect(json[:credit_notes].first[:lago_id]).to eq(self_billed_credit_note.id)
+      end
+
+      context "when self billed is false" do
+        let(:params) { {self_billed: false} }
+
+        it "returns non self billed credit_notes" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_notes].count).to eq(1)
+          expect(json[:credit_notes].first[:lago_id]).to eq(non_self_billed_credit_note.id)
+        end
+      end
+
+      context "when self billed is nil" do
+        let(:params) { {self_billed: nil} }
+
+        it "returns all credit_notes" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_notes].count).to eq(2)
+        end
+      end
+    end
+
     context 'with search term' do
       let(:params) { {search_term: matching_credit_note.invoice.number} }
       let!(:matching_credit_note) { create(:credit_note, customer:) }
