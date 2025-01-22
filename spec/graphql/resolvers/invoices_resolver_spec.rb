@@ -450,13 +450,11 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
 
       invoices_response = result["data"]["invoices"]
 
-      aggregate_failures do
-        expect(invoices_response["collection"].count).to eq(1)
-        expect(invoices_response["collection"].first["id"]).to eq(invoice_fourth.id)
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(invoices_response["collection"].first["id"]).to eq(invoice_fourth.id)
 
-        expect(invoices_response["metadata"]["currentPage"]).to eq(1)
-        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
-      end
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 end
