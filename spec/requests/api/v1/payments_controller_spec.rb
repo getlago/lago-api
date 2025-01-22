@@ -54,9 +54,10 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
     it "returns organization's payments", :aggregate_failures do
       invoice = create(:invoice, organization:)
+      invoice2 = create(:invoice, organization:)
       payment_request = create(:payment_request, organization:)
       first_payment = create(:payment, payable: invoice)
-      second_payment = create(:payment, payable: invoice)
+      second_payment = create(:payment, payable: invoice2)
       third_payment = create(:payment, payable: payment_request)
 
       subject
