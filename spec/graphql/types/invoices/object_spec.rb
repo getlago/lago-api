@@ -11,6 +11,7 @@ RSpec.describe Types::Invoices::Object do
   it { is_expected.to have_field(:number).of_type('String!') }
   it { is_expected.to have_field(:sequential_id).of_type('ID!') }
 
+  it { is_expected.to have_field(:self_billed).of_type('Boolean!') }
   it { is_expected.to have_field(:version_number).of_type('Int!') }
 
   it { is_expected.to have_field(:invoice_type).of_type('InvoiceTypeEnum!') }

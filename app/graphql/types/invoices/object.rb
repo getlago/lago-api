@@ -12,6 +12,7 @@ module Types
       field :number, String, null: false
       field :sequential_id, ID, null: false
 
+      field :self_billed, Boolean, null: false
       field :version_number, Integer, null: false
 
       field :invoice_type, Types::Invoices::InvoiceTypeEnum, null: false
