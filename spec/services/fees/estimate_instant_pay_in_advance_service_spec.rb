@@ -25,12 +25,15 @@ RSpec.describe Fees::EstimateInstantPayInAdvanceService do
     {
       organization_id:,
       code:,
+      transaction_id:,
       external_customer_id:,
       external_subscription_id:,
       timestamp:,
       properties:
     }
   end
+
+  let(:transaction_id) { SecureRandom.uuid }
 
   let(:properties) { nil }
 
@@ -51,16 +54,12 @@ RSpec.describe Fees::EstimateInstantPayInAdvanceService do
       expect(result.fees.count).to eq(1)
 
       fee = result.fees.first
-      expect(fee).not_to be_persisted
-      expect(fee).to have_attributes(
-        subscription:,
-        charge:,
-        fee_type: 'charge',
+      expect(fee).to be_a(Hash)
+      expect(fee).to include(
         pay_in_advance: true,
-        invoiceable: charge,
+        invoiceable: charge.invoiceable,
         events_count: 1,
-        pay_in_advance_event_id: nil,
-        pay_in_advance_event_transaction_id: nil
+        event_transaction_id: transaction_id
       )
     end
 
@@ -74,7 +73,7 @@ RSpec.describe Fees::EstimateInstantPayInAdvanceService do
         expect(result.fees.count).to eq(1)
 
         fee = result.fees.first
-        expect(fee.amount_cents).to eq(50)
+        expect(fee[:amount_cents]).to eq(50)
       end
     end
 

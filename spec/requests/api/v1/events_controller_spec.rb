@@ -424,7 +424,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
       expect(fee[:item][:type]).to eq('charge')
       expect(fee[:item][:code]).to eq(metric.code)
       expect(fee[:item][:name]).to eq(metric.name)
-      expect(fee[:amount_cents]).to be_an(Integer)
+      expect(fee[:amount_cents]).to eq('40.0')
       expect(fee[:amount_currency]).to eq('EUR')
       expect(fee[:units]).to eq('400.0')
       expect(fee[:events_count]).to eq(1)

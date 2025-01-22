@@ -93,11 +93,7 @@ module Api
 
         if result.success?
           render(
-            json: ::CollectionSerializer.new(
-              result.fees,
-              ::V1::FeeSerializer,
-              collection_name: 'fees'
-            )
+            json: {fees: result.fees}
           )
         else
           render_error_response(result)

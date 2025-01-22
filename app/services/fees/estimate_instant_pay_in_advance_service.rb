@@ -5,7 +5,7 @@ module Fees
     def initialize(organization:, params:)
       @organization = organization
       # NOTE: validation is shared with event creation and is expecting a transaction_id
-      @event_params = params.merge(transaction_id: SecureRandom.uuid)
+      @event_params = params
       @billing_at = event.timestamp
 
       super
@@ -36,8 +36,9 @@ module Fees
       properties = charge_filter&.properties || charge.properties
 
       # fetch value and apply rounding
+      billable_metric = charge.billable_metric
       units = BigDecimal(event.properties[charge.billable_metric.field_name] || 0)
-      units = BillableMetrics::Aggregations::ApplyRoundingService.call!(billable_metric: charge.billable_metric, units:).units
+      units = BillableMetrics::Aggregations::ApplyRoundingService.call!(billable_metric:, units:).units
 
       estimate_result = Charges::EstimateInstant::PercentageService.call!(properties:, units:)
 
@@ -49,31 +50,56 @@ module Fees
       unit_amount = rounded_amount.zero? ? BigDecimal("0") : rounded_amount / units
       unit_amount_cents = unit_amount * currency.subunit_to_unit
 
-      Fee.new(
-        subscription:,
-        charge:,
-        organization:,
-        amount_cents:,
-        precise_amount_cents: amount * currency.subunit_to_unit.to_d,
-        amount_currency: subscription.plan.amount_currency,
-        fee_type: :charge,
-        invoiceable: charge,
-        units: estimate_result.units,
-        total_aggregated_units: estimate_result.units,
-        properties: boundaries,
-        events_count: 1,
-        charge_filter_id: charge_filter&.id,
-        pay_in_advance_event_id: nil,
-        pay_in_advance_event_transaction_id: nil,
-        payment_status: :pending,
+      # construct payload directly
+      {
+        lago_id: nil,
+        lago_charge_id: charge.id,
+        lago_charge_filter_id: charge_filter&.id,
+        lago_invoice_id: nil,
+        lago_true_up_fee_id: nil,
+        lago_true_up_parent_fee_id: nil,
+        lago_subscription_id: subscription.id,
+        external_subscription_id: subscription.external_id,
+        lago_customer_id: customer.id,
+        external_customer_id: customer.external_id,
+        item: {
+          type: 'charge',
+          code: billable_metric.code,
+          name: billable_metric.name,
+          description: billable_metric.description,
+          invoice_display_name: charge.invoice_display_name.presence || billable_metric.name,
+          filters: charge_filter&.to_h,
+          filter_invoice_display_name: charge_filter&.display_name,
+          lago_item_id: billable_metric.id,
+          item_type: BillableMetric.name,
+          grouped_by: {}
+        },
         pay_in_advance: true,
+        invoiceable: charge.invoiceable,
+        amount_cents:,
+        amount_currency: currency.iso_code,
+        precise_amount: amount,
+        precise_total_amount: amount,
         taxes_amount_cents: 0,
-        taxes_precise_amount_cents: 0.to_d,
-        unit_amount_cents:,
-        precise_unit_amount: unit_amount,
-        grouped_by: {},
-        amount_details: {}
-      )
+        taxes_precise_amount: 0,
+        taxes_rate: 0,
+        total_amount_cents: amount_cents,
+        total_amount_currency: currency.iso_code,
+        units: units,
+        description: nil,
+        precise_unit_amount: unit_amount_cents,
+        precise_coupons_amount_cents: "0.0",
+        events_count: 1,
+        payment_status: "pending",
+        created_at: nil,
+        succeeded_at: nil,
+        failed_at: nil,
+        refunded_at: nil,
+        amount_details: nil,
+        from_date: boundaries[:charges_from_datetime]&.to_datetime&.iso8601,
+        to_date: boundaries[:charges_to_datetime]&.to_datetime&.end_of_day&.iso8601,
+        event_transaction_id: event.transaction_id
+      }
     end
 
     def boundaries
@@ -95,7 +121,7 @@ module Fees
         code: event_params[:code],
         external_subscription_id: event_params[:external_subscription_id],
         properties: event_params[:properties] || {},
-        transaction_id: SecureRandom.uuid,
+        transaction_id: event_params[:transaction_id] || SecureRandom.uuid,
         timestamp: Time.current
       )
     end
