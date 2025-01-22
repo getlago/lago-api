@@ -12,8 +12,8 @@ en:
     breakdown: Breakdown
     breakdown_for_days: Used %{breakdown_duration} out of %{breakdown_total_duration} days
     breakdown_of: Breakdown of %{fee_filter_display_name}
-    coupons: Coupons
     charges_paid_in_advance: Charges paid in advance
+    coupons: Coupons
     credit_notes: Credit notes
     date_from: From
     date_to: to
