@@ -61,6 +61,9 @@ it:
     quarterly: Trimestrale
     reached_usage_threshold: Questa fatturazione progressiva è generata poiché il tuo utilizzo cumulato ha raggiunto %{usage_amount}, superando la soglia di %{threshold_amount}.
     see_breakdown: Vedere la ripartizione per l'unità totale
+    self_billed:
+      document_name: Fattura di autofatturazione
+      footer: Fattura autofatturata. Il partner ha accettato di non emettere la propria fattura per questa transazione.
     sub_total: Subtotale
     sub_total_with_tax: Subtotale (incl. tasse)
     sub_total_without_tax: Subtotale (escl. tasse)

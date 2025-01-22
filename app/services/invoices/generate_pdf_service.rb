@@ -45,7 +45,10 @@ module Invoices
     end
 
     def template
-      if invoice.one_off?
+      if invoice.self_billed?
+        "invoices/v#{invoice.version_number}/self_billed"
+
+      elsif invoice.one_off?
         return 'invoices/v3/one_off' if invoice.version_number < 4
 
         "invoices/v#{invoice.version_number}/one_off"

@@ -113,6 +113,30 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
       end
     end
 
+    context "when invoice is self billed" do
+      let(:invoice) do
+        create(:invoice, :self_billed, customer:, status: :finalized, organization:)
+      end
+
+      let(:pdf_generator) { instance_double(Utils::PdfGenerator, call: pdf_response) }
+
+      let(:pdf_response) do
+        BaseService::Result.new.tap { |r| r.io = StringIO.new(pdf_content) }
+      end
+
+      let(:pdf_content) { File.read(Rails.root.join('spec/fixtures/blank.pdf')) }
+
+      before do
+        allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
+      end
+
+      it "calls the self billed template" do
+        invoice_generate_service.call
+
+        expect(Utils::PdfGenerator).to have_received(:new).with(template: 'invoices/v4/self_billed', context: invoice)
+      end
+    end
+
     context 'when in API context' do
       let(:context) { 'api' }
 

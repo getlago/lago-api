@@ -61,6 +61,9 @@ en:
     quarterly: Quarterly
     reached_usage_threshold: This progressive billing is generated because your cumulative usage has reached %{usage_amount}, exceeding the %{threshold_amount} threshold.
     see_breakdown: See breakdown for total unit
+    self_billed:
+      document_name: Self billing invoice
+      footer: Self-billed invoice. The partner has agreed not to issue their own invoice for this transaction.
     sub_total: Subtotal
     sub_total_with_tax: Subtotal (incl. tax)
     sub_total_without_tax: Subtotal (excl. tax)

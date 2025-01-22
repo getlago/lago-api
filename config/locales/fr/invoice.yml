@@ -61,6 +61,9 @@ fr:
     quarterly: trimestriellement
     reached_usage_threshold: Cette facturation progressive est générée car votre usage cumulé a atteint %{usage_amount}, dépassant le seuil de %{threshold_amount}.
     see_breakdown: Consultez le détail ci-après
+    self_billed:
+      document_name: Facture d'autofacturation
+      footer: Facture autofacturée. Le partenaire a accepté de ne pas émettre sa propre facture pour cette transaction.
     sub_total: Sous total
     sub_total_with_tax: Sous total (TTC)
     sub_total_without_tax: Sous total (HT)

@@ -61,6 +61,9 @@ de:
     quarterly: Vierteljährlich
     reached_usage_threshold: Diese progressive Rechnung wird erstellt, da Ihre kumulierte Nutzung %{usage_amount} erreicht hat und den Schwellenwert von %{threshold_amount} überschritten hat.
     see_breakdown: Siehe Aufschlüsselung für Gesamtübersicht
+    self_billed:
+      document_name: Selbstabrechnungsrechnung
+      footer: Selbstabgerechnete Rechnung. Der Partner hat zugestimmt, für diese Transaktion keine eigene Rechnung auszustellen.
     sub_total: Zwischensumme
     sub_total_with_tax: Zwischensumme (inkl. Steuern)
     sub_total_without_tax: Zwischensumme (ohne Steuern)
