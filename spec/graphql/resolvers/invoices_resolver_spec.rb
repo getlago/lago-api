@@ -317,6 +317,117 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
     end
   end
 
+  context 'when filtering by partially paid' do
+    let(:invoice_third) do
+      create(
+        :invoice,
+        customer: customer_first,
+        organization:,
+        total_amount_cents: 1000,
+        total_paid_amount_cents: 10
+      )
+    end
+
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(limit: 5, partiallyPaid: true) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      invoice_third
+    end
+
+    it 'returns all partially paid invoices' do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      invoices_response = result['data']['invoices']
+
+      aggregate_failures do
+        expect(invoices_response['collection'].count).to eq(1)
+        expect(invoices_response['collection'].first['id']).to eq(invoice_third.id)
+
+        expect(invoices_response['metadata']['currentPage']).to eq(1)
+        expect(invoices_response['metadata']['totalCount']).to eq(1)
+      end
+    end
+  end
+
+  context 'when filtering by positive due amount' do
+    let(:invoice_third) do
+      create(
+        :invoice,
+        customer: customer_first,
+        organization:,
+        total_amount_cents: 1000,
+        total_paid_amount_cents: 10
+      )
+    end
+
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(limit: 5, positiveDueAmount: #{positive_due_amount}) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    let(:result) do
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+    end
+
+    before do
+      invoice_third
+    end
+
+    context 'when the flag is set to true' do
+      let(:positive_due_amount) { true }
+
+      it 'returns all invoices with due amount is greater than 0' do
+        invoices_response = result['data']['invoices']
+
+        expect(invoices_response['collection'].count).to eq(1)
+        expect(invoices_response['collection'].first['id']).to eq(invoice_third.id)
+
+        expect(invoices_response['metadata']['currentPage']).to eq(1)
+        expect(invoices_response['metadata']['totalCount']).to eq(1)
+      end
+    end
+
+    context 'when the flag is set to false' do
+      let(:positive_due_amount) { false }
+
+      it 'returns all invoices with due amount is 0' do
+        invoices_response = result['data']['invoices']
+
+        expect(invoices_response['collection'].count).to eq(2)
+
+        expect(invoices_response['collection'].map { _1['id'] }).to contain_exactly(invoice_first.id, invoice_second.id)
+
+        expect(invoices_response['metadata']['currentPage']).to eq(1)
+        expect(invoices_response['metadata']['totalCount']).to eq(2)
+      end
+    end
+  end
+
   context 'when filtering by issuing date' do
     let(:invoice_third) do
       create(

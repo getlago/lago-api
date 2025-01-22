@@ -95,9 +95,10 @@ class InvoicesQuery < BaseQuery
     positive_due_amount = ActiveModel::Type::Boolean.new.cast(filters.positive_due_amount)
 
     if positive_due_amount
-      scope = scope.where("total_amount_cents - total_paid_amount_cents > 0")
+      scope.where("total_amount_cents - total_paid_amount_cents > 0")
+    else
+      scope.where("total_amount_cents - total_paid_amount_cents <= 0")
     end
-    scope
   end
 
   def with_partially_paid(scope)
