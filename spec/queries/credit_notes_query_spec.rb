@@ -7,6 +7,8 @@ RSpec.describe CreditNotesQuery, type: :query do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
+  let(:returned_ids) { result.credit_notes.pluck(:id) }
+
   let(:organization) { customer.organization }
   let(:customer) { create(:customer) }
 
@@ -310,6 +312,52 @@ RSpec.describe CreditNotesQuery, type: :query do
       it "returns credit notes with total cents amount in provided range" do
         expect(result).to be_success
         expect(result.credit_notes.pluck(:id)).to match_array credit_notes[1..3].pluck(:id)
+      end
+    end
+  end
+
+  context "when filtering by self_billed" do
+    let(:credit_note_first) do
+      invoice = create(:invoice, :self_billed, organization:, customer:)
+
+      create(:credit_note, customer:, invoice:)
+    end
+
+    let(:credit_note_second) do
+      invoice = create(:invoice, organization:, customer:)
+
+      create(:credit_note, customer:, invoice:)
+    end
+
+    before do
+      credit_note_first
+      credit_note_second
+    end
+
+    context "when self_billed is true" do
+      let(:filters) { {self_billed: true} }
+
+      it "returns only credit notes from self billed invoices" do
+        expect(returned_ids).to include(credit_note_first.id)
+        expect(returned_ids).not_to include(credit_note_second.id)
+      end
+    end
+
+    context "when self_billed is false" do
+      let(:filters) { {self_billed: false} }
+
+      it "returns only credit notes from non self billed invoices" do
+        expect(returned_ids).not_to include(credit_note_first.id)
+        expect(returned_ids).to include(credit_note_second.id)
+      end
+    end
+
+    context "when self_billed is nil" do
+      let(:filters) { {self_billed: nil} }
+
+      it "returns all credit notes" do
+        expect(returned_ids).to include(credit_note_first.id)
+        expect(returned_ids).to include(credit_note_second.id)
       end
     end
   end
