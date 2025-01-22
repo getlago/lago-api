@@ -384,7 +384,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       end
 
       context 'when it is a server error' do
-        let(:error_code) { Faker::Number.between(from: 500, to: 599) }
+        let(:error_code) { 500 }
 
         it 'returns an error' do
           expect do
@@ -398,7 +398,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       end
 
       context 'when it is a client error' do
-        let(:error_code) { Faker::Number.between(from: 400, to: 499) }
+        let(:error_code) { 400 }
 
         it 'does not return an error' do
           expect { service_call }.not_to raise_error

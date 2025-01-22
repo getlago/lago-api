@@ -51,7 +51,7 @@ module Integrations
 
           deliver_error_webhook(customer:, code:, message:)
 
-          return result if e.error_code.to_i < 500
+          return result unless [500, 424].include?(e.error_code.to_i)
 
           raise e
         rescue Integrations::Aggregator::BasePayload::Failure => e
