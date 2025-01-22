@@ -702,7 +702,7 @@ RSpec.describe InvoicesQuery, type: :query do
         number: "1111111111",
         issuing_date: 1.week.ago,
         total_amount_cents: 2000,
-        total_paid_amount_cents: 2000,
+        total_paid_amount_cents: 2000
       )
     end
     let(:invoice_second) do
