@@ -6968,6 +6968,16 @@ type Query {
   ): ResetPassword!
 
   """
+  Query a single Payment
+  """
+  payment(
+    """
+    Uniq ID of the payment
+    """
+    id: ID!
+  ): Payment
+
+  """
   Query a single payment provider
   """
   paymentProvider(
@@ -6995,7 +7005,7 @@ type Query {
   """
   Query payments of an organization
   """
-  payments(invoiceId: ID, limit: Int, page: Int): PaymentCollection!
+  payments(externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int): PaymentCollection!
 
   """
   Query a single plan of an organization
