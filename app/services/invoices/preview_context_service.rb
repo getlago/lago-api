@@ -2,10 +2,10 @@
 
 module Invoices
   class PreviewContextService < BaseService
-    def initialize(organization, params:)
+    def initialize(organization:, params:)
       @organization = organization
       @params = params.presence || {}
-      super(nil)
+      super
     end
 
     def call
