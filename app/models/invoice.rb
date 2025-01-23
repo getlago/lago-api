@@ -414,7 +414,7 @@ class Invoice < ApplicationRecord
     ) do
       # If previous invoice had different numbering, base sequential id is the total number of invoices
       organization_sequential_id = if switched_from_customer_numbering?
-        organization.invoices.with_generated_number.count
+        organization.invoices.non_self_billed.with_generated_number.count
       else
         organization
           .invoices

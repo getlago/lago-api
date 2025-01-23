@@ -350,6 +350,25 @@ RSpec.describe Customers::CreateService, type: :service do
           expect(customer).to be_partner_account
           expect(customer).to be_exclude_from_dunning_campaign
         end
+
+        context "when updating a customer that already have an invoice" do
+          let(:customer) { create(:customer, organization:, account_type: "customer") }
+          let(:invoice) { create(:invoice, customer: customer) }
+
+          before { invoice }
+
+          it "doesn't update customer to partner" do
+            result = customers_service.create_from_api(
+              organization:,
+              params: create_args.merge(external_id: customer.external_id)
+            )
+
+            expect(result).to be_success
+
+            customer = result.customer
+            expect(customer).to be_customer_account
+          end
+        end
       end
     end
 

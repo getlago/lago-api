@@ -746,4 +746,119 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
       end
     end
   end
+
+  context 'with partner customer' do
+    let(:customer_third) { create(:customer, organization:, account_type: 'partner') }
+
+    around { |test| lago_premium!(&test) }
+
+    before { organization.update!(premium_integrations: ['revenue_share']) }
+
+    it 'creates invoice numbers correctly' do
+      # NOTE: Jul 19th: create the subscription
+      travel_to(subscription_at) do
+        create_subscription(
+          {
+            external_customer_id: customer_first.external_id,
+            external_id: customer_first.external_id,
+            plan_code: monthly_plan.code,
+            billing_time: 'anniversary',
+            subscription_at: subscription_at.iso8601
+          }
+        )
+        create_subscription(
+          {
+            external_customer_id: customer_second.external_id,
+            external_id: customer_second.external_id,
+            plan_code: monthly_plan.code,
+            billing_time: 'anniversary',
+            subscription_at: subscription_at.iso8601
+          }
+        )
+        create_subscription(
+          {
+            external_customer_id: customer_third.external_id,
+            external_id: customer_third.external_id,
+            plan_code: monthly_plan.code,
+            billing_time: 'anniversary',
+            subscription_at: subscription_at.iso8601
+          }
+        )
+
+        invoices = organization.invoices.order(created_at: :desc).limit(3)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([1, 1, 1])
+        expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(numbers).to match_array(%w[ORG-1-001-001 ORG-1-002-001 ORG-1-003-001])
+      end
+
+      # NOTE: August 19th: Bill subscription
+      travel_to(DateTime.new(2023, 8, 19, 12, 12)) do
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+
+        invoices = organization.invoices.order(created_at: :desc).limit(3)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([2, 2, 2])
+        expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(numbers).to match_array(%w[ORG-1-001-002 ORG-1-002-002 ORG-1-003-002])
+      end
+
+      # NOTE: September 19th: Bill subscription
+      travel_to(DateTime.new(2023, 9, 19, 12, 12)) do
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+
+        invoices = organization.invoices.order(created_at: :desc).limit(3)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([3, 3, 3])
+        expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(numbers).to match_array(%w[ORG-1-001-003 ORG-1-002-003 ORG-1-003-003])
+      end
+
+      # NOTE: October 19th: Switching to per_organization numbering and Bill subscription
+      travel_to(DateTime.new(2023, 10, 19, 12, 12)) do
+        organization.update!(document_numbering: 'per_organization', document_number_prefix: 'ORG-11')
+
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+
+        invoices = organization.invoices.order(created_at: :desc).limit(3)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([4, 4, 4])
+        expect(organization_sequential_ids).to match_array([7, 8, 0])
+        expect(numbers).to match_array(%w[ORG-11-202310-007 ORG-11-202310-008 ORG-11-003-004])
+      end
+
+      # NOTE: November 19th: Switching to per_customer numbering and Bill subscription
+      travel_to(DateTime.new(2023, 11, 19, 12, 12)) do
+        organization.update!(document_numbering: 'per_customer')
+
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+
+        invoices = organization.invoices.order(created_at: :desc).limit(3)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([5, 5, 5])
+        expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(numbers).to match_array(%w[ORG-11-001-005 ORG-11-002-005 ORG-11-003-005])
+      end
+    end
+  end
+
 end
