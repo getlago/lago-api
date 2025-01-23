@@ -552,6 +552,54 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].pluck(:lago_id)).to contain_exactly matching_invoice.id
       end
     end
+
+    context "with self billed filters" do
+      let(:params) { {self_billed: true} }
+
+      let(:self_billed_invoice) do
+        create(:invoice, :self_billed, customer:, organization:)
+      end
+
+      let(:non_self_billed_invoice) do
+        create(:invoice, customer:, organization:)
+      end
+
+      before do
+        self_billed_invoice
+        non_self_billed_invoice
+      end
+
+      it "returns self billed invoices" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].count).to eq(1)
+        expect(json[:invoices].first[:lago_id]).to eq(self_billed_invoice.id)
+      end
+
+      context "when self billed is false" do
+        let(:params) { {self_billed: false} }
+
+        it "returns non self billed invoices" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoices].count).to eq(1)
+          expect(json[:invoices].first[:lago_id]).to eq(non_self_billed_invoice.id)
+        end
+      end
+
+      context "when self billed is nil" do
+        let(:params) { {self_billed: nil} }
+
+        it "returns all invoices" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoices].count).to eq(2)
+        end
+      end
+    end
   end
 
   describe 'PUT /api/v1/invoices/:id/refresh' do

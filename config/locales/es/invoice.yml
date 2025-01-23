@@ -61,8 +61,8 @@ es:
     reached_usage_threshold: Esta facturación progresiva se genera porque su uso acumulado ha alcanzado los %{usage_amount}, superando el umbral de %{threshold_amount}.
     see_breakdown: Consulte el desglose a continuación
     self_billed:
-      document_name: Factura de autofacturación
-      footer: Factura autofacturada. El socio ha aceptado no emitir su propia factura para esta transacción.
+      document_name: Factura de autoliquidación
+      footer: Esta factura de autoliquidación ha sido emitida por el cliente en nombre del socio, con su consentimiento. El socio ha aceptado no emitir su propia factura para esta transacción.
     sub_total: Subtotal
     sub_total_with_tax: Subtotal (impuestos incl.)
     sub_total_without_tax: Subtotal (impuestos excl.)

@@ -122,6 +122,9 @@ class Invoice < ApplicationRecord
       .distinct
   }
 
+  scope :self_billed, -> { where(self_billed: true) }
+  scope :non_self_billed, -> { where(self_billed: false) }
+
   validates :issuing_date, :currency, presence: true
   validates :timezone, timezone: true, allow_nil: true
   validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
@@ -402,7 +405,7 @@ class Invoice < ApplicationRecord
       "date_trunc('month', created_at::timestamptz AT TIME ZONE ?)::date = ?",
       timezone,
       Time.now.in_time_zone(timezone).beginning_of_month.to_date
-    ).where(self_billed: false)
+    ).non_self_billed
 
     result = Invoice.with_advisory_lock(
       organization_id,
@@ -415,7 +418,7 @@ class Invoice < ApplicationRecord
       else
         organization
           .invoices
-          .where(self_billed: false)
+          .non_self_billed
           .where.not(organization_sequential_id: 0)
           .order(organization_sequential_id: :desc)
           .limit(1)
@@ -437,7 +440,7 @@ class Invoice < ApplicationRecord
   end
 
   def switched_from_customer_numbering?
-    last_invoice = organization.invoices.where(self_billed: false).order(created_at: :desc).with_generated_number.first
+    last_invoice = organization.invoices.non_self_billed.order(created_at: :desc).with_generated_number.first
 
     return false unless last_invoice
 

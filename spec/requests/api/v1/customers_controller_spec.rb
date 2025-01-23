@@ -334,8 +334,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
   end
 
   describe 'GET /api/v1/customers' do
-    subject { get_with_token(organization, '/api/v1/customers') }
+    subject { get_with_token(organization, '/api/v1/customers', params) }
 
+    let(:params) { {} }
     let(:organization) { create(:organization) }
 
     before { create_pair(:customer, organization:) }
@@ -349,6 +350,24 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(response).to have_http_status(:ok)
         expect(json[:meta][:total_count]).to eq(2)
         expect(json[:customers][0][:taxes]).not_to be_nil
+      end
+    end
+
+    context "with account_type filters" do
+      let(:params) { {account_type: %w[partner]} }
+
+      let(:partner) do
+        create(:customer, organization:, account_type: "partner")
+      end
+
+      before { partner }
+
+      it "returns partner customers" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(1)
+        expect(json[:customers].first[:lago_id]).to eq(partner.id)
       end
     end
   end

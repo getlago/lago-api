@@ -403,4 +403,58 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
       expect(collection.pluck('id')).to match_array invoices[1..3].pluck(:id)
     end
   end
+
+  context "when filtering by self billed" do
+    let(:invoice_third) do
+      create(
+        :invoice,
+        customer: customer_second,
+        status: :draft,
+        organization:
+      )
+    end
+
+    let(:invoice_fourth) do
+      create(
+        :invoice,
+        :self_billed,
+        customer: customer_second,
+        status: :finalized,
+        organization:
+      )
+    end
+
+    let(:query) do
+      <<~GQL
+        query {
+          invoices(limit: 5, selfBilled: true) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      invoice_third
+      invoice_fourth
+    end
+
+    it "returns all self billed invoices" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      invoices_response = result["data"]["invoices"]
+
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(invoices_response["collection"].first["id"]).to eq(invoice_fourth.id)
+
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
 end

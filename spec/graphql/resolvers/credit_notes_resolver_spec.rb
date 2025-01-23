@@ -213,4 +213,40 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
       expect(response_collection.pluck('id')).to contain_exactly credit_note.id
     end
   end
+
+  context "when filtering by self billed invoice" do
+    let(:self_billed_credit_note) do
+      invoice = create(:invoice, :self_billed, customer:, organization:)
+
+      create(:credit_note, invoice:, customer:)
+    end
+
+    let(:non_self_billed_credit_note) do
+      create(:credit_note, customer:)
+    end
+
+    let(:query) do
+      <<~GQL
+        query {
+          creditNotes(limit: 5, selfBilled: true) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      self_billed_credit_note
+      non_self_billed_credit_note
+    end
+
+    it "returns all credit notes from self billed invoices" do
+      expect(response_collection.count).to eq(1)
+      expect(response_collection.first["id"]).to eq(self_billed_credit_note.id)
+
+      expect(result["data"]["creditNotes"]["metadata"]["currentPage"]).to eq(1)
+      expect(result["data"]["creditNotes"]["metadata"]["totalCount"]).to eq(1)
+    end
+  end
 end

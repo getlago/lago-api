@@ -61,8 +61,8 @@ sv:
     reached_usage_threshold: Denna progressiva fakturering skapas eftersom din ackumulerade användning har nått %{usage_amount} och överstiger %{threshold_amount} tröskeln.
     see_breakdown: Se uppdelning nedan
     self_billed:
-      document_name: Självfaktura
-      footer: Självfakturerad faktura. Partnern har gått med på att inte utfärda sin egen faktura för denna transaktion.
+      document_name: Självfakturering
+      footer: Denna självfaktura har utfärdats av kunden för partnerns räkning, med deras samtycke. Partnern har gått med på att inte utfärda en egen faktura för denna transaktion.
     sub_total: Delsumma
     sub_total_with_tax: Delsumma (inkl. moms)
     sub_total_without_tax: Delsumma (exkl. moms)

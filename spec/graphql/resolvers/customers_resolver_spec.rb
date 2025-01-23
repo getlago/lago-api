@@ -53,4 +53,43 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
       )
     end
   end
+
+  context "when filtering by partner account type" do
+    let(:customer) { create(:customer, organization:) }
+    let(:partner) { create(:customer, organization:, account_type: "partner") }
+
+    let(:query) do
+      <<~GQL
+        query($accountType: [CustomerAccountTypeEnum!]) {
+          customers(limit: 5, accountType: $accountType) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      customer
+      partner
+    end
+
+    it "returns all customers with account_type partner" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {accountType: "partner"}
+      )
+
+      invoices_response = result["data"]["customers"]
+
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(invoices_response["collection"].first["id"]).to eq(partner.id)
+
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
 end

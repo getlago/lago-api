@@ -47,7 +47,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         balance_amount_cents: credit_note.balance_amount_cents,
         created_at: credit_note.created_at.iso8601,
         updated_at: credit_note.updated_at.iso8601,
-        applied_taxes: []
+        applied_taxes: [],
+        self_billed: invoice.self_billed
       )
 
       expect(json[:credit_note][:items].count).to eq(2)
@@ -391,6 +392,56 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
         expect(response).to have_http_status(:success)
         expect(json[:credit_notes].pluck(:lago_id)).to match_array credit_notes[1..3].pluck(:id)
+      end
+    end
+
+    context "with self billed invoice filter" do
+      let(:params) { {self_billed: true} }
+
+      let(:self_billed_credit_note) do
+        invoice = create(:invoice, :self_billed, customer:, organization:)
+
+        create(:credit_note, invoice:, customer:)
+      end
+
+      let(:non_self_billed_credit_note) do
+        create(:credit_note, customer:)
+      end
+
+      before do
+        self_billed_credit_note
+        non_self_billed_credit_note
+      end
+
+      it "returns self billed credit_notes" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_notes].count).to eq(1)
+        expect(json[:credit_notes].first[:lago_id]).to eq(self_billed_credit_note.id)
+      end
+
+      context "when self billed is false" do
+        let(:params) { {self_billed: false} }
+
+        it "returns non self billed credit_notes" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_notes].count).to eq(1)
+          expect(json[:credit_notes].first[:lago_id]).to eq(non_self_billed_credit_note.id)
+        end
+      end
+
+      context "when self billed is nil" do
+        let(:params) { {self_billed: nil} }
+
+        it "returns all credit_notes" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:credit_notes].count).to eq(2)
+        end
       end
     end
 

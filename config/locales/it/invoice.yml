@@ -63,7 +63,7 @@ it:
     see_breakdown: Vedere la ripartizione per l'unità totale
     self_billed:
       document_name: Fattura di autofatturazione
-      footer: Fattura autofatturata. Il partner ha accettato di non emettere la propria fattura per questa transazione.
+      footer: Questa fattura di autofatturazione è stata emessa dal cliente per conto del partner, con il suo consenso. Il partner ha accettato di non emettere una propria fattura per questa transazione.
     sub_total: Subtotale
     sub_total_with_tax: Subtotale (incl. tasse)
     sub_total_without_tax: Subtotale (escl. tasse)

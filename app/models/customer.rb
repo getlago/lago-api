@@ -205,7 +205,7 @@ class Customer < ApplicationRecord
   end
 
   def overdue_balance_cents
-    invoices.payment_overdue.where(currency:).sum(:total_amount_cents)
+    invoices.non_self_billed.payment_overdue.where(currency:).sum(:total_amount_cents)
   end
 
   def reset_dunning_campaign!

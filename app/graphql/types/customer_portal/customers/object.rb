@@ -8,6 +8,7 @@ module Types
 
         field :id, ID, null: false
 
+        field :account_type, Types::Customers::AccountTypeEnum, null: false
         field :applicable_timezone, Types::TimezoneEnum, null: false
         field :currency, Types::CurrencyEnum, null: true
         field :customer_type, Types::Customers::CustomerTypeEnum

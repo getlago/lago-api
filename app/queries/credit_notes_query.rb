@@ -15,6 +15,7 @@ class CreditNotesQuery < BaseQuery
     credit_notes = with_invoice_number(credit_notes) if filters.invoice_number.present?
     credit_notes = with_issuing_date_range(credit_notes) if filters.issuing_date_from || filters.issuing_date_to
     credit_notes = with_amount_range(credit_notes) if filters.amount_from.present? || filters.amount_to.present?
+    credit_notes = with_self_billed_invoice(credit_notes) unless filters.self_billed.nil?
 
     result.credit_notes = credit_notes
     result
@@ -91,6 +92,14 @@ class CreditNotesQuery < BaseQuery
     scope = scope.where("credit_notes.total_amount_cents >= ?", filters.amount_from) if filters.amount_from
     scope = scope.where("credit_notes.total_amount_cents <= ?", filters.amount_to) if filters.amount_to
     scope
+  end
+
+  def with_self_billed_invoice(scope)
+    scope
+      .joins(:invoice)
+      .where(invoices: {
+        self_billed: ActiveModel::Type::Boolean.new.cast(filters.self_billed)
+      })
   end
 
   def issuing_date_from

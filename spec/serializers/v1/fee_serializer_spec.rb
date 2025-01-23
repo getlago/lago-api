@@ -51,7 +51,8 @@ RSpec.describe ::V1::FeeSerializer do
         'succeeded_at' => fee.succeeded_at&.iso8601,
         'failed_at' => fee.failed_at&.iso8601,
         'refunded_at' => fee.refunded_at&.iso8601,
-        'amount_details' => fee.amount_details
+        'amount_details' => fee.amount_details,
+        'self_billed' => fee.invoice.self_billed
       )
       expect(result['fee']['item']).to include(
         'type' => fee.fee_type,
@@ -68,6 +69,17 @@ RSpec.describe ::V1::FeeSerializer do
 
       expect(result['fee']['from_date']).not_to be_nil
       expect(result['fee']['to_date']).not_to be_nil
+    end
+  end
+
+  context "when fee is not attached to an invoice" do
+    let(:fee) { create(:fee, invoice: nil) }
+
+    it "serialize self_billed as false" do
+      expect(result["fee"]).to include(
+        "lago_invoice_id" => nil,
+        "self_billed" => false
+      )
     end
   end
 

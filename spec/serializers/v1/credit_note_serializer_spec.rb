@@ -46,7 +46,8 @@ RSpec.describe V1::CreditNoteSerializer, type: :serializer do
         'lago_id' => error_detail.id,
         'error_code' => error_detail.error_code,
         'details' => error_detail.details
-      }]
+      }],
+      "self_billed" => credit_note.invoice.self_billed
     )
 
     expect(result['credit_note'].keys).to include('customer', 'items')
