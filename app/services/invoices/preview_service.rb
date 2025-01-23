@@ -116,12 +116,12 @@ module Invoices
       credit_result = Credits::CreditNoteService.call(invoice:, context: :preview)
       credit_result.raise_if_error!
 
-      refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits
+      invoice.total_amount_cents -= credit_result.credits.sum(&:amount_cents))
     end
 
     def create_applied_prepaid_credits
       return unless customer.persisted?
-      return unless wallet&.active?
+      return unless wallet
       return unless invoice.total_amount_cents&.positive?
       return unless wallet.balance.positive?
 
@@ -131,17 +131,13 @@ module Invoices
         invoice.total_amount_cents
       end
       invoice.prepaid_credit_amount_cents += amount_cents
-      refresh_amounts(credit_amount_cents: amount_cents)
-    end
-
-    def refresh_amounts(credit_amount_cents:)
-      invoice.total_amount_cents -= credit_amount_cents
+      invoice.total_amount_cents -= amount_cents
     end
 
     def wallet
       return @wallet if defined? @wallet
 
-      @wallet = customer.wallets&.active&.first
+      @wallet = customer.wallets.active.first
     end
   end
 end
