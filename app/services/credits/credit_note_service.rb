@@ -2,8 +2,9 @@
 
 module Credits
   class CreditNoteService < BaseService
-    def initialize(invoice:)
+    def initialize(invoice:, context: nil)
       @invoice = invoice
+      @context = context
 
       super(nil)
     end
@@ -20,16 +21,17 @@ module Credits
           next unless credit_amount.positive?
 
           # NOTE: create a new credit line on the invoice
-          credit = Credit.create!(
+          credit = Credit.new(
             invoice:,
             credit_note:,
             amount_cents: credit_amount,
             amount_currency: invoice.currency,
             before_taxes: false
           )
+          credit.save! unless context == :preview
 
           # NOTE: Consume remaining credit on the credit note
-          update_remaining_credit(credit_note, credit_amount)
+          update_remaining_credit(credit_note, credit_amount) unless context == :preview
           remaining_invoice_amount -= credit_amount
 
           result.credits << credit
@@ -47,7 +49,7 @@ module Credits
 
     private
 
-    attr_accessor :invoice
+    attr_accessor :invoice, :context
 
     delegate :customer, to: :invoice
 
