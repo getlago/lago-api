@@ -12,9 +12,6 @@ module Fees
     end
 
     def call
-      validation_result = Events::ValidateCreationService.call(organization:, event_params:, customer:, subscriptions:)
-      return validation_result unless validation_result.success?
-
       if charges.none?
         return result.single_validation_failure!(field: :code, error_code: 'does_not_match_an_instant_charge')
       end
@@ -97,20 +94,7 @@ module Fees
         failed_at: nil,
         refunded_at: nil,
         amount_details: nil,
-        from_date: boundaries[:charges_from_datetime]&.to_datetime&.iso8601,
-        to_date: boundaries[:charges_to_datetime]&.to_datetime&.end_of_day&.iso8601,
         event_transaction_id: event.transaction_id
-      }
-    end
-
-    def boundaries
-      @boundaries ||= {
-        from_datetime: date_service.from_datetime,
-        to_datetime: date_service.to_datetime,
-        charges_from_datetime: date_service.charges_from_datetime,
-        charges_to_datetime: date_service.charges_to_datetime,
-        charges_duration: date_service.charges_duration_in_days,
-        timestamp: billing_at
       }
     end
 
@@ -127,29 +111,8 @@ module Fees
       )
     end
 
-    def date_service
-      @date_service ||= Subscriptions::DatesService.new_instance(
-        subscription,
-        billing_at,
-        current_usage: true
-      )
-    end
-
-    def subscriptions
-      return @subscriptions if defined? @subscriptions
-
-      subscriptions = organization.subscriptions.where(external_id: event.external_subscription_id)
-      return unless subscriptions
-
-      timestamp = event.timestamp
-      @subscriptions = subscriptions
-        .where("date_trunc('second', started_at::timestamp) <= ?", timestamp)
-        .where("terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?", timestamp)
-        .order('terminated_at DESC NULLS FIRST, started_at DESC')
-    end
-
     def charges
-      @charges ||= subscriptions.first
+      @charges ||= subscription
         .plan
         .charges
         .percentage
@@ -159,7 +122,7 @@ module Fees
     end
 
     def currency
-      subscription.plan.amount.currency
+      @currency ||= subscription.plan.amount.currency
     end
   end
 end
