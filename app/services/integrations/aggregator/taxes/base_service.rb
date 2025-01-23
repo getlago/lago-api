@@ -18,11 +18,10 @@ module Integrations
         end
 
         def integration_customer
-          @integration_customer ||=
-            customer
-              .integration_customers
-              .where(type: 'IntegrationCustomers::AnrokCustomer')
-              .first
+          @integration_customer ||= begin
+            int_customers = customer.integration_customers
+            int_customers.find { |ic| ic.type == 'IntegrationCustomers::AnrokCustomer' }
+          end
         end
 
         def headers
@@ -63,7 +62,7 @@ module Integrations
             message = 'API limit' if message == 'Internal server error: resource contention.'
 
             unless message.include?('API limit')
-              deliver_tax_error_webhook(customer:, code:, message:)
+              deliver_tax_error_webhook(customer:, code:, message:) if customer.persisted? # Do not send this webhook in preview mode
             end
 
             result.service_failure!(code:, message:)

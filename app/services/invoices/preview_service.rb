@@ -92,13 +92,11 @@ module Invoices
 
       invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents - invoice.coupons_amount_cents
 
-      invoice.fees.each do |fee|
-        taxes_result = Fees::ApplyTaxesService.call(fee:)
-        taxes_result.raise_if_error!
+      if provider_taxation?
+        apply_provider_taxes
+      else
+        apply_taxes
       end
-
-      taxes_result = Invoices::ApplyTaxesService.call(invoice:)
-      taxes_result.raise_if_error!
 
       invoice.sub_total_including_taxes_amount_cents = (
         invoice.sub_total_excluding_taxes_amount_cents + invoice.taxes_amount_cents
@@ -138,6 +136,72 @@ module Invoices
       return @wallet if defined? @wallet
 
       @wallet = customer.wallets.active.first
+    end
+
+    def apply_taxes
+      invoice.fees.each do |fee|
+        taxes_result = Fees::ApplyTaxesService.call(fee:)
+        taxes_result.raise_if_error!
+      end
+
+      taxes_result = Invoices::ApplyTaxesService.call(invoice:)
+      taxes_result.raise_if_error!
+    end
+
+    def apply_provider_taxes
+      taxes_result = fetch_provider_taxes
+
+      if taxes_result.success?
+        result.fees_taxes = taxes_result.fees
+        invoice.fees.each do |fee|
+          fee_taxes = result.fees_taxes.find { |item| item.item_id == fee.id }
+
+          res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)
+          res.raise_if_error!
+        end
+
+        res = Invoices::ApplyProviderTaxesService.call(invoice:, provider_taxes: result.fees_taxes)
+        res.raise_if_error!
+      else
+        apply_zero_tax
+      end
+    rescue BaseService::ThrottlingError
+      apply_zero_tax
+    end
+
+    def provider_taxes_cache_key
+      [
+        "preview-taxes",
+        customer.id,
+        subscription.plan.updated_at.iso8601
+      ].join("/")
+    end
+
+    def apply_zero_tax
+      invoice.taxes_amount_cents = 0
+      invoice.taxes_rate = 0
+    end
+
+    def fetch_provider_taxes
+      if customer.persisted?
+        taxes_result = Rails.cache.read(provider_taxes_cache_key)
+
+        unless taxes_result
+          taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(
+            invoice:,
+            fees: invoice.fees
+          )
+          Rails.cache.write(provider_taxes_cache_key, taxes_result, expires_in: 24.hours) if taxes_result.success?
+        end
+
+        taxes_result
+      else
+        Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
+      end
+    end
+
+    def provider_taxation?
+      customer.integration_customers&.find { |ic| ic.type == 'IntegrationCustomers::AnrokCustomer' }
     end
   end
 end
