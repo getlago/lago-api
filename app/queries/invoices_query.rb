@@ -113,7 +113,7 @@ class InvoicesQuery < BaseQuery
   end
 
   def with_metadata(scope)
-    base_scope = scope.left_joins(:metadata)
+    base_scope = scope.left_joins(:metadata).limit(nil).offset(nil)
     subquery = base_scope
 
     presence_filters = filters.metadata.select { |_k, v| v.present? }
