@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class DeleteSequenceGenerationInvoiceErrorForGeneratedInvoices < ActiveRecord::Migration[7.1]
-  GENERATED_INVOICE_STATUSES = %w[finalized closed].freeze
+  GENERATED_INVOICE_STATUSES = [1, 6].freeze
 
   def change
     InvoiceError.joins("LEFT JOIN invoices ON invoices.id = invoice_errors.id")
