@@ -85,6 +85,9 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
       expect(invoice_1.ready_for_payment_processing).to eq(false)
       expect(invoice_2.reload).to be_payment_succeeded
       expect(invoice_2.ready_for_payment_processing).to eq(false)
+
+      expect(invoice_1.total_paid_amount_cents).to eq(invoice_1.total_amount_cents)
+      expect(invoice_2.total_paid_amount_cents).to eq(invoice_2.total_amount_cents)
     end
 
     it "does not send payment requested email" do
@@ -238,6 +241,9 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
 
         expect(invoice_2.reload).to be_payment_succeeded
         expect(invoice_2.ready_for_payment_processing).to eq(false)
+
+        expect(invoice_1.total_paid_amount_cents).to eq(0)
+        expect(invoice_2.total_paid_amount_cents).to eq(0)
       end
     end
   end
