@@ -190,6 +190,23 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
     end
 
+    context 'when items are missing' do
+      let(:items) {}
+
+      it 'returns a failed result' do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages.keys).to include(:items)
+        expect(result.error.messages[:items]).to eq(
+          %w[
+            must_be_an_array
+          ]
+        )
+      end
+    end
+
     context 'with a refund, a payment and a succeeded invoice' do
       let(:payment) { create(:payment, payable: invoice) }
 
