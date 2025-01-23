@@ -116,7 +116,7 @@ module Invoices
       credit_result = Credits::CreditNoteService.call(invoice:, context: :preview)
       credit_result.raise_if_error!
 
-      invoice.total_amount_cents -= credit_result.credits.sum(&:amount_cents))
+      invoice.total_amount_cents -= credit_result.credits.sum(&:amount_cents)
     end
 
     def create_applied_prepaid_credits
