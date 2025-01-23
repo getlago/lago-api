@@ -33,6 +33,7 @@ module Invoices
       compute_tax_and_totals
 
       result.invoice = invoice
+      result.subscription = subscription
       result
     end
 

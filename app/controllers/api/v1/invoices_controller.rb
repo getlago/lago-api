@@ -202,6 +202,42 @@ module Api
         end
       end
 
+      def preview
+        result = Invoices::PreviewContextService.call(
+          organization: current_organization,
+          params: preview_params.to_h.deep_symbolize_keys
+        )
+        return render_error_response(result) unless result.success?
+
+        result = Invoices::PreviewService.call(
+          customer: result.customer,
+          subscription: result.subscription,
+          applied_coupons: result.applied_coupons
+        )
+        if result.success?
+          render(
+            json: ::V1::InvoiceSerializer.new(
+              result.invoice,
+              root_name: 'invoice',
+              includes: %i[customer integration_customers credits applied_taxes]
+            ).serialize.tap do |p|
+              p[:subscriptions] = [
+                ::V1::SubscriptionSerializer.new(result.subscription).serialize
+              ]
+              p.merge!(
+                ::CollectionSerializer.new(
+                  result.invoice.fees,
+                  ::V1::FeeSerializer,
+                  collection_name: 'fees'
+                ).serialize
+              )
+            end
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def create_params
@@ -230,6 +266,44 @@ module Api
             :id,
             :key,
             :value
+          ]
+        )
+      end
+
+      def preview_params
+        params.permit(
+          :plan_code,
+          :billing_time,
+          :subscription_at,
+          coupons: [
+            :code,
+            :name,
+            :coupon_type,
+            :amount_cents,
+            :amount_currency,
+            :percentage_rate,
+            :frequency,
+            :frequency_duration,
+            :frequency_duration_remaining
+          ],
+          customer: [
+            :external_id,
+            :name,
+            :tax_identification_number,
+            :currency,
+            :timezone,
+            shipping_address: [
+              :address_line1,
+              :address_line2,
+              :city,
+              :zipcode,
+              :state,
+              :country
+            ],
+            integration_customers: [
+              :integration_type,
+              :integration_code
+            ]
           ]
         )
       end

@@ -34,6 +34,7 @@ module Invoices
           organization: organization,
           tax_identification_number: customer_params[:tax_identification_number],
           currency: customer_params[:currency],
+          timezone: customer_params[:timezone],
           shipping_address_line1: customer_params.dig(:shipping_address, :address_line1),
           shipping_address_line2: customer_params.dig(:shipping_address, :address_line2),
           shipping_city: customer_params.dig(:shipping_address, :city),
@@ -94,6 +95,7 @@ module Invoices
         coupon || Coupon.new(coupon_attr)
       end.map do |coupon|
         AppliedCoupon.new(
+          id: SecureRandom.uuid,
           coupon:,
           customer: result.customer,
           amount_cents: coupon.amount_cents,

@@ -1008,4 +1008,50 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
   end
+
+  describe 'POST /api/v1/invoices' do
+    subject { post_with_token(organization, '/api/v1/invoices/preview', preview_params) }
+
+    let(:plan) { create(:plan, organization:) }
+    let(:preview_params) do
+      {
+        customer: {
+          name: 'test 1',
+          currency: 'EUR',
+          tax_identification_number: '123456789',
+        },
+        plan_code: plan.code,
+        billing_time: 'anniversary'
+      }
+    end
+
+    it 'creates a preview invoice' do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:invoice]).to include(
+        invoice_type: 'subscription',
+        fees_amount_cents: 100,
+        taxes_amount_cents: 20,
+        total_amount_cents: 120,
+        currency: 'EUR'
+      )
+    end
+
+    context 'when customer does not exist' do
+      let(:preview_params) do
+        {
+          customer: {
+            external_id: 'unknown'
+          },
+          plan_code: plan.code
+        }
+      end
+
+      it 'returns a not found error' do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
 end

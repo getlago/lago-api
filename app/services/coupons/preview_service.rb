@@ -17,7 +17,7 @@ module Coupons
 
       applied_coupons.each do |applied_coupon|
         break unless invoice.sub_total_excluding_taxes_amount_cents&.positive?
-        next unless invoice.currency == applied_coupon.amount_currency
+        next if applied_coupon.coupon.fixed_amount? && invoice.currency != applied_coupon.amount_currency
 
         fees = fees(applied_coupon)
 
