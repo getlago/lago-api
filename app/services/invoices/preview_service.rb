@@ -201,7 +201,7 @@ module Invoices
     end
 
     def provider_taxation?
-      customer&.integration_customers&.find { |ic| ic.type == 'IntegrationCustomers::AnrokCustomer' }
+      customer.integration_customers&.find { |ic| ic.type == 'IntegrationCustomers::AnrokCustomer' }
     end
   end
 end
