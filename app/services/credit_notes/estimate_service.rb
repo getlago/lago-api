@@ -43,6 +43,8 @@ module CreditNotes
     end
 
     def validate_items
+      return result.validation_failure!(errors: {items: ['must_be_an_array']}) unless items.is_a?(Array)
+
       items.each do |item_attr|
         amount_cents = item_attr[:amount_cents]&.to_i || 0
 
