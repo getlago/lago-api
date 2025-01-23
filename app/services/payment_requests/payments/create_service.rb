@@ -4,6 +4,7 @@ module PaymentRequests
   module Payments
     class CreateService < BaseService
       include Customers::PaymentProviderFinder
+      include Updatable
 
       def initialize(payable:, payment_provider: nil)
         @payable = payable
@@ -58,10 +59,7 @@ module PaymentRequests
 
         update_payable_payment_status(payment_status: payment_result.payment.payable_payment_status)
         update_invoices_payment_status(payment_status: payment_result.payment.payable_payment_status)
-
-        if payment_result.payment.payable_payment_status.to_sym == :succeeded
-          update_invoices_paid_amount_cents(payment_status: payment_result.payment.payable_payment_status)
-        end
+        update_invoices_paid_amount_cents(payment_status: payment_result.payment.payable_payment_status)
 
         PaymentRequestMailer.with(payment_request: payable).requested.deliver_later if payable.payment_failed?
 
@@ -135,12 +133,6 @@ module PaymentRequests
             },
             webhook_notification: payment_status.to_sym == :succeeded
           )
-        end
-      end
-
-      def update_invoices_paid_amount_cents(payment_status:)
-        payable.invoices.each do |invoice|
-          Invoices::UpdateService.call!(invoice:, params: {total_paid_amount_cents: invoice.total_amount_cents})
         end
       end
 

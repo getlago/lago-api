@@ -4,6 +4,7 @@ module PaymentRequests
   module Payments
     class StripeService < BaseService
       include Customers::PaymentProviderFinder
+      include Updatable
 
       def initialize(payable = nil)
         @payable = payable
@@ -58,6 +59,7 @@ module PaymentRequests
 
         update_payable_payment_status(payment_status: payable_payment_status, processing:)
         update_invoices_payment_status(payment_status: payable_payment_status, processing:)
+        update_invoices_paid_amount_cents(payment_status: payable_payment_status)
         reset_customer_dunning_campaign_status(payable_payment_status)
 
         PaymentRequestMailer.with(payment_request: payment.payable).requested.deliver_later if result.payable.payment_failed?
