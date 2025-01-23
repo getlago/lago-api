@@ -77,6 +77,21 @@ RSpec.describe Fees::EstimateInstantPayInAdvanceService do
       end
     end
 
+    context 'when billable metric has an expression configured' do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, expression: 'event.properties.test * 2') }
+      let(:properties) { {'test' => 200} }
+
+      it 'calculates evaluates the expression before estimating' do
+        result = subject.call
+
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
+
+        fee = result.fees.first
+        expect(fee[:amount_cents]).to eq(40)
+      end
+    end
+
     context 'when event code does not match an pay_in_advance charge' do
       let(:charge) { create(:percentage_charge, plan:, billable_metric:) }
 
