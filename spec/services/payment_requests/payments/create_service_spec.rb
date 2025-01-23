@@ -223,6 +223,13 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
         expect(invoice_2.reload).to be_payment_succeeded
       end
 
+      it "updates invoice paid amount" do
+        create_service.call
+
+        expect(invoice_1.reload.total_paid_amount_cents).to eq(invoice_1.total_amount_cents)
+        expect(invoice_2.reload.total_paid_amount_cents).to eq(invoice_2.total_amount_cents)
+      end
+
       it "does not send a payment requested email" do
         expect { create_service.call }
           .not_to have_enqueued_mail(PaymentRequestMailer, :requested)
