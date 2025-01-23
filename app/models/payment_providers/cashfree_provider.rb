@@ -17,6 +17,10 @@ module PaymentProviders
     validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
 
     secrets_accessors :client_id, :client_secret
+
+    def payment_type
+      'cashfree'
+    end
   end
 end
 

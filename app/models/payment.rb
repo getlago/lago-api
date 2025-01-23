@@ -51,20 +51,7 @@ class Payment < ApplicationRecord
   end
 
   def payment_provider_type
-    return nil unless payment_provider
-
-    case payment_provider.type.to_s
-    when 'PaymentProviders::AdyenProvider'
-      'adyen'
-    when 'PaymentProviders::CashfreeProvider'
-      'cashfree'
-    when 'PaymentProviders::GocardlessProvider'
-      'gocardless'
-    when 'PaymentProviders::StripeProvider'
-      'stripe'
-    else
-      raise(NotImplementedError)
-    end
+    payment_provider&.payment_type
   end
 
   private
