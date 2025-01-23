@@ -830,7 +830,7 @@ RSpec.describe Invoice, type: :model do
       let(:invoice) { create(:invoice, :self_billed, customer:, organization:) }
 
       it 'returns the correct name for EU country' do
-        expect(invoice.document_invoice_name).to eq("Self billing invoice")
+        expect(invoice.document_invoice_name).to eq("Self-billing invoice")
       end
     end
 
