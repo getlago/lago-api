@@ -52,6 +52,7 @@ Rails.application.routes.draw do
       resources :events, only: %i[create show index] do
         post :estimate_fees, on: :collection
         post :estimate_instant_fees, on: :collection
+        post :batch_estimate_instant_fees, on: :collection
       end
       resources :applied_coupons, only: %i[create index]
       resources :fees, only: %i[show update index destroy]

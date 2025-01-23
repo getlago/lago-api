@@ -385,6 +385,99 @@ RSpec.describe Api::V1::EventsController, type: :request do
     end
   end
 
+  describe 'POST /api/v1/events/batch_estimate_instant_fees' do
+    subject do
+      post_with_token(organization, '/api/v1/events/batch_estimate_instant_fees', events: batch_params)
+    end
+
+    let(:metric) { create(:sum_billable_metric, organization:) }
+    let(:charge) { create(:percentage_charge, :pay_in_advance, plan:, billable_metric: metric, properties: {rate: '0.1', fixed_amount: '0'}) }
+
+    let(:event_params) do
+      {
+        code: metric.code,
+        organization_id: organization.id,
+        external_subscription_id: subscription.external_id,
+        transaction_id: SecureRandom.uuid,
+        properties: {
+          metric.field_name => 400
+        }
+      }
+    end
+
+    let(:batch_params) { [event_params] }
+
+    before do
+      charge
+    end
+
+    include_examples 'requires API permission', 'event', 'write'
+
+    it 'returns a success' do
+      subject
+
+      expect(response).to have_http_status(:success)
+
+      expect(json[:fees].count).to eq(1)
+
+      fee = json[:fees].first
+      expect(fee[:lago_id]).to be_nil
+      expect(fee[:lago_group_id]).to be_nil
+      expect(fee[:item][:type]).to eq('charge')
+      expect(fee[:item][:code]).to eq(metric.code)
+      expect(fee[:item][:name]).to eq(metric.name)
+      expect(fee[:amount_cents]).to eq('40.0')
+      expect(fee[:amount_currency]).to eq('EUR')
+      expect(fee[:units]).to eq('400.0')
+      expect(fee[:events_count]).to eq(1)
+    end
+
+    context 'with multiple events' do
+      let(:event2_params) do
+        {
+          code: metric.code,
+          organization_id: organization.id,
+          external_subscription_id: subscription.external_id,
+          transaction_id: SecureRandom.uuid,
+          properties: {
+            metric.field_name => 300
+          }
+        }
+      end
+
+      let(:batch_params) { [event_params, event2_params] }
+
+      it 'returns a success' do
+        subject
+
+        expect(response).to have_http_status(:success)
+
+        expect(json[:fees].count).to eq(2)
+        fee1 = json[:fees].find { |f| f[:event_transaction_id] == event_params[:transaction_id] }
+        fee2 = json[:fees].find { |f| f[:event_transaction_id] == event2_params[:transaction_id] }
+
+        expect(fee1[:lago_id]).to be_nil
+        expect(fee1[:lago_group_id]).to be_nil
+        expect(fee1[:item][:type]).to eq('charge')
+        expect(fee1[:item][:code]).to eq(metric.code)
+        expect(fee1[:item][:name]).to eq(metric.name)
+        expect(fee1[:amount_cents]).to eq('40.0')
+        expect(fee1[:amount_currency]).to eq('EUR')
+        expect(fee1[:units]).to eq('400.0')
+        expect(fee1[:events_count]).to eq(1)
+        expect(fee2[:lago_id]).to be_nil
+        expect(fee2[:lago_group_id]).to be_nil
+        expect(fee2[:item][:type]).to eq('charge')
+        expect(fee2[:item][:code]).to eq(metric.code)
+        expect(fee2[:item][:name]).to eq(metric.name)
+        expect(fee2[:amount_cents]).to eq('30.0')
+        expect(fee2[:amount_currency]).to eq('EUR')
+        expect(fee2[:units]).to eq('300.0')
+        expect(fee2[:events_count]).to eq(1)
+      end
+    end
+  end
+
   describe 'POST /api/v1/events/estimate_instant_fees' do
     subject do
       post_with_token(organization, '/api/v1/events/estimate_instant_fees', event: event_params)
