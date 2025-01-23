@@ -63,7 +63,7 @@ class Organization < ApplicationRecord
   ].freeze
 
   INTEGRATIONS = %w[
-    netsuite okta anrok xero progressive_billing hubspot auto_dunning revenue_analytics salesforce api_permissions revenue_share
+    netsuite okta anrok xero progressive_billing hubspot auto_dunning revenue_analytics salesforce api_permissions revenue_share zero_amount_fees
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 

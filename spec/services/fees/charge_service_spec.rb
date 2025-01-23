@@ -114,6 +114,18 @@ RSpec.describe Fees::ChargeService do
             expect(result).to be_success
             expect(result.fees.count).to eq(0)
           end
+
+          context 'when organization as zero_amount_fees premium integration' do
+            before do
+              organization.update!(premium_integrations: ["zero_amount_fees"])
+            end
+
+            it "creates a fee" do
+              result = charge_subscription_service.call
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+            end
+          end
         end
 
         context "with events" do
@@ -2089,7 +2101,17 @@ RSpec.describe Fees::ChargeService do
     context "when apply taxes" do
       let(:apply_taxes) { true }
 
-      before { create(:tax, organization:, rate: 20) }
+      before do
+        create(:tax, organization:, rate: 20)
+
+        create(
+          :event,
+          organization: invoice.organization,
+          subscription:,
+          code: billable_metric.code,
+          timestamp: boundaries[:charges_to_datetime] - 2.days
+        )
+      end
 
       it "creates a fee with applied taxes" do
         result = charge_subscription_service.call
@@ -2098,18 +2120,18 @@ RSpec.describe Fees::ChargeService do
           id: String,
           invoice_id: invoice.id,
           charge_id: charge.id,
-          amount_cents: 0,
-          precise_amount_cents: 0.0,
+          amount_cents: 2000,
+          precise_amount_cents: 2000.0,
           amount_currency: "EUR",
-          units: 0,
-          unit_amount_cents: 0,
-          precise_unit_amount: 0.0,
-          events_count: 0,
+          units: 1,
+          unit_amount_cents: 2000,
+          precise_unit_amount: 20.0,
+          events_count: 1,
           payment_status: "pending",
 
           taxes_rate: 20.0,
-          taxes_amount_cents: 0,
-          taxes_precise_amount_cents: 0.0
+          taxes_amount_cents: 400,
+          taxes_precise_amount_cents: 400.0
         )
         expect(result.fees.first.applied_taxes.count).to eq(1)
       end
