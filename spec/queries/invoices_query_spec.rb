@@ -668,7 +668,8 @@ RSpec.describe InvoicesQuery, type: :query do
         }
       end
 
-      let!(:matching_invoices) { create_pair(:invoice, organization:) }
+      let(:pagination) { {page: 1, limit: 2} }
+      let!(:matching_invoices) { create_list(:invoice, 3, organization:) }
 
       before do
         matching_invoices.each do |invoice|
@@ -692,7 +693,8 @@ RSpec.describe InvoicesQuery, type: :query do
 
       it "returns invoices with matching metadata filters" do
         expect(result).to be_success
-        expect(result.invoices.pluck(:id)).to match_array matching_invoices.pluck(:id)
+        expect(result.invoices.pluck(:id)).to match_array matching_invoices[1..].pluck(:id)
+        expect(result.invoices.total_count).to eq matching_invoices.count
       end
     end
   end
