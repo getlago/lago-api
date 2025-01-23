@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Invoices::PreviewService, type: :service do
+RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
   subject(:preview_service) { described_class.new(customer:, subscription:) }
 
   describe '#call' do
@@ -165,6 +165,97 @@ RSpec.describe Invoices::PreviewService, type: :service do
               expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(9)
               expect(result.invoice.prepaid_credit_amount_cents).to eq(3)
               expect(result.invoice.total_amount_cents).to eq(6)
+            end
+          end
+        end
+      end
+
+      context 'with provider taxes' do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { build(:anrok_customer, integration:, customer:) }
+        let(:response) { instance_double(Net::HTTPOK) }
+        let(:lago_client) { instance_double(LagoHttpClient::Client) }
+        let(:endpoint) { 'https://api.nango.dev/v1/anrok/draft_invoices' }
+        let(:body) do
+          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response.json')
+          File.read(p)
+        end
+        let(:integration_collection_mapping) do
+          create(
+            :netsuite_collection_mapping,
+            integration:,
+            mapping_type: :fallback_item,
+            settings: {external_id: '1', external_account_code: '11', external_name: ''}
+          )
+        end
+
+        before do
+          integration_collection_mapping
+          customer.integration_customers = [integration_customer]
+
+          allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+          allow(lago_client).to receive(:post_with_response).and_return(response)
+          allow(response).to receive(:body).and_return(body)
+          allow_any_instance_of(Fee).to receive(:id).and_return('lago_fee_id') # rubocop:disable RSpec/AnyInstance
+        end
+
+        it 'creates preview invoice for 2 days' do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.subscriptions.first).to eq(subscription)
+            expect(result.invoice.fees.length).to eq(1)
+            expect(result.invoice.invoice_type).to eq('subscription')
+            expect(result.invoice.issuing_date.to_s).to eq('2024-04-01')
+            expect(result.invoice.fees_amount_cents).to eq(6)
+            expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(6)
+            expect(result.invoice.taxes_amount_cents).to eq(1) # 6 x 0.1
+            expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(7)
+            expect(result.invoice.total_amount_cents).to eq(7)
+          end
+        end
+
+        context 'when there is error received from the provider' do
+          let(:body) do
+            p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+            File.read(p)
+          end
+
+          it 'uses zero taxes' do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.subscriptions.first).to eq(subscription)
+              expect(result.invoice.fees.length).to eq(1)
+              expect(result.invoice.invoice_type).to eq('subscription')
+              expect(result.invoice.issuing_date.to_s).to eq('2024-04-01')
+              expect(result.invoice.fees_amount_cents).to eq(6)
+              expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(6)
+              expect(result.invoice.taxes_amount_cents).to eq(0)
+              expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(6)
+              expect(result.invoice.total_amount_cents).to eq(6)
+            end
+          end
+        end
+
+        context 'with rails cache' do
+          let(:customer) { create(:customer, organization:) }
+
+          before { Rails.cache.clear }
+
+          it 'uses the Rails cache' do
+            travel_to(timestamp) do
+              key = [
+                'preview-taxes',
+                customer.id,
+                plan.updated_at.iso8601
+              ].join('/')
+
+              expect do
+                preview_service.call
+              end.to change { Rails.cache.exist?(key) }.from(false).to(true)
             end
           end
         end
