@@ -9,17 +9,19 @@ module Resolvers
 
     description "Query payments of an organization"
 
+    argument :external_customer_id, ID, required: false
     argument :invoice_id, ID, required: false
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
 
     type Types::Payments::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil, invoice_id: nil)
+    def resolve(page: nil, limit: nil, invoice_id: nil, external_customer_id: nil)
       result = PaymentsQuery.call(
         organization: current_organization,
         filters: {
-          invoice_id:
+          invoice_id:,
+          external_customer_id:
         },
         pagination: {
           page:,
