@@ -859,7 +859,7 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
         expect(numbers).to match_array(%w[ORG-11-001-005 ORG-11-002-005 ORG-11-003-005])
       end
 
-      # NOTE: December 19th: Switching to per_customer numbering and Bill subscription
+      # NOTE: December 19th: Switching to per_organization numbering and Bill subscription
       travel_to(DateTime.new(2023, 12, 19, 12, 12)) do
         organization.update!(document_numbering: 'per_organization')
 

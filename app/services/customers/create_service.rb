@@ -174,7 +174,7 @@ module Customers
         customer_type: args[:customer_type]
       )
 
-      if customer&.organization&.revenue_share_enabled?
+      if customer&.organization&.revenue_share_enabled? && customer&.editable?
         customer.account_type = args[:account_type] if args.key?(:account_type)
         customer.exclude_from_dunning_campaign = customer.partner_account?
       end
