@@ -35,6 +35,7 @@ RSpec.describe Types::Invoices::Object do
   it { is_expected.to have_field(:taxes_amount_cents).of_type('BigInt!') }
   it { is_expected.to have_field(:total_amount_cents).of_type('BigInt!') }
 
+  it { is_expected.to have_field(:total_due_amount_cents).of_type('BigInt!') }
   it { is_expected.to have_field(:issuing_date).of_type('ISO8601Date!') }
   it { is_expected.to have_field(:payment_due_date).of_type('ISO8601Date!') }
   it { is_expected.to have_field(:payment_overdue).of_type('Boolean!') }
