@@ -217,7 +217,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
               message: "error",
               error_code: "code"
             }
-          ).on_queue(:webhook)
+          ).on_queue(webhook_queue)
       end
 
       context "when payment has a payable_payment_status" do

@@ -124,7 +124,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
               message: 'API key invalid.',
               error_code: nil
             }
-          ).on_queue(:webhook)
+          ).on_queue(webhook_queue)
       end
     end
 
@@ -204,7 +204,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
                   message: 'Invalid request',
                   error_code: nil
                 }
-              ).on_queue(:webhook)
+              ).on_queue(webhook_queue)
           end
         end
 
@@ -231,7 +231,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
                   message: 'Permission error',
                   error_code: nil
                 }
-              ).on_queue(:webhook)
+              ).on_queue(webhook_queue)
           end
         end
 
@@ -257,7 +257,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
                   message: 'Invalid username.',
                   error_code: nil
                 }
-              ).on_queue(:webhook)
+              ).on_queue(webhook_queue)
           end
         end
       end
@@ -554,7 +554,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
               message: 'Expired API Key provided',
               error_code: nil
             }
-          ).on_queue(:webhook)
+          ).on_queue(webhook_queue)
       end
     end
   end

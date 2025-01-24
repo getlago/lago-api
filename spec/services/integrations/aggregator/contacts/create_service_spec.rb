@@ -103,7 +103,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
             .with(
               'customer.accounting_provider_created',
               customer
-            ).on_queue(:webhook)
+            ).on_queue(webhook_queue)
         end
 
         it_behaves_like 'throttles!', :anrok, :hubspot, :netsuite, :xero
@@ -150,7 +150,7 @@ RSpec.describe Integrations::Aggregator::Contacts::CreateService do
               .with(
                 'customer.accounting_provider_created',
                 customer
-              ).on_queue(:webhook)
+              ).on_queue(webhook_queue)
           end
 
           it_behaves_like 'throttles!', :anrok, :hubspot, :netsuite, :xero

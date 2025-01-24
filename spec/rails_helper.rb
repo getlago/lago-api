@@ -60,6 +60,7 @@ RSpec.configure do |config|
   config.include ScenariosHelper
   config.include LicenseHelper
   config.include PdfHelper
+  config.include QueuesHelper
   config.include ActiveSupport::Testing::TimeHelpers
   config.include ActiveStorageValidations::Matchers
 

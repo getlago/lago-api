@@ -60,7 +60,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
           'subscription.usage_threshold_reached',
           subscription,
           usage_threshold:
-        ).on_queue(:webhook)
+        ).on_queue(webhook_queue)
     end
 
     it "creates an invoice for the usage_threshold" do
@@ -105,7 +105,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
           'subscription.usage_threshold_reached',
           subscription,
           usage_threshold:
-        ).on_queue(:webhook)
+        ).on_queue(webhook_queue)
     end
 
     it "sends a webhook for the last threshold" do
@@ -114,7 +114,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
           'subscription.usage_threshold_reached',
           subscription,
           usage_threshold: usage_threshold2
-        ).on_queue(:webhook)
+        ).on_queue(webhook_queue)
     end
 
     it "creates an invoice for the current usage" do
@@ -160,7 +160,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
           'subscription.usage_threshold_reached',
           subscription,
           usage_threshold: usage_threshold2
-        ).on_queue(:webhook)
+        ).on_queue(webhook_queue)
     end
 
     it "creates an invoice for the current usage" do
