@@ -219,19 +219,8 @@ module Api
             json: ::V1::InvoiceSerializer.new(
               result.invoice,
               root_name: 'invoice',
-              includes: %i[customer integration_customers credits applied_taxes]
-            ).serialize.tap do |p|
-              p[:subscriptions] = [
-                ::V1::SubscriptionSerializer.new(result.subscription).serialize
-              ]
-              p.merge!(
-                ::CollectionSerializer.new(
-                  result.invoice.fees,
-                  ::V1::FeeSerializer,
-                  collection_name: 'fees'
-                ).serialize
-              )
-            end
+              includes: %i[customer integration_customers credits applied_taxes preview_subscriptions preview_fees]
+            )
           )
         else
           render_error_response(result)

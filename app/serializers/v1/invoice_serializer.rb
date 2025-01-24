@@ -42,6 +42,8 @@ module V1
       payload.merge!(error_details) if include?(:error_details)
       payload.merge!(applied_usage_thresholds) if model.progressive_billing?
       payload.merge!(applied_invoice_custom_sections) if include?(:applied_invoice_custom_sections)
+      payload.merge!(preview_subscriptions) if include?(:preview_subscriptions)
+      payload.merge!(preview_fees) if include?(:preview_fees)
 
       payload
     end
@@ -63,6 +65,12 @@ module V1
       ).serialize
     end
 
+    def preview_subscriptions
+      ::CollectionSerializer.new(
+        model.subscriptions, ::V1::SubscriptionSerializer, collection_name: 'subscriptions'
+      ).serialize
+    end
+
     def fees
       ::CollectionSerializer.new(
         model.fees.includes(
@@ -77,6 +85,12 @@ module V1
         ),
         ::V1::FeeSerializer,
         collection_name: 'fees'
+      ).serialize
+    end
+
+    def preview_fees
+      ::CollectionSerializer.new(
+        model.fees, ::V1::FeeSerializer, collection_name: 'fees'
       ).serialize
     end
 
