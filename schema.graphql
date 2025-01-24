@@ -4540,6 +4540,7 @@ type Invoice {
   taxesAmountCents: BigInt!
   taxesRate: Float!
   totalAmountCents: BigInt!
+  totalDueAmountCents: BigInt!
   updatedAt: ISO8601DateTime!
   versionNumber: Int!
   voidable: Boolean!
