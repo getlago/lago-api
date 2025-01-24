@@ -52,10 +52,17 @@ module PaymentRequests
         payment.update!(status:)
 
         processing = status == "processing"
-        payment_status = payment.payment_provider.determine_payment_status(status)
-        update_payable_payment_status(payment_status:, processing:)
-        update_invoices_payment_status(payment_status:, processing:)
-        reset_customer_dunning_campaign_status(payment_status)
+        payment.status = status
+
+        payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
+        if Payment::PAYABLE_PAYMENT_STATUS.include?(payable_payment_status)
+          payment.payable_payment_status = payable_payment_status
+        end
+        payment.save!
+
+        update_payable_payment_status(payment_status: payable_payment_status, processing:)
+        update_invoices_payment_status(payment_status: payable_payment_status, processing:)
+        reset_customer_dunning_campaign_status(payable_payment_status)
 
         PaymentRequestMailer.with(payment_request: payment.payable).requested.deliver_later if result.payable.payment_failed?
 

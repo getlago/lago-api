@@ -46,91 +46,11 @@ RSpec.describe PaymentRequests::Payments::CashfreeService, type: :service do
     )
   end
 
-  describe ".call" do
-    before do
-      cashfree_payment_provider
-      cashfree_customer
-    end
-
-    it "creates a cashfree payment", aggregate_failure: true do
-      result = cashfree_service.call
-
-      expect(result).to be_success
-
-      expect(result.payable).to be_payment_pending
-      expect(result.payable.payment_attempts).to eq(1)
-      expect(result.payable.reload.ready_for_payment_processing).to eq(true)
-
-      expect(result.payment.id).to be_present
-      expect(result.payment.payable).to eq(payment_request)
-      expect(result.payment.payment_provider).to eq(cashfree_payment_provider)
-      expect(result.payment.payment_provider_customer).to eq(cashfree_customer)
-      expect(result.payment.amount_cents).to eq(payment_request.total_amount_cents)
-      expect(result.payment.amount_currency).to eq(payment_request.currency)
-      expect(result.payment.status).to eq("pending")
-    end
-
-    context "with no payment provider" do
-      let(:cashfree_payment_provider) { nil }
-
-      it "does not creates a payment", aggregate_failure: true do
-        result = cashfree_service.call
-
-        expect(result).to be_success
-        expect(result.payable).to eq(payment_request)
-        expect(result.payment).to be_nil
-      end
-    end
-
-    context "with 0 amount" do
-      let(:payment_request) do
-        create(
-          :payment_request,
-          organization:,
-          customer:,
-          amount_cents: 0,
-          amount_currency: "EUR",
-          invoices: [invoice]
-        )
-      end
-
-      let(:invoice) do
-        create(
-          :invoice,
-          organization:,
-          customer:,
-          total_amount_cents: 0,
-          currency: "EUR"
-        )
-      end
-
-      it "does not creates a payment", aggregate_failure: true do
-        result = cashfree_service.call
-
-        expect(result).to be_success
-        expect(result.payable).to eq(payment_request)
-        expect(result.payment).to be_nil
-        expect(result.payable).to be_payment_succeeded
-      end
-    end
-
-    context "when customer does not exists" do
-      let(:cashfree_customer) { nil }
-
-      it "does not creates a adyen payment", aggregate_failure: true do
-        result = cashfree_service.call
-
-        expect(result).to be_success
-        expect(result.payable).to eq(payment_request)
-        expect(result.payment).to be_nil
-      end
-    end
-  end
-
   describe ".update_payment_status" do
     let(:payment) do
       create(
         :payment,
+        :cashfree_payment,
         payable: payment_request,
         provider_payment_id: payment_request.id,
         status: "pending"

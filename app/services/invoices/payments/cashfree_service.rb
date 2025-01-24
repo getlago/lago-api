@@ -23,9 +23,15 @@ module Invoices
         result.invoice = payment.payable
         return result if payment.payable.payment_succeeded?
 
-        payment.update!(status:)
-        invoice_payment_status = payment.payment_provider&.determine_payment_status(status)
-        update_invoice_payment_status(payment_status: invoice_payment_status)
+        payment.status = status
+
+        payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
+        if Payment::PAYABLE_PAYMENT_STATUS.include?(payable_payment_status)
+          payment.payable_payment_status = payable_payment_status
+        end
+        payment.save!
+
+        update_invoice_payment_status(payment_status: payable_payment_status)
 
         result
       rescue BaseService::FailedResult => e
