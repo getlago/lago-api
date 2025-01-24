@@ -41,7 +41,7 @@ module Fees
     def initialize_fee(new_amount_cents, new_precise_amount_cents)
       base_fee = Fee.new(
         invoice:,
-        organization:,
+        organization_id: organization.id,
         subscription:,
         amount_cents: new_amount_cents,
         precise_amount_cents: new_precise_amount_cents.to_d,

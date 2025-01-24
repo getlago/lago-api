@@ -134,7 +134,7 @@ module Fees
 
       new_fee = Fee.new(
         invoice:,
-        organization:,
+        organization_id: organization.id,
         subscription:,
         charge:,
         amount_cents:,

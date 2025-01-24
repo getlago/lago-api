@@ -57,6 +57,7 @@ RSpec.describe Fees::ChargeService do
         expect(result).to be_success
         expect(result.fees.first).to have_attributes(
           id: String,
+          organization_id: organization.id,
           invoice_id: invoice.id,
           charge_id: charge.id,
           amount_cents: 0,

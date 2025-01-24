@@ -57,6 +57,7 @@ RSpec.describe Fees::SubscriptionService do
 
       expect(result.fee).to have_attributes(
         id: String,
+        organization_id: organization.id,
         invoice_id: invoice.id,
         amount_cents: 100,
         precise_amount_cents: 100.0,

@@ -12,7 +12,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       started_at: DateTime.parse('2022-03-15')
     )
   end
-
+  let(:organization) { invoice.organization }
   let(:invoice) { create(:invoice, status: :draft) }
   let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
 
@@ -63,6 +63,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       expect(result.fee).to be_a(Fee)
       expect(result.fee).to have_attributes(
         id: nil,
+        organization_id: organization.id,
         invoice:,
         subscription:,
         charge:,

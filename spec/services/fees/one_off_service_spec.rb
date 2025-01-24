@@ -45,6 +45,7 @@ RSpec.describe Fees::OneOffService do
       aggregate_failures do
         expect(first_fee).to have_attributes(
           id: String,
+          organization_id: organization.id,
           invoice_id: invoice.id,
           add_on_id: add_on_first.id,
           description: 'desc-123',
@@ -61,6 +62,7 @@ RSpec.describe Fees::OneOffService do
 
         expect(second_fee).to have_attributes(
           id: String,
+          organization_id: organization.id,
           invoice_id: invoice.id,
           add_on_id: add_on_second.id,
           description: add_on_second.description,

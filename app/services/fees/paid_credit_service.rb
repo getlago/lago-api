@@ -20,7 +20,7 @@ module Fees
 
       new_fee = Fee.new(
         invoice:,
-        organization:,
+        organization_id: organization.id,
         fee_type: :credit,
         invoiceable_type: 'WalletTransaction',
         invoiceable: wallet_transaction,
