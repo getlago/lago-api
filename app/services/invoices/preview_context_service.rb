@@ -74,7 +74,7 @@ module Invoices
         subscription_at: params[:subscription_at].presence || Time.current,
         started_at: params[:subscription_at].presence || Time.current,
         billing_time:,
-        created_at: Time.current,
+        created_at: params[:subscription_at].presence || Time.current,
         updated_at: Time.current
       )
     end

@@ -57,8 +57,9 @@ module Invoices
 
     def billing_time
       return @billing_time if defined? @billing_time
+      return subscription.subscription_at if subscription.plan.pay_in_advance?
 
-      ds = Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true)
+      ds = Subscriptions::DatesService.new_instance(subscription, subscription.subscription_at, current_usage: true)
 
       @billing_time = ds.end_of_period + 1.day
     end
