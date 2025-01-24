@@ -305,6 +305,7 @@ RSpec.describe Payment, type: :model do
       other_org_invoice_payment
       other_org_payment_request_payment
     end
+
     it "returns payments and payment requests for the organization's visible invoices" do
       payments = subject
 
