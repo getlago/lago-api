@@ -94,7 +94,7 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
             .with(
               'customer.crm_provider_created',
               customer
-            ).on_queue(:webhook)
+            ).on_queue(webhook_queue)
         end
 
         it_behaves_like 'throttles!', :hubspot
@@ -139,7 +139,7 @@ RSpec.describe Integrations::Aggregator::Companies::CreateService do
               .with(
                 'customer.crm_provider_created',
                 customer
-              ).on_queue(:webhook)
+              ).on_queue(webhook_queue)
           end
 
           it_behaves_like 'throttles!', :hubspot

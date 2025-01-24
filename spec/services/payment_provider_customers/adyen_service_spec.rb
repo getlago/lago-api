@@ -43,7 +43,7 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
             customer,
             checkout_url: 'https://test.adyen.link/test'
           )
-          .on_queue(:webhook)
+          .on_queue(webhook_queue)
       end
     end
 
@@ -73,7 +73,7 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
               message: 'There are no payment methods available for the given parameters.',
               error_code: 'validation'
             }
-          ).on_queue(:webhook)
+          ).on_queue(webhook_queue)
       end
     end
 
@@ -174,7 +174,7 @@ RSpec.describe PaymentProviderCustomers::AdyenService, type: :service do
             customer,
             checkout_url: 'https://test.adyen.link/test'
           )
-          .on_queue(:webhook)
+          .on_queue(webhook_queue)
       end
     end
   end
