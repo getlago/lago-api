@@ -64,7 +64,7 @@ module Fees
         fee = Fee.new(
           subscription:,
           charge:,
-          organization:,
+          organization_id: organization.id,
           amount_cents: result.amount,
           precise_amount_cents: result.precise_amount,
           amount_currency: subscription.plan.amount_currency,

@@ -15,7 +15,7 @@ module Fees
 
       new_fee = Fee.new(
         invoice:,
-        organization:,
+        organization_id: organization.id,
         applied_add_on:,
         amount_cents:,
         precise_amount_cents: amount_cents.to_d,

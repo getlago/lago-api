@@ -71,6 +71,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         expect(result.fees.count).to eq(1)
         expect(result.fees.first).to have_attributes(
           subscription:,
+          organization_id: organization.id,
           charge:,
           amount_cents: 10,
           precise_amount_cents: 10.0,

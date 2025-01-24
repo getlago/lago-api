@@ -8,7 +8,8 @@ RSpec.describe Fees::PaidCreditService do
   end
 
   let(:customer) { create(:customer) }
-  let(:invoice) { create(:invoice, organization: customer.organization) }
+  let(:organization) { customer.organization }
+  let(:invoice) { create(:invoice, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, rate_amount: '1.00') }
   let(:wallet_transaction) do
@@ -25,6 +26,7 @@ RSpec.describe Fees::PaidCreditService do
       expect(result.fee).to have_attributes(
         id: String,
         fee_type: 'credit',
+        organization_id: organization.id,
         invoice_id: invoice.id,
         invoiceable_type: 'WalletTransaction',
         invoiceable_id: wallet_transaction.id,
