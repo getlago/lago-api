@@ -18,6 +18,7 @@ class Payment < ApplicationRecord
   validates :payment_type, presence: true
   validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
   validates :reference, absence: true, if: -> { payment_type_provider? }
+  validate :manual_payment_credit_invoice_amount_cents
   validate :max_invoice_paid_amount_cents, on: :create
   validate :payment_request_succeeded, on: :create
 
@@ -51,6 +52,13 @@ class Payment < ApplicationRecord
   end
 
   private
+
+  def manual_payment_credit_invoice_amount_cents
+    return if !payable.is_a?(Invoice) || payment_type_provider? || !payable.credit?
+    return if amount_cents == payable.total_amount_cents
+
+    errors.add(:amount_cents, :invalid_amount)
+  end
 
   def max_invoice_paid_amount_cents
     return if !payable.is_a?(Invoice) || payment_type_provider?

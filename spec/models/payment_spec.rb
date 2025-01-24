@@ -5,7 +5,8 @@ require 'rails_helper'
 RSpec.describe Payment, type: :model do
   subject(:payment) { build(:payment, payable:, payment_type:, provider_payment_id:, reference:, amount_cents:) }
 
-  let(:payable) { create(:invoice, total_amount_cents: 10000) }
+  let(:payable) { create(:invoice, invoice_type:, total_amount_cents: 10000) }
+  let(:invoice_type) { :subscription }
   let(:payment_type) { 'provider' }
   let(:provider_payment_id) { SecureRandom.uuid }
   let(:reference) { nil }
@@ -30,6 +31,110 @@ RSpec.describe Payment, type: :model do
     let(:errors) { payment.errors }
 
     before { payment.valid? }
+
+    describe 'of amount cents' do
+      before { payment.save }
+
+      context 'when payable is an invoice' do
+        context 'when invoice is not of a credit type' do
+          context 'when payment type is manual' do
+            let(:payment_type) { 'manual' }
+
+            context 'when amount cents does not equal invoice total amount cents' do
+              it 'does not add an error' do
+                expect(errors.where(:amount_cents, :invalid_amount)).not_to be_present
+              end
+            end
+
+            context 'when amount cents equals invoice total amount cents' do
+              let(:amount_cents) { payable.total_amount_cents }
+
+              it 'does not add an error' do
+                expect(errors.where(:amount_cents, :invalid_amount)).not_to be_present
+              end
+            end
+          end
+
+          context 'when payment type is provider' do
+            let(:payment_type) { 'provider' }
+
+            context 'when amount cents does not equal invoice total amount cents' do
+              it 'does not add an error' do
+                expect(errors.where(:amount_cents, :invalid_amount)).not_to be_present
+              end
+            end
+
+            context 'when amount cents equals invoice total amount cents' do
+              let(:amount_cents) { payable.total_amount_cents }
+
+              it 'does not add an error' do
+                expect(errors.where(:amount_cents, :invalid_amount)).not_to be_present
+              end
+            end
+          end
+        end
+
+        context 'when invoice is of a credit type' do
+          let(:invoice_type) { :credit }
+
+          context 'when payment type is manual' do
+            let(:payment_type) { 'manual' }
+
+            context 'when amount cents does not equal invoice total amount cents' do
+              it 'adds an error' do
+                expect(errors.where(:amount_cents, :invalid_amount)).to be_present
+              end
+            end
+
+            context 'when amount cents equals invoice total amount cents' do
+              let(:amount_cents) { payable.total_amount_cents }
+
+              it 'does not add an error' do
+                expect(errors.where(:amount_cents, :invalid_amount)).not_to be_present
+              end
+            end
+          end
+
+          context 'when payment type is provider' do
+            let(:payment_type) { 'provider' }
+
+            context 'when amount cents does not equal invoice total amount cents' do
+              it 'does not add an error' do
+                expect(errors.where(:amount_cents, :invalid_amount)).not_to be_present
+              end
+            end
+
+            context 'when amount cents equals invoice total amount cents' do
+              let(:amount_cents) { payable.total_amount_cents }
+
+              it 'does not add an error' do
+                expect(errors.where(:amount_cents, :invalid_amount)).not_to be_present
+              end
+            end
+          end
+        end
+      end
+
+      context 'when payable is a payment request' do
+        let(:payable) { create(:payment_request) }
+
+        context 'when payment type is manual' do
+          let(:payment_type) { 'manual' }
+
+          it 'does not add an error' do
+            expect(errors.where(:amount_cents, :invalid_amount)).not_to be_present
+          end
+        end
+
+        context 'when payment type is provider' do
+          let(:payment_type) { 'provider' }
+
+          it 'does not add an error' do
+            expect(errors.where(:amount_cents, :invalid_amount)).not_to be_present
+          end
+        end
+      end
+    end
 
     describe 'of max invoice paid amount cents' do
       before { payment.save }
