@@ -17,8 +17,8 @@ namespace :signup do
       Membership.find_or_create_by!(user:, organization:, role: :admin)
 
       if ENV['LAGO_ORG_API_KEY'].present?
-        api_key = ApiKey.find_or_create_by!(organization:, value: ENV['LAGO_API_KEY'])
-        api_key.update!(value: ENV['LAGO_API_KEY'])
+        api_key = ApiKey.find_or_create_by!(organization:, value: ENV['LAGO_ORG_API_KEY'])
+        api_key.update!(value: ENV['LAGO_ORG_API_KEY'])
       else
         ApiKey.find_or_create_by!(organization:)
       end
