@@ -858,7 +858,23 @@ describe 'Invoice Numbering Scenario', :scenarios, type: :request, transaction: 
         expect(organization_sequential_ids).to match_array([0, 0, 0])
         expect(numbers).to match_array(%w[ORG-11-001-005 ORG-11-002-005 ORG-11-003-005])
       end
+
+      # NOTE: December 19th: Switching to per_customer numbering and Bill subscription
+      travel_to(DateTime.new(2023, 12, 19, 12, 12)) do
+        organization.update!(document_numbering: 'per_organization')
+
+        Subscriptions::BillingService.call
+        perform_all_enqueued_jobs
+
+        invoices = organization.invoices.order(created_at: :desc).limit(3)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([6, 6, 6])
+        expect(organization_sequential_ids).to match_array([11, 12, 0])
+        expect(numbers).to match_array(%w[ORG-11-202312-011 ORG-11-202312-012 ORG-11-003-006])
+      end
     end
   end
-
 end
