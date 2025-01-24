@@ -5,8 +5,8 @@ require 'rails_helper'
 RSpec.describe Fees::Commitments::Minimum::CreateService do
   subject(:service_call) { described_class.call(invoice_subscription:) }
 
-  let(:invoice) { invoice_subscription.invoice }
-  let(:invoice_subscription) { create(:invoice_subscription, subscription:, from_datetime:, to_datetime:, timestamp:) }
+  let(:invoice) { create(:invoice, customer:, organization:) }
+  let(:invoice_subscription) { create(:invoice_subscription, subscription:, invoice:, from_datetime:, to_datetime:, timestamp:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:from_datetime) { DateTime.parse('2024-01-01T00:00:00') }
   let(:to_datetime) { DateTime.parse('2024-12-31T23:59:59') }
@@ -18,14 +18,6 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
   context 'when plan has no minimum commitment' do
     context 'when invoice has no commitment fee' do
       it 'creates a commitment fee' do
-        expect do
-          service_call
-        end.not_to change(Fee.commitment, :count)
-      end
-    end
-
-    context 'when invoice already has a commitment fee' do
-      it 'does not create a commitment fee' do
         expect do
           service_call
         end.not_to change(Fee.commitment, :count)
@@ -47,15 +39,23 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
         end
 
         it 'saves taxes amount cents' do
-          service_call
+          result = service_call
+          expect(result).to be_success
+          fee = result.fee
 
-          expect(Fee.commitment.first.taxes_amount_cents).to eq(0)
+          expect(fee.taxes_amount_cents).to eq(0)
         end
 
-        it 'saves precise amount cents' do
-          service_call
+        it 'creates a fee' do
+          result = service_call
+          expect(result).to be_success
+          fee = result.fee
 
-          expect(Fee.commitment.first.precise_amount_cents).to eq(1000.0)
+          expect(fee).to have_attributes(
+            id: String,
+            organization_id: organization.id,
+            precise_amount_cents: 1000.0
+          )
         end
       end
 
@@ -88,7 +88,7 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
     context 'when invoice already has a minimum commitment fee for different subscription' do
       before { create(:minimum_commitment_fee, invoice:) }
 
-      it 'does not create a commitment fee' do
+      it 'creates a commitment fee' do
         expect do
           service_call
         end.to change(Fee.commitment, :count).by(1)
