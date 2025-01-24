@@ -51,6 +51,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
 
       expect(result).to be_success
       expect(result.payment.status).to eq("paid_out")
+      expect(result.payment.payable_payment_status).to eq("succeeded")
       expect(result.invoice.reload).to have_attributes(
         payment_status: "succeeded",
         ready_for_payment_processing: false
@@ -66,6 +67,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
 
         expect(result).to be_success
         expect(result.payment.status).to eq("failed")
+        expect(result.payment.payable_payment_status).to eq("failed")
         expect(result.invoice.reload).to have_attributes(
           payment_status: "failed",
           ready_for_payment_processing: true
@@ -97,8 +99,8 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages.keys).to include(:payment_status)
-          expect(result.error.messages[:payment_status]).to include("value_is_invalid")
+          expect(result.error.messages.keys).to include(:payable_payment_status)
+          expect(result.error.messages[:payable_payment_status]).to include("value_is_invalid")
         end
       end
     end
@@ -114,6 +116,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
 
         expect(result).to be_success
         expect(result.payment.status).to eq("paid_out")
+        expect(result.payment.payable_payment_status).to eq("succeeded")
         expect(result.invoice.reload).to have_attributes(
           payment_status: "succeeded",
           ready_for_payment_processing: false

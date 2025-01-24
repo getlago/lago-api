@@ -49,15 +49,11 @@ module PaymentRequests
         result.payable = payment.payable
         return result if payment.payable.payment_succeeded?
 
-        payment.update!(status:)
-
         processing = status == "processing"
         payment.status = status
 
         payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
-        if Payment::PAYABLE_PAYMENT_STATUS.include?(payable_payment_status)
-          payment.payable_payment_status = payable_payment_status
-        end
+        payment.payable_payment_status = payable_payment_status
         payment.save!
 
         update_payable_payment_status(payment_status: payable_payment_status, processing:)
@@ -67,6 +63,8 @@ module PaymentRequests
         PaymentRequestMailer.with(payment_request: payment.payable).requested.deliver_later if result.payable.payment_failed?
 
         result
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
       end

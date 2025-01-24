@@ -27,14 +27,14 @@ module Invoices
         payment.status = status
 
         payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
-        if Payment::PAYABLE_PAYMENT_STATUS.include?(payable_payment_status)
-          payment.payable_payment_status = payable_payment_status
-        end
+        payment.payable_payment_status = payable_payment_status
         payment.save!
 
         update_invoice_payment_status(payment_status: payable_payment_status)
 
         result
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
       rescue BaseService::FailedResult => e
         result.fail_with_error!(e)
       end
