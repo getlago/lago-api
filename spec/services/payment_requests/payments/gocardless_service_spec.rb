@@ -76,6 +76,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
     it "updates the payment, payment_request and invoice payment_status", :aggregate_failures do
       expect(result).to be_success
       expect(result.payment.status).to eq("paid_out")
+      expect(result.payment.payable_payment_status).to eq("succeeded")
 
       expect(result.payable.reload).to be_payment_succeeded
       expect(result.payable.ready_for_payment_processing).to eq(false)
@@ -139,6 +140,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
       it "updates the payment, payment_request and invoice status", :aggregate_failures do
         expect(result).to be_success
         expect(result.payment.status).to eq(status)
+        expect(result.payment.payable_payment_status).to eq("failed")
 
         expect(result.payable.reload).to be_payment_failed
         expect(result.payable.ready_for_payment_processing).to eq(true)
@@ -200,14 +202,14 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
           .to not_change { payment_request.reload.payment_status }
           .and not_change { invoice_1.reload.payment_status }
           .and not_change { invoice_2.reload.payment_status }
-          .and change { payment.reload.status }.to(status)
+          .and not_change { payment.reload.status }
       end
 
       it "returns an error", :aggregate_failures do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages.keys).to include(:payment_status)
-        expect(result.error.messages[:payment_status]).to include("value_is_invalid")
+        expect(result.error.messages.keys).to include(:payable_payment_status)
+        expect(result.error.messages[:payable_payment_status]).to include("value_is_invalid")
       end
 
       it "does not send payment requested email" do
@@ -226,6 +228,7 @@ RSpec.describe PaymentRequests::Payments::GocardlessService, type: :service do
       it "updates the payment and invoice payment_status" do
         expect(result).to be_success
         expect(result.payment.status).to eq(status)
+        expect(result.payment.payable_payment_status).to eq("succeeded")
 
         expect(result.payable).to be_payment_succeeded
         expect(result.payable.ready_for_payment_processing).to eq(false)
