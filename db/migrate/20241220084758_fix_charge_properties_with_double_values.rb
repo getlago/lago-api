@@ -24,6 +24,13 @@ class FixChargePropertiesWithDoubleValues < ActiveRecord::Migration[7.1]
     ).raise_if_error!
     charge_filter.properties = result.properties
     charge_filter.save!
+  rescue ActiveRecord::RecordInvalid => e
+    say '-' * 50
+    say e.message
+    say "Please fix the following charge filter manually:"
+    say "Failed charge_filter_id: #{charge_filter.id}"
+    say "Charge Filter properties: #{charge_filter.properties}"
+    say "Charge payment model: #{charge_filter.charge.charge_model}"
   end
 
   def fix_charge_properties(charge)
@@ -32,5 +39,12 @@ class FixChargePropertiesWithDoubleValues < ActiveRecord::Migration[7.1]
     ).raise_if_error!
     charge.properties = result.properties
     charge.save!
+  rescue ActiveRecord::RecordInvalid => e
+    say '-' * 50
+    say e.message
+    say "Please fix the following charge manually:"
+    say "Failed charge_id: #{charge.id}"
+    say "Charge properties: #{charge.properties}"
+    say "Charge payment model: #{charge.charge_model}"
   end
 end
