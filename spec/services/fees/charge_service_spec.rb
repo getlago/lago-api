@@ -4,19 +4,19 @@ require "rails_helper"
 
 RSpec.describe Fees::ChargeService do
   subject(:charge_subscription_service) do
-    described_class.new(invoice:, charge:, subscription:, boundaries:, current_usage:, apply_taxes:)
+    described_class.new(invoice:, charge:, subscription:, boundaries:, context:, apply_taxes:)
   end
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
-  let(:current_usage) { false }
+  let(:context) { :finalize }
   let(:apply_taxes) { false }
 
   let(:subscription) do
     create(
       :subscription,
       status: :active,
-      started_at: DateTime.parse("2022-03-15"),
+      started_at: Time.zone.parse("2022-03-15"),
       customer:
     )
   end
@@ -55,21 +55,40 @@ RSpec.describe Fees::ChargeService do
       it "creates a fee" do
         result = charge_subscription_service.call
         expect(result).to be_success
-        expect(result.fees.first).to have_attributes(
-          id: String,
-          organization_id: organization.id,
-          invoice_id: invoice.id,
-          charge_id: charge.id,
-          amount_cents: 0,
-          precise_amount_cents: 0.0,
-          taxes_precise_amount_cents: 0.0,
-          amount_currency: "EUR",
-          units: 0,
-          unit_amount_cents: 0,
-          precise_unit_amount: 0,
-          events_count: 0,
-          payment_status: "pending"
-        )
+        expect(result.fees.count).to be_zero
+      end
+
+      context 'with an event' do
+        let(:event) do
+          create(
+            :event,
+            organization: subscription.organization,
+            subscription:,
+            code: billable_metric.code,
+            timestamp: boundaries[:charges_to_datetime] - 2.days
+          )
+        end
+
+        before { event }
+
+        it "creates a fee" do
+          result = charge_subscription_service.call
+          expect(result).to be_success
+          expect(result.fees.first).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            charge_id: charge.id,
+            amount_cents: 2000,
+            precise_amount_cents: 2000.0,
+            taxes_precise_amount_cents: 0.0,
+            amount_currency: "EUR",
+            units: 1,
+            unit_amount_cents: 2000,
+            precise_unit_amount: 20,
+            events_count: 1,
+            payment_status: "pending"
+          )
+        end
       end
 
       context "with grouped standard charge" do
@@ -90,23 +109,22 @@ RSpec.describe Fees::ChargeService do
         end
 
         context "without events" do
-          it "creates an empty fee" do
+          it "does not create a fee" do
             result = charge_subscription_service.call
             expect(result).to be_success
-            expect(result.fees.count).to eq(1)
+            expect(result.fees.count).to eq(0)
+          end
 
-            fee = result.fees.first
-            expect(fee).to have_attributes(
-              id: String,
-              invoice_id: invoice.id,
-              charge_id: charge.id,
-              amount_cents: 0,
-              amount_currency: "EUR",
-              units: 0,
-              unit_amount_cents: 0,
-              precise_unit_amount: 0,
-              grouped_by: {"cloud" => nil}
-            )
+          context 'when organization as zero_amount_fees premium integration' do
+            before do
+              organization.update!(premium_integrations: ["zero_amount_fees"])
+            end
+
+            it "creates a fee" do
+              result = charge_subscription_service.call
+              expect(result).to be_success
+              expect(result.fees.count).to eq(1)
+            end
           end
         end
 
@@ -115,30 +133,27 @@ RSpec.describe Fees::ChargeService do
             create(
               :event,
               organization: subscription.organization,
-              customer: subscription.customer,
               subscription:,
               code: charge.billable_metric.code,
-              timestamp: DateTime.parse("2022-03-16"),
+              timestamp: Time.zone.parse("2022-03-16"),
               properties: {cloud: "aws", value: 10}
             )
 
             create(
               :event,
               organization: subscription.organization,
-              customer: subscription.customer,
               subscription:,
               code: charge.billable_metric.code,
-              timestamp: DateTime.parse("2022-03-16"),
+              timestamp: Time.zone.parse("2022-03-16"),
               properties: {cloud: "aws", value: 5}
             )
 
             create(
               :event,
               organization: subscription.organization,
-              customer: subscription.customer,
               subscription:,
               code: charge.billable_metric.code,
-              timestamp: DateTime.parse("2022-03-16"),
+              timestamp: Time.zone.parse("2022-03-16"),
               properties: {cloud: "gcp", value: 10}
             )
           end
@@ -297,10 +312,9 @@ RSpec.describe Fees::ChargeService do
             :event,
             4,
             organization: subscription.organization,
-            customer: subscription.customer,
             subscription:,
             code: charge.billable_metric.code,
-            timestamp: DateTime.parse("2022-03-16")
+            timestamp: Time.zone.parse("2022-03-16")
           )
         end
 
@@ -343,7 +357,6 @@ RSpec.describe Fees::ChargeService do
           create(
             :event,
             organization: invoice.organization,
-            customer: subscription.customer,
             subscription:,
             code: billable_metric.code,
             timestamp: Time.zone.parse("10 Apr 2022 00:01:00")
@@ -383,13 +396,24 @@ RSpec.describe Fees::ChargeService do
       end
 
       context "with all types of aggregation" do
+        let(:event) do
+          create(
+            :event,
+            code: billable_metric.code,
+            organization: organization,
+            external_subscription_id: subscription.external_id,
+            timestamp: boundaries[:charges_to_datetime] - 2.days,
+            properties: {"foo_bar" => 1}
+          )
+        end
+
         BillableMetric::AGGREGATION_TYPES.keys.each do |aggregation_type|
           before do
             billable_metric.update!(
               aggregation_type:,
-              field_name: "foo_bar",
+              field_name: event.properties.keys.first,
               weighted_interval: "seconds",
-              custom_aggregator: "def aggregate(event, agg, aggregation_properties); agg; end"
+              custom_aggregator: "def aggregate(event, agg, aggregation_properties); { total_units: 1, amount: 1 }; end"
             )
           end
 
@@ -400,13 +424,13 @@ RSpec.describe Fees::ChargeService do
               id: String,
               invoice_id: invoice.id,
               charge_id: charge.id,
-              amount_cents: 0,
-              precise_amount_cents: 0.0,
+              amount_cents: 2000,
+              precise_amount_cents: 2000.0,
               taxes_precise_amount_cents: 0.0,
               amount_currency: "EUR",
-              units: 0,
-              unit_amount_cents: 0,
-              precise_unit_amount: 0
+              units: 1,
+              unit_amount_cents: 2000,
+              precise_unit_amount: 20
             )
           end
         end
@@ -543,37 +567,33 @@ RSpec.describe Fees::ChargeService do
               create(
                 :event,
                 organization: subscription.organization,
-                customer: subscription.customer,
                 subscription:,
                 code: charge.billable_metric.code,
-                timestamp: DateTime.parse("2022-03-16"),
+                timestamp: Time.zone.parse("2022-03-16"),
                 properties: {region: "usa", foo_bar: 12}
               )
               create(
                 :event,
                 organization: subscription.organization,
-                customer: subscription.customer,
                 subscription:,
                 code: charge.billable_metric.code,
-                timestamp: DateTime.parse("2022-03-16"),
+                timestamp: Time.zone.parse("2022-03-16"),
                 properties: {region: "europe", foo_bar: 10}
               )
               create(
                 :event,
                 organization: subscription.organization,
-                customer: subscription.customer,
                 subscription:,
                 code: charge.billable_metric.code,
-                timestamp: DateTime.parse("2022-03-16"),
+                timestamp: Time.zone.parse("2022-03-16"),
                 properties: {region: "europe", foo_bar: 5}
               )
               create(
                 :event,
                 organization: subscription.organization,
-                customer: subscription.customer,
                 subscription:,
                 code: charge.billable_metric.code,
-                timestamp: DateTime.parse("2022-03-16"),
+                timestamp: Time.zone.parse("2022-03-16"),
                 properties: {country: "france", foo_bar: 5}
               )
             end
@@ -585,7 +605,7 @@ RSpec.describe Fees::ChargeService do
               created_fees = result.fees
 
               aggregate_failures do
-                expect(created_fees.count).to eq(4)
+                expect(created_fees.count).to eq(3)
                 expect(created_fees).to all(
                   have_attributes(
                     invoice_id: invoice.id,
@@ -732,7 +752,7 @@ RSpec.describe Fees::ChargeService do
 
       context "with true-up fee" do
         it "creates two fees" do
-          travel_to(DateTime.new(2023, 4, 1)) do
+          travel_to(Time.zone.parse("2023-04-01")) do
             charge.update!(min_amount_cents: 1000)
             result = charge_subscription_service.call
 
@@ -775,10 +795,9 @@ RSpec.describe Fees::ChargeService do
           create(
             :event,
             organization: subscription.organization,
-            customer: subscription.customer,
             subscription:,
             code: billable_metric.code,
-            timestamp: DateTime.parse("2022-03-16"),
+            timestamp: Time.zone.parse("2022-03-16"),
             properties: {item_id: -10}
           )
         end
@@ -858,37 +877,41 @@ RSpec.describe Fees::ChargeService do
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
+          properties: {foo_bar: 12}
+        )
+        create(
+          :event,
+          organization: subscription.organization,
+          subscription:,
+          code: charge.billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "usa", foo_bar: 12}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 10}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 5}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {country: "france", foo_bar: 5}
         )
       end
@@ -1165,37 +1188,41 @@ RSpec.describe Fees::ChargeService do
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
+          properties: {foo_bar: 12}
+        )
+        create(
+          :event,
+          organization: subscription.organization,
+          subscription:,
+          code: charge.billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "usa", foo_bar: 12}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 10}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 5}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {country: "france", foo_bar: 5}
         )
       end
@@ -1317,37 +1344,41 @@ RSpec.describe Fees::ChargeService do
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
+          properties: {foo_bar: 12}
+        )
+        create(
+          :event,
+          organization: subscription.organization,
+          subscription:,
+          code: charge.billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "usa", foo_bar: 12}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 10}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 5}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {country: "france", foo_bar: 5}
         )
       end
@@ -1475,28 +1506,33 @@ RSpec.describe Fees::ChargeService do
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
+          properties: {foo_bar: 12}
+        )
+        create(
+          :event,
+          organization: subscription.organization,
+          subscription:,
+          code: charge.billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "usa", foo_bar: 12}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 10}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 5}
         )
       end
@@ -1599,28 +1635,33 @@ RSpec.describe Fees::ChargeService do
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
+          properties: {foo_bar: 12}
+        )
+        create(
+          :event,
+          organization: subscription.organization,
+          subscription:,
+          code: charge.billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "usa", foo_bar: 12}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 10}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 5}
         )
       end
@@ -1738,28 +1779,33 @@ RSpec.describe Fees::ChargeService do
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
+          properties: {foo_bar: 12}
+        )
+        create(
+          :event,
+          organization: subscription.organization,
+          subscription:,
+          code: charge.billable_metric.code,
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "usa", foo_bar: 12}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 10}
         )
         create(
           :event,
           organization: subscription.organization,
-          customer: subscription.customer,
           subscription:,
           code: charge.billable_metric.code,
-          timestamp: DateTime.parse("2022-03-16"),
+          timestamp: Time.zone.parse("2022-03-16"),
           properties: {region: "europe", foo_bar: 5}
         )
       end
@@ -1849,24 +1895,25 @@ RSpec.describe Fees::ChargeService do
         usa_filter_value
       end
 
-      it "creates three fees" do
-        travel_to(DateTime.new(2023, 4, 1)) do
+      it "creates two fees" do
+        travel_to(Time.zone.parse("2023-04-01")) do
           result = charge_subscription_service.call
 
           aggregate_failures do
             expect(result).to be_success
-            expect(result.fees.count).to eq(4)
+            expect(result.fees.count).to eq(2)
 
             # 548 is 1000 prorated for 17 days.
-            expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 0, 0, 548)
-            expect(result.fees.pluck(:precise_amount_cents)).to contain_exactly(0, 0, 0, 548.3870967741935)
-            expect(result.fees.pluck(:taxes_precise_amount_cents)).to contain_exactly(0.0, 0.0, 0.0, 0.0)
+            expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 548)
+            expect(result.fees.pluck(:precise_amount_cents)).to contain_exactly(0, 548.3870967741935)
+            expect(result.fees.pluck(:taxes_precise_amount_cents)).to contain_exactly(0.0, 0.0)
           end
         end
       end
     end
 
     context "with recurring weighted sum aggregation" do
+      let(:context) { :recurring }
       let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
       it "creates a fee and a cached aggregation" do
@@ -1931,7 +1978,7 @@ RSpec.describe Fees::ChargeService do
     end
 
     context "when current usage" do
-      let(:current_usage) { true }
+      let(:context) { :current_usage }
 
       context "with all types of aggregation" do
         BillableMetric::AGGREGATION_TYPES.keys.each do |aggregation_type|
@@ -1993,10 +2040,9 @@ RSpec.describe Fees::ChargeService do
             :event,
             4,
             organization: subscription.organization,
-            customer: subscription.customer,
             subscription:,
             code: charge.billable_metric.code,
-            timestamp: DateTime.parse("2022-03-16")
+            timestamp: Time.zone.parse("2022-03-16")
           )
         end
 
@@ -2055,7 +2101,17 @@ RSpec.describe Fees::ChargeService do
     context "when apply taxes" do
       let(:apply_taxes) { true }
 
-      before { create(:tax, organization:, rate: 20) }
+      before do
+        create(:tax, organization:, rate: 20)
+
+        create(
+          :event,
+          organization: invoice.organization,
+          subscription:,
+          code: billable_metric.code,
+          timestamp: boundaries[:charges_to_datetime] - 2.days
+        )
+      end
 
       it "creates a fee with applied taxes" do
         result = charge_subscription_service.call
@@ -2064,18 +2120,18 @@ RSpec.describe Fees::ChargeService do
           id: String,
           invoice_id: invoice.id,
           charge_id: charge.id,
-          amount_cents: 0,
-          precise_amount_cents: 0.0,
+          amount_cents: 2000,
+          precise_amount_cents: 2000.0,
           amount_currency: "EUR",
-          units: 0,
-          unit_amount_cents: 0,
-          precise_unit_amount: 0.0,
-          events_count: 0,
+          units: 1,
+          unit_amount_cents: 2000,
+          precise_unit_amount: 20.0,
+          events_count: 1,
           payment_status: "pending",
 
           taxes_rate: 20.0,
-          taxes_amount_cents: 0,
-          taxes_precise_amount_cents: 0.0
+          taxes_amount_cents: 400,
+          taxes_precise_amount_cents: 400.0
         )
         expect(result.fees.first.applied_taxes.count).to eq(1)
       end

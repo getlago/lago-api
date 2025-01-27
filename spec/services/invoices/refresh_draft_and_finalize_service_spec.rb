@@ -37,10 +37,25 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
     let(:fee) { create(:fee, invoice:, subscription:) }
     let(:plan) { create(:plan, organization:, interval: 'monthly') }
     let(:credit_note) { create(:credit_note, :draft, invoice:) }
-    let(:standard_charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard') }
+    let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: 'count_agg') }
+
+    let(:standard_charge) do
+      create(:standard_charge, plan: subscription.plan, charge_model: 'standard', billable_metric:)
+    end
+
+    let(:event) do
+      create(
+        :event,
+        organization:,
+        subscription: subscription,
+        code: billable_metric.code,
+        timestamp: Time.current.beginning_of_month - 2.days
+      )
+    end
 
     before do
       standard_charge
+      event
 
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
