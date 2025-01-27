@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
+describe "Billing Subscriptions Scenario", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
 
-  let(:timezone) { 'UTC' }
-  let(:customer) { create(:customer, organization:, timezone:, currency: 'GBP') }
+  let(:timezone) { "UTC" }
+  let(:customer) { create(:customer, organization:, timezone:, currency: "GBP") }
 
   let(:plan_monthly_charges) { false }
   let(:plan) do
@@ -14,15 +14,15 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
       :plan,
       organization:,
       amount_cents: 5_000_000,
-      amount_currency: 'GBP',
+      amount_currency: "GBP",
       interval: plan_interval,
       pay_in_advance: false,
       bill_charges_monthly: plan_monthly_charges
     )
   end
 
-  shared_examples 'a subscription billing without duplicated invoices' do
-    it 'creates an invoice' do
+  shared_examples "a subscription billing without duplicated invoices" do
+    it "creates an invoice" do
       # Create the subscription
       travel_to(subscription_time) do
         create_subscription(
@@ -40,8 +40,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
       # Does not create invoices before the billing day
       before_billing_times.each do |time|
         travel_to(time) do
-          Subscriptions::BillingService.new.call
-          expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
+          expect { perform_billing }.not_to change { subscription.reload.invoices.count }
         end
       end
 
@@ -49,8 +48,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
       expect do
         billing_times.each do |time|
           travel_to(time) do
-            Subscriptions::BillingService.new.call
-            perform_all_enqueued_jobs
+            perform_billing
           end
         end
       end.to change { subscription.reload.invoices.count }.from(0).to(1)
@@ -58,15 +56,14 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
       # Does not create invoices after the billing day
       after_billing_times.each do |time|
         travel_to(time) do
-          Subscriptions::BillingService.new.call
-          expect { perform_all_enqueued_jobs }.not_to change { subscription.reload.invoices.count }
+          expect { perform_billing }.not_to change { subscription.reload.invoices.count }
         end
       end
     end
   end
 
-  shared_examples 'a subscription billing on every billing day' do
-    it 'creates an invoice' do
+  shared_examples "a subscription billing on every billing day" do
+    it "creates an invoice" do
       # Create the subscription
       travel_to(subscription_time) do
         create_subscription(
@@ -85,29 +82,28 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
       expect do
         billing_times.each do |time|
           travel_to(time) do
-            Subscriptions::BillingService.new.call
-            perform_all_enqueued_jobs
+            perform_billing
           end
         end
       end.to change { subscription.reload.invoices.count }.from(0).to(billing_times.count)
     end
   end
 
-  context 'with weekly plan' do
-    let(:plan_interval) { 'weekly' }
+  context "with weekly plan" do
+    let(:plan_interval) { "weekly" }
 
-    context 'with calendar billing' do
-      let(:billing_time) { 'calendar' }
+    context "with calendar billing" do
+      let(:billing_time) { "calendar" }
       let(:subscription_time) { DateTime.new(2023, 2, 1) }
 
       let(:before_billing_times) { [DateTime.new(2023, 2, 5)] }
       let(:billing_times) { [DateTime.new(2023, 2, 6, 1), DateTime.new(2023, 2, 6, 2)] }
       let(:after_billing_times) { [DateTime.new(2023, 2, 7, 1)] }
 
-      it_behaves_like 'a subscription billing without duplicated invoices'
+      it_behaves_like "a subscription billing without duplicated invoices"
 
-      context 'with UTC+ timezone' do
-        let(:timezone) { 'Asia/Kolkata' }
+      context "with UTC+ timezone" do
+        let(:timezone) { "Asia/Kolkata" }
         let(:subscription_time) { DateTime.new(2023, 2, 2) }
 
         let(:before_billing_times) do
@@ -126,11 +122,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [DateTime.new(2023, 2, 13, 19, 0)] # 13th of Feb 19:00 UTC - 14th of Feb 00:30 Asia/Kolkata
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC- timezone' do
-        let(:timezone) { 'America/Bogota' }
+      context "with UTC- timezone" do
+        let(:timezone) { "America/Bogota" }
         let(:subscription_time) { DateTime.new(2023, 2, 1, 6, 10) }
 
         let(:before_billing_times) do
@@ -150,22 +146,22 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [DateTime.new(2023, 2, 14, 5, 0)] # 14th of Feb 05:00 UTC - 14th of Feb 00:00 America/Bogota
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
     end
 
-    context 'with anniversary billing' do
-      let(:billing_time) { 'anniversary' }
+    context "with anniversary billing" do
+      let(:billing_time) { "anniversary" }
       let(:subscription_time) { DateTime.new(2023, 2, 1) }
 
       let(:before_billing_times) { [DateTime.new(2023, 2, 14)] }
       let(:billing_times) { [DateTime.new(2023, 2, 15, 1), DateTime.new(2023, 2, 15, 2)] }
       let(:after_billing_times) { [DateTime.new(2023, 2, 16, 1)] }
 
-      it_behaves_like 'a subscription billing without duplicated invoices'
+      it_behaves_like "a subscription billing without duplicated invoices"
 
-      context 'with UTC+ timezone' do
-        let(:timezone) { 'Europe/Paris' }
+      context "with UTC+ timezone" do
+        let(:timezone) { "Europe/Paris" }
         let(:subscription_time) { DateTime.new(2023, 5, 2) }
 
         let(:before_billing_times) do
@@ -185,11 +181,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [DateTime.new(2023, 5, 24, 0, 10)] # 24th of May 00:10 UTC - 24th of May 02:10 Europe/Paris
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC- timezone' do
-        let(:timezone) { 'America/Bogota' }
+      context "with UTC- timezone" do
+        let(:timezone) { "America/Bogota" }
         let(:subscription_time) { DateTime.new(2023, 2, 1, 6, 10) }
 
         let(:before_billing_times) do
@@ -209,26 +205,26 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [DateTime.new(2023, 2, 16, 5, 0)] # 16th of Feb 05:00 UTC - 16th of Feb 00:00 America/Bogota
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
     end
   end
 
-  context 'with monthly plan' do
-    let(:plan_interval) { 'monthly' }
+  context "with monthly plan" do
+    let(:plan_interval) { "monthly" }
 
-    context 'with calendar billing' do
-      let(:billing_time) { 'calendar' }
+    context "with calendar billing" do
+      let(:billing_time) { "calendar" }
       let(:subscription_time) { DateTime.new(2023, 2, 4) }
 
       let(:before_billing_times) { [DateTime.new(2023, 2, 28)] }
       let(:billing_times) { [DateTime.new(2023, 3, 1, 1), DateTime.new(2023, 3, 1, 2)] }
       let(:after_billing_times) { [DateTime.new(2023, 3, 2)] }
 
-      it_behaves_like 'a subscription billing without duplicated invoices'
+      it_behaves_like "a subscription billing without duplicated invoices"
 
-      context 'with UTC+ timezone' do
-        let(:timezone) { 'Asia/Kolkata' }
+      context "with UTC+ timezone" do
+        let(:timezone) { "Asia/Kolkata" }
         let(:subscription_time) { DateTime.new(2023, 2, 1) }
 
         let(:before_billing_times) do
@@ -248,11 +244,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           ]
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC- timezone' do
-        let(:timezone) { 'America/Bogota' }
+      context "with UTC- timezone" do
+        let(:timezone) { "America/Bogota" }
         let(:subscription_time) { DateTime.new(2023, 2, 2, 19) }
 
         let(:before_billing_times) do
@@ -273,31 +269,31 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           ]
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
     end
 
-    context 'with anniversary billing' do
-      let(:billing_time) { 'anniversary' }
+    context "with anniversary billing" do
+      let(:billing_time) { "anniversary" }
       let(:subscription_time) { DateTime.new(2023, 2, 4) }
 
       let(:before_billing_times) { [DateTime.new(2023, 3, 3)] }
       let(:billing_times) { [DateTime.new(2023, 3, 4, 1), DateTime.new(2023, 3, 4, 2)] }
       let(:after_billing_times) { [DateTime.new(2023, 3, 5)] }
 
-      it_behaves_like 'a subscription billing without duplicated invoices'
+      it_behaves_like "a subscription billing without duplicated invoices"
 
-      context 'when subscription started on a 31st' do
+      context "when subscription started on a 31st" do
         let(:subscription_time) { DateTime.new(2023, 3, 31) }
 
         let(:before_billing_times) { [DateTime.new(2023, 4, 29)] }
         let(:billing_times) { [DateTime.new(2023, 4, 30)] }
         let(:after_billing_times) { [DateTime.new(2023, 5, 1)] }
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with anniversary on a 31st' do
+      context "with anniversary on a 31st" do
         let(:billing_times) do
           [
             DateTime.new(2023, 1, 31, 1),
@@ -320,10 +316,10 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:subscription_time) { DateTime.new(2022, 12, 31) }
 
-        it_behaves_like 'a subscription billing on every billing day'
+        it_behaves_like "a subscription billing on every billing day"
       end
 
-      context 'with anniversary on a 30' do
+      context "with anniversary on a 30" do
         let(:billing_times) do
           [
             DateTime.new(2023, 1, 30, 1),
@@ -345,10 +341,10 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:subscription_time) { DateTime.new(2022, 4, 30) }
 
-        it_behaves_like 'a subscription billing on every billing day'
+        it_behaves_like "a subscription billing on every billing day"
       end
 
-      context 'with anniversary on a 28 of february' do
+      context "with anniversary on a 28 of february" do
         let(:billing_times) do
           [
             DateTime.new(2023, 1, 28, 1),
@@ -368,11 +364,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:subscription_time) { DateTime.new(2022, 2, 28) }
 
-        it_behaves_like 'a subscription billing on every billing day'
+        it_behaves_like "a subscription billing on every billing day"
       end
 
-      context 'with UTC+ timezone' do
-        let(:timezone) { 'Asia/Kolkata' }
+      context "with UTC+ timezone" do
+        let(:timezone) { "Asia/Kolkata" }
         let(:subscription_time) { DateTime.new(2023, 2, 2) }
 
         let(:before_billing_times) do
@@ -391,11 +387,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [DateTime.new(2023, 3, 2, 19, 0)] # 2nd of Mar 19:00 UTC - 3rd of Mar 00:30 Asia/Kolkata
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC- timezone' do
-        let(:timezone) { 'America/Bogota' }
+      context "with UTC- timezone" do
+        let(:timezone) { "America/Bogota" }
         let(:subscription_time) { DateTime.new(2023, 2, 2, 5) }
 
         let(:before_billing_times) do
@@ -415,26 +411,26 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [DateTime.new(2023, 3, 3, 5, 0)] # 3rd of Mar 05:00 UTC - 3rd of Mar 00:00 America/Bogota
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
     end
   end
 
-  context 'with quarterly plan' do
-    let(:plan_interval) { 'quarterly' }
+  context "with quarterly plan" do
+    let(:plan_interval) { "quarterly" }
 
-    context 'with calendar billing' do
-      let(:billing_time) { 'calendar' }
+    context "with calendar billing" do
+      let(:billing_time) { "calendar" }
       let(:subscription_time) { DateTime.new(2023, 2, 4) }
 
       let(:before_billing_times) { [DateTime.new(2023, 3, 1)] }
       let(:billing_times) { [DateTime.new(2023, 4, 1, 1), DateTime.new(2023, 4, 1, 2)] }
       let(:after_billing_times) { [DateTime.new(2023, 5, 1)] }
 
-      it_behaves_like 'a subscription billing without duplicated invoices'
+      it_behaves_like "a subscription billing without duplicated invoices"
 
-      context 'with UTC+ timezone' do
-        let(:timezone) { 'Asia/Kolkata' }
+      context "with UTC+ timezone" do
+        let(:timezone) { "Asia/Kolkata" }
         let(:subscription_time) { DateTime.new(2023, 2, 1) }
 
         let(:before_billing_times) do
@@ -454,11 +450,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           ]
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC- timezone' do
-        let(:timezone) { 'America/Bogota' }
+      context "with UTC- timezone" do
+        let(:timezone) { "America/Bogota" }
         let(:subscription_time) { DateTime.new(2023, 2, 2, 19) }
 
         let(:before_billing_times) do
@@ -479,31 +475,31 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           ]
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
     end
 
-    context 'with anniversary billing' do
-      let(:billing_time) { 'anniversary' }
+    context "with anniversary billing" do
+      let(:billing_time) { "anniversary" }
       let(:subscription_time) { DateTime.new(2023, 2, 4) }
 
       let(:before_billing_times) { [DateTime.new(2023, 3, 4)] }
       let(:billing_times) { [DateTime.new(2023, 5, 4, 1), DateTime.new(2023, 5, 4, 2)] }
       let(:after_billing_times) { [DateTime.new(2023, 5, 5)] }
 
-      it_behaves_like 'a subscription billing without duplicated invoices'
+      it_behaves_like "a subscription billing without duplicated invoices"
 
-      context 'when subscription started on a 31st' do
+      context "when subscription started on a 31st" do
         let(:subscription_time) { DateTime.new(2023, 3, 31) }
 
         let(:before_billing_times) { [DateTime.new(2023, 6, 29)] }
         let(:billing_times) { [DateTime.new(2023, 6, 30)] }
         let(:after_billing_times) { [DateTime.new(2023, 7, 1)] }
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with anniversary on a 31st' do
+      context "with anniversary on a 31st" do
         let(:billing_times) do
           [
             DateTime.new(2023, 3, 31, 1),
@@ -515,10 +511,10 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:subscription_time) { DateTime.new(2022, 12, 31) }
 
-        it_behaves_like 'a subscription billing on every billing day'
+        it_behaves_like "a subscription billing on every billing day"
       end
 
-      context 'with anniversary on a 30' do
+      context "with anniversary on a 30" do
         let(:billing_times) do
           [
             DateTime.new(2023, 1, 30, 1),
@@ -530,10 +526,10 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:subscription_time) { DateTime.new(2022, 4, 30) }
 
-        it_behaves_like 'a subscription billing on every billing day'
+        it_behaves_like "a subscription billing on every billing day"
       end
 
-      context 'with anniversary on a 28 of february' do
+      context "with anniversary on a 28 of february" do
         let(:billing_times) do
           [
             DateTime.new(2023, 2, 28, 1),
@@ -545,11 +541,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
 
         let(:subscription_time) { DateTime.new(2022, 2, 28) }
 
-        it_behaves_like 'a subscription billing on every billing day'
+        it_behaves_like "a subscription billing on every billing day"
       end
 
-      context 'with UTC+ timezone' do
-        let(:timezone) { 'Asia/Kolkata' }
+      context "with UTC+ timezone" do
+        let(:timezone) { "Asia/Kolkata" }
         let(:subscription_time) { DateTime.new(2023, 2, 2) }
 
         let(:before_billing_times) do
@@ -568,11 +564,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [DateTime.new(2023, 5, 2, 19, 0)] # 2nd of May 19:00 UTC - 3rd of May 00:30 Asia/Kolkata
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC- timezone' do
-        let(:timezone) { 'America/Bogota' }
+      context "with UTC- timezone" do
+        let(:timezone) { "America/Bogota" }
         let(:subscription_time) { DateTime.new(2023, 2, 2, 5) }
 
         let(:before_billing_times) do
@@ -592,26 +588,26 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [DateTime.new(2023, 5, 3, 5, 0)] # 3rd of Mar 05:00 UTC - 3rd of Mar 00:00 America/Bogota
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
     end
   end
 
-  context 'with yearly plan' do
-    let(:plan_interval) { 'yearly' }
+  context "with yearly plan" do
+    let(:plan_interval) { "yearly" }
 
-    context 'with calendar billing' do
-      let(:billing_time) { 'calendar' }
+    context "with calendar billing" do
+      let(:billing_time) { "calendar" }
       let(:subscription_time) { DateTime.new(2022, 2, 1) }
 
       let(:before_billing_times) { [DateTime.new(2022, 12, 31)] }
       let(:billing_times) { [DateTime.new(2023, 1, 1, 1), DateTime.new(2023, 1, 1, 2)] }
       let(:after_billing_times) { [DateTime.new(2023, 1, 2)] }
 
-      it_behaves_like 'a subscription billing without duplicated invoices'
+      it_behaves_like "a subscription billing without duplicated invoices"
 
-      context 'with UTC+ timezone' do
-        let(:timezone) { 'Europe/Paris' }
+      context "with UTC+ timezone" do
+        let(:timezone) { "Europe/Paris" }
         let(:subscription_time) { DateTime.new(2022, 4, 2) }
 
         let(:before_billing_times) do
@@ -633,11 +629,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           ]
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC- timezone' do
-        let(:timezone) { 'America/Bogota' }
+      context "with UTC- timezone" do
+        let(:timezone) { "America/Bogota" }
         let(:subscription_time) { DateTime.new(2022, 2, 4, 19) }
 
         let(:before_billing_times) do
@@ -654,32 +650,32 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [DateTime.new(2023, 1, 2, 5, 0)] # 2nd of Jan 05:00 UTC - 2nd of Jan 00:00 America/Bogota
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
     end
 
-    context 'with anniversary billing' do
-      let(:billing_time) { 'anniversary' }
+    context "with anniversary billing" do
+      let(:billing_time) { "anniversary" }
       let(:subscription_time) { DateTime.new(2022, 2, 4) }
 
       let(:before_billing_times) { [DateTime.new(2023, 1, 1), DateTime.new(2023, 2, 3)] }
       let(:billing_times) { [DateTime.new(2023, 2, 4, 1), DateTime.new(2023, 2, 4, 2)] }
       let(:after_billing_times) { [DateTime.new(2023, 2, 5), DateTime.new(2023, 3, 4)] }
 
-      it_behaves_like 'a subscription billing without duplicated invoices'
+      it_behaves_like "a subscription billing without duplicated invoices"
 
-      context 'when subscription started on a 29th of February' do
+      context "when subscription started on a 29th of February" do
         let(:subscription_time) { DateTime.new(2020, 2, 29) }
 
         let(:before_billing_times) { [DateTime.new(2023, 1, 28), DateTime.new(2023, 2, 27)] }
         let(:billing_times) { [DateTime.new(2023, 2, 28, 1), DateTime.new(2023, 2, 28, 2)] }
         let(:after_billing_times) { [DateTime.new(2023, 3, 1), DateTime.new(2023, 4, 29)] }
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC+ timezone' do
-        let(:timezone) { 'Europe/Paris' }
+      context "with UTC+ timezone" do
+        let(:timezone) { "Europe/Paris" }
         let(:subscription_time) { DateTime.new(2022, 4, 2) }
 
         let(:before_billing_times) do
@@ -701,11 +697,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           ]
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC- timezone' do
-        let(:timezone) { 'America/Bogota' }
+      context "with UTC- timezone" do
+        let(:timezone) { "America/Bogota" }
         let(:subscription_time) { DateTime.new(2022, 2, 4, 19) }
 
         let(:before_billing_times) do
@@ -722,17 +718,17 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [DateTime.new(2023, 2, 5, 5, 0)] # 5th of Feb 05:00 UTC - 5th of Feb 00:00 America/Bogota
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
     end
   end
 
-  context 'with yearly plan and monthly charge' do
-    let(:plan_interval) { 'yearly' }
+  context "with yearly plan and monthly charge" do
+    let(:plan_interval) { "yearly" }
     let(:plan_monthly_charges) { true }
 
-    context 'with calendar billing' do
-      let(:billing_time) { 'calendar' }
+    context "with calendar billing" do
+      let(:billing_time) { "calendar" }
 
       let(:subscription_time) { DateTime.new(2022, 2, 4) }
 
@@ -740,10 +736,10 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
       let(:billing_times) { [DateTime.new(2023, 1, 1, 1), DateTime.new(2023, 1, 1, 2)] }
       let(:after_billing_times) { [DateTime.new(2023, 1, 2)] }
 
-      it_behaves_like 'a subscription billing without duplicated invoices'
+      it_behaves_like "a subscription billing without duplicated invoices"
 
-      context 'with UTC+ timezone' do
-        let(:timezone) { 'Asia/Kolkata' }
+      context "with UTC+ timezone" do
+        let(:timezone) { "Asia/Kolkata" }
         let(:subscription_time) { DateTime.new(2023, 2, 2) }
 
         let(:before_billing_times) do
@@ -763,11 +759,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           ]
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC- timezone' do
-        let(:timezone) { 'America/Bogota' }
+      context "with UTC- timezone" do
+        let(:timezone) { "America/Bogota" }
         let(:subscription_time) { DateTime.new(2022, 2, 2, 19) }
 
         let(:before_billing_times) do
@@ -788,12 +784,12 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           ]
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
     end
 
-    context 'with anniversary billing' do
-      let(:billing_time) { 'anniversary' }
+    context "with anniversary billing" do
+      let(:billing_time) { "anniversary" }
 
       let(:subscription_time) { DateTime.new(2022, 2, 4) }
 
@@ -801,20 +797,20 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
       let(:billing_times) { [DateTime.new(2023, 1, 4, 1), DateTime.new(2023, 1, 4, 2)] }
       let(:after_billing_times) { [DateTime.new(2023, 1, 5)] }
 
-      it_behaves_like 'a subscription billing without duplicated invoices'
+      it_behaves_like "a subscription billing without duplicated invoices"
 
-      context 'when subscription started on a 31st' do
+      context "when subscription started on a 31st" do
         let(:subscription_time) { DateTime.new(2023, 3, 31) }
 
         let(:before_billing_times) { [DateTime.new(2023, 4, 29)] }
         let(:billing_times) { [DateTime.new(2023, 4, 30)] }
         let(:after_billing_times) { [DateTime.new(2023, 5, 1)] }
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC+ timezone' do
-        let(:timezone) { 'Europe/Paris' }
+      context "with UTC+ timezone" do
+        let(:timezone) { "Europe/Paris" }
         let(:subscription_time) { DateTime.new(2022, 4, 2) }
 
         let(:before_billing_times) do
@@ -836,11 +832,11 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           ]
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
 
-      context 'with UTC- timezone' do
-        let(:timezone) { 'America/Bogota' }
+      context "with UTC- timezone" do
+        let(:timezone) { "America/Bogota" }
         let(:subscription_time) { DateTime.new(2022, 2, 4, 19) }
 
         let(:before_billing_times) do
@@ -857,7 +853,7 @@ describe 'Billing Subscriptions Scenario', :scenarios, type: :request do
           [DateTime.new(2023, 3, 5, 5, 0)] # 5th of Mar 05:00 UTC - 5th of Mar 00:00 America/Bogota
         end
 
-        it_behaves_like 'a subscription billing without duplicated invoices'
+        it_behaves_like "a subscription billing without duplicated invoices"
       end
     end
   end

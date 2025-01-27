@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class BillingService < BaseService
-    def initialize(billing_at: Time.current)
+  class OrganizationBillingService < BaseService
+    def initialize(organization:, billing_at: Time.current)
+      @organization = organization
       @today = billing_at
 
       super
@@ -29,11 +30,13 @@ module Subscriptions
 
         BillNonInvoiceableFeesJob.perform_later(billing_subscriptions, today)
       end
+
+      result
     end
 
     private
 
-    attr_reader :today
+    attr_reader :today, :organization
 
     # NOTE: Retrieve list of subscriptions that should be billed today
     def billable_subscriptions
@@ -73,8 +76,10 @@ module Subscriptions
           INNER JOIN organizations ON organizations.id = customers.organization_id
           LEFT JOIN already_billed_today ON already_billed_today.subscription_id = subscriptions.id
         WHERE
+          organizations.id = '#{organization.id}'
+
           -- Exclude subscriptions already billed today
-          already_billed_today.invoiced_count IS NULL
+          AND already_billed_today.invoiced_count IS NULL
 
           -- Do not bill subscriptions that have started _after_ :today (excludes subscriptions starting today! and also importantly invoices that might have started after this service is run)
           AND DATE(subscriptions.started_at#{at_time_zone}) < DATE(:today#{at_time_zone})
@@ -98,6 +103,7 @@ module Subscriptions
           INNER JOIN customers ON customers.id = subscriptions.customer_id
           INNER JOIN organizations ON organizations.id = customers.organization_id
         WHERE subscriptions.status = #{Subscription.statuses[:active]}
+          AND organizations.id = '#{organization.id}'
           AND subscriptions.billing_time = #{Subscription.billing_times[billing_time]}
           AND plans.interval = #{Plan.intervals[interval]}
           AND #{conditions.join(" AND ")}
@@ -306,6 +312,7 @@ module Subscriptions
           INNER JOIN customers AS cus ON sub.customer_id = cus.id
           INNER JOIN organizations AS org ON cus.organization_id = org.id
         WHERE invoice_subscriptions.recurring = 't'
+          AND org.id = '#{organization.id}'
           AND invoice_subscriptions.timestamp IS NOT NULL
           AND DATE(
             (invoice_subscriptions.timestamp)#{at_time_zone(customer: "cus", organization: "org")}

@@ -2,19 +2,22 @@
 
 require 'rails_helper'
 
-RSpec.describe Subscriptions::BillingService, type: :service do
-  subject(:billing_service) { described_class.new(billing_at:) }
+RSpec.describe Subscriptions::OrganizationBillingService, type: :service do
+  subject(:billing_service) { described_class.new(organization:, billing_at:) }
 
   describe '.call' do
-    let(:plan) { create(:plan, interval:, bill_charges_monthly:) }
+    let(:organization) { create(:organization) }
+    let(:plan) { create(:plan, organization:, interval:, bill_charges_monthly:) }
     let(:bill_charges_monthly) { false }
     let(:created_at) { DateTime.parse('20 Feb 2020') }
     let(:subscription_at) { DateTime.parse('20 Feb 2021') }
-    let(:customer) { create(:customer) }
+    let(:customer) { create(:customer, organization:) }
+    let(:customer2) { create(:customer, organization:) }
 
     let(:subscription) do
       create(
         :subscription,
+        customer: customer2,
         plan:,
         subscription_at:,
         started_at: current_date - 10.days,
@@ -54,9 +57,12 @@ RSpec.describe Subscriptions::BillingService, type: :service do
         )
       end
 
+      let(:customer3) { create(:customer, organization:) }
+
       let(:subscription3) do
         create(
           :subscription,
+          customer: customer3,
           plan:,
           subscription_at:,
           started_at: current_date - 10.days,
@@ -409,7 +415,7 @@ RSpec.describe Subscriptions::BillingService, type: :service do
     end
 
     context 'when downgraded' do
-      let(:customer) { create(:customer, :with_hubspot_integration) }
+      let(:customer) { create(:customer, :with_hubspot_integration, organization:) }
       let(:current_date) { DateTime.parse('20 Feb 2022') }
       let(:subscription) do
         create(

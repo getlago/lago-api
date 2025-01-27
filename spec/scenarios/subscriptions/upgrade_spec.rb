@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transaction: false do
+describe "Subscription Upgrade Scenario", :scenarios, type: :request, transaction: false do
   let(:organization) { create(:organization, webhook_url: false, email_settings: []) }
 
   let(:customer) { create(:customer, organization:) }
@@ -11,7 +11,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
     create(
       :plan,
       organization:,
-      interval: 'monthly',
+      interval: "monthly",
       amount_cents: 1000,
       pay_in_advance: true
     )
@@ -21,7 +21,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
     create(
       :plan,
       organization:,
-      interval: 'yearly',
+      interval: "yearly",
       amount_cents: 12_000,
       pay_in_advance: true
     )
@@ -29,7 +29,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
 
   let(:subscription_at) { DateTime.new(2023, 6, 29, 12, 12) }
 
-  it 'upgrades and bill subscriptions on a regular basis' do
+  it "upgrades and bill subscriptions on a regular basis" do
     subscription = nil
 
     # NOTE: Jun 29th: create the subscription
@@ -39,7 +39,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: monthly_plan.code,
-          billing_time: 'anniversary',
+          billing_time: "anniversary",
           subscription_at: subscription_at.iso8601
         }
       )
@@ -50,38 +50,36 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
 
       invoice = subscription.invoices.last
       expect(invoice.fees_amount_cents).to eq(monthly_plan.amount_cents)
-      expect(invoice.invoice_subscriptions.first.from_datetime.iso8601).to eq('2023-06-29T00:00:00Z')
-      expect(invoice.invoice_subscriptions.first.to_datetime.iso8601).to eq('2023-07-28T23:59:59Z')
+      expect(invoice.invoice_subscriptions.first.from_datetime.iso8601).to eq("2023-06-29T00:00:00Z")
+      expect(invoice.invoice_subscriptions.first.to_datetime.iso8601).to eq("2023-07-28T23:59:59Z")
     end
 
     # NOTE: July 29th: Bill subscription
     travel_to(DateTime.new(2023, 7, 29, 12, 12)) do
-      Subscriptions::BillingService.call
-      expect { perform_all_enqueued_jobs }.to change { subscription.reload.invoices.count }
+      expect { perform_billing }.to change { subscription.reload.invoices.count }
 
       expect(subscription.invoices.count).to eq(2)
 
       invoice = subscription.invoices.order(created_at: :asc).last
       expect(invoice.fees_amount_cents).to eq(monthly_plan.amount_cents)
-      expect(invoice.invoice_subscriptions.first.from_datetime.iso8601).to eq('2023-07-29T00:00:00Z')
-      expect(invoice.invoice_subscriptions.first.to_datetime.iso8601).to eq('2023-08-28T23:59:59Z')
-      expect(invoice.invoice_subscriptions.first.charges_from_datetime.iso8601).to eq('2023-06-29T12:12:00Z')
-      expect(invoice.invoice_subscriptions.first.charges_to_datetime.iso8601).to eq('2023-07-28T23:59:59Z')
+      expect(invoice.invoice_subscriptions.first.from_datetime.iso8601).to eq("2023-07-29T00:00:00Z")
+      expect(invoice.invoice_subscriptions.first.to_datetime.iso8601).to eq("2023-08-28T23:59:59Z")
+      expect(invoice.invoice_subscriptions.first.charges_from_datetime.iso8601).to eq("2023-06-29T12:12:00Z")
+      expect(invoice.invoice_subscriptions.first.charges_to_datetime.iso8601).to eq("2023-07-28T23:59:59Z")
     end
 
     # NOTE: August 29th: Bill subscription
     travel_to(DateTime.new(2023, 8, 29, 12, 12)) do
-      Subscriptions::BillingService.call
-      expect { perform_all_enqueued_jobs }.to change { subscription.reload.invoices.count }
+      expect { perform_billing }.to change { subscription.reload.invoices.count }
 
       expect(subscription.invoices.count).to eq(3)
 
       invoice = subscription.invoices.order(created_at: :asc).last
       expect(invoice.fees_amount_cents).to eq(monthly_plan.amount_cents)
-      expect(invoice.invoice_subscriptions.first.from_datetime.iso8601).to eq('2023-08-29T00:00:00Z')
-      expect(invoice.invoice_subscriptions.first.to_datetime.iso8601).to eq('2023-09-28T23:59:59Z')
-      expect(invoice.invoice_subscriptions.first.charges_from_datetime.iso8601).to eq('2023-07-29T00:00:00Z')
-      expect(invoice.invoice_subscriptions.first.charges_to_datetime.iso8601).to eq('2023-08-28T23:59:59Z')
+      expect(invoice.invoice_subscriptions.first.from_datetime.iso8601).to eq("2023-08-29T00:00:00Z")
+      expect(invoice.invoice_subscriptions.first.to_datetime.iso8601).to eq("2023-09-28T23:59:59Z")
+      expect(invoice.invoice_subscriptions.first.charges_from_datetime.iso8601).to eq("2023-07-29T00:00:00Z")
+      expect(invoice.invoice_subscriptions.first.charges_to_datetime.iso8601).to eq("2023-08-28T23:59:59Z")
     end
 
     # NOTE: On september 28th: Upgrade to the yearly plan
@@ -91,7 +89,7 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: yearly_plan.code,
-          billing_time: 'anniversary'
+          billing_time: "anniversary"
         }
       )
 
@@ -102,9 +100,9 @@ describe 'Subscription Upgrade Scenario', :scenarios, type: :request, transactio
       # expect(invoice.invoice_subscriptions.first.from_datetime.iso8601).to eq('2023-08-29T00:00:00Z')
       # expect(invoice.invoice_subscriptions.first.to_datetime.iso8601).to eq('2023-09-28T23:59:59Z')
       expect(subscription.invoice_subscriptions.order(created_at: :desc).first.charges_from_datetime.iso8601)
-        .to eq('2023-08-29T00:00:00Z')
+        .to eq("2023-08-29T00:00:00Z")
       expect(subscription.invoice_subscriptions.order(created_at: :desc).first.charges_to_datetime.iso8601)
-        .to eq('2023-09-28T05:00:00Z')
+        .to eq("2023-09-28T05:00:00Z")
 
       new_subscription = customer.subscriptions.order(created_at: :asc).last
       expect(new_subscription.plan.code).to eq(yearly_plan.code)

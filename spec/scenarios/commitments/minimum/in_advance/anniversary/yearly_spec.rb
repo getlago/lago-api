@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :request do
+describe "Billing Minimum Commitments In Advance Scenario", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
-  let(:timezone) { 'UTC' }
+  let(:timezone) { "UTC" }
   let(:customer) { create(:customer, organization:, timezone:) }
 
   let(:plan) do
     create(
       :plan,
-      name: 'In Advance',
-      code: 'in_advance',
+      name: "In Advance",
+      code: "in_advance",
       organization:,
       amount_cents: 10_000,
       interval: plan_interval,
@@ -27,10 +27,10 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
     create(
       :billable_metric,
       organization:,
-      name: 'Metered in advance',
-      code: 'advance_metered',
-      aggregation_type: 'sum_agg',
-      field_name: 'total',
+      name: "Metered in advance",
+      code: "advance_metered",
+      aggregation_type: "sum_agg",
+      field_name: "total",
       recurring: false
     )
   end
@@ -39,10 +39,10 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
     create(
       :billable_metric,
       organization:,
-      name: 'Metered in arrears',
-      code: 'metered',
-      aggregation_type: 'sum_agg',
-      field_name: 'total',
+      name: "Metered in arrears",
+      code: "metered",
+      aggregation_type: "sum_agg",
+      field_name: "total",
       recurring: false
     )
   end
@@ -51,16 +51,16 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
     create(
       :billable_metric,
       organization:,
-      name: 'In advance recurring',
-      code: 'recurring_advance',
-      aggregation_type: 'sum_agg',
-      field_name: 'total',
+      name: "In advance recurring",
+      code: "recurring_advance",
+      aggregation_type: "sum_agg",
+      field_name: "total",
       recurring: true
     )
   end
 
-  let(:billing_time) { 'anniversary' }
-  let(:plan_interval) { 'yearly' }
+  let(:billing_time) { "anniversary" }
+  let(:plan_interval) { "yearly" }
   let(:subscription_time) { DateTime.new(2024, 3, 5, 10) }
   let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:, amount_cents: 1_000_000) }
 
@@ -73,7 +73,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       billable_metric: billable_metric_advance_metered,
       invoiceable: true,
       plan:,
-      properties: {amount: '1'}
+      properties: {amount: "1"}
     )
 
     create(
@@ -81,7 +81,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       billable_metric: billable_metric_metered,
       invoiceable: true,
       plan:,
-      properties: {amount: '1'}
+      properties: {amount: "1"}
     )
 
     create(
@@ -90,7 +90,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
       billable_metric: billable_metric_recurring_advance,
       invoiceable: true,
       plan:,
-      properties: {amount: '1'}
+      properties: {amount: "1"}
     )
 
     # Create the subscription
@@ -111,7 +111,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_advance_metered.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: customer.external_id,
-          properties: {total: '2'}
+          properties: {total: "2"}
         }
       )
 
@@ -120,7 +120,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_metered.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: customer.external_id,
-          properties: {total: '1'}
+          properties: {total: "1"}
         }
       )
 
@@ -129,27 +129,26 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
           code: billable_metric_advance_metered.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: customer.external_id,
-          properties: {total: '30'}
+          properties: {total: "30"}
         }
       )
 
-      Subscriptions::BillingService.new.call
-      perform_all_enqueued_jobs
+      perform_billing
     end
   end
 
-  context 'when billed monthly' do
+  context "when billed monthly" do
     let(:bill_charges_monthly) { true }
 
-    context 'when subscription is billed for the first period' do
-      it 'creates an invoice with no minimum commitment fee' do
+    context "when subscription is billed for the first period" do
+      it "creates an invoice with no minimum commitment fee" do
         travel_to(subscription_time + 1.minute) do
           expect(invoice.fees.commitment.count).to eq(0)
         end
       end
     end
 
-    context 'when subscription is billed for the last period' do
+    context "when subscription is billed for the last period" do
       before do
         (1..12).each do |i|
           travel_to(subscription_time + i.month) do
@@ -159,7 +158,7 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
                   code: billable_metric_advance_metered.code,
                   transaction_id: SecureRandom.uuid,
                   external_subscription_id: customer.external_id,
-                  properties: {total: '55'}
+                  properties: {total: "55"}
                 }
               )
             end
@@ -170,18 +169,17 @@ describe 'Billing Minimum Commitments In Advance Scenario', :scenarios, type: :r
                   code: billable_metric_metered.code,
                   transaction_id: SecureRandom.uuid,
                   external_subscription_id: customer.external_id,
-                  properties: {total: '1'}
+                  properties: {total: "1"}
                 }
               )
             end
 
-            Subscriptions::BillingService.new.call
-            perform_all_enqueued_jobs
+            perform_billing
           end
         end
       end
 
-      it 'creates an invoice with minimum commitment fee' do
+      it "creates an invoice with minimum commitment fee" do
         travel_to(subscription_time + 1.year) do
           aggregate_failures do
             expect(invoice.fees.commitment.count).to eq(1)

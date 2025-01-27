@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Spending Minimum Scenarios', :scenarios, type: :request do
+describe "Spending Minimum Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
@@ -11,10 +11,10 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
 
   before { tax }
 
-  context 'when invoice grace period' do
+  context "when invoice grace period" do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
 
-    it 'creates expected credit note and invoice' do
+    it "creates expected credit note and invoice" do
       ### 8 Jan: Create subscription
       travel_to(DateTime.new(2023, 1, 8, 8)) do
         expect {
@@ -31,7 +31,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           :standard_charge,
           plan:,
           billable_metric: metric,
-          properties: {amount: '8'},
+          properties: {amount: "8"},
           min_amount_cents: 1000
         )
       end
@@ -41,8 +41,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
       expect(sub_invoice.total_amount_cents).to eq(4645) # 60 / 31 * 24
 
       travel_to(DateTime.new(2023, 2, 1, 6)) do
-        Subscriptions::BillingService.call
-        perform_all_enqueued_jobs
+        perform_billing
       end
 
       last_invoice = subscription.invoices.order(created_at: :desc).first
@@ -59,7 +58,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
 
         expect {
           terminate_subscription(subscription)
-        }.to change { subscription.reload.status }.from('active').to('terminated')
+        }.to change { subscription.reload.status }.from("active").to("terminated")
           .and change { subscription.invoices.count }.from(2).to(3)
 
         term_invoice = subscription.invoices.order(created_at: :desc).first
@@ -104,13 +103,13 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
         # Finalize pay in advance invoice
         expect {
           finalize_invoice(last_invoice)
-        }.to change { last_invoice.reload.status }.from('draft').to('finalized')
-          .and change { credit_note.reload.status }.from('draft').to('finalized')
+        }.to change { last_invoice.reload.status }.from("draft").to("finalized")
+          .and change { credit_note.reload.status }.from("draft").to("finalized")
 
         # Finalize termination invoice
         expect {
           finalize_invoice(term_invoice)
-        }.to change { term_invoice.reload.status }.from('draft').to('finalized')
+        }.to change { term_invoice.reload.status }.from("draft").to("finalized")
 
         credit_note = last_invoice.credit_notes.first
         expect(credit_note.total_amount_cents).to eq(643) # 60.0 / 28 * 3
@@ -125,12 +124,12 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'when filters' do
+  context "when filters" do
     let(:billable_metric_filter) do
-      create(:billable_metric_filter, billable_metric: metric, key: 'region', values: %w[europe usa])
+      create(:billable_metric_filter, billable_metric: metric, key: "region", values: %w[europe usa])
     end
 
-    it 'creates expected credit note and invoice' do
+    it "creates expected credit note and invoice" do
       ### 8 Jan: Create subscription
       travel_to(DateTime.new(2023, 1, 8)) do
         expect {
@@ -147,15 +146,15 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
           :standard_charge,
           plan:,
           billable_metric: metric,
-          properties: {amount: '0'},
+          properties: {amount: "0"},
           min_amount_cents: 10_000
         )
 
-        europe_filter = create(:charge_filter, charge:, properties: {amount: '20'})
-        create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter:, values: ['europe'])
+        europe_filter = create(:charge_filter, charge:, properties: {amount: "20"})
+        create(:charge_filter_value, charge_filter: europe_filter, billable_metric_filter:, values: ["europe"])
 
-        usa_filter = create(:charge_filter, charge:, properties: {amount: '50'})
-        create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter:, values: ['usa'])
+        usa_filter = create(:charge_filter, charge:, properties: {amount: "50"})
+        create(:charge_filter_value, charge_filter: usa_filter, billable_metric_filter:, values: ["usa"])
       end
 
       subscription = customer.subscriptions.find_by(external_id: customer.external_id)
@@ -163,8 +162,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
       expect(sub_invoice.total_amount_cents).to eq(4645) # 60 / 31 * 24
 
       travel_to(DateTime.new(2023, 2, 1, 6)) do
-        Subscriptions::BillingService.call
-        perform_all_enqueued_jobs
+        perform_billing
       end
 
       ### 25 Feb: Create event and Terminate subscription
@@ -175,7 +173,7 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
             properties: {
-              region: 'usa'
+              region: "usa"
             }
           }
         )
@@ -186,14 +184,14 @@ describe 'Spending Minimum Scenarios', :scenarios, type: :request do
             transaction_id: SecureRandom.uuid,
             external_subscription_id: subscription.external_id,
             properties: {
-              region: 'europe'
+              region: "europe"
             }
           }
         )
 
         expect {
           terminate_subscription(subscription)
-        }.to change { subscription.reload.status }.from('active').to('terminated')
+        }.to change { subscription.reload.status }.from("active").to("terminated")
           .and change { subscription.invoices.count }.from(2).to(3)
 
         term_invoice = subscription.invoices.order(created_at: :desc).first
