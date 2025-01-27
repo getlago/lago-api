@@ -136,6 +136,7 @@ module Invoices
           payment_method_types: customer.stripe_customer.provider_payment_methods,
           payment_intent_data: {
             description:,
+            setup_future_usage: off_session? ? "off_session" : nil, # save payment method for future use
             metadata: {
               lago_customer_id: customer.id,
               lago_invoice_id: invoice.id,
