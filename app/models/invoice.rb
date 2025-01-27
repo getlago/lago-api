@@ -50,12 +50,14 @@ class Invoice < ApplicationRecord
     :sub_total_excluding_taxes_amount_cents,
     :sub_total_including_taxes_amount_cents,
     :total_amount_cents,
+    :total_paid_amount_cents,
     :taxes_amount_cents,
     with_model_currency: :currency
 
   # NOTE: Readonly fields
   monetize :charge_amount_cents,
     :subscription_amount_cents,
+    :total_due_amount_cents,
     disable_validation: true,
     allow_nil: true,
     with_model_currency: :currency
