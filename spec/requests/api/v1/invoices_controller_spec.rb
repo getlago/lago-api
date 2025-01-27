@@ -1009,7 +1009,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
   end
 
-  describe 'POST /api/v1/invoices' do
+  describe 'POST /api/v1/invoices/preview' do
     subject { post_with_token(organization, '/api/v1/invoices/preview', preview_params) }
 
     let(:plan) { create(:plan, organization:) }
@@ -1018,7 +1018,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         customer: {
           name: 'test 1',
           currency: 'EUR',
-          tax_identification_number: '123456789',
+          tax_identification_number: '123456789'
         },
         plan_code: plan.code,
         billing_time: 'anniversary'

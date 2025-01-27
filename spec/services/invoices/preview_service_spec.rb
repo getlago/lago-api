@@ -64,6 +64,38 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
       end
 
+      context 'with in advance billing in the future' do
+        let(:plan) { create(:plan, organization:, interval: 'monthly', pay_in_advance: true) }
+        let(:subscription) do
+          build(
+            :subscription,
+            customer:,
+            plan:,
+            billing_time:,
+            subscription_at: timestamp + 1.day,
+            started_at: timestamp + 1.day,
+            created_at: timestamp + 1.day
+          )
+        end
+
+        it 'creates preview invoice for 1 day' do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result).to be_success
+            expect(result.invoice.subscriptions.first).to eq(subscription)
+            expect(result.invoice.fees.length).to eq(1)
+            expect(result.invoice.invoice_type).to eq('subscription')
+            expect(result.invoice.issuing_date.to_s).to eq('2024-03-31')
+            expect(result.invoice.fees_amount_cents).to eq(3)
+            expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(3)
+            expect(result.invoice.taxes_amount_cents).to eq(2)
+            expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(5)
+            expect(result.invoice.total_amount_cents).to eq(5)
+          end
+        end
+      end
+
       context 'with applied coupons' do
         let(:applied_coupon) do
           build(
