@@ -24,6 +24,8 @@ module Events
       event.properties[field_name] = value
 
       result
+    rescue RuntimeError => e
+      result.service_failure!(code: :expression_evaluation_failed, message: e.message)
     end
 
     private

@@ -35,7 +35,7 @@ module Fees
       properties = charge_filter&.properties || charge.properties
 
       # Todo: perhaps this should live in its own service
-      Events::CalculateExpressionService.call!(organization:, event:)
+      Events::CalculateExpressionService.call(organization:, event:)
       billable_metric = charge.billable_metric
       units = BigDecimal(event.properties[charge.billable_metric.field_name] || 0)
       units = BillableMetrics::Aggregations::ApplyRoundingService.call!(billable_metric:, units:).units
