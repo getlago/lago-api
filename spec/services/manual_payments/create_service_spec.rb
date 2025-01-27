@@ -92,7 +92,7 @@ RSpec.describe ManualPayments::CreateService, type: :service do
         context "when paid_at format is invalid" do
           let(:paid_at) { "invalid_date" }
 
-          it "returns unprocessable entity failure" do
+          it "returns a validation failure" do
             result = service.call
 
             aggregate_failures do
