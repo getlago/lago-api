@@ -123,7 +123,8 @@ module Invoices
           link_notes: {
             lago_customer_id: customer.id,
             lago_invoice_id: invoice.id,
-            invoice_issuing_date: invoice.issuing_date.iso8601
+            invoice_issuing_date: invoice.issuing_date.iso8601,
+            payment_type: "one-time"
           },
           link_id: "#{SecureRandom.uuid}.#{invoice.payment_attempts}",
           link_amount: invoice.total_amount_cents / 100.to_f,

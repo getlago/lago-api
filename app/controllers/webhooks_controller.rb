@@ -21,8 +21,8 @@ class WebhooksController < ApplicationController
       organization_id: params[:organization_id],
       code: params[:code].presence,
       body: request.body.read,
-      timestamp: request.headers['X-Cashfree-Timestamp'],
-      signature: request.headers['X-Cashfree-Signature']
+      timestamp: request.headers['X-Cashfree-Timestamp'] || request.headers['X-Webhook-Timestamp'],
+      signature: request.headers['X-Cashfree-Signature'] || request.headers['X-Webhook-Signature']
     )
 
     unless result.success?
