@@ -23,7 +23,7 @@ module ManualPayments
           status: 'succeeded',
           payable_payment_status: 'succeeded',
           payment_type: :manual,
-          created_at: params[:paid_at].present? ? Time.iso8601(params[:paid_at]) : nil
+          created_at: parsed_paid_at
         )
 
         invoice.update!(total_paid_amount_cents: invoice.total_paid_amount_cents + amount_cents)
@@ -46,6 +46,12 @@ module ManualPayments
 
     attr_reader :organization, :params
 
+    def parsed_paid_at
+      return nil if params[:paid_at].blank?
+
+      Time.zone.parse(params[:paid_at])
+    end
+
     def invoice
       @invoice ||= organization.invoices.find_by(id: params[:invoice_id])
     end
@@ -53,7 +59,12 @@ module ManualPayments
     def check_preconditions
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "invoice") unless invoice
-      result.forbidden_failure! unless invoice.organization.premium_integrations.include?('manual_payments')
+      return result.forbidden_failure! unless invoice.organization.premium_integrations.include?('manual_payments')
+      result.single_validation_failure!(error_code: "invalid_date", field: "paid_at") unless valid_paid_at?
+    end
+
+    def valid_paid_at?
+      params[:paid_at].blank? || Utils::Datetime.valid_format?(params[:paid_at])
     end
   end
 end

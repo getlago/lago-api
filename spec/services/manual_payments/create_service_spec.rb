@@ -89,6 +89,34 @@ RSpec.describe ManualPayments::CreateService, type: :service do
           end
         end
 
+        context "when paid_at format is invalid" do
+          let(:paid_at) { "invalid_date" }
+
+          it "returns a validation failure" do
+            result = service.call
+
+            aggregate_failures do
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::ValidationFailure)
+              expect(result.error.messages[:paid_at]).to eq(["invalid_date"])
+            end
+          end
+        end
+
+        context "when paid_at format is valid but different format" do
+          let(:paid_at) { "2024-01-20" }
+
+          it "creates a payment with valid date" do
+            result = service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.payment.payment_type).to eq("manual")
+              expect(result.payment.created_at).to eq(paid_at)
+            end
+          end
+        end
+
         context "when payment amount cents is smaller than invoice remaining amount cents" do
           let(:amount_cents) { 2000 }
 
