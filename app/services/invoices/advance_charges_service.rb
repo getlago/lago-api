@@ -59,7 +59,7 @@ module Invoices
 
       params = {invoice_id: invoice.id, amount_cents:, reference:, created_at:}
 
-      ::Payments::ManualCreateJob.perform_later(organization:, params:, skip_checks: true)
+      ::Payments::ManualCreateJob.perform_later(organization:, params:)
     end
 
     def create_group_invoice

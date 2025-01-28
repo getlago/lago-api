@@ -2,11 +2,9 @@
 
 module Payments
   class ManualCreateService < BaseService
-    def initialize(organization:, params:, skip_checks: false)
+    def initialize(organization:, params:)
       @organization = organization
       @params = params
-      @skip_checks = skip_checks
-
       super
     end
 
@@ -57,14 +55,20 @@ module Payments
     end
 
     def check_preconditions
-	  return result.forbidden_failure! if !License.premium? && !skip_checks
-      return result.not_found_failure!(resource: "invoice") unless invoice
+	  return result.not_found_failure!(resource: "invoice") unless invoice
+      return if invoice.invoice_type == :advance_charges
+	  return result.forbidden_failure! unless License.premium?
       return result.forbidden_failure! unless invoice.organization.premium_integrations.include?('manual_payments')
       result.single_validation_failure!(error_code: "invalid_date", field: "paid_at") unless valid_paid_at?
     end
 
     def valid_paid_at?
       params[:paid_at].blank? || Utils::Datetime.valid_format?(params[:paid_at])
+      return result.not_found_failure!(resource: "invoice") unless invoice
+      return if invoice.invoice_type == :advance_charges
+
+      return result.forbidden_failure! unless License.premium?
+      result.forbidden_failure! unless invoice.organization.premium_integrations.include?('manual_payments')
     end
   end
 end
