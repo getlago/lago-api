@@ -17,6 +17,8 @@ sv:
     prepaid_credits_for_wallet: Förbetald kontobalans - %{wallet_name}
     refunded: Återbetald
     refunded_notice: Återbetald den %{issuing_date}
+    self_billed:
+      footer: Denna självfaktura har utfärdats av kunden för partnerns räkning, med deras samtycke. Partnern har gått med på att inte utfärda en egen faktura för denna transaktion.
     sub_total_without_tax: Delsumma (exkl. moms)
     subscription: Prenumeration
     tax: "%{name} (%{rate}% på %{amount})"

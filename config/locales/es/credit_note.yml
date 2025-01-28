@@ -17,6 +17,8 @@ es:
     prepaid_credits_for_wallet: Créditos prepagados - %{wallet_name}
     refunded: Reembolso
     refunded_notice: Reembolso hecho el %{issuing_date}
+    self_billed:
+      footer: Esta nota de crédito sobre una factura de autoliquidación ha sido emitida por el cliente en nombre del socio, con su consentimiento. El socio ha aceptado no emitir su propia nota de crédito para esta transacción.
     sub_total_without_tax: Subtotal (impuestos excl.)
     subscription: Suscripción
     tax: "%{name} (%{rate}% sobre %{amount})"

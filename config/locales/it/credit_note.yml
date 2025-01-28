@@ -17,6 +17,8 @@ it:
     prepaid_credits_for_wallet: Crediti prepagati - %{wallet_name}
     refunded: Rimborsato
     refunded_notice: Rimborsato il %{issuing_date}
+    self_billed:
+      footer: Questa fattura di autofatturazione è stata emessa dal cliente per conto del partner, con il suo consenso. Il partner ha accettato di non emettere una propria fattura per questa transazione.
     sub_total_without_tax: Subtotale (escl. tasse)
     subscription: Abbonamento
     tax: "%{name} (%{rate}% su %{amount})"

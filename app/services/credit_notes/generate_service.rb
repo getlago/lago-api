@@ -27,7 +27,7 @@ module CreditNotes
     def generate_pdf(credit_note)
       I18n.locale = credit_note.customer.preferred_document_locale
 
-      pdf_service = Utils::PdfGenerator.new(template: 'credit_note', context: credit_note)
+      pdf_service = Utils::PdfGenerator.new(template: , context: credit_note)
       pdf_result = pdf_service.call
 
       credit_note.file.attach(
@@ -41,6 +41,12 @@ module CreditNotes
 
     def should_generate_pdf?
       context == 'admin' || credit_note.file.blank?
+    end
+
+    def template
+      return 'credit_notes/self_billed' if credit_note.invoice.self_billed?
+
+      'credit_notes/credit_note'
     end
   end
 end

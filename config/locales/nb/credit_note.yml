@@ -17,6 +17,8 @@ nb:
     prepaid_credits_for_wallet: Forhåndsbetalte kreditter - %{wallet_name}
     refunded: Refundert
     refunded_notice: Refundert %{issuing_date}
+    self_billed:
+      footer: Denne egenfakturaen ble utstedt av kunden på vegne av partneren, med deres samtykke. Partneren har gått med på å ikke utstede sin egen faktura for denne transaksjonen.
     sub_total_without_tax: Sub total (ekskl. MVA)
     subscription: Abonnement
     tax: "%{name} (%{rate}% on %{amount})"
