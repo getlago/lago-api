@@ -42,7 +42,7 @@ module Payments
 
     private
 
-    attr_reader :organization, :params, :skip_checks
+    attr_reader :organization, :params
 
     def parsed_paid_at
       return nil if params[:paid_at].blank?

@@ -9,7 +9,7 @@ RSpec.describe Payments::ManualCreateJob, type: :job do
 
   it "calls the create service" do
     allow(Payments::ManualCreateService)
-      .to receive(:call!).with(organization:, params:, skip_checks: false).and_return(BaseService::Result.new)
+      .to receive(:call!).with(organization:, params:).and_return(BaseService::Result.new)
 
     described_class.perform_now(organization:, params:)
 

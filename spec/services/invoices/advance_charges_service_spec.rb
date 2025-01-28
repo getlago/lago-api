@@ -119,8 +119,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
               amount_cents: result.invoice.total_amount_cents,
               reference:,
               created_at: result.invoice.created_at
-            },
-            skip_checks: true
+            }
           )
       end
     end
