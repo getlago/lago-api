@@ -74,6 +74,7 @@ class Organization < ApplicationRecord
     salesforce
     api_permissions
     revenue_share
+	manual_payments
     zero_amount_fees
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]

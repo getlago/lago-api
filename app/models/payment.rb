@@ -51,6 +51,10 @@ class Payment < ApplicationRecord
     payable.finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_payments }
   end
 
+  def payment_provider_type
+    payment_provider&.payment_type
+  end
+
   private
 
   def manual_payment_credit_invoice_amount_cents
