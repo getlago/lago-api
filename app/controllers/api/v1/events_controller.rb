@@ -102,10 +102,11 @@ module Api
 
       def batch_estimate_instant_fees
         fees = []
-        batch_params[:events].each do |create_params|
-          fees += Fees::EstimateInstantPayInAdvanceService.call!(
+        batch_params[:events].group_by { |h| h[:external_subscription_id] }.each do |external_subscription_id, events|
+          fees += Fees::BatchEstimateInstantPayInAdvanceService.call!(
             organization: current_organization,
-            params: create_params
+            external_subscription_id:,
+            events:
           ).fees
         end
 

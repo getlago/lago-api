@@ -1,10 +1,22 @@
 # frozen_string_literal: true
 
 module Fees
-  class EstimateInstantPayInAdvanceService < BaseService
-    def initialize(organization:, params:)
+  class BatchEstimateInstantPayInAdvanceService < BaseService
+    def initialize(organization:, external_subscription_id:, events:)
       @organization = organization
-      @event_params = params
+      @external_subscription_id = external_subscription_id
+      @timestamp = Time.current
+
+      @events = events.map do |e|
+        Event.new(
+          organization_id: organization.id,
+          code: e[:code],
+          external_subscription_id: e[:external_subscription_id],
+          properties: e[:properties] || {},
+          transaction_id: e[:transaction_id] || SecureRandom.uuid,
+          timestamp:
+        )
+      end
 
       super
     end
@@ -16,7 +28,14 @@ module Fees
         return result.single_validation_failure!(field: :code, error_code: 'does_not_match_an_instant_charge')
       end
 
-      fees = charges.map { |charge| estimate_charge_fees(charge) }
+      fees = []
+
+      events.each do |event|
+        # find all charges that match this event
+        matched_charges = charges.select { |c| c.billable_metric.code == event.code }
+        next unless matched_charges
+        fees += matched_charges.map { |charge| estimate_charge_fees(charge, event) }
+      end
 
       result.fees = fees
       result
@@ -24,11 +43,10 @@ module Fees
 
     private
 
-    attr_reader :event_params, :organization
-    delegate :subscription, to: :event
-    delegate :customer, to: :subscription, allow_nil: true
+    attr_reader :events, :timestamp, :external_subscription_id, :organization
+    delegate :customer, to: :subscription
 
-    def estimate_charge_fees(charge)
+    def estimate_charge_fees(charge, event)
       charge_filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
       properties = charge_filter&.properties || charge.properties
 
@@ -41,7 +59,7 @@ module Fees
       estimate_result = Charges::EstimateInstant::PercentageService.call!(properties:, units:)
 
       amount = estimate_result.amount
-      # NOTE: amount_result should be a BigDecimal, we need to round it
+      # NOTE: amount_result should be  a BigDecimal, we need to round it
       # to the currency decimals and transform it into currency cents
       rounded_amount = amount.round(currency.exponent)
       amount_cents = rounded_amount * currency.subunit_to_unit
@@ -98,17 +116,16 @@ module Fees
       }
     end
 
-    def event
-      return @event if @event
-
-      @event = Event.new(
-        organization_id: organization.id,
-        code: event_params[:code],
-        external_subscription_id: event_params[:external_subscription_id],
-        properties: event_params[:properties] || {},
-        transaction_id: event_params[:transaction_id] || SecureRandom.uuid,
-        timestamp: Time.current
-      )
+    def subscription
+      @subscription ||=
+        organization.subscriptions.where(external_id: external_subscription_id)
+          .where("date_trunc('millisecond', started_at::timestamp) <= ?::timestamp", timestamp)
+          .where(
+            "terminated_at IS NULL OR date_trunc('millisecond', terminated_at::timestamp) >= ?",
+            timestamp
+          )
+          .order('terminated_at DESC NULLS FIRST, started_at DESC')
+          .first
     end
 
     def charges
@@ -117,8 +134,7 @@ module Fees
         .charges
         .percentage
         .pay_in_advance
-        .joins(:billable_metric)
-        .where(billable_metric: {code: event.code})
+        .includes(:billable_metric)
     end
 
     def currency
