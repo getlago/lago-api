@@ -11,7 +11,6 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
   let(:credit_note) { create(:credit_note, invoice:, customer:) }
   let(:fee) { create(:fee, invoice:) }
   let(:credit_note_item) { create(:credit_note_item, credit_note:, fee:) }
-  let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
   let(:context) { nil }
 
   let(:pdf_content) do
@@ -25,9 +24,7 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
   before do
     credit_note_item
 
-    allow(Utils::PdfGenerator).to receive(:new)
-      .and_return(pdf_generator)
-    allow(pdf_generator).to receive(:call)
+    allow(Utils::PdfGenerator).to receive(:call)
       .and_return(pdf_response)
   end
 
@@ -36,6 +33,23 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
       result = credit_note_generate_service.call
 
       expect(result.credit_note.file).to be_present
+    end
+
+    it 'uses credit_note template' do
+      credit_note_generate_service.call
+
+      expect(Utils::PdfGenerator).to have_received(:call).with(template: 'credit_notes/credit_note', context: credit_note)
+    end
+
+    context "when credit note is for self billed invoice" do
+      let(:invoice) { create(:invoice, :self_billed, customer:, organization:) }
+      let(:credit_note) { create(:credit_note, invoice:, customer:) }
+
+      it 'uses self billed template' do
+        credit_note_generate_service.call
+
+        expect(Utils::PdfGenerator).to have_received(:call).with(template: 'credit_notes/self_billed', context: credit_note)
+      end
     end
 
     context 'with preferred locale' do
