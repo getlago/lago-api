@@ -110,7 +110,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         expect(SegmentTrackJob).to have_been_enqueued.once
         expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
 
-        expect(ManualPayments::CreateJob)
+        expect(Payments::ManualCreateJob)
           .to have_been_enqueued.once
           .with(
             organization:,

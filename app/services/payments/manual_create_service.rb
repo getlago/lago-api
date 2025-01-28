@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-module ManualPayments
-  class CreateService < BaseService
+module Payments
+  class ManualCreateService < BaseService
     def initialize(organization:, params:, skip_checks: false)
       @organization = organization
       @params = params

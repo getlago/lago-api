@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ManualPayments::CreateService, type: :service do
+RSpec.describe Payments::ManualCreateService, type: :service do
   subject(:service) { described_class.new(organization:, params:) }
 
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 10000, status: :finalized) }
