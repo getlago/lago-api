@@ -304,7 +304,7 @@ class Invoice < ApplicationRecord
     #   total_paid_amount_cents - credit_notes.sum("refund_amount_cents + credit_amount_cents")
     # end
 
-    amount = available_to_credit_amount_cents -
+    amount = total_paid_amount_cents - credit_notes.sum("refund_amount_cents + credit_amount_cents") -
       credits.where(before_taxes: false).sum(:amount_cents) -
       prepaid_credit_amount_cents
     amount = amount.negative? ? 0 : amount
