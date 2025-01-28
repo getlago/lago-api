@@ -20568,6 +20568,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "manual_payments",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -30623,6 +30629,12 @@
             },
             {
               "name": "zero_amount_fees",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "manual_payments",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
