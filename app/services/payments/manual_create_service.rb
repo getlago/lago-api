@@ -56,7 +56,7 @@ module Payments
 
     def check_preconditions
       return result.not_found_failure!(resource: "invoice") unless invoice
-      return if invoice.invoice_type == :advance_charges
+      return if invoice.invoice_type == "advance_charges"
       return result.forbidden_failure! if !License.premium? && !invoice.organization.premium_integrations.include?('manual_payments')
       result.single_validation_failure!(error_code: "invalid_date", field: "paid_at") unless valid_paid_at?
     end
