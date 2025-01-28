@@ -6264,6 +6264,7 @@ type Payment {
   paymentType: PaymentTypeEnum!
   providerPaymentId: String
   reference: String
+  updatedAt: ISO8601DateTime
 }
 
 """
