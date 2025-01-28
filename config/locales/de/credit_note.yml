@@ -18,7 +18,6 @@ de:
     refunded: Erstattet
     refunded_notice: Erstattung am %{issuing_date}
     self_billed:
-      document_name: Self-billing invoice
       footer: Diese Gutschriftrechnung wurde vom Kunden im Namen des Partners mit dessen Zustimmung erstellt. Der Partner hat zugestimmt, keine eigene Rechnung für diese Transaktion auszustellen.
     sub_total_without_tax: Zwischensumme (ohne Steuern)
     subscription: Abonnement

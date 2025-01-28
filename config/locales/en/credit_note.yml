@@ -18,7 +18,6 @@ en:
     refunded: Refunded
     refunded_notice: Refunded on %{issuing_date}
     self_billed:
-      document_name: Self-billing credit note
       footer: This credit note on a self-billing invoice was issued by the client on behalf of the partner, with their consent. The partner has agreed not to issue their own credit note for this transaction.
     sub_total_without_tax: Sub total (excl. tax)
     subscription: Subscription
