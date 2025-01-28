@@ -19,4 +19,5 @@ RSpec.describe Types::Payments::Object do
   it { is_expected.to have_field(:reference).of_type('String') }
 
   it { is_expected.to have_field(:created_at).of_type('ISO8601DateTime!') }
+  it { is_expected.to have_field(:updated_at).of_type('ISO8601DateTime') }
 end

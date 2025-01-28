@@ -9,7 +9,7 @@ RSpec.describe Resolvers::PaymentResolver, type: :graphql do
     <<~GQL
       query($id: ID!) {
         payment(id: $id) {
-          id
+          id createdAt updatedAt
         }
       }
     GQL
@@ -41,6 +41,8 @@ RSpec.describe Resolvers::PaymentResolver, type: :graphql do
     data = result['data']['payment']
 
     expect(data['id']).to eq(payment.id)
+    expect(data['createdAt']).to eq(payment.created_at.iso8601)
+    expect(data['updatedAt']).to eq(payment.updated_at.iso8601)
   end
 
   context 'when payment is not found' do
