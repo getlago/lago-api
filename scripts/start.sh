@@ -3,6 +3,7 @@
 if [ "$RAILS_ENV" == "staging" ]
 then
   bundle exec rake db:prepare
+  bundle exec rails signup:seed_organization
 fi
 
 rm -f ./tmp/pids/server.pid
@@ -15,5 +16,4 @@ else
   bundle exec rails db:migrate
 fi
 
-bundle exec rails signup:seed_organization
 exec bundle exec rails s -b ::
