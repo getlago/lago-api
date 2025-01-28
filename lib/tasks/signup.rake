@@ -4,16 +4,25 @@ namespace :signup do
   desc 'This task seeds lago with an organisation & a user for on premise deployment'
   task seed_organization: :environment do
     if ENV['LAGO_CREATE_ORG'].present? && ENV['LAGO_CREATE_ORG'] == 'true'
-      pp 'starting seeding environment'
+      puts '[SEED] Setting up default Organization'
+
       unless ENV['LAGO_ORG_USER_PASSWORD'].present? &&
-          ENV['LAGO_ORG_USER_EMAIL'].present? &&
-          ENV['LAGO_ORG_NAME'].present?
-        raise "Couldn't find LAGO_ORG_USER_PASSWORD, LAGO_ORG_USER_EMAIL or LAGO_ORG_NAME in environement variables"
+          ENV['LAGO_ORG_USER_EMAIL'].present?
+        raise "Couldn't find required LAGO_ORG_USER_PASSWORD, LAGO_ORG_USER_EMAIL environment variables"
       end
 
       user = User.create_with(password: ENV['LAGO_ORG_USER_PASSWORD'])
         .find_or_create_by!(email: ENV['LAGO_ORG_USER_EMAIL'])
-      organization = Organization.find_or_create_by!(name: ENV['LAGO_ORG_NAME'])
+
+      # Ideally, we should force the org primary key so we can use it in other services
+      # (like for inbound webhooks url using stripe CLI, or for other webhook endpoints)
+      organization = if ENV['LAGO_ORG_ID'].present?
+        Organization.create_with(name: ENV.fetch('LAGO_ORG_NAME', 'Lago Dev Env'))
+          .find_or_create_by!(id: ENV.fetch('LAGO_ORG_ID'))
+      else
+        Organization.find_or_create_by!(name: ENV.fetch('LAGO_ORG_NAME', 'Lago Dev Env'))
+      end
+
       Membership.find_or_create_by!(user:, organization:, role: :admin)
 
       if ENV['LAGO_ORG_API_KEY'].present?
@@ -23,7 +32,7 @@ namespace :signup do
         ApiKey.find_or_create_by!(organization:)
       end
 
-      pp 'ending seeding environment'
+      puts "[SEED] Organization #{organization.id} is now set up"
     end
   end
 end
