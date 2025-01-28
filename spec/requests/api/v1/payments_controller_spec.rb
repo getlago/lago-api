@@ -27,17 +27,17 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
     let(:payment) { create(:payment, payable: invoice) }
 
     before do
-      allow(ManualPayments::CreateService).to receive(:call).and_return(
+      allow(Payments::ManualCreateService).to receive(:call).and_return(
         BaseService::Result.new.tap { |r| r.payment = payment }
       )
     end
 
     include_examples 'requires API permission', 'payment', 'write'
 
-    it "delegates to ManualPayments::CreateService", :aggregate_failures do
+    it "delegates to Payments::ManualCreateService", :aggregate_failures do
       subject
 
-      expect(ManualPayments::CreateService).to have_received(:call).with(organization:, params:)
+      expect(Payments::ManualCreateService).to have_received(:call).with(organization:, params:)
 
       expect(response).to have_http_status(:success)
       expect(json[:payment][:lago_id]).to eq(payment.id)
