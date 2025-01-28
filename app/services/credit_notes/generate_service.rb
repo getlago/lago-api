@@ -27,7 +27,7 @@ module CreditNotes
     def generate_pdf(credit_note)
       I18n.locale = credit_note.customer.preferred_document_locale
 
-      pdf_result = Utils::PdfGenerator.call(template: , context: credit_note)
+      pdf_result = Utils::PdfGenerator.call(template:, context: credit_note)
 
       credit_note.file.attach(
         io: pdf_result.io,
