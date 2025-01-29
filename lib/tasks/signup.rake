@@ -35,4 +35,23 @@ namespace :signup do
       puts "[SEED] Organization #{organization.id} is now set up"
     end
   end
+
+  task :setup_stripe, [:name] => :environment do |_task, args|
+    if ENV['STRIPE_API_KEY'].blank? || ENV['LAGO_ORG_ID'].blank?
+      raise "STRIPE_API_KEY and LAGO_ORG_ID environment variables are required"
+    end
+
+    name = args[:name]
+    code = name.downcase.strip.tr(' ', '_').gsub(/[^\w-]/, '')
+
+    result = ::PaymentProviders::StripeService.new
+      .create_or_update(
+        code:,
+        name:,
+        secret_key: ENV['STRIPE_API_KEY'],
+        success_redirect_url: ENV['LAGO_API_URL'],
+      )
+
+    result.success? ? 0 : 123
+  end
 end
