@@ -153,6 +153,8 @@ module Invoices
       taxes_result = Rails.cache.read(provider_taxes_cache_key)
 
       unless taxes_result
+        invoice.fees.each { |f| f.id = SecureRandom.uuid }
+
         # Call the service if the cache is empty
         taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
 
@@ -165,9 +167,7 @@ module Invoices
       result.fees_taxes = taxes_result.fees
 
       invoice.fees.each do |fee|
-        fee_taxes = result.fees_taxes.find do |item|
-          (item.item_id == fee.item_id) && (item.amount_cents.to_i == fee.sub_total_excluding_taxes_amount_cents&.to_i)
-        end
+        fee_taxes = result.fees_taxes.find { |item| item.item_id == fee.id }
 
         res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)
         res.raise_if_error!
