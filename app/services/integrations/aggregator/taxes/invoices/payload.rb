@@ -47,7 +47,7 @@ module Integrations
             mapped_item ||= empty_struct
 
             {
-              'item_id' => fee.id,
+              'item_id' => fee.id || fee.item_id,
               'item_code' => mapped_item.external_id,
               'amount_cents' => fee.sub_total_excluding_taxes_amount_cents&.to_i
             }

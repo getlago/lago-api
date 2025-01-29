@@ -133,7 +133,14 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
       let(:endpoint) { 'https://api.nango.dev/v1/anrok/draft_invoices' }
       let(:body) do
         p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response.json')
-        File.read(p)
+        json = File.read(p)
+
+        # setting item_id based on the test example
+        response = JSON.parse(json)
+        response['succeededInvoices'].first['fees'].last['item_id'] = charge.billable_metric.id
+        response['succeededInvoices'].first['fees'].last['amount_cents'] = 2532
+
+        response.to_json
       end
       let(:integration_collection_mapping) do
         create(
@@ -151,7 +158,6 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
         allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
         allow(lago_client).to receive(:post_with_response).and_return(response)
         allow(response).to receive(:body).and_return(body)
-        allow_any_instance_of(Fee).to receive(:id).and_return('lago_fee_id') # rubocop:disable RSpec/AnyInstance
       end
 
       it 'initializes an invoice' do
