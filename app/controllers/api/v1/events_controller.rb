@@ -85,6 +85,36 @@ module Api
         end
       end
 
+      def estimate_instant_fees
+        result = Fees::EstimateInstantPayInAdvanceService.call(
+          organization: current_organization,
+          params: create_params
+        )
+
+        if result.success?
+          render(
+            json: {fees: result.fees}
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
+      def batch_estimate_instant_fees
+        fees = []
+        batch_params[:events].group_by { |h| h[:external_subscription_id] }.each do |external_subscription_id, events|
+          fees += Fees::BatchEstimateInstantPayInAdvanceService.call!(
+            organization: current_organization,
+            external_subscription_id:,
+            events:
+          ).fees
+        end
+
+        render(
+          json: {fees: fees}
+        )
+      end
+
       def estimate_fees
         result = Fees::EstimatePayInAdvanceService.call(
           organization: current_organization,

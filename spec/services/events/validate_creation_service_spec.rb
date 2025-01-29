@@ -6,38 +6,36 @@ RSpec.describe Events::ValidateCreationService, type: :service do
   subject(:validate_event) do
     described_class.call(
       organization:,
-      params:,
-      result:,
+      event_params:,
       customer:,
       subscriptions: [subscription]
     )
   end
 
   let(:organization) { create(:organization) }
-  let(:result) { BaseService::Result.new }
   let(:customer) { create(:customer, organization:) }
   let!(:subscription) { create(:subscription, customer:, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:transaction_id) { SecureRandom.uuid }
-  let(:params) do
-    {external_customer_id: customer.external_id, code: billable_metric.code, transaction_id:}
+  let(:event_params) do
+    {external_subscription_id: subscription.external_id, code: billable_metric.code, transaction_id:}
   end
 
   describe '.call' do
     context 'when customer has only one active subscription and external_subscription_id is not given' do
       it 'does not return any validation errors' do
-        expect(validate_event).to be_nil
+        result = validate_event
         expect(result).to be_success
       end
     end
 
     context 'when customer has only one active subscription and customer is not given' do
-      let(:params) do
+      let(:event_params) do
         {code: billable_metric.code, external_subscription_id: subscription.external_id, transaction_id:}
       end
 
       it 'does not return any validation errors' do
-        expect(validate_event).to be_nil
+        result = validate_event
         expect(result).to be_success
       end
     end
@@ -45,52 +43,51 @@ RSpec.describe Events::ValidateCreationService, type: :service do
     context 'when customer has two active subscriptions' do
       before { create(:subscription, customer:, organization:) }
 
-      let(:params) do
+      let(:event_params) do
         {code: billable_metric.code, external_subscription_id: subscription.external_id, transaction_id:}
       end
 
       it 'does not return any validation errors' do
-        expect(validate_event).to be_nil
+        result = validate_event
         expect(result).to be_success
       end
     end
 
     context 'when customer is not given but subscription is present' do
-      let(:params) do
-        {code: billable_metric.code, transaction_id:}
+      let(:event_params) do
+        {code: billable_metric.code, external_subscription_id: subscription.external_id, transaction_id:}
       end
 
       let(:validate_event) do
         described_class.call(
           organization:,
-          params:,
-          result:,
+          event_params:,
           customer: nil,
           subscriptions: [subscription]
         )
       end
 
       it 'does not return any validation errors' do
-        expect(validate_event).to be_nil
+        result = validate_event
         expect(result).to be_success
       end
     end
 
     context 'when there are two active subscriptions but external_subscription_id is not given' do
       let(:subscription2) { create(:subscription, customer:, organization:) }
+      let(:event_params) { {code: billable_metric.code, transaction_id:} }
 
       let(:validate_event) do
         described_class.call(
           organization:,
-          params:,
-          result:,
+          event_params:,
           customer:,
           subscriptions: [subscription, subscription2]
         )
       end
 
       it 'returns a subscription_not_found error' do
-        validate_event
+        result = validate_event
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -101,7 +98,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
     end
 
     context 'when there are two active subscriptions but external_subscription_id is invalid' do
-      let(:params) do
+      let(:event_params) do
         {
           code: billable_metric.code,
           external_subscription_id: SecureRandom.uuid,
@@ -115,15 +112,14 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       let(:validate_event) do
         described_class.call(
           organization:,
-          params:,
-          result:,
+          event_params:,
           customer:,
           subscriptions: [subscription, subscription2]
         )
       end
 
       it 'returns a not found error' do
-        validate_event
+        result = validate_event
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -138,7 +134,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         create(:subscription, customer:, organization:, external_id:, status: :terminated)
       end
       let(:external_id) { SecureRandom.uuid }
-      let(:params) do
+      let(:event_params) do
         {
           code: billable_metric.code,
           external_subscription_id: external_id,
@@ -153,7 +149,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       end
 
       it 'does not return any validation errors' do
-        expect(validate_event).to be_nil
+        result = validate_event
         expect(result).to be_success
       end
     end
@@ -170,7 +166,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       end
 
       it 'returns a validation error' do
-        validate_event
+        result = validate_event
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -180,12 +176,12 @@ RSpec.describe Events::ValidateCreationService, type: :service do
     end
 
     context 'when code does not exist' do
-      let(:params) do
-        {external_customer_id: customer.external_id, code: 'event_code', transaction_id:}
+      let(:event_params) do
+        {external_subscription_id: subscription.external_id, code: 'event_code', transaction_id:}
       end
 
       it 'returns an event_not_found error' do
-        validate_event
+        result = validate_event
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -197,10 +193,10 @@ RSpec.describe Events::ValidateCreationService, type: :service do
 
     context 'when field_name value is not a number' do
       let(:billable_metric) { create(:sum_billable_metric, organization:) }
-      let(:params) do
+      let(:event_params) do
         {
           code: billable_metric.code,
-          external_customer_id: customer.external_id,
+          external_subscription_id: subscription.external_id,
           properties: {
             item_id: 'test'
           },
@@ -209,7 +205,7 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       end
 
       it 'returns an value_is_not_valid_number error' do
-        validate_event
+        result = validate_event
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -220,10 +216,10 @@ RSpec.describe Events::ValidateCreationService, type: :service do
       end
 
       context 'when field_name cannot be found' do
-        let(:params) do
+        let(:event_params) do
           {
             code: billable_metric.code,
-            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
             properties: {
               invalid_key: 'test'
             },
@@ -232,23 +228,23 @@ RSpec.describe Events::ValidateCreationService, type: :service do
         end
 
         it 'does not raise error' do
-          validate_event
+          result = validate_event
 
           expect(result).to be_success
         end
       end
 
       context 'when properties are missing' do
-        let(:params) do
+        let(:event_params) do
           {
             code: billable_metric.code,
-            external_customer_id: customer.external_id,
+            external_subscription_id: subscription.external_id,
             transaction_id:
           }
         end
 
         it 'does not raise error' do
-          validate_event
+          result = validate_event
 
           expect(result).to be_success
         end
@@ -256,12 +252,12 @@ RSpec.describe Events::ValidateCreationService, type: :service do
     end
 
     context 'when timestamp is in a wrong format' do
-      let(:params) do
-        {external_customer_id: customer.external_id, code: billable_metric.code, transaction_id:, timestamp: '2025-01-01'}
+      let(:event_params) do
+        {external_subscription_id: subscription.external_id, code: billable_metric.code, transaction_id:, timestamp: '2025-01-01'}
       end
 
       it 'returns a timestamp_is_not_valid error' do
-        validate_event
+        result = validate_event
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -271,12 +267,12 @@ RSpec.describe Events::ValidateCreationService, type: :service do
     end
 
     context 'when timestamp is valid' do
-      let(:params) do
-        {external_customer_id: customer.external_id, code: billable_metric.code, transaction_id:, timestamp: Time.current.to_i + 0.11}
+      let(:event_params) do
+        {external_subscription_id: subscription.external_id, code: billable_metric.code, transaction_id:, timestamp: Time.current.to_i + 0.11}
       end
 
       it 'does not raise any errors' do
-        expect(validate_event).to be_nil
+        result = validate_event
         expect(result).to be_success
       end
     end
