@@ -14,7 +14,7 @@ module Integrations
       def call
         organization = Organization.find_by(id: params[:organization_id])
 
-        unless organization.premium_integrations.include?('netsuite')
+        unless organization.netsuite_enabled?
           return result.not_allowed_failure!(code: 'premium_integration_missing')
         end
 

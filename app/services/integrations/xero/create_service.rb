@@ -3,10 +3,10 @@
 module Integrations
   module Xero
     class CreateService < BaseService
-      def call(**args)
+      def call(**args) # rubocop:disable Cops/ServiceCallCop
         organization = Organization.find_by(id: args[:organization_id])
 
-        unless organization.premium_integrations.include?('xero')
+        unless organization.xero_enabled?
           return result.not_allowed_failure!(code: 'premium_integration_missing')
         end
 

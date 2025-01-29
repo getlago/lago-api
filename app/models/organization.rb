@@ -63,7 +63,18 @@ class Organization < ApplicationRecord
   ].freeze
 
   INTEGRATIONS = %w[
-    netsuite okta anrok xero progressive_billing hubspot auto_dunning revenue_analytics salesforce api_permissions revenue_share zero_amount_fees
+    netsuite
+    okta
+    anrok
+    xero
+    progressive_billing
+    hubspot
+    auto_dunning
+    revenue_analytics
+    salesforce
+    api_permissions
+    revenue_share
+    zero_amount_fees
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 
@@ -94,6 +105,10 @@ class Organization < ApplicationRecord
 
   PREMIUM_INTEGRATIONS.each do |premium_integration|
     scope "with_#{premium_integration}_support", -> { where("? = ANY(premium_integrations)", premium_integration) }
+
+    define_method("#{premium_integration}_enabled?") do
+      License.premium? && premium_integrations.include?(premium_integration)
+    end
   end
 
   def admins
@@ -134,14 +149,6 @@ class Organization < ApplicationRecord
 
   def document_number_prefix=(value)
     super(value&.upcase)
-  end
-
-  def auto_dunning_enabled?
-    License.premium? && premium_integrations.include?("auto_dunning")
-  end
-
-  def revenue_share_enabled?
-    License.premium? && premium_integrations.include?("revenue_share")
   end
 
   def reset_customers_last_dunning_campaign_attempt

@@ -13,6 +13,8 @@ RSpec.describe Mutations::ApiKeys::Update, type: :graphql do
     )
   end
 
+  around { |test| lago_premium!(&test) }
+
   let(:query) do
     <<-GQL
       mutation($input: UpdateApiKeyInput!) {

@@ -319,6 +319,8 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     end
 
     context "when revenue_analytics is set" do
+      around { |test| lago_premium!(&test) }
+
       before do
         organization.update!(premium_integrations: %w[revenue_analytics])
       end

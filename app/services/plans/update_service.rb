@@ -48,7 +48,7 @@ module Plans
 
         if params.key?(:usage_thresholds) &&
             License.premium? &&
-            plan.organization.premium_integrations.include?('progressive_billing')
+            plan.organization.progressive_billing_enabled?
 
           if params[:usage_thresholds].empty?
             plan.usage_thresholds.discard_all

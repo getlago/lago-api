@@ -11,7 +11,7 @@ module ApiKeys
     def call
       return result.not_found_failure!(resource: 'api_key') unless api_key
 
-      if params[:permissions].present? && !api_key.organization.premium_integrations.include?('api_permissions')
+      if params[:permissions].present? && !api_key.organization.api_permissions_enabled?
         return result.forbidden_failure!(code: 'premium_integration_missing')
       end
 

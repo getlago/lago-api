@@ -154,7 +154,7 @@ module Invoices
 
     USAGE_TRACKABLE_REASONS = %i[subscription_periodic subscription_terminating].freeze
     def fill_daily_usage
-      return unless invoice.organization.premium_integrations.include?("revenue_analytics")
+      return unless invoice.organization.revenue_analytics_enabled?
 
       subscriptions = invoice
         .invoice_subscriptions

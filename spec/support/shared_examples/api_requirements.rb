@@ -2,6 +2,8 @@
 
 RSpec.shared_examples "requires API permission" do |resource, mode|
   describe "permissions" do
+    around { |test| lago_premium!(&test) }
+
     let(:api_key) { organization.api_keys.first }
 
     before do

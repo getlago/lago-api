@@ -221,12 +221,10 @@ RSpec.describe Organization, type: :model do
     end
   end
 
-  describe "#auto_dunning_enabled?" do
-    it_behaves_like "organization premium feature", "auto_dunning"
-  end
-
-  describe "#revenue_share_enabled?" do
-    it_behaves_like "organization premium feature", "revenue_share"
+  describe "#premium_integrations_enabled?" do
+    described_class::PREMIUM_INTEGRATIONS.each do |integration|
+      it_behaves_like "organization premium feature", integration
+    end
   end
 
   describe "#reset_customers_last_dunning_campaign_attempt" do

@@ -38,7 +38,7 @@ module Plans
 
         if params[:usage_thresholds].present? &&
             License.premium? &&
-            plan.organization.premium_integrations.include?('progressive_billing')
+            plan.organization.progressive_billing_enabled?
 
           UsageThresholds::OverrideService.call(usage_thresholds_params: params[:usage_thresholds], new_plan: new_plan)
         end
