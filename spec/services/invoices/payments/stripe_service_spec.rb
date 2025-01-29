@@ -79,6 +79,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           payment_method_types: customer.stripe_customer.provider_payment_methods,
           payment_intent_data: {
             description: stripe_service.__send__(:description),
+            setup_future_usage: "off_session",
             metadata: {
               lago_customer_id: customer.id,
               lago_invoice_id: invoice.id,
