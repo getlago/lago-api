@@ -41,7 +41,7 @@ namespace :signup do
       raise "STRIPE_API_KEY and LAGO_ORG_ID environment variables are required"
     end
 
-    name = args[:name]
+    name = args[:name] || "Stripe"
     code = name.downcase.strip.tr(' ', '_').gsub(/[^\w-]/, '')
 
     result = ::PaymentProviders::StripeService.new

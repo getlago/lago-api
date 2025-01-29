@@ -4,6 +4,10 @@ if [ "$RAILS_ENV" == "staging" ]
 then
   bundle exec rake db:prepare
   bundle exec rails signup:seed_organization
+  if [ -v STRIPE_API_KEY ]
+  then
+    bundle exec rails signup:setup_stripe
+  fi
 fi
 
 rm -f ./tmp/pids/server.pid
