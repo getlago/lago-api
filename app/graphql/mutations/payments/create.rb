@@ -15,7 +15,7 @@ module Mutations
       type Types::Payments::Object
 
       def resolve(**args)
-        result = ::ManualPayments::CreateService.call(organization: current_organization, params: args)
+        result = ::Payments::ManualCreateService.call(organization: current_organization, params: args)
         result.success? ? result.payment : result_error(result)
       end
     end
