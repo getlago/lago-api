@@ -32,6 +32,8 @@ namespace :signup do
         ApiKey.find_or_create_by!(organization:)
       end
 
+      WebhookEndpoint.find_or_create_by!(organization:, webhook_url: "http://webhook:8066/#{organization.id}")
+
       puts "[SEED] Organization #{organization.id} is now set up"
     end
   end
