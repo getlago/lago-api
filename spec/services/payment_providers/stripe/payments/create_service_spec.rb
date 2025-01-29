@@ -56,13 +56,13 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       File.read(Rails.root.join("spec/fixtures/stripe/customer_retrieve_response.json"))
     end
 
-    let(:stripe_payment_intent) do
-      Stripe::PaymentIntent.construct_from(
-        id: "ch_123456",
+    let(:stripe_payment_intent_data) do
+      {
+        id: "pi_123456",
         status: payment_status,
         amount: invoice.total_amount_cents,
         currency: invoice.currency
-      )
+      }
     end
 
     let(:payment_status) { "succeeded" }
@@ -71,8 +71,10 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       stripe_payment_provider
       stripe_customer
 
-      allow(Stripe::PaymentIntent).to receive(:create)
-        .and_return(stripe_payment_intent)
+      allow(Stripe::PaymentIntent).to receive(:create).and_call_original
+      stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+        .to_return(body: stripe_payment_intent_data.to_json)
+
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
 
@@ -206,6 +208,9 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
 
         expect(result.error_message).to eq("error")
         expect(result.error_code).to be_nil
+
+        expect(result.payment.status).to eq("failed")
+        expect(result.payment.payable_payment_status).to eq("failed")
       end
     end
 
@@ -247,6 +252,53 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       end
     end
 
+    context 'when invoice amount is too big to pay with Boleto' do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:subscription) { create(:subscription, organization:, customer:) }
+
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 100_000_00,
+          currency: "BRL",
+          ready_for_payment_processing: true
+        )
+      end
+
+      before do
+        subscription
+
+        WebMock.stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+          .to_return(status: 400, body: {
+            error: {
+              code: "amount_too_large",
+              doc_url: "https://stripe.com/docs/error-codes/amount-too-large",
+              message: "Amount must be no more than R$ 49,999.99 brl",
+              param: "amount",
+              request_log_url: "https://dashboard.stripe.com/test/logs/req_WAmkqXs7ajMNAU?t=1738144303",
+              type: "invalid_request_error"
+            }
+          }.to_json)
+      end
+
+      it "returns an empty result" do
+        result = create_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("stripe_error")
+        expect(result.error.error_message).to eq("Amount must be no more than R$ 49,999.99 brl")
+
+        expect(result.error_message).to eq("Amount must be no more than R$ 49,999.99 brl")
+        expect(result.error_code).to eq("amount_too_large")
+        expect(result.payment.status).to eq("failed")
+        expect(result.payment.payable_payment_status).to eq("failed")
+      end
+    end
+
     context "when payment status is processing" do
       let(:payment_status) { "processing" }
 
@@ -271,16 +323,16 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
     context "when customers country is IN" do
       let(:payment_status) { "requires_action" }
 
-      let(:stripe_payment_intent) do
-        Stripe::PaymentIntent.construct_from(
-          id: "ch_123456",
+      let(:stripe_payment_intent_data) do
+        {
+          id: "pi_123456",
           status: payment_status,
           amount: invoice.total_amount_cents,
           currency: invoice.currency,
           next_action: {
             redirect_to_url: {url: "https://foo.bar"}
           }
-        )
+        }
       end
 
       before do
