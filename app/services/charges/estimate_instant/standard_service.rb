@@ -25,7 +25,7 @@ module Charges
 
       attr_reader :properties, :units
 
-      def amound
+      def amount
         BigDecimal((properties['amount'] || 0).to_s)
       end
     end
