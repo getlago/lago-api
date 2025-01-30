@@ -63,6 +63,7 @@ class Organization < ApplicationRecord
   ].freeze
 
   INTEGRATIONS = %w[
+    analytics_revenue_streams
     netsuite
     okta
     anrok
