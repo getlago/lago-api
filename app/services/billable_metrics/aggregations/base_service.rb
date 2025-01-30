@@ -131,6 +131,7 @@ module BillableMetrics
         result.count = 0
         result.current_usage_units = 0
         result.options = {running_total: []}
+        result
       end
 
       def empty_results

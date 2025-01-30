@@ -34,6 +34,10 @@ module Fees
       adjusted_fee_result.full_units_number = adjusted_fee.units
       adjusted_fee_result.count = 0
 
+      if charge.dynamic?
+        adjusted_fee_result.precise_total_amount_cents = 0
+      end
+
       apply_charge_model_service(adjusted_fee_result)
     end
 
