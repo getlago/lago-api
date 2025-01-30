@@ -51,7 +51,7 @@ class BaseService
     private
 
     def format_messages
-      "Validation errors: #{[messages].flatten.join(", ")}"
+      "Validation errors: #{messages.to_json}"
     end
   end
 
@@ -104,7 +104,9 @@ class BaseService
     end
   end
 
-  class Result < OpenStruct
+  # DEPRECATED: This is a legacy result class that should
+  #             be replaced be defining a Result in every service, using the BaseResult
+  class LegacyResult < OpenStruct
     attr_reader :error
 
     def initialize
@@ -176,6 +178,8 @@ class BaseService
     attr_accessor :failure
   end
 
+  Result = LegacyResult
+
   def self.call(*, **, &)
     LagoTracer.in_span("#{name}#call") do
       new(*, **).call(&)
@@ -193,7 +197,7 @@ class BaseService
   end
 
   def initialize(args = nil)
-    @result = Result.new
+    @result = self.class::Result.new
     @source = CurrentContext&.source
   end
 

@@ -2,6 +2,8 @@
 
 module AddOns
   class ApplyTaxesService < BaseService
+    Result = BaseResult[:applied_taxes]
+
     def initialize(add_on:, tax_codes:)
       @add_on = add_on
       @tax_codes = tax_codes
