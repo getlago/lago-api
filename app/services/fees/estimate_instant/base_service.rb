@@ -25,7 +25,7 @@ module Fees
         units = BigDecimal(event.properties[charge.billable_metric.field_name] || 0)
         units = BillableMetrics::Aggregations::ApplyRoundingService.call!(billable_metric:, units:).units
 
-        estimate_result = Charges::EstimateInstant::PercentageService.call!(properties:, units:)
+        estimate_result = estimate_class(charge).call!(properties:, units:)
 
         amount = estimate_result.amount
         # NOTE: amount_result should be  a BigDecimal, we need to round it
@@ -83,6 +83,14 @@ module Fees
           amount_details: nil,
           event_transaction_id: event.transaction_id
         }
+      end
+
+      def estimate_class(charge)
+        if charge.percentage?
+          Charges::EstimateInstant::PercentageService
+        elsif charge.standard?
+          Charges::EstimateInstant::StandardService
+        end
       end
 
       def currency
