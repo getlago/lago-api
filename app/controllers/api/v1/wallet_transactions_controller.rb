@@ -48,6 +48,21 @@ module Api
         )
       end
 
+      def show
+        wallet_transaction = current_organization.wallet_transactions.find_by(
+          id: params[:id]
+        )
+
+        return not_found_error(resource: 'wallet_transaction') unless wallet_transaction
+
+        render(
+          json: ::V1::WalletTransactionSerializer.new(
+            wallet_transaction,
+            root_name: 'wallet_transaction'
+          )
+        )
+      end
+
       private
 
       def input_params

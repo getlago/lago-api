@@ -183,4 +183,44 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       end
     end
   end
+
+  describe 'GET /api/v1/wallet_transactions/:id' do
+    subject do
+      get_with_token(organization, "/api/v1/wallet_transactions/#{wallet_transaction_id}", params)
+    end
+
+    let(:params) { {} }
+    let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+    let(:wallet_transaction_id) { wallet_transaction.id }
+
+    include_examples 'requires API permission', 'wallet_transaction', 'read'
+
+    it 'returns the wallet transaction' do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:wallet_transaction][:lago_id]).to eq(wallet_transaction.id)
+    end
+
+    context 'when wallet transaction belongs to another organization' do
+      let(:customer) { create(:customer, organization: create(:organization)) }
+      let(:subscription) { create(:subscription, customer:) }
+      let(:wallet) { create(:wallet, customer:) }
+      let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
+
+      it 'returns not_found error' do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context 'when wallet_transaction does not exist' do
+      let(:wallet_transaction_id) { SecureRandom.uuid }
+
+      it 'returns not_found error' do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
 end
