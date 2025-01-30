@@ -318,6 +318,21 @@ class Invoice < ApplicationRecord
     finalized? && (payment_pending? || payment_failed?)
   end
 
+  def all_charges_have_fees?
+    return true unless subscription?
+
+    subscriptions.includes(plan: {charges: :filters}).all? do |subscription|
+      subscription.plan.charges.all? do |charge|
+        charge_fee_exists = fees.charge.any? { |f| f.charge_id == charge.id && f.charge_filter_id.nil? }
+        next charge_fee_exists if charge.filters.empty?
+
+        charge_fee_exists && charge.filters.all? do |fi|
+          fees.charge.any? { |f| f.charge_id == charge.id && f.charge_filter_id == fi.id }
+        end
+      end
+    end
+  end
+
   def different_boundaries_for_subscription_and_charges(subscription)
     subscription_from = invoice_subscription(subscription.id).from_datetime_in_customer_timezone&.to_date
     subscription_to = invoice_subscription(subscription.id).to_datetime_in_customer_timezone&.to_date

@@ -55,7 +55,7 @@ describe 'Adjusted Subscription Fees Scenario', :scenarios, type: :request, tran
         expect(invoice.status).to eq('draft')
         expect(invoice.total_amount_cents).to eq(12_900)
 
-        AdjustedFees::CreateService.call(organization:, fee:, params: adjusted_fee_params)
+        AdjustedFees::CreateService.call(invoice:, params: adjusted_fee_params.merge(fee_id: fee.id))
         perform_all_enqueued_jobs
 
         expect(invoice.reload.status).to eq('draft')
@@ -109,7 +109,7 @@ describe 'Adjusted Subscription Fees Scenario', :scenarios, type: :request, tran
         expect(invoice.status).to eq('draft')
         expect(invoice.total_amount_cents).to eq(12_900)
 
-        AdjustedFees::CreateService.call(organization:, fee:, params: adjusted_fee_params)
+        AdjustedFees::CreateService.call(invoice:, params: adjusted_fee_params.merge(fee_id: fee.id))
         perform_all_enqueued_jobs
 
         expect(invoice.reload.status).to eq('draft')

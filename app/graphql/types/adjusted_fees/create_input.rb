@@ -5,7 +5,16 @@ module Types
     class CreateInput < Types::BaseInputObject
       description 'Create Adjusted Fee Input'
 
-      argument :fee_id, ID, required: true
+      argument :invoice_id, ID, required: true
+
+      # NOTE: adjust an existing fee
+      argument :fee_id, ID, required: false
+
+      # NOTE: adjust a empty charge fee
+      argument :charge_filter_id, ID, required: false
+      argument :charge_id, ID, required: false
+      argument :subscription_id, ID, required: false
+
       argument :invoice_display_name, String, required: false
       argument :unit_precise_amount, String, required: false
       argument :units, GraphQL::Types::Float, required: false

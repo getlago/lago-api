@@ -1537,4 +1537,43 @@ RSpec.describe Invoice, type: :model do
       end
     end
   end
+
+  describe '#all_charges_have_fees?' do
+    let(:invoice) { create(:invoice, :subscription, subscriptions: [subscription]) }
+    let(:plan) { create(:plan) }
+    let(:subscription) { create(:subscription, plan:) }
+
+    let(:charge1) { create(:standard_charge, plan:) }
+    let(:charge2) { create(:standard_charge, plan:) }
+
+    before do
+      create(:charge_fee, charge: charge1, invoice:)
+      charge2
+    end
+
+    it { expect(invoice).not_to be_all_charges_have_fees }
+
+    context 'when all charges have fees' do
+      before { create(:charge_fee, charge: charge2, invoice:) }
+
+      it { expect(invoice).to be_all_charges_have_fees }
+    end
+
+    context 'with filters' do
+      let(:charge_filter) { create(:charge_filter, charge: charge1) }
+
+      before do
+        create(:charge_fee, charge: charge2, invoice:)
+        charge_filter
+      end
+
+      it { expect(invoice).not_to be_all_charges_have_fees }
+
+      context 'when filters have fees' do
+        before { create(:charge_fee, charge: charge1, charge_filter:, invoice:) }
+
+        it { expect(invoice).to be_all_charges_have_fees }
+      end
+    end
+  end
 end

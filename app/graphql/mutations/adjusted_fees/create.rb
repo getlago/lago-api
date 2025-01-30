@@ -16,14 +16,9 @@ module Mutations
       type Types::Fees::Object
 
       def resolve(**args)
-        fee = Fee.find_by(id: args[:fee_id])
+        invoice = current_organization.invoices.find_by(id: args[:invoice_id])
 
-        result = ::AdjustedFees::CreateService.call(
-          organization: current_organization,
-          fee:,
-          params: args
-        )
-
+        result = ::AdjustedFees::CreateService.call(invoice:, params: args)
         result.success? ? result.fee : result_error(result)
       end
     end
