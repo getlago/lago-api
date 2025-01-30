@@ -17,6 +17,8 @@ de:
     prepaid_credits_for_wallet: Prepaid-Guthaben - %{wallet_name}
     refunded: Erstattet
     refunded_notice: Erstattung am %{issuing_date}
+    self_billed:
+      footer: Diese Gutschriftrechnung wurde vom Kunden im Namen des Partners mit dessen Zustimmung erstellt. Der Partner hat zugestimmt, keine eigene Rechnung für diese Transaktion auszustellen.
     sub_total_without_tax: Zwischensumme (ohne Steuern)
     subscription: Abonnement
     tax: "%{name} (%{rate}% on %{amount})"
