@@ -64,6 +64,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         expect(result).to be_success
 
         credit_note = result.credit_note
+        expect(credit_note.organization_id).to eq(organization.id)
         expect(credit_note.invoice).to eq(invoice)
         expect(credit_note.customer).to eq(invoice.customer)
         expect(credit_note.issuing_date.to_s).to eq(Time.zone.today.to_s)
@@ -110,7 +111,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         membership_id: CurrentContext.membership,
         event: 'credit_note_issued',
         properties: {
-          organization_id: credit_note.organization.id,
+          organization_id: organization.id,
           credit_note_id: credit_note.id,
           invoice_id: credit_note.invoice_id,
           credit_note_method: 'both'
