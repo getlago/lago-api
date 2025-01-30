@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Fees::BatchEstimateInstantPayInAdvanceService do
+RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
   subject { described_class.new(organization:, external_subscription_id:, events:) }
 
   let(:organization) { create(:organization) }

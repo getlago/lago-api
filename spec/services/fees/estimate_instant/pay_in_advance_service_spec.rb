@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe Fees::EstimateInstantPayInAdvanceService do
+RSpec.describe Fees::EstimateInstant::PayInAdvanceService do
   subject { described_class.new(organization:, params:) }
 
   let(:organization) { create(:organization) }
