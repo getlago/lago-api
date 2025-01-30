@@ -144,6 +144,8 @@ RSpec.describe ApiKey, type: :model do
   describe "#permit?" do
     subject { api_key.permit?(resource, mode) }
 
+    around { |test| lago_premium!(&test) }
+
     let(:api_key) { create(:api_key, permissions:) }
     let(:resource) { described_class::RESOURCES.sample }
     let(:mode) { described_class::MODES.sample }

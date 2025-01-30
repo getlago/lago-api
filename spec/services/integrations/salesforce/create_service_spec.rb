@@ -36,6 +36,8 @@ RSpec.describe Integrations::Salesforce::CreateService, type: :service do
     end
 
     context 'with premium license' do
+      around { |test| lago_premium!(&test) }
+
       context 'with salesforce premium integration not present' do
         it 'returns an error' do
           result = service_call

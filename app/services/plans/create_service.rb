@@ -40,7 +40,7 @@ module Plans
 
         if args[:usage_thresholds].present? &&
             License.premium? &&
-            plan.organization.premium_integrations.include?('progressive_billing')
+            plan.organization.progressive_billing_enabled?
           args[:usage_thresholds].each do |threshold_args|
             create_usage_threshold(plan, threshold_args)
           end

@@ -5,6 +5,8 @@ require 'rails_helper'
 RSpec.describe ApiKeys::UpdateService do
   subject(:service_result) { described_class.call(api_key:, params:) }
 
+  around { |test| lago_premium!(&test) }
+
   let(:name) { Faker::Lorem.words.join(' ') }
 
   context 'when API key is provided' do

@@ -13,7 +13,7 @@ module Integrations
       def call
         return result.not_found_failure!(resource: 'integration') unless integration
 
-        unless integration.organization.premium_integrations.include?('hubspot')
+        unless integration.organization.hubspot_enabled?
           return result.not_allowed_failure!(code: 'premium_integration_missing')
         end
 

@@ -7,6 +7,8 @@ RSpec.describe Fees::ChargeService do
     described_class.new(invoice:, charge:, subscription:, boundaries:, context:, apply_taxes:)
   end
 
+  around { |test| lago_premium!(&test) }
+
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
   let(:context) { :finalize }

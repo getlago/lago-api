@@ -13,7 +13,7 @@ module Integrations
       def call
         organization = Organization.find_by(id: params[:organization_id])
 
-        unless organization.premium_integrations.include?('hubspot')
+        unless organization.hubspot_enabled?
           return result.not_allowed_failure!(code: 'premium_integration_missing')
         end
 

@@ -178,7 +178,7 @@ module Fees
 
     def should_persit_fee?(fee, fees)
       return true if context == :recurring
-      return true if fee.organization.premium_integrations.include?("zero_amount_fees")
+      return true if fee.organization.zero_amount_fees_enabled?
       return true if fee.units != 0 || fee.amount_cents != 0 || fee.events_count != 0
       return true if adjusted_fee(charge_filter: fee.charge_filter, grouped_by: fee.grouped_by).present?
       return true if fee.true_up_parent_fee.present?
