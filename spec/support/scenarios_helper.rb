@@ -162,16 +162,6 @@ module ScenariosHelper
     put_with_token(organization, "/api/v1/fees/#{fee.id}", params)
   end
 
-  # This performs any enqueued-jobs, and continues doing so until the queue is empty.
-  # Lots of the jobs enqueue other jobs as part of their work, and this ensures that
-  # everything that's supposed to happen, happens.
-  def perform_all_enqueued_jobs
-    until enqueued_jobs.empty?
-      perform_enqueued_jobs
-      Sidekiq::Worker.drain_all
-    end
-  end
-
   def perform_billing
     Clock::SubscriptionsBillerJob.perform_later
     Clock::FreeTrialSubscriptionsBillerJob.perform_later

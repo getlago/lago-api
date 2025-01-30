@@ -8,4 +8,16 @@ module QueuesHelper
       :webhook
     end
   end
+
+  # This performs any enqueued-jobs, and continues doing so until the queue is empty.
+  # Lots of the jobs enqueue other jobs as part of their work, and this ensures that
+  # everything that's supposed to happen, happens.
+  #
+  # ⚠️ Notice that `have_been_enqueued` does not work with perform_all_enqueued_jobs because of the loop.
+  def perform_all_enqueued_jobs
+    until enqueued_jobs.empty?
+      perform_enqueued_jobs
+      Sidekiq::Worker.drain_all
+    end
+  end
 end

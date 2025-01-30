@@ -42,6 +42,8 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
   it_behaves_like 'requires permission', 'wallets:create'
 
   it 'creates a wallet' do
+    allow(WalletTransactions::CreateJob).to receive(:perform_later)
+
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -86,6 +88,12 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       expect(result_data['recurringTransactionRules'][0]['grantedCredits']).to eq('0.0')
       expect(result_data['recurringTransactionRules'][0]['invoiceRequiresSuccessfulPayment']).to eq(true)
     end
+
+    expect(WalletTransactions::CreateJob).to have_received(:perform_later).with(
+      organization_id: membership.organization.id,
+      params: Hash,
+      new_wallet: true
+    )
   end
 
   context 'when name is not present' do
