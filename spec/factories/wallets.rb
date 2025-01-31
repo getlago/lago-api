@@ -13,6 +13,7 @@ FactoryBot.define do
 
     trait :terminated do
       status { 'terminated' }
+      terminated_at { DateTime.now }
     end
   end
 end
