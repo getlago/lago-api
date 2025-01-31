@@ -11,6 +11,7 @@ module Invoices
     end
 
     def call
+      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_found_failure!(resource: 'subscription') unless subscription
 
