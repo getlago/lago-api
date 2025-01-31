@@ -297,6 +297,14 @@ module Api
             :zipcode,
             :state,
             :country,
+            shipping_address: [
+              :address_line1,
+              :address_line2,
+              :city,
+              :zipcode,
+              :state,
+              :country
+            ],
             integration_customers: [
               :integration_type,
               :integration_code
