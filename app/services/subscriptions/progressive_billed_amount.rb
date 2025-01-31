@@ -19,7 +19,7 @@ module Subscriptions
         .where("charges_from_datetime <= ?", timestamp)
         .joins(:invoice)
         .merge(Invoice.progressive_billing)
-        .merge(Invoice.finalized)
+        .merge(Invoice.finalized.or(Invoice.failed))
         .where(subscription: subscription)
         .order("invoices.issuing_date" => :desc, "invoices.created_at" => :desc).first
 
