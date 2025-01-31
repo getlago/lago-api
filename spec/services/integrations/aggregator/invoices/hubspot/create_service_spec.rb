@@ -6,7 +6,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateService do
   subject(:service_call) { service.call }
 
   let(:service) { described_class.new(invoice:) }
-  let(:integration) { create(:hubspot_integration, organization:) }
+  let(:integration) { create(:hubspot_integration, organization:, invoices_properties_version: 2) }
   let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }

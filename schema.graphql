@@ -4446,6 +4446,7 @@ enum IntegrationTypeEnum {
   api_permissions
   auto_dunning
   hubspot
+  manual_payments
   netsuite
   okta
   progressive_billing
@@ -4540,6 +4541,7 @@ type Invoice {
   taxesAmountCents: BigInt!
   taxesRate: Float!
   totalAmountCents: BigInt!
+  totalDueAmountCents: BigInt!
   updatedAt: ISO8601DateTime!
   versionNumber: Int!
   voidable: Boolean!
@@ -6432,6 +6434,7 @@ enum PremiumIntegrationTypeEnum {
   api_permissions
   auto_dunning
   hubspot
+  manual_payments
   netsuite
   okta
   progressive_billing

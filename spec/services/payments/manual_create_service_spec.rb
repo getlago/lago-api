@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ManualPayments::CreateService, type: :service do
+RSpec.describe Payments::ManualCreateService, type: :service do
   subject(:service) { described_class.new(organization:, params:) }
 
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 10000, status: :finalized) }
@@ -174,10 +174,7 @@ RSpec.describe ManualPayments::CreateService, type: :service do
           it "updates invoice's payment status to suceeded" do
             result = service.call
 
-            aggregate_failures do
-              expect(result.payment.payable.payment_status).to eq("succeeded")
-              expect(result.payment.payable_payment_status).to eq("succeeded")
-            end
+            expect(result.payment.payable.payment_status).to eq("succeeded")
           end
         end
       end

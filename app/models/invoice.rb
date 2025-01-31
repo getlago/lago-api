@@ -50,12 +50,14 @@ class Invoice < ApplicationRecord
     :sub_total_excluding_taxes_amount_cents,
     :sub_total_including_taxes_amount_cents,
     :total_amount_cents,
+    :total_paid_amount_cents,
     :taxes_amount_cents,
     with_model_currency: :currency
 
   # NOTE: Readonly fields
   monetize :charge_amount_cents,
     :subscription_amount_cents,
+    :total_due_amount_cents,
     disable_validation: true,
     allow_nil: true,
     with_model_currency: :currency
@@ -257,6 +259,10 @@ class Invoice < ApplicationRecord
     }
   end
 
+  def total_due_amount_cents
+    total_amount_cents - total_paid_amount_cents
+  end
+
   # amount cents onto which we can issue a credit note
   def available_to_credit_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
@@ -292,7 +298,13 @@ class Invoice < ApplicationRecord
   def refundable_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft? || !payment_succeeded?
 
-    amount = available_to_credit_amount_cents -
+    # base_amount = if credit?
+    #   available_to_credit_amount_cents
+    # else
+    #   total_paid_amount_cents - credit_notes.sum("refund_amount_cents + credit_amount_cents")
+    # end
+
+    amount = total_paid_amount_cents - credit_notes.sum("refund_amount_cents + credit_amount_cents") -
       credits.where(before_taxes: false).sum(:amount_cents) -
       prepaid_credit_amount_cents
     amount = amount.negative? ? 0 : amount

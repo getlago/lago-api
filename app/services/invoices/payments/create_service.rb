@@ -33,7 +33,7 @@ module Invoices
         payment ||= Payment.create_with(
           payment_provider_id: current_payment_provider.id,
           payment_provider_customer_id: current_payment_provider_customer.id,
-          amount_cents: invoice.total_amount_cents,
+          amount_cents: invoice.total_due_amount_cents,
           amount_currency: invoice.currency,
           status: "pending"
         ).find_or_create_by!(
@@ -114,13 +114,20 @@ module Invoices
       end
 
       def update_invoice_payment_status(payment_status:)
+        params = {
+          # NOTE: A proper `processing` payment status should be introduced for invoices
+          payment_status: (payment_status.to_s == "processing") ? :pending : payment_status,
+          ready_for_payment_processing: %w[pending failed].include?(payment_status.to_s)
+        }
+
+        if payment_status.to_s == "succeeded"
+          total_paid_amount_cents = invoice.payments.where(payable_payment_status: :succeeded).sum(:amount_cents)
+          params[:total_paid_amount_cents] = total_paid_amount_cents
+        end
+
         Invoices::UpdateService.call!(
-          invoice: invoice,
-          params: {
-            # NOTE: A proper `processing` payment status should be introduced for invoices
-            payment_status: (payment_status.to_s == "processing") ? :pending : payment_status,
-            ready_for_payment_processing: %w[pending failed].include?(payment_status.to_s)
-          },
+          invoice:,
+          params:,
           webhook_notification: payment_status.to_sym == :succeeded
         )
       end
