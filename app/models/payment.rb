@@ -50,6 +50,10 @@ class Payment < ApplicationRecord
     payable.finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_payments }
   end
 
+  def payment_provider_type
+    payment_provider&.payment_type
+  end
+
   private
 
   def max_invoice_paid_amount_cents

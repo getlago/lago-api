@@ -32,6 +32,10 @@ module PaymentProviders
 
     settings_accessors :webhook_id
     secrets_accessors :secret_key
+
+    def payment_type
+      'stripe'
+    end
   end
 end
 

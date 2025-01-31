@@ -36,6 +36,7 @@ module Types
       field :sub_total_including_taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :taxes_amount_cents, GraphQL::Types::BigInt, null: false
       field :total_amount_cents, GraphQL::Types::BigInt, null: false
+      field :total_paid_amount_cents, GraphQL::Types::BigInt, null: false
 
       field :issuing_date, GraphQL::Types::ISO8601Date, null: false
       field :payment_due_date, GraphQL::Types::ISO8601Date, null: false

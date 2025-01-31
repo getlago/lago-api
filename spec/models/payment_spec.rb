@@ -202,6 +202,52 @@ RSpec.describe Payment, type: :model do
     end
   end
 
+  describe '#payment_provider_type' do
+    subject(:payment_provider_type) { payment.payment_provider_type }
+
+    let(:payment) { create(:payment, payment_provider:) }
+
+    context 'when payment provider is AdyenProvider' do
+      let(:payment_provider) { create(:adyen_provider) }
+
+      it 'returns adyen' do
+        expect(payment_provider_type).to eq('adyen')
+      end
+    end
+
+    context 'when payment provider is CashfreeProvider' do
+      let(:payment_provider) { create(:cashfree_provider) }
+
+      it 'returns cashfree' do
+        expect(payment_provider_type).to eq('cashfree')
+      end
+    end
+
+    context 'when payment provider is GocardlessProvider' do
+      let(:payment_provider) { create(:gocardless_provider) }
+
+      it 'returns gocardless' do
+        expect(payment_provider_type).to eq('gocardless')
+      end
+    end
+
+    context 'when payment provider is StripeProvider' do
+      let(:payment_provider) { create(:stripe_provider) }
+
+      it 'returns stripe' do
+        expect(payment_provider_type).to eq('stripe')
+      end
+    end
+
+    context 'when payment provider is nil' do
+      let(:payment_provider) { nil }
+
+      it 'returns an empty string' do
+        expect(payment_provider_type).to be_nil
+      end
+    end
+  end
+
   describe '#should_sync_payment?' do
     subject(:method_call) { payment.should_sync_payment? }
 
