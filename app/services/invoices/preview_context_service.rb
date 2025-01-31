@@ -26,29 +26,38 @@ module Invoices
     def find_or_build_customer
       customer_params = params[:customer] || {}
 
-      if customer_params.key?(:external_id)
+      customer = if customer_params.key?(:external_id)
         organization.customers.find_by!(external_id: customer_params[:external_id])
       else
-        Customer.new(
-          name: customer_params[:name],
-          organization: organization,
-          tax_identification_number: customer_params[:tax_identification_number],
-          currency: customer_params[:currency],
-          timezone: customer_params[:timezone],
-          shipping_address_line1: customer_params.dig(:shipping_address, :address_line1),
-          shipping_address_line2: customer_params.dig(:shipping_address, :address_line2),
-          shipping_city: customer_params.dig(:shipping_address, :city),
-          shipping_zipcode: customer_params.dig(:shipping_address, :zipcode),
-          shipping_state: customer_params.dig(:shipping_address, :state),
-          shipping_country: customer_params.dig(:shipping_address, :country),
-          created_at: Time.current,
-          updated_at: Time.current
-        ) do |customer|
-          customer.integration_customers = Array(customer_params[:integration_customers]).map do |integration_params|
-            build_customer_integration(customer, integration_params)
-          end
-        end
+        organization.customers.new(created_at: Time.current, updated_at: Time.current)
       end
+
+      customer.assign_attributes(
+        **customer_params.slice(
+          :name,
+          :tax_identification_number,
+          :currency,
+          :timezone,
+          :address_line1,
+          :address_line2,
+          :city,
+          :zipcode,
+          :state,
+          :country
+        ),
+        shipping_address_line1: customer_params.dig(:shipping_address, :address_line1),
+        shipping_address_line2: customer_params.dig(:shipping_address, :address_line2),
+        shipping_city: customer_params.dig(:shipping_address, :city),
+        shipping_zipcode: customer_params.dig(:shipping_address, :zipcode),
+        shipping_state: customer_params.dig(:shipping_address, :state),
+        shipping_country: customer_params.dig(:shipping_address, :country)
+      )
+
+      customer.integration_customers = Array(customer_params[:integration_customers]).map do |integration_params|
+        build_customer_integration(customer, integration_params)
+      end
+
+      customer
     end
 
     def build_customer_integration(customer, attrs)

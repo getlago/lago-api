@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 guard :rspec, cmd: 'bundle exec rspec' do
+  directories ['app', 'db/seeds', 'lib', 'spec', 'dev']
+
   watch('spec/spec_helper.rb') { 'spec' }
   watch('config/routes.rb') { 'spec/routing' }
   watch('app/controllers/application_controller.rb') { 'spec/requests' }

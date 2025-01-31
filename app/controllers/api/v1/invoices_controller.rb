@@ -203,6 +203,16 @@ module Api
       end
 
       def preview
+        if preview_params[:coupons] && !preview_params[:coupons].is_a?(Array)
+          return render(
+            json: {
+              status: 400,
+              error: "coupons_must_be_an_array"
+            },
+            status: :bad_request
+          )
+        end
+
         result = Invoices::PreviewContextService.call(
           organization: current_organization,
           params: preview_params.to_h.deep_symbolize_keys
@@ -281,6 +291,12 @@ module Api
             :tax_identification_number,
             :currency,
             :timezone,
+            :address_line1,
+            :address_line2,
+            :city,
+            :zipcode,
+            :state,
+            :country,
             shipping_address: [
               :address_line1,
               :address_line2,

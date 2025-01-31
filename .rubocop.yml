@@ -1,3 +1,7 @@
+inherit_mode:
+  merge:
+    - Exclude
+
 require:
   - standard
   - rubocop-rspec
@@ -19,6 +23,10 @@ AllCops:
     - 'bin/**/*'
     - 'db/schema.rb'
     - 'db/*_schema.rb'
+    - 'storage/**/*'
+    - 'tmp/**/*'
+    - 'coverage/**/*'
+    - 'log/**/*'
 
 # TODO: Enable when we have time to fix all the offenses
 Style/StringLiterals:
