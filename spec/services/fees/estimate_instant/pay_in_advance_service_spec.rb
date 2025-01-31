@@ -77,6 +77,55 @@ RSpec.describe Fees::EstimateInstant::PayInAdvanceService do
       end
     end
 
+    context "when charge is standard charge" do
+      let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, properties: {amount: '10'}) }
+
+      it 'returns a list of fees' do
+        result = subject.call
+
+        expect(result).to be_success
+        expect(result.fees.count).to eq(1)
+
+        fee = result.fees.first
+        expect(fee).to be_a(Hash)
+        expect(fee).to include(
+          pay_in_advance: true,
+          invoiceable: charge.invoiceable,
+          events_count: 1,
+          event_transaction_id: transaction_id
+        )
+      end
+
+      context 'when setting event properties' do
+        let(:properties) { {billable_metric.field_name => 500} }
+
+        it 'calculates the fee correctly' do
+          result = subject.call
+
+          expect(result).to be_success
+          expect(result.fees.count).to eq(1)
+
+          fee = result.fees.first
+          expect(fee[:amount_cents]).to eq(500000)
+        end
+      end
+
+      context 'when billable metric has an expression configured' do
+        let(:billable_metric) { create(:sum_billable_metric, organization:, expression: 'event.properties.test * 2') }
+        let(:properties) { {'test' => 200} }
+
+        it 'calculates evaluates the expression before estimating' do
+          result = subject.call
+
+          expect(result).to be_success
+          expect(result.fees.count).to eq(1)
+
+          fee = result.fees.first
+          expect(fee[:amount_cents]).to eq(400000)
+        end
+      end
+    end
+
     context 'when billable metric has an expression configured' do
       let(:billable_metric) { create(:sum_billable_metric, organization:, expression: 'event.properties.test * 2') }
       let(:properties) { {'test' => 200} }
@@ -107,7 +156,7 @@ RSpec.describe Fees::EstimateInstant::PayInAdvanceService do
     end
 
     context 'when event matches multiple charges' do
-      let(:charge2) { create(:percentage_charge, :pay_in_advance, plan:, billable_metric:) }
+      let(:charge2) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
 
       before { charge2 }
 
