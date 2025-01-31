@@ -46,7 +46,13 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
             address_line1: "Rue de Tax",
             city: "Paris",
             zipcode: "75011",
-            country: "IT"
+            country: "IT",
+            shipping_address: {
+              address_line1: Faker::Address.street_address,
+              city: "Paris",
+              zipcode: "75011",
+              country: "IT"
+            }
           }
         }
       end
@@ -63,7 +69,8 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
               id: customer.id,
               name: customer.name,
               currency: params.dig(:customer, :currency),
-              address_line1: params.dig(:customer, :address_line1)
+              address_line1: params.dig(:customer, :address_line1),
+              shipping_address_line1: params.dig(:customer, :shipping_address, :address_line1)
             )
         end
       end
@@ -94,6 +101,14 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
             city: "Paris",
             zipcode: "75011",
             country: "IT",
+            shipping_address: {
+              address_line1: Faker::Address.street_address,
+              address_line2: Faker::Address.street_address,
+              city: "Paris",
+              state: nil,
+              zipcode: "75011",
+              country: "IT"
+            },
             integration_customers:
           }
         }
