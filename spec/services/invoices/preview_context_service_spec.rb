@@ -39,7 +39,15 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
     context "when customer external id is provided" do
       let(:params) do
         {
-          customer: {external_id:}
+          customer: {
+            external_id:,
+            tax_identification_number: "123",
+            currency: "USD",
+            address_line1: "Rue de Tax",
+            city: "Paris",
+            zipcode: "75011",
+            country: "IT"
+          }
         }
       end
 
@@ -47,8 +55,16 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
         let(:customer) { create(:customer, organization:) }
         let(:external_id) { customer.external_id }
 
-        it "returns customer" do
-          expect(subject).to eq customer
+        it "returns customer with overrides from params" do
+          expect(subject)
+            .to be_a(Customer)
+            .and be_persisted
+            .and have_attributes(
+                   id: customer.id,
+                   name: customer.name,
+                   currency: params.dig(:customer, :currency),
+                   address_line1: params.dig(:customer, :address_line1)
+                 )
         end
       end
 
@@ -65,21 +81,19 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
       end
     end
 
-    context "when customer external id is omitted" do
+    context "when customer external id is missing" do
       let(:params) do
         {
           customer: {
             name: "Mislav M",
             tax_identification_number: "123",
             currency: "EUR",
-            shipping_address: {
-              address_line1: "Rue de Tax",
-              address_line2: nil,
-              state: nil,
-              city: "Paris",
-              zipcode: "75011",
-              country: "IT"
-            },
+            address_line1: "Rue de Tax",
+            address_line2: nil,
+            state: nil,
+            city: "Paris",
+            zipcode: "75011",
+            country: "IT",
             integration_customers:
           }
         }
