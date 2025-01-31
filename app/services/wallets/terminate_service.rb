@@ -10,7 +10,10 @@ module Wallets
     def call
       return result.not_found_failure!(resource: 'wallet') unless wallet
 
-      wallet.mark_as_terminated! if wallet.active?
+      unless wallet.terminated?
+        wallet.mark_as_terminated!
+        SendWebhookJob.perform_later('wallet.terminated', wallet)
+      end
 
       result.wallet = wallet
       result

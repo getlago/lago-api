@@ -533,6 +533,10 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       expect(json[:wallet][:name]).to eq(wallet.name)
     end
 
+    it 'sends a wallet.terminated webhook' do
+      expect { subject }.to have_enqueued_job(SendWebhookJob).with('wallet.terminated', Wallet)
+    end
+
     context 'when wallet does not exist' do
       let(:id) { SecureRandom.uuid }
 

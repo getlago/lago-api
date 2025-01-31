@@ -43,5 +43,7 @@ RSpec.describe Mutations::Wallets::Terminate, type: :graphql do
     expect(data['name']).to eq(wallet.name)
     expect(data['status']).to eq('terminated')
     expect(data['terminatedAt']).to be_present
+
+    expect(SendWebhookJob).to have_been_enqueued.with('wallet.terminated', Wallet)
   end
 end
