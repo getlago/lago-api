@@ -6491,6 +6491,7 @@ input ProviderCustomerInput {
 
 enum ProviderPaymentMethodsEnum {
   bacs_debit
+  boleto
   card
   link
   sepa_debit
