@@ -16,6 +16,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       revenue_share
       salesforce
       xero
+      zero_amount_fees
     ]
   end
 
