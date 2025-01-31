@@ -60,11 +60,11 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
             .to be_a(Customer)
             .and be_persisted
             .and have_attributes(
-                   id: customer.id,
-                   name: customer.name,
-                   currency: params.dig(:customer, :currency),
-                   address_line1: params.dig(:customer, :address_line1)
-                 )
+              id: customer.id,
+              name: customer.name,
+              currency: params.dig(:customer, :currency),
+              address_line1: params.dig(:customer, :address_line1)
+            )
         end
       end
 
