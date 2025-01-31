@@ -50,7 +50,7 @@ module Invoices
         shipping_city: customer_params.dig(:shipping_address, :city),
         shipping_zipcode: customer_params.dig(:shipping_address, :zipcode),
         shipping_state: customer_params.dig(:shipping_address, :state),
-        shipping_country: customer_params.dig(:shipping_address, :country),
+        shipping_country: customer_params.dig(:shipping_address, :country)
       )
 
       customer.integration_customers = Array(customer_params[:integration_customers]).map do |integration_params|
