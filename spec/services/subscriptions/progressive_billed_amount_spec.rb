@@ -56,6 +56,22 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
     end
   end
 
+  context "with failed progressive billing invoice for this subscription" do
+    let(:invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
+    let(:invoice) { invoice_subscription.invoice }
+
+    before do
+      invoice.update!(invoice_type:, status: :failed, fees_amount_cents: 20)
+    end
+
+    it "returns the fees_amount_cents from that invoice" do
+      result = service.call
+      expect(result.progressive_billed_amount).to eq(20)
+      expect(result.progressive_billing_invoice).to eq(invoice)
+      expect(result.to_credit_amount).to eq(20)
+    end
+  end
+
   context "with progressive billing invoice for this subscription in previous period" do
     let(:charges_to_datetime) { timestamp - 1.week }
     let(:charges_from_datetime) { timestamp - 2.weeks }
@@ -83,6 +99,25 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
     before do
       invoice.update!(invoice_type:, issuing_date: timestamp - 2.days, fees_amount_cents: 20)
       invoice2.update!(invoice_type:, issuing_date: timestamp - 1.day, fees_amount_cents: 40)
+    end
+
+    it "returns the last issued invoice fees_amount_cents" do
+      result = service.call
+      expect(result.progressive_billed_amount).to eq(40)
+      expect(result.progressive_billing_invoice).to eq(invoice2)
+      expect(result.to_credit_amount).to eq(40)
+    end
+  end
+
+  context "with multiple progressive billing invoice for this subscription and the last one failed" do
+    let(:invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
+    let(:invoice) { invoice_subscription.invoice }
+    let(:invoice_subscription2) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
+    let(:invoice2) { invoice_subscription2.invoice }
+
+    before do
+      invoice.update!(invoice_type:, issuing_date: timestamp - 2.days, fees_amount_cents: 20)
+      invoice2.update!(invoice_type:, status: :failed, issuing_date: timestamp - 1.day, fees_amount_cents: 40)
     end
 
     it "returns the last issued invoice fees_amount_cents" do
