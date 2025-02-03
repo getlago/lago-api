@@ -32,6 +32,7 @@ module Customers
 
       ActiveRecord::Base.transaction do
         customer.name = params[:name] if params.key?(:name)
+        customer.billing_entity_id = params[:billing_entity_id] if params.key?(:billing_entity_id)
         customer.country = params[:country]&.upcase if params.key?(:country)
         customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
         customer.address_line2 = params[:address_line2] if params.key?(:address_line2)
@@ -142,6 +143,7 @@ module Customers
 
       customer = Customer.new(
         organization_id: args[:organization_id],
+        billing_entity_id: args[:billing_entity_id],
         external_id: args[:external_id],
         name: args[:name],
         country: args[:country]&.upcase,

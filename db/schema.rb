@@ -640,6 +640,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "error_code", default: 0, null: false
+    t.uuid "billing_entity_id"
+    t.index ["billing_entity_id"], name: "index_error_details_on_billing_entity_id"
     t.index ["deleted_at"], name: "index_error_details_on_deleted_at"
     t.index ["error_code"], name: "index_error_details_on_error_code"
     t.index ["organization_id"], name: "index_error_details_on_organization_id"

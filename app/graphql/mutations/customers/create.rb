@@ -18,7 +18,7 @@ module Mutations
       def resolve(**args)
         result = ::Customers::CreateService
           .new(context[:current_user])
-          .create(**args.merge(organization_id: current_organization.id))
+          .create(**args.merge(organization_id: current_organization.id, billing_entity_id: current_organization.billing_entities.first.id))
 
         result.success? ? result.customer : result_error(result)
       end

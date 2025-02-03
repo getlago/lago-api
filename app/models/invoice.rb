@@ -12,11 +12,13 @@ class Invoice < ApplicationRecord
   COUPON_BEFORE_VAT_VERSION = 3
   TAX_INVOICE_LABEL_COUNTRIES = %w[AU AE NZ ID SG].freeze
 
-  before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
+  # before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
+  before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity.per_entity? && !self_billed }
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
+  belongs_to :billing_entity
 
   has_many :fees
   has_many :credits
@@ -369,7 +371,7 @@ class Invoice < ApplicationRecord
     return I18n.t("invoice.self_billed.document_name") if self_billed?
     return I18n.t('invoice.prepaid_credit_invoice') if credit?
 
-    if TAX_INVOICE_LABEL_COUNTRIES.include?(organization.country)
+    if TAX_INVOICE_LABEL_COUNTRIES.include?(billing_entity.country)
       return I18n.t('invoice.paid_tax_invoice') if advance_charges?
       return I18n.t('invoice.document_tax_name')
     end
@@ -390,62 +392,62 @@ class Invoice < ApplicationRecord
   end
 
   def ensure_number
-    self.number = "#{organization.document_number_prefix}-DRAFT" if number.blank? && !status_changed_to_finalized?
+    self.number = "#{billing_entity.document_number_prefix}-DRAFT" if number.blank? && !status_changed_to_finalized?
 
     return unless status_changed_to_finalized?
 
-    if organization.per_customer? || self_billed
+    if billing_entity.per_customer? || self_billed
       # NOTE: Example of expected customer slug format is ORG_PREFIX-005
-      customer_slug = "#{organization.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
+      customer_slug = "#{billing_entity.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
       formatted_sequential_id = format('%03d', sequential_id)
 
       self.number = "#{customer_slug}-#{formatted_sequential_id}"
     else
-      org_formatted_sequential_id = format('%03d', organization_sequential_id)
-      formatted_year_and_month = Time.now.in_time_zone(organization.timezone || 'UTC').strftime('%Y%m')
+      org_formatted_sequential_id = format('%03d', billing_entity_sequential_id)
+      formatted_year_and_month = Time.now.in_time_zone(billing_entity.timezone || 'UTC').strftime('%Y%m')
 
-      self.number = "#{organization.document_number_prefix}-#{formatted_year_and_month}-#{org_formatted_sequential_id}"
+      self.number = "#{billing_entity.document_number_prefix}-#{formatted_year_and_month}-#{org_formatted_sequential_id}"
     end
   end
 
-  def ensure_organization_sequential_id
-    return if organization_sequential_id.present? && organization_sequential_id.positive?
+  def ensure_billing_entity_sequential_id
+    return if billing_entity_sequential_id.present? && billing_entity_sequential_id.positive?
     return unless status_changed_to_finalized?
 
-    self.organization_sequential_id = generate_organization_sequential_id
+    self.billing_entity_sequential_id = generate_billing_entity_sequential_id
   end
 
-  def generate_organization_sequential_id
-    timezone = organization.timezone || 'UTC'
-    organization_sequence_scope = organization.invoices.with_generated_number.where(
+  def generate_billing_entity_sequential_id
+    timezone = billing_entity.timezone || 'UTC'
+    billing_entity_sequence_scope = billing_entity.invoices.with_generated_number.where(
       "date_trunc('month', created_at::timestamptz AT TIME ZONE ?)::date = ?",
       timezone,
       Time.now.in_time_zone(timezone).beginning_of_month.to_date
     ).non_self_billed
 
     result = Invoice.with_advisory_lock(
-      organization_id,
+      billing_entity_id,
       transaction: true,
       timeout_seconds: 10.seconds
     ) do
       # If previous invoice had different numbering, base sequential id is the total number of invoices
-      organization_sequential_id = if switched_from_customer_numbering?
-        organization.invoices.non_self_billed.with_generated_number.count
+      billing_entity_sequential_id = if switched_from_customer_numbering?
+        billing_entity.invoices.non_self_billed.with_generated_number.count
       else
-        organization
+        billing_entity
           .invoices
           .non_self_billed
-          .where.not(organization_sequential_id: 0)
-          .order(organization_sequential_id: :desc)
+          .where.not(billing_entity_sequential_id: 0)
+          .order(billing_entity_sequential_id: :desc)
           .limit(1)
-          .pick(:organization_sequential_id) || 0
+          .pick(:billing_entity_sequential_id) || 0
       end
 
       # NOTE: Start with the most recent sequential id and find first available sequential id that haven't occurred
       loop do
-        organization_sequential_id += 1
+        billing_entity_sequential_id += 1
 
-        break organization_sequential_id unless organization_sequence_scope.exists?(organization_sequential_id:)
+        break billing_entity_sequential_id unless billing_entity_sequence_scope.exists?(billing_entity_sequential_id:)
       end
     end
 
@@ -456,11 +458,11 @@ class Invoice < ApplicationRecord
   end
 
   def switched_from_customer_numbering?
-    last_invoice = organization.invoices.non_self_billed.order(created_at: :desc).with_generated_number.first
+    last_invoice = billing_entity.invoices.non_self_billed.order(created_at: :desc).with_generated_number.first
 
     return false unless last_invoice
 
-    last_invoice&.organization_sequential_id&.zero?
+    last_invoice&.billing_entity_sequential_id&.zero?
   end
 
   def status_changed_to_finalized?

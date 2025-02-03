@@ -21,6 +21,7 @@ module Invoices
         invoice = Invoice.create!(
           id: invoice_id || SecureRandom.uuid,
           organization:,
+          billing_entity:,
           customer:,
           invoice_type:,
           currency:,
@@ -45,6 +46,7 @@ module Invoices
     attr_accessor :customer, :invoice_type, :currency, :datetime, :charge_in_advance, :skip_charges, :invoice_id
 
     delegate :organization, to: :customer
+    delegate :billing_entity, to: :customer
 
     # NOTE: accounting date must be in customer timezone
     def issuing_date
