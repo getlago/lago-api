@@ -1,4 +1,4 @@
-#frozen_string_literal: true
+# frozen_string_literal: true
 
 class PopulateBillingEntityForOrganizations < ActiveRecord::Migration[7.1]
   class Organization < ApplicationRecord
@@ -53,6 +53,7 @@ class PopulateBillingEntityForOrganizations < ActiveRecord::Migration[7.1]
       )
       billing_entity.save!
 
+      # rubocop:disable Rails/SkipsModelValidations
       organization.customers.update_all(billing_entity_id: billing_entity.id)
       organization.invoices.update_all(billing_entity_id: billing_entity.id)
       organization.daily_usages.update_all(billing_entity_id: billing_entity.id)
@@ -63,6 +64,7 @@ class PopulateBillingEntityForOrganizations < ActiveRecord::Migration[7.1]
       organization.data_exports.update_all(billing_entity_id: billing_entity.id)
       organization.invoice_custom_section_selections.update_all(billing_entity_id: billing_entity.id)
       ErrorDetail.where(organization_id: organization.id).update_all(billing_entity_id: billing_entity.id)
+      # rubocop:enable Rails/SkipsModelValidations
 
       organization.taxes.applied_to_organization.each do |tax|
         billing_entity.taxes << tax
