@@ -10,6 +10,7 @@ class Organization < ApplicationRecord
     "credit_note.created"
   ].freeze
 
+  has_many :billing_entities
   has_many :api_keys
   has_many :memberships
   has_many :users, through: :memberships

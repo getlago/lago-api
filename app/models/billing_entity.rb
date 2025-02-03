@@ -36,7 +36,7 @@ class BillingEntity < ApplicationRecord
   has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
 
   # this one needs to be done via applied_dunning_campaign_id
-  has_one :applied_dunning_campaign
+  has_one :applied_dunning_campaign, class_name: "DunningCampaign", foreign_key: :applied_dunning_campaign_id
 
   has_many :invoice_custom_section_selections
   has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section

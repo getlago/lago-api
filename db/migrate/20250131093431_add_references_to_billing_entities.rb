@@ -16,5 +16,6 @@ class AddReferencesToBillingEntities < ActiveRecord::Migration[7.1]
     add_reference :cached_aggregations, :billing_entity, index: {algorithm: :concurrently}, type: :uuid
     add_reference :data_exports, :billing_entity, index: {algorithm: :concurrently}, type: :uuid
     add_reference :invoice_custom_section_selections, :billing_entity, index: {algorithm: :concurrently}, type: :uuid
+    add_reference :error_details, :billing_entity, index: {algorithm: :concurrently}, type: :uuid
   end
 end

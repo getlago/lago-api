@@ -35,6 +35,7 @@ class Customer < ApplicationRecord
   before_save :ensure_slug
 
   belongs_to :organization
+  belongs_to :billing_entity
   belongs_to :applied_dunning_campaign, optional: true, class_name: "DunningCampaign"
 
   has_many :subscriptions
@@ -142,7 +143,7 @@ class Customer < ApplicationRecord
   def applicable_invoice_custom_sections
     return [] if skip_invoice_custom_sections?
 
-    selected_invoice_custom_sections.order(:name).presence || organization.selected_invoice_custom_sections.order(:name)
+    selected_invoice_custom_sections.order(:name).presence || billing_entity.selected_invoice_custom_sections.order(:name)
   end
 
   def editable?

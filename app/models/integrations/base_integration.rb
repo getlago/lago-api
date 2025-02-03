@@ -11,6 +11,7 @@ module Integrations
     INTEGRATION_ACCOUNTING_TYPES = %w[Integrations::NetsuiteIntegration Integrations::XeroIntegration].freeze
 
     belongs_to :organization
+    belongs_to :billing_entity
 
     has_many :integration_items, dependent: :destroy, foreign_key: :integration_id
     has_many :integration_resources, dependent: :destroy, foreign_key: :integration_id

@@ -14,6 +14,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
           organization: customer.organization,
+          billing_entity: customer.billing_entity,
           customer:,
           issuing_date:,
           payment_due_date:,
@@ -94,7 +95,7 @@ module Invoices
 
     def should_deliver_email?
       License.premium? &&
-        customer.organization.email_settings.include?('invoice.finalized')
+        customer.billing_entity.email_settings.include?('invoice.finalized')
     end
   end
 end
