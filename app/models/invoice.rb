@@ -296,7 +296,8 @@ class Invoice < ApplicationRecord
 
   # amount cents onto which we can issue a credit note as refund
   def refundable_amount_cents
-    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft? # || !payment_succeeded?
+    return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
+    return 0 if !payment_succeeded? && total_paid_amount_cents == total_amount_cents
 
     # base_amount = if credit?
     #   available_to_credit_amount_cents
