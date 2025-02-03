@@ -12,7 +12,7 @@ class Invoice < ApplicationRecord
   COUPON_BEFORE_VAT_VERSION = 3
 
   # before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
-  before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity.per_entity? && !self_billed }
+  before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity.per_organization? && !self_billed }
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }

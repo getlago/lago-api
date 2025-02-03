@@ -63,6 +63,7 @@ module Fees
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
+    delegate :billing_entity, to: :subscription
     delegate :plan, to: :subscription
 
     def init_fees
@@ -287,6 +288,7 @@ module Fees
       aggregation_results.each do |aggregation_result|
         result.cached_aggregations << CachedAggregation.find_or_initialize_by(
           organization_id: billable_metric.organization_id,
+          billing_entity_id: billing_entity.id,
           external_subscription_id: subscription.external_id,
           charge_id: charge.id,
           charge_filter_id: charge_filter&.id,
