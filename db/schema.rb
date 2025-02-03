@@ -234,7 +234,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.float "vat_rate", default: 0.0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.uuid "organization_id", null: false
+    t.uuid "organization_id"
     t.uuid "applied_dunning_campaign_id"
     t.index ["applied_dunning_campaign_id"], name: "index_billing_entities_on_applied_dunning_campaign_id"
     t.index ["organization_id"], name: "index_billing_entities_on_organization_id"
