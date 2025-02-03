@@ -13,15 +13,17 @@ end
 #  id                        :uuid             not null, primary key
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
+#  billing_entity_id         :uuid
 #  customer_id               :uuid
 #  invoice_custom_section_id :uuid             not null
 #  organization_id           :uuid
 #
 # Indexes
 #
-#  idx_on_invoice_custom_section_id_7edbcef7b5                 (invoice_custom_section_id)
-#  index_invoice_custom_section_selections_on_customer_id      (customer_id)
-#  index_invoice_custom_section_selections_on_organization_id  (organization_id)
+#  idx_on_invoice_custom_section_id_7edbcef7b5                   (invoice_custom_section_id)
+#  index_invoice_custom_section_selections_on_billing_entity_id  (billing_entity_id)
+#  index_invoice_custom_section_selections_on_customer_id        (customer_id)
+#  index_invoice_custom_section_selections_on_organization_id    (organization_id)
 #
 # Foreign Keys
 #

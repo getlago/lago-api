@@ -494,6 +494,7 @@ end
 #  voided_at                               :datetime
 #  created_at                              :datetime         not null
 #  updated_at                              :datetime         not null
+#  billing_entity_id                       :uuid
 #  customer_id                             :uuid
 #  organization_id                         :uuid             not null
 #  organization_sequential_id              :integer          default(0), not null
@@ -501,6 +502,7 @@ end
 #
 # Indexes
 #
+#  index_invoices_on_billing_entity_id              (billing_entity_id)
 #  index_invoices_on_customer_id                    (customer_id)
 #  index_invoices_on_customer_id_and_sequential_id  (customer_id,sequential_id) UNIQUE
 #  index_invoices_on_issuing_date                   (issuing_date)

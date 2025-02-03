@@ -47,13 +47,13 @@ class Organization < ApplicationRecord
   has_many :hubspot_integrations, class_name: "Integrations::HubspotIntegration"
   has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"
   has_many :xero_integrations, class_name: "Integrations::XeroIntegration"
-  has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
+  has_many :salesforce_integrations, class_name: "Integrations::SalesforceIntegration"
 
-  has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
+  # has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
 
   has_many :invoice_custom_sections
-  has_many :invoice_custom_section_selections
-  has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section
+  # has_many :invoice_custom_section_selections
+  # has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section
 
   has_one_attached :logo
 
