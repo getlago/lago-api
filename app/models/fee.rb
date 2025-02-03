@@ -247,6 +247,7 @@ end
 #  updated_at                          :datetime         not null
 #  add_on_id                           :uuid
 #  applied_add_on_id                   :uuid
+#  billing_entity_id                   :uuid
 #  charge_filter_id                    :uuid
 #  charge_id                           :uuid
 #  group_id                            :uuid
@@ -263,6 +264,7 @@ end
 #  idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167  (pay_in_advance_event_transaction_id,charge_id,charge_filter_id) UNIQUE WHERE ((created_at > '2025-01-21 00:00:00'::timestamp without time zone) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true))
 #  index_fees_on_add_on_id                                         (add_on_id)
 #  index_fees_on_applied_add_on_id                                 (applied_add_on_id)
+#  index_fees_on_billing_entity_id                                 (billing_entity_id)
 #  index_fees_on_charge_filter_id                                  (charge_filter_id)
 #  index_fees_on_charge_id                                         (charge_id)
 #  index_fees_on_charge_id_and_invoice_id                          (charge_id,invoice_id) WHERE (deleted_at IS NULL)

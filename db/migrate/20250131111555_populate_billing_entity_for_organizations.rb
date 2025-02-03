@@ -63,6 +63,7 @@ class PopulateBillingEntityForOrganizations < ActiveRecord::Migration[7.1]
       organization.cached_aggregations.update_all(billing_entity_id: billing_entity.id)
       organization.data_exports.update_all(billing_entity_id: billing_entity.id)
       organization.invoice_custom_section_selections.update_all(billing_entity_id: billing_entity.id)
+      Fee.where(organization_id: organization.id).update_all(billing_entity_id: billing_entity.id)
       ErrorDetail.where(organization_id: organization.id).update_all(billing_entity_id: billing_entity.id)
       # rubocop:enable Rails/SkipsModelValidations
 

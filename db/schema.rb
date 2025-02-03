@@ -241,8 +241,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
   end
 
   create_table "billing_entities_taxes", id: false, force: :cascade do |t|
-    t.bigint "billing_entity_id"
-    t.bigint "tax_id"
+    t.uuid "billing_entity_id"
+    t.uuid "tax_id"
     t.index ["billing_entity_id"], name: "index_billing_entities_taxes_on_billing_entity_id"
     t.index ["tax_id"], name: "index_billing_entities_taxes_on_tax_id"
   end
@@ -719,8 +719,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.decimal "taxes_precise_amount_cents", precision: 40, scale: 15, default: "0.0", null: false
     t.float "taxes_base_rate", default: 1.0, null: false
     t.uuid "organization_id"
+    t.uuid "billing_entity_id"
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
+    t.index ["billing_entity_id"], name: "index_fees_on_billing_entity_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
     t.index ["charge_id", "invoice_id"], name: "index_fees_on_charge_id_and_invoice_id", where: "(deleted_at IS NULL)"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
