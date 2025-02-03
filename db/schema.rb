@@ -207,6 +207,46 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.index ["organization_id"], name: "index_billable_metrics_on_organization_id"
   end
 
+  create_table "billing_entities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "address_line1"
+    t.string "address_line2"
+    t.string "city"
+    t.string "country"
+    t.string "zipcode"
+    t.string "state"
+    t.string "timezone", default: "UTC", null: false
+    t.string "default_currency", default: "USD", null: false
+    t.string "document_locale", default: "en", null: false
+    t.string "document_number_prefix"
+    t.integer "document_numbering", null: false
+    t.boolean "finalize_zero_amount_invoice", default: true, null: false
+    t.text "invoice_footer"
+    t.integer "invoice_grace_period", default: 0, null: false
+    t.integer "net_payment_term", default: 0, null: false
+    t.string "email"
+    t.string "email_settings", default: [], null: false, array: true
+    t.boolean "eu_tax_management", default: false
+    t.string "legal_name"
+    t.string "legal_number"
+    t.string "logo"
+    t.string "name", null: false
+    t.string "tax_identification_number"
+    t.float "vat_rate", default: 0.0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "organization_id", null: false
+    t.uuid "applied_dunning_campaign_id"
+    t.index ["applied_dunning_campaign_id"], name: "index_billing_entities_on_applied_dunning_campaign_id"
+    t.index ["organization_id"], name: "index_billing_entities_on_organization_id"
+  end
+
+  create_table "billing_entities_taxes", id: false, force: :cascade do |t|
+    t.bigint "billing_entity_id"
+    t.bigint "tax_id"
+    t.index ["billing_entity_id"], name: "index_billing_entities_taxes_on_billing_entity_id"
+    t.index ["tax_id"], name: "index_billing_entities_taxes_on_tax_id"
+  end
+
   create_table "cached_aggregations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "event_id"
@@ -223,6 +263,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.uuid "charge_filter_id"
     t.decimal "current_amount"
     t.string "event_transaction_id"
+    t.uuid "billing_entity_id"
+    t.index ["billing_entity_id"], name: "index_cached_aggregations_on_billing_entity_id"
     t.index ["charge_id"], name: "index_cached_aggregations_on_charge_id"
     t.index ["event_id"], name: "index_cached_aggregations_on_event_id"
     t.index ["external_subscription_id"], name: "index_cached_aggregations_on_external_subscription_id"
@@ -488,8 +530,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "last_dunning_campaign_attempt_at", precision: nil
     t.boolean "skip_invoice_custom_sections", default: false, null: false
     t.enum "account_type", default: "customer", null: false, enum_type: "customer_account_type"
+    t.uuid "billing_entity_id"
     t.index ["account_type"], name: "index_customers_on_account_type"
     t.index ["applied_dunning_campaign_id"], name: "index_customers_on_applied_dunning_campaign_id"
+    t.index ["billing_entity_id"], name: "index_customers_on_billing_entity_id"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
@@ -520,6 +564,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "refreshed_at", null: false
     t.jsonb "usage_diff", default: "{}", null: false
     t.date "usage_date"
+    t.uuid "billing_entity_id"
+    t.index ["billing_entity_id"], name: "index_daily_usages_on_billing_entity_id"
     t.index ["customer_id"], name: "index_daily_usages_on_customer_id"
     t.index ["organization_id", "external_subscription_id"], name: "idx_on_organization_id_external_subscription_id_df3a30d96d"
     t.index ["organization_id"], name: "index_daily_usages_on_organization_id"
@@ -550,6 +596,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "updated_at", null: false
     t.uuid "membership_id"
     t.uuid "organization_id"
+    t.uuid "billing_entity_id"
+    t.index ["billing_entity_id"], name: "index_data_exports_on_billing_entity_id"
     t.index ["membership_id"], name: "index_data_exports_on_membership_id"
     t.index ["organization_id"], name: "index_data_exports_on_organization_id"
   end
@@ -816,6 +864,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.jsonb "settings", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "billing_entity_id"
+    t.index ["billing_entity_id"], name: "index_integrations_on_billing_entity_id"
     t.index ["code", "organization_id"], name: "index_integrations_on_code_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_integrations_on_organization_id"
   end
@@ -842,6 +892,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.uuid "customer_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "billing_entity_id"
+    t.index ["billing_entity_id"], name: "index_invoice_custom_section_selections_on_billing_entity_id"
     t.index ["customer_id"], name: "index_invoice_custom_section_selections_on_customer_id"
     t.index ["invoice_custom_section_id"], name: "idx_on_invoice_custom_section_id_7edbcef7b5"
     t.index ["organization_id"], name: "index_invoice_custom_section_selections_on_organization_id"
@@ -941,6 +993,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.enum "tax_status", enum_type: "tax_status"
     t.bigint "total_paid_amount_cents", default: 0, null: false
     t.boolean "self_billed", default: false, null: false
+    t.uuid "billing_entity_id"
+    t.index ["billing_entity_id"], name: "index_invoices_on_billing_entity_id"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["issuing_date"], name: "index_invoices_on_issuing_date"
@@ -1089,6 +1143,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.string "code", null: false
     t.string "name", null: false
     t.datetime "deleted_at"
+    t.uuid "billing_entity_id"
+    t.index ["billing_entity_id"], name: "index_payment_providers_on_billing_entity_id"
     t.index ["code", "organization_id"], name: "index_payment_providers_on_code_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_payment_providers_on_organization_id"
   end
@@ -1105,6 +1161,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.integer "payment_attempts", default: 0, null: false
     t.boolean "ready_for_payment_processing", default: true, null: false
     t.uuid "dunning_campaign_id"
+    t.uuid "billing_entity_id"
+    t.index ["billing_entity_id"], name: "index_payment_requests_on_billing_entity_id"
     t.index ["customer_id"], name: "index_payment_requests_on_customer_id"
     t.index ["dunning_campaign_id"], name: "index_payment_requests_on_dunning_campaign_id"
     t.index ["organization_id"], name: "index_payment_requests_on_organization_id"
