@@ -2,6 +2,8 @@
 
 module AddOns
   class DestroyService < BaseService
+    Result = BaseResult[:add_on]
+
     def initialize(add_on:)
       @add_on = add_on
       super

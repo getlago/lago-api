@@ -2,6 +2,8 @@
 
 module AddOns
   class UpdateService < BaseService
+    Result = BaseResult[:add_on]
+
     def initialize(add_on:, params:)
       @add_on = add_on
       @params = params

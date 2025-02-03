@@ -2,6 +2,8 @@
 
 module AddOns
   class CreateService < BaseService
+    Result = BaseResult[:add_on]
+
     def initialize(args)
       @args = args
       super
