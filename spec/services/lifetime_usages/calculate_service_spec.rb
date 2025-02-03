@@ -53,8 +53,8 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
         expect { service.call }.to change(lifetime_usage, :invoiced_usage_amount_refreshed_at)
       end
 
-      it "does not change current_usage_amount_refreshed_at" do
-        expect { service.call }.not_to change(lifetime_usage, :current_usage_amount_refreshed_at)
+      it "also changes current_usage_amount_refreshed_at" do
+        expect { service.call }.to change(lifetime_usage, :current_usage_amount_refreshed_at)
       end
     end
 
@@ -89,6 +89,33 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
         expect(result.lifetime_usage.invoiced_usage_amount_cents).to eq(200)
         expect(lifetime_usage.reload.invoiced_usage_amount_cents).to eq(200)
         expect(lifetime_usage.recalculate_invoiced_usage).to be false
+      end
+    end
+
+    context "with finalized invoice and usage" do
+      let(:invoice) { create(:invoice, :finalized, organization:) }
+
+      before do
+        invoice
+        invoice_subscription
+        fees
+        events
+        charge
+        Rails.cache.clear
+      end
+
+      it "calculates the invoiced_usage_amount_cents correctly" do
+        result = service.call
+        expect(result.lifetime_usage.invoiced_usage_amount_cents).to eq(200)
+        expect(lifetime_usage.reload.invoiced_usage_amount_cents).to eq(200)
+        expect(lifetime_usage.recalculate_invoiced_usage).to be false
+      end
+
+      it "calculates the current_usage_amount_cents correctly" do
+        result = service.call
+        expect(result.lifetime_usage.current_usage_amount_cents).to eq(2000)
+        expect(lifetime_usage.reload.current_usage_amount_cents).to eq(2000)
+        expect(lifetime_usage.recalculate_current_usage).to be false
       end
     end
 
