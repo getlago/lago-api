@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class BillingEntity < ApplicationRecord
   include PaperTrailTraceable
   include OrganizationTimezone
@@ -57,14 +59,13 @@ class BillingEntity < ApplicationRecord
   validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
   validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
   validates :logo,
-            image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},
-            if: :logo?
+    image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},
+    if: :logo?
   validates :name, presence: true
   validates :timezone, timezone: true
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
 
   validate :validate_email_settings
-
 
   def logo_url
     return if logo.blank?

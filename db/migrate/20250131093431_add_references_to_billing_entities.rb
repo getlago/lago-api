@@ -1,10 +1,10 @@
-#frozen_string_literal: true
+# frozen_string_literal: true
 
 class AddReferencesToBillingEntities < ActiveRecord::Migration[7.1]
   disable_ddl_transaction!
 
   def change
-    add_reference :billing_entities, :organization, null: false, index: {algorithm: :concurrently}, type: :uuid
+    add_reference :billing_entities, :organization, index: {algorithm: :concurrently}, type: :uuid
     add_reference :billing_entities, :applied_dunning_campaign, index: {algorithm: :concurrently}, type: :uuid
 
     add_reference :customers, :billing_entity, index: {algorithm: :concurrently}, type: :uuid
