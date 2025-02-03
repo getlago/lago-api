@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Create credit note Scenarios', :scenarios, type: :request do
+describe "Create credit note Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
   let(:customer) { create(:customer, organization:) }
 
@@ -44,7 +44,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
     create(:coupon_plan, coupon:, plan: plan2)
   end
 
-  let(:plan_tax) { create(:tax, organization:, name: 'Plan Tax', rate: 10, applied_to_organization: false) }
+  let(:plan_tax) { create(:tax, organization:, name: "Plan Tax", rate: 10, applied_to_organization: false) }
   let(:plan_applied_tax) { create(:plan_applied_tax, plan: plan2, tax: plan_tax) }
   let(:plan_applied_tax2) { create(:plan_applied_tax, plan: plan2, tax:) }
 
@@ -56,7 +56,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
     plan_applied_tax2
   end
 
-  it 'Allows creation of partial credit note' do
+  it "Allows creation of partial credit note" do
     # Creates two subscriptions
     travel_to(DateTime.new(2022, 12, 19, 12)) do
       create_subscription(
@@ -85,8 +85,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
 
     # Bill subscription on an anniversary date
     travel_to(DateTime.new(2023, 10, 19)) do
-      Subscriptions::BillingService.call
-      perform_all_enqueued_jobs
+      perform_billing
     end
 
     invoice = customer.invoices.order(created_at: :desc).first
@@ -168,7 +167,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
     expect(credit_note.coupons_adjustment_amount_cents).to eq(16_454)
   end
 
-  context 'when applying multiple time the same coupon' do
+  context "when applying multiple time the same coupon" do
     let(:plan) do
       create(
         :plan,
@@ -240,7 +239,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       charge5
     end
 
-    it 'Allows creation of partial credit note' do
+    it "Allows creation of partial credit note" do
       # Creates two subscriptions
       travel_to(DateTime.new(2022, 12, 19, 12)) do
         create_subscription(
@@ -268,8 +267,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
 
       # Bill subscription on an anniversary date
       travel_to(DateTime.new(2023, 10, 19)) do
-        Subscriptions::BillingService.call
-        perform_all_enqueued_jobs
+        perform_billing
       end
 
       invoice = customer.invoices.order(created_at: :desc).first
@@ -337,14 +335,14 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'when creating credit note with possible rounding issues' do
-    context 'when creating credit notes for small items with taxes, so sum of items with their taxes is bigger than invoice total amount' do
+  context "when creating credit note with possible rounding issues" do
+    context "when creating credit notes for small items with taxes, so sum of items with their taxes is bigger than invoice total amount" do
       let(:tax) { create(:tax, organization:, rate: 20) }
 
-      context 'when two similar items are refunded separately' do
+      context "when two similar items are refunded separately" do
         let(:add_ons) { create_list(:add_on, 2, organization:, amount_cents: 68_33) }
 
-        it 'solves the rounding issue' do
+        it "solves the rounding issue" do
           #  create a one off invoice with two addons and small amounts as feed
           create_one_off_invoice(customer, add_ons)
           # invoice amount should be with taxes calculated on items sum:
@@ -352,7 +350,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
           expect(invoice.total_amount_cents).to eq(163_99)
           expect(invoice.taxes_amount_cents).to eq(27_33)
           fees = invoice.fees
-          invoice.update(payment_status: 'succeeded')
+          invoice.update(payment_status: "succeeded")
 
           # estimate and create credit notes for first item - full refund; the taxes are rounded to higher number
           estimate_credit_note(
@@ -447,10 +445,10 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         end
       end
 
-      context 'when four items are refunded separately, some whole, some in parts' do
+      context "when four items are refunded separately, some whole, some in parts" do
         let(:add_ons) { create_list(:add_on, 4, organization:, amount_cents: 68_33) }
 
-        it 'solves the rounding issue' do
+        it "solves the rounding issue" do
           #  create a one off invoice with two addons and small amounts as feed
           create_one_off_invoice(customer, add_ons)
           # invoice amount should be with taxes calculated on items sum:
@@ -458,7 +456,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
           expect(invoice.total_amount_cents).to eq(327_98)
           expect(invoice.taxes_amount_cents).to eq(54_66)
           fees = invoice.fees
-          invoice.update(payment_status: 'succeeded')
+          invoice.update(payment_status: "succeeded")
 
           # estimate and create credit notes for first three items - full refund; the taxes are rounded to higher number
           3.times do |i|
@@ -659,9 +657,9 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       end
     end
 
-    context 'when creating credit note with small items and applied coupons' do
+    context "when creating credit note with small items and applied coupons" do
       let(:tax) { create(:tax, organization:, rate: 20) }
-      let(:plan_tax) { create(:tax, organization:, name: 'Plan Tax', rate: 20, applied_to_organization: false) }
+      let(:plan_tax) { create(:tax, organization:, name: "Plan Tax", rate: 20, applied_to_organization: false) }
       let(:plan) do
         create(
           :plan,
@@ -706,7 +704,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         charge2
       end
 
-      it 'calculates all roundings' do
+      it "calculates all roundings" do
         # Creates two subscriptions
         travel_to(DateTime.new(2022, 12, 19, 12)) do
           create_subscription(
@@ -728,8 +726,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
 
         # Bill subscription on an anniversary date
         travel_to(DateTime.new(2023, 10, 19)) do
-          Subscriptions::BillingService.call
-          perform_all_enqueued_jobs
+          perform_billing
         end
 
         invoice = customer.invoices.order(created_at: :desc).first
@@ -880,30 +877,30 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'when invoice is prepaid credit' do
-    it 'behaves differently depending on the invoice payment status, wallet balance and wallet status' do
+  context "when invoice is prepaid credit" do
+    it "behaves differently depending on the invoice payment status, wallet balance and wallet status" do
       # Create a prepaid credit invoice for 15 credits
       create_wallet({
         external_customer_id: customer.external_id,
-        rate_amount: '1',
-        name: 'Wallet1',
-        currency: 'EUR',
+        rate_amount: "1",
+        name: "Wallet1",
+        currency: "EUR",
         invoice_requires_successful_payment: false # default
       })
       wallet = customer.wallets.sole
 
       create_wallet_transaction({
         wallet_id: wallet.id,
-        paid_credits: '15'
+        paid_credits: "15"
       })
       wt = WalletTransaction.find json[:wallet_transactions].first[:lago_id]
 
-      expect(wt.status).to eq 'pending'
-      expect(wt.transaction_status).to eq 'purchased'
+      expect(wt.status).to eq "pending"
+      expect(wt.transaction_status).to eq "purchased"
 
       # Customer does not have a payment_provider set yet
       invoice = customer.invoices.credit.sole
-      expect(invoice.status).to eq 'finalized'
+      expect(invoice.status).to eq "finalized"
 
       # it does not allow to create credit notes on invoices with payment status pending
       expect(invoice.creditable_amount_cents).to eq 0
@@ -975,8 +972,8 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
       expect(credit_note.refund_amount_cents).to eq(500)
       expect(credit_note.total_amount_cents).to eq(500)
       wallet_transaction = wallet.wallet_transactions.order(:created_at).last
-      expect(wallet_transaction.status).to eq('settled')
-      expect(wallet_transaction.transaction_status).to eq('voided')
+      expect(wallet_transaction.status).to eq("settled")
+      expect(wallet_transaction.transaction_status).to eq("voided")
       expect(wallet_transaction.credit_note_id).to eq(credit_note.id)
       expect(wallet.reload.balance_cents).to eq(1000)
 
@@ -992,7 +989,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         ]
       )
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.body).to include('higher_than_wallet_balance')
+      expect(response.body).to include("higher_than_wallet_balance")
 
       # when creating a credit note with amount higher than remaining balance, it throws an error
       create_credit_note(
@@ -1007,7 +1004,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         ]
       )
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.body).to include('higher_than_wallet_balance')
+      expect(response.body).to include("higher_than_wallet_balance")
 
       expect(wallet.reload.balance_cents).to eq(5)
 
@@ -1024,7 +1021,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         ]
       )
       expect(response).to have_http_status(:method_not_allowed)
-      expect(response.body).to include('invalid_type_or_status')
+      expect(response.body).to include("invalid_type_or_status")
 
       create_credit_note(
         invoice_id: invoice.id,
@@ -1038,7 +1035,7 @@ describe 'Create credit note Scenarios', :scenarios, type: :request do
         ]
       )
       expect(response).to have_http_status(:method_not_allowed)
-      expect(response.body).to include('invalid_type_or_status')
+      expect(response.body).to include("invalid_type_or_status")
     end
   end
 end

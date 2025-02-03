@@ -5,7 +5,7 @@ module Clock
     include SentryCronConcern
 
     queue_as do
-      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_CLOCK'])
+      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_CLOCK"])
         :clock_worker
       else
         :clock
@@ -13,7 +13,9 @@ module Clock
     end
 
     def perform
-      Subscriptions::BillingService.call
+      Organization.find_each do |organization|
+        Subscriptions::OrganizationBillingJob.perform_later(organization:)
+      end
     end
   end
 end

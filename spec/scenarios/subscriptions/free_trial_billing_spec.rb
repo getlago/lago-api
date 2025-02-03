@@ -430,7 +430,7 @@ describe 'Free Trial Billing Subscriptions Scenario', :scenarios, type: :request
 
       expect(customer.reload.invoices.count).to eq(0)
 
-      # NOTE: Subscriptions::BillingService will bill the subscription because it's billing day
+      # NOTE: Subscriptions::OrganizationBillingService will bill the subscription because it's billing day
       #       Subscriptions::FreeTrialBillingService will ignore it because the trial ends at 12:12:00
       #
       #   Time.current:                         31 Mar 2024 22:01:00 UTC +00:00

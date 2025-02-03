@@ -1,18 +1,18 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, transaction: false do
+describe "Aggregation - Weighted Sum Scenarios", :scenarios, type: :request, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 
   let(:plan) { create(:plan, organization:, amount_cents: 0) }
   let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
-  let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: '1'}) }
+  let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "1"}) }
 
   before { charge }
 
-  it 'creates fees and keeps the units between periods' do
+  it "creates fees and keeps the units between periods" do
     travel_to(DateTime.new(2023, 3, 5)) do
       create_subscription(
         {
@@ -31,20 +31,18 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: {value: '2500'}
+          properties: {value: "2500"}
         }
       )
 
       fetch_current_usage(customer:)
       expect(json[:customer_usage][:total_amount_cents]).to eq(217_742)
-      expect(json[:customer_usage][:charges_usage][0][:units]).to eq('2177.4193548387096774')
+      expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2177.4193548387096774")
     end
 
     travel_to(DateTime.new(2023, 4, 1)) do
-      expect do
-        Subscriptions::BillingService.new.call
-        perform_all_enqueued_jobs
-      end.to change { subscription.reload.invoices.count }.from(0).to(1)
+      expect { perform_billing }
+        .to change { subscription.reload.invoices.count }.from(0).to(1)
         .and change { organization.reload.cached_aggregations.count }.from(0).to(1)
     end
 
@@ -65,7 +63,7 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: {value: '-2000'}
+          properties: {value: "-2000"}
         }
       )
     end
@@ -76,20 +74,18 @@ describe 'Aggregation - Weighted Sum Scenarios', :scenarios, type: :request, tra
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: subscription.external_id,
-          properties: {value: '-200'}
+          properties: {value: "-200"}
         }
       )
 
       fetch_current_usage(customer:)
       expect(json[:customer_usage][:total_amount_cents]).to eq(53_333)
-      expect(json[:customer_usage][:charges_usage][0][:units]).to eq('533.3333333333333333')
+      expect(json[:customer_usage][:charges_usage][0][:units]).to eq("533.3333333333333333")
     end
 
     travel_to(DateTime.new(2023, 5, 1)) do
-      expect do
-        Subscriptions::BillingService.new.call
-        perform_all_enqueued_jobs
-      end.to change { subscription.reload.invoices.count }.from(1).to(2)
+      expect { perform_billing }
+        .to change { subscription.reload.invoices.count }.from(1).to(2)
         .and change { organization.reload.cached_aggregations.count }.from(1).to(2)
     end
 

@@ -1296,8 +1296,8 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
         context 'when started_at in the past' do
           let(:timestamp) { Time.zone.parse(started_at.to_s).end_of_year + 1.day }
-          let(:started_at) { Time.current - 2.months }
-          let(:created_at) { Time.current }
+          let(:started_at) { created_at - 2.months }
+          let(:created_at) { Time.zone.parse('2025-01-21T00:10:00') }
 
           it 'updates the invoice accordingly' do
             result = invoice_service.call

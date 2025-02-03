@@ -3,12 +3,12 @@
 FactoryBot.define do
   factory :organization do
     name { Faker::Company.name }
-    default_currency { 'USD' }
+    default_currency { "USD" }
 
     email { Faker::Internet.email }
-    email_settings { ['invoice.finalized', 'credit_note.created'] }
+    email_settings { ["invoice.finalized", "credit_note.created"] }
 
-    api_keys { [association(:api_key)] }
+    api_keys { [association(:api_key, organization: instance)] }
 
     transient do
       webhook_url { Faker::Internet.url }
