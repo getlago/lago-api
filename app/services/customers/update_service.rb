@@ -138,15 +138,15 @@ module Customers
         customer.save!
         customer.reload
 
-        eu_tax_code = Customers::EuAutoTaxesService.call(
+        eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: false,
-          changed_attributes: args.key?(:tax_identification_number) || args.key?(:zipcode) || args.key?(:country)
+          tax_attributes_changed: args.key?(:tax_identification_number) || args.key?(:zipcode) || args.key?(:country)
         )
 
-        if eu_tax_code
+        if eu_tax_code_result.success?
           args[:tax_codes] ||= []
-          args[:tax_codes] = (args[:tax_codes] + [eu_tax_code]).uniq
+          args[:tax_codes] = (args[:tax_codes] + [eu_tax_code_result.tax_code]).uniq
         end
 
         if args[:tax_codes]

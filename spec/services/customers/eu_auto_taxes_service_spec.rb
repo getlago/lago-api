@@ -4,12 +4,12 @@ require 'rails_helper'
 require 'valvat'
 
 RSpec.describe Customers::EuAutoTaxesService, type: :service do
-  subject(:eu_tax_service) { described_class.new(customer:, new_record:, changed_attributes:) }
+  subject(:eu_tax_service) { described_class.new(customer:, new_record:, tax_attributes_changed:) }
 
   let(:organization) { create(:organization, country: 'FR', eu_tax_management: true) }
   let(:customer) { create(:customer, organization:, zipcode: nil) }
   let(:new_record) { true }
-  let(:changed_attributes) { true }
+  let(:tax_attributes_changed) { true }
 
   describe '.call' do
     context 'with B2B organization' do
@@ -24,31 +24,33 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
       context 'when eu_tax_management is false' do
         let(:organization) { create(:organization, country: 'FR', eu_tax_management: false) }
 
-        it 'returns nil' do
-          tax_code = eu_tax_service.call
+        it 'returns error' do
+          result = eu_tax_service.call
 
-          expect(tax_code).to eq(nil)
+          expect(result).not_to be_success
+          expect(result.error.code).to eq('eu_tax_not_applicable')
         end
       end
 
       context 'when customer is updated and there are eu taxes' do
         let(:new_record) { false }
-        let(:changed_attributes) { false }
+        let(:tax_attributes_changed) { false }
         let(:applied_tax) { create(:customer_applied_tax, tax:, customer:) }
         let(:tax) { create(:tax, organization:, code: 'lago_eu_tax_exempt') }
 
         before { applied_tax }
 
-        it 'returns nil' do
-          tax_code = eu_tax_service.call
+        it 'returns error' do
+          result = eu_tax_service.call
 
-          expect(tax_code).to eq(nil)
+          expect(result).not_to be_success
+          expect(result.error.code).to eq('eu_tax_not_applicable')
         end
       end
 
       context 'when customer is updated and there are no eu taxes' do
         let(:new_record) { false }
-        let(:changed_attributes) { false }
+        let(:tax_attributes_changed) { false }
         let(:applied_tax) { create(:customer_applied_tax, tax:, customer:) }
         let(:tax) { create(:tax, organization:, code: 'unknown_eu_tax_exempt') }
         let(:vies_response) do
@@ -60,9 +62,9 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
         before { applied_tax }
 
         it 'returns the organization country tax code' do
-          tax_code = eu_tax_service.call
+          result = eu_tax_service.call
 
-          expect(tax_code).to eq('lago_eu_fr_standard')
+          expect(result.tax_code).to eq('lago_eu_fr_standard')
         end
       end
 
@@ -74,9 +76,9 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
         end
 
         it 'returns the organization country tax code' do
-          tax_code = eu_tax_service.call
+          result = eu_tax_service.call
 
-          expect(tax_code).to eq('lago_eu_fr_standard')
+          expect(result.tax_code).to eq('lago_eu_fr_standard')
         end
 
         it 'enqueues a SendWebhookJob' do
@@ -95,9 +97,9 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
         end
 
         it 'returns the reverse charge tax' do
-          tax_code = eu_tax_service.call
+          result = eu_tax_service.call
 
-          expect(tax_code).to eq('lago_eu_reverse_charge')
+          expect(result.tax_code).to eq('lago_eu_reverse_charge')
         end
       end
 
@@ -110,8 +112,8 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
 
         context 'when customer has no zipcode' do
           it 'returns the customer country standard tax' do
-            tax_code = eu_tax_service.call
-            expect(tax_code).to eq('lago_eu_fr_standard')
+            result = eu_tax_service.call
+            expect(result.tax_code).to eq('lago_eu_fr_standard')
           end
         end
 
@@ -122,8 +124,8 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
             end
 
             it 'returns the exception tax code' do
-              tax_code = eu_tax_service.call
-              expect(tax_code).to eq('lago_eu_fr_exception_reunion')
+              result = eu_tax_service.call
+              expect(result.tax_code).to eq('lago_eu_fr_exception_reunion')
             end
           end
 
@@ -133,8 +135,8 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
             end
 
             it 'returns the customer counrty standard tax' do
-              tax_code = eu_tax_service.call
-              expect(tax_code).to eq('lago_eu_fr_standard')
+              result = eu_tax_service.call
+              expect(result.tax_code).to eq('lago_eu_fr_standard')
             end
           end
         end
@@ -150,9 +152,9 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
         end
 
         it 'returns the organization country tax code' do
-          tax_code = eu_tax_service.call
+          result = eu_tax_service.call
 
-          expect(tax_code).to eq('lago_eu_fr_standard')
+          expect(result.tax_code).to eq('lago_eu_fr_standard')
         end
       end
 
@@ -162,9 +164,9 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
         end
 
         it 'returns the customer country tax code' do
-          tax_code = eu_tax_service.call
+          result = eu_tax_service.call
 
-          expect(tax_code).to eq('lago_eu_de_standard')
+          expect(result.tax_code).to eq('lago_eu_de_standard')
         end
       end
 
@@ -174,9 +176,9 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
         end
 
         it 'returns the tax exempt tax code' do
-          tax_code = eu_tax_service.call
+          result = eu_tax_service.call
 
-          expect(tax_code).to eq('lago_eu_tax_exempt')
+          expect(result.tax_code).to eq('lago_eu_tax_exempt')
         end
       end
     end
