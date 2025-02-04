@@ -23,6 +23,7 @@ module ApiKeys
         api_key.update!(expires_at:)
       end
 
+      Rails.cache.delete("api_key/#{api_key.value}")
       ApiKeyMailer.with(api_key:).rotated.deliver_later
 
       result.api_key = new_api_key

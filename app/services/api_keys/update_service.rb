@@ -16,6 +16,7 @@ module ApiKeys
       end
 
       api_key.update!(params.slice(:name, :permissions))
+      Rails.cache.delete("api_key/#{api_key.value}")
 
       result.api_key = api_key
       result
