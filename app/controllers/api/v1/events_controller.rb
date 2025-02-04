@@ -3,6 +3,8 @@
 module Api
   module V1
     class EventsController < Api::BaseController
+      ACTIONS_WITH_CACHED_API_KEY = %i[create batch estimate_instant_fees batch_estimate_instant_fees].freeze
+
       def create
         result = ::Events::CreateService.call(
           organization: current_organization,
@@ -15,7 +17,7 @@ module Api
           render(
             json: ::V1::EventSerializer.new(
               result.event,
-              root_name: 'event'
+              root_name: "event"
             )
           )
         else
@@ -36,7 +38,7 @@ module Api
             json: ::CollectionSerializer.new(
               result.events,
               ::V1::EventSerializer,
-              collection_name: 'events'
+              collection_name: "events"
             )
           )
         else
@@ -51,12 +53,12 @@ module Api
           transaction_id: params[:id]
         )
 
-        return not_found_error(resource: 'event') unless event
+        return not_found_error(resource: "event") unless event
 
         render(
           json: ::V1::EventSerializer.new(
             event,
-            root_name: 'event'
+            root_name: "event"
           )
         )
       end
@@ -76,7 +78,7 @@ module Api
             json: ::CollectionSerializer.new(
               result.events,
               ::V1::EventSerializer,
-              collection_name: 'events',
+              collection_name: "events",
               meta: pagination_metadata(result.events)
             )
           )
@@ -126,7 +128,7 @@ module Api
             json: ::CollectionSerializer.new(
               result.fees,
               ::V1::FeeSerializer,
-              collection_name: 'fees',
+              collection_name: "fees",
               includes: %i[applied_taxes]
             )
           )
@@ -185,7 +187,11 @@ module Api
       end
 
       def resource_name
-        'event'
+        "event"
+      end
+
+      def cached_api_key?
+        ACTIONS_WITH_CACHED_API_KEY.include?(action_name&.to_sym)
       end
     end
   end

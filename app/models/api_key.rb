@@ -25,7 +25,7 @@ class ApiKey < ApplicationRecord
 
   default_scope { active }
 
-  scope :active, -> { where('expires_at IS NULL OR expires_at > ?', Time.current) }
+  scope :active, -> { where("expires_at IS NULL OR expires_at > ?", Time.current) }
   scope :non_expiring, -> { where(expires_at: nil) }
 
   def permit?(resource, mode)
@@ -36,6 +36,10 @@ class ApiKey < ApplicationRecord
 
   def self.default_permissions
     RESOURCES.index_with { MODES.dup }
+  end
+
+  def expired?(time = Time.current)
+    expires_at.present? && expires_at < time
   end
 
   private
