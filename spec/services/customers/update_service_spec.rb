@@ -480,13 +480,15 @@ RSpec.describe Customers::UpdateService, type: :service do
     context 'when organization has eu tax management' do
       let(:eu_auto_tax_service) { instance_double(Customers::EuAutoTaxesService) }
       let(:tax_code) { 'lago_eu_fr_standard' }
+      let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new }
 
       before do
         create(:tax, organization:, code: 'lago_eu_fr_standard', rate: 20.0)
         organization.update(eu_tax_management: true)
 
+        eu_tax_result.tax_code = tax_code
         allow(Customers::EuAutoTaxesService).to receive(:new).and_return(eu_auto_tax_service)
-        allow(eu_auto_tax_service).to receive(:call).and_return(tax_code)
+        allow(eu_auto_tax_service).to receive(:call).and_return(eu_tax_result)
       end
 
       it 'assigns the right tax to the customer' do
@@ -501,7 +503,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
 
       context 'when eu tax code is not applicable' do
-        let(:tax_code) { nil }
+        let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new.not_allowed_failure!(code: '') }
 
         it 'does not apply tax' do
           result = customers_service.call
