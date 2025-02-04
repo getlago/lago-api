@@ -220,9 +220,11 @@ end
 #  zipcode                      :string
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
+#  holding_id                   :uuid
 #
 # Indexes
 #
-#  index_organizations_on_api_key   (api_key) UNIQUE
-#  index_organizations_on_hmac_key  (hmac_key) UNIQUE
+#  index_organizations_on_api_key     (api_key) UNIQUE
+#  index_organizations_on_hmac_key    (hmac_key) UNIQUE
+#  index_organizations_on_holding_id  (holding_id)
 #

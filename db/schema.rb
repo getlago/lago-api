@@ -67,7 +67,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "updated_at", null: false
     t.datetime "deleted_at"
     t.string "invoice_display_name"
+    t.uuid "holding_id"
     t.index ["deleted_at"], name: "index_add_ons_on_deleted_at"
+    t.index ["holding_id"], name: "index_add_ons_on_holding_id"
     t.index ["organization_id", "code"], name: "index_add_ons_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_add_ons_on_organization_id"
   end
@@ -346,7 +348,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "deleted_at"
     t.boolean "limited_billable_metrics", default: false, null: false
     t.text "description"
+    t.uuid "holding_id"
     t.index ["deleted_at"], name: "index_coupons_on_deleted_at"
+    t.index ["holding_id"], name: "index_coupons_on_holding_id"
     t.index ["organization_id", "code"], name: "index_coupons_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_coupons_on_organization_id"
   end
@@ -577,7 +581,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at", precision: nil
+    t.uuid "holding_id"
     t.index ["deleted_at"], name: "index_dunning_campaigns_on_deleted_at"
+    t.index ["holding_id"], name: "index_dunning_campaigns_on_holding_id"
     t.index ["organization_id", "code"], name: "index_dunning_campaigns_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_dunning_campaigns_on_organization_id"
     t.index ["organization_id"], name: "index_unique_applied_to_organization_per_organization", unique: true, where: "((applied_to_organization = true) AND (deleted_at IS NULL))"
@@ -730,6 +736,15 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.index ["parent_group_id"], name: "index_groups_on_parent_group_id"
   end
 
+  create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "api_key"
+    t.string "hmac_key"
+    t.string "premium_integrations", default: [], null: false, array: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "inbound_webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "source", null: false
     t.string "event_type", null: false
@@ -831,6 +846,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "role", default: 0, null: false
+    t.uuid "holding_id"
+    t.index ["holding_id"], name: "index_invites_on_holding_id"
     t.index ["membership_id"], name: "index_invites_on_membership_id"
     t.index ["organization_id"], name: "index_invites_on_organization_id"
     t.index ["token"], name: "index_invites_on_token", unique: true
@@ -857,6 +874,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "deleted_at", precision: nil
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "holding_id"
+    t.index ["holding_id"], name: "index_invoice_custom_sections_on_holding_id"
     t.index ["organization_id", "code"], name: "index_invoice_custom_sections_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id", "deleted_at"], name: "idx_on_organization_id_deleted_at_225e3f789d"
     t.index ["organization_id"], name: "index_invoice_custom_sections_on_organization_id"
@@ -1010,6 +1029,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.integer "role", default: 0, null: false
     t.integer "status", default: 0, null: false
     t.datetime "revoked_at"
+    t.uuid "holding_id"
+    t.index ["holding_id"], name: "index_memberships_on_holding_id"
     t.index ["organization_id"], name: "index_memberships_on_organization_id"
     t.index ["user_id", "organization_id"], name: "index_memberships_on_user_id_and_organization_id", unique: true, where: "(revoked_at IS NULL)"
     t.index ["user_id"], name: "index_memberships_on_user_id"
@@ -1049,8 +1070,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.boolean "finalize_zero_amount_invoice", default: true, null: false
     t.boolean "clickhouse_events_store", default: false, null: false
     t.string "hmac_key", null: false
+    t.uuid "holding_id"
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.index ["hmac_key"], name: "index_organizations_on_hmac_key", unique: true
+    t.index ["holding_id"], name: "index_organizations_on_holding_id"
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
     t.check_constraint "net_payment_term >= 0", name: "check_organizations_on_net_payment_term"
   end
@@ -1151,8 +1174,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "deleted_at"
     t.boolean "pending_deletion", default: false, null: false
     t.string "invoice_display_name"
+    t.uuid "holding_id"
     t.index ["created_at"], name: "index_plans_on_created_at"
     t.index ["deleted_at"], name: "index_plans_on_deleted_at"
+    t.index ["holding_id"], name: "index_plans_on_holding_id"
     t.index ["organization_id", "code"], name: "index_plans_on_organization_id_and_code", unique: true, where: "((deleted_at IS NULL) AND (parent_id IS NULL))"
     t.index ["organization_id"], name: "index_plans_on_organization_id"
     t.index ["parent_id"], name: "index_plans_on_parent_id"
@@ -1261,7 +1286,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "updated_at", null: false
     t.boolean "applied_to_organization", default: false, null: false
     t.boolean "auto_generated", default: false, null: false
+    t.uuid "holding_id"
     t.index ["code", "organization_id"], name: "index_taxes_on_code_and_organization_id", unique: true
+    t.index ["holding_id"], name: "index_taxes_on_holding_id"
     t.index ["organization_id"], name: "index_taxes_on_organization_id"
   end
 

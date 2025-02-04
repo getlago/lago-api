@@ -42,11 +42,13 @@ end
 #  token           :string           not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
+#  holding_id      :uuid
 #  membership_id   :uuid
 #  organization_id :uuid             not null
 #
 # Indexes
 #
+#  index_invites_on_holding_id       (holding_id)
 #  index_invites_on_membership_id    (membership_id)
 #  index_invites_on_organization_id  (organization_id)
 #  index_invites_on_token            (token) UNIQUE

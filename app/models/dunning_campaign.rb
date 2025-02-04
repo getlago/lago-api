@@ -60,11 +60,13 @@ end
 #  name                    :string           not null
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null
+#  holding_id              :uuid
 #  organization_id         :uuid             not null
 #
 # Indexes
 #
 #  index_dunning_campaigns_on_deleted_at                  (deleted_at)
+#  index_dunning_campaigns_on_holding_id                  (holding_id)
 #  index_dunning_campaigns_on_organization_id             (organization_id)
 #  index_dunning_campaigns_on_organization_id_and_code    (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
 #  index_unique_applied_to_organization_per_organization  (organization_id) UNIQUE WHERE ((applied_to_organization = true) AND (deleted_at IS NULL))
