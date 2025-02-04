@@ -90,7 +90,9 @@ nb:
     total_credits: Antall kreditter
     total_credits_with_value: 'Antall kreditter: %{credit_amount} kreditter'
     total_due: Å betale
+    total_due_amount: Skyldig beløp
     total_events: 'Totalt antall hendelser: %{count}'
+    total_paid_amount: Betalt beløp
     total_unit: 'Antall enheter: %{units}'
     total_unit_interval: 'Antall enheter: %{events_count} hendelser for %{units}'
     true_up_details: Minimumsutgift på %{min_amount} beregnet etter antall brukte dager

@@ -183,9 +183,19 @@
               td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
           tr
             td.body-2
-            td.body-1 = I18n.t('invoice.total_due')
+            td.body-1 = I18n.t('invoice.total')
             td.body-1
               = MoneyHelper.format(total_amount)
+          tr
+            td.body-2
+            td.body-1 = I18n.t('invoice.total_paid_amount')
+            td.body-1
+              = MoneyHelper.format(total_paid_amount)
+          tr
+            td.body-2
+            td.body-1 = I18n.t('invoice.total_due_amount')
+            td.body-1
+              = MoneyHelper.format(total_due_amount)
         - else
           - if progressive_billing_credit_amount_cents.positive?
             - credits = progressice_billing_credits(invoice_subscription.subscription).all
