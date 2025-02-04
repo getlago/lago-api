@@ -34,7 +34,7 @@ jobs:
       LAGO_CLICKHOUSE_HOST: localhost
       LAGO_CLICKHOUSE_DATABASE: default
       LAGO_CLICKHOUSE_USERNAME: ""
-      LAGO_CLICKHOUSE_PASSWORD: ""
+      LAGO_CLICKHOUSE_PASSWORD: "password"
       LAGO_DISABLE_SCHEMA_DUMP: true
       ANNOTATE_SKIP_ON_DB_MIGRATE: 1
     steps:
@@ -47,7 +47,7 @@ jobs:
           bundler-cache: true
       - name: Start Clickhouse database
         run: |
-          docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml clickhouse/clickhouse-server
+          docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml -e CLICKHOUSE_PASSWORD=password clickhouse/clickhouse-server
         shell: bash
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
