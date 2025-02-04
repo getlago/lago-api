@@ -8,6 +8,7 @@ module Invoices
 
       @customer = initial_subscriptions&.first&.customer
       @organization = customer&.organization
+      @billing_entity = customer&.billing_entity
       @currency = initial_subscriptions&.first&.plan&.amount_currency
 
       super
@@ -35,12 +36,12 @@ module Invoices
 
     private
 
-    attr_accessor :initial_subscriptions, :billing_at, :customer, :organization, :currency
+    attr_accessor :initial_subscriptions, :billing_at, :customer, :organization, :billing_entity, :currency
 
     def subscriptions
-      return [] unless organization
+      return [] unless billing_entity
 
-      @subscriptions ||= organization.subscriptions.where(
+      @subscriptions ||= billing_entity.subscriptions.where(
         external_id: initial_subscriptions.pluck(:external_id).uniq,
         status: [:active, :terminated]
       )

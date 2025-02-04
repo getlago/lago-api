@@ -52,9 +52,10 @@ module Invoices
     attr_reader :invoice
 
     delegate :organization, to: :invoice
+    delegate :billing_entity, to: :invoice
 
     def applicable_taxes
-      organization.taxes.where(id: indexed_fees.keys)
+      billing_entity.taxes.where(id: indexed_fees.keys)
     end
 
     # NOTE: indexes the invoice fees by taxes.
