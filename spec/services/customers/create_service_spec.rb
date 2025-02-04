@@ -1033,13 +1033,14 @@ RSpec.describe Customers::CreateService, type: :service do
 
     context 'when organization has eu tax management' do
       let(:eu_auto_tax_service) { instance_double(Customers::EuAutoTaxesService) }
+      let(:tax_code) { 'lago_eu_fr_standard' }
 
       before do
         create(:tax, organization:, code: 'lago_eu_fr_standard', rate: 20.0)
         organization.update(eu_tax_management: true)
 
         allow(Customers::EuAutoTaxesService).to receive(:new).and_return(eu_auto_tax_service)
-        allow(eu_auto_tax_service).to receive(:call).and_return('lago_eu_fr_standard')
+        allow(eu_auto_tax_service).to receive(:call).and_return(tax_code)
       end
 
       it 'assigns the right tax to the customer' do
@@ -1052,7 +1053,22 @@ RSpec.describe Customers::CreateService, type: :service do
           expect(result).to be_success
 
           tax = result.customer.taxes.first
-          expect(tax.code).to eq('lago_eu_fr_standard')
+          expect(tax.code).to eq(tax_code)
+        end
+      end
+
+      context 'when eu tax code is not applicable' do
+        let(:tax_code) { nil }
+
+        it 'does not apply tax' do
+          result = customers_service.create_from_api(
+            organization:,
+            params: create_args
+          )
+
+          expect(result).to be_success
+
+          expect(result.customer.taxes).to eq([])
         end
       end
     end
@@ -1400,13 +1416,14 @@ RSpec.describe Customers::CreateService, type: :service do
 
     context 'when organization has eu tax management' do
       let(:eu_auto_tax_service) { instance_double(Customers::EuAutoTaxesService) }
+      let(:tax_code) { 'lago_eu_fr_standard' }
 
       before do
         create(:tax, organization:, code: 'lago_eu_fr_standard', rate: 20.0)
         organization.update(eu_tax_management: true)
 
         allow(Customers::EuAutoTaxesService).to receive(:new).and_return(eu_auto_tax_service)
-        allow(eu_auto_tax_service).to receive(:call).and_return('lago_eu_fr_standard')
+        allow(eu_auto_tax_service).to receive(:call).and_return(tax_code)
       end
 
       it 'assigns the right tax to the customer' do
@@ -1417,6 +1434,18 @@ RSpec.describe Customers::CreateService, type: :service do
 
           tax = result.customer.taxes.first
           expect(tax.code).to eq('lago_eu_fr_standard')
+        end
+      end
+
+      context 'when eu tax code is not applicable' do
+        let(:tax_code) { nil }
+
+        it 'does not apply tax' do
+          result = customers_service.create(**create_args)
+
+          expect(result).to be_success
+
+          expect(result.customer.taxes).to eq([])
         end
       end
     end

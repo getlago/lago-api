@@ -103,6 +103,16 @@ RSpec.describe CustomerPortal::CustomerUpdateService, type: :service do
       expect(tax.code).to eq(tax_code)
     end
 
+    context 'when eu tax code is not applicable' do
+      let(:tax_code) { nil }
+
+      it 'does not apply tax' do
+        expect(result).to be_success
+
+        expect(result.customer.taxes).to eq([])
+      end
+    end
+
     context "when applying taxes fails" do
       let(:apply_taxes_result) do
         BaseService::Result.new.not_found_failure!(resource: "tax")

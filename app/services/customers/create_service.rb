@@ -76,9 +76,13 @@ module Customers
 
         customer.save!
 
-        if customer.organization.eu_tax_management
-          eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
+        eu_tax_code = Customers::EuAutoTaxesService.call(
+          customer:,
+          new_record: new_customer,
+          changed_attributes: params.key?(:tax_identification_number) || params.key?(:zipcode) || params.key?(:country)
+        )
 
+        if eu_tax_code
           params[:tax_codes] ||= []
           params[:tax_codes] = (params[:tax_codes] + [eu_tax_code]).uniq
         end
@@ -188,9 +192,9 @@ module Customers
       ActiveRecord::Base.transaction do
         customer.save!
 
-        if customer.organization.eu_tax_management
-          eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
+        eu_tax_code = Customers::EuAutoTaxesService.call(customer:, new_record: true, changed_attributes: true)
 
+        if eu_tax_code
           args[:tax_codes] ||= []
           args[:tax_codes] = (args[:tax_codes] + [eu_tax_code]).uniq
         end

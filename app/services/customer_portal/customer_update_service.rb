@@ -42,10 +42,13 @@ module CustomerPortal
         customer.reload
 
         tax_codes = []
-        if customer.organization.eu_tax_management
-          # This service does not return a 'result' object but a string
-          tax_codes << Customers::EuAutoTaxesService.call(customer:)
-        end
+        # This service does not return a 'result' object but a string
+        eu_tax_code = Customers::EuAutoTaxesService.call(
+          customer:,
+          new_record: false,
+          changed_attributes: args.key?(:tax_identification_number) || args.key?(:zipcode) || args.key?(:country)
+        )
+        tax_codes << eu_tax_code if eu_tax_code
 
         if tax_codes.present?
           taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes:)
