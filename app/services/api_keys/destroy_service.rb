@@ -17,6 +17,7 @@ module ApiKeys
       api_key.touch(:expires_at) # rubocop:disable Rails/SkipsModelValidations
 
       ApiKeyMailer.with(api_key:).destroyed.deliver_later
+      Rails.cache.delete("api_key/#{api_key.value}")
 
       result.api_key = api_key
       result

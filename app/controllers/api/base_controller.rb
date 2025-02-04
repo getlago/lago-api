@@ -21,11 +21,13 @@ module Api
     def authenticate
       return unauthorized_error unless auth_token
 
-      @current_api_key = ApiKey.find_by(value: auth_token)
+      result = ApiKeys::FetchService.call(auth_token)
+      return unauthorized_error if result.failure?
 
+      @current_api_key = result.api_key
       return unauthorized_error unless current_api_key
 
-      @current_organization = current_api_key.organization
+      @current_organization = result.organization
       true
     end
 
