@@ -27,6 +27,8 @@ module Wallets
         wallet.save!
       end
 
+      SendWebhookJob.perform_later('wallet.updated', wallet)
+
       Wallets::Balance::RefreshOngoingService.call(wallet:)
 
       result.wallet = wallet

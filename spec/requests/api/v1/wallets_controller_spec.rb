@@ -300,6 +300,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         expect(json[:wallet][:name]).to eq(update_params[:name])
         expect(json[:wallet][:expiration_at]).to eq(expiration_at)
         expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
+
+        expect(SendWebhookJob).to have_been_enqueued.with('wallet.updated', Wallet)
       end
     end
 
@@ -309,6 +311,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       it 'returns not_found error' do
         subject
         expect(response).to have_http_status(:not_found)
+        expect(SendWebhookJob).not_to have_been_enqueued.with('wallet.updated', Wallet)
       end
     end
 
@@ -353,6 +356,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           expect(recurring_rules.first[:method]).to eq('target')
           expect(recurring_rules.first[:trigger]).to eq('interval')
           expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
+
+          expect(SendWebhookJob).to have_been_enqueued.with('wallet.updated', Wallet)
         end
       end
 
@@ -385,6 +390,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
             expect(response).to have_http_status(:success)
             expect(recurring_rules).to be_present
             expect(recurring_rules.first[:transaction_metadata]).to eq(update_transaction_metadata)
+
+            expect(SendWebhookJob).to have_been_enqueued.with('wallet.updated', Wallet)
           end
         end
       end
@@ -423,6 +430,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
               expect(recurring_rules).to be_present
               expect(recurring_rules.first[:lago_id]).to eq(recurring_transaction_rule.id)
               expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(false)
+
+              expect(SendWebhookJob).to have_been_enqueued.with('wallet.updated', Wallet)
             end
           end
         end
@@ -441,6 +450,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
               expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
               expect(recurring_rules).to be_present
               expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
+
+              expect(SendWebhookJob).to have_been_enqueued.with('wallet.updated', Wallet)
             end
           end
         end
@@ -479,6 +490,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
               expect(json[:wallet][:invoice_requires_successful_payment]).to eq(false)
               expect(recurring_rules).to be_present
               expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
+
+              expect(SendWebhookJob).to have_been_enqueued.with('wallet.updated', Wallet)
             end
           end
         end
