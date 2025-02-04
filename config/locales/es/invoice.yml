@@ -69,7 +69,7 @@ es:
     subscription: Suscripción
     subscription_interval: Suscripción %{plan_interval} - %{plan_name}
     tax: Impuesto
-    tax_identification_number: 'ID del impuesto: %{tax_identification_number}'
+    tax_identification_number: "ID del impuesto: %{tax_identification_number}"
     tax_name: "%{name} (%{rate}% sobre %{amount})"
     tax_name_only:
       customer_exempt: El cliente está exento de impuestos
@@ -86,13 +86,13 @@ es:
       reverse_charge: Responsabilidad fiscal transferida al cliente.
       tax_exempt: El cliente está exento de impuestos.
     total: Total
-    total_credits_with_value: 'Total de créditos con valor: %{credit_amount} créditos'
+    total_credits_with_value: "Total de créditos con valor: %{credit_amount} créditos"
     total_due: Total debido
-    total_due_amount: Monto debido
-    total_events: 'Eventos totales: %{count}'
+    total_due_amount: Importe debido
+    total_events: "Eventos totales: %{count}"
     total_paid_amount: Monto pagado
-    total_unit: 'Total de unidades: %{units}'
-    total_unit_interval: 'Total de unidades: %{events_count} evento(s) para %{units}'
+    total_unit: "Total de unidades: %{units}"
+    total_unit_interval: "Total de unidades: %{events_count} evento(s) para %{units}"
     true_up_details: Gasto mínimo de %{min_amount} prorrateado en días de uso
     true_up_metric: "%{metric} • Ajuste real"
     unit: Unidad
