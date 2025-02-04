@@ -44,6 +44,7 @@ RSpec.describe ::V1::InvoiceSerializer do
         "sub_total_excluding_taxes_amount_cents" => invoice.sub_total_excluding_taxes_amount_cents,
         "sub_total_including_taxes_amount_cents" => invoice.sub_total_including_taxes_amount_cents,
         "total_amount_cents" => invoice.total_amount_cents,
+        "total_due_amount_cents" => invoice.total_due_amount_cents,
         "file_url" => invoice.file_url,
         "error_details" => [
           {
