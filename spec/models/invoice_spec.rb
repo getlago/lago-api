@@ -842,6 +842,15 @@ RSpec.describe Invoice, type: :model do
       end
     end
 
+    context 'when the organization country is in TAX_INVOICE_LABEL_COUNTRIES' do
+      let(:country) { Invoice::TAX_INVOICE_LABEL_COUNTRIES.sample }
+      let(:organization) { create(:organization, name: 'LAGO', country:) }
+
+      it 'returns the correct tax invoice name' do
+        expect(invoice.document_invoice_name).to eq(I18n.t('invoice.document_tax_name'))
+      end
+    end
+
     context 'when it is credit invoice' do
       let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :credit) }
 

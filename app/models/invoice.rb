@@ -10,6 +10,7 @@ class Invoice < ApplicationRecord
 
   CREDIT_NOTES_MIN_VERSION = 2
   COUPON_BEFORE_VAT_VERSION = 3
+  TAX_INVOICE_LABEL_COUNTRIES = %w[AU AE NZ ID SG].freeze
 
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
   before_save :ensure_number
@@ -368,7 +369,7 @@ class Invoice < ApplicationRecord
     return I18n.t("invoice.self_billed.document_name") if self_billed?
     return I18n.t('invoice.prepaid_credit_invoice') if credit?
 
-    if %w[AU AE ID NZ].include?(organization.country)
+    if TAX_INVOICE_LABEL_COUNTRIES.include?(organization.country)
       return I18n.t('invoice.paid_tax_invoice') if advance_charges?
       return I18n.t('invoice.document_tax_name')
     end
