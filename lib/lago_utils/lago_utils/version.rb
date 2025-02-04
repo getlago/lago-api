@@ -1,18 +1,20 @@
 # frozen_string_literal: true
 
-require 'ostruct'
-
 module LagoUtils
   class Version
     VERSION_FILE = Rails.root.join('LAGO_VERSION')
     GITHUB_BASE_URL = 'https://github.com/getlago/lago-api'
 
+    attr_reader :version, :github_url
+
+    def initialize(version, github_url)
+      @version = version
+      @github_url = github_url
+    end
+
     class << self
       def call(default:)
-        OpenStruct.new(
-          number: version_number(default:),
-          github_url:
-        )
+        new(version_number(default:), github_url)
       end
 
       private
