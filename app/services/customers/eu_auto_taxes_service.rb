@@ -4,14 +4,18 @@ require 'valvat'
 
 module Customers
   class EuAutoTaxesService < BaseService
-    def initialize(customer:)
+    def initialize(customer:, new_record:, changed_attributes:)
       @customer = customer
       @organization_country_code = customer.organization.country
+      @new_record = new_record
+      @changed_attributes = changed_attributes
 
       super
     end
 
     def call
+      return nil unless should_apply_eu_taxes?
+
       customer_vies = vies_check
 
       return process_vies_tax(customer_vies) if customer_vies.present?
@@ -21,7 +25,7 @@ module Customers
 
     private
 
-    attr_reader :customer, :organization_country_code
+    attr_reader :customer, :organization_country_code, :changed_attributes, :new_record
 
     def vies_check
       vies_check = Valvat.new(customer.tax_identification_number).exists?(detail: true)
@@ -60,6 +64,14 @@ module Customers
 
     def eu_country_exceptions(country_code:)
       @eu_country_exceptions ||= LagoEuVat::Rate.new.country_rates(country_code:)[:exceptions]
+    end
+
+    def should_apply_eu_taxes?
+      return false unless customer.organization.eu_tax_management
+
+      non_existing_eu_taxes = customer.taxes.where('code ILIKE ?', 'lago_eu%').none?
+
+      new_record || non_existing_eu_taxes || changed_attributes
     end
   end
 end
