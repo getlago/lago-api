@@ -97,5 +97,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       "targetOngoingBalance" => "300.0",
       "invoiceRequiresSuccessfulPayment" => true
     )
+
+    expect(SendWebhookJob).to have_been_enqueued.with('wallet.updated', Wallet)
   end
 end

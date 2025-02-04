@@ -24,6 +24,10 @@ RSpec.describe Wallets::TerminateService, type: :service do
       expect(result.wallet).to be_terminated
     end
 
+    it 'sends a `wallet.terminated` webhook' do
+      expect { terminate_service.call }.to have_enqueued_job(SendWebhookJob).with('wallet.terminated', Wallet)
+    end
+
     context 'when wallet is already terminated' do
       before { wallet.mark_as_terminated! }
 
@@ -35,6 +39,10 @@ RSpec.describe Wallets::TerminateService, type: :service do
         expect(result).to be_success
         expect(result.wallet).to be_terminated
         expect(result.wallet.terminated_at).to eq(terminated_at)
+      end
+
+      it 'does not send the `wallet.terminated` webhook' do
+        expect { terminate_service.call }.not_to have_enqueued_job(SendWebhookJob)
       end
     end
   end
