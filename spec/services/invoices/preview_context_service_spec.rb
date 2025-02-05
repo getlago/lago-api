@@ -80,7 +80,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
                 currency: params.dig(:customer, :currency),
                 address_line1: params.dig(:customer, :address_line1),
                 shipping_address_line1: params.dig(:customer, :shipping_address, :address_line1),
-                anrok_customer: IntegrationCustomers::AnrokCustomer
+                integration_customers: array_including(IntegrationCustomers::AnrokCustomer)
               )
           end
 
@@ -89,7 +89,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
           end
 
           it "does not persist integrations" do
-            expect { subject }.not_to change { customer.reload.anrok_customer }
+            expect { subject }.not_to change { customer.reload.integration_customers.empty? }
           end
         end
       end
@@ -141,8 +141,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
       context "when integration matching params exists" do
         let(:expected_attributes) do
           params[:customer].tap do |hash|
-            hash[:integration_customers] = []
-            hash[:anrok_customer] = IntegrationCustomers::AnrokCustomer
+            hash[:integration_customers] = array_including(IntegrationCustomers::AnrokCustomer)
           end
         end
 

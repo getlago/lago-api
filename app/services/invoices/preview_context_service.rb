@@ -54,7 +54,6 @@ module Invoices
       )
 
       Array(customer_params[:integration_customers]).map do |integration_params|
-        IntegrationCustomers::BaseCustomer.customer_type(integration_params[:integration_type])
         build_customer_integration(customer, integration_params)
       end
 
@@ -64,8 +63,9 @@ module Invoices
     def build_customer_integration(customer, attrs)
       integration_class = integration_type(attrs[:integration_type]).constantize
       integration = integration_class.find_by!(code: attrs[:integration_code], organization:)
+      type = IntegrationCustomers::BaseCustomer.customer_type(attrs[:integration_type]).constantize
 
-      customer.public_send("build_#{attrs[:integration_type]}_customer", integration:)
+      customer.integration_customers.build(integration:, type:)
     end
 
     def build_subscription
