@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class WebhookEndpoint < ApplicationRecord
-  LIMIT = 5
+  LIMIT = 10
 
   SIGNATURE_ALGOS = [
     :jwt,
