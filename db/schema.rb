@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_01_22_112050) do
+ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -945,6 +945,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_01_22_112050) do
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["issuing_date"], name: "index_invoices_on_issuing_date"
     t.index ["number"], name: "index_invoices_on_number"
+    t.index ["organization_id", "organization_sequential_id"], name: "idx_on_organization_id_organization_sequential_id_2387146f54", order: { organization_sequential_id: :desc }, include: ["self_billed"]
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
     t.index ["ready_to_be_refreshed"], name: "index_invoices_on_ready_to_be_refreshed", where: "(ready_to_be_refreshed = true)"
