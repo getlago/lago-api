@@ -150,15 +150,7 @@ module Invoices
     def compute_amounts_with_provider_taxes
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
 
-      taxes_result = Rails.cache.read(provider_taxes_cache_key)
-
-      unless taxes_result
-        # Call the service if the cache is empty
-        taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
-
-        # Cache the result only if it's successful
-        Rails.cache.write(provider_taxes_cache_key, taxes_result, expires_in: 24.hours) if taxes_result.success?
-      end
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
 
       return result.validation_failure!(errors: {tax_error: [taxes_result.error.code]}) unless taxes_result.success?
 
@@ -177,14 +169,6 @@ module Invoices
       res.raise_if_error!
 
       invoice.total_amount_cents = invoice.fees_amount_cents + invoice.taxes_amount_cents
-    end
-
-    def provider_taxes_cache_key
-      [
-        "provider-taxes",
-        subscription.id,
-        plan.updated_at.iso8601
-      ].join("/")
     end
 
     def format_usage
