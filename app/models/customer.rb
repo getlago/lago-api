@@ -279,6 +279,7 @@ end
 #  created_at                       :datetime         not null
 #  updated_at                       :datetime         not null
 #  applied_dunning_campaign_id      :uuid
+#  billing_entity_id                :uuid
 #  external_id                      :string           not null
 #  external_salesforce_id           :string
 #  organization_id                  :uuid             not null

@@ -65,11 +65,13 @@ end
 #  rate                    :float            default(0.0), not null
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null
+#  holding_id              :uuid
 #  organization_id         :uuid             not null
 #
 # Indexes
 #
 #  index_taxes_on_code_and_organization_id  (code,organization_id) UNIQUE
+#  index_taxes_on_holding_id                (holding_id)
 #  index_taxes_on_organization_id           (organization_id)
 #
 # Foreign Keys

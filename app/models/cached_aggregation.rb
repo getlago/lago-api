@@ -26,6 +26,7 @@ end
 #  timestamp                      :datetime         not null
 #  created_at                     :datetime         not null
 #  updated_at                     :datetime         not null
+#  billing_entity_id              :uuid
 #  charge_filter_id               :uuid
 #  charge_id                      :uuid             not null
 #  event_id                       :uuid
