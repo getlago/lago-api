@@ -11,8 +11,6 @@ html
     .wrapper
       .mb-24
         h1.credit-note-title = I18n.t('credit_note.document_name')
-        - if organization.logo.present?
-          img.header-logo src="data:#{organization.logo.content_type};base64,#{organization.base64_logo}"
 
       .mb-24.overflow-auto
         .credit-note-information-column
