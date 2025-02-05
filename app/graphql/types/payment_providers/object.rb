@@ -8,6 +8,7 @@ module Types
       possible_types Types::PaymentProviders::Adyen,
         Types::PaymentProviders::Gocardless,
         Types::PaymentProviders::Stripe,
+        Types::PaymentProviders::Moneyhash,
         Types::PaymentProviders::Cashfree
 
       def self.resolve_type(object, _context)
@@ -18,6 +19,8 @@ module Types
           Types::PaymentProviders::Stripe
         when 'PaymentProviders::GocardlessProvider'
           Types::PaymentProviders::Gocardless
+        when 'PaymentProviders::MoneyhashProvider'
+          Types::PaymentProviders::Moneyhash
         when 'PaymentProviders::CashfreeProvider'
           Types::PaymentProviders::Cashfree
         else

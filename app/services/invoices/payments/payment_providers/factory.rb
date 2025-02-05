@@ -16,6 +16,8 @@ module Invoices
             Invoices::Payments::AdyenService
           when 'gocardless'
             Invoices::Payments::GocardlessService
+          when 'moneyhash'
+            Invoices::Payments::MoneyhashService
           when 'cashfree'
             Invoices::Payments::CashfreeService
           else

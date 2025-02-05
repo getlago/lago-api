@@ -74,4 +74,22 @@ class WebhooksController < ApplicationController
   def adyen_params
     params['notificationItems']&.first&.dig('NotificationRequestItem')&.permit!
   end
+
+  def moneyhash
+    result = PaymentProviders::Moneyhash::HandleIncomingWebhookService.call(
+      organization_id: params[:organization_id],
+      code: params[:code].presence,
+      body: JSON.parse(request.body.read)
+    )
+
+    unless result.success?
+      if result.error.is_a?(BaseService::ServiceFailure) && result.error.code == 'webhook_error'
+        return head(:bad_request)
+      end
+
+      result.raise_if_error!
+    end
+
+    head(:ok)
+  end
 end

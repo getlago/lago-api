@@ -126,16 +126,18 @@ module Types
       end
 
       def provider_customer
-        case object&.payment_provider&.to_sym
-        when :stripe
-          object.stripe_customer
-        when :gocardless
-          object.gocardless_customer
-        when :cashfree
-          object.cashfree_customer
-        when :adyen
-          object.adyen_customer
-        end
+        return unless object
+
+        provider_mapping = {
+          stripe: :stripe_customer,
+          gocardless: :gocardless_customer,
+          cashfree: :cashfree_customer,
+          adyen: :adyen_customer,
+          moneyhash: :moneyhash_customer
+        }
+
+        method = provider_mapping[object.payment_provider&.to_sym]
+        object.public_send(method) if method
       end
 
       def credit_notes_credits_available_count
