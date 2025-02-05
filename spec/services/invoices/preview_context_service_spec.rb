@@ -52,26 +52,45 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
               city: "Paris",
               zipcode: "75011",
               country: "IT"
-            }
+            },
+            integration_customers: [
+              {
+                integration_type: "anrok",
+                integration_code: "code"
+              }
+            ]
           }
         }
       end
+
+      before { create(:anrok_integration, organization:, code: "code") }
 
       context "when customer matching external id exists in organization" do
         let(:customer) { create(:customer, organization:) }
         let(:external_id) { customer.external_id }
 
-        it "returns customer with overrides from params" do
-          expect(subject)
-            .to be_a(Customer)
-            .and be_persisted
-            .and have_attributes(
-              id: customer.id,
-              name: customer.name,
-              currency: params.dig(:customer, :currency),
-              address_line1: params.dig(:customer, :address_line1),
-              shipping_address_line1: params.dig(:customer, :shipping_address, :address_line1)
-            )
+        context "when integration matching params exists" do
+          it "returns customer with overrides from params" do
+            expect(subject)
+              .to be_a(Customer)
+              .and be_persisted
+              .and have_attributes(
+                id: customer.id,
+                name: customer.name,
+                currency: params.dig(:customer, :currency),
+                address_line1: params.dig(:customer, :address_line1),
+                shipping_address_line1: params.dig(:customer, :shipping_address, :address_line1),
+                integration_customers: array_including(IntegrationCustomers::AnrokCustomer)
+              )
+          end
+
+          it "does not change existing customer" do
+            expect { subject }.not_to change { customer.reload.updated_at }
+          end
+
+          it "does not persist integrations" do
+            expect { subject }.not_to change { customer.reload.integration_customers.empty? }
+          end
         end
       end
 
@@ -109,58 +128,40 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
               zipcode: "75011",
               country: "IT"
             },
-            integration_customers:
+            integration_customers: [
+              {
+                integration_type: "anrok",
+                integration_code: "code"
+              }
+            ]
           }
         }
       end
 
-      context "when integration customers params passed" do
-        let(:integration_customers) do
-          [
-            {
-              integration_type: "anrok",
-              integration_code: "code"
-            }
-          ]
-        end
-
-        context "when integration matching params exists" do
-          let(:expected_attributes) do
-            params[:customer].tap do |hash|
-              hash[:integration_customers] = [IntegrationCustomers::AnrokCustomer]
-            end
-          end
-
-          before { create(:anrok_integration, organization:, code: "code") }
-
-          it "returns new customer build from params including integration customers" do
-            expect(subject)
-              .to be_present
-              .and be_new_record
-              .and have_attributes(expected_attributes)
+      context "when integration matching params exists" do
+        let(:expected_attributes) do
+          params[:customer].tap do |hash|
+            hash[:integration_customers] = array_including(IntegrationCustomers::AnrokCustomer)
           end
         end
 
-        context "when integration matching params does not exist" do
-          it "returns nil" do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.error_code).to eq("anrok_integration_not_found")
+        before { create(:anrok_integration, organization:, code: "code") }
 
-            expect(subject).to be_nil
-          end
-        end
-      end
-
-      context "when integration customers params is omitted or empty" do
-        let(:integration_customers) { [] }
-        let(:expected_attributes) { params[:customer] }
-
-        it "returns new customer build from params" do
+        it "returns new customer build from params including integration customers" do
           expect(subject)
             .to be_present
             .and be_new_record
             .and have_attributes(expected_attributes)
+        end
+      end
+
+      context "when integration matching params does not exist" do
+        it "returns nil" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.error_code).to eq("anrok_integration_not_found")
+
+          expect(subject).to be_nil
         end
       end
     end
