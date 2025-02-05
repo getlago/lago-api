@@ -158,7 +158,7 @@ module Invoices
 
       invoice.fees.each do |fee|
         fee_taxes = result.fees_taxes.find do |item|
-          (item.item_id == fee.item_id) && (item.amount_cents.to_i == fee.sub_total_excluding_taxes_amount_cents&.to_i)
+          item.item_key == fee.item_key
         end
 
         res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)

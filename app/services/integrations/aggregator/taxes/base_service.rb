@@ -47,6 +47,7 @@ module Integrations
               taxes_to_pay = fee['tax_amount_cents']
 
               OpenStruct.new(
+                item_key: fee['item_key'],
                 item_id: fee['item_id'],
                 item_code: fee['item_code'],
                 amount_cents: fee['amount_cents'],
