@@ -51,6 +51,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
             'lago_invoice_payment_status' => invoice.payment_status,
             'lago_invoice_currency' => invoice.currency,
             'lago_invoice_total_amount' => invoice.total_amount_cents / 100.0,
+            'lago_invoice_total_due_amount' => invoice.total_due_amount_cents / 100.0,
             'lago_invoice_subtotal_excluding_taxes' => invoice.sub_total_including_taxes_amount_cents / 100.0,
             'lago_invoice_file_url' => invoice.file_url
           }
@@ -90,6 +91,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Hubspot do
             'lago_invoice_payment_status' => invoice.payment_status,
             'lago_invoice_currency' => invoice.currency,
             'lago_invoice_total_amount' => invoice.total_amount_cents / 100.0,
+            'lago_invoice_total_due_amount' => invoice.total_due_amount_cents / 100.0,
             'lago_invoice_subtotal_excluding_taxes' => invoice.sub_total_including_taxes_amount_cents / 100.0,
             'lago_invoice_file_url' => invoice.file_url
           }

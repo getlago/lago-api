@@ -85,7 +85,7 @@ module Invoices
           payable: @invoice,
           payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,
-          amount_cents: @invoice.total_amount_cents,
+          amount_cents: @invoice.total_due_amount_cents,
           amount_currency: @invoice.currency,
           status: "pending"
         )
@@ -153,13 +153,20 @@ module Invoices
       end
 
       def update_invoice_payment_status(payment_status:, deliver_webhook: true, processing: false)
+        params = {
+          payment_status:,
+          # NOTE: A proper `processing` payment status should be introduced for invoices
+          ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
+        }
+
+        if payment_status.to_sym == :succeeded
+          total_paid_amount_cents = (invoice.presence || @result.invoice).payments.where(payable_payment_status: :succeeded).sum(:amount_cents)
+          params[:total_paid_amount_cents] = total_paid_amount_cents
+        end
+
         result = Invoices::UpdateService.call(
           invoice: invoice.presence || @result.invoice,
-          params: {
-            payment_status:,
-            # NOTE: A proper `processing` payment status should be introduced for invoices
-            ready_for_payment_processing: !processing && payment_status.to_sym != :succeeded
-          },
+          params:,
           webhook_notification: deliver_webhook
         )
         result.raise_if_error!

@@ -9,8 +9,14 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
 
-  let(:first_invoice) { create(:invoice, customer:, payment_overdue: true) }
-  let(:second_invoice) { create(:invoice, customer:, payment_overdue: true) }
+  let(:first_invoice) do
+    create(:invoice, customer:, payment_overdue: true, total_amount_cents: 200, total_paid_amount_cents: 100)
+  end
+
+  let(:second_invoice) do
+    create(:invoice, customer:, payment_overdue: true, total_amount_cents: 500, total_paid_amount_cents: 200)
+  end
+
   let(:params) do
     {
       external_customer_id: customer.external_id,
@@ -22,6 +28,11 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
   around { |test| lago_premium!(&test) }
 
   describe "#call" do
+    let(:amount_cents) do
+      first_invoice.total_amount_cents + second_invoice.total_amount_cents -
+        first_invoice.total_paid_amount_cents - second_invoice.total_paid_amount_cents
+    end
+
     context "when organization is not premium" do
       before do
         allow(License).to receive(:premium?).and_return(false)
@@ -137,7 +148,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
         organization:,
         customer:,
         dunning_campaign:,
-        amount_cents: first_invoice.total_amount_cents + second_invoice.total_amount_cents,
+        amount_cents:,
         amount_currency: "EUR",
         email: "john.doe@example.com"
       )

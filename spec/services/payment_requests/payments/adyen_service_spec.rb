@@ -215,6 +215,9 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
 
         expect(invoice_2.reload).to be_payment_failed
         expect(invoice_2.ready_for_payment_processing).to eq(true)
+
+        expect(invoice_1.total_paid_amount_cents).to eq(0)
+        expect(invoice_2.total_paid_amount_cents).to eq(0)
       end
 
       it "sends a payment requested email" do
@@ -304,6 +307,9 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
 
         expect(invoice_2.reload).to be_payment_succeeded
         expect(invoice_2.ready_for_payment_processing).to eq(false)
+
+        expect(invoice_1.total_paid_amount_cents).to eq(invoice_1.total_amount_cents)
+        expect(invoice_2.total_paid_amount_cents).to eq(invoice_2.total_amount_cents)
       end
     end
   end

@@ -10,6 +10,7 @@ FactoryBot.define do
     amount_currency { 'EUR' }
     provider_payment_id { SecureRandom.uuid }
     status { 'pending' }
+    payable_payment_status { 'pending' }
     payment_type { 'provider' }
 
     trait :adyen_payment do
