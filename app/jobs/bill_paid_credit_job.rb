@@ -1,13 +1,7 @@
 # frozen_string_literal: true
 
 class BillPaidCreditJob < ApplicationJob
-  queue_as do
-    if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_BILLING'])
-      :billing
-    else
-      :default
-    end
-  end
+  queue_as 'high_priority'
 
   retry_on Sequenced::SequenceError
 
