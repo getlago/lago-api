@@ -16,6 +16,7 @@ module Resolvers
 
     argument :amount_from, Integer, required: false
     argument :amount_to, Integer, required: false
+    argument :billing_entity_id, String, required: false
     argument :credit_status, [Types::CreditNotes::CreditStatusTypeEnum], required: false
     argument :currency, Types::CurrencyEnum, required: false
     argument :customer_external_id, String, required: false
@@ -45,7 +46,8 @@ module Resolvers
           issuing_date_to: args[:issuing_date_to],
           reason: args[:reason],
           refund_status: args[:refund_status],
-          self_billed: args[:self_billed]
+          self_billed: args[:self_billed],
+          billing_entity_id: args[:billing_entity_id]
         },
         pagination: {
           page: args[:page],
