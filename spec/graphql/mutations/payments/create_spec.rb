@@ -42,7 +42,6 @@ RSpec.describe Mutations::Payments::Create, type: :graphql do
 
   context 'with premium organization' do
     around { |test| lago_premium!(&test) }
-    before { membership.organization.update!(premium_integrations: ['manual_payments']) }
 
     it "creates a manual payment" do
       expect(result["data"]).to include(

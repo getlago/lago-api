@@ -69,7 +69,7 @@ sv:
     subscription: Prenumeration
     subscription_interval: "%{plan_interval} prenumeration - %{plan_name}"
     tax: Skatt
-    tax_identification_number: "Skatte ID: %{tax_identification_number}"
+    tax_identification_number: 'Skatte ID: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% på %{amount})"
     tax_name_only:
       customer_exempt: Kunden är befriad från moms
@@ -86,13 +86,13 @@ sv:
       reverse_charge: Skattskyldighet överförd till kunden.
       tax_exempt: Kunden är skattebefriad.
     total: Total
-    total_credits_with_value: "Totalt antal krediter med värde: %{credit_amount} krediter"
+    total_credits_with_value: 'Totalt antal krediter med värde: %{credit_amount} krediter'
     total_due: Att betala
     total_due_amount: Förfallobelopp
-    total_events: "Totala händelser: %{count}"
+    total_events: 'Totala händelser: %{count}'
     total_paid_amount: Betalt belopp
-    total_unit: "Totalt antal enheter: %{units}"
-    total_unit_interval: "Totalt antal enheter: %{events_count} händelse(r) för %{units}"
+    total_unit: 'Totalt antal enheter: %{units}'
+    total_unit_interval: 'Totalt antal enheter: %{events_count} händelse(r) för %{units}'
     true_up_details: Minsta utgift på %{min_amount} fördelat på användningsdagar
     true_up_metric: "%{metric} • Justering"
     unit: Antal

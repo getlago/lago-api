@@ -8,7 +8,6 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       api_permissions
       auto_dunning
       hubspot
-      manual_payments
       netsuite
       okta
       progressive_billing

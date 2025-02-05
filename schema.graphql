@@ -4461,7 +4461,6 @@ enum IntegrationTypeEnum {
   api_permissions
   auto_dunning
   hubspot
-  manual_payments
   netsuite
   okta
   progressive_billing
@@ -6504,7 +6503,6 @@ enum PremiumIntegrationTypeEnum {
   api_permissions
   auto_dunning
   hubspot
-  manual_payments
   netsuite
   okta
   progressive_billing
