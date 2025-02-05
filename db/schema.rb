@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_01_22_112050) do
+ActiveRecord::Schema[7.1].define(version: 2025_01_30_101122) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -392,8 +392,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_01_22_112050) do
     t.decimal "precise_coupons_adjustment_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
     t.decimal "precise_taxes_amount_cents", precision: 30, scale: 5, default: "0.0", null: false
     t.float "taxes_rate", default: 0.0, null: false
+    t.uuid "organization_id"
     t.index ["customer_id"], name: "index_credit_notes_on_customer_id"
     t.index ["invoice_id"], name: "index_credit_notes_on_invoice_id"
+    t.index ["organization_id"], name: "index_credit_notes_on_organization_id"
   end
 
   create_table "credit_notes_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1409,6 +1411,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_01_22_112050) do
   add_foreign_key "credit_note_items", "fees"
   add_foreign_key "credit_notes", "customers"
   add_foreign_key "credit_notes", "invoices"
+  add_foreign_key "credit_notes", "organizations"
   add_foreign_key "credit_notes_taxes", "credit_notes"
   add_foreign_key "credit_notes_taxes", "taxes"
   add_foreign_key "credits", "applied_coupons"
