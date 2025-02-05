@@ -53,7 +53,8 @@ module Invoices
         shipping_country: customer_params.dig(:shipping_address, :country)
       )
 
-      customer.integration_customers = Array(customer_params[:integration_customers]).map do |integration_params|
+      Array(customer_params[:integration_customers]).map do |integration_params|
+        IntegrationCustomers::BaseCustomer.customer_type(integration_params[:integration_type])
         build_customer_integration(customer, integration_params)
       end
 
@@ -64,8 +65,7 @@ module Invoices
       integration_class = integration_type(attrs[:integration_type]).constantize
       integration = integration_class.find_by!(code: attrs[:integration_code], organization:)
 
-      integration_customer_class = IntegrationCustomers::BaseCustomer.customer_type(attrs[:integration_type]).constantize
-      integration_customer_class.new(integration:, customer:)
+      customer.public_send("build_#{attrs[:integration_type]}_customer", integration:)
     end
 
     def build_subscription
