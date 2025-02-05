@@ -91,6 +91,22 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       end
     end
 
+    context 'when apply_taxes is false' do
+      let(:params) { {external_subscription_id: subscription.external_id, apply_taxes: false} }
+
+      it 'returns the usage for the customer without applying taxes' do
+        subject
+
+        aggregate_failures do
+          expect(response).to have_http_status(:success)
+          # With taxes disabled, fees_amount_cents remains 5 and no tax is added.
+          expect(json[:customer_usage][:amount_cents]).to eq(5)
+          expect(json[:customer_usage][:taxes_amount_cents]).to eq(0)
+          expect(json[:customer_usage][:total_amount_cents]).to eq(5)
+        end
+      end
+    end
+
     context 'with filters' do
       let(:billable_metric_filter) do
         create(:billable_metric_filter, billable_metric: metric, key: 'cloud', values: %w[aws google])
