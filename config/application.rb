@@ -11,7 +11,7 @@ Bundler.require(*Rails.groups)
 module LagoApi
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
-    config.load_defaults 7.1
+    config.load_defaults 7.2
 
     # Disable YJIT as we are not ready yet
     config.yjit = false
