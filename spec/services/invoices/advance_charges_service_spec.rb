@@ -25,11 +25,11 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
     end
     let(:subscriptions) { [subscription] }
 
-    let(:billable_metric) { create(:billable_metric, code: "new_user") }
+    let(:billable_metric) { create(:billable_metric, organization:, code: "new_user") }
     let(:billing_at) { Time.zone.now.beginning_of_month + 1.hour }
     let(:started_at) { Time.zone.now - 2.years }
 
-    let(:plan) { create(:plan, interval: "monthly", pay_in_advance: true) }
+    let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
 
     def fee_boundaries
       prev_month = billing_at - 1.month
@@ -55,6 +55,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         succeeded_fees = create_list(
           :charge_fee,
           3,
+          organization_id: organization.id,
           payment_status: :succeeded,
           succeeded_at: billing_at - 1.month,
           invoice_id: nil,
@@ -152,7 +153,9 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         create(:subscription, {
           external_id: subscription.external_id,
           customer: subscription.customer,
-          status: :terminated
+          status: :terminated,
+          started_at: Time.current - 1.year,
+          plan:
         })
       end
 
@@ -160,6 +163,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         create(
           :fee,
           :succeeded,
+          organization_id: organization.id,
           succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days,
           invoice_id: nil,
           subscription: subscription_2,
@@ -171,7 +175,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
 
       before { paid_in_advance_fee }
 
-      it 'creates invoices' do
+      it "creates invoices" do
         result = invoice_service.call
 
         expect(result).to be_success
@@ -182,17 +186,17 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         expect(result.invoice)
           .to be_finalized
           .and have_attributes(
-            invoice_type: 'advance_charges',
-            currency: 'EUR',
+            invoice_type: "advance_charges",
+            currency: "EUR",
             issuing_date: billing_at.to_date,
             skip_charges: true
           )
 
-        expect(result.invoice.invoice_subscriptions.count).to eq(2)
+        expect(result.invoice.invoice_subscriptions.count).to eq(1)
         sub = result.invoice.invoice_subscriptions.first
         expect(sub.charges_to_datetime).to match_datetime fee_boundaries[:charges_to_datetime]
         expect(sub.charges_from_datetime).to match_datetime fee_boundaries[:charges_from_datetime]
-        expect(sub.invoicing_reason).to eq 'in_advance_charge_periodic'
+        expect(sub.invoicing_reason).to eq "in_advance_charge_periodic"
       end
     end
 
@@ -202,6 +206,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         charge = create(:standard_charge, :regroup_paid_fees, plan: subscription.plan)
         create(
           :charge_fee,
+          organization_id: organization.id,
           payment_status: :succeeded,
           succeeded_at: billing_at - 1.month,
           invoice_id: nil,
