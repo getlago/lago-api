@@ -129,12 +129,11 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
             plan_code: plan_upgrade.code
           }
         )
-        perform_billing
 
         upgraded_subscription = customer.subscriptions.where.not(id: subscription.id).sole
         expect(customer.invoices.count).to eq(3)
-        expect(upgraded_subscription.fees.charge.where(invoice_id: nil).count).to eq 0
-        advance_charges = upgraded_subscription.invoices.where(invoice_type: :advance_charges).sole
+        expect(upgraded_subscription.fees.charge.count).to eq 0
+        advance_charges = customer.invoices.where(invoice_type: :advance_charges).sole
         expect(advance_charges.fees.count).to eq(3)
       end
 
@@ -158,21 +157,6 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
         expect(advance_charges_invoice.fees.count).to eq(1)
         expect(Fee.where(invoice_id: nil).excluding(recurring_fee).count).to eq 0
       end
-
-      # travel_to(DateTime.new(2024, 7, 10, 10)) do
-      #   # Mark fees created in June + recurring fee for July as payment succeeded
-      #   Fee.where(invoice_id: nil).update(payment_status: :succeeded)
-      # end
-      #
-      # travel_to(DateTime.new(2024, 8, 1, 0, 10)) do
-      #   perform_billing
-      #   expect(customer.invoices.count).to eq(5)
-      #
-      #   advance_charges_invoice = customer.invoices.where(invoice_type: :advance_charges).order(created_at: :desc).first
-      #   expect(advance_charges_invoice.fees.count).to eq 3
-      #   expect(advance_charges_invoice.fees.charge.where(created_at: ..DateTime.new(2024, 7, 1)).count).to eq 2
-      #   expect(advance_charges_invoice.fees_amount_cents).to eq(((5 * 30) + 17 + 16) * 100)
-      # end
     end
   end
 

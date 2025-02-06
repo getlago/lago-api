@@ -112,11 +112,13 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
     end
 
     context "without any standalone fees" do
-      it "does not create an invoice" do
-        result = invoice_service.call
+      context "without any pay in advance charge" do
+        it "does not create an invoice" do
+          result = invoice_service.call
 
-        expect(result).to be_success
-        expect(result.invoice).to be_nil
+          expect(result).to be_success
+          expect(result.invoice).to be_nil
+        end
       end
 
       context "when there is a pay in advance charge" do
@@ -124,8 +126,12 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
           create(:standard_charge, :regroup_paid_fees, plan: subscription.plan)
         end
 
-        it "does not create an invoice" do
+        it "does not try to create an invoice only to roll back when there are no fees" do
+          connection = ActiveRecord::Base.connection
+          allow(connection).to receive(:transaction).and_call_original
+
           result = invoice_service.call
+          expect(connection).not_to have_received(:transaction)
 
           expect(result).to be_success
           expect(result.invoice).to be_nil
