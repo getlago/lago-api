@@ -3,10 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Analytics::RevenueStreamsService, type: :service do
-  let(:service) { described_class.new(organization) }
+  let(:service) { described_class.new(organization, **params) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:body_response) { File.read("spec/fixtures/lago_data_api/revenue_streams.json") }
+  let(:params) { {} }
 
   before do
     stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/")

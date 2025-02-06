@@ -63,7 +63,14 @@ RSpec.describe Resolvers::Analytics::RevenueStreamsResolver, type: :graphql do
     end
 
     context "with premium addon" do
-      before { organization.update!(premium_integrations: ["analytics_revenue_streams"]) }
+      let(:body_response) { File.read("spec/fixtures/lago_data_api/revenue_streams.json") }
+
+      before do
+        organization.update!(premium_integrations: ["analytics_revenue_streams"])
+
+        stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/")
+          .to_return(status: 200, body: body_response, headers: {})
+      end
 
       it "returns a list of revenue streams" do
         result = execute_graphql(
@@ -74,7 +81,12 @@ RSpec.describe Resolvers::Analytics::RevenueStreamsResolver, type: :graphql do
         )
 
         revenue_streams_response = result["data"]["revenueStreams"]
-        expect(revenue_streams_response["collection"].first["grossRevenueAmountCents"]).to eq("2015000")
+        expect(revenue_streams_response['collection'].first).to include(
+          {
+            "fromDate" => "2024-01-01",
+            "toDate" => "2024-01-31"
+          }
+        )
       end
     end
   end
