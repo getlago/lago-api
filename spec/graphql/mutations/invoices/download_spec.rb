@@ -19,22 +19,7 @@ RSpec.describe Mutations::Invoices::Download, type: :graphql do
     GQL
   end
 
-  let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
-
-  let(:pdf_response) do
-    BaseService::Result.new.tap { |r| r.io = StringIO.new(pdf_content) }
-  end
-
-  let(:pdf_content) do
-    File.read(Rails.root.join('spec/fixtures/blank.pdf'))
-  end
-
-  before do
-    allow(Utils::PdfGenerator).to receive(:new)
-      .and_return(pdf_generator)
-    allow(pdf_generator).to receive(:call)
-      .and_return(pdf_response)
-  end
+  before { stub_pdf_generation }
 
   it_behaves_like 'requires current user'
   it_behaves_like 'requires current organization'

@@ -12,23 +12,11 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
   let(:invoice) { create(:invoice, customer:, status: :finalized, organization:) }
   let(:credit) { create(:credit, invoice:) }
   let(:fees) { create_list(:fee, 3, invoice:) }
-  let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
-  let(:pdf_content) do
-    File.read(Rails.root.join('spec/fixtures/blank.pdf'))
-  end
-
-  let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
-  let(:pdf_response) do
-    BaseService::Result.new.tap { |r| r.io = StringIO.new(pdf_content) }
-  end
+  let(:invoice_subscription) { create(:invoice_subscription, :boundaries, invoice:, subscription:) }
 
   before do
     invoice_subscription
-
-    allow(Utils::PdfGenerator).to receive(:new)
-      .and_return(pdf_generator)
-    allow(pdf_generator).to receive(:call)
-      .and_return(pdf_response)
+    stub_pdf_generation
   end
 
   describe '#call' do

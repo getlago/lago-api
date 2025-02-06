@@ -5,15 +5,9 @@ require 'rails_helper'
 describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
 
-  let(:pdf_generator) { instance_double(Utils::PdfGenerator) }
-  let(:pdf_file) { StringIO.new(File.read(Rails.root.join('spec/fixtures/blank.pdf'))) }
-  let(:pdf_result) { OpenStruct.new(io: pdf_file) }
-
   before do
+    stub_pdf_generation
     organization
-
-    allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
-    allow(pdf_generator).to receive(:call).and_return(pdf_result)
   end
 
   around { |test| lago_premium!(&test) }
