@@ -2,6 +2,8 @@
 
 module Invoices
   class AdvanceChargesService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(initial_subscriptions:, billing_at:)
       @initial_subscriptions = initial_subscriptions
       @billing_at = billing_at
@@ -21,7 +23,7 @@ module Invoices
       invoice = create_group_invoice
 
       if invoice && !invoice.closed?
-        SendWebhookJob.perform_later('invoice.created', invoice)
+        SendWebhookJob.perform_later("invoice.created", invoice)
         Invoices::GeneratePdfAndNotifyJob.perform_later(invoice:, email: false)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -40,10 +42,19 @@ module Invoices
     def subscriptions
       return [] unless organization
 
-      @subscriptions ||= organization.subscriptions.where(
-        external_id: initial_subscriptions.pluck(:external_id).uniq,
-        status: [:active, :terminated]
-      )
+      # NOTE: filter all active/terminated subscriptions having non-invoiceable fees not yet attached to an invoice
+      @subscriptions ||= organization.subscriptions
+        .where(
+          id: Fee.where(organization_id: organization.id)
+            .where(invoice_id: nil, payment_status: :succeeded)
+            .where("succeeded_at <= ?", billing_at)
+            .joins(:subscription)
+            .where(subscriptions: {
+              external_id: initial_subscriptions.pluck(:external_id).uniq,
+              status: [:active, :terminated]
+            })
+            .select("DISTINCT(subscriptions.id)")
+        )
     end
 
     def has_charges_with_statement?
