@@ -31,6 +31,8 @@ module Customers
       end
 
       ActiveRecord::Base.transaction do
+        original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
+
         customer.name = params[:name] if params.key?(:name)
         customer.country = params[:country]&.upcase if params.key?(:country)
         customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
@@ -79,7 +81,7 @@ module Customers
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: new_customer,
-          tax_attributes_changed: params.key?(:tax_identification_number) || params.key?(:zipcode) || params.key?(:country)
+          tax_attributes_changed: original_tax_values.any? { |key, value| params.key?(key) && params[key] != value }
         )
 
         if eu_tax_code_result.success?

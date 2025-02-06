@@ -24,6 +24,7 @@ module Customers
 
       old_payment_provider = customer.payment_provider
       old_provider_customer = customer.provider_customer
+      original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
       ActiveRecord::Base.transaction do
         billing_configuration = args[:billing_configuration]&.to_h || {}
         shipping_address = args[:shipping_address]&.to_h || {}
@@ -141,7 +142,7 @@ module Customers
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: false,
-          tax_attributes_changed: args.key?(:tax_identification_number) || args.key?(:zipcode) || args.key?(:country)
+          tax_attributes_changed: original_tax_values.any? { |key, value| args.key?(key) && args[key] != value }
         )
 
         if eu_tax_code_result.success?
