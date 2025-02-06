@@ -13,19 +13,11 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
   let(:credit_note_item) { create(:credit_note_item, credit_note:, fee:) }
   let(:context) { nil }
 
-  let(:pdf_content) do
-    File.read(Rails.root.join('spec/fixtures/blank.pdf'))
-  end
-
-  let(:pdf_response) do
-    BaseService::Result.new.tap { |r| r.io = StringIO.new(pdf_content) }
-  end
-
   before do
     credit_note_item
 
-    allow(Utils::PdfGenerator).to receive(:call)
-      .and_return(pdf_response)
+    stub_pdf_generation
+    allow(Utils::PdfGenerator).to receive(:call).and_call_original
   end
 
   describe '.call' do
