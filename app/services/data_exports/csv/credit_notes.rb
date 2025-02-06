@@ -48,12 +48,12 @@ module DataExports
       attr_reader :data_export_part, :serializer_klass
 
       def serialize_item(credit_note, csv)
-        serialized_note = serializer_klass.new(credit_note, includes: %i[customer invoice]).serialize
+        serialized_note = serializer_klass.new(credit_note, includes: %i[customer]).serialize
 
         csv << [
           serialized_note[:lago_id],
           serialized_note[:sequential_id],
-          serialized_note.dig(:invocie, :self_billed),
+          serialized_note[:self_billed],
           serialized_note[:issuing_date],
           serialized_note.dig(:customer, :lago_id),
           serialized_note.dig(:customer, :external_id),
@@ -79,7 +79,7 @@ module DataExports
       end
 
       def collection
-        CreditNote.includes(:customer, :invoice).find(data_export_part.object_ids)
+        CreditNote.includes(:customer).find(data_export_part.object_ids)
       end
     end
   end

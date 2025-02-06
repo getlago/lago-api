@@ -19,6 +19,7 @@ RSpec.describe DataExports::Csv::Invoices do
       payment_overdue:,
       payment_status:,
       search_term:,
+      self_billed:,
       status:
     }
   end
@@ -33,6 +34,7 @@ RSpec.describe DataExports::Csv::Invoices do
   let(:payment_overdue) { true }
   let(:payment_status) { 'pending' }
   let(:search_term) { 'service ABC' }
+  let(:self_billed) { false }
   let(:status) { 'finalized' }
 
   let(:serializer_klass) { class_double('V1::InvoiceSerializer') }
@@ -46,6 +48,7 @@ RSpec.describe DataExports::Csv::Invoices do
       lago_id: 'invoice-lago-id-123',
       sequential_id: 'SEQ123',
       issuing_date: '2023-01-01',
+      self_billed: false,
       customer: {
         name: 'customer name',
         lago_id: 'customer-lago-id-456',
@@ -86,7 +89,7 @@ RSpec.describe DataExports::Csv::Invoices do
 
     it 'generates the correct CSV output' do
       expected_csv = <<~CSV
-        invoice-lago-id-123,SEQ123,2023-01-01,customer-lago-id-456,CUST123,customer name,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false
+        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false
       CSV
 
       expect(result).to be_success
