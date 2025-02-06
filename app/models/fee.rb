@@ -83,6 +83,10 @@ class Fee < ApplicationRecord
     from_organization_pay_in_advance(org).where("customers.external_id = ?", external_customer_id)
   end
 
+  def item_key
+    id || object_id
+  end
+
   def item_id
     return billable_metric.id if charge?
     return add_on.id if add_on?
