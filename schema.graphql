@@ -3537,6 +3537,7 @@ input DataExportCreditNoteFiltersInput {
   reason: [CreditNoteReasonEnum!]
   refundStatus: [CreditNoteRefundStatusEnum!]
   searchTerm: String
+  selfBilled: Boolean
 }
 
 enum DataExportFormatTypeEnum {
@@ -3558,6 +3559,7 @@ input DataExportInvoiceFiltersInput {
   paymentOverdue: Boolean
   paymentStatus: [InvoicePaymentStatusTypeEnum!]
   searchTerm: String
+  selfBilled: Boolean
   status: [InvoiceStatusTypeEnum!]
 }
 

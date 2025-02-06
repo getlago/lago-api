@@ -19,6 +19,7 @@ module Types
         argument :payment_status, [Types::Invoices::PaymentStatusTypeEnum], required: false
         argument :search_term, String, required: false
         argument :status, [Types::Invoices::StatusTypeEnum], required: false
+        argument :self_billed, Boolean, required: false
       end
     end
   end

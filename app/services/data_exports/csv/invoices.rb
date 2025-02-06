@@ -18,6 +18,7 @@ module DataExports
         %w[
           lago_id
           sequential_id
+          partner_billing
           issuing_date
           customer_lago_id
           customer_external_id
@@ -54,6 +55,7 @@ module DataExports
         csv << [
           serialized_invoice[:lago_id],
           serialized_invoice[:sequential_id],
+          serialized_invoice[:self_billed],
           serialized_invoice[:issuing_date],
           serialized_invoice.dig(:customer, :lago_id),
           serialized_invoice.dig(:customer, :external_id),
