@@ -2,7 +2,6 @@
 
 require "rails_helper"
 
-# NOTE: Skipped until feature is fully released
 describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
@@ -10,6 +9,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
   let(:billable_metric) { create(:unique_count_billable_metric, organization:, code: "cards", recurring: true) }
   let(:plan) { create(:plan, organization:, pay_in_advance: true, amount_cents: 49) }
   let(:external_subscription_id) { SecureRandom.uuid }
+  let(:bm_amount) { 30.12 }
 
   def send_card_event!(item_id = SecureRandom.uuid)
     create_event({
@@ -23,7 +23,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
 
   before do
     create(:tax, organization:, rate: tax_rate)
-    create(:standard_charge, regroup_paid_fees: "invoice", pay_in_advance: true, invoiceable: false, prorated: true, billable_metric:, plan:, properties: {amount: "30", grouped_by: nil})
+    create(:standard_charge, regroup_paid_fees: "invoice", pay_in_advance: true, invoiceable: false, prorated: true, billable_metric:, plan:, properties: {amount: bm_amount.to_s, grouped_by: nil})
   end
 
   context "when subscription is renewed" do
@@ -46,7 +46,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
         travel_to(DateTime.new(2024, 6, 10 + i, 10)) do
           send_card_event! "card_#{i}"
           expect(subscription.fees.charge.where(invoice_id: nil).count).to eq(i)
-          expect(subscription.fees.charge.order(created_at: :desc).first.amount_cents).to eq((21 - i) * 100)
+          expect(subscription.fees.charge.order(created_at: :desc).first.amount_cents).to eq ((bm_amount * (30 - 10 - (i - 1)) / 30) * 100).round
         end
       end
 
@@ -63,7 +63,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
         expect(subscription.fees.charge.where(invoice_id: nil, created_at: Time.current.beginning_of_month..).count).to eq 1 # recurring fee
 
         advance_charges_invoice = customer.invoices.where(invoice_type: :advance_charges).sole
-        expect(advance_charges_invoice.fees_amount_cents).to eq((20 + 19 + 18) * 100)
+        expect(advance_charges_invoice.fees_amount_cents).to eq(2008 + 1908 + 1807)
       end
 
       travel_to(DateTime.new(2024, 7, 10, 10)) do
@@ -81,7 +81,19 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
         advance_charges_invoice = customer.invoices.where(invoice_type: :advance_charges).order(created_at: :desc).first
         expect(advance_charges_invoice.fees.count).to eq 3
         expect(advance_charges_invoice.fees.charge.where(created_at: ..DateTime.new(2024, 7, 1)).count).to eq 2
-        expect(advance_charges_invoice.fees_amount_cents).to eq(((5 * 30) + 17 + 16) * 100)
+        expect(advance_charges_invoice.fees_amount_cents).to eq((5 * bm_amount * 100) + 1707 + 1606)
+
+        expect(advance_charges_invoice.total_amount_cents).to eq 22047 # Invoices::ComputeAmountsFromFees would return 22048
+        expect(advance_charges_invoice.taxes_amount_cents).to eq 3674 # Invoices::ComputeAmountsFromFees would return 3675
+        expect(advance_charges_invoice.fees_amount_cents).to eq 18373
+
+        expect(advance_charges_invoice.sub_total_excluding_taxes_amount_cents).to eq 18373 # == fees_amount_cents
+        expect(advance_charges_invoice.sub_total_including_taxes_amount_cents).to eq 22047 # == fees_amount_cents + taxes_amount_cents == total_amount_cents
+
+        expect(advance_charges_invoice.coupons_amount_cents).to eq 0
+        expect(advance_charges_invoice.credit_notes_amount_cents).to eq 0
+        expect(advance_charges_invoice.prepaid_credit_amount_cents).to eq 0
+        expect(advance_charges_invoice.progressive_billing_credit_amount_cents).to eq 0
       end
     end
   end

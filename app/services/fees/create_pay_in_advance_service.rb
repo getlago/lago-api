@@ -2,6 +2,8 @@
 
 module Fees
   class CreatePayInAdvanceService < BaseService
+    Result = BaseResult[:fees]
+
     def initialize(charge:, event:, billing_at: nil, estimate: false)
       @charge = charge
       @event = Events::CommonFactory.new_instance(source: event)
@@ -58,22 +60,22 @@ module Fees
 
         cache_aggregation_result(aggregation_result:, charge_filter:)
 
-        result = apply_charge_model(aggregation_result:, properties:)
-        unit_amount_cents = result.unit_amount * subscription.plan.amount.currency.subunit_to_unit
+        charge_model_result = apply_charge_model(aggregation_result:, properties:)
+        unit_amount_cents = charge_model_result.unit_amount * subscription.plan.amount.currency.subunit_to_unit
 
         fee = Fee.new(
           subscription:,
           charge:,
           organization_id: organization.id,
-          amount_cents: result.amount,
-          precise_amount_cents: result.precise_amount,
+          amount_cents: charge_model_result.amount,
+          precise_amount_cents: charge_model_result.precise_amount,
           amount_currency: subscription.plan.amount_currency,
           fee_type: :charge,
           invoiceable: charge,
-          units: result.units,
-          total_aggregated_units: result.units,
+          units: charge_model_result.units,
+          total_aggregated_units: charge_model_result.units,
           properties: boundaries,
-          events_count: result.count,
+          events_count: charge_model_result.count,
           charge_filter_id: charge_filter&.id,
           pay_in_advance_event_id: event.id,
           pay_in_advance_event_transaction_id: event.transaction_id,
@@ -82,9 +84,9 @@ module Fees
           taxes_amount_cents: 0,
           taxes_precise_amount_cents: 0.to_d,
           unit_amount_cents:,
-          precise_unit_amount: result.unit_amount,
+          precise_unit_amount: charge_model_result.unit_amount,
           grouped_by: format_grouped_by,
-          amount_details: result.amount_details || {}
+          amount_details: charge_model_result.amount_details || {}
         )
 
         unless customer_provider_taxation?

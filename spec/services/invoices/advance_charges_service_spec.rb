@@ -139,7 +139,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
       end
     end
 
-    context "when there is a successful non invoiceable paid in advance fees" do
+    context "when there are paid non invoiceable pay_in_advance fees" do
       let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
 
       let(:charge) do
@@ -169,11 +169,25 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         create(
           :fee,
           :succeeded,
-          organization_id: organization.id,
+          organization:,
           succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days,
           invoice_id: nil,
           subscription: subscription_2,
-          amount_cents: 999,
+          amount_cents: 12,
+          taxes_amount_cents: 2,
+          properties: fee_boundaries,
+          charge:
+        )
+
+        create(
+          :fee,
+          :succeeded,
+          organization:,
+          succeeded_at: fee_boundaries[:charges_to_datetime] - 2.days,
+          invoice_id: nil,
+          subscription: subscription_2,
+          amount_cents: 12,
+          taxes_amount_cents: 2,
           properties: fee_boundaries,
           charge:
         )
@@ -187,7 +201,10 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         expect(result).to be_success
         expect(result.invoice).to be_a Invoice
         expect(result.invoice.fees.count).to eq 1
-        expect(result.invoice.total_amount_cents).to eq(paid_in_advance_fee.amount_cents)
+
+        expect(result.invoice.fees_amount_cents).to eq 24
+        expect(result.invoice.taxes_amount_cents).to eq 4
+        expect(result.invoice.total_amount_cents).to eq 28
 
         expect(result.invoice)
           .to be_finalized
