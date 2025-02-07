@@ -3,8 +3,8 @@
 module Types
   module Invoices
     class Object < Types::BaseObject
-      description 'Invoice'
-      graphql_name 'Invoice'
+      description "Invoice"
+      graphql_name "Invoice"
 
       field :customer, Types::Customers::Object, null: false
 
@@ -58,7 +58,7 @@ module Types
       field :credit_notes, [Types::CreditNotes::Object], null: true
       field :error_details, [Types::ErrorDetails::Object], null: true
       field :fees, [Types::Fees::Object], null: true
-      field :invoice_subscriptions, [Types::InvoiceSubscription::Object]
+      field :invoice_subscriptions, [Types::InvoiceSubscriptions::Object]
       field :subscriptions, [Types::Subscriptions::Object]
 
       field :external_hubspot_integration_id, String, null: true
@@ -78,7 +78,7 @@ module Types
           object.integration_resources
             .joins(:integration)
             .where(integration: {type: ::Integrations::BaseIntegration::INTEGRATION_ACCOUNTING_TYPES})
-            .where(resource_type: 'invoice', syncable_type: 'Invoice').none?
+            .where(resource_type: "invoice", syncable_type: "Invoice").none?
       end
 
       def integration_hubspot_syncable
@@ -86,7 +86,7 @@ module Types
           object.integration_resources
             .joins(:integration)
             .where(integration: {type: "Integrations::HubspotIntegration"})
-            .where(resource_type: 'invoice', syncable_type: 'Invoice').none?
+            .where(resource_type: "invoice", syncable_type: "Invoice").none?
       end
 
       def integration_salesforce_syncable
@@ -94,7 +94,7 @@ module Types
           object.integration_resources
             .joins(:integration)
             .where(integration: {type: "Integrations::SalesforceIntegration"})
-            .where(resource_type: 'invoice', syncable_type: 'Invoice').none?
+            .where(resource_type: "invoice", syncable_type: "Invoice").none?
       end
 
       def tax_provider_voidable
@@ -111,7 +111,7 @@ module Types
         IntegrationResource.find_by(
           integration: integration_customer.integration,
           syncable_id: object.id,
-          syncable_type: 'Invoice',
+          syncable_type: "Invoice",
           resource_type: :invoice
         )&.external_id
       end
@@ -124,7 +124,7 @@ module Types
         IntegrationResource.find_by(
           integration: integration_customer.integration,
           syncable_id: object.id,
-          syncable_type: 'Invoice',
+          syncable_type: "Invoice",
           resource_type: :invoice
         )&.external_id
       end
@@ -137,7 +137,7 @@ module Types
         IntegrationResource.find_by(
           integration: integration_customer.integration,
           syncable_id: object.id,
-          syncable_type: 'Invoice',
+          syncable_type: "Invoice",
           resource_type: :invoice
         )&.external_id
       end

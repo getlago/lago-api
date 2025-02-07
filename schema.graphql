@@ -4671,6 +4671,7 @@ enum InvoiceStatusTypeEnum {
 }
 
 type InvoiceSubscription {
+  acceptNewFees: Boolean!
   chargeAmountCents: BigInt!
   chargesFromDatetime: ISO8601DateTime
   chargesToDatetime: ISO8601DateTime

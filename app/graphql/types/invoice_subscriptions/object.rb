@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module Types
-  module InvoiceSubscription
+  module InvoiceSubscriptions
     class Object < Types::BaseObject
-      graphql_name 'InvoiceSubscription'
+      graphql_name "InvoiceSubscription"
 
       field :invoice, Types::Invoices::Object, null: false
       field :subscription, Types::Subscriptions::Object, null: false
@@ -22,6 +22,8 @@ module Types
 
       field :from_datetime, GraphQL::Types::ISO8601DateTime, null: true
       field :to_datetime, GraphQL::Types::ISO8601DateTime, null: true
+
+      field :accept_new_fees, Boolean, null: false
 
       def in_advance_charges_from_datetime
         return nil unless should_use_in_advance_charges_interval
@@ -47,6 +49,12 @@ module Types
       def charge_pay_in_advance_interval
         @charge_pay_in_advance_interval ||=
           ::Subscriptions::DatesService.charge_pay_in_advance_interval(object.timestamp, object.subscription)
+      end
+
+      def accept_new_charge_fees
+        return false if object.invoice.skip_charge?
+
+        object.subscription_periodic? || object.subscription_terminating?
       end
     end
   end
