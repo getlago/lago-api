@@ -15,19 +15,7 @@ module Organizations
         organization.invoice_grace_period = grace_period
         organization.save!
 
-        # NOTE: Update issuing_date on draft invoices.
-        organization.invoices.draft.find_each do |invoice|
-          grace_period_diff = invoice.customer.applicable_invoice_grace_period.to_i -
-            old_applicable_grace_period(invoice.customer, old_grace_period)
-
-          invoice.issuing_date = invoice.issuing_date + grace_period_diff.days
-          invoice.payment_due_date = grace_period_payment_due_date(invoice)
-          invoice.save!
-        end
-
-        organization.invoices.ready_to_be_finalized.find_each do |invoice|
-          Invoices::FinalizeJob.perform_later(invoice)
-        end
+        Invoices::UpdateAllInvoiceGracePeriodFromOrganizationJob.perform_later(organization:, old_grace_period:)
       end
 
       result.organization = organization
