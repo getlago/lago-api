@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Analytics::RevenueStreamsService, type: :service do
+RSpec.describe DataApi::RevenueStreamsService, type: :service do
   let(:service) { described_class.new(organization, **params) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }

@@ -25,7 +25,7 @@ module Resolvers
       def resolve(**args)
         raise unauthorized_error unless License.premium?
 
-        result = ::Analytics::RevenueStreamsService.call(current_organization, **args)
+        result = ::DataApi::RevenueStreamsService.call(current_organization, **args)
         result.revenue_streams
       end
     end

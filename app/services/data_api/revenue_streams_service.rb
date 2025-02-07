@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-module Analytics
+module DataApi
   class RevenueStreamsService < BaseService
     Result = BaseResult[:revenue_streams]
 
     def call
       return result.forbidden_failure! unless License.premium?
 
-      data_revenue_streams = http_client.get(headers:, **filters)
+      data_revenue_streams = http_client.get(headers:, params:)
 
       result.revenue_streams = format_revenue_streams(data_revenue_streams)
       result
