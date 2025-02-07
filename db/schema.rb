@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
+ActiveRecord::Schema[7.1].define(version: 2025_02_07_094842) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -941,6 +941,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.enum "tax_status", enum_type: "tax_status"
     t.bigint "total_paid_amount_cents", default: 0, null: false
     t.boolean "self_billed", default: false, null: false
+    t.integer "applied_grace_period"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["issuing_date"], name: "index_invoices_on_issuing_date"

@@ -477,6 +477,7 @@ end
 # Table name: invoices
 #
 #  id                                      :uuid             not null, primary key
+#  applied_grace_period                    :integer
 #  coupons_amount_cents                    :bigint           default(0), not null
 #  credit_notes_amount_cents               :bigint           default(0), not null
 #  currency                                :string
