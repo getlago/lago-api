@@ -36,6 +36,7 @@ jobs:
       SECRET_KEY_BASE: cvIAI6ycC0OnVDRAjT5hmbRxnjCxl4YB
       LAGO_API_URL: https://api.lago.dev
       LAGO_PDF_URL: https://pdf.lago.dev
+      LAGO_DATA_API_URL: http://data_api
       LAGO_FROM_EMAIL: noreply@getlago.com
       LAGO_CLICKHOUSE_ENABLED: true
       LAGO_CLICKHOUSE_MIGRATIONS_ENABLED: true
