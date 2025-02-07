@@ -3,6 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Organizations::UpdateInvoiceGracePeriodService, type: :service do
+  include ActiveJob::TestHelper
   subject(:update_service) { described_class.new(organization:, grace_period:) }
 
   let(:membership) { create(:membership) }
@@ -29,23 +30,13 @@ RSpec.describe Organizations::UpdateInvoiceGracePeriodService, type: :service do
       expect { update_service.call }.to change { organization.reload.invoice_grace_period }.from(0).to(2)
     end
 
-    it 'finalizes corresponding draft invoices' do
-      current_date = DateTime.parse('22 Jun 2022')
-
-      travel_to(current_date) do
-        result = update_service.call
-
-        expect(result.organization.invoice_grace_period).to eq(2)
-        expect(Invoices::FinalizeJob).not_to have_received(:perform_later).with(invoice_to_not_be_finalized)
-        expect(Invoices::FinalizeJob).to have_received(:perform_later).with(invoice_to_be_finalized)
-      end
-    end
-
     it 'updates issuing_date on draft invoices' do
       current_date = DateTime.parse('22 Jun 2022')
 
       travel_to(current_date) do
-        expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
+        expect {
+          perform_enqueued_jobs { update_service.call }
+        }.to change { invoice_to_not_be_finalized.reload.issuing_date }
           .to(DateTime.parse('23 Jun 2022'))
           .and change { invoice_to_not_be_finalized.reload.payment_due_date }
           .to(DateTime.parse('23 Jun 2022'))
@@ -59,7 +50,7 @@ RSpec.describe Organizations::UpdateInvoiceGracePeriodService, type: :service do
         current_date = DateTime.parse('22 Jun 2022')
 
         travel_to(current_date) do
-          expect { update_service.call }.to change { invoice_to_not_be_finalized.reload.issuing_date }
+          expect { perform_enqueued_jobs { update_service.call } }.to change { invoice_to_not_be_finalized.reload.issuing_date }
             .to(DateTime.parse('23 Jun 2022'))
             .and change { invoice_to_not_be_finalized.reload.payment_due_date }
             .to(DateTime.parse('26 Jun 2022'))

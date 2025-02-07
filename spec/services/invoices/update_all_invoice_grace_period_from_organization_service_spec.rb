@@ -21,7 +21,7 @@ RSpec.describe Invoices::UpdateAllInvoiceGracePeriodFromOrganizationService do
 
     it "enqueues 1 job for the draft invoice" do
       expect { subject.call }.to enqueue_job(Invoices::UpdateGracePeriodFromOrganizationJob)
-        .with(invoice: draft_invoice, old_grace_period:)
+        .with(draft_invoice, old_grace_period)
     end
 
     context "with finalized invoice present" do
@@ -31,7 +31,7 @@ RSpec.describe Invoices::UpdateAllInvoiceGracePeriodFromOrganizationService do
 
       it "enqueues 1 job for the draft invoice" do
         expect { subject.call }.to enqueue_job(Invoices::UpdateGracePeriodFromOrganizationJob)
-          .with(invoice: draft_invoice, old_grace_period:)
+          .with(draft_invoice, old_grace_period)
       end
     end
   end

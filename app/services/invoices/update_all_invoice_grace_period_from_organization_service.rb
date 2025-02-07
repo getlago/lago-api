@@ -11,7 +11,7 @@ module Invoices
 
     def call
       organization.invoices.draft.find_each do |invoice|
-        Invoices::UpdateGracePeriodFromOrganizationJob.perform_later(invoice:, old_grace_period:)
+        Invoices::UpdateGracePeriodFromOrganizationJob.perform_later(invoice, old_grace_period)
       end
 
       result

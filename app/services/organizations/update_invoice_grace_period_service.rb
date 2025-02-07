@@ -15,7 +15,7 @@ module Organizations
         organization.invoice_grace_period = grace_period
         organization.save!
 
-        Invoices::UpdateAllInvoiceGracePeriodFromOrganizationJob.perform_later(organization:, old_grace_period:)
+        Invoices::UpdateAllInvoiceGracePeriodFromOrganizationJob.perform_later(organization, old_grace_period)
       end
 
       result.organization = organization
