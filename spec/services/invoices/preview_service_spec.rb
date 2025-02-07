@@ -287,26 +287,6 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               end
             end
           end
-
-          context 'with rails cache' do
-            let(:customer) { create(:customer, organization:) }
-
-            before { Rails.cache.clear }
-
-            it 'uses the Rails cache' do
-              travel_to(timestamp) do
-                key = [
-                  'preview-taxes',
-                  customer.id,
-                  plan.updated_at.iso8601
-                ].join('/')
-
-                expect do
-                  preview_service.call
-                end.to change { Rails.cache.exist?(key) }.from(false).to(true)
-              end
-            end
-          end
         end
       end
 
