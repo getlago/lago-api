@@ -18,6 +18,7 @@ RSpec.describe DataExports::Csv::CreditNotes do
         [
           credit_note.id,
           credit_note.sequential_id,
+          credit_note.invoice.self_billed,
           credit_note.issuing_date.iso8601,
           credit_note.customer.id,
           credit_note.customer.external_id,
