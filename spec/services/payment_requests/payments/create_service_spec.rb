@@ -359,6 +359,8 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
               error_code: "code"
             }
           ).on_queue(webhook_queue)
+          .and have_enqueued_mail(PaymentRequestMailer, :requested)
+          .with(params: {payment_request:}, args: [])
       end
 
       context "when payment has a payable_payment_status" do

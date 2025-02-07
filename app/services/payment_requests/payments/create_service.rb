@@ -63,6 +63,7 @@ module PaymentRequests
 
         result
       rescue BaseService::ServiceFailure => e
+        PaymentRequestMailer.with(payment_request: payable).requested.deliver_later
         result.payment = e.result.payment
         deliver_error_webhook(e.result)
         update_payable_payment_status(payment_status: e.result.payment.payable_payment_status)
