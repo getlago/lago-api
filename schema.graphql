@@ -4444,7 +4444,6 @@ enum IntegrationItemTypeEnum {
 }
 
 enum IntegrationTypeEnum {
-  analytics_revenue_streams
   anrok
   api_permissions
   auto_dunning
@@ -6434,7 +6433,6 @@ input PlanOverridesInput {
 }
 
 enum PremiumIntegrationTypeEnum {
-  analytics_revenue_streams
   api_permissions
   auto_dunning
   hubspot

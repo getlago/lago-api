@@ -1,4 +1,3 @@
-
 # frozen_string_literal: true
 
 module Analytics
@@ -6,7 +5,7 @@ module Analytics
     Result = BaseResult[:revenue_streams]
 
     def call
-      return result.forbidden_failure! unless organization.analytics_revenue_streams_enabled?
+      return result.forbidden_failure! unless License.premium?
 
       data_revenue_streams = http_client.get(headers:, **filters)
 

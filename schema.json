@@ -20522,12 +20522,6 @@
           "inputFields": null,
           "enumValues": [
             {
-              "name": "analytics_revenue_streams",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "netsuite",
               "description": null,
               "isDeprecated": false,
@@ -30598,12 +30592,6 @@
           "inputFields": null,
           "enumValues": [
             {
-              "name": "analytics_revenue_streams",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "netsuite",
               "description": null,
               "isDeprecated": false,
@@ -34146,6 +34134,18 @@
               "deprecationReason": null,
               "args": [
                 {
+                  "name": "country",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "CountryCode",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "currency",
                   "description": null,
                   "type": {
@@ -34182,11 +34182,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "country",
+                  "name": "customerType",
                   "description": null,
                   "type": {
                     "kind": "ENUM",
-                    "name": "CountryCode",
+                    "name": "CustomerTypeEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -34206,19 +34206,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "customerType",
-                  "description": null,
-                  "type": {
-                    "kind": "ENUM",
-                    "name": "CustomerTypeEnum",
-                    "ofType": null
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                },
-                {
-                  "name": "planCode",
+                  "name": "externalSubscriptionId",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -34230,7 +34218,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "externalSubscriptionId",
+                  "name": "planCode",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",

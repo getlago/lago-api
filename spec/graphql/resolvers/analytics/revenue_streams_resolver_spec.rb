@@ -49,45 +49,28 @@ RSpec.describe Resolvers::Analytics::RevenueStreamsResolver, type: :graphql do
   context "with premium feature" do
     around { |test| lago_premium!(&test) }
 
-    context "without premium addon" do
-      it "returns an error" do
-        result = execute_graphql(
-          current_user: membership.user,
-          current_organization: organization,
-          permissions: required_permission,
-          query:
-        )
+    let(:body_response) { File.read("spec/fixtures/lago_data_api/revenue_streams.json") }
 
-        expect_graphql_error(result:, message: "unauthorized")
-      end
+    before do
+      stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/")
+        .to_return(status: 200, body: body_response, headers: {})
     end
 
-    context "with premium addon" do
-      let(:body_response) { File.read("spec/fixtures/lago_data_api/revenue_streams.json") }
+    it "returns a list of revenue streams" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
 
-      before do
-        organization.update!(premium_integrations: ["analytics_revenue_streams"])
-
-        stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/")
-          .to_return(status: 200, body: body_response, headers: {})
-      end
-
-      it "returns a list of revenue streams" do
-        result = execute_graphql(
-          current_user: membership.user,
-          current_organization: organization,
-          permissions: required_permission,
-          query:
-        )
-
-        revenue_streams_response = result["data"]["revenueStreams"]
-        expect(revenue_streams_response['collection'].first).to include(
-          {
-            "fromDate" => "2024-01-01",
-            "toDate" => "2024-01-31"
-          }
-        )
-      end
+      revenue_streams_response = result["data"]["revenueStreams"]
+      expect(revenue_streams_response['collection'].first).to include(
+        {
+          "fromDate" => "2024-01-01",
+          "toDate" => "2024-01-31"
+        }
+      )
     end
   end
 end
