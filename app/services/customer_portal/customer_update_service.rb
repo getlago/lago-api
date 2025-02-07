@@ -42,7 +42,7 @@ module CustomerPortal
         customer.reload
 
         tax_codes = []
-        if customer.organization.eu_tax_management
+        if customer.billing_entity.eu_tax_management
           # This service does not return a 'result' object but a string
           tax_codes << Customers::EuAutoTaxesService.call(customer:)
         end

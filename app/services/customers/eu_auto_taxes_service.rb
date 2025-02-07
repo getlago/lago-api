@@ -6,7 +6,7 @@ module Customers
   class EuAutoTaxesService < BaseService
     def initialize(customer:)
       @customer = customer
-      @organization_country_code = customer.organization.country
+      @entity_country_code = customer.billing_entity.country
 
       super
     end
@@ -21,7 +21,7 @@ module Customers
 
     private
 
-    attr_reader :customer, :organization_country_code
+    attr_reader :customer, :entity_country_code
 
     def vies_check
       vies_check = Valvat.new(customer.tax_identification_number).exists?(detail: true)
@@ -31,9 +31,9 @@ module Customers
     end
 
     def process_vies_tax(customer_vies)
-      return 'lago_eu_reverse_charge' unless organization_country_code.casecmp?(customer_vies[:country_code])
+      return 'lago_eu_reverse_charge' unless entity_country_code.casecmp?(customer_vies[:country_code])
 
-      standard_code = "lago_eu_#{organization_country_code.downcase}_standard"
+      standard_code = "lago_eu_#{entity_country_code.downcase}_standard"
       return standard_code if customer.zipcode.blank?
       return standard_code if applicable_tax_exceptions(country_code: customer_vies[:country_code]).blank?
 
@@ -42,7 +42,7 @@ module Customers
     end
 
     def process_not_vies_tax
-      return "lago_eu_#{organization_country_code.downcase}_standard" if customer.country.blank?
+      return "lago_eu_#{entity_country_code.downcase}_standard" if customer.country.blank?
       return "lago_eu_#{customer.country.downcase}_standard" if eu_countries_code.include?(customer.country.upcase)
 
       'lago_eu_tax_exempt'
