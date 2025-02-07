@@ -16,7 +16,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
   describe "#call" do
     let(:result) do
       BaseService::Result.new.tap do |r|
-        r.payment = OpenStruct.new(payable_payment_status: "processing")
+        r.payment = instance_double(Payment, payable_payment_status: "processing")
       end
     end
 
@@ -193,7 +193,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
     context "when provider service raises a service failure" do
       let(:result) do
         BaseService::Result.new.tap do |r|
-          r.payment = OpenStruct.new(status: "failed", payable_payment_status: "failed")
+          r.payment = instance_double(Payment, status: "failed", payable_payment_status: "failed")
           r.error_message = "error"
           r.error_code = "code"
           r.reraise = true
@@ -223,7 +223,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       context "when payment has a payable_payment_status" do
         let(:result) do
           BaseService::Result.new.tap do |r|
-            r.payment = OpenStruct.new(payable_payment_status: "failed")
+            r.payment = instance_double(Payment, payable_payment_status: "failed")
             r.error_message = "error"
             r.error_code = "code"
             r.reraise = true
@@ -270,7 +270,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       context "when payable_payment_status is pending" do
         let(:result) do
           BaseService::Result.new.tap do |r|
-            r.payment = OpenStruct.new(status: "failed", payable_payment_status: "pending")
+            r.payment = instance_double(Payment, status: "failed", payable_payment_status: "pending")
             r.error_message = "stripe_error"
             r.error_code = "amount_too_small"
           end

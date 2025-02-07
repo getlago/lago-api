@@ -26,7 +26,7 @@ RSpec.describe WebhookEndpoints::UpdateService, type: :service do
     end
 
     context 'when webhook endpoint does not exist' do
-      let(:webhook_endpoint) { OpenStruct.new(id: '123456') }
+      let(:webhook_endpoint) { instance_double(WebhookEndpoint, id: '123456') }
 
       it 'returns a not found error' do
         result = update_service.call

@@ -51,7 +51,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
 
     let(:service_result) do
       BaseService::Result.new.tap do |r|
-        r.payment = OpenStruct.new(payable_payment_status: "succeeded")
+        r.payment = instance_double(Payment, payable_payment_status: "succeeded")
       end
     end
 
@@ -83,7 +83,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
 
       let(:service_result) do
         BaseService::Result.new.tap do |r|
-          r.payment = OpenStruct.new(payable_payment_status: "succeeded")
+          r.payment = instance_double(Payment, payable_payment_status: "succeeded")
         end
       end
 
@@ -124,7 +124,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       context "when the payment fails" do
         let(:service_result) do
           BaseService::Result.new.tap do |r|
-            r.payment = OpenStruct.new(payable_payment_status: "failed")
+            r.payment = instance_double(Payment, payable_payment_status: "failed")
           end
         end
 
@@ -181,7 +181,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       context "when the payment fails" do
         let(:service_result) do
           BaseService::Result.new.tap do |r|
-            r.payment = OpenStruct.new(payable_payment_status: "failed")
+            r.payment = instance_double(Payment, payable_payment_status: "failed")
           end
         end
 
@@ -231,7 +231,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       context "when the payment fails" do
         let(:service_result) do
           BaseService::Result.new.tap do |r|
-            r.payment = OpenStruct.new(payable_payment_status: "failed")
+            r.payment = instance_double(Payment, payable_payment_status: "failed")
           end
         end
 
@@ -334,7 +334,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
     context "when provider service raises a service failure" do
       let(:service_result) do
         BaseService::Result.new.tap do |r|
-          r.payment = OpenStruct.new(status: "pending", payable_payment_status: "pending")
+          r.payment = instance_double(Payment, status: "pending", payable_payment_status: "pending")
           r.error_message = "error"
           r.error_code = "code"
           r.reraise = true
@@ -364,7 +364,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       context "when payment has a payable_payment_status" do
         let(:service_result) do
           BaseService::Result.new.tap do |r|
-            r.payment = OpenStruct.new(payable_payment_status: "failed")
+            r.payment = instance_double(Payment, payable_payment_status: "failed")
             r.error_message = "error"
             r.error_code = "code"
             r.reraise = true
@@ -382,7 +382,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       context "when payable_payment_status is pending" do
         let(:service_result) do
           BaseService::Result.new.tap do |r|
-            r.payment = OpenStruct.new(status: "failed", payable_payment_status: "pending")
+            r.payment = instance_double(Payment, status: "failed", payable_payment_status: "pending")
             r.error_message = "stripe_error"
             r.error_code = "amount_too_small"
           end
@@ -407,7 +407,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
     context "when payment status is processing" do
       let(:service_result) do
         BaseService::Result.new.tap do |r|
-          r.payment = OpenStruct.new(payable_payment_status: "pending", status: "processing")
+          r.payment = instance_double(Payment, payable_payment_status: "pending", status: "processing")
         end
       end
 
