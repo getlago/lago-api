@@ -6,7 +6,7 @@ module WalletTransactions
 
     def perform(organization_id:, params:, new_wallet: false)
       organization = Organization.find(organization_id)
-      WalletTransactions::CreateService.call(organization:, params:)
+      WalletTransactions::CreateService.call!(organization:, params:)
 
       if new_wallet
         SendWebhookJob.perform_later('wallet.created', Wallet.find_by(id: params[:wallet_id]))
