@@ -22518,6 +22518,22 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "acceptNewFees",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "chargeAmountCents",
               "description": null,
               "type": {
