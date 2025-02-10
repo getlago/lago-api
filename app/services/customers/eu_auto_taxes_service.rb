@@ -34,10 +34,14 @@ module Customers
     attr_reader :customer, :organization_country_code, :tax_attributes_changed, :new_record
 
     def vies_check
+      return nil if customer.tax_identification_number.blank?
+
       vies_check = Valvat.new(customer.tax_identification_number).exists?(detail: true)
       after_commit { SendWebhookJob.perform_later('customer.vies_check', customer, vies_check:) }
 
       vies_check
+    rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester => _e
+      nil
     end
 
     def process_vies_tax(customer_vies)
