@@ -25,15 +25,5 @@ module Organizations
     private
 
     attr_reader :organization, :grace_period
-
-    def grace_period_payment_due_date(invoice)
-      invoice.issuing_date + invoice.customer.applicable_net_payment_term.days
-    end
-
-    def old_applicable_grace_period(customer, old_org_grace_period)
-      return customer.invoice_grace_period if customer.invoice_grace_period.present?
-
-      old_org_grace_period
-    end
   end
 end
