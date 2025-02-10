@@ -22542,7 +22542,7 @@
           "possibleTypes": null,
           "fields": [
             {
-              "name": "acceptNewFees",
+              "name": "acceptNewChargeFees",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
