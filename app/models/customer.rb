@@ -35,6 +35,7 @@ class Customer < ApplicationRecord
   before_save :ensure_slug
 
   belongs_to :organization
+  belongs_to :billing_entity
   belongs_to :applied_dunning_campaign, optional: true, class_name: "DunningCampaign"
 
   has_many :subscriptions
@@ -142,7 +143,7 @@ class Customer < ApplicationRecord
   def applicable_invoice_custom_sections
     return [] if skip_invoice_custom_sections?
 
-    selected_invoice_custom_sections.order(:name).presence || organization.selected_invoice_custom_sections.order(:name)
+    selected_invoice_custom_sections.order(:name).presence || billing_entity.selected_invoice_custom_sections.order(:name)
   end
 
   def editable?
@@ -279,6 +280,7 @@ end
 #  created_at                       :datetime         not null
 #  updated_at                       :datetime         not null
 #  applied_dunning_campaign_id      :uuid
+#  billing_entity_id                :uuid
 #  external_id                      :string           not null
 #  external_salesforce_id           :string
 #  organization_id                  :uuid             not null
@@ -288,6 +290,7 @@ end
 #
 #  index_customers_on_account_type                     (account_type)
 #  index_customers_on_applied_dunning_campaign_id      (applied_dunning_campaign_id)
+#  index_customers_on_billing_entity_id                (billing_entity_id)
 #  index_customers_on_deleted_at                       (deleted_at)
 #  index_customers_on_external_id_and_organization_id  (external_id,organization_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_customers_on_organization_id                  (organization_id)

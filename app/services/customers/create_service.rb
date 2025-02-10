@@ -5,7 +5,8 @@ module Customers
     include Customers::PaymentProviderFinder
 
     def create_from_api(organization:, params:)
-      customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
+      billing_entity_id = params.fetch(:billing_entity_id, organization.billing_entities.first.id)
+      customer = organization.customers.find_or_initialize_by(external_id: params[:external_id], billing_entity_id: billing_entity_id)
       new_customer = customer.new_record?
       shipping_address = params[:shipping_address] ||= {}
 
@@ -142,6 +143,7 @@ module Customers
 
       customer = Customer.new(
         organization_id: args[:organization_id],
+        billing_entity_id: args[:billing_entity_id],
         external_id: args[:external_id],
         name: args[:name],
         country: args[:country]&.upcase,

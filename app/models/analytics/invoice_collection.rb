@@ -27,6 +27,10 @@ module Analytics
           and_currency_sql = sanitize_sql(['AND currency = :currency', args[:currency].upcase])
         end
 
+        if args[:billing_entity_id].present?
+          and_billing_entity_sql = sanitize_sql(['AND billing_entity_id = :billing_entity_id', args[:billing_entity_id]])
+        end
+
         sql = <<~SQL.squish
           WITH organization_creation_date AS (
             SELECT
@@ -60,6 +64,7 @@ module Analytics
             AND i.status = 1
             AND i.payment_dispute_lost_at IS NULL
             #{and_external_customer_id_sql}
+            #{and_billing_entity_sql}
             GROUP BY payment_status, month, i.currency
           )
           SELECT

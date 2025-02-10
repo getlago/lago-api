@@ -107,7 +107,7 @@ module Invoices
     end
 
     def should_deliver_email?
-      License.premium? && customer.organization.email_settings.include?('invoice.finalized')
+      License.premium? && customer.billing_entity.email_settings.include?('invoice.finalized')
     end
 
     def wallet
@@ -151,6 +151,7 @@ module Invoices
       error_result = ErrorDetails::CreateService.call(
         owner: invoice,
         organization: invoice.organization,
+        billing_entity: invoice.billing_entity,
         params: {
           error_code: :tax_error,
           details: {

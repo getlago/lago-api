@@ -15,6 +15,7 @@ module ErrorDetails
       new_error = ErrorDetail.create!(
         owner:,
         organization:,
+        billing_entity:,
         error_code: params[:error_code],
         details: params[:details]
       )

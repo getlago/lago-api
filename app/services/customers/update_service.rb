@@ -138,7 +138,7 @@ module Customers
         customer.save!
         customer.reload
 
-        if organization.eu_tax_management
+        if customer.billing_entity.eu_tax_management
           eu_tax_code = Customers::EuAutoTaxesService.call(customer:)
 
           args[:tax_codes] ||= []
