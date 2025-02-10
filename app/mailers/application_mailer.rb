@@ -8,6 +8,7 @@ class ApplicationMailer < ActionMailer::Base
   before_action :set_shared_variables
 
   def set_shared_variables
+    @show_lago_logo = true
     @lago_logo_url = "https://assets.getlago.com/lago-logo-email.png"
   end
 end

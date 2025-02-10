@@ -7,6 +7,7 @@ class CreditNoteMailer < ApplicationMailer
     @credit_note = params[:credit_note]
     @organization = @credit_note.organization
     @customer = @credit_note.customer
+    @show_lago_logo = !@organization.remove_branding_watermark_enabled?
 
     return if @organization.email.blank?
     return if @customer.email.blank?
