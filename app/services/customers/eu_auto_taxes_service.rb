@@ -4,30 +4,44 @@ require 'valvat'
 
 module Customers
   class EuAutoTaxesService < BaseService
-    def initialize(customer:)
+    Result = BaseResult[:tax_code]
+
+    def initialize(customer:, new_record:, tax_attributes_changed:)
       @customer = customer
       @organization_country_code = customer.organization.country
+      @new_record = new_record
+      @tax_attributes_changed = tax_attributes_changed
 
       super
     end
 
     def call
+      return result.not_allowed_failure!(code: 'eu_tax_not_applicable') unless should_apply_eu_taxes?
+
       customer_vies = vies_check
 
-      return process_vies_tax(customer_vies) if customer_vies.present?
+      result.tax_code = if customer_vies.present?
+        process_vies_tax(customer_vies)
+      else
+        process_not_vies_tax
+      end
 
-      process_not_vies_tax
+      result
     end
 
     private
 
-    attr_reader :customer, :organization_country_code
+    attr_reader :customer, :organization_country_code, :tax_attributes_changed, :new_record
 
     def vies_check
+      return nil if customer.tax_identification_number.blank?
+
       vies_check = Valvat.new(customer.tax_identification_number).exists?(detail: true)
       after_commit { SendWebhookJob.perform_later('customer.vies_check', customer, vies_check:) }
 
       vies_check
+    rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester => _e
+      nil
     end
 
     def process_vies_tax(customer_vies)
@@ -60,6 +74,15 @@ module Customers
 
     def eu_country_exceptions(country_code:)
       @eu_country_exceptions ||= LagoEuVat::Rate.new.country_rates(country_code:)[:exceptions]
+    end
+
+    def should_apply_eu_taxes?
+      return false unless customer.organization.eu_tax_management
+      return true if new_record
+
+      non_existing_eu_taxes = customer.taxes.where('code ILIKE ?', 'lago_eu%').none?
+
+      non_existing_eu_taxes || tax_attributes_changed
     end
   end
 end

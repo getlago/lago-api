@@ -13,6 +13,8 @@ module CustomerPortal
       return result.not_found_failure!(resource: "customer") unless customer
 
       ActiveRecord::Base.transaction do
+        original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
+
         customer.customer_type = args[:customer_type] if args.key?(:customer_type)
         customer.name = args[:name] if args.key?(:name)
         customer.firstname = args[:firstname] if args.key?(:firstname)
@@ -42,10 +44,13 @@ module CustomerPortal
         customer.reload
 
         tax_codes = []
-        if customer.organization.eu_tax_management
-          # This service does not return a 'result' object but a string
-          tax_codes << Customers::EuAutoTaxesService.call(customer:)
-        end
+        # This service does not return a 'result' object but a string
+        eu_tax_code_result = Customers::EuAutoTaxesService.call(
+          customer:,
+          new_record: false,
+          tax_attributes_changed: original_tax_values.any? { |key, value| args.key?(key) && args[key] != value }
+        )
+        tax_codes << eu_tax_code_result.tax_code if eu_tax_code_result.success?
 
         if tax_codes.present?
           taxes_result = Customers::ApplyTaxesService.call(customer:, tax_codes:)

@@ -87,13 +87,15 @@ RSpec.describe CustomerPortal::CustomerUpdateService, type: :service do
     let(:eu_auto_tax_service) { instance_double(Customers::EuAutoTaxesService) }
     let(:organization) { customer.organization }
     let(:tax_code) { "lago_eu_fr_standard" }
+    let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new }
 
     before do
       create(:tax, organization:, code: "lago_eu_fr_standard", rate: 20.0)
       organization.update!(eu_tax_management: true)
 
+      eu_tax_result.tax_code = tax_code
       allow(Customers::EuAutoTaxesService).to receive(:new).and_return(eu_auto_tax_service)
-      allow(eu_auto_tax_service).to receive(:call).and_return(tax_code)
+      allow(eu_auto_tax_service).to receive(:call).and_return(eu_tax_result)
     end
 
     it "assigns the right tax to the customer", :aggregate_failures do
@@ -101,6 +103,16 @@ RSpec.describe CustomerPortal::CustomerUpdateService, type: :service do
 
       tax = result.customer.taxes.first
       expect(tax.code).to eq(tax_code)
+    end
+
+    context 'when eu tax code is not applicable' do
+      let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new.not_allowed_failure!(code: '') }
+
+      it 'does not apply tax' do
+        expect(result).to be_success
+
+        expect(result.customer.taxes).to eq([])
+      end
     end
 
     context "when applying taxes fails" do
