@@ -120,6 +120,10 @@ class BaseService
       !failure
     end
 
+    def failure?
+      failure
+    end
+
     def fail_with_error!(error)
       @failure = true
       @error = error
