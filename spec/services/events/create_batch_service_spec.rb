@@ -238,6 +238,29 @@ RSpec.describe Events::CreateBatchService, type: :service do
         expect(result).to be_success
         result.events.each { |event| expect(event.properties["result"]).to eq('bar-bar') }
       end
+
+      context "when not all the event properties are not provided" do
+        let(:events_params) do
+          {
+            events: [
+              {
+                external_subscription_id: SecureRandom.uuid,
+                code:,
+                transaction_id: SecureRandom.uuid,
+                properties: {},
+                timestamp:
+              }
+            ]
+          }
+        end
+
+        it "returns a failure when the expression fails to evaluate" do
+          result = create_batch_service.call
+
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+        end
+      end
     end
 
     context 'when timestamp is sent with decimal precision' do
