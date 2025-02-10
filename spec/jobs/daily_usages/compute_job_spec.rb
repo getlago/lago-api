@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe DailyUsages::ComputeJob, type: :job do
   subject(:compute_job) { described_class }
@@ -10,8 +10,8 @@ RSpec.describe DailyUsages::ComputeJob, type: :job do
 
   let(:result) { BaseService::Result.new }
 
-  describe '.perform' do
-    it 'removes all old webhooks' do
+  describe ".perform" do
+    it "delegates to DailyUsages::ComputeService" do
       allow(DailyUsages::ComputeService).to receive(:call)
         .with(subscription:, timestamp:)
         .and_return(result)
