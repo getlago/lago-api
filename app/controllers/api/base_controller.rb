@@ -21,20 +21,19 @@ module Api
     def authenticate
       return unauthorized_error unless auth_token
 
-      @current_api_key = ApiKey.find_by(value: auth_token)
-
+      @current_api_key, organization = ApiKeys::CacheService.call(auth_token, with_cache: cached_api_key?)
       return unauthorized_error unless current_api_key
 
-      @current_organization = current_api_key.organization
+      @current_organization = organization
       true
     end
 
     def auth_token
-      request.headers['Authorization']&.split(' ')&.second
+      request.headers["Authorization"]&.split(" ")&.second
     end
 
     def set_context_source
-      CurrentContext.source = 'api'
+      CurrentContext.source = "api"
     end
 
     def track_api_key_usage
@@ -61,7 +60,11 @@ module Api
     end
 
     def mode
-      (request.method == 'GET') ? 'read' : 'write'
+      (request.method == "GET") ? "read" : "write"
+    end
+
+    def cached_api_key?
+      false
     end
   end
 end

@@ -2,6 +2,8 @@
 
 module Organizations
   class UpdateService < BaseService
+    Result = BaseResult[:organization]
+
     def initialize(organization:, params:)
       @organization = organization
       @params = params
@@ -58,6 +60,8 @@ module Organizations
 
       organization.save!
 
+      ApiKeys::CacheService.expire_all_cache(organization)
+
       result.organization = organization
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -80,16 +84,16 @@ module Organizations
     def handle_base64_logo
       return if params[:logo].blank?
 
-      base64_data = params[:logo].split(',')
+      base64_data = params[:logo].split(",")
       data = base64_data.second
       decoded_base_64_data = Base64.decode64(data)
 
       # NOTE: data:image/png;base64, should give image/png content_type
-      content_type = base64_data.first.split(';').first.split(':').second
+      content_type = base64_data.first.split(";").first.split(":").second
 
       organization.logo.attach(
         io: StringIO.new(decoded_base_64_data),
-        filename: 'logo',
+        filename: "logo",
         content_type:
       )
     end
@@ -97,7 +101,7 @@ module Organizations
     def handle_eu_tax_management(eu_tax_management)
       trying_to_enable_eu_tax_management = params[:eu_tax_management] && !organization.eu_tax_management
       if !organization.eu_vat_eligible? && trying_to_enable_eu_tax_management
-        result.single_validation_failure!(error_code: 'org_must_be_in_eu', field: :eu_tax_management)
+        result.single_validation_failure!(error_code: "org_must_be_in_eu", field: :eu_tax_management)
           .raise_if_error!
       end
 
