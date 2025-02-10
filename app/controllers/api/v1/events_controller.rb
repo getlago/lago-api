@@ -3,7 +3,13 @@
 module Api
   module V1
     class EventsController < Api::BaseController
-      ACTIONS_WITH_CACHED_API_KEY = %i[create batch estimate_instant_fees batch_estimate_instant_fees].freeze
+      ACTIONS_WITH_CACHED_API_KEY = %i[
+        create
+        high_usage
+        batch
+        estimate_instant_fees
+        batch_estimate_instant_fees
+      ].freeze
 
       def create
         result = ::Events::CreateService.call(
@@ -25,6 +31,20 @@ module Api
         end
       end
 
+      def high_usage
+        result = ::Events::HighUsageCreateService.call(
+          organization: current_organization,
+          params: create_params,
+          timestamp: Time.current.to_f
+        )
+
+        if result.success?
+          render(json: {event: {transaction_id: result.transaction_id}})
+        else
+          render_error_response(result)
+        end
+      end
+
       def batch
         result = ::Events::CreateBatchService.call(
           organization: current_organization,
@@ -41,6 +61,20 @@ module Api
               collection_name: "events"
             )
           )
+        else
+          render_error_response(result)
+        end
+      end
+
+      def batch_high_usage
+        result = ::Events::HighUsageBatchCreateService.call(
+          organization: current_organization,
+          params: batch_params[:events],
+          timestamp: Time.current.to_f
+        )
+
+        if result.success?
+          render(json: {events: result.transactions})
         else
           render_error_response(result)
         end
