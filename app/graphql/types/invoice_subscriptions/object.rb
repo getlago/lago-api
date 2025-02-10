@@ -52,7 +52,7 @@ module Types
       end
 
       def accept_new_charge_fees
-        return false if object.invoice.skip_charge?
+        return false if object.invoice.skip_charges
 
         object.subscription_periodic? || object.subscription_terminating?
       end
