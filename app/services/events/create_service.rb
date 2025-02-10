@@ -21,7 +21,8 @@ module Events
       event.timestamp = Time.zone.at(params[:timestamp] ? Float(params[:timestamp]) : timestamp)
       event.precise_total_amount_cents = params[:precise_total_amount_cents]
 
-      CalculateExpressionService.call(organization:, event:).raise_if_error!
+      expression_result = CalculateExpressionService.call(organization:, event:)
+      return result.validation_failure!(errors: expression_result.error.message) unless expression_result.success?
 
       event.save! unless organization.clickhouse_events_store?
 

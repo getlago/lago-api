@@ -80,6 +80,49 @@ RSpec.describe Api::V1::EventsController, type: :request do
         expect(json[:error_details]).to eq({timestamp: ["invalid_format"]})
       end
     end
+
+    context "with expression configured on billable metric" do
+      let(:metric) { create(:billable_metric, field_name: "value", organization:, expression: "event.properties.a + event.properties.b") }
+      let(:create_params) do
+        {
+          code: metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: subscription.external_id,
+          timestamp: Time.current.to_i,
+          properties: {
+            a: '1',
+            b: '2'
+          }
+        }
+      end
+
+      it "evaluates the expression and stores the result" do
+        expect { subject }.to change(Event, :count).by(1)
+
+        expect(response).to have_http_status(:success)
+        expect(json[:event][:properties]).to include(value: "3.0")
+      end
+
+      context "when sending incomplete properties for expression" do
+        let(:create_params) do
+          {
+            code: metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            timestamp: Time.current.to_i,
+            properties: {
+              a: '1'
+            }
+          }
+        end
+
+        it "fails with a 422 error" do
+          expect { subject }.not_to change(Event, :count)
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details]).to include("Variable: b not found")
+        end
+      end
+    end
   end
 
   describe 'POST /api/v1/events/batch' do
