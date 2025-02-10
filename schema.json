@@ -20592,6 +20592,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "remove_branding_watermark",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -30647,6 +30653,12 @@
             },
             {
               "name": "zero_amount_fees",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "remove_branding_watermark",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
