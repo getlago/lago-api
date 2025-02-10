@@ -7,9 +7,10 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
   subject(:eu_tax_service) { described_class.new(customer:, new_record:, tax_attributes_changed:) }
 
   let(:organization) { create(:organization, country: 'FR', eu_tax_management: true) }
-  let(:customer) { create(:customer, organization:, zipcode: nil) }
+  let(:customer) { create(:customer, organization:, tax_identification_number:, zipcode: nil) }
   let(:new_record) { true }
   let(:tax_attributes_changed) { true }
+  let(:tax_identification_number) { Faker::Number.number(digits: 10) }
 
   describe '.call' do
     context 'with B2B organization' do
@@ -19,6 +20,31 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
       before do
         allow(Valvat).to receive(:new).and_return(vies_service)
         allow(vies_service).to receive(:exists?).and_return(vies_response)
+      end
+
+      context 'when tax_identification_number is blank' do
+        let(:tax_identification_number) { nil }
+
+        before { customer.update!(country: "DE") }
+
+        it 'returns the default tax code' do
+          result = eu_tax_service.call
+
+          expect(result.tax_code).to eq('lago_eu_de_standard')
+        end
+      end
+
+      context 'when VIES check raises an error' do
+        before do
+          allow(vies_service).to receive(:exists?).and_raise(Valvat::RateLimitError.new(nil, nil))
+          customer.update!(country: "DE")
+        end
+
+        it 'returns the default tax code' do
+          result = eu_tax_service.call
+
+          expect(result.tax_code).to eq('lago_eu_de_standard')
+        end
       end
 
       context 'when eu_tax_management is false' do
