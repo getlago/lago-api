@@ -565,7 +565,4 @@ html
 
       p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
 
-      .powered-by
-        span.body-2
-          | #{I18n.t('invoice.powered_by')} &nbsp;
-        img src="#{::SlimHelper::PDF_LOGO_FILENAME}" alt="Lago Logo"
+      == SlimHelper.render('templates/invoices/v4/_powered_by_logo', self)

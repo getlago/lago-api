@@ -6,6 +6,7 @@ class PaymentRequestMailer < ApplicationMailer
   def requested
     @payment_request = params[:payment_request]
     @organization = @payment_request.organization
+    @show_lago_logo = !@organization.remove_branding_watermark_enabled?
 
     return if @payment_request.email.blank?
     return if @organization.email.blank?

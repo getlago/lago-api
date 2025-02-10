@@ -75,6 +75,7 @@ class Organization < ApplicationRecord
     api_permissions
     revenue_share
     zero_amount_fees
+    remove_branding_watermark
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 

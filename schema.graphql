@@ -4451,6 +4451,7 @@ enum IntegrationTypeEnum {
   netsuite
   okta
   progressive_billing
+  remove_branding_watermark
   revenue_analytics
   revenue_share
   salesforce
@@ -6438,6 +6439,7 @@ enum PremiumIntegrationTypeEnum {
   netsuite
   okta
   progressive_billing
+  remove_branding_watermark
   revenue_analytics
   revenue_share
   salesforce
