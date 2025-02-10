@@ -43,6 +43,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
 
   it 'creates a wallet' do
     allow(WalletTransactions::CreateJob).to receive(:perform_later)
+    allow(SendWebhookJob).to receive(:perform_later)
 
     result = execute_graphql(
       current_user: membership.user,
@@ -91,9 +92,9 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
 
     expect(WalletTransactions::CreateJob).to have_received(:perform_later).with(
       organization_id: membership.organization.id,
-      params: Hash,
-      new_wallet: true
+      params: Hash
     )
+    expect(SendWebhookJob).to have_received(:perform_later).with('wallet.created', Wallet)
   end
 
   context 'when name is not present' do

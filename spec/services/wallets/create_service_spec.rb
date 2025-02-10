@@ -47,6 +47,11 @@ RSpec.describe Wallets::CreateService, type: :service do
       end
     end
 
+    it 'sends `wallet.created` webhook' do
+      expect { service_result }
+        .to have_enqueued_job(SendWebhookJob).with('wallet.created', Wallet)
+    end
+
     it 'enqueues the WalletTransaction::CreateJob' do
       expect { service_result }
         .to have_enqueued_job(WalletTransactions::CreateJob)

@@ -39,8 +39,8 @@ module Wallets
 
       result.wallet = wallet
 
-      # Webhook `wallet.created` is sent after this job
-      # so the wallet balance always include the paid or granted credit.
+      SendWebhookJob.perform_later('wallet.created', wallet)
+
       WalletTransactions::CreateJob.perform_later(
         organization_id: params[:organization_id],
         params: {
@@ -49,8 +49,7 @@ module Wallets
           granted_credits: params[:granted_credits],
           source: :manual,
           metadata: params[:transaction_metadata]
-        },
-        new_wallet: true
+        }
       )
 
       result

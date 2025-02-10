@@ -31,34 +31,32 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     include_examples 'requires API permission', 'wallet', 'write'
 
     it 'creates a wallet' do
-      allow(WalletTransactions::CreateService).to receive(:call)
+      allow(WalletTransactions::CreateService).to receive(:call!).and_call_original
       allow(SendWebhookJob).to receive(:perform_later).and_call_original
       stub_pdf_generation
 
       subject
       perform_all_enqueued_jobs
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
+      expect(response).to have_http_status(:success)
 
-        expect(json[:wallet][:lago_id]).to be_present
-        expect(json[:wallet][:name]).to eq(create_params[:name])
-        expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
-        expect(json[:wallet][:expiration_at]).to eq(expiration_at)
-        expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
+      expect(json[:wallet][:lago_id]).to be_present
+      expect(json[:wallet][:name]).to eq(create_params[:name])
+      expect(json[:wallet][:external_customer_id]).to eq(customer.external_id)
+      expect(json[:wallet][:expiration_at]).to eq(expiration_at)
+      expect(json[:wallet][:invoice_requires_successful_payment]).to eq(true)
 
-        expect(SendWebhookJob).to have_received(:perform_later).with('wallet.created', Wallet)
+      expect(SendWebhookJob).to have_received(:perform_later).with('wallet.created', Wallet)
 
-        expect(WalletTransactions::CreateService).to have_received(:call).with(
-          organization: organization,
-          params: hash_including(
-            wallet_id: json[:wallet][:lago_id],
-            paid_credits: '10',
-            granted_credits: '10',
-            source: :manual
-          )
+      expect(WalletTransactions::CreateService).to have_received(:call!).with(
+        organization: organization,
+        params: hash_including(
+          wallet_id: json[:wallet][:lago_id],
+          paid_credits: '10',
+          granted_credits: '10',
+          source: :manual
         )
-      end
+      )
     end
 
     context 'with transaction metadata' do
@@ -86,8 +84,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           organization_id: organization.id,
           params: hash_including(
             metadata: [{key: 'valid_value', value: 'also_valid'}]
-          ),
-          new_wallet: true
+          )
         )
       end
 
