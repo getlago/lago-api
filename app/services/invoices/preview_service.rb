@@ -152,12 +152,12 @@ module Invoices
     end
 
     def apply_provider_taxes
-      taxes_result = fetch_provider_taxes
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
 
       if taxes_result.success?
         result.fees_taxes = taxes_result.fees
         invoice.fees.each do |fee|
-          fee_taxes = result.fees_taxes.find { |item| item.item_id == fee.id }
+          fee_taxes = result.fees_taxes.find { |item| item.item_key == fee.item_key }
 
           res = Fees::ApplyProviderTaxesService.call(fee:, fee_taxes:)
           res.raise_if_error!
@@ -172,35 +172,9 @@ module Invoices
       apply_zero_tax
     end
 
-    def provider_taxes_cache_key
-      [
-        "preview-taxes",
-        customer.id,
-        subscription.plan.updated_at.iso8601
-      ].join("/")
-    end
-
     def apply_zero_tax
       invoice.taxes_amount_cents = 0
       invoice.taxes_rate = 0
-    end
-
-    def fetch_provider_taxes
-      if customer.persisted?
-        taxes_result = Rails.cache.read(provider_taxes_cache_key)
-
-        unless taxes_result
-          taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(
-            invoice:,
-            fees: invoice.fees
-          )
-          Rails.cache.write(provider_taxes_cache_key, taxes_result, expires_in: 24.hours) if taxes_result.success?
-        end
-
-        taxes_result
-      else
-        Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
-      end
     end
 
     def provider_taxation?
