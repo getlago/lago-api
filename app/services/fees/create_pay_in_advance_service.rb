@@ -2,7 +2,7 @@
 
 module Fees
   class CreatePayInAdvanceService < BaseService
-    Result = BaseResult[:fees]
+    Result = BaseResult[:fees, :fees_taxes, :invoice_id]
 
     def initialize(charge:, event:, billing_at: nil, estimate: false)
       @charge = charge
