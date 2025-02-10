@@ -152,7 +152,7 @@ module Invoices
     end
 
     def apply_provider_taxes
-      taxes_result = fetch_provider_taxes
+      taxes_result = Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
 
       if taxes_result.success?
         result.fees_taxes = taxes_result.fees
@@ -175,10 +175,6 @@ module Invoices
     def apply_zero_tax
       invoice.taxes_amount_cents = 0
       invoice.taxes_rate = 0
-    end
-
-    def fetch_provider_taxes
-      Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
     end
 
     def provider_taxation?
