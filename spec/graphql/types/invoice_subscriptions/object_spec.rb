@@ -23,5 +23,5 @@ RSpec.describe Types::InvoiceSubscriptions::Object do
   it { is_expected.to have_field(:from_datetime).of_type("ISO8601DateTime") }
   it { is_expected.to have_field(:to_datetime).of_type("ISO8601DateTime") }
 
-  it { is_expected.to have_field(:accept_new_fees).of_type("Boolean!") }
+  it { is_expected.to have_field(:accept_new_charge_fees).of_type("Boolean!") }
 end

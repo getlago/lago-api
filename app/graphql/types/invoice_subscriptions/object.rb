@@ -23,7 +23,7 @@ module Types
       field :from_datetime, GraphQL::Types::ISO8601DateTime, null: true
       field :to_datetime, GraphQL::Types::ISO8601DateTime, null: true
 
-      field :accept_new_fees, Boolean, null: false
+      field :accept_new_charge_fees, Boolean, null: false
 
       def in_advance_charges_from_datetime
         return nil unless should_use_in_advance_charges_interval
