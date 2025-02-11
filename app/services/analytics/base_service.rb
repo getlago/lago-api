@@ -5,6 +5,7 @@ module Analytics
     def initialize(organization, **filters)
       @organization = organization
       @filters = filters
+
       super()
     end
 
