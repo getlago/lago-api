@@ -45,7 +45,7 @@ RSpec.describe Events::HighUsageBatchCreateService, type: :service do
       ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] = "raw_events"
 
       allow(Karafka).to receive(:producer).and_return(karafka_producer)
-      allow(karafka_producer).to receive(:produce_async)
+      allow(karafka_producer).to receive(:produce_many_sync)
     end
 
     after do
@@ -56,7 +56,7 @@ RSpec.describe Events::HighUsageBatchCreateService, type: :service do
     it "produces the event on kafka" do
       expect(create_batch_service.call).to be_success
 
-      expect(karafka_producer).to have_received(:produce_async).exactly(100)
+      expect(karafka_producer).to have_received(:produce_many_sync).once
     end
 
     context "when no events are provided" do
@@ -128,21 +128,23 @@ RSpec.describe Events::HighUsageBatchCreateService, type: :service do
 
           params = events_params.first
 
-          expect(karafka_producer).to have_received(:produce_async)
+          expect(karafka_producer).to have_received(:produce_many_sync)
             .with(
-              topic: "raw_events",
-              key: "#{organization.id}-#{params[:external_subscription_id]}",
-              payload: {
-                organization_id: organization.id,
-                external_subscription_id: params[:external_subscription_id],
-                transaction_id: params[:transaction_id],
-                timestamp: creation_timestamp.to_i,
-                code: params[:code],
-                precise_total_amount_cents: "0.0",
-                properties: {foo: "bar"},
-                ingested_at: Time.current.iso8601[...-1],
-                source: "http_ruby_high_usage"
-              }.to_json
+              [{
+                topic: "raw_events",
+                key: "#{organization.id}-#{params[:external_subscription_id]}",
+                payload: {
+                  organization_id: organization.id,
+                  external_subscription_id: params[:external_subscription_id],
+                  transaction_id: params[:transaction_id],
+                  timestamp: creation_timestamp.to_i,
+                  code: params[:code],
+                  precise_total_amount_cents: "0.0",
+                  properties: {foo: "bar"},
+                  ingested_at: Time.current.iso8601[...-1],
+                  source: "http_ruby_high_usage"
+                }.to_json
+              }]
             )
         end
       end

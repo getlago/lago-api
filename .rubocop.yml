@@ -20,13 +20,13 @@ AllCops:
   NewCops: disable
   DisplayStyleGuide: true
   Exclude:
-    - "bin/**/*"
-    - "db/schema.rb"
-    - "db/*_schema.rb"
-    - "storage/**/*"
-    - "tmp/**/*"
-    - "coverage/**/*"
-    - "log/**/*"
+    - 'bin/**/*'
+    - 'db/schema.rb'
+    - 'db/*_schema.rb'
+    - 'storage/**/*'
+    - 'tmp/**/*'
+    - 'coverage/**/*'
+    - 'log/**/*'
 
 # TODO: Fix these services
 Lago/ServiceCall:
@@ -44,18 +44,15 @@ Style/FrozenStringLiteralComment:
   Enabled: true
   SafeAutoCorrect: true
 
-Style/QuotedSymbols:
-  Enabled: false
-
 Performance/CaseWhenSplat:
   Enabled: true
 
 Rails/InverseOf:
-  Description: "Checks for associations where the inverse cannot be determined automatically."
+  Description: 'Checks for associations where the inverse cannot be determined automatically.'
   Enabled: false
 
 Rails/HttpStatus:
-  Description: "Enforces use of symbolic or numeric value to describe HTTP status."
+  Description: 'Enforces use of symbolic or numeric value to describe HTTP status.'
   Enabled: false
 
 Rails/HasManyOrHasOneDependent:
@@ -63,11 +60,11 @@ Rails/HasManyOrHasOneDependent:
   Enabled: false
 
 RSpec/ExampleLength:
-  Description: "Checks for long examples."
+  Description: 'Checks for long examples.'
   Enabled: false
 
 RSpec/MultipleExpectations:
-  Description: "Checks if examples contain too many expect calls."
+  Description: 'Checks if examples contain too many expect calls.'
   Enabled: false
 
 RSpec/MultipleMemoizedHelpers:
@@ -95,10 +92,10 @@ GraphQL/ExtractType:
 
 GraphQL/ExtractInputType:
   Exclude:
-    - "app/graphql/mutations/applied_coupons/create.rb"
-    - "app/graphql/mutations/credit_notes/create.rb"
-    - "app/graphql/mutations/invites/accept.rb"
-    - "app/graphql/mutations/plans/create.rb"
-    - "app/graphql/mutations/plans/update.rb"
-    - "app/graphql/mutations/register_user.rb"
-    - "app/graphql/mutations/wallet_transactions/create.rb"
+    - 'app/graphql/mutations/applied_coupons/create.rb'
+    - 'app/graphql/mutations/credit_notes/create.rb'
+    - 'app/graphql/mutations/invites/accept.rb'
+    - 'app/graphql/mutations/plans/create.rb'
+    - 'app/graphql/mutations/plans/update.rb'
+    - 'app/graphql/mutations/register_user.rb'
+    - 'app/graphql/mutations/wallet_transactions/create.rb'
