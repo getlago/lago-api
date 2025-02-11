@@ -10,8 +10,8 @@ module Resolvers
 
       description "Query revenue streams of an organization"
 
-      argument :country, Types::CountryCodeEnum, required: false
-      argument :currency, Types::CurrencyEnum, required: false
+      argument :customer_country, Types::CountryCodeEnum, required: false
+      argument :customer_currency, Types::CurrencyEnum, required: false
       argument :from_date, GraphQL::Types::ISO8601Date, required: false
       argument :to_date, GraphQL::Types::ISO8601Date, required: false
 

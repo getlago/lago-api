@@ -34134,7 +34134,7 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "country",
+                  "name": "customerCountry",
                   "description": null,
                   "type": {
                     "kind": "ENUM",
@@ -34146,7 +34146,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "currency",
+                  "name": "customerCurrency",
                   "description": null,
                   "type": {
                     "kind": "ENUM",
@@ -35682,7 +35682,7 @@
               "args": []
             },
             {
-              "name": "currency",
+              "name": "customerCurrency",
               "description": null,
               "type": {
                 "kind": "ENUM",

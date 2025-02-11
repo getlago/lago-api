@@ -6942,7 +6942,7 @@ type Query {
   """
   Query revenue streams of an organization
   """
-  revenueStreams(country: CountryCode, currency: CurrencyEnum, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, toDate: ISO8601Date): RevenueStreamsCollection!
+  revenueStreams(customerCountry: CountryCode, customerCurrency: CurrencyEnum, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, toDate: ISO8601Date): RevenueStreamsCollection!
 
   """
   Query a single subscription of an organization
@@ -7204,7 +7204,7 @@ input RetryWebhookInput {
 type RevenueStreams {
   commitmentFeeAmountCents: BigInt!
   couponsAmountCents: BigInt!
-  currency: CurrencyEnum
+  customerCurrency: CurrencyEnum
   fromDate: ISO8601Date!
   grossRevenueAmountCents: BigInt!
   inAdvanceFeeAmountCents: BigInt!
