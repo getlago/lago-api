@@ -483,6 +483,10 @@ RSpec.describe SendWebhookJob, type: :job do
       Webhooks::Subscriptions::TerminatedService
 
     it_behaves_like "a webhook service",
+      "subscription.updated",
+      Webhooks::Subscriptions::UpdatedService
+
+    it_behaves_like "a webhook service",
       "subscription.termination_alert",
       Webhooks::Subscriptions::TerminationAlertService
 

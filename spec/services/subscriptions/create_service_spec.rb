@@ -646,6 +646,11 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             end
           end
 
+          it "sends updated subscription webhook", :aggregate_failures do
+            create_service.call
+            expect(SendWebhookJob).to have_been_enqueued.with("subscription.updated", subscription)
+          end
+
           it "keeps the current subscription" do
             result = create_service.call
 

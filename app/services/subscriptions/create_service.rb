@@ -163,6 +163,8 @@ module Subscriptions
         ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
       )
 
+      after_commit { SendWebhookJob.perform_later('subscription.updated', current_subscription) }
+
       current_subscription
     end
 
