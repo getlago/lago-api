@@ -35662,6 +35662,18 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "amountCurrency",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "CurrencyEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "commitmentFeeAmountCents",
               "description": null,
               "type": {
@@ -35694,19 +35706,7 @@
               "args": []
             },
             {
-              "name": "customerCurrency",
-              "description": null,
-              "type": {
-                "kind": "ENUM",
-                "name": "CurrencyEnum",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "fromDate",
+              "name": "endOfPeriodDt",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -35786,14 +35786,14 @@
               "args": []
             },
             {
-              "name": "subscriptionFeeAmountCents",
+              "name": "startOfPeriodDt",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "BigInt",
+                  "name": "ISO8601Date",
                   "ofType": null
                 }
               },
@@ -35802,14 +35802,14 @@
               "args": []
             },
             {
-              "name": "toDate",
+              "name": "subscriptionFeeAmountCents",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "ISO8601Date",
+                  "name": "BigInt",
                   "ofType": null
                 }
               },

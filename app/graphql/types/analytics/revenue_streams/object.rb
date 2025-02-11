@@ -6,7 +6,7 @@ module Types
       class Object < Types::BaseObject
         graphql_name "RevenueStreams"
 
-        field :customer_currency, Types::CurrencyEnum, null: true
+        field :amount_currency, Types::CurrencyEnum, null: true
 
         field :coupons_amount_cents, GraphQL::Types::BigInt, null: false
         field :gross_revenue_amount_cents, GraphQL::Types::BigInt, null: false
@@ -18,8 +18,8 @@ module Types
         field :subscription_fee_amount_cents, GraphQL::Types::BigInt, null: false
         field :usage_based_fee_amount_cents, GraphQL::Types::BigInt, null: false
 
-        field :from_date, GraphQL::Types::ISO8601Date, null: false
-        field :to_date, GraphQL::Types::ISO8601Date, null: false
+        field :end_of_period_dt, GraphQL::Types::ISO8601Date, null: false
+        field :start_of_period_dt, GraphQL::Types::ISO8601Date, null: false
       end
     end
   end

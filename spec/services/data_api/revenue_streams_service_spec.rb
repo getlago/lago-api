@@ -32,17 +32,17 @@ RSpec.describe DataApi::RevenueStreamsService, type: :service do
         expect(service_call.revenue_streams.count).to eq(12)
         expect(service_call.revenue_streams.first).to eq(
           {
-            "currency" => "EUR",
+            "amount_currency" => "EUR",
             "commitment_fee_amount_cents" => 0,
             "coupons_amount_cents" => 0,
-            "from_date" => "2024-01-01",
+            "end_of_period_dt" => "2024-01-31",
             "gross_revenue_amount_cents" => 46256357,
             "in_advance_fee_amount_cents" => 0,
             "net_revenue_amount_cents" => 46256357,
             "one_off_fee_amount_cents" => 0,
             "organization_id" => "2537afc4-0e7c-4abb-89b7-d9b28c35780b",
+            "start_of_period_dt" => "2024-01-01",
             "subscription_fee_amount_cents" => 25681455,
-            "to_date" => "2024-01-31",
             "usage_based_fee_amount_cents" => 20574902
           }
         )

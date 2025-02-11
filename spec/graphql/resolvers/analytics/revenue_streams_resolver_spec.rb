@@ -9,7 +9,7 @@ RSpec.describe Resolvers::Analytics::RevenueStreamsResolver, type: :graphql do
       query($customerCurrency: CurrencyEnum, $externalCustomerId: String) {
         revenueStreams(customerCurrency: $customerCurrency, externalCustomerId: $externalCustomerId) {
           collection {
-            customerCurrency
+            amountCurrency
             couponsAmountCents
             grossRevenueAmountCents
             netRevenueAmountCents
@@ -18,8 +18,8 @@ RSpec.describe Resolvers::Analytics::RevenueStreamsResolver, type: :graphql do
             oneOffFeeAmountCents
             subscriptionFeeAmountCents
             usageBasedFeeAmountCents
-            fromDate
-            toDate
+            startOfPeriodDt
+            endOfPeriodDt
           }
         }
       }
@@ -67,8 +67,8 @@ RSpec.describe Resolvers::Analytics::RevenueStreamsResolver, type: :graphql do
       revenue_streams_response = result["data"]["revenueStreams"]
       expect(revenue_streams_response['collection'].first).to include(
         {
-          "fromDate" => "2024-01-01",
-          "toDate" => "2024-01-31"
+          "startOfPeriodDt" => "2024-01-01",
+          "endOfPeriodDt" => "2024-01-31"
         }
       )
     end
