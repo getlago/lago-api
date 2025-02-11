@@ -40,7 +40,7 @@ RSpec.describe Events::HighUsageCreateService, type: :service do
       ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] = "raw_events"
 
       allow(Karafka).to receive(:producer).and_return(karafka_producer)
-      allow(karafka_producer).to receive(:produce_async)
+      allow(karafka_producer).to receive(:produce_sync)
     end
 
     it "produces the event on kafka" do
@@ -49,7 +49,7 @@ RSpec.describe Events::HighUsageCreateService, type: :service do
         expect(result).to be_success
         expect(result.transaction_id).to eq(transaction_id)
 
-        expect(karafka_producer).to have_received(:produce_async)
+        expect(karafka_producer).to have_received(:produce_sync)
           .with(
             topic: "raw_events",
             key: "#{organization.id}-#{external_subscription_id}",
@@ -77,7 +77,7 @@ RSpec.describe Events::HighUsageCreateService, type: :service do
           expect(result).to be_success
           expect(result.transaction_id).to eq(transaction_id)
 
-          expect(karafka_producer).to have_received(:produce_async)
+          expect(karafka_producer).to have_received(:produce_sync)
             .with(
               topic: "raw_events",
               key: "#{organization.id}-#{external_subscription_id}",
@@ -105,7 +105,7 @@ RSpec.describe Events::HighUsageCreateService, type: :service do
             expect(result).to be_success
             expect(result.transaction_id).to eq(transaction_id)
 
-            expect(karafka_producer).to have_received(:produce_async)
+            expect(karafka_producer).to have_received(:produce_sync)
               .with(
                 topic: "raw_events",
                 key: "#{organization.id}-#{external_subscription_id}",
@@ -134,7 +134,7 @@ RSpec.describe Events::HighUsageCreateService, type: :service do
         expect(result).to be_success
         expect(result.transaction_id).to eq(transaction_id)
 
-        expect(karafka_producer).to have_received(:produce_async)
+        expect(karafka_producer).to have_received(:produce_sync)
           .with(
             topic: "raw_events",
             key: "#{organization.id}-#{external_subscription_id}",

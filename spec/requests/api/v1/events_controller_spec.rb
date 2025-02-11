@@ -184,7 +184,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         expect { subject }.not_to change(Event, :count)
 
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:error_details]).to eq({"1": {timestamp: ["invalid_format"]}})
+        expect(json[:error_details]).to eq({"1": {timestamp: ["invalid_format"]}}) # rubocop:disable Style/QuotedSymbols
       end
     end
 
@@ -227,7 +227,7 @@ RSpec.describe Api::V1::EventsController, type: :request do
         it "fails with a 422 error" do
           expect { subject }.not_to change(Event, :count)
           expect(response).to have_http_status(:unprocessable_entity)
-          expect(json[:error_details]).to include("0": "expression_evaluation_failed: Variable: b not found")
+          expect(json[:error_details]).to include("0": "expression_evaluation_failed: Variable: b not found") # rubocop:disable Style/QuotedSymbols
         end
       end
     end

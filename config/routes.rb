@@ -50,8 +50,6 @@ Rails.application.routes.draw do
         post :estimate, on: :collection
       end
       resources :events, only: %i[create show index] do
-        post :high_usage, on: :collection
-        post :batch_high_usage, on: :collection
         post :estimate_fees, on: :collection
         post :estimate_instant_fees, on: :collection
         post :batch_estimate_instant_fees, on: :collection
@@ -88,6 +86,12 @@ Rails.application.routes.draw do
       resources :webhooks, only: %i[] do
         get :public_key, on: :collection
         get :json_public_key, on: :collection
+      end
+    end
+
+    namespace :v2 do
+      resources :events, only: %i[create] do
+        post :batch, on: :collection
       end
     end
   end

@@ -15,7 +15,7 @@ module Events
       return result.not_allowed_failure!(code: "missing_configuration") if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
       return result.not_allowed_failure!(code: "missing_configuration") if ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"].blank?
 
-      Karafka.producer.produce_async(
+      Karafka.producer.produce_sync(
         topic: ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"],
         key: "#{organization.id}-#{params[:external_subscription_id]}",
         payload: {
