@@ -5,9 +5,7 @@ require 'rails_helper'
 RSpec.describe ::V1::WalletSerializer do
   subject(:serializer) { described_class.new(wallet, root_name: 'wallet') }
 
-  let(:wallet) { create(:wallet, :terminated, terminated_at: Time.current) }
-
-  before { Timecop.freeze(DateTime.new(2025, 1, 31, 12, 5, 55)) }
+  let(:wallet) { create(:wallet) }
 
   it 'serializes the object' do
     result = JSON.parse(serializer.to_json)
@@ -21,11 +19,11 @@ RSpec.describe ::V1::WalletSerializer do
         'currency' => wallet.currency,
         'name' => wallet.name,
         'rate_amount' => wallet.rate_amount.to_s,
-        'created_at' => "2025-01-31T12:05:55Z",
+        'created_at' => wallet.created_at.iso8601,
         'expiration_at' => wallet.expiration_at&.iso8601,
         'last_balance_sync_at' => wallet.last_balance_sync_at&.iso8601,
         'last_consumed_credit_at' => wallet.last_consumed_credit_at&.iso8601,
-        'terminated_at' => "2025-01-31T12:05:55.000Z", # The date isn't iso8601, but it would be a breaking change to change it now
+        'terminated_at' => wallet.terminated_at,
         'credits_balance' => wallet.credits_balance.to_s,
         'balance_cents' => wallet.balance_cents,
         'credits_ongoing_balance' => wallet.credits_ongoing_balance.to_s,
