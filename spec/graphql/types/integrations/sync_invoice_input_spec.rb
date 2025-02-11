@@ -5,5 +5,7 @@ require 'rails_helper'
 RSpec.describe Types::Integrations::SyncInvoiceInput do
   subject { described_class }
 
-  it { is_expected.to accept_argument(:invoice_id).of_type('ID!') }
+  it do
+    expect(subject).to accept_argument(:invoice_id).of_type('ID!')
+  end
 end
