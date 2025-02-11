@@ -6,10 +6,10 @@ RSpec.describe Resolvers::Analytics::RevenueStreamsResolver, type: :graphql do
   let(:required_permission) { "analytics:view" }
   let(:query) do
     <<~GQL
-      query($currency: CurrencyEnum, $externalCustomerId: String) {
-        revenueStreams(currency: $currency, externalCustomerId: $externalCustomerId) {
+      query($customerCurrency: CurrencyEnum, $externalCustomerId: String) {
+        revenueStreams(customerCurrency: $customerCurrency, externalCustomerId: $externalCustomerId) {
           collection {
-            currency
+            customerCurrency
             couponsAmountCents
             grossRevenueAmountCents
             netRevenueAmountCents

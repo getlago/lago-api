@@ -12,12 +12,16 @@ module Resolvers
 
       argument :customer_country, Types::CountryCodeEnum, required: false
       argument :customer_currency, Types::CurrencyEnum, required: false
+      argument :customer_type, Types::Customers::CustomerTypeEnum, required: false
+
       argument :from_date, GraphQL::Types::ISO8601Date, required: false
       argument :to_date, GraphQL::Types::ISO8601Date, required: false
 
-      argument :customer_type, Types::Customers::CustomerTypeEnum, required: false
+      argument :time_granularity, Types::Analytics::TimeGranularityEnum, required: false
+
       argument :external_customer_id, String, required: false
       argument :external_subscription_id, String, required: false
+
       argument :plan_code, String, required: false
 
       type Types::Analytics::RevenueStreams::Object.collection_type, null: false

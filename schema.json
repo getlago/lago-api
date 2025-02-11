@@ -34158,6 +34158,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "customerType",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "CustomerTypeEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "fromDate",
                   "description": null,
                   "type": {
@@ -34182,11 +34194,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "customerType",
+                  "name": "timeGranularity",
                   "description": null,
                   "type": {
                     "kind": "ENUM",
-                    "name": "CustomerTypeEnum",
+                    "name": "TimeGranularityEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -37964,6 +37976,35 @@
             }
           ],
           "enumValues": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "TimeGranularityEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "daily",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "weekly",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "monthly",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
         },
         {
           "kind": "ENUM",
