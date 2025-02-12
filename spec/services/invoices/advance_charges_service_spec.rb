@@ -9,7 +9,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:tax_rate) { 20 }
+  let(:tax_rate) { 89 }
   let(:tax) { create(:tax, organization:, rate: tax_rate) }
 
   describe "#call" do
@@ -62,7 +62,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
           subscription:,
           charge:,
           amount_cents: 61,
-          taxes_amount_cents: 13,
+          taxes_amount_cents: 16,
           properties: fee_boundaries
         )
         create_list(:charge_fee, 2, :failed, invoice_id: nil, subscription:, charge:, amount_cents: 100, properties: fee_boundaries)
@@ -88,15 +88,15 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
 
         expect(result.invoice.fees.count).to eq 3
 
-        expect(result.invoice.total_amount_cents).to eq(61 * 3 + 13 * 3)
-        expect(result.invoice.taxes_amount_cents).to eq(13 * 3) # Sum of taxes in each paid fees
+        expect(result.invoice.total_amount_cents).to eq(61 * 3 + 16 * 3)
+        expect(result.invoice.taxes_amount_cents).to eq(16 * 3) # Sum of taxes in each paid fees
 
         expect(result.invoice).to be_finalized.and(have_attributes({
           invoice_type: "advance_charges",
           currency: "EUR",
           issuing_date: billing_at.to_date,
           skip_charges: true,
-          taxes_rate: tax_rate
+          taxes_rate: (16.0 * 100 / 61).round(2)
         }))
 
         expect(result.invoice.invoice_subscriptions.count).to eq(1)

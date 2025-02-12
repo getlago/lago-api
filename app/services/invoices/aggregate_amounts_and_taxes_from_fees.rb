@@ -22,6 +22,13 @@ module Invoices
       invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
       invoice.sub_total_including_taxes_amount_cents = invoice.sub_total_excluding_taxes_amount_cents + invoice.taxes_amount_cents
 
+      # Note: This field is populated for consistency but probably shouldn't be use
+      invoice.taxes_rate = if invoice.fees_amount_cents.zero?
+        0
+      else
+        (invoice.taxes_amount_cents.to_f * 100 / invoice.fees_amount_cents).round(2)
+      end
+
       invoice.applied_taxes = invoice.fees.flat_map(&:applied_taxes).group_by(&:tax_id).map do |tax_id, taxes|
         t = taxes.first
         Invoice::AppliedTax.new(
