@@ -7,14 +7,14 @@ module Invoices
     def initialize(invoice:)
       @invoice = invoice
 
+      raise ArgumentError.new("invoice type must be `advance_charges`") unless invoice.advance_charges?
+
       super
     end
 
     # NOTE: progressing billing, coupons and credit notes are not supported here
     def call
       return result if invoice.fees.empty?
-
-      # TODO: Return error if some fees are :succeeded
 
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
       invoice.taxes_amount_cents = invoice.fees.sum(&:taxes_amount_cents)
@@ -34,7 +34,7 @@ module Invoices
 
           amount_cents: taxes.sum(&:amount_cents),
           fees_amount_cents: taxes.sum(&:amount_cents),
-          taxable_base_amount_cents: taxes.sum(&:precise_amount_cents), # ???
+          taxable_base_amount_cents: taxes.sum(&:precise_amount_cents)
         )
       end
 

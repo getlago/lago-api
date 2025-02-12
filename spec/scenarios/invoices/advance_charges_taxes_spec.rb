@@ -13,11 +13,11 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
   let(:external_subscription_id) { 'sub_' + SecureRandom.uuid }
 
   def send_card_event!(item_id = SecureRandom.uuid)
-    send_event!(code: billable_metric_cards.code,item_id:)
+    send_event!(code: billable_metric_cards.code, item_id:)
   end
 
   def send_card_transfer!(item_id = SecureRandom.uuid)
-    send_event!(code: billable_metric_transfer.code,item_id:)
+    send_event!(code: billable_metric_transfer.code, item_id:)
   end
 
   def send_event!(code:, item_id:)

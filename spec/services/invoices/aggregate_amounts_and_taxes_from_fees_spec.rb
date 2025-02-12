@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Invoices::AggregateAmountsAndTaxesFromFees, type: :service do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, customer:) }
+  let(:invoice) { create(:invoice, invoice_type: :advance_charges, customer:) }
   let(:tax_5) { create(:tax, rate: 5, name: 'VAT', description: 'VAT 5%', code: 'tax-1234') }
   let(:tax_12) { create(:tax, rate: 12, name: 'VAT', description: 'VAT 12%', code: 'tax-8901') }
 
