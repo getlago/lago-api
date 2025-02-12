@@ -19,6 +19,8 @@ module DailyUsages
         return result
       end
 
+      current_usage.fees = current_usage.fees.select { |f| f.units.positive? }
+
       daily_usage = DailyUsage.new(
         organization: subscription.organization,
         customer: subscription.customer,

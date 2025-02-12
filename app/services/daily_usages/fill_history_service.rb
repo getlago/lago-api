@@ -35,6 +35,8 @@ module DailyUsages
             previous_daily_usage = nil
           end
 
+          usage.fees = usage.fees.select { |f| f.units.positive? }
+
           daily_usage = DailyUsage.new(
             organization:,
             customer: subscription.customer,

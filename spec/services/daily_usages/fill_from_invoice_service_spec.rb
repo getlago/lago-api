@@ -56,6 +56,19 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
       )
     end
 
+    context "when invoice contains fees with 0 units" do
+      it "does not include those fees in the usage" do
+        charge = create(:standard_charge, plan: subscription.plan)
+        create(:charge_fee, invoice:, charge:, units: 0, amount_cents: 0, subscription:)
+
+        travel_to(timestamp) do
+          expect { fill_service.call }.to change(DailyUsage, :count).by(1)
+          daily_usage = subscription.daily_usages.order(:created_at).last
+          expect(daily_usage.usage["charges_usage"]).to be_empty
+        end
+      end
+    end
+
     context "when the daily usage already exists" do
       before do
         create(
