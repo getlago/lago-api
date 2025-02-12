@@ -2,7 +2,7 @@
 
 module DataExports
   class ProcessPartJob < ApplicationJob
-    queue_as :low_priority
+    queue_as :default
 
     def perform(data_export_part)
       ProcessPartService.call(data_export_part:).raise_if_error!
