@@ -11,7 +11,7 @@ tr
       .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
     - if fee.charge.prorated?
       .body-3 = I18n.t('invoice.fee_prorated')
-  td.body-2 = fee.units
+  td.body-2 = RoundingHelper.round_decimal_part(fee.units)
   td.body-2 = MoneyHelper.format_with_precision(fee.precise_unit_amount, fee.unit_amount.currency)
   td.body-2 == TaxHelper.applied_taxes(fee)
   td.body-2 = MoneyHelper.format(fee.amount)
