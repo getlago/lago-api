@@ -85,7 +85,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
   end
 
-  fcontext "with small units amount" do
+  context "with small units amount" do
     let(:running_total) { [] }
     let(:fixed_amount) { nil }
     let(:aggregation) { 4 }
@@ -103,7 +103,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
         paid_units: "4.0",
         rate: 2.9,
         per_unit_total_amount: 0.116, # 4 * 0.029
-        paid_events: 4,
+        paid_events: 4
       )
     end
   end
