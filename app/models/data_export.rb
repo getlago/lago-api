@@ -67,25 +67,23 @@ end
 #
 # Table name: data_exports
 #
-#  id                :uuid             not null, primary key
-#  completed_at      :datetime
-#  expires_at        :datetime
-#  format            :integer
-#  resource_query    :jsonb
-#  resource_type     :string           not null
-#  started_at        :datetime
-#  status            :integer          default("pending"), not null
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  billing_entity_id :uuid
-#  membership_id     :uuid
-#  organization_id   :uuid
+#  id              :uuid             not null, primary key
+#  completed_at    :datetime
+#  expires_at      :datetime
+#  format          :integer
+#  resource_query  :jsonb
+#  resource_type   :string           not null
+#  started_at      :datetime
+#  status          :integer          default("pending"), not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  membership_id   :uuid
+#  organization_id :uuid
 #
 # Indexes
 #
-#  index_data_exports_on_billing_entity_id  (billing_entity_id)
-#  index_data_exports_on_membership_id      (membership_id)
-#  index_data_exports_on_organization_id    (organization_id)
+#  index_data_exports_on_membership_id    (membership_id)
+#  index_data_exports_on_organization_id  (organization_id)
 #
 # Foreign Keys
 #

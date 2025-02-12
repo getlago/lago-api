@@ -35,6 +35,8 @@ class CreateBillingEntities < ActiveRecord::Migration[7.1]
       t.string :tax_identification_number
       t.float :vat_rate, default: 0.0, null: false
 
+      t.boolean :is_default, default: false, null: false
+
       t.timestamps
     end
   end

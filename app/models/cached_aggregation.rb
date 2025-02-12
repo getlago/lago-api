@@ -26,7 +26,6 @@ end
 #  timestamp                      :datetime         not null
 #  created_at                     :datetime         not null
 #  updated_at                     :datetime         not null
-#  billing_entity_id              :uuid
 #  charge_filter_id               :uuid
 #  charge_id                      :uuid             not null
 #  event_id                       :uuid
@@ -38,7 +37,6 @@ end
 # Indexes
 #
 #  idx_on_timestamp_charge_id_external_subscription_id    (timestamp,charge_id,external_subscription_id)
-#  index_cached_aggregations_on_billing_entity_id         (billing_entity_id)
 #  index_cached_aggregations_on_charge_id                 (charge_id)
 #  index_cached_aggregations_on_event_id                  (event_id)
 #  index_cached_aggregations_on_event_transaction_id      (organization_id,event_transaction_id)

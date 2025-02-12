@@ -17,25 +17,25 @@ class BillingEntity < ApplicationRecord
   has_many :invoices
   has_many :credit_notes, through: :invoices
   has_many :fees, through: :subscriptions
-  has_many :daily_usages
-  has_many :integrations, class_name: "Integrations::BaseIntegration"
-  has_many :payment_providers, class_name: "PaymentProviders::BaseProvider"
-  has_many :payment_requests
+  # has_many :daily_usages
+  # has_many :integrations, class_name: "Integrations::BaseIntegration"
+  # has_many :payment_providers, class_name: "PaymentProviders::BaseProvider"
+  # has_many :payment_requests
   has_and_belongs_to_many :taxes # many taxes belong to many entities?
   has_many :wallets, through: :customers
   has_many :wallet_transactions, through: :wallets
-  has_many :cached_aggregations
-  has_many :data_exports
+  # has_many :cached_aggregations
+  # has_many :data_exports
 
-  has_many :stripe_payment_providers, class_name: 'PaymentProviders::StripeProvider'
-  has_many :gocardless_payment_providers, class_name: 'PaymentProviders::GocardlessProvider'
-  has_many :cashfree_payment_providers, class_name: 'PaymentProviders::CashfreeProvider'
-  has_many :adyen_payment_providers, class_name: 'PaymentProviders::AdyenProvider'
+  # has_many :stripe_payment_providers, class_name: 'PaymentProviders::StripeProvider'
+  # has_many :gocardless_payment_providers, class_name: 'PaymentProviders::GocardlessProvider'
+  # has_many :cashfree_payment_providers, class_name: 'PaymentProviders::CashfreeProvider'
+  # has_many :adyen_payment_providers, class_name: 'PaymentProviders::AdyenProvider'
 
-  has_many :hubspot_integrations, class_name: "Integrations::HubspotIntegration"
-  has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"
-  has_many :xero_integrations, class_name: "Integrations::XeroIntegration"
-  has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
+  # has_many :hubspot_integrations, class_name: "Integrations::HubspotIntegration"
+  # has_many :netsuite_integrations, class_name: "Integrations::NetsuiteIntegration"
+  # has_many :xero_integrations, class_name: "Integrations::XeroIntegration"
+  # has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
 
   # this one needs to be done via applied_dunning_campaign_id
   has_one :applied_dunning_campaign, class_name: "DunningCampaign", foreign_key: :applied_dunning_campaign_id
@@ -146,6 +146,7 @@ end
 #  finalize_zero_amount_invoice :boolean          default(TRUE), not null
 #  invoice_footer               :text
 #  invoice_grace_period         :integer          default(0), not null
+#  is_default                   :boolean          default(FALSE), not null
 #  legal_name                   :string
 #  legal_number                 :string
 #  logo                         :string

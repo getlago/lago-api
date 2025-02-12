@@ -27,7 +27,6 @@ end
 #  usage_diff               :jsonb            not null
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
-#  billing_entity_id        :uuid
 #  customer_id              :uuid             not null
 #  external_subscription_id :string           not null
 #  organization_id          :uuid             not null
@@ -36,7 +35,6 @@ end
 # Indexes
 #
 #  idx_on_organization_id_external_subscription_id_df3a30d96d  (organization_id,external_subscription_id)
-#  index_daily_usages_on_billing_entity_id                     (billing_entity_id)
 #  index_daily_usages_on_customer_id                           (customer_id)
 #  index_daily_usages_on_organization_id                       (organization_id)
 #  index_daily_usages_on_subscription_id                       (subscription_id)

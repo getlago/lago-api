@@ -232,6 +232,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.string "name", null: false
     t.string "tax_identification_number"
     t.float "vat_rate", default: 0.0, null: false
+    t.boolean "is_default", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "organization_id"
@@ -263,8 +264,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.uuid "charge_filter_id"
     t.decimal "current_amount"
     t.string "event_transaction_id"
-    t.uuid "billing_entity_id"
-    t.index ["billing_entity_id"], name: "index_cached_aggregations_on_billing_entity_id"
     t.index ["charge_id"], name: "index_cached_aggregations_on_charge_id"
     t.index ["event_id"], name: "index_cached_aggregations_on_event_id"
     t.index ["external_subscription_id"], name: "index_cached_aggregations_on_external_subscription_id"
@@ -564,8 +563,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "refreshed_at", null: false
     t.jsonb "usage_diff", default: "{}", null: false
     t.date "usage_date"
-    t.uuid "billing_entity_id"
-    t.index ["billing_entity_id"], name: "index_daily_usages_on_billing_entity_id"
     t.index ["customer_id"], name: "index_daily_usages_on_customer_id"
     t.index ["organization_id", "external_subscription_id"], name: "idx_on_organization_id_external_subscription_id_df3a30d96d"
     t.index ["organization_id"], name: "index_daily_usages_on_organization_id"
@@ -596,8 +593,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.datetime "updated_at", null: false
     t.uuid "membership_id"
     t.uuid "organization_id"
-    t.uuid "billing_entity_id"
-    t.index ["billing_entity_id"], name: "index_data_exports_on_billing_entity_id"
     t.index ["membership_id"], name: "index_data_exports_on_membership_id"
     t.index ["organization_id"], name: "index_data_exports_on_organization_id"
   end
@@ -868,8 +863,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.jsonb "settings", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.uuid "billing_entity_id"
-    t.index ["billing_entity_id"], name: "index_integrations_on_billing_entity_id"
     t.index ["code", "organization_id"], name: "index_integrations_on_code_and_organization_id", unique: true
     t.index ["organization_id"], name: "index_integrations_on_organization_id"
   end
@@ -1107,6 +1100,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.boolean "finalize_zero_amount_invoice", default: true, null: false
     t.boolean "clickhouse_events_store", default: false, null: false
     t.string "hmac_key", null: false
+    t.integer "max_billing_entities", default: 1
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.index ["hmac_key"], name: "index_organizations_on_hmac_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
@@ -1147,8 +1141,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.string "code", null: false
     t.string "name", null: false
     t.datetime "deleted_at"
-    t.uuid "billing_entity_id"
-    t.index ["billing_entity_id"], name: "index_payment_providers_on_billing_entity_id"
     t.index ["code", "organization_id"], name: "index_payment_providers_on_code_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_payment_providers_on_organization_id"
   end
@@ -1165,8 +1157,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.integer "payment_attempts", default: 0, null: false
     t.boolean "ready_for_payment_processing", default: true, null: false
     t.uuid "dunning_campaign_id"
-    t.uuid "billing_entity_id"
-    t.index ["billing_entity_id"], name: "index_payment_requests_on_billing_entity_id"
     t.index ["customer_id"], name: "index_payment_requests_on_customer_id"
     t.index ["dunning_campaign_id"], name: "index_payment_requests_on_dunning_campaign_id"
     t.index ["organization_id"], name: "index_payment_requests_on_organization_id"
