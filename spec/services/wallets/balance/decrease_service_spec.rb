@@ -36,5 +36,10 @@ RSpec.describe Wallets::Balance::DecreaseService, type: :service do
         .to change(wallet.reload, :ongoing_balance_cents).from(800).to(550)
         .and change(wallet, :credits_ongoing_balance).from(8.0).to(5.5)
     end
+
+    it 'sends a `wallet.updated` webhook' do
+      expect { create_service.call }
+        .to have_enqueued_job(SendWebhookJob).with('wallet.updated', Wallet)
+    end
   end
 end

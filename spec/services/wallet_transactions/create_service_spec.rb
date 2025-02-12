@@ -76,7 +76,7 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
 
     it 'enqueues a SendWebhookJob for each wallet transaction' do
       expect do
-        create_service.call
+        create_service
       end.to have_enqueued_job(SendWebhookJob).thrice.with('wallet_transaction.created', WalletTransaction)
     end
 

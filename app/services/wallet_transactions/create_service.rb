@@ -2,6 +2,8 @@
 
 module WalletTransactions
   class CreateService < BaseService
+    Result = BaseResult[:current_wallet, :wallet_transactions]
+
     def initialize(organization:, params:)
       @organization = organization
       @params = params
@@ -10,7 +12,7 @@ module WalletTransactions
     end
 
     def call
-      return result unless valid?
+      return result unless valid? # NOTE: validator sets result.current_wallet
 
       wallet_transactions = []
       @source = params[:source] || :manual
@@ -111,7 +113,7 @@ module WalletTransactions
     def valid?
       WalletTransactions::ValidateService.new(
         result,
-        **params.merge(organization_id: organization.id)
+        **params.merge(organization: organization)
       ).valid?
     end
   end

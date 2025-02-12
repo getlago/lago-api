@@ -20,7 +20,7 @@ module WalletTransactions
     private
 
     def valid_wallet?
-      organization = Organization.find_by(id: args[:organization_id])
+      organization = args[:organization].presence || Organization.find_by(id: args[:organization_id])
 
       result.current_wallet = organization.wallets.find_by(id: args[:wallet_id])
 
