@@ -20,6 +20,6 @@ RSpec.describe DataExports::CreatePartService, type: :service do
   end
 
   it "enqueues a job for this part" do
-    expect { result }.to have_enqueued_job(DataExports::ProcessPartJob).on_queue('low_priority')
+    expect { result }.to have_enqueued_job(DataExports::ProcessPartJob).on_queue('default')
   end
 end
