@@ -150,6 +150,16 @@ module Integrations
               }
             end
 
+            if credit_item && invoice.progressive_billing_credit_amount_cents > 0
+              output << {
+                'item' => credit_item.external_id,
+                'account' => credit_item.external_account_code,
+                'quantity' => 1,
+                'rate' => -amount(invoice.progressive_billing_credit_amount_cents, resource: invoice),
+                'taxdetailsreference' => 'credit_item_progressive_billing'
+              }
+            end
+
             if credit_note_item && invoice.credit_notes_amount_cents > 0
               output << {
                 'item' => credit_note_item.external_id,
@@ -187,6 +197,17 @@ module Integrations
                 'taxtype' => tax_item.tax_type,
                 'taxcode' => tax_item.tax_code,
                 'taxdetailsreference' => 'credit_item'
+              }
+            end
+
+            if credit_item && invoice.progressive_billing_credit_amount_cents > 0
+              output << {
+                'taxbasis' => 1,
+                'taxamount' => 0,
+                'taxrate' => invoice.taxes_rate,
+                'taxtype' => tax_item.tax_type,
+                'taxcode' => tax_item.tax_code,
+                'taxdetailsreference' => 'credit_item_progressive_billing'
               }
             end
 

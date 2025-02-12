@@ -123,6 +123,17 @@ module Integrations
               }
             end
 
+            if credit_item && invoice.progressive_billing_credit_amount_cents > 0
+              output << {
+                'external_id' => credit_item.external_id,
+                'description' => 'Usage already billed',
+                'units' => 1,
+                'precise_unit_amount' => -amount(invoice.progressive_billing_credit_amount_cents, resource: invoice),
+                'taxes_amount_cents' => 0,
+                'account_code' => credit_item.external_account_code
+              }
+            end
+
             if credit_note_item && invoice.credit_notes_amount_cents > 0
               output << {
                 'external_id' => credit_note_item.external_id,
