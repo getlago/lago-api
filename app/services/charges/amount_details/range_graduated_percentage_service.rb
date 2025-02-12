@@ -42,7 +42,7 @@ module Charges
       end
 
       def per_unit_total_amount
-        @per_unit_total_amount ||= (units * rate).fdiv(100)
+        @per_unit_total_amount ||= units * rate / 100
       end
 
       def total_with_flat_amount

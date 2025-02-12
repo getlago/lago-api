@@ -38,11 +38,11 @@ RSpec.describe Charges::EstimateInstant::PercentageService, type: :service do
 
     context "when units and rate are positive" do
       let(:units) { 20 }
-      let(:rate) { 20 }
+      let(:rate) { 2.99 }
 
       it "returns the percentage amount" do
         result = subject.call
-        expect(result.amount).to eq(4)
+        expect(result.amount).to eq(0.598)
         expect(result.units).to eq(20)
       end
 
@@ -51,27 +51,27 @@ RSpec.describe Charges::EstimateInstant::PercentageService, type: :service do
 
         it "includes the fixed amount" do
           result = subject.call
-          expect(result.amount).to eq(14)
+          expect(result.amount).to eq(10.598)
           expect(result.units).to eq(20)
         end
       end
 
       context "when a maximum is set" do
-        let(:per_transaction_max_amount) { 3 }
+        let(:per_transaction_max_amount) { 0.1 }
 
         it "returns the percentage amount capped at the max" do
           result = subject.call
-          expect(result.amount).to eq(3)
+          expect(result.amount).to eq(0.1)
           expect(result.units).to eq(20)
         end
       end
 
       context "when a minimum is set" do
-        let(:per_transaction_min_amount) { 5 }
+        let(:per_transaction_min_amount) { 5.5 }
 
         it "returns the percentage amount and at least the min" do
           result = subject.call
-          expect(result.amount).to eq(5)
+          expect(result.amount).to eq(5.5)
           expect(result.units).to eq(20)
         end
       end
