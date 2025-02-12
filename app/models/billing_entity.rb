@@ -4,6 +4,9 @@ class BillingEntity < ApplicationRecord
   include PaperTrailTraceable
   include OrganizationTimezone
   include Currencies
+  include Discard::Model
+
+  self.discard_column = :deleted_at
 
   EMAIL_SETTINGS = [
     "invoice.finalized",
@@ -66,6 +69,8 @@ class BillingEntity < ApplicationRecord
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
 
   validate :validate_email_settings
+
+  default_scope -> { kept }
 
   def logo_url
     return if logo.blank?
@@ -137,6 +142,7 @@ end
 #  city                         :string
 #  country                      :string
 #  default_currency             :string           default("USD"), not null
+#  deleted_at                   :datetime
 #  document_locale              :string           default("en"), not null
 #  document_number_prefix       :string
 #  document_numbering           :integer          not null

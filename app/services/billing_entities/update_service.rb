@@ -2,6 +2,7 @@
 
 module BillingEntities
   class UpdateService < BaseService
+    Result = BaseResult[:billing_entity]
     def initialize(billing_entity:, params:)
       @billing_entity = billing_entity
       @params = params

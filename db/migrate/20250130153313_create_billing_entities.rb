@@ -37,6 +37,7 @@ class CreateBillingEntities < ActiveRecord::Migration[7.1]
 
       t.boolean :is_default, default: false, null: false
 
+      t.datetime :deleted_at
       t.timestamps
     end
   end

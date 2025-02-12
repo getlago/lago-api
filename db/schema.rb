@@ -233,6 +233,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.string "tax_identification_number"
     t.float "vat_rate", default: 0.0, null: false
     t.boolean "is_default", default: false, null: false
+    t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "organization_id"
