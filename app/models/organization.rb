@@ -56,6 +56,8 @@ class Organization < ApplicationRecord
   has_many :invoice_custom_section_selections
   has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section
 
+  has_one :default_billing_entity, -> { where(is_default: true) }, class_name: "BillingEntity"
+
   has_one_attached :logo
 
   DOCUMENT_NUMBERINGS = [
