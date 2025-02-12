@@ -1,15 +1,13 @@
 # frozen_string_literal: true
 
 module V1
-  class OrganizationSerializer < ModelSerializer
+  class BillingEntitySerializer < ModelSerializer
     def serialize
       payload = {
         lago_id: model.id,
         name: model.name,
         default_currency: model.default_currency,
         created_at: model.created_at.iso8601,
-        webhook_url: webhook_urls.first.to_s,
-        webhook_urls:,
         country: model.country,
         address_line1: model.address_line1,
         address_line2: model.address_line2,
@@ -42,26 +40,6 @@ module V1
         invoice_grace_period: model.invoice_grace_period,
         document_locale: model.document_locale
       }
-    end
-
-    def taxes
-      ::CollectionSerializer.new(
-        model.taxes.applied_to_organization,
-        ::V1::TaxSerializer,
-        collection_name: 'taxes'
-      ).serialize
-    end
-
-    def webhook_urls
-      model.webhook_endpoints.map(&:webhook_url)
-    end
-
-    def billing_entities
-      ::CollectionSerializer.new(
-        model.billing_entities,
-        ::V1::BillingEntitySerializer,
-        collection_name: 'billing_entities'
-      ).serialize
     end
   end
 end
