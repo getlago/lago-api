@@ -82,12 +82,7 @@ module Invoices
         # NOTE: We don't want to use Invoices::ComputeAmountsFromFees here
         #       because it would recompute taxes from pre-tax values. All Fees are already paid
         #       this invoice should show how much taxes were paid in total.
-        # NOTE: progressing billing, coupons and credit notes are not supported here
-        invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
-        invoice.taxes_amount_cents = invoice.fees.sum(&:taxes_amount_cents)
-        invoice.total_amount_cents = invoice.fees_amount_cents + invoice.taxes_amount_cents
-        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
-        invoice.sub_total_including_taxes_amount_cents = invoice.sub_total_excluding_taxes_amount_cents + invoice.taxes_amount_cents
+        Invoices::AggregateAmountsAndTaxesFromFees.call!(invoice:)
 
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 

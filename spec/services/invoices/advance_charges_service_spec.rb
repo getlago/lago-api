@@ -61,7 +61,8 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
           invoice_id: nil,
           subscription:,
           charge:,
-          amount_cents: 100,
+          amount_cents: 61,
+          taxes_amount_cents: 13,
           properties: fee_boundaries
         )
         create_list(:charge_fee, 2, :failed, invoice_id: nil, subscription:, charge:, amount_cents: 100, properties: fee_boundaries)
@@ -74,7 +75,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
           subscription:,
           charge:,
           properties: {
-            timestamp: (billing_at - 1.month).end_of_month + 1.day
+            timestamp: (billing_at - 1.month).end_of_month + 1.day # ??
           }
         )
 
@@ -87,7 +88,8 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
 
         expect(result.invoice.fees.count).to eq 3
 
-        expect(result.invoice.total_amount_cents).to eq(100 * 3 * (100 + tax_rate) / 100)
+        expect(result.invoice.total_amount_cents).to eq(61 * 3 + 13 * 3)
+        expect(result.invoice.taxes_amount_cents).to eq(13 * 3) # Sum of taxes in each paid fees
 
         expect(result.invoice).to be_finalized.and(have_attributes({
           invoice_type: "advance_charges",
