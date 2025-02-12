@@ -539,9 +539,9 @@ html
                           .body-1 = fee.filter_display_name(separator: ' • ')
                           .body-3
                             - if fee.charge.percentage?
-                              = I18n.t('invoice.total_unit_interval', events_count: fee.events_count, units: fee.units)
+                              = I18n.t('invoice.total_unit_interval', events_count: fee.events_count, units: RoundingHelper.round_decimal_part(fee.units))
                             - else
-                              = I18n.t('invoice.total_unit', units: fee.units)
+                              = I18n.t('invoice.total_unit', units: RoundingHelper.round_decimal_part(fee.units))
                         td.body-1 width="30%" = fee.amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
                     - if fee.true_up_fee.present?
                       tr
