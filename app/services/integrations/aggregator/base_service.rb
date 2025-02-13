@@ -150,8 +150,6 @@ module Integrations
       end
 
       def request_limit_error?(http_error)
-        return false unless [500, 424].include?(http_error.error_code.to_i)
-
         http_error.error_body.include?(REQUEST_LIMIT_ERROR_CODE)
       end
     end
