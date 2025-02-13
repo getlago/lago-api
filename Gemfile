@@ -16,7 +16,7 @@ gem "puma", "~> 6.5"
 gem "rails", "~> 7.1.5.1"
 gem "redis"
 gem "sidekiq"
-gem "sidekiq-throttled", '1.4.0' # '1.5.0' was losing some jobs
+gem "sidekiq-throttled", "1.4.0" # '1.5.0' was losing some jobs
 gem "throttling"
 gem "dry-validation"
 
@@ -94,7 +94,7 @@ gem "valvat", require: false
 # Data Export
 gem "csv", "~> 3.0"
 
-gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", tag: 'v0.1.3'
+gem "lago-expression", github: "getlago/lago-expression", glob: "expression-ruby/lago-expression.gemspec", tag: "v0.1.3"
 
 group :development, :test, :staging do
   gem "factory_bot_rails"

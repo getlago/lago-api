@@ -12,9 +12,9 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'customer') unless customer
-      return result.not_found_failure!(resource: 'fees') if fees.blank?
-      return result.not_found_failure!(resource: 'add_on') unless add_ons.count == add_on_identifiers.count
+      return result.not_found_failure!(resource: "customer") unless customer
+      return result.not_found_failure!(resource: "fees") if fees.blank?
+      return result.not_found_failure!(resource: "add_on") unless add_ons.count == add_on_identifiers.count
 
       ActiveRecord::Base.transaction do
         Customers::UpdateCurrencyService
@@ -43,7 +43,7 @@ module Invoices
 
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
-        SendWebhookJob.perform_later('invoice.one_off_created', invoice)
+        SendWebhookJob.perform_later("invoice.one_off_created", invoice)
         GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -87,7 +87,7 @@ module Invoices
     end
 
     def should_deliver_email?
-      License.premium? && customer.organization.email_settings.include?('invoice.finalized')
+      License.premium? && customer.organization.email_settings.include?("invoice.finalized")
     end
 
     def add_ons
@@ -103,7 +103,7 @@ module Invoices
     end
 
     def tax_error?(fee_result)
-      !fee_result.success? && fee_result.error.respond_to?(:code) && fee_result&.error&.code == 'tax_error'
+      !fee_result.success? && fee_result.error.respond_to?(:code) && fee_result&.error&.code == "tax_error"
     end
   end
 end

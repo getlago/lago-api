@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::BaseController, type: :controller do
   controller do
@@ -20,65 +20,65 @@ RSpec.describe Api::BaseController, type: :controller do
 
   let(:api_key) { create(:api_key) }
 
-  it 'sets the context source to api' do
-    request.headers['Authorization'] = "Bearer #{api_key.value}"
+  it "sets the context source to api" do
+    request.headers["Authorization"] = "Bearer #{api_key.value}"
 
     get :index
 
-    expect(CurrentContext.source).to eq 'api'
+    expect(CurrentContext.source).to eq "api"
   end
 
-  describe '#authenticate' do
+  describe "#authenticate" do
     before do
-      request.headers['Authorization'] = "Bearer #{api_key.value}"
+      request.headers["Authorization"] = "Bearer #{api_key.value}"
       get :index
     end
 
-    context 'with valid authorization header' do
+    context "with valid authorization header" do
       let(:api_key) { [create(:api_key), create(:api_key, :expiring)].sample }
 
-      it 'returns success response' do
+      it "returns success response" do
         expect(response).to have_http_status(:success)
       end
     end
 
-    context 'with invalid authentication header' do
+    context "with invalid authentication header" do
       let(:api_key) { create(:api_key, :expired) }
 
-      it 'returns an authentication error' do
+      it "returns an authentication error" do
         expect(response).to have_http_status(:unauthorized)
       end
     end
   end
 
-  describe '#track_api_key_usage', cache: :memory do
+  describe "#track_api_key_usage", cache: :memory do
     let(:api_key) { create(:api_key) }
     let(:cache_key) { "api_key_last_used_#{api_key.id}" }
 
     before do
-      request.headers['Authorization'] = "Bearer #{api_key.value}"
+      request.headers["Authorization"] = "Bearer #{api_key.value}"
       freeze_time
     end
 
-    context 'when accessed trackable endpoint' do
+    context "when accessed trackable endpoint" do
       subject { get :index }
 
-      it 'caches when API key was last used' do
+      it "caches when API key was last used" do
         expect { subject }.to change { Rails.cache.read(cache_key) }.to Time.current.iso8601
       end
     end
 
-    context 'when accessed non-trackable endpoint' do
+    context "when accessed non-trackable endpoint" do
       subject { get :create }
 
-      it 'does not cache when API key was last used' do
+      it "does not cache when API key was last used" do
         expect { subject }.not_to change { Rails.cache.read(cache_key) }.from nil
       end
     end
   end
 
-  it 'catches the missing parameters error' do
-    request.headers['Authorization'] = "Bearer #{api_key.value}"
+  it "catches the missing parameters error" do
+    request.headers["Authorization"] = "Bearer #{api_key.value}"
 
     post :create
 
@@ -86,6 +86,6 @@ RSpec.describe Api::BaseController, type: :controller do
 
     json = JSON.parse(response.body, symbolize_names: true)
     expect(json[:status]).to eq(400)
-    expect(json[:error]).to eq('BadRequest: param is missing or the value is empty: input')
+    expect(json[:error]).to eq("BadRequest: param is missing or the value is empty: input")
   end
 end

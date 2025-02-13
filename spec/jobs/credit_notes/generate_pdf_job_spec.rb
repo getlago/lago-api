@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreditNotes::GeneratePdfJob, type: :job do
   let(:credit_note) { create(:credit_note) }
@@ -11,9 +11,9 @@ RSpec.describe CreditNotes::GeneratePdfJob, type: :job do
     instance_double(CreditNotes::GenerateService)
   end
 
-  it 'delegates to the Generate service' do
+  it "delegates to the Generate service" do
     allow(CreditNotes::GenerateService).to receive(:new)
-      .with(credit_note:, context: 'api')
+      .with(credit_note:, context: "api")
       .and_return(generate_service)
     allow(generate_service).to receive(:call)
       .and_return(result)

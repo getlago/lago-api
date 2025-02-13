@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service do
   subject(:create_interval_transactions_service) { described_class.new }
 
-  describe '.call' do
+  describe ".call" do
     let(:wallet) { create(:wallet, customer:, created_at:, credits_ongoing_balance: 50) }
-    let(:created_at) { DateTime.parse('20 Feb 2021') }
+    let(:created_at) { DateTime.parse("20 Feb 2021") }
     let(:customer) { create(:customer) }
     let(:started_at) { nil }
 
@@ -24,14 +24,14 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
 
     before { recurring_transaction_rule }
 
-    context 'when recurring transactions should be created weekly' do
+    context "when recurring transactions should be created weekly" do
       let(:interval) { :weekly }
 
       let(:current_date) do
-        DateTime.parse('20 Jun 2022').prev_occurring(created_at.strftime('%A').downcase.to_sym)
+        DateTime.parse("20 Jun 2022").prev_occurring(created_at.strftime("%A").downcase.to_sym)
       end
 
-      it 'enqueues a job on correct day' do
+      it "enqueues a job on correct day" do
         travel_to(current_date) do
           create_interval_transactions_service.call
 
@@ -50,7 +50,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         end
       end
 
-      it 'does not enqueue a job on other day' do
+      it "does not enqueue a job on other day" do
         travel_to(current_date + 1.day) do
           expect { create_interval_transactions_service.call }.not_to have_enqueued_job
         end
@@ -65,8 +65,8 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           end
         end
 
-        it 'enqueues a job one week after the started_at date' do
-          current_date = DateTime.parse('20 Jun 2022').next_occurring(started_at.strftime('%A').downcase.to_sym)
+        it "enqueues a job one week after the started_at date" do
+          current_date = DateTime.parse("20 Jun 2022").next_occurring(started_at.strftime("%A").downcase.to_sym)
 
           travel_to(current_date) do
             create_interval_transactions_service.call
@@ -119,11 +119,11 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       end
     end
 
-    context 'when recurring transactions should be created monthly' do
+    context "when recurring transactions should be created monthly" do
       let(:interval) { :monthly }
       let(:current_date) { created_at.next_month }
 
-      it 'enqueues a job on correct day' do
+      it "enqueues a job on correct day" do
         travel_to(current_date) do
           create_interval_transactions_service.call
 
@@ -142,17 +142,17 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         end
       end
 
-      it 'does not enqueue a job on other day' do
+      it "does not enqueue a job on other day" do
         travel_to(current_date + 1.day) do
           expect { create_interval_transactions_service.call }.not_to have_enqueued_job
         end
       end
 
-      context 'when wallet is created on a 31st' do
-        let(:created_at) { DateTime.parse('31 Mar 2021') }
-        let(:current_date) { DateTime.parse('30 Apr 2021') }
+      context "when wallet is created on a 31st" do
+        let(:created_at) { DateTime.parse("31 Mar 2021") }
+        let(:current_date) { DateTime.parse("30 Apr 2021") }
 
-        it 'enqueues a job if the month count less than 31 days' do
+        it "enqueues a job if the month count less than 31 days" do
           travel_to(current_date) do
             create_interval_transactions_service.call
 
@@ -184,7 +184,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
           end
         end
 
-        it 'enqueues a job one month after the started_at date' do
+        it "enqueues a job one month after the started_at date" do
           current_date = DateTime.parse("15 May 2025")
 
           travel_to(current_date) do
@@ -207,11 +207,11 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       end
     end
 
-    context 'when recurring transactions should be created quarterly' do
+    context "when recurring transactions should be created quarterly" do
       let(:interval) { :quarterly }
       let(:current_date) { created_at + 3.months }
 
-      it 'enqueues a job on correct day' do
+      it "enqueues a job on correct day" do
         travel_to(current_date) do
           create_interval_transactions_service.call
 
@@ -230,17 +230,17 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         end
       end
 
-      it 'does not enqueue a job on other day' do
+      it "does not enqueue a job on other day" do
         travel_to(current_date + 1.day) do
           expect { create_interval_transactions_service.call }.not_to have_enqueued_job
         end
       end
 
-      context 'when it is March' do
-        let(:created_at) { DateTime.parse('15 Mar 2021') }
-        let(:current_date) { DateTime.parse('15 Sep 2022') }
+      context "when it is March" do
+        let(:created_at) { DateTime.parse("15 Mar 2021") }
+        let(:current_date) { DateTime.parse("15 Sep 2022") }
 
-        it 'enqueues a job' do
+        it "enqueues a job" do
           travel_to(current_date) do
             create_interval_transactions_service.call
 
@@ -260,11 +260,11 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         end
       end
 
-      context 'when wallet is created on a 31st' do
-        let(:created_at) { DateTime.parse('31 Mar 2021') }
-        let(:current_date) { DateTime.parse('30 Jun 2022') }
+      context "when wallet is created on a 31st" do
+        let(:created_at) { DateTime.parse("31 Mar 2021") }
+        let(:current_date) { DateTime.parse("30 Jun 2022") }
 
-        it 'enqueues a job if the month count less than 31 days' do
+        it "enqueues a job if the month count less than 31 days" do
           travel_to(current_date) do
             create_interval_transactions_service.call
 
@@ -285,11 +285,11 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       end
     end
 
-    context 'when recurring transactions should be created yearly' do
+    context "when recurring transactions should be created yearly" do
       let(:interval) { :yearly }
       let(:current_date) { created_at.next_year }
 
-      it 'enqueues a job on correct day' do
+      it "enqueues a job on correct day" do
         travel_to(current_date) do
           create_interval_transactions_service.call
 
@@ -308,17 +308,17 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         end
       end
 
-      it 'does not enqueue a job on other day' do
+      it "does not enqueue a job on other day" do
         travel_to(current_date + 1.day) do
           expect { create_interval_transactions_service.call }.not_to have_enqueued_job
         end
       end
 
-      context 'when wallet is created on 29th of february' do
-        let(:created_at) { DateTime.parse('29 Feb 2020') }
-        let(:current_date) { DateTime.parse('28 Feb 2022') }
+      context "when wallet is created on 29th of february" do
+        let(:created_at) { DateTime.parse("29 Feb 2020") }
+        let(:current_date) { DateTime.parse("28 Feb 2022") }
 
-        it 'enqueues a job on 28th of february when year is not a leap year' do
+        it "enqueues a job on 28th of february when year is not a leap year" do
           travel_to(current_date) do
             create_interval_transactions_service.call
 
@@ -339,21 +339,21 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       end
     end
 
-    context 'when on wallet creation day' do
+    context "when on wallet creation day" do
       let(:interval) { :monthly }
       let(:customer) { create(:customer, timezone:) }
       let(:timezone) { nil }
 
-      it 'does not enqueue a job' do
+      it "does not enqueue a job" do
         travel_to(created_at) do
           expect { create_interval_transactions_service.call }.not_to have_enqueued_job
         end
       end
 
-      context 'with customer timezone' do
-        let(:timezone) { 'Pacific/Noumea' }
+      context "with customer timezone" do
+        let(:timezone) { "Pacific/Noumea" }
 
-        it 'does not enqueue a job' do
+        it "does not enqueue a job" do
           travel_to(created_at + 10.hours) do
             expect { create_interval_transactions_service.call }.not_to have_enqueued_job
           end
@@ -361,9 +361,9 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       end
     end
 
-    context 'when wallet transactions had already been created that day' do
+    context "when wallet transactions had already been created that day" do
       let(:interval) { :monthly }
-      let(:current_date) { DateTime.parse('20 Mar 2021T12:00:00') }
+      let(:current_date) { DateTime.parse("20 Mar 2021T12:00:00") }
 
       let(:wallet_transaction) do
         create(
@@ -377,17 +377,17 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
 
       before { wallet_transaction }
 
-      it 'does not enqueue a job' do
+      it "does not enqueue a job" do
         travel_to(current_date) do
           expect { create_interval_transactions_service.call }.not_to have_enqueued_job
         end
       end
 
-      context 'with customer timezone' do
+      context "with customer timezone" do
         let(:customer) { create(:customer, timezone:) }
-        let(:timezone) { 'Pacific/Noumea' }
+        let(:timezone) { "Pacific/Noumea" }
 
-        it 'does not enqueue a job' do
+        it "does not enqueue a job" do
           travel_to(current_date + 10.hours) do
             expect { create_interval_transactions_service.call }.not_to have_enqueued_job
           end
@@ -395,7 +395,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       end
     end
 
-    context 'when rule requires successful payment' do
+    context "when rule requires successful payment" do
       let(:recurring_transaction_rule) do
         create(
           :recurring_transaction_rule,
@@ -410,10 +410,10 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       let(:interval) { :weekly }
 
       let(:current_date) do
-        DateTime.parse('20 Jun 2022').prev_occurring(created_at.strftime('%A').downcase.to_sym)
+        DateTime.parse("20 Jun 2022").prev_occurring(created_at.strftime("%A").downcase.to_sym)
       end
 
-      it 'follows the rule configuration' do
+      it "follows the rule configuration" do
         travel_to(current_date) do
           create_interval_transactions_service.call
 
@@ -433,7 +433,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       end
     end
 
-    context 'when rule have medata' do
+    context "when rule have medata" do
       let(:recurring_transaction_rule) do
         create(
           :recurring_transaction_rule,
@@ -447,13 +447,13 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       end
       let(:interval) { :weekly }
 
-      let(:transaction_metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
+      let(:transaction_metadata) { [{"key" => "valid_value", "value" => "also_valid"}] }
 
       let(:current_date) do
-        DateTime.parse('20 Jun 2022').prev_occurring(created_at.strftime('%A').downcase.to_sym)
+        DateTime.parse("20 Jun 2022").prev_occurring(created_at.strftime("%A").downcase.to_sym)
       end
 
-      it 'enqueues a job with correct configuration' do
+      it "enqueues a job with correct configuration" do
         travel_to(current_date) do
           create_interval_transactions_service.call
 

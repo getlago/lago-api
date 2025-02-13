@@ -1,25 +1,25 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::SubsidiariesService do
   subject(:subsidiaries_service) { described_class.new(integration:) }
 
   let(:integration) { create(:netsuite_integration) }
 
-  describe '.call' do
+  describe ".call" do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:subsidiaries_endpoint) { 'https://api.nango.dev/v1/netsuite/subsidiaries' }
+    let(:subsidiaries_endpoint) { "https://api.nango.dev/v1/netsuite/subsidiaries" }
     let(:headers) do
       {
-        'Connection-Id' => integration.connection_id,
-        'Authorization' => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
-        'Provider-Config-Key' => 'netsuite-tba'
+        "Connection-Id" => integration.connection_id,
+        "Authorization" => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
+        "Provider-Config-Key" => "netsuite-tba"
       }
     end
 
     let(:aggregator_response) do
-      path = Rails.root.join('spec/fixtures/integration_aggregator/subsidiaries_response.json')
+      path = Rails.root.join("spec/fixtures/integration_aggregator/subsidiaries_response.json")
       JSON.parse(File.read(path))
     end
 
@@ -32,14 +32,14 @@ RSpec.describe Integrations::Aggregator::SubsidiariesService do
         .and_return(aggregator_response)
     end
 
-    it 'successfully fetches subsidiaries' do
+    it "successfully fetches subsidiaries" do
       result = subsidiaries_service.call
 
       aggregate_failures do
         expect(LagoHttpClient::Client).to have_received(:new).with(subsidiaries_endpoint)
         expect(lago_client).to have_received(:get)
         expect(result.subsidiaries.count).to eq(4)
-        expect(result.subsidiaries.first.external_id).to eq('1')
+        expect(result.subsidiaries.first.external_id).to eq("1")
       end
     end
   end

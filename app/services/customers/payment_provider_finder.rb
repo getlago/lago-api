@@ -12,7 +12,7 @@ module Customers
           payment_provider_type: customer.payment_provider
         ).call
 
-        return nil if payment_provider_result.error&.code == 'payment_provider_not_found'
+        return nil if payment_provider_result.error&.code == "payment_provider_not_found"
 
         payment_provider_result.raise_if_error!
         payment_provider_result.payment_provider

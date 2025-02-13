@@ -11,7 +11,7 @@ FactoryBot.define do
     signature { "MySignature" }
 
     payload do
-      File.read(Rails.root.join('spec/fixtures/stripe/payment_intent_event.json'))
+      File.read(Rails.root.join("spec/fixtures/stripe/payment_intent_event.json"))
     end
   end
 end

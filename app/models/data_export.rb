@@ -20,12 +20,12 @@ class DataExport < ApplicationRecord
   validates :file, attached: true, if: :completed?
 
   def processing!
-    update!(status: 'processing', started_at: Time.zone.now)
+    update!(status: "processing", started_at: Time.zone.now)
   end
 
   def completed!
     update!(
-      status: 'completed',
+      status: "completed",
       completed_at: Time.zone.now,
       expires_at: EXPIRATION_PERIOD.from_now
     )
@@ -46,11 +46,11 @@ class DataExport < ApplicationRecord
 
     blob_path = Rails.application.routes.url_helpers.rails_blob_path(
       file,
-      host: 'void',
+      host: "void",
       expires_in: EXPIRATION_PERIOD
     )
 
-    File.join(ENV['LAGO_API_URL'], blob_path)
+    File.join(ENV["LAGO_API_URL"], blob_path)
   end
 
   def export_class

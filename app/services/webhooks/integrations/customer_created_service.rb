@@ -18,7 +18,7 @@ module Webhooks
       end
 
       def object_type
-        'customer'
+        "customer"
       end
     end
   end

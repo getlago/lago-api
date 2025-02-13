@@ -17,16 +17,16 @@ module V1
 
     def type
       case model.type
-      when 'IntegrationCustomers::NetsuiteCustomer'
-        'netsuite'
-      when 'IntegrationCustomers::AnrokCustomer'
-        'anrok'
-      when 'IntegrationCustomers::XeroCustomer'
-        'xero'
-      when 'IntegrationCustomers::HubspotCustomer'
-        'hubspot'
-      when 'IntegrationCustomers::SalesforceCustomer'
-        'salesforce'
+      when "IntegrationCustomers::NetsuiteCustomer"
+        "netsuite"
+      when "IntegrationCustomers::AnrokCustomer"
+        "anrok"
+      when "IntegrationCustomers::XeroCustomer"
+        "xero"
+      when "IntegrationCustomers::HubspotCustomer"
+        "hubspot"
+      when "IntegrationCustomers::SalesforceCustomer"
+        "salesforce"
       end
     end
   end

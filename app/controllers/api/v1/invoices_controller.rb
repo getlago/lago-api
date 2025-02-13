@@ -37,7 +37,7 @@ module Api
       def show
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
 
-        return not_found_error(resource: 'invoice') unless invoice
+        return not_found_error(resource: "invoice") unless invoice
 
         render_invoice(invoice)
       end
@@ -73,7 +73,7 @@ module Api
             json: ::CollectionSerializer.new(
               result.invoices.includes(:metadata, :applied_taxes),
               ::V1::InvoiceSerializer,
-              collection_name: 'invoices',
+              collection_name: "invoices",
               meta: pagination_metadata(result.invoices),
               includes: %i[customer integration_customers metadata applied_taxes]
             )
@@ -86,13 +86,13 @@ module Api
       def download
         invoice = current_organization.invoices.finalized.find_by(id: params[:id])
 
-        return not_found_error(resource: 'invoice') unless invoice
+        return not_found_error(resource: "invoice") unless invoice
 
         if invoice.file.present?
           return render(
             json: ::V1::InvoiceSerializer.new(
               invoice,
-              root_name: 'invoice'
+              root_name: "invoice"
             )
           )
         end
@@ -104,7 +104,7 @@ module Api
 
       def refresh
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
-        return not_found_error(resource: 'invoice') unless invoice
+        return not_found_error(resource: "invoice") unless invoice
 
         result = Invoices::RefreshDraftService.call(invoice:)
         if result.success?
@@ -116,7 +116,7 @@ module Api
 
       def finalize
         invoice = current_organization.invoices.draft.find_by(id: params[:id])
-        return not_found_error(resource: 'invoice') unless invoice
+        return not_found_error(resource: "invoice") unless invoice
 
         result = Invoices::RefreshDraftAndFinalizeService.call(invoice:)
         if result.success?
@@ -150,7 +150,7 @@ module Api
 
       def retry_payment
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
-        return not_found_error(resource: 'invoice') unless invoice
+        return not_found_error(resource: "invoice") unless invoice
 
         result = Invoices::Payments::RetryService.new(invoice:).call
         return render_error_response(result) unless result.success?
@@ -160,7 +160,7 @@ module Api
 
       def retry
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
-        return not_found_error(resource: 'invoice') unless invoice
+        return not_found_error(resource: "invoice") unless invoice
 
         result = Invoices::RetryService.new(invoice:).call
         if result.success?
@@ -172,7 +172,7 @@ module Api
 
       def payment_url
         invoice = current_organization.invoices.visible.includes(:customer).find_by(id: params[:id])
-        return not_found_error(resource: 'invoice') unless invoice
+        return not_found_error(resource: "invoice") unless invoice
 
         result = ::Invoices::Payments::GeneratePaymentUrlService.call(invoice:)
 
@@ -180,7 +180,7 @@ module Api
           render(
             json: ::V1::PaymentProviders::InvoicePaymentSerializer.new(
               invoice,
-              root_name: 'invoice_payment_details',
+              root_name: "invoice_payment_details",
               payment_url: result.payment_url
             )
           )
@@ -191,7 +191,7 @@ module Api
 
       def sync_salesforce_id
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
-        return not_found_error(resource: 'invoice') unless invoice
+        return not_found_error(resource: "invoice") unless invoice
 
         result = Invoices::SyncSalesforceIdService.call(invoice:, params: sync_salesforce_id_params)
 
@@ -228,7 +228,7 @@ module Api
           render(
             json: ::V1::InvoiceSerializer.new(
               result.invoice,
-              root_name: 'invoice',
+              root_name: "invoice",
               includes: %i[customer integration_customers credits applied_taxes preview_subscriptions preview_fees]
             )
           )
@@ -324,7 +324,7 @@ module Api
         render(
           json: ::V1::InvoiceSerializer.new(
             invoice,
-            root_name: 'invoice',
+            root_name: "invoice",
             includes: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes error_details applied_invoice_custom_sections]
           )
         )
@@ -346,7 +346,7 @@ module Api
       end
 
       def resource_name
-        'invoice'
+        "invoice"
       end
     end
   end

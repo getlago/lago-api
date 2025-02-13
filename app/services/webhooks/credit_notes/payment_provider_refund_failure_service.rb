@@ -21,11 +21,11 @@ module Webhooks
       end
 
       def webhook_type
-        'credit_note.refund_failure'
+        "credit_note.refund_failure"
       end
 
       def object_type
-        'credit_note_payment_provider_refund_error'
+        "credit_note_payment_provider_refund_error"
       end
     end
   end

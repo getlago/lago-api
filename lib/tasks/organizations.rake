@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 namespace :organizations do
-  desc 'Think couple times before running this!!! It will delete all the data related to invoices, credit notes and events'
+  desc "Think couple times before running this!!! It will delete all the data related to invoices, credit notes and events"
   task :delete_invoices_data, [:org_id] => :environment do |_task, args|
     organization = Organization.find(args[:org_id])
     organization.invoices.find_each do |invoice|

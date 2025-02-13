@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe IntegrationCustomers::CreateService, type: :service do
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization:) }
-  let(:integration_type) { 'netsuite' }
+  let(:integration_type) { "netsuite" }
 
-  describe '#call' do
+  describe "#call" do
     subject(:service_call) { described_class.call(params:, integration:, customer:) }
 
     let(:params) do
@@ -22,9 +22,9 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
       }
     end
 
-    let(:subsidiary_id) { '1' }
+    let(:subsidiary_id) { "1" }
 
-    context 'with netsuite premium integration present' do
+    context "with netsuite premium integration present" do
       let(:integration_code) { integration.code }
       let(:external_customer_id) { nil }
       let(:sync_with_provider) { true }
@@ -45,7 +45,7 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
       around { |test| lago_premium!(&test) }
 
       before do
-        organization.update!(premium_integrations: ['netsuite'])
+        organization.update!(premium_integrations: ["netsuite"])
 
         allow(Integrations::Aggregator::Contacts::CreateService)
           .to receive(:new).and_return(aggregator_contacts_create_service)
@@ -53,13 +53,13 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
         allow(aggregator_contacts_create_service).to receive(:call).and_return(create_result)
       end
 
-      context 'when sync with provider is true' do
+      context "when sync with provider is true" do
         let(:sync_with_provider) { true }
 
-        context 'when customer external id is present' do
+        context "when customer external id is present" do
           let(:external_customer_id) { SecureRandom.uuid }
 
-          it 'returns integration customer' do
+          it "returns integration customer" do
             result = service_call
 
             aggregate_failures do
@@ -70,15 +70,15 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
             end
           end
 
-          it 'creates integration customer' do
+          it "creates integration customer" do
             expect { service_call }.to change(IntegrationCustomers::BaseCustomer, :count).by(1)
           end
 
-          context 'when the integration type is salesforce' do
+          context "when the integration type is salesforce" do
             let(:integration) { create(:salesforce_integration, organization:) }
-            let(:integration_type) { 'salesforce' }
+            let(:integration_type) { "salesforce" }
 
-            it 'returns integration customer with sync_with_provider true' do
+            it "returns integration customer with sync_with_provider true" do
               result = service_call
 
               aggregate_failures do
@@ -92,10 +92,10 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
           end
         end
 
-        context 'when customer external id is not present' do
+        context "when customer external id is not present" do
           let(:external_customer_id) { nil }
 
-          it 'returns integration customer' do
+          it "returns integration customer" do
             result = service_call
 
             aggregate_failures do
@@ -105,57 +105,57 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
             end
           end
 
-          it 'creates integration customer' do
+          it "creates integration customer" do
             expect { service_call }.to change(IntegrationCustomers::NetsuiteCustomer, :count).by(1)
           end
 
-          context 'with anrok integration' do
+          context "with anrok integration" do
             let(:integration) { create(:anrok_integration, organization:) }
             let(:params) do
               {
-                integration_type: 'anrok',
+                integration_type: "anrok",
                 integration_code:,
                 sync_with_provider:,
                 external_customer_id:
               }
             end
 
-            before { organization.update!(premium_integrations: ['anrok']) }
+            before { organization.update!(premium_integrations: ["anrok"]) }
 
-            it 'creates integration customer' do
+            it "creates integration customer" do
               expect { service_call }.to change(IntegrationCustomers::AnrokCustomer, :count).by(1)
             end
           end
         end
       end
 
-      context 'when sync with provider is false' do
+      context "when sync with provider is false" do
         let(:sync_with_provider) { false }
 
-        context 'when customer external id is present' do
+        context "when customer external id is present" do
           let(:external_customer_id) { SecureRandom.uuid }
 
-          it 'does not calls aggregator create service' do
+          it "does not calls aggregator create service" do
             service_call
 
             expect(aggregator_contacts_create_service).not_to have_received(:call)
           end
 
-          it 'creates integration customer' do
+          it "creates integration customer" do
             expect { service_call }.to change(IntegrationCustomers::BaseCustomer, :count).by(1)
           end
         end
 
-        context 'when customer external id is not present' do
+        context "when customer external id is not present" do
           let(:external_customer_id) { nil }
 
-          it 'does not calls aggregator create service' do
+          it "does not calls aggregator create service" do
             service_call
 
             expect(aggregator_contacts_create_service).not_to have_received(:call)
           end
 
-          it 'does not create integration customer' do
+          it "does not create integration customer" do
             expect { service_call }.not_to change(IntegrationCustomers::BaseCustomer, :count)
           end
         end

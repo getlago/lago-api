@@ -10,8 +10,8 @@ module Memberships
     end
 
     def call
-      return result.not_found_failure!(resource: 'membership') unless membership
-      return result.not_allowed_failure!(code: 'last_admin') if changing_role_of_last_admin?
+      return result.not_found_failure!(resource: "membership") unless membership
+      return result.not_allowed_failure!(code: "last_admin") if changing_role_of_last_admin?
 
       membership.update!(
         role: params[:role]
@@ -30,7 +30,7 @@ module Memberships
     def changing_role_of_last_admin?
       membership.organization.memberships.admin.count == 1 &&
         membership.admin? &&
-        params[:role] != 'admin'
+        params[:role] != "admin"
     end
   end
 end

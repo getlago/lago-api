@@ -12,7 +12,7 @@ module Types
     # Ex: current organization > memberships > another member > organizations can lead to an organization
     #     the current user is not supposed to have access to
     class OrganizationType < BaseOrganizationType
-      description 'Safe Organization Type'
+      description "Safe Organization Type"
 
       field :id, ID, null: false
 

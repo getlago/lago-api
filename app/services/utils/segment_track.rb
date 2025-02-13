@@ -6,7 +6,7 @@ module Utils
       def invoice_created(invoice)
         SegmentTrackJob.perform_later(
           membership_id: CurrentContext.membership,
-          event: 'invoice_created',
+          event: "invoice_created",
           properties: {
             organization_id: invoice.organization.id,
             invoice_id: invoice.id,
@@ -18,7 +18,7 @@ module Utils
       def refund_status_changed(status, credit_note_id, organization_id)
         SegmentTrackJob.perform_later(
           membership_id: CurrentContext.membership,
-          event: 'refund_status_changed',
+          event: "refund_status_changed",
           properties: {
             organization_id: organization_id,
             credit_note_id: credit_note_id,

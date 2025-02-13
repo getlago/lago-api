@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'organization:integrations:view'
+    REQUIRED_PERMISSION = "organization:integrations:view"
 
     description "Query organization's integrations"
 
@@ -25,18 +25,18 @@ module Resolvers
 
     def integration_type(type)
       case type
-      when 'netsuite'
-        'Integrations::NetsuiteIntegration'
-      when 'okta'
-        'Integrations::OktaIntegration'
-      when 'anrok'
-        'Integrations::AnrokIntegration'
-      when 'xero'
-        'Integrations::XeroIntegration'
-      when 'hubspot'
-        'Integrations::HubspotIntegration'
-      when 'salesforce'
-        'Integrations::SalesforceIntegration'
+      when "netsuite"
+        "Integrations::NetsuiteIntegration"
+      when "okta"
+        "Integrations::OktaIntegration"
+      when "anrok"
+        "Integrations::AnrokIntegration"
+      when "xero"
+        "Integrations::XeroIntegration"
+      when "hubspot"
+        "Integrations::HubspotIntegration"
+      when "salesforce"
+        "Integrations::SalesforceIntegration"
       else
         raise(NotImplementedError)
       end

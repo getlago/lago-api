@@ -29,34 +29,34 @@ module Validators
     private
 
     def validate_type
-      errors[:metadata] = 'invalid_type' unless metadata.is_a?(Array)
+      errors[:metadata] = "invalid_type" unless metadata.is_a?(Array)
     end
 
     def validate_size
-      errors[:metadata] = 'too_many_keys' if metadata.size > config[:max_keys]
+      errors[:metadata] = "too_many_keys" if metadata.size > config[:max_keys]
     end
 
     def validate_item(item)
-      unless item.is_a?(Hash) && item.keys.sort == %w[key value] && item['key'] && item['value']
-        errors[:metadata] = 'invalid_key_value_pair'
+      unless item.is_a?(Hash) && item.keys.sort == %w[key value] && item["key"] && item["value"]
+        errors[:metadata] = "invalid_key_value_pair"
         return
       end
 
-      validate_key_length(item['key'])
-      validate_value_length(item['value'])
-      validate_structure(item['value'])
+      validate_key_length(item["key"])
+      validate_value_length(item["value"])
+      validate_structure(item["value"])
     end
 
     def validate_key_length(key)
-      errors[:metadata] = 'key_too_long' if key.length > config[:max_key_length]
+      errors[:metadata] = "key_too_long" if key.length > config[:max_key_length]
     end
 
     def validate_value_length(value)
-      errors[:metadata] = 'value_too_long' if value.is_a?(String) && value.length > config[:max_value_length]
+      errors[:metadata] = "value_too_long" if value.is_a?(String) && value.length > config[:max_value_length]
     end
 
     def validate_structure(value)
-      errors[:metadata] = 'nested_structure_not_allowed' if value.is_a?(Hash) || value.is_a?(Array)
+      errors[:metadata] = "nested_structure_not_allowed" if value.is_a?(Hash) || value.is_a?(Array)
     end
   end
 end

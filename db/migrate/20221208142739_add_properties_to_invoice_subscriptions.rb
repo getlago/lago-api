@@ -2,7 +2,7 @@
 
 class AddPropertiesToInvoiceSubscriptions < ActiveRecord::Migration[7.0]
   def change
-    add_column :invoice_subscriptions, :properties, :jsonb, null: false, default: '{}'
+    add_column :invoice_subscriptions, :properties, :jsonb, null: false, default: "{}"
 
     safety_assured do
       reversible do |dir|

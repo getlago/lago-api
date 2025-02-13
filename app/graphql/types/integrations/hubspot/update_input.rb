@@ -4,7 +4,7 @@ module Types
   module Integrations
     class Hubspot
       class UpdateInput < Types::BaseInputObject
-        graphql_name 'UpdateHubspotIntegrationInput'
+        graphql_name "UpdateHubspotIntegrationInput"
 
         argument :id, ID, required: false
 

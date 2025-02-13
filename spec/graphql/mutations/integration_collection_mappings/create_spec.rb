@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::IntegrationCollectionMappings::Create, type: :graphql do
-  let(:required_permission) { 'organization:integrations:update' }
+  let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:mapping_type) { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample.to_s }
   let(:organization) { membership.organization }
@@ -27,11 +27,11 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create, type: :graphql 
     GQL
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:update"
 
-  it 'creates an integration collection mapping' do
+  it "creates an integration collection mapping" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -48,15 +48,15 @@ RSpec.describe Mutations::IntegrationCollectionMappings::Create, type: :graphql 
       }
     )
 
-    result_data = result['data']['createIntegrationCollectionMapping']
+    result_data = result["data"]["createIntegrationCollectionMapping"]
 
     aggregate_failures do
-      expect(result_data['id']).to be_present
-      expect(result_data['integrationId']).to eq(integration.id)
-      expect(result_data['mappingType']).to eq(mapping_type)
-      expect(result_data['externalAccountCode']).to eq(external_account_code)
-      expect(result_data['externalId']).to eq(external_id)
-      expect(result_data['externalName']).to eq(external_name)
+      expect(result_data["id"]).to be_present
+      expect(result_data["integrationId"]).to eq(integration.id)
+      expect(result_data["mappingType"]).to eq(mapping_type)
+      expect(result_data["externalAccountCode"]).to eq(external_account_code)
+      expect(result_data["externalId"]).to eq(external_id)
+      expect(result_data["externalName"]).to eq(external_name)
     end
   end
 end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Taxes::Destroy, type: :graphql do
   let(:membership) { create(:membership) }
@@ -17,7 +17,7 @@ RSpec.describe Mutations::Taxes::Destroy, type: :graphql do
 
   before { tax }
 
-  it 'destroys a tax' do
+  it "destroys a tax" do
     expect do
       execute_graphql(
         current_user: membership.user,

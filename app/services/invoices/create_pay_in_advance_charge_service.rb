@@ -32,7 +32,7 @@ module Invoices
 
         if tax_error?(fee_result)
           invoice.failed!
-          invoice.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
+          invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
           create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
 
           return fee_result
@@ -102,12 +102,12 @@ module Invoices
     end
 
     def deliver_webhooks
-      invoice.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
-      SendWebhookJob.perform_later('invoice.created', invoice)
+      invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
+      SendWebhookJob.perform_later("invoice.created", invoice)
     end
 
     def should_deliver_email?
-      License.premium? && customer.organization.email_settings.include?('invoice.finalized')
+      License.premium? && customer.organization.email_settings.include?("invoice.finalized")
     end
 
     def wallet

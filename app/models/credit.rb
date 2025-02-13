@@ -6,7 +6,7 @@ class Credit < ApplicationRecord
   belongs_to :invoice
   belongs_to :applied_coupon, optional: true
   belongs_to :credit_note, optional: true
-  belongs_to :progressive_billing_invoice, class_name: 'Invoice', optional: true
+  belongs_to :progressive_billing_invoice, class_name: "Invoice", optional: true
 
   has_one :coupon, -> { with_discarded }, through: :applied_coupon
 
@@ -26,10 +26,10 @@ class Credit < ApplicationRecord
   end
 
   def item_type
-    return 'coupon' if applied_coupon_id?
-    return 'invoice' if progressive_billing_invoice_id?
+    return "coupon" if applied_coupon_id?
+    return "invoice" if progressive_billing_invoice_id?
 
-    'credit_note'
+    "credit_note"
   end
 
   def item_code
@@ -54,9 +54,9 @@ class Credit < ApplicationRecord
       "#{format("%.2f", applied_coupon.percentage_rate)}%"
     else
       applied_coupon.amount.format(
-        format: I18n.t('money.format'),
-        decimal_mark: I18n.t('money.decimal_mark'),
-        thousands_separator: I18n.t('money.thousands_separator')
+        format: I18n.t("money.format"),
+        decimal_mark: I18n.t("money.decimal_mark"),
+        thousands_separator: I18n.t("money.thousands_separator")
       )
     end
 

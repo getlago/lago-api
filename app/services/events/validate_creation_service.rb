@@ -67,23 +67,23 @@ module Events
     end
 
     def missing_subscription_error
-      result.not_found_failure!(resource: 'subscription')
+      result.not_found_failure!(resource: "subscription")
     end
 
     def transaction_id_error
-      result.validation_failure!(errors: {transaction_id: ['value_is_missing_or_already_exists']})
+      result.validation_failure!(errors: {transaction_id: ["value_is_missing_or_already_exists"]})
     end
 
     def invalid_code_error
-      result.not_found_failure!(resource: 'billable_metric')
+      result.not_found_failure!(resource: "billable_metric")
     end
 
     def invalid_properties_error
-      result.validation_failure!(errors: {properties: ['value_is_not_valid_number']})
+      result.validation_failure!(errors: {properties: ["value_is_not_valid_number"]})
     end
 
     def invalid_timestamp_error
-      result.validation_failure!(errors: {timestamp: ['invalid_format']})
+      result.validation_failure!(errors: {timestamp: ["invalid_format"]})
     end
 
     def billable_metric

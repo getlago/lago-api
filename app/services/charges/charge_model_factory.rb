@@ -4,7 +4,7 @@ module Charges
   class ChargeModelFactory
     def self.new_instance(charge:, aggregation_result:, properties:)
       charge_model = charge_model_class(charge:)
-      if properties['grouped_by'].present? && !aggregation_result.aggregations.nil?
+      if properties["grouped_by"].present? && !aggregation_result.aggregations.nil?
         Charges::ChargeModels::GroupedService.new(charge_model: charge_model, charge:, aggregation_result:, properties:)
       else
         charge_model.new(charge:, aggregation_result:, properties:)

@@ -54,7 +54,7 @@ module V1
       ::CollectionSerializer.new(
         model.metadata,
         ::V1::Customers::MetadataSerializer,
-        collection_name: 'metadata'
+        collection_name: "metadata"
       ).serialize
     end
 
@@ -86,7 +86,7 @@ module V1
     end
 
     def taxes
-      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: 'taxes').serialize
+      ::CollectionSerializer.new(model.taxes, ::V1::TaxSerializer, collection_name: "taxes").serialize
     end
 
     def vies_check
@@ -101,7 +101,7 @@ module V1
       ::CollectionSerializer.new(
         model.integration_customers,
         ::V1::IntegrationCustomerSerializer,
-        collection_name: 'integration_customers'
+        collection_name: "integration_customers"
       ).serialize
     end
 
@@ -109,7 +109,7 @@ module V1
       ::CollectionSerializer.new(
         model.applicable_invoice_custom_sections,
         ::V1::InvoiceCustomSectionSerializer,
-        collection_name: 'applicable_invoice_custom_sections'
+        collection_name: "applicable_invoice_custom_sections"
       ).serialize
     end
   end

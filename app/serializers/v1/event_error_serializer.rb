@@ -5,7 +5,7 @@ module V1
     def serialize
       payload = {
         status: 422,
-        error: 'Unprocessable entity',
+        error: "Unprocessable entity",
         message: model.error.to_json
       }
 

@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'invoices:void'
+      REQUIRED_PERMISSION = "invoices:void"
 
-      graphql_name 'VoidInvoice'
-      description 'Void an invoice'
+      graphql_name "VoidInvoice"
+      description "Void an invoice"
 
       argument :id, ID, required: true
 

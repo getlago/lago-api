@@ -3,7 +3,7 @@
 module PaymentRequests
   module Payments
     class CreateJob < ApplicationJob
-      queue_as 'providers'
+      queue_as "providers"
 
       unique :until_executed, on_conflict: :log
 

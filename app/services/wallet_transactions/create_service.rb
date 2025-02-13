@@ -53,7 +53,7 @@ module WalletTransactions
 
       transactions = wallet_transactions.compact
 
-      transactions.each { |wt| SendWebhookJob.perform_later('wallet_transaction.created', wt.reload) }
+      transactions.each { |wt| SendWebhookJob.perform_later("wallet_transaction.created", wt.reload) }
 
       result.wallet_transactions = transactions
       result

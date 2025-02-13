@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query taxes of an organization'
+    description "Query taxes of an organization"
 
     argument :applied_to_organization, Boolean, required: false
     argument :auto_generated, Boolean, required: false

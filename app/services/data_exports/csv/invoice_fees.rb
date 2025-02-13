@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'csv'
-require 'forwardable'
+require "csv"
+require "forwardable"
 
 module DataExports
   module Csv

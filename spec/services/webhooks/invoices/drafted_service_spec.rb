@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Webhooks::Invoices::DraftedService do
   subject(:webhook_service) { described_class.new(object: invoice) }
@@ -16,7 +16,7 @@ RSpec.describe Webhooks::Invoices::DraftedService do
     create_list(:credit, 2, invoice:)
   end
 
-  describe '.call' do
-    it_behaves_like 'creates webhook', 'invoice.drafted', 'invoice', {'fees' => Array, 'credits' => Array}
+  describe ".call" do
+    it_behaves_like "creates webhook", "invoice.drafted", "invoice", {"fees" => Array, "credits" => Array}
   end
 end

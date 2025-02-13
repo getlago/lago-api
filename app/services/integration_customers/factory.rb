@@ -8,15 +8,15 @@ module IntegrationCustomers
 
     def self.service_class(integration)
       case integration&.type&.to_s
-      when 'Integrations::NetsuiteIntegration'
+      when "Integrations::NetsuiteIntegration"
         IntegrationCustomers::NetsuiteService
-      when 'Integrations::AnrokIntegration'
+      when "Integrations::AnrokIntegration"
         IntegrationCustomers::AnrokService
-      when 'Integrations::XeroIntegration'
+      when "Integrations::XeroIntegration"
         IntegrationCustomers::XeroService
-      when 'Integrations::HubspotIntegration'
+      when "Integrations::HubspotIntegration"
         IntegrationCustomers::HubspotService
-      when 'Integrations::SalesforceIntegration'
+      when "Integrations::SalesforceIntegration"
         IntegrationCustomers::SalesforceService
       else
         raise(NotImplementedError)

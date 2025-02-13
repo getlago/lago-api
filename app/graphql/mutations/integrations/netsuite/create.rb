@@ -7,10 +7,10 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = 'organization:integrations:create'
+        REQUIRED_PERMISSION = "organization:integrations:create"
 
-        graphql_name 'CreateNetsuiteIntegration'
-        description 'Create Netsuite integration'
+        graphql_name "CreateNetsuiteIntegration"
+        description "Create Netsuite integration"
 
         input_object_class Types::Integrations::Netsuite::CreateInput
 

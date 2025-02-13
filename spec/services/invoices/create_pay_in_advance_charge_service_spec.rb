@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
   subject(:invoice_service) do
@@ -18,7 +18,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
 
   let(:invoice) { nil }
 
-  let(:email_settings) { ['invoice.finalized', 'credit_note.created'] }
+  let(:email_settings) { ["invoice.finalized", "credit_note.created"] }
 
   let(:event) do
     Events::CommonFactory.new_instance(
@@ -33,7 +33,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
 
   before { create(:tax, organization:, applied_to_organization: true) }
 
-  describe 'call' do
+  describe "call" do
     let(:aggregation_result) do
       BaseService::Result.new.tap do |result|
         result.aggregation = 9
@@ -66,7 +66,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
     end
 
-    it 'creates an invoice' do
+    it "creates an invoice" do
       result = invoice_service.call
 
       aggregate_failures do
@@ -76,8 +76,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         expect(result.invoice.payment_due_date.to_date).to eq(timestamp)
         expect(result.invoice.organization_id).to eq(organization.id)
         expect(result.invoice.customer_id).to eq(customer.id)
-        expect(result.invoice.invoice_type).to eq('subscription')
-        expect(result.invoice.payment_status).to eq('pending')
+        expect(result.invoice.invoice_type).to eq("subscription")
+        expect(result.invoice.payment_status).to eq("pending")
 
         expect(result.invoice.fees.where(fee_type: :charge).count).to eq(1)
         expect(result.invoice.fees.first).to have_attributes(
@@ -85,11 +85,11 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           charge:,
           amount_cents: 10,
           precise_amount_cents: 10.0,
-          amount_currency: 'EUR',
+          amount_currency: "EUR",
           taxes_rate: 20.0,
           taxes_amount_cents: 2,
           taxes_precise_amount_cents: 2.0,
-          fee_type: 'charge',
+          fee_type: "charge",
           pay_in_advance: true,
           invoiceable: charge,
           units: 9,
@@ -97,7 +97,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           events_count: 1,
           charge_filter: nil,
           pay_in_advance_event_id: event.id,
-          payment_status: 'pending',
+          payment_status: "pending",
           unit_amount_cents: 1,
           precise_unit_amount: 0.01111111111
         )
@@ -116,16 +116,16 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end
     end
 
-    it 'creates InvoiceSubscription object' do
+    it "creates InvoiceSubscription object" do
       expect { invoice_service.call.invoice }.to change(InvoiceSubscription, :count).by(1)
     end
 
-    it 'calls SegmentTrackJob' do
+    it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'invoice_created',
+        event: "invoice_created",
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
@@ -134,7 +134,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       )
     end
 
-    it 'creates a payment' do
+    it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 
       invoice_service.call
@@ -142,37 +142,37 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       expect(Invoices::Payments::CreateService).to have_received(:call_async)
     end
 
-    it 'enqueues a SendWebhookJob for the invoice' do
+    it "enqueues a SendWebhookJob for the invoice" do
       expect do
         invoice_service.call
-      end.to have_enqueued_job(SendWebhookJob).with('invoice.created', Invoice)
+      end.to have_enqueued_job(SendWebhookJob).with("invoice.created", Invoice)
     end
 
-    it 'enqueues a SendWebhookJob for the fees' do
+    it "enqueues a SendWebhookJob for the fees" do
       expect do
         invoice_service.call
-      end.to have_enqueued_job(SendWebhookJob).with('fee.created', Fee)
+      end.to have_enqueued_job(SendWebhookJob).with("fee.created", Fee)
     end
 
-    it 'enqueues GeneratePdfAndNotifyJob with email false' do
+    it "enqueues GeneratePdfAndNotifyJob with email false" do
       expect do
         invoice_service.call
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
-    context 'with lago_premium' do
+    context "with lago_premium" do
       around { |test| lago_premium!(&test) }
 
-      it 'enqueues GeneratePdfAndNotifyJob with email true' do
+      it "enqueues GeneratePdfAndNotifyJob with email true" do
         expect do
           invoice_service.call
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
-      context 'when organization does not have right email settings' do
+      context "when organization does not have right email settings" do
         let(:email_settings) { [] }
 
-        it 'enqueues GeneratePdfAndNotifyJob with email false' do
+        it "enqueues GeneratePdfAndNotifyJob with email false" do
           expect do
             invoice_service.call
           end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
@@ -180,26 +180,26 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end
     end
 
-    context 'with customer timezone' do
-      let(:customer) { create(:customer, organization:, timezone: 'America/Los_Angeles') }
-      let(:timestamp) { DateTime.parse('2022-11-25 01:00:00') }
+    context "with customer timezone" do
+      let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
+      let(:timestamp) { DateTime.parse("2022-11-25 01:00:00") }
 
-      it 'assigns the issuing date in the customer timezone' do
+      it "assigns the issuing date in the customer timezone" do
         result = invoice_service.call
 
-        expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
-        expect(result.invoice.payment_due_date.to_s).to eq('2022-11-24')
+        expect(result.invoice.issuing_date.to_s).to eq("2022-11-24")
+        expect(result.invoice.payment_due_date.to_s).to eq("2022-11-24")
       end
     end
 
-    context 'when there is tax provider integration' do
+    context "when there is tax provider integration" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
       let(:response) { instance_double(Net::HTTPOK) }
       let(:lago_client) { instance_double(LagoHttpClient::Client) }
-      let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+      let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
       let(:body) do
-        p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response.json')
+        p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
         File.read(p)
       end
       let(:integration_collection_mapping) do
@@ -207,7 +207,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           :netsuite_collection_mapping,
           integration:,
           mapping_type: :fallback_item,
-          settings: {external_id: '1', external_account_code: '11', external_name: ''}
+          settings: {external_id: "1", external_account_code: "11", external_name: ""}
         )
       end
 
@@ -218,10 +218,10 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
         allow(lago_client).to receive(:post_with_response).and_return(response)
         allow(response).to receive(:body).and_return(body)
-        allow_any_instance_of(Fee).to receive(:id).and_return('lago_fee_id') # rubocop:disable RSpec/AnyInstance
+        allow_any_instance_of(Fee).to receive(:id).and_return("lago_fee_id") # rubocop:disable RSpec/AnyInstance
       end
 
-      it 'creates an invoice and fees' do
+      it "creates an invoice and fees" do
         result = invoice_service.call
 
         aggregate_failures do
@@ -237,49 +237,49 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         end
       end
 
-      context 'when there is error received from the provider' do
+      context "when there is error received from the provider" do
         let(:body) do
-          p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+          p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
           File.read(p)
         end
 
-        it 'returns tax error' do
+        it "returns tax error" do
           result = invoice_service.call
 
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:tax_error]).to eq(['taxDateTooFarInFuture'])
+            expect(result.error.messages[:tax_error]).to eq(["taxDateTooFarInFuture"])
 
             invoice = customer.invoices.order(created_at: :desc).first
 
-            expect(invoice.status).to eq('failed')
+            expect(invoice.status).to eq("failed")
             expect(invoice.error_details.count).to eq(1)
-            expect(invoice.error_details.first.details['tax_error']).to eq('taxDateTooFarInFuture')
+            expect(invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
           end
         end
       end
     end
 
-    context 'with grace period' do
+    context "with grace period" do
       let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
-      let(:timestamp) { DateTime.parse('2022-11-25 08:00:00') }
+      let(:timestamp) { DateTime.parse("2022-11-25 08:00:00") }
 
-      it 'assigns the correct issuing date' do
+      it "assigns the correct issuing date" do
         result = invoice_service.call
 
-        expect(result.invoice.issuing_date.to_s).to eq('2022-11-25')
+        expect(result.invoice.issuing_date.to_s).to eq("2022-11-25")
       end
     end
 
-    context 'with provided invoice' do
+    context "with provided invoice" do
       let(:invoice) { create(:invoice, organization:, customer:, invoice_type: :subscription, status: :generating) }
 
-      it_behaves_like 'syncs invoice' do
+      it_behaves_like "syncs invoice" do
         let(:service_call) { invoice_service.call }
       end
 
-      it 'does not re-create an invoice' do
+      it "does not re-create an invoice" do
         result = invoice_service.call
 
         expect(result).to be_success
@@ -290,10 +290,10 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           subscription:,
           charge:,
           amount_cents: 10,
-          amount_currency: 'EUR',
+          amount_currency: "EUR",
           taxes_rate: 20.0,
           taxes_amount_cents: 2,
-          fee_type: 'charge',
+          fee_type: "charge",
           pay_in_advance: true,
           invoiceable: charge,
           units: 9,
@@ -301,7 +301,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           events_count: 1,
           charge_filter: nil,
           pay_in_advance_event_id: event.id,
-          payment_status: 'pending',
+          payment_status: "pending",
           unit_amount_cents: 1,
           precise_unit_amount: 0.01111111111
         )
@@ -323,11 +323,11 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       let(:service_call) { invoice_service.call }
     end
 
-    context 'when an error occurs' do
-      context 'with a stale object error' do
+    context "when an error occurs" do
+      context "with a stale object error" do
         before { create(:wallet, customer:, balance_cents: 100) }
 
-        it 'propagates the error' do
+        it "propagates the error" do
           allow_any_instance_of(Credits::AppliedPrepaidCreditService) # rubocop:disable RSpec/AnyInstance
             .to receive(:call).and_raise(ActiveRecord::StaleObjectError)
 
@@ -335,8 +335,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         end
       end
 
-      context 'with a sequence error' do
-        it 'propagates the error' do
+      context "with a sequence error" do
+        it "propagates the error" do
           allow_any_instance_of(Invoice) # rubocop:disable RSpec/AnyInstance
             .to receive(:save!).and_raise(Sequenced::SequenceError)
 

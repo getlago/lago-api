@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Payments::Payloads::Netsuite do
   let(:payload) { described_class.new(integration:, payment:) }
@@ -26,25 +26,25 @@ RSpec.describe Integrations::Aggregator::Payments::Payloads::Netsuite do
 
   let(:body) do
     {
-      'isDynamic' => true,
-      'columns' => {
-        'customer' => integration_customer.external_customer_id,
-        'payment' => payment.amount_cents.div(100).to_f
+      "isDynamic" => true,
+      "columns" => {
+        "customer" => integration_customer.external_customer_id,
+        "payment" => payment.amount_cents.div(100).to_f
       },
-      'options' => {
-        'ignoreMandatoryFields' => false
+      "options" => {
+        "ignoreMandatoryFields" => false
       },
-      'type' => 'customerpayment',
-      'lines' => [
+      "type" => "customerpayment",
+      "lines" => [
         {
-          'lineItems' => [
+          "lineItems" => [
             {
-              'amount' => payment.amount_cents.div(100).to_f,
-              'apply' => true,
-              'doc' => integration_invoice.external_id
+              "amount" => payment.amount_cents.div(100).to_f,
+              "apply" => true,
+              "doc" => integration_invoice.external_id
             }
           ],
-          'sublistId' => 'apply'
+          "sublistId" => "apply"
         }
       ]
     }
@@ -55,10 +55,10 @@ RSpec.describe Integrations::Aggregator::Payments::Payloads::Netsuite do
     integration_invoice
   end
 
-  describe '#body' do
+  describe "#body" do
     subject(:body_call) { payload.body }
 
-    it 'returns payload body' do
+    it "returns payload body" do
       expect(subject).to eq(body)
     end
   end

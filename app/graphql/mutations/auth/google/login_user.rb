@@ -5,8 +5,8 @@ module Mutations
   module Auth
     module Google
       class LoginUser < BaseMutation
-        graphql_name 'GoogleLoginUser'
-        description 'Opens a session for an existing user with Google Oauth'
+        graphql_name "GoogleLoginUser"
+        description "Opens a session for an existing user with Google Oauth"
 
         argument :code, String, required: true
 

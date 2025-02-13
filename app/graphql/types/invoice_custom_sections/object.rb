@@ -3,7 +3,7 @@
 module Types
   module InvoiceCustomSections
     class Object < Types::BaseObject
-      graphql_name 'InvoiceCustomSection'
+      graphql_name "InvoiceCustomSection"
 
       field :id, ID, null: false
       field :organization, Types::Organizations::OrganizationType

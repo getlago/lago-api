@@ -10,7 +10,7 @@ RSpec.describe Customers::UpdateCurrencyService do
   let(:customer_update) { false }
 
   describe "#call" do
-    it 'assigns the currency to the customer' do
+    it "assigns the currency to the customer" do
       result = currency_service.call
 
       expect(result).to be_success
@@ -30,7 +30,7 @@ RSpec.describe Customers::UpdateCurrencyService do
     end
 
     context "when customer currency is the same as the provided one" do
-      let(:customer) { create(:customer, currency: 'EUR') }
+      let(:customer) { create(:customer, currency: "EUR") }
       let(:currency) { customer.currency }
 
       it "returns a success" do
@@ -40,10 +40,10 @@ RSpec.describe Customers::UpdateCurrencyService do
       end
     end
 
-    context 'when customer already has a currency' do
-      let(:customer) { create(:customer, currency: 'EUR') }
+    context "when customer already has a currency" do
+      let(:customer) { create(:customer, currency: "EUR") }
 
-      it 'returns a failure' do
+      it "returns a failure" do
         result = currency_service.call
 
         expect(result).not_to be_success
@@ -51,20 +51,20 @@ RSpec.describe Customers::UpdateCurrencyService do
         expect(result.error.messages[:currency]).to eq(["currencies_does_not_match"])
       end
 
-      context 'when in customer update' do
+      context "when in customer update" do
         let(:customer_update) { true }
 
-        it 'assigns the currency to the customer' do
+        it "assigns the currency to the customer" do
           result = currency_service.call
 
           expect(result).to be_success
           expect(customer.reload.currency).to eq(currency)
         end
 
-        context 'when customer is not editable' do
+        context "when customer is not editable" do
           before { create(:subscription, customer:) }
 
-          it 'returns a failure' do
+          it "returns a failure" do
             result = currency_service.call
 
             expect(result).not_to be_success
@@ -75,10 +75,10 @@ RSpec.describe Customers::UpdateCurrencyService do
       end
     end
 
-    context 'when customer is not editable' do
+    context "when customer is not editable" do
       before { create(:subscription, customer:) }
 
-      it 'returns a failure' do
+      it "returns a failure" do
         result = currency_service.call
 
         expect(result).not_to be_success
@@ -87,10 +87,10 @@ RSpec.describe Customers::UpdateCurrencyService do
       end
     end
 
-    context 'when providing an invalid currency' do
+    context "when providing an invalid currency" do
       let(:currency) { "INVALID" }
 
-      it 'returns a failure' do
+      it "returns a failure" do
         result = currency_service.call
 
         expect(result).not_to be_success

@@ -11,11 +11,11 @@ module PaymentProviderCustomers
     settings_accessors :payment_method_id
 
     def provider_payment_methods
-      get_from_settings('provider_payment_methods')
+      get_from_settings("provider_payment_methods")
     end
 
     def provider_payment_methods=(provider_payment_methods)
-      push_to_settings(key: 'provider_payment_methods', value: provider_payment_methods.to_a)
+      push_to_settings(key: "provider_payment_methods", value: provider_payment_methods.to_a)
     end
 
     private
@@ -27,7 +27,7 @@ module PaymentProviderCustomers
     end
 
     def link_payment_method_can_exist_only_with_card
-      return if provider_payment_methods.exclude?('link') || provider_payment_methods.include?('card')
+      return if provider_payment_methods.exclude?("link") || provider_payment_methods.include?("card")
 
       errors.add(:provider_payment_methods, :invalid)
     end

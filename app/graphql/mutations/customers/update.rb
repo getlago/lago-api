@@ -13,8 +13,8 @@ module Mutations
         customer_settings:update:lang
       ]
 
-      graphql_name 'UpdateCustomer'
-      description 'Updates an existing Customer'
+      graphql_name "UpdateCustomer"
+      description "Updates an existing Customer"
 
       input_object_class Types::Customers::UpdateCustomerInput
 

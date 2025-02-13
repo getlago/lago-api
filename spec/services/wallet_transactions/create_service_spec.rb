@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe WalletTransactions::CreateService, type: :service do
   subject(:create_service) { described_class.call(organization:, params:) }
@@ -24,10 +24,10 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
     subscription
   end
 
-  describe '#call' do
-    let(:paid_credits) { '10.00' }
-    let(:granted_credits) { '15.00' }
-    let(:voided_credits) { '3.00' }
+  describe "#call" do
+    let(:paid_credits) { "10.00" }
+    let(:granted_credits) { "15.00" }
+    let(:voided_credits) { "3.00" }
     let(:params) do
       {
         wallet_id: wallet.id,
@@ -38,11 +38,11 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
       }
     end
 
-    it 'creates wallet transactions' do
+    it "creates wallet transactions" do
       expect { create_service }.to change(WalletTransaction, :count).by(3)
     end
 
-    it 'sets expected transaction status', :aggregate_failures do
+    it "sets expected transaction status", :aggregate_failures do
       create_service
       transactions = WalletTransaction.where(wallet_id: wallet.id)
 
@@ -51,37 +51,37 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
       expect(transactions.voided.first.credit_amount).to eq(3)
     end
 
-    it 'sets expected source' do
+    it "sets expected source" do
       create_service
-      expect(WalletTransaction.where(wallet_id: wallet.id).pluck(:source).uniq).to eq(['manual'])
+      expect(WalletTransaction.where(wallet_id: wallet.id).pluck(:source).uniq).to eq(["manual"])
     end
 
-    it 'enqueues the BillPaidCreditJob' do
+    it "enqueues the BillPaidCreditJob" do
       expect { create_service }.to have_enqueued_job(BillPaidCreditJob)
     end
 
-    it 'updates wallet balance based on granted and voided credits' do
+    it "updates wallet balance based on granted and voided credits" do
       create_service
 
       expect(wallet.reload.balance_cents).to eq(2200)
       expect(wallet.reload.credits_balance).to eq(22.0)
     end
 
-    it 'updates wallet ongoing balance based on granted and voided credits' do
+    it "updates wallet ongoing balance based on granted and voided credits" do
       create_service
 
       expect(wallet.reload.ongoing_balance_cents).to eq(2200)
       expect(wallet.reload.credits_ongoing_balance).to eq(22.0)
     end
 
-    it 'enqueues a SendWebhookJob for each wallet transaction' do
+    it "enqueues a SendWebhookJob for each wallet transaction" do
       expect do
         create_service
-      end.to have_enqueued_job(SendWebhookJob).thrice.with('wallet_transaction.created', WalletTransaction)
+      end.to have_enqueued_job(SendWebhookJob).thrice.with("wallet_transaction.created", WalletTransaction)
     end
 
-    context 'with valid metadata' do
-      let(:metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
+    context "with valid metadata" do
+      let(:metadata) { [{"key" => "valid_value", "value" => "also_valid"}] }
       let(:params) do
         {
           wallet_id: wallet.id,
@@ -93,30 +93,30 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
         }
       end
 
-      it 'processes the transaction normally and includes the metadata' do
+      it "processes the transaction normally and includes the metadata" do
         expect(create_service).to be_success
         transactions = WalletTransaction.where(wallet_id: wallet.id)
-        expect(transactions.first.metadata).to include('key' => 'valid_value', 'value' => 'also_valid')
-        expect(transactions.second.metadata).to include('key' => 'valid_value', 'value' => 'also_valid')
-        expect(transactions.third.metadata).to include('key' => 'valid_value', 'value' => 'also_valid')
+        expect(transactions.first.metadata).to include("key" => "valid_value", "value" => "also_valid")
+        expect(transactions.second.metadata).to include("key" => "valid_value", "value" => "also_valid")
+        expect(transactions.third.metadata).to include("key" => "valid_value", "value" => "also_valid")
       end
     end
 
-    context 'with validation error' do
-      let(:paid_credits) { '-15.00' }
+    context "with validation error" do
+      let(:paid_credits) { "-15.00" }
 
-      it 'returns an error' do
+      it "returns an error" do
         result = create_service
 
         expect(result).not_to be_success
-        expect(result.error.messages[:paid_credits]).to eq(['invalid_paid_credits'])
+        expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits"])
       end
     end
 
-    context 'with decimal value' do
-      let(:paid_credits) { '4.399999' }
+    context "with decimal value" do
+      let(:paid_credits) { "4.399999" }
 
-      it 'creates wallet transaction with floored value' do
+      it "creates wallet transaction with floored value" do
         result = create_service
         expect(result.wallet_transactions.first.credit_amount).to eq(4.39999)
       end

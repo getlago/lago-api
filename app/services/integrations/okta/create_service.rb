@@ -7,13 +7,13 @@ module Integrations
         organization = Organization.find_by(id: args[:organization_id])
 
         unless organization.okta_enabled?
-          return result.not_allowed_failure!(code: 'premium_integration_missing')
+          return result.not_allowed_failure!(code: "premium_integration_missing")
         end
 
         integration = Integrations::OktaIntegration.new(
           organization:,
-          name: 'Okta Integration',
-          code: 'okta',
+          name: "Okta Integration",
+          code: "okta",
           client_id: args[:client_id],
           client_secret: args[:client_secret],
           domain: args[:domain],

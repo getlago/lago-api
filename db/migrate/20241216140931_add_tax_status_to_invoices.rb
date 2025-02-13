@@ -6,7 +6,7 @@ class AddTaxStatusToInvoices < ActiveRecord::Migration[7.1]
 
     safety_assured do
       change_table :invoices do |t|
-        t.enum :tax_status, enum_type: 'tax_status', null: true
+        t.enum :tax_status, enum_type: "tax_status", null: true
       end
     end
   end

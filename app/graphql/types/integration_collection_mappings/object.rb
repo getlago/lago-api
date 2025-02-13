@@ -3,7 +3,7 @@
 module Types
   module IntegrationCollectionMappings
     class Object < Types::BaseObject
-      graphql_name 'CollectionMapping'
+      graphql_name "CollectionMapping"
 
       field :external_account_code, String, null: true
       field :external_id, String, null: false

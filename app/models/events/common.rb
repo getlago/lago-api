@@ -25,12 +25,12 @@ module Events
           "terminated_at IS NULL OR date_trunc('millisecond', terminated_at::timestamp) >= ?",
           timestamp
         )
-        .order('terminated_at DESC NULLS FIRST, started_at DESC')
+        .order("terminated_at DESC NULLS FIRST, started_at DESC")
         .first
     end
 
     def as_json
-      super.tap { |j| j['timestamp'] = timestamp.to_f }
+      super.tap { |j| j["timestamp"] = timestamp.to_f }
     end
   end
 end

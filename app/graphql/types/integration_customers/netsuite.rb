@@ -3,7 +3,7 @@
 module Types
   module IntegrationCustomers
     class Netsuite < Types::BaseObject
-      graphql_name 'NetsuiteCustomer'
+      graphql_name "NetsuiteCustomer"
 
       field :external_customer_id, String, null: true
       field :id, ID, null: false
@@ -16,8 +16,8 @@ module Types
       def integration_type
         object.integration&.type
         case object.integration&.type
-        when 'Integrations::NetsuiteIntegration'
-          'netsuite'
+        when "Integrations::NetsuiteIntegration"
+          "netsuite"
         end
       end
 

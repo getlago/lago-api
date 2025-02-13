@@ -6,9 +6,9 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'analytics:view'
+      REQUIRED_PERMISSION = "analytics:view"
 
-      description 'Query gross revenue of an organization'
+      description "Query gross revenue of an organization"
 
       argument :currency, Types::CurrencyEnum, required: false
       argument :external_customer_id, String, required: false

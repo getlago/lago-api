@@ -7,7 +7,7 @@ module Api
         render(
           json: ::V1::OrganizationSerializer.new(
             current_organization,
-            root_name: 'organization',
+            root_name: "organization",
             include: %i[taxes]
           )
         )
@@ -20,7 +20,7 @@ module Api
           render(
             json: ::V1::OrganizationSerializer.new(
               result.organization,
-              root_name: 'organization',
+              root_name: "organization",
               includes: %i[taxes]
             )
           )
@@ -32,9 +32,9 @@ module Api
       def grpc_token
         payload = {
           organization_id: current_organization.id,
-          aud: 'lago-grpc'
+          aud: "lago-grpc"
         }
-        grpc_token = JWT.encode(payload, RsaPrivateKey, 'RS256')
+        grpc_token = JWT.encode(payload, RsaPrivateKey, "RS256")
 
         render(
           json: {
@@ -76,7 +76,7 @@ module Api
       end
 
       def resource_name
-        'organization'
+        "organization"
       end
     end
   end

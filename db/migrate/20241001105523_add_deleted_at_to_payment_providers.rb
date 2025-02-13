@@ -6,7 +6,7 @@ class AddDeletedAtToPaymentProviders < ActiveRecord::Migration[7.1]
   def up
     add_column :payment_providers, :deleted_at, :datetime
     remove_index :payment_providers, %i[code organization_id]
-    add_index :payment_providers, %i[code organization_id], unique: true, where: 'deleted_at IS NULL', algorithm: :concurrently
+    add_index :payment_providers, %i[code organization_id], unique: true, where: "deleted_at IS NULL", algorithm: :concurrently
   end
 
   def down

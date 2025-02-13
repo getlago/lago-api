@@ -12,11 +12,11 @@ module Integrations
     TARGETED_OBJECTS = %w[companies contacts].freeze
 
     def companies_object_type_id
-      '0-2'
+      "0-2"
     end
 
     def contacts_object_type_id
-      '0-1'
+      "0-1"
     end
   end
 end

@@ -6,7 +6,7 @@ module Webhooks
       private
 
       def webhook_type
-        'customer.accounting_provider_created'
+        "customer.accounting_provider_created"
       end
     end
   end

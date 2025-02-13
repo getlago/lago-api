@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe DataExports::ExportResourcesService, type: :service do
   subject(:result) { described_class.call(data_export:, batch_size:) }
 
   let(:organization) { data_export.organization }
   let(:batch_size) { 100 }
-  let(:data_export) { create :data_export, resource_type: 'invoices', format: 'csv' }
+  let(:data_export) { create :data_export, resource_type: "invoices", format: "csv" }
 
   let(:issuing_date) { Date.new(2023, 12, 1) }
 
@@ -17,15 +17,15 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
     invoice
   end
 
-  describe '#call' do
-    it 'updates the data export status to processing' do
+  describe "#call" do
+    it "updates the data export status to processing" do
       allow(data_export).to receive(:processing!)
 
       result
       expect(data_export).to have_received(:processing!)
     end
 
-    it 'splits up the data export into parts' do
+    it "splits up the data export into parts" do
       result
       expect(data_export.data_export_parts).not_to be_empty
       # only 1 export part should be create
@@ -33,7 +33,7 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
       expect(part.object_ids).to eq([invoice.id])
     end
 
-    context 'when there are many invoices' do
+    context "when there are many invoices" do
       # small batch size for easier testing
       let(:batch_size) { 2 }
       let(:invoice2) { create(:invoice, organization:, issuing_date: issuing_date + 1.day) }
@@ -48,7 +48,7 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
         invoice5
       end
 
-      it 'splits up into many parts' do
+      it "splits up into many parts" do
         result
 
         expect(data_export.data_export_parts.size).to eq(3)
@@ -61,7 +61,7 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
       end
     end
 
-    it 'returns the data export result' do
+    it "returns the data export result" do
       expect(result).to be_success
 
       aggregate_failures do
@@ -70,46 +70,46 @@ RSpec.describe DataExports::ExportResourcesService, type: :service do
       end
     end
 
-    context 'when the data export is expired' do
+    context "when the data export is expired" do
       let(:data_export) { create(:data_export, expires_at: 1.hour.ago) }
 
-      it 'returns a service failure result' do
+      it "returns a service failure result" do
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.code).to eq('data_export_expired')
+          expect(result.error.code).to eq("data_export_expired")
         end
       end
     end
 
-    context 'when the data export is already processed' do
+    context "when the data export is already processed" do
       let(:data_export) { create(:data_export, :processing) }
 
-      it 'returns a service failure result' do
+      it "returns a service failure result" do
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.code).to eq('data_export_processed')
+          expect(result.error.code).to eq("data_export_processed")
         end
       end
     end
 
-    context 'when an error occurs during processing' do
+    context "when an error occurs during processing" do
       before do
         allow(data_export)
           .to receive(:transaction)
-          .and_raise(StandardError.new('error_message'))
+          .and_raise(StandardError.new("error_message"))
       end
 
-      it 'returns a service failure result' do
+      it "returns a service failure result" do
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.code).to eq('error_message')
+          expect(result.error.code).to eq("error_message")
           expect(data_export).to be_failed
         end
       end
     end
 
     context "when resource type is not supported" do
-      let(:data_export) { create :data_export, resource_type: 'unknown' }
+      let(:data_export) { create :data_export, resource_type: "unknown" }
 
       it "returns a service failure result" do
         aggregate_failures do

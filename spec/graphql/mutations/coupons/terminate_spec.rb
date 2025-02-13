@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Coupons::Terminate, type: :graphql do
-  let(:required_permission) { 'coupons:update' }
+  let(:required_permission) { "coupons:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:coupon) { create(:coupon, organization:) }
@@ -18,10 +18,10 @@ RSpec.describe Mutations::Coupons::Terminate, type: :graphql do
     GQL
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires permission', 'coupons:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires permission", "coupons:update"
 
-  it 'terminates a coupon' do
+  it "terminates a coupon" do
     result = execute_graphql(
       current_user: membership.user,
       permissions: required_permission,
@@ -31,10 +31,10 @@ RSpec.describe Mutations::Coupons::Terminate, type: :graphql do
       }
     )
 
-    data = result['data']['terminateCoupon']
-    expect(data['id']).to eq(coupon.id)
-    expect(data['name']).to eq(coupon.name)
-    expect(data['status']).to eq('terminated')
-    expect(data['terminatedAt']).to be_present
+    data = result["data"]["terminateCoupon"]
+    expect(data["id"]).to eq(coupon.id)
+    expect(data["name"]).to eq(coupon.name)
+    expect(data["status"]).to eq("terminated")
+    expect(data["terminatedAt"]).to be_present
   end
 end

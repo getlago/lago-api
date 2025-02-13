@@ -1,36 +1,36 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Hubspot::CreateService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  describe '#call' do
+  describe "#call" do
     subject(:service_call) { described_class.call(params: create_args) }
 
-    let(:name) { 'Hubspot 1' }
+    let(:name) { "Hubspot 1" }
     let(:script_endpoint_url) { Faker::Internet.url }
 
     let(:create_args) do
       {
         name:,
-        code: 'hubspot1',
+        code: "hubspot1",
         organization_id: organization.id,
-        connection_id: 'conn1',
-        client_secret: 'secret',
+        connection_id: "conn1",
+        client_secret: "secret",
         default_targeted_object: "test",
         sync_invoices: false,
         sync_subscriptions: false
       }
     end
 
-    context 'without premium license' do
-      it 'does not create an integration' do
+    context "without premium license" do
+      it "does not create an integration" do
         expect { service_call }.not_to change(Integrations::HubspotIntegration, :count)
       end
 
-      it 'returns an error' do
+      it "returns an error" do
         result = service_call
 
         aggregate_failures do
@@ -40,11 +40,11 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
       end
     end
 
-    context 'with premium license' do
+    context "with premium license" do
       around { |test| lago_premium!(&test) }
 
-      context 'with hubspot premium integration not present' do
-        it 'returns an error' do
+      context "with hubspot premium integration not present" do
+        it "returns an error" do
           result = service_call
 
           aggregate_failures do
@@ -54,15 +54,15 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
         end
       end
 
-      context 'with hubspot premium integration present' do
+      context "with hubspot premium integration present" do
         before do
-          organization.update!(premium_integrations: ['hubspot'])
+          organization.update!(premium_integrations: ["hubspot"])
           allow(Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob).to receive(:perform_later)
           allow(Integrations::Hubspot::SavePortalIdJob).to receive(:perform_later)
         end
 
-        context 'without validation errors' do
-          it 'creates an integration' do
+        context "without validation errors" do
+          it "creates an integration" do
             expect { service_call }.to change(Integrations::HubspotIntegration, :count).by(1)
 
             integration = Integrations::HubspotIntegration.order(:created_at).last
@@ -75,13 +75,13 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
             expect(integration.organization_id).to eq(organization.id)
           end
 
-          it 'returns an integration in result object' do
+          it "returns an integration in result object" do
             result = service_call
 
             expect(result.integration).to be_a(Integrations::HubspotIntegration)
           end
 
-          it 'enqueues the jobs to send token and sync objects to Hubspot' do
+          it "enqueues the jobs to send token and sync objects to Hubspot" do
             service_call
 
             integration = Integrations::HubspotIntegration.order(:created_at).last
@@ -90,16 +90,16 @@ RSpec.describe Integrations::Hubspot::CreateService, type: :service do
           end
         end
 
-        context 'with validation error' do
+        context "with validation error" do
           let(:name) { nil }
 
-          it 'returns an error' do
+          it "returns an error" do
             result = service_call
 
             aggregate_failures do
               expect(result).not_to be_success
               expect(result.error).to be_a(BaseService::ValidationFailure)
-              expect(result.error.messages[:name]).to eq(['value_is_mandatory'])
+              expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
             end
           end
         end

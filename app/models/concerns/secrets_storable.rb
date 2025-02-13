@@ -22,7 +22,7 @@ module SecretsStorable
   end
 
   def secrets_json
-    JSON.parse(secrets || '{}')
+    JSON.parse(secrets || "{}")
   end
 
   def push_to_secrets(key:, value:)

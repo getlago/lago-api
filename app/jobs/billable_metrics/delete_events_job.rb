@@ -14,7 +14,7 @@ module BillableMetrics
         code: metric.code,
         subscription_id: Charge.with_discarded
           .where(billable_metric_id: metric.id)
-          .joins(plan: :subscriptions).pluck('subscriptions.id')
+          .joins(plan: :subscriptions).pluck("subscriptions.id")
       ).update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
 
       # Delete events using the new `external_subscription_id`
@@ -23,7 +23,7 @@ module BillableMetrics
         code: metric.code,
         external_subscription_id: Charge.with_discarded
           .where(billable_metric_id: metric.id)
-          .joins(plan: :subscriptions).pluck('subscriptions.external_id')
+          .joins(plan: :subscriptions).pluck("subscriptions.external_id")
       ).update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
 
       # Delete events_raw & events_enriched on clickhouse using `external_subscription_id`
@@ -32,7 +32,7 @@ module BillableMetrics
         code: metric.code,
         external_subscription_id: Charge.with_discarded
           .where(billable_metric_id: metric.id)
-          .joins(plan: :subscriptions).pluck('subscriptions.external_id')
+          .joins(plan: :subscriptions).pluck("subscriptions.external_id")
       ).delete_all
 
       Clickhouse::EventsEnriched.where(
@@ -40,7 +40,7 @@ module BillableMetrics
         code: metric.code,
         external_subscription_id: Charge.with_discarded
           .where(billable_metric_id: metric.id)
-          .joins(plan: :subscriptions).pluck('subscriptions.external_id')
+          .joins(plan: :subscriptions).pluck("subscriptions.external_id")
       ).delete_all
     end
   end

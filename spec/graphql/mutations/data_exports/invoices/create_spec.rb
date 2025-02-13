@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::DataExports::Invoices::Create, type: :graphql do
-  let(:required_permission) { 'invoices:export' }
+  let(:required_permission) { "invoices:export" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -20,11 +20,11 @@ RSpec.describe Mutations::DataExports::Invoices::Create, type: :graphql do
 
   before { membership }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'invoices:export'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "invoices:export"
 
-  it 'creates data export' do
+  it "creates data export" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -32,32 +32,32 @@ RSpec.describe Mutations::DataExports::Invoices::Create, type: :graphql do
       query: mutation,
       variables: {
         input: {
-          format: 'csv',
-          resourceType: 'invoices',
+          format: "csv",
+          resourceType: "invoices",
           filters: {
             amountFrom: 0,
             amountTo: 10000,
-            currency: 'USD',
-            customerExternalId: 'abc123',
-            invoiceType: ['one_off'],
-            issuingDateFrom: '2024-05-23',
-            issuingDateTo: '2024-07-01',
+            currency: "USD",
+            customerExternalId: "abc123",
+            invoiceType: ["one_off"],
+            issuingDateFrom: "2024-05-23",
+            issuingDateTo: "2024-07-01",
             paymentDisputeLost: false,
             paymentOverdue: true,
-            paymentStatus: ['pending'],
-            searchTerm: 'service ABC',
-            status: ['finalized']
+            paymentStatus: ["pending"],
+            searchTerm: "service ABC",
+            status: ["finalized"]
           }
         }
       }
     )
 
-    result_data = result['data']['createInvoicesDataExport']
+    result_data = result["data"]["createInvoicesDataExport"]
 
     aggregate_failures do
       expect(result_data).to include(
-        'id' => String,
-        'status' => "pending"
+        "id" => String,
+        "status" => "pending"
       )
     end
   end

@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::AddOns::Update, type: :graphql do
-  let(:required_permission) { 'addons:update' }
+  let(:required_permission) { "addons:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:tax) { create(:tax, organization:) }
@@ -28,10 +28,10 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
 
   before { create(:add_on_applied_tax, add_on:, tax:) }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires permission', 'addons:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires permission", "addons:update"
 
-  it 'updates an add-on' do
+  it "updates an add-on" do
     result = execute_graphql(
       current_user: membership.user,
       permissions: required_permission,
@@ -39,27 +39,27 @@ RSpec.describe Mutations::AddOns::Update, type: :graphql do
       variables: {
         input: {
           id: add_on.id,
-          name: 'New name',
-          invoiceDisplayName: 'New invoice name',
-          code: 'new_code',
-          description: 'desc',
+          name: "New name",
+          invoiceDisplayName: "New invoice name",
+          code: "new_code",
+          description: "desc",
           amountCents: 123,
-          amountCurrency: 'USD',
+          amountCurrency: "USD",
           taxCodes: [tax2.code]
         }
       }
     )
 
-    result_data = result['data']['updateAddOn']
+    result_data = result["data"]["updateAddOn"]
 
     aggregate_failures do
-      expect(result_data['name']).to eq('New name')
-      expect(result_data['invoiceDisplayName']).to eq('New invoice name')
-      expect(result_data['code']).to eq('new_code')
-      expect(result_data['description']).to eq('desc')
-      expect(result_data['amountCents']).to eq('123')
-      expect(result_data['amountCurrency']).to eq('USD')
-      expect(result_data['taxes'].map { |t| t['code'] }).to contain_exactly(tax2.code)
+      expect(result_data["name"]).to eq("New name")
+      expect(result_data["invoiceDisplayName"]).to eq("New invoice name")
+      expect(result_data["code"]).to eq("new_code")
+      expect(result_data["description"]).to eq("desc")
+      expect(result_data["amountCents"]).to eq("123")
+      expect(result_data["amountCurrency"]).to eq("USD")
+      expect(result_data["taxes"].map { |t| t["code"] }).to contain_exactly(tax2.code)
     end
   end
 end

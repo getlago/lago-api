@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'current_context'
+require "current_context"
 
 ActiveJob::Traceable.tracing_info_getter = lambda do
   {

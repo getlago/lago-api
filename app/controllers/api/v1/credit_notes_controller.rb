@@ -14,7 +14,7 @@ module Api
           render(
             json: ::V1::CreditNoteSerializer.new(
               result.credit_note,
-              root_name: 'credit_note',
+              root_name: "credit_note",
               includes: %i[items applied_taxes]
             )
           )
@@ -25,12 +25,12 @@ module Api
 
       def show
         credit_note = current_organization.credit_notes.finalized.find_by(id: params[:id])
-        return not_found_error(resource: 'credit_note') unless credit_note
+        return not_found_error(resource: "credit_note") unless credit_note
 
         render(
           json: ::V1::CreditNoteSerializer.new(
             credit_note,
-            root_name: 'credit_note',
+            root_name: "credit_note",
             includes: %i[items applied_taxes error_details]
           )
         )
@@ -38,7 +38,7 @@ module Api
 
       def update
         credit_note = current_organization.credit_notes.find_by(id: params[:id])
-        return not_found_error(resource: 'credit_note') unless credit_note
+        return not_found_error(resource: "credit_note") unless credit_note
 
         result = CreditNotes::UpdateService.new(credit_note:, **update_params).call
 
@@ -46,7 +46,7 @@ module Api
           render(
             json: ::V1::CreditNoteSerializer.new(
               credit_note,
-              root_name: 'credit_note',
+              root_name: "credit_note",
               includes: %i[items applied_taxes]
             )
           )
@@ -57,13 +57,13 @@ module Api
 
       def download
         credit_note = current_organization.credit_notes.finalized.find_by(id: params[:id])
-        return not_found_error(resource: 'credit_note') unless credit_note
+        return not_found_error(resource: "credit_note") unless credit_note
 
         if credit_note.file.present?
           return render(
             json: ::V1::CreditNoteSerializer.new(
               credit_note,
-              root_name: 'credit_note'
+              root_name: "credit_note"
             )
           )
         end
@@ -75,7 +75,7 @@ module Api
 
       def void
         credit_note = current_organization.credit_notes.find_by(id: params[:id])
-        return not_found_error(resource: 'credit_note') unless credit_note
+        return not_found_error(resource: "credit_note") unless credit_note
 
         result = CreditNotes::VoidService.new(credit_note:).call
 
@@ -83,7 +83,7 @@ module Api
           render(
             json: ::V1::CreditNoteSerializer.new(
               credit_note,
-              root_name: 'credit_note',
+              root_name: "credit_note",
               includes: %i[items applied_taxes]
             )
           )
@@ -140,7 +140,7 @@ module Api
           render(
             json: ::V1::CreditNotes::EstimateSerializer.new(
               result.credit_note,
-              root_name: 'estimated_credit_note'
+              root_name: "estimated_credit_note"
             )
           )
         else
@@ -181,7 +181,7 @@ module Api
       end
 
       def resource_name
-        'credit_note'
+        "credit_note"
       end
     end
   end

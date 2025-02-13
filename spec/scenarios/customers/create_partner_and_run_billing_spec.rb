@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Create partner and run billing Scenarios', :scenarios, type: :request do
-  let(:organization) { create(:organization, webhook_url: nil, document_numbering: 'per_organization', premium_integrations: ['revenue_share']) }
+describe "Create partner and run billing Scenarios", :scenarios, type: :request do
+  let(:organization) { create(:organization, webhook_url: nil, document_numbering: "per_organization", premium_integrations: ["revenue_share"]) }
   let(:partner) { create(:customer, organization:) }
   let(:customers) { create_list(:customer, 2, organization:) }
   let(:plan) { create(:plan, organization:) }
@@ -14,16 +14,16 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
 
   around { |test| lago_premium!(&test) }
 
-  it 'allows to switch customer to partner before customer has assigned plans' do
+  it "allows to switch customer to partner before customer has assigned plans" do
     expect do
       create_or_update_customer(
         {
           external_id: partner.external_id,
-          account_type: 'partner'
+          account_type: "partner"
         }
       )
       partner.reload
-    end.to change(partner, :account_type).from('customer').to('partner')
+    end.to change(partner, :account_type).from("customer").to("partner")
       .and change(partner, :exclude_from_dunning_campaign).from(false).to(true)
 
     create_subscription(
@@ -38,22 +38,22 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
       create_or_update_customer(
         {
           external_id: partner.external_id,
-          account_type: 'customer'
+          account_type: "customer"
         }
       )
     end.not_to change(partner.reload, :account_type)
   end
 
-  it 'creates partner-specific invoices without payments, with partner numbering, excluded from analytics' do
+  it "creates partner-specific invoices without payments, with partner numbering, excluded from analytics" do
     create_or_update_customer(
       {
         external_id: partner.external_id,
-        account_type: 'partner'
+        account_type: "partner"
       }
     )
 
     ### 24 Apr: Create subscriptions + charges.
-    apr24 = Time.zone.parse('2024-04-24')
+    apr24 = Time.zone.parse("2024-04-24")
     travel_to(apr24) do
       create(
         :package_charge,
@@ -63,7 +63,7 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
         prorated: false,
         invoiceable: true,
         properties: {
-          amount: '2',
+          amount: "2",
           free_units: 1000,
           package_size: 1000
         }
@@ -88,7 +88,7 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     end
 
     ### 25 Apr: Ingest events for Plan 1.
-    apr24 = Time.zone.parse('2024-04-24')
+    apr24 = Time.zone.parse("2024-04-24")
     travel_to(apr24) do
       plan.subscriptions.each do |subscription|
         create_event(
@@ -101,7 +101,7 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     end
 
     # May 1st: Billing run; check invoice numbering
-    may1 = Time.zone.parse('2024-05-1')
+    may1 = Time.zone.parse("2024-05-1")
     travel_to(may1) do
       organization.update(created_at: 1.month.ago)
       perform_billing
@@ -115,12 +115,12 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
       customers_invoices = customers.map(&:invoices).flatten
       expect(customers_invoices.map(&:self_billed)).not_to include(true)
       expect(customers_invoices.map do |inv|
-        inv.number.gsub("#{organization.document_number_prefix}-202405-", '')
-      end.uniq.sort).to eq(['001', '002'])
+        inv.number.gsub("#{organization.document_number_prefix}-202405-", "")
+      end.uniq.sort).to eq(["001", "002"])
     end
 
     # June 1st: Billing run; check invoice numbering
-    june1 = Time.zone.parse('2024-06-1')
+    june1 = Time.zone.parse("2024-06-1")
     travel_to(june1) do
       perform_billing
       expect(organization.invoices.count).to eq(6)
@@ -133,8 +133,8 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
       customers_invoices = customers.map { |c| c.invoices.where(created_at: june1) }.flatten
       expect(customers_invoices.map(&:self_billed).uniq).to eq([false])
       expect(customers_invoices.map do |inv|
-        inv.number.gsub("#{organization.document_number_prefix}-202406-", '')
-      end.uniq.sort).to eq(['003', '004'])
+        inv.number.gsub("#{organization.document_number_prefix}-202406-", "")
+      end.uniq.sort).to eq(["003", "004"])
     end
     update_overdue_balance
 
@@ -145,7 +145,7 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     may_org_invoices = organization.invoices.where(self_billed: false, created_at: may1)
     june_org_invoices = organization.invoices.where(self_billed: false, created_at: june1)
     # invoice_collection
-    get_analytics(organization:, analytics_type: 'invoice_collection')
+    get_analytics(organization:, analytics_type: "invoice_collection")
     collection = json[:invoice_collections]
     may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000Z" }
     june_stats = collection.find { |el| el[:month] == "2024-06-01T00:00:00.000Z" }
@@ -156,7 +156,7 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     expect(june_stats[:amount_cents]).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
 
     # gross_revenue
-    get_analytics(organization:, analytics_type: 'gross_revenue')
+    get_analytics(organization:, analytics_type: "gross_revenue")
     collection = json[:gross_revenues]
     may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000Z" }
     june_stats = collection.find { |el| el[:month] == "2024-06-01T00:00:00.000Z" }
@@ -167,7 +167,7 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     expect(june_stats[:amount_cents]).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
 
     # mrr
-    get_analytics(organization:, analytics_type: 'mrr')
+    get_analytics(organization:, analytics_type: "mrr")
     collection = json[:mrrs]
     # We have different time format for mrr - is it alright?
     may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000+00:00" }
@@ -177,7 +177,7 @@ describe 'Create partner and run billing Scenarios', :scenarios, type: :request 
     expect(june_stats[:amount_cents].to_i).to eq(june_org_invoices.sum(:sub_total_including_taxes_amount_cents))
 
     # overdue_balance
-    get_analytics(organization:, analytics_type: 'overdue_balance')
+    get_analytics(organization:, analytics_type: "overdue_balance")
     collection = json[:overdue_balances]
     may_stats = collection.find { |el| el[:month] == "2024-05-01T00:00:00.000Z" }
     june_stats = collection.find { |el| el[:month] == "2024-06-01T00:00:00.000Z" }

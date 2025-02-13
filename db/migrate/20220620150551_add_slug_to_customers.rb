@@ -10,6 +10,6 @@ class AddSlugToCustomers < ActiveRecord::Migration[7.0]
     end
 
     LagoApi::Application.load_tasks
-    Rake::Task['customers:generate_slug'].invoke
+    Rake::Task["customers:generate_slug"].invoke
   end
 end

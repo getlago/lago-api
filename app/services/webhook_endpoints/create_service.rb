@@ -31,7 +31,7 @@ module WebhookEndpoints
     def track_webhook_webdpoint_created(webhook_endpoint)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'webhook_endpoint_created',
+        event: "webhook_endpoint_created",
         properties: {
           webhook_endpoint_id: webhook_endpoint.id,
           organization_id: webhook_endpoint.organization_id,

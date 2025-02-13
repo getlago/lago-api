@@ -7,10 +7,10 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = 'organization:integrations:update'
+        REQUIRED_PERMISSION = "organization:integrations:update"
 
-        graphql_name 'UpdateSalesforceIntegration'
-        description 'Update Salesforce integration'
+        graphql_name "UpdateSalesforceIntegration"
+        description "Update Salesforce integration"
 
         input_object_class Types::Integrations::Salesforce::UpdateInput
 

@@ -3,7 +3,7 @@
 module Types
   module AdjustedFees
     class CreateInput < Types::BaseInputObject
-      description 'Create Adjusted Fee Input'
+      description "Create Adjusted Fee Input"
 
       argument :invoice_id, ID, required: true
 

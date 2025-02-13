@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Invoices::LoseDispute, type: :graphql do
-  let(:required_permission) { 'invoices:update' }
+  let(:required_permission) { "invoices:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -20,11 +20,11 @@ RSpec.describe Mutations::Invoices::LoseDispute, type: :graphql do
     GQL
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'invoices:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "invoices:update"
 
-  it 'marks payment dispute lost to true' do
+  it "marks payment dispute lost to true" do
     freeze_time do
       result = execute_graphql(
         current_user: membership.user,
@@ -36,11 +36,11 @@ RSpec.describe Mutations::Invoices::LoseDispute, type: :graphql do
         }
       )
 
-      result_data = result['data']['loseInvoiceDispute']
+      result_data = result["data"]["loseInvoiceDispute"]
 
       aggregate_failures do
-        expect(result_data['id']).to be_present
-        expect(result_data['paymentDisputeLostAt']).to be_present
+        expect(result_data["id"]).to be_present
+        expect(result_data["paymentDisputeLostAt"]).to be_present
       end
     end
   end

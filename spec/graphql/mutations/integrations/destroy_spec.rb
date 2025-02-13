@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Integrations::Destroy, type: :graphql do
-  let(:required_permission) { 'organization:integrations:delete' }
+  let(:required_permission) { "organization:integrations:delete" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:integration) { create(:netsuite_integration, organization:) }
@@ -18,11 +18,11 @@ RSpec.describe Mutations::Integrations::Destroy, type: :graphql do
 
   before { integration }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:delete'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:delete"
 
-  it 'deletes an integration' do
+  it "deletes an integration" do
     expect do
       execute_graphql(
         current_user: membership.user,

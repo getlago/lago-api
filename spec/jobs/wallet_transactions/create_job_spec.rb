@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe WalletTransactions::CreateJob, type: :job do
   subject(:create_job) { described_class }
@@ -11,13 +11,13 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
   let(:params) do
     {
       wallet_id: wallet.id,
-      paid_credits: '1.00',
-      granted_credits: '1.00',
-      source: 'manual'
+      paid_credits: "1.00",
+      granted_credits: "1.00",
+      source: "manual"
     }
   end
 
-  it 'calls the WalletTransactions::CreateService' do
+  it "calls the WalletTransactions::CreateService" do
     allow(WalletTransactions::CreateService).to receive(:call!)
 
     described_class.perform_now(organization_id: organization.id, params:)

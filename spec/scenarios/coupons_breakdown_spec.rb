@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Coupons breakdown Spec', :scenarios, type: :request do
+describe "Coupons breakdown Spec", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
 
   before do
@@ -12,139 +12,139 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
 
   around { |test| lago_premium!(&test) }
 
-  context 'when there are multiple subscriptions and coupons of different kinds' do
-    it 'creates an invoice for the expected period' do
-      create_metric(name: 'Name', code: 'bm1', aggregation_type: 'sum_agg', field_name: 'total1')
-      bm1 = organization.billable_metrics.find_by(code: 'bm1')
+  context "when there are multiple subscriptions and coupons of different kinds" do
+    it "creates an invoice for the expected period" do
+      create_metric(name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1")
+      bm1 = organization.billable_metrics.find_by(code: "bm1")
 
-      create_metric(name: 'Name', code: 'bm2', aggregation_type: 'sum_agg', field_name: 'total2')
-      bm2 = organization.billable_metrics.find_by(code: 'bm2')
+      create_metric(name: "Name", code: "bm2", aggregation_type: "sum_agg", field_name: "total2")
+      bm2 = organization.billable_metrics.find_by(code: "bm2")
 
-      create_metric(name: 'Name', code: 'bm3', aggregation_type: 'sum_agg', field_name: 'total3')
-      bm3 = organization.billable_metrics.find_by(code: 'bm3')
+      create_metric(name: "Name", code: "bm3", aggregation_type: "sum_agg", field_name: "total3")
+      bm3 = organization.billable_metrics.find_by(code: "bm3")
 
-      create_metric(name: 'Name', code: 'bm4', aggregation_type: 'sum_agg', field_name: 'total4')
-      bm4 = organization.billable_metrics.find_by(code: 'bm4')
+      create_metric(name: "Name", code: "bm4", aggregation_type: "sum_agg", field_name: "total4")
+      bm4 = organization.billable_metrics.find_by(code: "bm4")
 
-      create_metric(name: 'Name', code: 'bm5', aggregation_type: 'sum_agg', field_name: 'total5')
-      bm5 = organization.billable_metrics.find_by(code: 'bm5')
+      create_metric(name: "Name", code: "bm5", aggregation_type: "sum_agg", field_name: "total5")
+      bm5 = organization.billable_metrics.find_by(code: "bm5")
 
-      create_metric(name: 'Name', code: 'bm6', aggregation_type: 'sum_agg', field_name: 'total6')
-      bm6 = organization.billable_metrics.find_by(code: 'bm6')
+      create_metric(name: "Name", code: "bm6", aggregation_type: "sum_agg", field_name: "total6")
+      bm6 = organization.billable_metrics.find_by(code: "bm6")
 
-      create_metric(name: 'Name', code: 'bm7', aggregation_type: 'sum_agg', field_name: 'total7')
-      bm7 = organization.billable_metrics.find_by(code: 'bm7')
+      create_metric(name: "Name", code: "bm7", aggregation_type: "sum_agg", field_name: "total7")
+      bm7 = organization.billable_metrics.find_by(code: "bm7")
 
-      create_metric(name: 'Name', code: 'bm8', aggregation_type: 'sum_agg', field_name: 'total8')
-      bm8 = organization.billable_metrics.find_by(code: 'bm8')
+      create_metric(name: "Name", code: "bm8", aggregation_type: "sum_agg", field_name: "total8")
+      bm8 = organization.billable_metrics.find_by(code: "bm8")
 
       travel_to(DateTime.new(2023, 1, 1)) do
-        create_tax(name: 'Banking rates 1', code: 'banking_rates1', rate: 10.0)
-        create_tax(name: 'Banking rates 2', code: 'banking_rates2', rate: 20.0)
+        create_tax(name: "Banking rates 1", code: "banking_rates1", rate: 10.0)
+        create_tax(name: "Banking rates 2", code: "banking_rates2", rate: 20.0)
 
-        create_or_update_customer(external_id: 'customer-12345')
+        create_or_update_customer(external_id: "customer-12345")
 
         create_plan(
           {
-            name: 'P1',
-            code: 'plan_code',
-            interval: 'monthly',
+            name: "P1",
+            code: "plan_code",
+            interval: "monthly",
             amount_cents: 0,
-            amount_currency: 'EUR',
+            amount_currency: "EUR",
             pay_in_advance: false,
             charges: [
               {
                 billable_metric_id: bm1.id,
-                charge_model: 'standard',
-                properties: {amount: '1'},
-                tax_codes: [organization.taxes.find_by(code: 'banking_rates1').code]
+                charge_model: "standard",
+                properties: {amount: "1"},
+                tax_codes: [organization.taxes.find_by(code: "banking_rates1").code]
               },
               {
                 billable_metric_id: bm2.id,
-                charge_model: 'standard',
-                properties: {amount: '1'},
-                tax_codes: [organization.taxes.find_by(code: 'banking_rates2').code]
+                charge_model: "standard",
+                properties: {amount: "1"},
+                tax_codes: [organization.taxes.find_by(code: "banking_rates2").code]
               },
               {
                 billable_metric_id: bm3.id,
-                charge_model: 'standard',
-                properties: {amount: '1'},
-                tax_codes: [organization.taxes.find_by(code: 'banking_rates1').code]
+                charge_model: "standard",
+                properties: {amount: "1"},
+                tax_codes: [organization.taxes.find_by(code: "banking_rates1").code]
               },
               {
                 billable_metric_id: bm4.id,
-                charge_model: 'standard',
-                properties: {amount: '1'},
-                tax_codes: [organization.taxes.find_by(code: 'banking_rates1').code]
+                charge_model: "standard",
+                properties: {amount: "1"},
+                tax_codes: [organization.taxes.find_by(code: "banking_rates1").code]
               }
             ]
           }
         )
-        plan = organization.plans.find_by(code: 'plan_code')
+        plan = organization.plans.find_by(code: "plan_code")
 
         create_subscription(
           {
-            external_customer_id: 'customer-12345',
-            external_id: 'sub_external_id',
+            external_customer_id: "customer-12345",
+            external_id: "sub_external_id",
             plan_code: plan.code
           }
         )
 
         create_plan(
           {
-            name: 'P2',
-            code: 'plan_code2',
-            interval: 'monthly',
+            name: "P2",
+            code: "plan_code2",
+            interval: "monthly",
             amount_cents: 0,
-            amount_currency: 'EUR',
+            amount_currency: "EUR",
             pay_in_advance: false,
             charges: [
               {
                 billable_metric_id: bm5.id,
-                charge_model: 'standard',
-                properties: {amount: '1'},
-                tax_codes: [organization.taxes.find_by(code: 'banking_rates1').code]
+                charge_model: "standard",
+                properties: {amount: "1"},
+                tax_codes: [organization.taxes.find_by(code: "banking_rates1").code]
               },
               {
                 billable_metric_id: bm6.id,
-                charge_model: 'standard',
-                properties: {amount: '1'},
-                tax_codes: [organization.taxes.find_by(code: 'banking_rates2').code]
+                charge_model: "standard",
+                properties: {amount: "1"},
+                tax_codes: [organization.taxes.find_by(code: "banking_rates2").code]
               },
               {
                 billable_metric_id: bm7.id,
-                charge_model: 'standard',
-                properties: {amount: '1'},
-                tax_codes: [organization.taxes.find_by(code: 'banking_rates1').code]
+                charge_model: "standard",
+                properties: {amount: "1"},
+                tax_codes: [organization.taxes.find_by(code: "banking_rates1").code]
               },
               {
                 billable_metric_id: bm8.id,
-                charge_model: 'standard',
-                properties: {amount: '1'},
-                tax_codes: [organization.taxes.find_by(code: 'banking_rates1').code]
+                charge_model: "standard",
+                properties: {amount: "1"},
+                tax_codes: [organization.taxes.find_by(code: "banking_rates1").code]
               }
             ]
           }
         )
-        plan2 = organization.plans.find_by(code: 'plan_code2')
+        plan2 = organization.plans.find_by(code: "plan_code2")
 
         create_subscription(
           {
-            external_customer_id: 'customer-12345',
-            external_id: 'sub_external_id2',
+            external_customer_id: "customer-12345",
+            external_id: "sub_external_id2",
             plan_code: plan2.code
           }
         )
 
         create_coupon(
           {
-            name: 'coupon1',
-            code: 'coupon1_code',
-            coupon_type: 'fixed_amount',
-            frequency: 'once',
+            name: "coupon1",
+            code: "coupon1_code",
+            coupon_type: "fixed_amount",
+            frequency: "once",
             amount_cents: 2_000,
-            amount_currency: 'EUR',
-            expiration: 'time_limit',
+            amount_currency: "EUR",
+            expiration: "time_limit",
             expiration_at: Time.current + 50.days,
             reusable: false,
             applies_to: {
@@ -152,17 +152,17 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
             }
           }
         )
-        apply_coupon({external_customer_id: 'customer-12345', coupon_code: 'coupon1_code'})
+        apply_coupon({external_customer_id: "customer-12345", coupon_code: "coupon1_code"})
 
         create_coupon(
           {
-            name: 'coupon2',
-            code: 'coupon2_code',
-            coupon_type: 'fixed_amount',
-            frequency: 'once',
+            name: "coupon2",
+            code: "coupon2_code",
+            coupon_type: "fixed_amount",
+            frequency: "once",
             amount_cents: 1_000,
-            amount_currency: 'EUR',
-            expiration: 'time_limit',
+            amount_currency: "EUR",
+            expiration: "time_limit",
             expiration_at: Time.current + 50.days,
             reusable: false,
             applies_to: {
@@ -170,29 +170,29 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
             }
           }
         )
-        apply_coupon({external_customer_id: 'customer-12345', coupon_code: 'coupon2_code'})
+        apply_coupon({external_customer_id: "customer-12345", coupon_code: "coupon2_code"})
 
         create_coupon(
           {
-            name: 'coupon3',
-            code: 'coupon3_code',
-            coupon_type: 'fixed_amount',
-            frequency: 'once',
+            name: "coupon3",
+            code: "coupon3_code",
+            coupon_type: "fixed_amount",
+            frequency: "once",
             amount_cents: 500,
-            amount_currency: 'EUR',
-            expiration: 'time_limit',
+            amount_currency: "EUR",
+            expiration: "time_limit",
             expiration_at: Time.current + 50.days,
             reusable: false
           }
         )
-        apply_coupon({external_customer_id: 'customer-12345', coupon_code: 'coupon3_code'})
+        apply_coupon({external_customer_id: "customer-12345", coupon_code: "coupon3_code"})
 
         # First subscription events
         create_event(
           {
             code: bm1.code,
             transaction_id: SecureRandom.uuid,
-            external_subscription_id: 'sub_external_id',
+            external_subscription_id: "sub_external_id",
             properties: {total1: 10}
           }
         )
@@ -200,7 +200,7 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
           {
             code: bm2.code,
             transaction_id: SecureRandom.uuid,
-            external_subscription_id: 'sub_external_id',
+            external_subscription_id: "sub_external_id",
             properties: {total2: 20}
           }
         )
@@ -208,7 +208,7 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
           {
             code: bm3.code,
             transaction_id: SecureRandom.uuid,
-            external_subscription_id: 'sub_external_id',
+            external_subscription_id: "sub_external_id",
             properties: {total3: 30}
           }
         )
@@ -216,7 +216,7 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
           {
             code: bm4.code,
             transaction_id: SecureRandom.uuid,
-            external_subscription_id: 'sub_external_id',
+            external_subscription_id: "sub_external_id",
             properties: {total4: 40}
           }
         )
@@ -226,7 +226,7 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
           {
             code: bm5.code,
             transaction_id: SecureRandom.uuid,
-            external_subscription_id: 'sub_external_id2',
+            external_subscription_id: "sub_external_id2",
             properties: {total5: 10}
           }
         )
@@ -234,7 +234,7 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
           {
             code: bm6.code,
             transaction_id: SecureRandom.uuid,
-            external_subscription_id: 'sub_external_id2',
+            external_subscription_id: "sub_external_id2",
             properties: {total6: 20}
           }
         )
@@ -242,7 +242,7 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
           {
             code: bm7.code,
             transaction_id: SecureRandom.uuid,
-            external_subscription_id: 'sub_external_id2',
+            external_subscription_id: "sub_external_id2",
             properties: {total7: 30}
           }
         )
@@ -250,7 +250,7 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
           {
             code: bm8.code,
             transaction_id: SecureRandom.uuid,
-            external_subscription_id: 'sub_external_id2',
+            external_subscription_id: "sub_external_id2",
             properties: {total8: 40}
           }
         )
@@ -260,11 +260,11 @@ describe 'Coupons breakdown Spec', :scenarios, type: :request do
         perform_billing
       end
 
-      customer = organization.customers.find_by(external_id: 'customer-12345')
+      customer = organization.customers.find_by(external_id: "customer-12345")
       invoice = customer.invoices.first
       fees = invoice.fees
-      subscription1 = Subscription.find_by(external_id: 'sub_external_id')
-      subscription2 = Subscription.find_by(external_id: 'sub_external_id2')
+      subscription1 = Subscription.find_by(external_id: "sub_external_id")
+      subscription2 = Subscription.find_by(external_id: "sub_external_id2")
       sub1_fees = fees.charge.where(subscription: subscription1).joins(:charge)
       sub2_fees = fees.charge.where(subscription: subscription2).joins(:charge)
 

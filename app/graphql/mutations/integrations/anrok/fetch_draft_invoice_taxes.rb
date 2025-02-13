@@ -7,9 +7,9 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = 'invoices:create'
+        REQUIRED_PERMISSION = "invoices:create"
 
-        description 'Fetches taxes for one-off invoice'
+        description "Fetches taxes for one-off invoice"
 
         input_object_class Types::Invoices::CreateInvoiceInput
 

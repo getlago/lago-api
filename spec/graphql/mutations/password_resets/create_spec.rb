@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::PasswordResets::Create, type: :graphql do
   let(:user) { create(:user) }
@@ -16,7 +16,7 @@ RSpec.describe Mutations::PasswordResets::Create, type: :graphql do
     GQL
   end
 
-  it 'creates a password reset for a user' do
+  it "creates a password reset for a user" do
     result = execute_graphql(
       query: mutation,
       variables: {
@@ -26,8 +26,8 @@ RSpec.describe Mutations::PasswordResets::Create, type: :graphql do
       }
     )
 
-    data = result['data']['createPasswordReset']
+    data = result["data"]["createPasswordReset"]
 
-    expect(data['id']).to be_present
+    expect(data["id"]).to be_present
   end
 end

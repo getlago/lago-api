@@ -13,7 +13,7 @@ module WalletTransactions
     def call
       result.wallet_transaction = wallet_transaction
 
-      return result.not_allowed_failure!(code: 'wallet_not_active') unless wallet.active?
+      return result.not_allowed_failure!(code: "wallet_not_active") unless wallet.active?
 
       transaction_result = WalletTransactions::CreateService.call(
         organization: customer.organization,

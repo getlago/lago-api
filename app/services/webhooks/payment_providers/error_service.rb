@@ -18,11 +18,11 @@ module Webhooks
       end
 
       def webhook_type
-        'payment_provider.error'
+        "payment_provider.error"
       end
 
       def object_type
-        'payment_provider_error'
+        "payment_provider_error"
       end
     end
   end

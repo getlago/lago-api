@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::ProviderTaxes::VoidJob, type: :job do
   let(:organization) { create(:organization) }
@@ -15,21 +15,21 @@ RSpec.describe Invoices::ProviderTaxes::VoidJob, type: :job do
       .and_return(result)
   end
 
-  context 'when there is anrok customer' do
+  context "when there is anrok customer" do
     let(:integration) { create(:anrok_integration, organization:) }
     let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
 
     before { integration_customer }
 
-    it 'calls successfully void service' do
+    it "calls successfully void service" do
       described_class.perform_now(invoice:)
 
       expect(Invoices::ProviderTaxes::VoidService).to have_received(:call)
     end
   end
 
-  context 'when there is NOT anrok customer' do
-    it 'does not call void service' do
+  context "when there is NOT anrok customer" do
+    it "does not call void service" do
       described_class.perform_now(invoice:)
 
       expect(Invoices::ProviderTaxes::VoidService).not_to have_received(:call)

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
   subject(:result) do
@@ -12,7 +12,7 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
     )
   end
 
-  let(:required_permission) { 'credit_notes:view' }
+  let(:required_permission) { "credit_notes:view" }
   let(:query) do
     <<~GQL
       query {
@@ -29,37 +29,37 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
   let(:customer) { create(:customer, organization:) }
   let(:arguments) { "" }
 
-  let(:response_collection) { result['data']['creditNotes']['collection'] }
+  let(:response_collection) { result["data"]["creditNotes"]["collection"] }
 
   before { create(:credit_note, :draft, customer:) }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'credit_notes:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "credit_notes:view"
 
-  context 'with no arguments' do
+  context "with no arguments" do
     let!(:credit_note) { create(:credit_note, customer:) }
 
-    it 'returns finalized credit_notes' do
-      expect(response_collection.pluck('id')).to contain_exactly credit_note.id
+    it "returns finalized credit_notes" do
+      expect(response_collection.pluck("id")).to contain_exactly credit_note.id
 
-      expect(result['data']['creditNotes']['metadata']['currentPage']).to eq(1)
-      expect(result['data']['creditNotes']['metadata']['totalCount']).to eq(1)
+      expect(result["data"]["creditNotes"]["metadata"]["currentPage"]).to eq(1)
+      expect(result["data"]["creditNotes"]["metadata"]["totalCount"]).to eq(1)
     end
   end
 
-  context 'with currency' do
+  context "with currency" do
     let(:arguments) { "currency: #{credit_note.currency.upcase}" }
     let!(:credit_note) { create(:credit_note, customer:, total_amount_currency: "USD") }
 
     before { create(:credit_note, customer:, total_amount_currency: "EUR") }
 
-    it 'returns finalized credit_notes matching currency' do
-      expect(response_collection.pluck('id')).to contain_exactly credit_note.id
+    it "returns finalized credit_notes matching currency" do
+      expect(response_collection.pluck("id")).to contain_exactly credit_note.id
     end
   end
 
-  context 'with customer_external_id' do
+  context "with customer_external_id" do
     let(:arguments) { "customerExternalId: #{customer.external_id.inspect}" }
     let!(:credit_note) { create(:credit_note, customer:) }
 
@@ -68,12 +68,12 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
       create(:credit_note, customer: another_customer)
     end
 
-    it 'returns finalized credit_notes with matching customer external id' do
-      expect(response_collection.pluck('id')).to contain_exactly credit_note.id
+    it "returns finalized credit_notes with matching customer external id" do
+      expect(response_collection.pluck("id")).to contain_exactly credit_note.id
     end
   end
 
-  context 'with customer_id' do
+  context "with customer_id" do
     let(:arguments) { "customerId: #{customer.id.inspect}" }
     let!(:credit_note) { create(:credit_note, customer:) }
 
@@ -82,12 +82,12 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
       create(:credit_note, customer: another_customer)
     end
 
-    it 'returns finalized credit_notes with matching customer id' do
-      expect(response_collection.pluck('id')).to contain_exactly credit_note.id
+    it "returns finalized credit_notes with matching customer id" do
+      expect(response_collection.pluck("id")).to contain_exactly credit_note.id
     end
   end
 
-  context 'with reason' do
+  context "with reason" do
     let(:arguments) { "reason: [#{matching_reasons.map(&:to_s).join(", ")}]" }
     let(:matching_reasons) { CreditNote::REASON.sample(2) }
 
@@ -103,12 +103,12 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
       )
     end
 
-    it 'returns finalized credit_notes with matching reasons' do
-      expect(response_collection.pluck('id')).to match_array credit_notes.pluck(:id)
+    it "returns finalized credit_notes with matching reasons" do
+      expect(response_collection.pluck("id")).to match_array credit_notes.pluck(:id)
     end
   end
 
-  context 'with credit_status' do
+  context "with credit_status" do
     let(:arguments) { "creditStatus: [#{matching_credit_statuses.map(&:to_s).join(", ")}]" }
     let(:matching_credit_statuses) { CreditNote::CREDIT_STATUS.sample(2) }
 
@@ -126,12 +126,12 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
       )
     end
 
-    it 'returns finalized credit_notes with matching credit statuses' do
-      expect(response_collection.pluck('id')).to match_array credit_notes.pluck(:id)
+    it "returns finalized credit_notes with matching credit statuses" do
+      expect(response_collection.pluck("id")).to match_array credit_notes.pluck(:id)
     end
   end
 
-  context 'with refund_status' do
+  context "with refund_status" do
     let(:arguments) { "refundStatus: [#{matching_refund_statuses.map(&:to_s).join(", ")}]" }
     let(:matching_refund_statuses) { CreditNote::REFUND_STATUS.sample(2) }
 
@@ -149,23 +149,23 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
       )
     end
 
-    it 'returns finalized credit_notes with matching refund statuses' do
-      expect(response_collection.pluck('id')).to match_array credit_notes.pluck(:id)
+    it "returns finalized credit_notes with matching refund statuses" do
+      expect(response_collection.pluck("id")).to match_array credit_notes.pluck(:id)
     end
   end
 
-  context 'with invoice_number' do
+  context "with invoice_number" do
     let(:arguments) { "invoiceNumber: #{credit_note.invoice.number.inspect}" }
     let!(:credit_note) { create(:credit_note, customer:) }
 
     before { create(:credit_note, customer:) }
 
-    it 'returns finalized credit_notes matching invoice number' do
-      expect(response_collection.pluck('id')).to contain_exactly credit_note.id
+    it "returns finalized credit_notes matching invoice number" do
+      expect(response_collection.pluck("id")).to contain_exactly credit_note.id
     end
   end
 
-  context 'with both issuing_date_from and issuing_date_to' do
+  context "with both issuing_date_from and issuing_date_to" do
     let(:arguments) do
       [
         "issuingDateFrom: #{credit_notes.second.issuing_date.to_s.inspect}",
@@ -179,12 +179,12 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
       end.reverse # from oldest to newest
     end
 
-    it 'returns finalized credit notes that were issued between provided dates' do
-      expect(response_collection.pluck('id')).to match_array credit_notes[1..3].pluck(:id)
+    it "returns finalized credit notes that were issued between provided dates" do
+      expect(response_collection.pluck("id")).to match_array credit_notes[1..3].pluck(:id)
     end
   end
 
-  context 'with both amount_from and amount_to' do
+  context "with both amount_from and amount_to" do
     let(:arguments) do
       [
         "amountFrom: #{credit_notes.second.total_amount_cents.inspect}",
@@ -198,19 +198,19 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
       end # from smallest to biggest
     end
 
-    it 'returns finalized credit notes total cents amount in provided range' do
-      expect(response_collection.pluck('id')).to match_array credit_notes[1..3].pluck(:id)
+    it "returns finalized credit notes total cents amount in provided range" do
+      expect(response_collection.pluck("id")).to match_array credit_notes[1..3].pluck(:id)
     end
   end
 
-  context 'with search_term' do
+  context "with search_term" do
     let(:arguments) { "searchTerm: #{credit_note.number.inspect}" }
     let!(:credit_note) { create(:credit_note, customer:) }
 
     before { create(:credit_note, customer:) }
 
-    it 'returns finalized credit_notes matching the terms' do
-      expect(response_collection.pluck('id')).to contain_exactly credit_note.id
+    it "returns finalized credit_notes matching the terms" do
+      expect(response_collection.pluck("id")).to contain_exactly credit_note.id
     end
   end
 

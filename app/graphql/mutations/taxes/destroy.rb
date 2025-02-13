@@ -9,8 +9,8 @@ module Mutations
       # Permissions ??
       # REQUIRED_PERMISSION = 'taxes:create'
 
-      graphql_name 'DestroyTax'
-      description 'Deletes a tax'
+      graphql_name "DestroyTax"
+      description "Deletes a tax"
 
       argument :id, ID, required: true
 

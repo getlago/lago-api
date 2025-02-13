@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'invoice_custom_sections:update'
+      REQUIRED_PERMISSION = "invoice_custom_sections:update"
 
-      graphql_name 'UpdateInvoiceCustomSection'
-      description 'Updates an InvoiceCustomSection'
+      graphql_name "UpdateInvoiceCustomSection"
+      description "Updates an InvoiceCustomSection"
 
       input_object_class Types::InvoiceCustomSections::UpdateInput
 

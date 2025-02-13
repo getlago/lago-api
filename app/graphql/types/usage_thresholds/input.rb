@@ -3,7 +3,7 @@
 module Types
   module UsageThresholds
     class Input < BaseInputObject
-      graphql_name 'UsageThresholdInput'
+      graphql_name "UsageThresholdInput"
 
       argument :id, ID, required: false
 

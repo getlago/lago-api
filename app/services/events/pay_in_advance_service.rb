@@ -62,7 +62,7 @@ module Events
     end
 
     def kafka_producer_enabled?
-      ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].present? && ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'].present?
+      ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present? && ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"].present?
     end
   end
 end

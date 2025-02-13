@@ -33,7 +33,7 @@ module Invoices
 
       if invoice.finalized?
         Utils::SegmentTrack.invoice_created(result.invoice)
-        SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice)
+        SendWebhookJob.perform_later("invoice.paid_credit_added", result.invoice)
         GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -96,7 +96,7 @@ module Invoices
 
     def should_deliver_email?
       License.premium? &&
-        customer.organization.email_settings.include?('invoice.finalized')
+        customer.organization.email_settings.include?("invoice.finalized")
     end
   end
 end

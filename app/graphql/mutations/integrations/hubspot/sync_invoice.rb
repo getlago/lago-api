@@ -7,10 +7,10 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = 'organization:integrations:update'
+        REQUIRED_PERMISSION = "organization:integrations:update"
 
-        graphql_name 'SyncHubspotInvoice'
-        description 'Sync hubspot integration invoice'
+        graphql_name "SyncHubspotInvoice"
+        description "Sync hubspot integration invoice"
 
         input_object_class Types::Integrations::SyncHubspotInvoiceInput
 

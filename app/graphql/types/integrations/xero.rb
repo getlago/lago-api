@@ -3,7 +3,7 @@
 module Types
   module Integrations
     class Xero < Types::BaseObject
-      graphql_name 'XeroIntegration'
+      graphql_name "XeroIntegration"
 
       field :code, String, null: false
       field :connection_id, ID, null: false
@@ -15,7 +15,7 @@ module Types
       field :sync_payments, Boolean
 
       def has_mappings_configured
-        object.integration_collection_mappings.where(type: 'IntegrationCollectionMappings::XeroCollectionMapping').any?
+        object.integration_collection_mappings.where(type: "IntegrationCollectionMappings::XeroCollectionMapping").any?
       end
     end
   end

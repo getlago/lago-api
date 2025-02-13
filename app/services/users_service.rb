@@ -5,7 +5,7 @@ class UsersService < BaseService
     result.user = User.find_by(email:)&.authenticate(password)
 
     unless result.user.present? && result.user.memberships&.active&.any?
-      return result.single_validation_failure!(error_code: 'incorrect_login_or_password')
+      return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
     result.token = generate_token if result.user
@@ -17,12 +17,12 @@ class UsersService < BaseService
   end
 
   def register(email, password, organization_name)
-    if ENV.fetch('LAGO_DISABLE_SIGNUP', 'false') == 'true'
-      return result.not_allowed_failure!(code: 'signup_disabled')
+    if ENV.fetch("LAGO_DISABLE_SIGNUP", "false") == "true"
+      return result.not_allowed_failure!(code: "signup_disabled")
     end
 
     if User.exists?(email:)
-      result.single_validation_failure!(field: :email, error_code: 'user_already_exists')
+      result.single_validation_failure!(field: :email, error_code: "user_already_exists")
 
       return result
     end
@@ -31,7 +31,7 @@ class UsersService < BaseService
       result.user = User.create!(email:, password:)
 
       result.organization = Organizations::CreateService
-        .call(name: organization_name, document_numbering: 'per_organization')
+        .call(name: organization_name, document_numbering: "per_organization")
         .raise_if_error!
         .organization
 
@@ -80,9 +80,9 @@ class UsersService < BaseService
   private
 
   def generate_token
-    JWT.encode(payload, ENV['SECRET_KEY_BASE'], 'HS256')
+    JWT.encode(payload, ENV["SECRET_KEY_BASE"], "HS256")
   rescue => e
-    result.service_failure!(code: 'token_encoding_error', message: e.message)
+    result.service_failure!(code: "token_encoding_error", message: e.message)
   end
 
   def payload
@@ -95,7 +95,7 @@ class UsersService < BaseService
   def track_organization_registered(organization, membership)
     SegmentTrackJob.perform_later(
       membership_id: "membership/#{membership.id}",
-      event: 'organization_registered',
+      event: "organization_registered",
       properties: {
         organization_name: organization.name,
         organization_id: organization.id

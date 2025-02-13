@@ -13,7 +13,7 @@ module Wallets
       def call
         return unless License.premium?
 
-        if method == 'fixed' && rule_params[:paid_credits].nil? && rule_params[:granted_credits].nil?
+        if method == "fixed" && rule_params[:paid_credits].nil? && rule_params[:granted_credits].nil?
           paid_credits = wallet_params[:paid_credits]
           granted_credits = wallet_params[:granted_credits]
         end
@@ -51,7 +51,7 @@ module Wallets
       end
 
       def method
-        @method ||= rule_params[:method] || 'fixed'
+        @method ||= rule_params[:method] || "fixed"
       end
     end
   end

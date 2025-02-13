@@ -13,7 +13,7 @@ module IntegrationCollectionMappings
     def call
       integration = Integrations::BaseIntegration.find_by(id: params[:integration_id])
 
-      return result.not_found_failure!(resource: 'integration') unless integration
+      return result.not_found_failure!(resource: "integration") unless integration
 
       integration_collection_mapping = IntegrationCollectionMappings::Factory.new_instance(integration:).new(
         integration_id: params[:integration_id],

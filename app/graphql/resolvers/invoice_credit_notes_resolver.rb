@@ -5,11 +5,11 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'credit_notes:view'
+    REQUIRED_PERMISSION = "credit_notes:view"
 
     description "Query invoice's credit note"
 
-    argument :invoice_id, ID, required: true, description: 'Uniq ID of the invoice'
+    argument :invoice_id, ID, required: true, description: "Uniq ID of the invoice"
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
 
@@ -23,7 +23,7 @@ module Resolvers
         .page(page)
         .per(limit)
     rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'invoice')
+      not_found_error(resource: "invoice")
     end
   end
 end

@@ -15,10 +15,10 @@ module AdjustedFees
 
       fee = find_or_create_fee
       return result unless result.success?
-      return result.validation_failure!(errors: {adjusted_fee: ['already_exists']}) if fee.adjusted_fee
+      return result.validation_failure!(errors: {adjusted_fee: ["already_exists"]}) if fee.adjusted_fee
 
       charge = fee.charge
-      return result.validation_failure!(errors: {charge: ['invalid_charge_model']}) if disabled_charge_model?(charge)
+      return result.validation_failure!(errors: {charge: ["invalid_charge_model"]}) if disabled_charge_model?(charge)
 
       unit_precise_amount_cents = params[:unit_precise_amount].to_f * fee.amount.currency.subunit_to_unit
       adjusted_fee = AdjustedFee.new(
@@ -66,7 +66,7 @@ module AdjustedFees
     def find_existing_fee
       fee = invoice.fees.find_by(id: params[:fee_id])
       if fee.blank?
-        result.not_found_failure!(resource: 'fee')
+        result.not_found_failure!(resource: "fee")
         return
       end
 
@@ -76,13 +76,13 @@ module AdjustedFees
     def create_empty_fee
       subscription = invoice.subscriptions.includes(plan: {charges: :filters}).find_by(id: params[:subscription_id])
       unless subscription
-        result.not_found_failure!(resource: 'subscription')
+        result.not_found_failure!(resource: "subscription")
         return
       end
 
       charge = subscription.plan.charges.find { |c| c.id == params[:charge_id] }
       unless charge
-        result.not_found_failure!(resource: 'charge')
+        result.not_found_failure!(resource: "charge")
         return
       end
 
@@ -90,7 +90,7 @@ module AdjustedFees
         charge_filter = charge.filters.find_by(id: params[:charge_filter_id])
 
         unless charge_filter
-          result.not_found_failure!(resource: 'charge_filter')
+          result.not_found_failure!(resource: "charge_filter")
           return
         end
       end

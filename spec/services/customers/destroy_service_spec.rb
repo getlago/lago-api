@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Customers::DestroyService, type: :service do
   subject(:destroy_service) { described_class.new(customer:) }
@@ -11,29 +11,29 @@ RSpec.describe Customers::DestroyService, type: :service do
 
   before { customer }
 
-  describe '#call' do
-    it 'soft deletes the customer' do
+  describe "#call" do
+    it "soft deletes the customer" do
       freeze_time do
         expect { destroy_service.call }.to change(Customer, :count).by(-1)
           .and change { customer.reload.deleted_at }.from(nil).to(Time.current)
       end
     end
 
-    it 'enqueues a job to terminates the customer resources' do
+    it "enqueues a job to terminates the customer resources" do
       destroy_service.call
 
       expect(Customers::TerminateRelationsJob).to have_been_enqueued
         .with(customer_id: customer.id)
     end
 
-    context 'when customer is not found' do
+    context "when customer is not found" do
       let(:customer) { nil }
 
-      it 'returns an error' do
+      it "returns an error" do
         result = destroy_service.call
 
         expect(result).not_to be_success
-        expect(result.error.error_code).to eq('customer_not_found')
+        expect(result.error.error_code).to eq("customer_not_found")
       end
     end
   end

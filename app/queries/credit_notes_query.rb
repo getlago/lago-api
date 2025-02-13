@@ -29,7 +29,7 @@ class CreditNotesQuery < BaseQuery
     CreditNote
       .includes(:customer)
       .joins(:customer)
-      .where('customers.organization_id = ?', organization.id)
+      .where("customers.organization_id = ?", organization.id)
       .finalized
       .ransack(search_params)
   end
@@ -38,7 +38,7 @@ class CreditNotesQuery < BaseQuery
     return if search_term.blank?
 
     terms = {
-      m: 'or',
+      m: "or",
       id_cont: search_term,
       number_cont: search_term
     }

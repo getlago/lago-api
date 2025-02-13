@@ -6,9 +6,9 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'analytics:view'
+      REQUIRED_PERMISSION = "analytics:view"
 
-      description 'Query invoiced usage of an organization'
+      description "Query invoiced usage of an organization"
 
       argument :currency, Types::CurrencyEnum, required: false
 

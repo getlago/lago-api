@@ -3,7 +3,7 @@
 module Invoices
   module ProviderTaxes
     class VoidJob < ApplicationJob
-      queue_as 'integrations'
+      queue_as "integrations"
 
       def perform(invoice:)
         return unless invoice.customer.anrok_customer

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Webhooks::Events::ValidationErrorsService do
   subject(:webhook_service) { described_class.new(object: organization, options:) }
@@ -17,11 +17,11 @@ RSpec.describe Webhooks::Events::ValidationErrorsService do
     }
   end
 
-  describe '.call' do
-    it_behaves_like 'creates webhook', 'events.errors', 'events_errors', {
-      'invalid_code' => Array,
-      'missing_aggregation_property' => Array,
-      'missing_group_key' => Array
+  describe ".call" do
+    it_behaves_like "creates webhook", "events.errors", "events_errors", {
+      "invalid_code" => Array,
+      "missing_aggregation_property" => Array,
+      "missing_group_key" => Array
     }
   end
 end

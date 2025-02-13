@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::UpdateGracePeriodFromOrganizationService do
   subject { described_class.new(invoice:, old_grace_period:) }

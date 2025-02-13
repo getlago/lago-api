@@ -22,13 +22,13 @@ module Charges
 
       def amount_details
         if units.zero?
-          return {free_units: '0.0', paid_units: '0.0', per_package_size: 0, per_package_unit_amount: '0.0'}
+          return {free_units: "0.0", paid_units: "0.0", per_package_size: 0, per_package_unit_amount: "0.0"}
         end
 
         if paid_units.negative?
           return {
             free_units: BigDecimal(free_units).to_s,
-            paid_units: '0.0',
+            paid_units: "0.0",
             per_package_size:,
             per_package_unit_amount:
           }
@@ -47,15 +47,15 @@ module Charges
       end
 
       def free_units
-        @free_units ||= properties['free_units'] || 0
+        @free_units ||= properties["free_units"] || 0
       end
 
       def per_package_size
-        @per_package_size ||= properties['package_size']
+        @per_package_size ||= properties["package_size"]
       end
 
       def per_package_unit_amount
-        @per_package_unit_amount ||= BigDecimal(properties['amount'])
+        @per_package_unit_amount ||= BigDecimal(properties["amount"])
       end
     end
   end

@@ -4,7 +4,7 @@ module Types
   module Integrations
     class Netsuite
       class CreateInput < Types::BaseInputObject
-        graphql_name 'CreateNetsuiteIntegrationInput'
+        graphql_name "CreateNetsuiteIntegrationInput"
 
         argument :code, String, required: true
         argument :name, String, required: true

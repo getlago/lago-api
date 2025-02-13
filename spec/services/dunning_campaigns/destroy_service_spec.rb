@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe DunningCampaigns::DestroyService, type: :service do
   subject(:destroy_service) { described_class.new(dunning_campaign:) }
@@ -29,7 +29,7 @@ RSpec.describe DunningCampaigns::DestroyService, type: :service do
     end
 
     context "when lago freemium" do
-      it 'returns an error', :aggregate_failures do
+      it "returns an error", :aggregate_failures do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
       end
@@ -43,7 +43,7 @@ RSpec.describe DunningCampaigns::DestroyService, type: :service do
       around { |test| lago_premium!(&test) }
 
       context "when no auto_dunning premium integration" do
-        it 'returns an error', :aggregate_failures do
+        it "returns an error", :aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ForbiddenFailure)
         end

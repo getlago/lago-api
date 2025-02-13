@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
-  let(:required_permission) { 'coupons:attach' }
+  let(:required_permission) { "coupons:attach" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:mutation) do
@@ -27,11 +27,11 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
     create(:subscription, customer:)
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'coupons:attach'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "coupons:attach"
 
-  it 'assigns a coupon to the customer' do
+  it "assigns a coupon to the customer" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -41,21 +41,21 @@ RSpec.describe Mutations::AppliedCoupons::Create, type: :graphql do
         input: {
           couponId: coupon.id,
           customerId: customer.id,
-          frequency: 'once',
+          frequency: "once",
           amountCents: 123,
-          amountCurrency: 'EUR'
+          amountCurrency: "EUR"
         }
       }
     )
 
-    result_data = result['data']['createAppliedCoupon']
+    result_data = result["data"]["createAppliedCoupon"]
 
     aggregate_failures do
-      expect(result_data['id']).to be_present
-      expect(result_data['coupon']['id']).to eq(coupon.id)
-      expect(result_data['amountCents']).to eq('123')
-      expect(result_data['amountCurrency']).to eq('EUR')
-      expect(result_data['createdAt']).to be_present
+      expect(result_data["id"]).to be_present
+      expect(result_data["coupon"]["id"]).to eq(coupon.id)
+      expect(result_data["amountCents"]).to eq("123")
+      expect(result_data["amountCurrency"]).to eq("EUR")
+      expect(result_data["createdAt"]).to be_present
     end
   end
 end

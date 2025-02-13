@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Plans::OverrideService, type: :service do
   subject(:override_service) { described_class.new(plan: parent_plan, params:) }
@@ -8,7 +8,7 @@ RSpec.describe Plans::OverrideService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  describe '#call' do
+  describe "#call" do
     let(:parent_plan) { create(:plan, organization:) }
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
@@ -19,7 +19,7 @@ RSpec.describe Plans::OverrideService, type: :service do
         :standard_charge,
         plan: parent_plan,
         billable_metric:,
-        properties: {amount: '300'}
+        properties: {amount: "300"}
       )
     end
 
@@ -29,7 +29,7 @@ RSpec.describe Plans::OverrideService, type: :service do
       create(
         :charge_filter,
         charge:,
-        properties: {amount: '10'}
+        properties: {amount: "10"}
       )
     end
 
@@ -45,10 +45,10 @@ RSpec.describe Plans::OverrideService, type: :service do
     let(:params) do
       {
         amount_cents: 300,
-        amount_currency: 'USD',
-        invoice_display_name: 'invoice display name',
-        name: 'overridden name',
-        description: 'overridden description',
+        amount_currency: "USD",
+        invoice_display_name: "invoice display name",
+        name: "overridden name",
+        description: "overridden description",
         trial_period: 20,
         tax_codes: [tax.code],
         charges: charges_params,
@@ -65,7 +65,7 @@ RSpec.describe Plans::OverrideService, type: :service do
       }
     end
 
-    let(:minimum_commitment_invoice_display_name) { 'Minimum spending' }
+    let(:minimum_commitment_invoice_display_name) { "Minimum spending" }
     let(:minimum_commitment_amount_cents) { 100 }
 
     let(:charges_params) do
@@ -81,7 +81,7 @@ RSpec.describe Plans::OverrideService, type: :service do
       [
         {
           id: usage_threshold.id,
-          threshold_display_name: 'Threshold 1',
+          threshold_display_name: "Threshold 1",
           amount_cents: 1_000
         }
       ]
@@ -90,14 +90,14 @@ RSpec.describe Plans::OverrideService, type: :service do
     around { |test| lago_premium!(&test) }
 
     before do
-      organization.update!(premium_integrations: ['progressive_billing'])
+      organization.update!(premium_integrations: ["progressive_billing"])
       charge
       usage_threshold
       allow(SegmentTrackJob).to receive(:perform_later)
       filter_value
     end
 
-    it 'creates a plan based from the parent plan', :aggregate_failures do
+    it "creates a plan based from the parent plan", :aggregate_failures do
       expect { override_service.call }.to change(Plan, :count).by(1)
 
       plan = Plan.order(:created_at).last
@@ -111,35 +111,35 @@ RSpec.describe Plans::OverrideService, type: :service do
         parent_id: parent_plan.id,
         # Overriden attributes
         amount_cents: 300,
-        amount_currency: 'USD',
-        description: 'overridden description',
-        invoice_display_name: 'invoice display name',
-        name: 'overridden name',
+        amount_currency: "USD",
+        description: "overridden description",
+        invoice_display_name: "invoice display name",
+        name: "overridden name",
         trial_period: 20
       )
 
       expect(plan.taxes).to contain_exactly(tax)
 
       expect(plan.minimum_commitment).to have_attributes(
-        commitment_type: 'minimum_commitment',
+        commitment_type: "minimum_commitment",
         amount_cents: minimum_commitment_amount_cents,
         invoice_display_name: minimum_commitment_invoice_display_name
       )
 
       expect(plan.usage_thresholds.first).to have_attributes(
-        threshold_display_name: 'Threshold 1',
+        threshold_display_name: "Threshold 1",
         amount_cents: 1_000
       )
 
       expect(plan.minimum_commitment.taxes.first).to eq(tax)
     end
 
-    it 'calls SegmentTrackJob' do
+    it "calls SegmentTrackJob" do
       plan = override_service.call.plan
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'plan_created',
+        event: "plan_created",
         properties: {
           code: plan.code,
           name: plan.name,
@@ -147,7 +147,7 @@ RSpec.describe Plans::OverrideService, type: :service do
           description: plan.description,
           plan_interval: plan.interval,
           plan_amount_cents: plan.amount_cents,
-          plan_period: 'arrears',
+          plan_period: "arrears",
           trial: plan.trial_period,
           nb_charges: 1,
           nb_standard_charges: 1,
@@ -160,7 +160,7 @@ RSpec.describe Plans::OverrideService, type: :service do
       )
     end
 
-    it 'creates charges based from the parent plan', :aggregate_failures do
+    it "creates charges based from the parent plan", :aggregate_failures do
       charge2 = create(
         :graduated_charge,
         plan: parent_plan,
@@ -170,8 +170,8 @@ RSpec.describe Plans::OverrideService, type: :service do
             {
               from_value: 0,
               to_value: nil,
-              per_unit_amount: '0.01',
-              flat_amount: '0.01'
+              per_unit_amount: "0.01",
+              flat_amount: "0.01"
             }
           ]
         }
@@ -204,10 +204,10 @@ RSpec.describe Plans::OverrideService, type: :service do
       )
     end
 
-    context 'when minimum commitment is not valid' do
+    context "when minimum commitment is not valid" do
       let(:minimum_commitment_amount_cents) { nil }
 
-      it 'returns error', :aggregate_failures do
+      it "returns error", :aggregate_failures do
         expect { override_service.call }.not_to change(Plan, :count)
         expect(override_service.call).not_to be_success
       end

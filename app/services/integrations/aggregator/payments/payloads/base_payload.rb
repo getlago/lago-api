@@ -14,17 +14,17 @@ module Integrations
           def body
             [
               {
-                'invoice_id' => integration_invoice.external_id,
-                'account_code' => account_item&.external_account_code,
-                'date' => payment.created_at.utc.iso8601,
-                'amount_cents' => payment.amount_cents
+                "invoice_id" => integration_invoice.external_id,
+                "account_code" => account_item&.external_account_code,
+                "date" => payment.created_at.utc.iso8601,
+                "amount_cents" => payment.amount_cents
               }
             ]
           end
 
           def integration_payment
             @integration_payment ||=
-              IntegrationResource.find_by(integration:, syncable: payment, resource_type: 'payment')
+              IntegrationResource.find_by(integration:, syncable: payment, resource_type: "payment")
           end
 
           private
@@ -38,10 +38,10 @@ module Integrations
           def integration_invoice
             integration_resource =
               invoice.integration_resources
-                .where(integration:, resource_type: 'invoice', syncable_type: 'Invoice').first
+                .where(integration:, resource_type: "invoice", syncable_type: "Invoice").first
 
             unless integration_resource
-              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invoice_missing')
+              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: "invoice_missing")
             end
 
             integration_resource

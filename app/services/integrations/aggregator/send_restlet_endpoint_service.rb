@@ -8,7 +8,7 @@ module Integrations
       end
 
       def call
-        return unless integration.type == 'Integrations::NetsuiteIntegration'
+        return unless integration.type == "Integrations::NetsuiteIntegration"
         return unless integration.script_endpoint_url
 
         payload = {
@@ -25,8 +25,8 @@ module Integrations
 
       def headers
         {
-          'Provider-Config-Key' => 'netsuite-tba',
-          'Authorization' => "Bearer #{secret_key}"
+          "Provider-Config-Key" => "netsuite-tba",
+          "Authorization" => "Bearer #{secret_key}"
         }
       end
     end

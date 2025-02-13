@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'organization:members:update'
+      REQUIRED_PERMISSION = "organization:members:update"
 
-      graphql_name 'RevokeMembership'
-      description 'Revoke a membership'
+      graphql_name "RevokeMembership"
+      description "Revoke a membership"
 
       argument :id, ID, required: true
 

@@ -5,10 +5,10 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
-      REQUIRED_PERMISSION = 'coupons:update'
+      REQUIRED_PERMISSION = "coupons:update"
 
-      graphql_name 'UpdateCoupon'
-      description 'Update an existing coupon'
+      graphql_name "UpdateCoupon"
+      description "Update an existing coupon"
 
       input_object_class Types::Coupons::UpdateInput
 

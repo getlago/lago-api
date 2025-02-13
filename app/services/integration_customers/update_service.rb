@@ -11,9 +11,9 @@ module IntegrationCustomers
       result = super
       return result if result.error
 
-      return result if integration_customer.type == 'IntegrationCustomers::AnrokCustomer'
-      return result if integration_customer.type == 'IntegrationCustomers::SalesforceCustomer'
-      return result.not_found_failure!(resource: 'integration_customer') unless integration_customer
+      return result if integration_customer.type == "IntegrationCustomers::AnrokCustomer"
+      return result if integration_customer.type == "IntegrationCustomers::SalesforceCustomer"
+      return result.not_found_failure!(resource: "integration_customer") unless integration_customer
 
       integration_customer.external_customer_id = external_customer_id if external_customer_id.present?
       integration_customer.targeted_object = targeted_object if targeted_object.present?
@@ -35,9 +35,9 @@ module IntegrationCustomers
     delegate :customer, to: :integration_customer
 
     def update_service_class
-      @update_service_class ||= if integration_customer.type != 'IntegrationCustomers::HubspotCustomer'
+      @update_service_class ||= if integration_customer.type != "IntegrationCustomers::HubspotCustomer"
         Integrations::Aggregator::Contacts::UpdateService
-      elsif integration_customer.targeted_object == 'contacts'
+      elsif integration_customer.targeted_object == "contacts"
         Integrations::Aggregator::Contacts::UpdateService
       else
         Integrations::Aggregator::Companies::UpdateService

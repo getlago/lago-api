@@ -75,7 +75,7 @@ module V1
       end
 
       if model.charge? && !model.charge.invoiceable? && model.pay_in_advance?
-        timestamp = Time.parse(model.properties['timestamp']).to_i
+        timestamp = Time.parse(model.properties["timestamp"]).to_i
         interval = ::Subscriptions::DatesService.charge_pay_in_advance_interval(timestamp, model.subscription)
 
         return {
@@ -91,12 +91,12 @@ module V1
     end
 
     def from_date
-      property = model.charge? ? 'charges_from_datetime' : 'from_datetime'
+      property = model.charge? ? "charges_from_datetime" : "from_datetime"
       model.properties[property]&.to_datetime&.iso8601
     end
 
     def to_date
-      property = model.charge? ? 'charges_to_datetime' : 'to_datetime'
+      property = model.charge? ? "charges_to_datetime" : "to_datetime"
       model.properties[property]&.to_datetime&.iso8601
     end
 
@@ -110,7 +110,7 @@ module V1
       ::CollectionSerializer.new(
         model.applied_taxes,
         ::V1::Fees::AppliedTaxSerializer,
-        collection_name: 'applied_taxes'
+        collection_name: "applied_taxes"
       ).serialize
     end
 

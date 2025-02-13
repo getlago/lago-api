@@ -719,7 +719,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
     end
   end
 
-  context 'when rounding is configured' do
+  context "when rounding is configured" do
     let(:billable_metric) do
       create(
         :billable_metric,
@@ -735,17 +735,17 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       latest_events.last.update!(properties: {total_count: 12.434})
     end
 
-    it 'aggregates the events' do
+    it "aggregates the events" do
       result = sum_service.aggregate(options:)
 
       expect(result.aggregation).to eq(48.44)
     end
   end
 
-  context 'when bypass_aggregation is set to true' do
+  context "when bypass_aggregation is set to true" do
     let(:bypass_aggregation) { true }
 
-    it 'returns a default empty result' do
+    it "returns a default empty result" do
       result = sum_service.aggregate
 
       expect(result.aggregation).to eq(0)
@@ -814,10 +814,10 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       end
     end
 
-    context 'when bypass_aggregation is set to true' do
+    context "when bypass_aggregation is set to true" do
       let(:bypass_aggregation) { true }
 
-      it 'returns an empty result' do
+      it "returns an empty result" do
         result = sum_service.aggregate
 
         expect(result.aggregations.count).to eq(1)
@@ -825,7 +825,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
         aggregation = result.aggregations.first
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
-        expect(aggregation.grouped_by).to eq({'agent_name' => nil})
+        expect(aggregation.grouped_by).to eq({"agent_name" => nil})
       end
     end
 
@@ -883,7 +883,7 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
       end
     end
 
-    context 'when rounding is configured' do
+    context "when rounding is configured" do
       let(:billable_metric) do
         create(
           :billable_metric,
@@ -897,19 +897,19 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
       let(:last_event) do
         latest_events.last.tap do |e|
-          e.update!(properties: {total_count: 12.434, agent_name: e.properties['agent_name']})
+          e.update!(properties: {total_count: 12.434, agent_name: e.properties["agent_name"]})
         end
       end
 
       before { last_event }
 
-      it 'aggregates the events' do
+      it "aggregates the events" do
         result = sum_service.aggregate(options:)
 
         expect(result.aggregations.count).to eq(4)
 
         result.aggregations.sort_by { |a| a.grouped_by["agent_name"] }.each_with_index do |aggregation, index|
-          if aggregation.grouped_by["agent_name"] == last_event.properties['agent_name']
+          if aggregation.grouped_by["agent_name"] == last_event.properties["agent_name"]
             expect(aggregation.aggregation).to eq(12.44)
           else
             expect(aggregation.aggregation).to eq(12)

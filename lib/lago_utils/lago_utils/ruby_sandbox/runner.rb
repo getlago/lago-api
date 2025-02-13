@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'open3'
+require "open3"
 
 module LagoUtils
   module RubySandbox
@@ -15,7 +15,7 @@ module LagoUtils
 
         temp_file = prepare_ruby_file
 
-        Open3.popen3("ruby #{temp_file.path}", chdir: '/tmp') do |_, stdout, stderr, _|
+        Open3.popen3("ruby #{temp_file.path}", chdir: "/tmp") do |_, stdout, stderr, _|
           error = stderr.read
           result = stdout.read
         end
@@ -24,10 +24,10 @@ module LagoUtils
 
         parsed_result = JSON.parse(result)
 
-        if parsed_result.is_a?(Hash) && parsed_result['type'] == 'error'
+        if parsed_result.is_a?(Hash) && parsed_result["type"] == "error"
           raise SandboxError.new(
-            initial_error: parsed_result['error'],
-            backtrace: parsed_result['backtrace']
+            initial_error: parsed_result["error"],
+            backtrace: parsed_result["backtrace"]
           )
         end
 
@@ -45,7 +45,7 @@ module LagoUtils
       end
 
       def prepare_ruby_file
-        file = Tempfile.new('lago-ruby-sandbox')
+        file = Tempfile.new("lago-ruby-sandbox")
         file.write(<<~STRING)
           require 'json'
           require 'bigdecimal'

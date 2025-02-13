@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::WebhookEndpoints::Update, type: :graphql do
-  let(:required_permission) { 'developers:manage' }
+  let(:required_permission) { "developers:manage" }
   let(:membership) { create(:membership) }
   let(:webhook_url) { Faker::Internet.url }
   let(:webhook_endpoint) { create(:webhook_endpoint, organization: membership.organization) }
@@ -12,7 +12,7 @@ RSpec.describe Mutations::WebhookEndpoints::Update, type: :graphql do
     {
       id: webhook_endpoint.id,
       webhookUrl: webhook_url,
-      signatureAlgo: 'hmac'
+      signatureAlgo: "hmac"
     }
   end
 
@@ -30,11 +30,11 @@ RSpec.describe Mutations::WebhookEndpoints::Update, type: :graphql do
 
   before { webhook_endpoint }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'developers:manage'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "developers:manage"
 
-  it 'updates a webhook_endpoint' do
+  it "updates a webhook_endpoint" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -43,10 +43,10 @@ RSpec.describe Mutations::WebhookEndpoints::Update, type: :graphql do
       variables: {input:}
     )
 
-    expect(result['data']['updateWebhookEndpoint']).to include(
-      'id' => String,
-      'webhookUrl' => webhook_url,
-      'signatureAlgo' => 'hmac'
+    expect(result["data"]["updateWebhookEndpoint"]).to include(
+      "id" => String,
+      "webhookUrl" => webhook_url,
+      "signatureAlgo" => "hmac"
     )
   end
 end

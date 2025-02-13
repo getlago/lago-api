@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'invoices:update'
+      REQUIRED_PERMISSION = "invoices:update"
 
-      graphql_name 'RetryAllInvoices'
-      description 'Retry all failed invoices'
+      graphql_name "RetryAllInvoices"
+      description "Retry all failed invoices"
 
       type Types::Invoices::Object.collection_type
 

@@ -3,8 +3,8 @@
 RSpec::Matchers.define :have_empty_charge_fees do
   match do |invoice|
     invoice.fees.charge.all? do |fee|
-      from = Time.zone.parse(fee.properties['charges_from_datetime'])
-      to = Time.zone.parse(fee.properties['charges_to_datetime'])
+      from = Time.zone.parse(fee.properties["charges_from_datetime"])
+      to = Time.zone.parse(fee.properties["charges_to_datetime"])
 
       fee.total_amount_cents.zero? && from.before?(to)
     end

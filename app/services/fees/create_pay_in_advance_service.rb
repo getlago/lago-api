@@ -149,7 +149,7 @@ module Fees
     def deliver_webhooks
       return if estimate
 
-      result.fees.each { |f| SendWebhookJob.perform_later('fee.created', f) }
+      result.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
     end
 
     def cache_aggregation_result(aggregation_result:, charge_filter:)
@@ -174,9 +174,9 @@ module Fees
     end
 
     def format_grouped_by
-      return {} if properties['grouped_by'].blank?
+      return {} if properties["grouped_by"].blank?
 
-      properties['grouped_by'].index_with { event.properties[_1] }
+      properties["grouped_by"].index_with { event.properties[_1] }
     end
 
     def customer_provider_taxation?

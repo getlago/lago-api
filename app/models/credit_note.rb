@@ -14,11 +14,11 @@ class CreditNote < ApplicationRecord
 
   has_one :organization, through: :invoice
 
-  has_many :items, class_name: 'CreditNoteItem', dependent: :destroy
+  has_many :items, class_name: "CreditNoteItem", dependent: :destroy
   has_many :fees, through: :items
   has_many :refunds
 
-  has_many :applied_taxes, class_name: 'CreditNote::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "CreditNote::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
   has_many :integration_resources, as: :syncable
   has_many :error_details, as: :owner, dependent: :destroy
@@ -72,7 +72,7 @@ class CreditNote < ApplicationRecord
   def file_url
     return if file.blank?
 
-    Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV['LAGO_API_URL'])
+    Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV["LAGO_API_URL"])
   end
 
   def currency
@@ -154,7 +154,7 @@ class CreditNote < ApplicationRecord
   def ensure_number
     return if number.present?
 
-    formatted_sequential_id = format('%03d', sequential_id)
+    formatted_sequential_id = format("%03d", sequential_id)
 
     self.number = "#{invoice.number}-CN#{formatted_sequential_id}"
   end

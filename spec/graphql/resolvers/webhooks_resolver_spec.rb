@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
-  let(:required_permission) { 'developers:manage' }
+  let(:required_permission) { "developers:manage" }
   let(:query) do
     <<~GQL
       query {
@@ -23,11 +23,11 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
     create_list(:webhook, 5, :succeeded, webhook_endpoint:)
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'developers:manage'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "developers:manage"
 
-  it 'returns a list of webhooks' do
+  it "returns a list of webhooks" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -35,21 +35,21 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
       query:
     )
 
-    webhooks_response = result['data']['webhooks']
-    webhook = webhooks_response['collection'].first
+    webhooks_response = result["data"]["webhooks"]
+    webhook = webhooks_response["collection"].first
 
     aggregate_failures do
-      expect(webhooks_response['collection'].count).to eq(webhook_endpoint.webhooks.count)
-      expect(webhooks_response['metadata']['currentPage']).to eq(1)
-      expect(webhook['payload']).to be_a String
-      expect(JSON.parse(webhook['payload'])).to be_a Hash
+      expect(webhooks_response["collection"].count).to eq(webhook_endpoint.webhooks.count)
+      expect(webhooks_response["metadata"]["currentPage"]).to eq(1)
+      expect(webhook["payload"]).to be_a String
+      expect(JSON.parse(webhook["payload"])).to be_a Hash
     end
   end
 
-  context 'when the webhook payload is json-serialized in the database' do
-    it 'returns a list of webhooks' do
+  context "when the webhook payload is json-serialized in the database" do
+    it "returns a list of webhooks" do
       Webhook.all.find_each do |w|
-        w.update_column(:payload, {'foo' => 'bar'}.to_json) # rubocop:disable Rails/SkipsModelValidations
+        w.update_column(:payload, {"foo" => "bar"}.to_json) # rubocop:disable Rails/SkipsModelValidations
       end
 
       result = execute_graphql(
@@ -59,14 +59,14 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
         query:
       )
 
-      webhooks_response = result['data']['webhooks']
-      webhook = webhooks_response['collection'].first
+      webhooks_response = result["data"]["webhooks"]
+      webhook = webhooks_response["collection"].first
 
       aggregate_failures do
-        expect(webhooks_response['collection'].count).to eq(webhook_endpoint.webhooks.count)
-        expect(webhooks_response['metadata']['currentPage']).to eq(1)
-        expect(webhook['payload']).to be_a String
-        expect(JSON.parse(webhook['payload'])).to be_a Hash
+        expect(webhooks_response["collection"].count).to eq(webhook_endpoint.webhooks.count)
+        expect(webhooks_response["metadata"]["currentPage"]).to eq(1)
+        expect(webhook["payload"]).to be_a String
+        expect(JSON.parse(webhook["payload"])).to be_a Hash
       end
     end
   end

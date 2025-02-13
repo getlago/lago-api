@@ -4,7 +4,7 @@ module LagoUtils
   module RubySandbox
     class Sanitizer
       def initialize(code)
-        @code = code || ''
+        @code = code || ""
       end
 
       def sanitize

@@ -10,7 +10,7 @@ module ChargeFilters
       @parent_filters = if parent_filters_attributes.blank?
         ChargeFilter.none
       else
-        ChargeFilter.with_discarded.where(id: parent_filters_attributes.map { |f| f['id'] })
+        ChargeFilter.with_discarded.where(id: parent_filters_attributes.map { |f| f["id"] })
       end
 
       super
@@ -101,10 +101,10 @@ module ChargeFilters
 
     def parent_filter_properties(parent_filter)
       match = parent_filters_attributes.find do |f|
-        f['id'] == parent_filter.id
+        f["id"] == parent_filter.id
       end
 
-      match['properties']
+      match["properties"]
     end
 
     def remove_all

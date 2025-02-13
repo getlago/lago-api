@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 describe Clock::ProcessDunningCampaignsJob, job: true do
   subject { described_class }
 
-  describe '.perform' do
+  describe ".perform" do
     context "when premium features are enabled" do
       around { |test| lago_premium!(&test) }
 

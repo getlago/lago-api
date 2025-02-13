@@ -3,7 +3,7 @@
 module IntegrationCustomers
   class CreateJob < ApplicationJob
     include ConcurrencyThrottlable
-    queue_as 'integrations'
+    queue_as "integrations"
 
     retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 3
     retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25

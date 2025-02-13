@@ -9,8 +9,8 @@ module Mutations
 
       REQUIRED_PERMISSION = %w[customers:update customer_settings:update:grace_period]
 
-      graphql_name 'UpdateCustomerInvoiceGracePeriod'
-      description 'Assign the invoice grace period to Customers'
+      graphql_name "UpdateCustomerInvoiceGracePeriod"
+      description "Assign the invoice grace period to Customers"
 
       argument :id, ID, required: true
       argument :invoice_grace_period, Integer, required: false

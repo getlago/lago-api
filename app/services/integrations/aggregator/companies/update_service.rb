@@ -7,7 +7,7 @@ module Integrations
         def initialize(integration:, integration_customer:)
           @integration_customer = integration_customer
 
-          raise ArgumentError, 'Integration customer is not a company' if customer.customer_type_individual?
+          raise ArgumentError, "Integration customer is not a company" if customer.customer_type_individual?
 
           super(integration:)
         end

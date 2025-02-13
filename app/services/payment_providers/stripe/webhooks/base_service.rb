@@ -28,7 +28,7 @@ module PaymentProviders
           #       (Happens when the Stripe API key is shared between organizations)
           return result if Customer.find_by(id: metadata[:lago_customer_id], organization_id: organization.id).nil?
 
-          result.not_found_failure!(resource: 'stripe_customer')
+          result.not_found_failure!(resource: "stripe_customer")
         end
       end
     end

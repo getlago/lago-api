@@ -7,11 +7,11 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
   end
 
   class Charge < ApplicationRecord
-    has_many :filters, class_name: 'ChargeFilter'
+    has_many :filters, class_name: "ChargeFilter"
   end
 
   class ChargeFilter < ApplicationRecord
-    has_many :values, class_name: 'ChargeFilterValue'
+    has_many :values, class_name: "ChargeFilterValue"
 
     def to_h
       # NOTE: Ensure filters are keeping the initial ordering
@@ -48,21 +48,21 @@ class LinkFiltersToCachedAggregation < ActiveRecord::Migration[7.0]
 
   def up
     # NOTE: Associate cached aggregations with charge filters
-    puts 'Migrate cached aggregations' # rubocop:disable Rails/Output
+    puts "Migrate cached aggregations" # rubocop:disable Rails/Output
     CachedAggregation.where.associated(:group)
       .where(charge_filter_id: nil)
       .includes(charge: {filters: {values: :billable_metric_filter}}, group: :parent)
       .find_each { |agg| link_charge_filter(agg) }
 
     # NOTE: Associate fees with charge filters
-    puts 'Migrate fees' # rubocop:disable Rails/Output
+    puts "Migrate fees" # rubocop:disable Rails/Output
     Fee.where.associated(:group)
       .where(charge_filter_id: nil)
       .includes(charge: {filters: {values: :billable_metric_filter}}, group: :parent)
       .find_each { |fee| link_charge_filter(fee) }
 
     # NOTE: Associate adjusted fees with charge filters
-    puts 'Migrate adjusted fees' # rubocop:disable Rails/Output
+    puts "Migrate adjusted fees" # rubocop:disable Rails/Output
     AdjustedFee.where.associated(:group)
       .where(charge_filter_id: nil)
       .includes(charge: {filters: {values: :billable_metric_filter}}, group: :parent)

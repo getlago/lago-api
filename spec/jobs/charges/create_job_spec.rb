@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Charges::CreateJob, type: :job do
   let(:organization) { create(:organization) }
@@ -9,8 +9,8 @@ RSpec.describe Charges::CreateJob, type: :job do
   let(:params) do
     {
       billable_metric_id: billable_metric.id,
-      charge_model: 'standard',
-      invoice_display_name: 'charge1',
+      charge_model: "standard",
+      invoice_display_name: "charge1",
       min_amount_cents: 100
     }
   end
@@ -19,7 +19,7 @@ RSpec.describe Charges::CreateJob, type: :job do
     allow(Charges::CreateService).to receive(:call).with(plan:, params:).and_return(BaseService::Result.new)
   end
 
-  it 'calls the service' do
+  it "calls the service" do
     described_class.perform_now(plan:, params:)
 
     expect(Charges::CreateService).to have_received(:call)

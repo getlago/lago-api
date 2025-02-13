@@ -12,7 +12,7 @@ class CreateAdjustedFees < ActiveRecord::Migration[7.0]
       t.integer :fee_type
       t.boolean :adjusted_units, default: false, null: false
       t.boolean :adjusted_amount, default: false, null: false
-      t.decimal :units, default: '0.0', null: false
+      t.decimal :units, default: "0.0", null: false
       t.bigint :unit_amount_cents, null: false, default: 0
       t.jsonb :properties, null: false, default: {}
 

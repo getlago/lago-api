@@ -12,6 +12,6 @@ class ReAddUniqueIndexOnRecordId < ActiveRecord::Migration[7.1]
   end
 
   def down
-    remove_index :active_storage_attachments, name: 'index_active_storage_attachments_uniqueness', algorithm: :concurrently
+    remove_index :active_storage_attachments, name: "index_active_storage_attachments_uniqueness", algorithm: :concurrently
   end
 end

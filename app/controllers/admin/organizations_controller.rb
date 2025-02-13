@@ -13,7 +13,7 @@ module Admin
       render(
         json: ::V1::OrganizationSerializer.new(
           result.organization,
-          root_name: 'organization'
+          root_name: "organization"
         )
       )
     end

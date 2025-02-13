@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Progressive billing invoices', :scenarios, type: :request do
-  let(:organization) { create(:organization, webhook_url: nil, email_settings: [], premium_integrations: ['progressive_billing']) }
-  let(:plan) { create(:plan, organization: organization, interval: 'monthly', amount_cents: 31_00, pay_in_advance: false) }
-  let(:upgrade_plan) { create(:plan, organization: organization, interval: 'monthly', amount_cents: 62_000, pay_in_advance: false) }
-  let(:downgrade_plan) { create(:plan, organization: organization, interval: 'monthly', amount_cents: 31, pay_in_advance: false) }
+describe "Progressive billing invoices", :scenarios, type: :request do
+  let(:organization) { create(:organization, webhook_url: nil, email_settings: [], premium_integrations: ["progressive_billing"]) }
+  let(:plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 31_00, pay_in_advance: false) }
+  let(:upgrade_plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 62_000, pay_in_advance: false) }
+  let(:downgrade_plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 31, pay_in_advance: false) }
   let(:customer) { create(:customer, organization: organization) }
-  let(:billable_metric) { create(:billable_metric, organization: organization, field_name: 'total', aggregation_type: "sum_agg") }
-  let(:charge) { create(:charge, plan: plan, billable_metric: billable_metric, charge_model: 'standard', properties: {'amount' => '0.0002'}) }
+  let(:billable_metric) { create(:billable_metric, organization: organization, field_name: "total", aggregation_type: "sum_agg") }
+  let(:charge) { create(:charge, plan: plan, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "0.0002"}) }
   let(:usage_threshold) { create(:usage_threshold, plan: plan, amount_cents: 20000) }
   let(:usage_threshold2) { create(:usage_threshold, plan: plan, amount_cents: 50000) }
 
@@ -25,12 +25,12 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
       transaction_id: SecureRandom.uuid,
       code: billable_metric.code,
       external_subscription_id: subscription.external_id,
-      properties: {'total' => amount}
+      properties: {"total" => amount}
     })
     perform_usage_update
   end
 
-  it 'generates an invoice in the middle of the month and a final invoice at the end of the month' do
+  it "generates an invoice in the middle of the month and a final invoice at the end of the month" do
     time_0 = DateTime.new(2022, 12, 1)
     travel_to time_0 do
       create_subscription(
@@ -66,7 +66,7 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
     end
   end
 
-  it 'generates an invoice in the middle of the month and terminates the subscription before the end of the month' do
+  it "generates an invoice in the middle of the month and terminates the subscription before the end of the month" do
     time_0 = DateTime.new(2022, 12, 1)
     travel_to time_0 do
       create_subscription(
@@ -95,7 +95,7 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
     end
   end
 
-  it 'generates an invoice in the middle of the month and upgrades the subscription before the end of the month' do
+  it "generates an invoice in the middle of the month and upgrades the subscription before the end of the month" do
     time_0 = DateTime.new(2022, 12, 1)
     travel_to time_0 do
       create_subscription(
@@ -130,7 +130,7 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
     end
   end
 
-  it 'generates an invoice during the grace period and finalizes it at the end of the next month' do
+  it "generates an invoice during the grace period and finalizes it at the end of the next month" do
     organization.update!(invoice_grace_period: 30)
     time_0 = DateTime.new(2022, 12, 1)
     travel_to time_0 do
@@ -150,7 +150,7 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
       subscription_invoice_1 = subscription.invoices.first
       expect(subscription_invoice_1.total_amount_cents).to eq(31_00)
       expect(subscription_invoice_1.progressive_billing_credit_amount_cents).to eq(0)
-      expect(subscription_invoice_1.status).to eq('draft')
+      expect(subscription_invoice_1.status).to eq("draft")
     end
 
     travel_to time_0 + 1.month + 15.days do
@@ -168,18 +168,18 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
       subscription_invoice_1 = subscription.invoices.order(:created_at).subscription.first
       expect(subscription_invoice_1.total_amount_cents).to eq(31_00)
       expect(subscription_invoice_1.progressive_billing_credit_amount_cents).to eq(0)
-      expect(subscription_invoice_1.status).to eq('finalized')
+      expect(subscription_invoice_1.status).to eq("finalized")
       expect(subscription_invoice_1.fees_amount_cents).to eq(31_00)
 
       subscription_invoice_2 = subscription.invoices.order(:created_at).subscription.last
       expect(subscription_invoice_2.total_amount_cents).to eq(3100)
       expect(subscription_invoice_2.progressive_billing_credit_amount_cents).to eq(60000)
-      expect(subscription_invoice_2.status).to eq('draft')
+      expect(subscription_invoice_2.status).to eq("draft")
       expect(subscription_invoice_2.fees_amount_cents).to eq(631_00)
     end
   end
 
-  it 'generates invoices for multiple usage thresholds within the same billing period' do
+  it "generates invoices for multiple usage thresholds within the same billing period" do
     usage_threshold2
     time_0 = DateTime.new(2022, 12, 1)
     travel_to time_0 do
@@ -219,7 +219,7 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
     end
   end
 
-  it 'generates only the final invoice at the end of the month' do
+  it "generates only the final invoice at the end of the month" do
     time_0 = Time.current.beginning_of_month
     travel_to time_0 do
       create_subscription(
@@ -239,7 +239,7 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
     end
   end
 
-  it 'generates progressive billing invoices only once when not recurring' do
+  it "generates progressive billing invoices only once when not recurring" do
     time_0 = DateTime.new(2022, 12, 1)
     travel_to time_0 do
       create_subscription(
@@ -291,7 +291,7 @@ describe 'Progressive billing invoices', :scenarios, type: :request do
     end
   end
 
-  it 'generates correct invoices when there is a combination of single thresholds and recurring' do
+  it "generates correct invoices when there is a combination of single thresholds and recurring" do
     usage_threshold.update(amount_cents: 200)
     create(:usage_threshold, plan: plan, amount_cents: 500)
     create(:usage_threshold, plan: plan, amount_cents: 700)

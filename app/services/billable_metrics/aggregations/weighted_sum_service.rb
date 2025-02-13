@@ -126,7 +126,7 @@ module BillableMetrics
           .order(timestamp: :desc, created_at: :desc)
 
         grouped_by.each do |key|
-          query = query.where('grouped_by?:key', key:)
+          query = query.where("grouped_by?:key", key:)
         end
 
         query = query.where(charge_filter_id: charge_filter.id) if charge_filter

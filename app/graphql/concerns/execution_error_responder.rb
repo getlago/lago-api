@@ -6,7 +6,7 @@ module ExecutionErrorResponder
 
   private
 
-  def execution_error(error: 'Internal Error', status: 422, code: 'internal_error', details: nil)
+  def execution_error(error: "Internal Error", status: 422, code: "internal_error", details: nil)
     payload = {
       status:,
       code:
@@ -23,18 +23,18 @@ module ExecutionErrorResponder
 
   def not_found_error(resource:)
     execution_error(
-      error: 'Resource not found',
+      error: "Resource not found",
       status: 404,
-      code: 'not_found',
+      code: "not_found",
       details: {
-        resource => ['not_found']
+        resource => ["not_found"]
       }
     )
   end
 
   def not_allowed_error(code:)
     execution_error(
-      error: 'Method Not Allowed',
+      error: "Method Not Allowed",
       status: 405,
       code:
     )
@@ -42,7 +42,7 @@ module ExecutionErrorResponder
 
   def forbidden_error(code:)
     execution_error(
-      error: 'forbidden',
+      error: "forbidden",
       status: 403,
       code:
     )
@@ -50,9 +50,9 @@ module ExecutionErrorResponder
 
   def validation_error(messages:)
     execution_error(
-      error: 'Unprocessable Entity',
+      error: "Unprocessable Entity",
       status: 422,
-      code: 'unprocessable_entity',
+      code: "unprocessable_entity",
       details: messages
     )
   end
@@ -69,7 +69,7 @@ module ExecutionErrorResponder
       forbidden_error(code: service_result.error.code)
     else
       execution_error(
-        error: 'Internal error',
+        error: "Internal error",
         status: 500,
         code: service_result.error.code
       )

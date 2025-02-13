@@ -10,11 +10,11 @@ module CreditNotes
     end
 
     def call
-      return result.not_found_failure!(resource: 'credit_note') if credit_note.blank? || !credit_note.finalized?
+      return result.not_found_failure!(resource: "credit_note") if credit_note.blank? || !credit_note.finalized?
 
       generate_pdf(credit_note) if should_generate_pdf?
 
-      SendWebhookJob.perform_later('credit_note.generated', credit_note)
+      SendWebhookJob.perform_later("credit_note.generated", credit_note)
 
       result.credit_note = credit_note
       result
@@ -32,20 +32,20 @@ module CreditNotes
       credit_note.file.attach(
         io: pdf_result.io,
         filename: "#{credit_note.number}.pdf",
-        content_type: 'application/pdf'
+        content_type: "application/pdf"
       )
 
       credit_note.save!
     end
 
     def should_generate_pdf?
-      context == 'admin' || credit_note.file.blank?
+      context == "admin" || credit_note.file.blank?
     end
 
     def template
-      return 'credit_notes/self_billed' if credit_note.invoice.self_billed?
+      return "credit_notes/self_billed" if credit_note.invoice.self_billed?
 
-      'credit_notes/credit_note'
+      "credit_notes/credit_note"
     end
   end
 end

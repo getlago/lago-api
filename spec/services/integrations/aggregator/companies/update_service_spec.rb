@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Companies::UpdateService do
   subject(:service_call) { described_class.call(integration:, integration_customer:) }
@@ -13,9 +13,9 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
 
   let(:headers) do
     {
-      'Connection-Id' => integration.connection_id,
-      'Authorization' => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
-      'Provider-Config-Key' => integration_type_key
+      "Connection-Id" => integration.connection_id,
+      "Authorization" => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
+      "Provider-Config-Key" => integration_type_key
     }
   end
 
@@ -30,60 +30,60 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
     allow(service).to receive(:throttle!)
   end
 
-  describe '#initialize' do
+  describe "#initialize" do
     let(:integration) { create(:hubspot_integration, organization:) }
     let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
-    let(:integration_type) { 'hubspot' }
-    let(:integration_type_key) { 'hubspot' }
+    let(:integration_type) { "hubspot" }
+    let(:integration_type_key) { "hubspot" }
 
-    context 'when integration customer is a company' do
-      it 'initializes the service without errors' do
+    context "when integration customer is a company" do
+      it "initializes the service without errors" do
         expect { described_class.new(integration:, integration_customer:) }.not_to raise_error
       end
     end
 
-    context 'when integration customer is an individual' do
+    context "when integration customer is an individual" do
       before do
         allow(integration_customer.customer).to receive(:customer_type_individual?).and_return(true)
       end
 
-      it 'raises an ArgumentError' do
+      it "raises an ArgumentError" do
         expect { described_class.new(integration:, integration_customer:) }
-          .to raise_error(ArgumentError, 'Integration customer is not a company')
+          .to raise_error(ArgumentError, "Integration customer is not a company")
       end
     end
   end
 
-  describe '#call' do
-    context 'when service call is successful' do
+  describe "#call" do
+    context "when service call is successful" do
       let(:response) { instance_double(Net::HTTPOK) }
       let(:code) { 200 }
 
-      context 'when response is a string' do
+      context "when response is a string" do
         let(:integration) { create(:hubspot_integration, organization:) }
         let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
-        let(:integration_type) { 'hubspot' }
-        let(:integration_type_key) { 'hubspot' }
+        let(:integration_type) { "hubspot" }
+        let(:integration_type_key) { "hubspot" }
 
         let(:params) do
           {
-            'companyId' => integration_customer.external_customer_id,
-            'input' => {
-              'properties' => {
-                'name' => customer.name,
-                'domain' => anything,
-                'lago_customer_id' => customer.id,
-                'lago_customer_external_id' => customer.external_id,
-                'lago_billing_email' => customer.email,
-                'lago_tax_identification_number' => customer.tax_identification_number,
-                'lago_customer_link' => anything
+            "companyId" => integration_customer.external_customer_id,
+            "input" => {
+              "properties" => {
+                "name" => customer.name,
+                "domain" => anything,
+                "lago_customer_id" => customer.id,
+                "lago_customer_external_id" => customer.external_id,
+                "lago_billing_email" => customer.email,
+                "lago_tax_identification_number" => customer.tax_identification_number,
+                "lago_customer_link" => anything
               }
             }
           }
         end
 
         let(:body) do
-          path = Rails.root.join('spec/fixtures/integration_aggregator/companies/success_string_response.json')
+          path = Rails.root.join("spec/fixtures/integration_aggregator/companies/success_string_response.json")
           File.read(path)
         end
 
@@ -92,43 +92,43 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
           allow(response).to receive(:body).and_return(body)
         end
 
-        it 'returns contact id' do
+        it "returns contact id" do
           result = service_call
 
           aggregate_failures do
             expect(result).to be_success
-            expect(result.contact_id).to eq('1')
+            expect(result.contact_id).to eq("1")
           end
         end
 
-        it_behaves_like 'throttles!', :hubspot
+        it_behaves_like "throttles!", :hubspot
       end
 
-      context 'when response is a hash' do
+      context "when response is a hash" do
         let(:integration) { create(:hubspot_integration, organization:) }
         let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
-        let(:integration_type) { 'hubspot' }
-        let(:integration_type_key) { 'hubspot' }
+        let(:integration_type) { "hubspot" }
+        let(:integration_type_key) { "hubspot" }
 
         let(:params) do
           {
-            'companyId' => integration_customer.external_customer_id,
-            'input' => {
-              'properties' => {
-                'name' => customer.name,
-                'domain' => anything,
-                'lago_customer_id' => customer.id,
-                'lago_customer_external_id' => customer.external_id,
-                'lago_billing_email' => customer.email,
-                'lago_tax_identification_number' => customer.tax_identification_number,
-                'lago_customer_link' => anything
+            "companyId" => integration_customer.external_customer_id,
+            "input" => {
+              "properties" => {
+                "name" => customer.name,
+                "domain" => anything,
+                "lago_customer_id" => customer.id,
+                "lago_customer_external_id" => customer.external_id,
+                "lago_billing_email" => customer.email,
+                "lago_tax_identification_number" => customer.tax_identification_number,
+                "lago_customer_link" => anything
               }
             }
           }
         end
 
         let(:body) do
-          path = Rails.root.join('spec/fixtures/integration_aggregator/companies/success_hash_response.json')
+          path = Rails.root.join("spec/fixtures/integration_aggregator/companies/success_hash_response.json")
           File.read(path)
         end
 
@@ -137,44 +137,44 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
           allow(response).to receive(:body).and_return(body)
         end
 
-        it 'returns contact id' do
+        it "returns contact id" do
           result = service_call
 
           aggregate_failures do
             expect(result).to be_success
-            expect(result.contact_id).to eq('2e50c200-9a54-4a66-b241-1e75fb87373f')
+            expect(result.contact_id).to eq("2e50c200-9a54-4a66-b241-1e75fb87373f")
           end
         end
 
-        it_behaves_like 'throttles!', :hubspot
+        it_behaves_like "throttles!", :hubspot
       end
     end
 
-    context 'when service call is not successful' do
+    context "when service call is not successful" do
       let(:integration) { create(:hubspot_integration, organization:) }
       let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
-      let(:integration_type) { 'hubspot' }
-      let(:integration_type_key) { 'hubspot' }
+      let(:integration_type) { "hubspot" }
+      let(:integration_type_key) { "hubspot" }
 
       let(:params) do
         {
-          'companyId' => integration_customer.external_customer_id,
-          'input' => {
-            'properties' => {
-              'name' => customer.name,
-              'domain' => anything,
-              'lago_customer_id' => customer.id,
-              'lago_customer_external_id' => customer.external_id,
-              'lago_billing_email' => customer.email,
-              'lago_tax_identification_number' => customer.tax_identification_number,
-              'lago_customer_link' => anything
+          "companyId" => integration_customer.external_customer_id,
+          "input" => {
+            "properties" => {
+              "name" => customer.name,
+              "domain" => anything,
+              "lago_customer_id" => customer.id,
+              "lago_customer_external_id" => customer.external_id,
+              "lago_billing_email" => customer.email,
+              "lago_tax_identification_number" => customer.tax_identification_number,
+              "lago_customer_link" => anything
             }
           }
         }
       end
 
       let(:body) do
-        path = Rails.root.join('spec/fixtures/integration_aggregator/error_response.json')
+        path = Rails.root.join("spec/fixtures/integration_aggregator/error_response.json")
         File.read(path)
       end
 
@@ -184,55 +184,55 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
         allow(lago_client).to receive(:put_with_response).with(params, headers).and_raise(http_error)
       end
 
-      context 'when it is a server error' do
+      context "when it is a server error" do
         let(:error_code) { Faker::Number.between(from: 500, to: 599) }
-        let(:code) { 'action_script_runtime_error' }
-        let(:message) { 'submitFields: Missing a required argument: type' }
+        let(:code) { "action_script_runtime_error" }
+        let(:message) { "submitFields: Missing a required argument: type" }
 
         let(:body) do
-          path = Rails.root.join('spec/fixtures/integration_aggregator/error_response.json')
+          path = Rails.root.join("spec/fixtures/integration_aggregator/error_response.json")
           File.read(path)
         end
 
-        it 'returns an error' do
+        it "returns an error" do
           result = service_call
 
           aggregate_failures do
             expect(result).not_to be_success
-            expect(result.error.code).to eq('action_script_runtime_error')
+            expect(result.error.code).to eq("action_script_runtime_error")
             expect(result.error.message)
-              .to eq('action_script_runtime_error: submitFields: Missing a required argument: type')
+              .to eq("action_script_runtime_error: submitFields: Missing a required argument: type")
           end
         end
 
-        it 'delivers an error webhook' do
+        it "delivers an error webhook" do
           expect { service_call }.to enqueue_job(SendWebhookJob)
             .with(
-              'customer.crm_provider_error',
+              "customer.crm_provider_error",
               customer,
-              provider: 'hubspot',
+              provider: "hubspot",
               provider_code: integration.code,
               provider_error: {
-                message: 'submitFields: Missing a required argument: type',
-                error_code: 'action_script_runtime_error'
+                message: "submitFields: Missing a required argument: type",
+                error_code: "action_script_runtime_error"
               }
             )
         end
 
-        it_behaves_like 'throttles!', :hubspot
+        it_behaves_like "throttles!", :hubspot
       end
 
-      context 'when it is a server payload error' do
+      context "when it is a server payload error" do
         let(:error_code) { Faker::Number.between(from: 500, to: 599) }
-        let(:code) { 'TypeError' }
-        let(:message) { 'Please enter value(s) for: Company Name' }
+        let(:code) { "TypeError" }
+        let(:message) { "Please enter value(s) for: Company Name" }
 
         let(:body) do
-          path = Rails.root.join('spec/fixtures/integration_aggregator/error_payload_response.json')
+          path = Rails.root.join("spec/fixtures/integration_aggregator/error_payload_response.json")
           File.read(path)
         end
 
-        it 'returns an error' do
+        it "returns an error" do
           result = service_call
 
           aggregate_failures do
@@ -242,12 +242,12 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
           end
         end
 
-        it 'delivers an error webhook' do
+        it "delivers an error webhook" do
           expect { service_call }.to enqueue_job(SendWebhookJob)
             .with(
-              'customer.crm_provider_error',
+              "customer.crm_provider_error",
               customer,
-              provider: 'hubspot',
+              provider: "hubspot",
               provider_code: integration.code,
               provider_error: {
                 message:,
@@ -256,20 +256,20 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
             )
         end
 
-        it_behaves_like 'throttles!', :hubspot
+        it_behaves_like "throttles!", :hubspot
       end
 
-      context 'when it is a client error' do
+      context "when it is a client error" do
         let(:error_code) { 404 }
-        let(:code) { 'invalid_secret_key_format' }
-        let(:message) { 'Authentication failed. The provided secret key is not a UUID v4.' }
+        let(:code) { "invalid_secret_key_format" }
+        let(:message) { "Authentication failed. The provided secret key is not a UUID v4." }
 
         let(:body) do
-          path = Rails.root.join('spec/fixtures/integration_aggregator/error_auth_response.json')
+          path = Rails.root.join("spec/fixtures/integration_aggregator/error_auth_response.json")
           File.read(path)
         end
 
-        it 'returns an error' do
+        it "returns an error" do
           result = service_call
 
           aggregate_failures do
@@ -279,12 +279,12 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
           end
         end
 
-        it 'delivers an error webhook' do
+        it "delivers an error webhook" do
           expect { service_call }.to enqueue_job(SendWebhookJob)
             .with(
-              'customer.crm_provider_error',
+              "customer.crm_provider_error",
               customer,
-              provider: 'hubspot',
+              provider: "hubspot",
               provider_code: integration.code,
               provider_error: {
                 message:,
@@ -293,7 +293,7 @@ RSpec.describe Integrations::Aggregator::Companies::UpdateService do
             )
         end
 
-        it_behaves_like 'throttles!', :hubspot
+        it_behaves_like "throttles!", :hubspot
       end
     end
   end

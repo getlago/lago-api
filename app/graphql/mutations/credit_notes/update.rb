@@ -5,10 +5,10 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
-      REQUIRED_PERMISSION = 'credit_notes:update'
+      REQUIRED_PERMISSION = "credit_notes:update"
 
-      graphql_name 'UpdateCreditNote'
-      description 'Updates an existing Credit Note'
+      graphql_name "UpdateCreditNote"
+      description "Updates an existing Credit Note"
 
       argument :id, ID, required: true
       argument :refund_status, Types::CreditNotes::RefundStatusTypeEnum, required: true

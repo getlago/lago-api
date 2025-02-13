@@ -9,7 +9,7 @@ module Integrations
     end
 
     def call
-      return result.not_found_failure!(resource: 'integration') unless integration
+      return result.not_found_failure!(resource: "integration") unless integration
 
       integration.destroy!
 

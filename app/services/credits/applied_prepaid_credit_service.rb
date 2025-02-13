@@ -11,7 +11,7 @@ module Credits
 
     def call
       if already_applied?
-        return result.service_failure!(code: 'already_applied', message: 'Prepaid credits already applied')
+        return result.service_failure!(code: "already_applied", message: "Prepaid credits already applied")
       end
 
       amount_cents = compute_amount
@@ -37,7 +37,7 @@ module Credits
         invoice.prepaid_credit_amount_cents += amount_cents
       end
 
-      after_commit { SendWebhookJob.perform_later('wallet_transaction.created', result.wallet_transaction) }
+      after_commit { SendWebhookJob.perform_later("wallet_transaction.created", result.wallet_transaction) }
 
       result
     rescue ActiveRecord::RecordInvalid => e

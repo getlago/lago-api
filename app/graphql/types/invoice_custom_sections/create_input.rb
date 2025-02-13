@@ -3,7 +3,7 @@
 module Types
   module InvoiceCustomSections
     class CreateInput < Types::BaseInputObject
-      graphql_name 'CreateInvoiceCustomSectionInput'
+      graphql_name "CreateInvoiceCustomSectionInput"
 
       argument :code, String, required: true
       argument :description, String, required: false

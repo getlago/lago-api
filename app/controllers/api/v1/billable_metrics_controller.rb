@@ -147,7 +147,7 @@ module Api
       end
 
       def resource_name
-        'billable_metric'
+        "billable_metric"
       end
     end
   end

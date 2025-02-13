@@ -10,15 +10,15 @@ module Webhooks
       end
 
       def object_serializer
-        ::V1::WalletSerializer.new(object, root_name: 'wallet')
+        ::V1::WalletSerializer.new(object, root_name: "wallet")
       end
 
       def webhook_type
-        'wallet.depleted_ongoing_balance'
+        "wallet.depleted_ongoing_balance"
       end
 
       def object_type
-        'wallet'
+        "wallet"
       end
     end
   end

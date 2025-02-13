@@ -7,10 +7,10 @@ FactoryBot.define do
     association :payment_provider_customer, factory: :stripe_customer
 
     amount_cents { 200 }
-    amount_currency { 'EUR' }
+    amount_currency { "EUR" }
     provider_payment_id { SecureRandom.uuid }
-    status { 'pending' }
-    payment_type { 'provider' }
+    status { "pending" }
+    payment_type { "provider" }
 
     trait :adyen_payment do
       association :payment_provider, factory: :adyen_provider
@@ -28,10 +28,10 @@ FactoryBot.define do
     end
 
     trait :requires_action do
-      status { 'requires_action' }
+      status { "requires_action" }
       provider_payment_data do
         {
-          redirect_to_url: {url: 'https://foo.bar'}
+          redirect_to_url: {url: "https://foo.bar"}
         }
       end
     end

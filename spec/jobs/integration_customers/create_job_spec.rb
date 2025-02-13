@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe IntegrationCustomers::CreateJob, type: :job do
   subject(:create_job) { described_class }
@@ -20,7 +20,7 @@ RSpec.describe IntegrationCustomers::CreateJob, type: :job do
     allow(create_service).to receive(:call).and_return(result)
   end
 
-  it 'calls the create service' do
+  it "calls the create service" do
     described_class.perform_now(integration_customer_params:, integration:, customer:)
 
     expect(IntegrationCustomers::CreateService).to have_received(:new)

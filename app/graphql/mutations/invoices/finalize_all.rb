@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'invoices:update'
+      REQUIRED_PERMISSION = "invoices:update"
 
-      graphql_name 'FinalizeAllInvoices'
-      description 'Finalize all draft invoices'
+      graphql_name "FinalizeAllInvoices"
+      description "Finalize all draft invoices"
 
       type Types::Invoices::Object.collection_type
 

@@ -12,7 +12,7 @@ module Charges
     end
 
     def call
-      return result.not_found_failure!(resource: 'charge') unless charge
+      return result.not_found_failure!(resource: "charge") unless charge
       return result if cascade && charge.charge_model != params[:charge_model]
 
       ActiveRecord::Base.transaction do

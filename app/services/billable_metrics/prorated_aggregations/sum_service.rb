@@ -37,7 +37,7 @@ module BillableMetrics
         result.options = options
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
       # NOTE: Apply the grouped_by filter to the aggregation
@@ -92,7 +92,7 @@ module BillableMetrics
 
         result
       rescue ActiveRecord::StatementInvalid => e
-        result.service_failure!(code: 'aggregation_failure', message: e.message)
+        result.service_failure!(code: "aggregation_failure", message: e.message)
       end
 
       def compute_per_event_prorated_aggregation

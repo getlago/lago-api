@@ -6,7 +6,7 @@ class AddWeightedIntervalToBillableMetric < ActiveRecord::Migration[7.0]
 
     safety_assured do
       change_table :billable_metrics do |t|
-        t.enum :weighted_interval, enum_type: 'billable_metric_weighted_interval', null: true
+        t.enum :weighted_interval, enum_type: "billable_metric_weighted_interval", null: true
       end
     end
   end

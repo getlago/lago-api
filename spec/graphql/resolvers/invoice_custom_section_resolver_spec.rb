@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::InvoiceCustomSectionResolver, type: :graphql do
   let(:query) do
@@ -19,7 +19,7 @@ RSpec.describe Resolvers::InvoiceCustomSectionResolver, type: :graphql do
 
   before { invoice_custom_section }
 
-  it 'returns a single invoice_custom_section' do
+  it "returns a single invoice_custom_section" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -27,39 +27,39 @@ RSpec.describe Resolvers::InvoiceCustomSectionResolver, type: :graphql do
       variables: {invoiceCustomSectionId: invoice_custom_section.id}
     )
 
-    expect(result['data']['invoiceCustomSection']).to include(
-      'id' => invoice_custom_section.id,
-      'code' => invoice_custom_section.code,
-      'name' => invoice_custom_section.name,
-      'description' => invoice_custom_section.description,
-      'details' => invoice_custom_section.details,
-      'displayName' => invoice_custom_section.display_name,
-      'selected' => false
+    expect(result["data"]["invoiceCustomSection"]).to include(
+      "id" => invoice_custom_section.id,
+      "code" => invoice_custom_section.code,
+      "name" => invoice_custom_section.name,
+      "description" => invoice_custom_section.description,
+      "details" => invoice_custom_section.details,
+      "displayName" => invoice_custom_section.display_name,
+      "selected" => false
     )
   end
 
-  context 'without current organization' do
-    it 'returns an error' do
+  context "without current organization" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         query:,
         variables: {invoiceCustomSectionId: invoice_custom_section.id}
       )
 
-      expect_graphql_error(result:, message: 'Missing organization id')
+      expect_graphql_error(result:, message: "Missing organization id")
     end
   end
 
-  context 'when invoice_custom_section is not found' do
-    it 'returns an error' do
+  context "when invoice_custom_section is not found" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         query:,
-        variables: {invoiceCustomSectionId: 'unknown'}
+        variables: {invoiceCustomSectionId: "unknown"}
       )
 
-      expect_graphql_error(result:, message: 'Resource not found')
+      expect_graphql_error(result:, message: "Resource not found")
     end
   end
 end

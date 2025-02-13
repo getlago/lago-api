@@ -16,8 +16,8 @@ module Invoices
     def call
       if duplicated_invoices?
         return result.service_failure!(
-          code: 'duplicated_invoices',
-          message: 'Invoice subscription already exists with the boundaries'
+          code: "duplicated_invoices",
+          message: "Invoice subscription already exists with the boundaries"
         )
       end
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe WalletTransactions::VoidService, type: :service do
   subject(:void_service) { described_class.call(wallet:, credits_amount:) }
@@ -19,59 +19,59 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
       credits_ongoing_balance: 10.0
     )
   end
-  let(:credits_amount) { BigDecimal('10.00') }
+  let(:credits_amount) { BigDecimal("10.00") }
 
   before do
     subscription
   end
 
-  describe '#call' do
-    context 'when credits amount is zero' do
-      let(:credits_amount) { BigDecimal('0.00') }
+  describe "#call" do
+    context "when credits amount is zero" do
+      let(:credits_amount) { BigDecimal("0.00") }
 
-      it 'does not create a wallet transaction' do
+      it "does not create a wallet transaction" do
         expect { void_service }.not_to change(WalletTransaction, :count)
       end
     end
 
-    context 'when transaction have metadata' do
+    context "when transaction have metadata" do
       subject(:void_service) { described_class.call(wallet:, credits_amount:, metadata:) }
 
-      let(:metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
+      let(:metadata) { [{"key" => "valid_value", "value" => "also_valid"}] }
 
-      it 'sets expected attributes' do
+      it "sets expected attributes" do
         expect(void_service.wallet_transaction).to have_attributes(
           amount: 10,
           credit_amount: 10,
-          transaction_type: 'outbound',
-          status: 'settled',
-          source: 'manual',
-          transaction_status: 'voided',
+          transaction_type: "outbound",
+          status: "settled",
+          source: "manual",
+          transaction_status: "voided",
           metadata: metadata
         )
       end
     end
 
-    it 'creates a wallet transaction' do
+    it "creates a wallet transaction" do
       expect { void_service }.to change(WalletTransaction, :count).by(1)
     end
 
-    it 'sets expected attributes' do
+    it "sets expected attributes" do
       freeze_time do
         result = void_service
         expect(result.wallet_transaction).to have_attributes(
           amount: 10,
           credit_amount: 10,
-          transaction_type: 'outbound',
-          status: 'settled',
-          source: 'manual',
-          transaction_status: 'voided',
+          transaction_type: "outbound",
+          status: "settled",
+          source: "manual",
+          transaction_status: "voided",
           settled_at: Time.current
         )
       end
     end
 
-    it 'updates wallet balance' do
+    it "updates wallet balance" do
       result = void_service
       wallet = result.wallet_transaction.wallet
 
@@ -79,12 +79,12 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
       expect(wallet.credits_balance).to eq(0.0)
     end
 
-    context 'when credit_note_id is passed' do
+    context "when credit_note_id is passed" do
       subject(:void_service) { described_class.call(wallet:, credits_amount:, credit_note_id:) }
 
       let(:credit_note_id) { create(:credit_note, organization: organization).id }
 
-      it 'saves credit_note_id in wallet_transaction' do
+      it "saves credit_note_id in wallet_transaction" do
         result = void_service
         wallet_transaction = result.wallet_transaction
 

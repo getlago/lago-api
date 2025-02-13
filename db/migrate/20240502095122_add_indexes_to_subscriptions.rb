@@ -9,7 +9,7 @@ class AddIndexesToSubscriptions < ActiveRecord::Migration[7.0]
     end
     add_index :invoice_subscriptions,
       [:subscription_id, :from_datetime, :to_datetime],
-      name: 'index_invoice_subscriptions_boundaries',
+      name: "index_invoice_subscriptions_boundaries",
       algorithm: :concurrently
   end
 end

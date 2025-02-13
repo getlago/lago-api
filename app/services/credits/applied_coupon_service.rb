@@ -11,7 +11,7 @@ module Credits
 
     def call
       if !AppliedCoupons::LockService.new(customer:).locked?
-        return result.service_failure!(code: 'no_lock_acquired', message: "Calling this service without acquiring a lock is not allowed")
+        return result.service_failure!(code: "no_lock_acquired", message: "Calling this service without acquiring a lock is not allowed")
       end
 
       return result unless matches_currency?

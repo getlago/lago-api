@@ -1,21 +1,21 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe PaymentProviders::Gocardless::HandleEventService, type: :service do
   subject(:event_service) { described_class.new(event_json:) }
 
   let(:event_json) do
-    path = Rails.root.join('spec/fixtures/gocardless/events.json')
-    JSON.parse(File.read(path))['events'].first.to_json
+    path = Rails.root.join("spec/fixtures/gocardless/events.json")
+    JSON.parse(File.read(path))["events"].first.to_json
   end
 
   let(:payment_service) { instance_double(Invoices::Payments::GocardlessService) }
   let(:service_result) { BaseService::Result.new }
 
-  describe '#call' do
-    context 'when succeeded payment event' do
-      it 'routes the event to an other service' do
+  describe "#call" do
+    context "when succeeded payment event" do
+      it "routes the event to an other service" do
         allow(Invoices::Payments::GocardlessService).to receive(:new)
           .and_return(payment_service)
         allow(payment_service).to receive(:update_payment_status)
@@ -34,7 +34,7 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventService, type: :service 
 
       let(:event_json) do
         path = Rails.root.join("spec/fixtures/gocardless/events_payment_request.json")
-        JSON.parse(File.read(path))['events'].first.to_json
+        JSON.parse(File.read(path))["events"].first.to_json
       end
 
       it "routes the event to an other service" do
@@ -53,7 +53,7 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventService, type: :service 
     context "when event metadata contains invalid payable_type" do
       let(:event_json) do
         path = Rails.root.join("spec/fixtures/gocardless/events_invalid_payable_type.json")
-        JSON.parse(File.read(path))['events'].first.to_json
+        JSON.parse(File.read(path))["events"].first.to_json
       end
 
       it "routes the event to an other service" do
@@ -63,14 +63,14 @@ RSpec.describe PaymentProviders::Gocardless::HandleEventService, type: :service 
       end
     end
 
-    context 'when succeeded refund event' do
+    context "when succeeded refund event" do
       let(:refund_service) { instance_double(CreditNotes::Refunds::GocardlessService) }
       let(:event_json) do
-        path = Rails.root.join('spec/fixtures/gocardless/events_refund.json')
-        JSON.parse(File.read(path))['events'].first.to_json
+        path = Rails.root.join("spec/fixtures/gocardless/events_refund.json")
+        JSON.parse(File.read(path))["events"].first.to_json
       end
 
-      it 'routes the event to an other service' do
+      it "routes the event to an other service" do
         allow(CreditNotes::Refunds::GocardlessService).to receive(:new)
           .and_return(refund_service)
         allow(refund_service).to receive(:update_status)

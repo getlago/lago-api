@@ -22,7 +22,7 @@ module Subscriptions
     def valid_customer?
       return true if args[:customer]
 
-      result.not_found_failure!(resource: 'customer')
+      result.not_found_failure!(resource: "customer")
 
       false
     end
@@ -30,7 +30,7 @@ module Subscriptions
     def valid_plan?
       return true if args[:plan]
 
-      result.not_found_failure!(resource: 'plan')
+      result.not_found_failure!(resource: "plan")
 
       false
     end
@@ -38,7 +38,7 @@ module Subscriptions
     def valid_subscription_at?
       return true if Utils::Datetime.valid_format?(args[:subscription_at])
 
-      add_error(field: :subscription_at, error_code: 'invalid_date')
+      add_error(field: :subscription_at, error_code: "invalid_date")
 
       false
     end
@@ -53,15 +53,15 @@ module Subscriptions
         return true
       end
 
-      add_error(field: :ending_at, error_code: 'invalid_date')
+      add_error(field: :ending_at, error_code: "invalid_date")
 
       false
     end
 
     def ending_at
       @ending_at ||= if args[:ending_at].is_a?(String)
-        args[:ending_at].include?('.') ?
-          DateTime.strptime(args[:ending_at], '%Y-%m-%dT%H:%M:%S.%LZ') :
+        args[:ending_at].include?(".") ?
+          DateTime.strptime(args[:ending_at], "%Y-%m-%dT%H:%M:%S.%LZ") :
           DateTime.strptime(args[:ending_at])
       else
         args[:ending_at]
@@ -70,8 +70,8 @@ module Subscriptions
 
     def subscription_at
       @subscription_at ||= if args[:subscription_at].is_a?(String)
-        args[:subscription_at].include?('.') ?
-          DateTime.strptime(args[:subscription_at], '%Y-%m-%dT%H:%M:%S.%LZ') :
+        args[:subscription_at].include?(".") ?
+          DateTime.strptime(args[:subscription_at], "%Y-%m-%dT%H:%M:%S.%LZ") :
           DateTime.strptime(args[:subscription_at])
       else
         args[:subscription_at]

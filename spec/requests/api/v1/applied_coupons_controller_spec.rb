@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::AppliedCouponsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:coupon) { create(:coupon, organization:) }
 
-  describe 'POST /api/v1/applied_coupons' do
+  describe "POST /api/v1/applied_coupons" do
     subject do
-      post_with_token(organization, '/api/v1/applied_coupons', {applied_coupon: params})
+      post_with_token(organization, "/api/v1/applied_coupons", {applied_coupon: params})
     end
 
     let(:params) do
@@ -21,9 +21,9 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
 
     before { create(:subscription, customer:) }
 
-    include_examples 'requires API permission', 'applied_coupon', 'write'
+    include_examples "requires API permission", "applied_coupon", "write"
 
-    it 'returns a success' do
+    it "returns a success" do
       subject
 
       expect(response).to have_http_status(:success)
@@ -41,22 +41,22 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
       end
     end
 
-    context 'with invalid params' do
+    context "with invalid params" do
       let(:params) do
-        {name: 'Foo Bar'}
+        {name: "Foo Bar"}
       end
 
-      it 'returns an unprocessable_entity' do
+      it "returns an unprocessable_entity" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'GET /api/v1/applied_coupons' do
-    subject { get_with_token(organization, '/api/v1/applied_coupons') }
+  describe "GET /api/v1/applied_coupons" do
+    subject { get_with_token(organization, "/api/v1/applied_coupons") }
 
-    let(:coupon) { create(:coupon, coupon_type: 'fixed_amount', organization:) }
+    let(:coupon) { create(:coupon, coupon_type: "fixed_amount", organization:) }
 
     let(:applied_coupon) do
       create(
@@ -72,9 +72,9 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
       create(:credit, applied_coupon:, amount_cents: 2, amount_currency: customer.currency)
     end
 
-    include_examples 'requires API permission', 'applied_coupon', 'read'
+    include_examples "requires API permission", "applied_coupon", "read"
 
-    it 'returns applied coupons' do
+    it "returns applied coupons" do
       subject
 
       aggregate_failures do

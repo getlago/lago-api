@@ -3,7 +3,7 @@
 module Types
   module IntegrationCustomers
     class Xero < Types::BaseObject
-      graphql_name 'XeroCustomer'
+      graphql_name "XeroCustomer"
 
       field :external_customer_id, String, null: true
       field :id, ID, null: false
@@ -15,8 +15,8 @@ module Types
       def integration_type
         object.integration&.type
         case object.integration&.type
-        when 'Integrations::XeroIntegration'
-          'xero'
+        when "Integrations::XeroIntegration"
+          "xero"
         end
       end
 

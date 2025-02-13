@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe LifetimeUsages::CalculateService, type: :service do
   subject(:service) { described_class.new(lifetime_usage: lifetime_usage) }
@@ -13,8 +13,8 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
   let(:customer) { create(:customer) }
 
   let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
-  let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
-  let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: '10'}) }
+  let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
+  let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "10"}) }
   let(:timestamp) { Time.current }
   let(:subscription_at) { timestamp - 6.months }
   let(:fees) do
@@ -40,7 +40,7 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
     )
   end
 
-  describe '#recalculate_invoiced_usage' do
+  describe "#recalculate_invoiced_usage" do
     let(:recalculate_invoiced_usage) { true }
 
     context "without previous invoices" do
@@ -149,11 +149,11 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
     end
   end
 
-  describe '#recalculate_current_usage' do
+  describe "#recalculate_current_usage" do
     let(:recalculate_current_usage) { true }
 
-    context 'without usage' do
-      it 'calculates the current_usage as zero' do
+    context "without usage" do
+      it "calculates the current_usage as zero" do
         result = service.call
         expect(result.lifetime_usage.current_usage_amount_cents).to be_zero
       end
@@ -182,14 +182,14 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
       end
     end
 
-    context 'with usage' do
+    context "with usage" do
       before do
         events
         charge
         Rails.cache.clear
       end
 
-      it 'calculates the current_usage_amount_cents correctly' do
+      it "calculates the current_usage_amount_cents correctly" do
         result = service.call
         expect(result.lifetime_usage.current_usage_amount_cents).to eq(2000)
         expect(lifetime_usage.reload.current_usage_amount_cents).to eq(2000)

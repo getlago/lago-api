@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
   let(:query) do
@@ -25,25 +25,25 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
     finalized_invoice
   end
 
-  it_behaves_like 'requires a customer portal user'
+  it_behaves_like "requires a customer portal user"
 
-  it 'returns a list of invoices' do
+  it "returns a list of invoices" do
     result = execute_graphql(
       customer_portal_user: customer,
       query:
     )
 
-    invoices_response = result['data']['customerPortalInvoices']
+    invoices_response = result["data"]["customerPortalInvoices"]
 
     aggregate_failures do
-      expect(invoices_response['collection'].count).to eq(2)
-      expect(invoices_response['collection'].pluck('id')).to contain_exactly(draft_invoice.id, finalized_invoice.id)
-      expect(invoices_response['metadata']['currentPage']).to eq(1)
-      expect(invoices_response['metadata']['totalCount']).to eq(2)
+      expect(invoices_response["collection"].count).to eq(2)
+      expect(invoices_response["collection"].pluck("id")).to contain_exactly(draft_invoice.id, finalized_invoice.id)
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(2)
     end
   end
 
-  context 'with filter on status' do
+  context "with filter on status" do
     let(:query) do
       <<~GQL
         query($status: [InvoiceStatusTypeEnum!]) {
@@ -55,25 +55,25 @@ RSpec.describe Resolvers::CustomerPortal::InvoicesResolver, type: :graphql do
       GQL
     end
 
-    it 'only returns draft invoice' do
+    it "only returns draft invoice" do
       result = execute_graphql(
         customer_portal_user: customer,
         query:,
-        variables: {status: ['draft']}
+        variables: {status: ["draft"]}
       )
 
-      invoices_response = result['data']['customerPortalInvoices']
+      invoices_response = result["data"]["customerPortalInvoices"]
 
       aggregate_failures do
-        expect(invoices_response['collection'].count).to eq(1)
-        expect(invoices_response['collection'].first['id']).to eq(draft_invoice.id)
-        expect(invoices_response['metadata']['totalCount']).to eq(1)
+        expect(invoices_response["collection"].count).to eq(1)
+        expect(invoices_response["collection"].first["id"]).to eq(draft_invoice.id)
+        expect(invoices_response["metadata"]["totalCount"]).to eq(1)
       end
     end
   end
 
-  context 'without customer portal user' do
-    it 'returns an error' do
+  context "without customer portal user" do
+    it "returns an error" do
       result = execute_graphql(
         query:
       )

@@ -1,29 +1,29 @@
 # frozen_string_literal: true
 
-guard :rspec, cmd: 'bundle exec rspec' do
-  directories ['app', 'db/seeds', 'lib', 'spec', 'dev']
+guard :rspec, cmd: "bundle exec rspec" do
+  directories ["app", "db/seeds", "lib", "spec", "dev"]
 
-  watch('spec/spec_helper.rb') { 'spec' }
-  watch('config/routes.rb') { 'spec/routing' }
-  watch('app/controllers/application_controller.rb') { 'spec/requests' }
-  watch('app/services/integrations/aggregator/invoices/payloads/base_payload.rb') do
-    'spec/services/integrations/aggregator/invoices/payloads'
+  watch("spec/spec_helper.rb") { "spec" }
+  watch("config/routes.rb") { "spec/routing" }
+  watch("app/controllers/application_controller.rb") { "spec/requests" }
+  watch("app/services/integrations/aggregator/invoices/payloads/base_payload.rb") do
+    "spec/services/integrations/aggregator/invoices/payloads"
   end
-  watch('app/services/integrations/aggregator/credit_notes/payloads/base_payload.rb') do
-    'spec/services/integrations/aggregator/credit_notes/payloads'
+  watch("app/services/integrations/aggregator/credit_notes/payloads/base_payload.rb") do
+    "spec/services/integrations/aggregator/credit_notes/payloads"
   end
-  watch('app/services/integrations/aggregator/contacts/payloads/base_payload.rb') do
-    'spec/services/integrations/aggregator/contacts/payloads'
+  watch("app/services/integrations/aggregator/contacts/payloads/base_payload.rb") do
+    "spec/services/integrations/aggregator/contacts/payloads"
   end
-  watch('app/services/integrations/aggregator/payments/payloads/base_payload.rb') do
-    'spec/services/integrations/aggregator/payments/payloads'
+  watch("app/services/integrations/aggregator/payments/payloads/base_payload.rb") do
+    "spec/services/integrations/aggregator/payments/payloads"
   end
-  watch('app/services/integrations/aggregator/base_service.rb') { 'spec/services/integrations/aggregator/' }
-  watch('app/services/base_service.rb') { 'spec/services/' }
-  watch('app/jobs/application_job.rb') { 'spec/jobs/' }
-  watch('app/models/application_record.rb') { 'spec/models/' }
-  watch('app/serializers/model_serializer.rb') { 'spec/serializers/' }
-  watch('app/graphql/lago_api_schema.rb') { 'spec/graphql/' }
+  watch("app/services/integrations/aggregator/base_service.rb") { "spec/services/integrations/aggregator/" }
+  watch("app/services/base_service.rb") { "spec/services/" }
+  watch("app/jobs/application_job.rb") { "spec/jobs/" }
+  watch("app/models/application_record.rb") { "spec/models/" }
+  watch("app/serializers/model_serializer.rb") { "spec/serializers/" }
+  watch("app/graphql/lago_api_schema.rb") { "spec/graphql/" }
   watch(%r{^spec/.+_spec\.rb$})
   watch(%r{^app/(.+)\.rb$}) { |m| "spec/#{m[1]}_spec.rb" }
   watch(%r{^lib/(.+)\.rb$}) { |m| "spec/lib/#{m[1]}_spec.rb" }

@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe PaymentProviderCustomers::UpdateService, type: :service do
   let(:customer) { create(:customer, payment_provider: provider_name.downcase) }
   let(:payment_provider) { create(:stripe_provider, organization: customer.organization) }
-  let(:provider_name) { 'Stripe' }
+  let(:provider_name) { "Stripe" }
   let(:provider_service_class) { "PaymentProviderCustomers::#{provider_name}Service".constantize }
   let(:provider_service) { provider_service_class.new(provider_customer) }
   let(:provider_customer) { create(:"#{provider_name.downcase}_customer", customer:) }
@@ -19,10 +19,10 @@ RSpec.describe PaymentProviderCustomers::UpdateService, type: :service do
     allow(Stripe::Customer).to receive(:update).and_return(true)
   end
 
-  describe '#call' do
+  describe "#call" do
     before { payment_provider }
 
-    it 'updates the provider customer' do
+    it "updates the provider customer" do
       aggregate_failures do
         described_class.call(customer)
 

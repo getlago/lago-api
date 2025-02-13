@@ -11,13 +11,13 @@ module PasswordResets
 
     def call
       if new_password.blank?
-        return result.single_validation_failure!(field: :new_password, error_code: 'missing_password')
+        return result.single_validation_failure!(field: :new_password, error_code: "missing_password")
       end
-      return result.single_validation_failure!(field: :token, error_code: 'missing_token') if token.blank?
+      return result.single_validation_failure!(field: :token, error_code: "missing_token") if token.blank?
 
-      password_reset = PasswordReset.where('expire_at > ?', Time.current).find_by(token:)
+      password_reset = PasswordReset.where("expire_at > ?", Time.current).find_by(token:)
 
-      return result.not_found_failure!(resource: 'password_reset') if password_reset.blank?
+      return result.not_found_failure!(resource: "password_reset") if password_reset.blank?
 
       ActiveRecord::Base.transaction do
         password_reset.user.password = new_password

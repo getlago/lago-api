@@ -119,9 +119,9 @@ module Customers
       )
 
       if new_customer
-        SendWebhookJob.perform_later('customer.created', customer)
+        SendWebhookJob.perform_later("customer.created", customer)
       else
-        SendWebhookJob.perform_later('customer.updated', customer)
+        SendWebhookJob.perform_later("customer.updated", customer)
       end
 
       result
@@ -224,7 +224,7 @@ module Customers
         new_customer: true
       )
 
-      SendWebhookJob.perform_later('customer.created', customer)
+      SendWebhookJob.perform_later("customer.created", customer)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

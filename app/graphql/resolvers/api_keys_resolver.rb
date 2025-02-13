@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'developers:keys:manage'
+    REQUIRED_PERMISSION = "developers:keys:manage"
 
-    description 'Query the API keys of current organization'
+    description "Query the API keys of current organization"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false

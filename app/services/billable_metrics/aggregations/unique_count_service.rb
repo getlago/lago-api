@@ -124,16 +124,16 @@ module BillableMetrics
       end
 
       def count_unique_group_scope(events)
-        events = events.where('quantified_events.properties @> ?', {group.key.to_s => group.value}.to_json)
+        events = events.where("quantified_events.properties @> ?", {group.key.to_s => group.value}.to_json)
         return events unless group.parent
 
-        events.where('quantified_events.properties @> ?', {group.parent.key.to_s => group.parent.value}.to_json)
+        events.where("quantified_events.properties @> ?", {group.parent.key.to_s => group.parent.value}.to_json)
       end
 
       protected
 
       def operation_type
-        @operation_type ||= event.properties.fetch('operation_type', 'add')&.to_sym
+        @operation_type ||= event.properties.fetch("operation_type", "add")&.to_sym
       end
 
       def handle_event_metadata(current_aggregation: nil, max_aggregation: nil, units_applied: nil)

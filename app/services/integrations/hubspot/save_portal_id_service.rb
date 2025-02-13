@@ -9,7 +9,7 @@ module Integrations
       end
 
       def call
-        return result unless integration.type == 'Integrations::HubspotIntegration'
+        return result unless integration.type == "Integrations::HubspotIntegration"
         return result if integration.portal_id.present?
 
         account_information_result = Integrations::Aggregator::AccountInformationService.call(integration:)

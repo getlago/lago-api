@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'lago_http_client'
+require "lago_http_client"
 
 module Webhooks
   # NOTE: Abstract Service, should not be used directly

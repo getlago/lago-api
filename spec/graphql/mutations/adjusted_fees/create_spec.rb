@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
-  let(:required_permission) { 'invoices:update' }
+  let(:required_permission) { "invoices:update" }
   let(:organization) { create(:organization) }
   let(:membership) { create(:membership, organization:) }
   let(:invoice) { create(:invoice, invoice_type: :subscription, organization:, customer:) }
@@ -47,8 +47,8 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
       feeId: fee.id,
       invoiceId: invoice.id,
       units: 4,
-      unitPreciseAmount: '10.00001',
-      invoiceDisplayName: 'Hello'
+      unitPreciseAmount: "10.00001",
+      invoiceDisplayName: "Hello"
     }
   end
 
@@ -69,11 +69,11 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'invoices:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "invoices:update"
 
-  it 'creates an adjusted fee' do
+  it "creates an adjusted fee" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -82,13 +82,13 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
       variables: {input:}
     )
 
-    expect(result['data']['createAdjustedFee']['id']).to be_present
-    expect(result['data']['createAdjustedFee']['adjustedFee']).to be_truthy
-    expect(result['data']['createAdjustedFee']['units']).to eq(4)
-    expect(result['data']['createAdjustedFee']['invoiceDisplayName']).to eq('Hello')
+    expect(result["data"]["createAdjustedFee"]["id"]).to be_present
+    expect(result["data"]["createAdjustedFee"]["adjustedFee"]).to be_truthy
+    expect(result["data"]["createAdjustedFee"]["units"]).to eq(4)
+    expect(result["data"]["createAdjustedFee"]["invoiceDisplayName"]).to eq("Hello")
   end
 
-  context 'without an existing fee' do
+  context "without an existing fee" do
     let(:billable_metric2) { create(:billable_metric, organization:) }
     let(:charge2) { create(:standard_charge, plan:, billable_metric: billable_metric2) }
 
@@ -98,12 +98,12 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
         chargeId: charge2.id,
         subscriptionId: subscription.id,
         units: 4,
-        unitPreciseAmount: '10.00001',
-        invoiceDisplayName: 'Hello'
+        unitPreciseAmount: "10.00001",
+        invoiceDisplayName: "Hello"
       }
     end
 
-    it 'creates an adjusted fee' do
+    it "creates an adjusted fee" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
@@ -112,17 +112,17 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
         variables: {input:}
       )
 
-      expect(result['data']['createAdjustedFee']['id']).to be_present
-      expect(result['data']['createAdjustedFee']['adjustedFee']).to be_truthy
-      expect(result['data']['createAdjustedFee']['units']).to eq(4)
-      expect(result['data']['createAdjustedFee']['invoiceDisplayName']).to eq('Hello')
+      expect(result["data"]["createAdjustedFee"]["id"]).to be_present
+      expect(result["data"]["createAdjustedFee"]["adjustedFee"]).to be_truthy
+      expect(result["data"]["createAdjustedFee"]["units"]).to eq(4)
+      expect(result["data"]["createAdjustedFee"]["invoiceDisplayName"]).to eq("Hello")
     end
   end
 
-  context 'with finalized invoice' do
+  context "with finalized invoice" do
     before { fee.invoice.finalized! }
 
-    it 'returns an error' do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,

@@ -3,7 +3,7 @@
 module Integrations
   module Aggregator
     class SendRestletEndpointJob < ApplicationJob
-      queue_as 'integrations'
+      queue_as "integrations"
 
       retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 3
       retry_on RequestLimitError, wait: :polynomially_longer, attempts: 100

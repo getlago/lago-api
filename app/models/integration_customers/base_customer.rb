@@ -5,10 +5,10 @@ module IntegrationCustomers
     include PaperTrailTraceable
     include SettingsStorable
 
-    self.table_name = 'integration_customers'
+    self.table_name = "integration_customers"
 
     belongs_to :customer
-    belongs_to :integration, class_name: 'Integrations::BaseIntegration'
+    belongs_to :integration, class_name: "Integrations::BaseIntegration"
 
     validates :customer_id, uniqueness: {scope: :type}
 
@@ -28,18 +28,18 @@ module IntegrationCustomers
 
     def self.customer_type(type)
       case type
-      when 'netsuite'
-        'IntegrationCustomers::NetsuiteCustomer'
-      when 'okta'
-        'IntegrationCustomers::OktaCustomer'
-      when 'anrok'
-        'IntegrationCustomers::AnrokCustomer'
-      when 'xero'
-        'IntegrationCustomers::XeroCustomer'
-      when 'hubspot'
-        'IntegrationCustomers::HubspotCustomer'
-      when 'salesforce'
-        'IntegrationCustomers::SalesforceCustomer'
+      when "netsuite"
+        "IntegrationCustomers::NetsuiteCustomer"
+      when "okta"
+        "IntegrationCustomers::OktaCustomer"
+      when "anrok"
+        "IntegrationCustomers::AnrokCustomer"
+      when "xero"
+        "IntegrationCustomers::XeroCustomer"
+      when "hubspot"
+        "IntegrationCustomers::HubspotCustomer"
+      when "salesforce"
+        "IntegrationCustomers::SalesforceCustomer"
       else
         raise(NotImplementedError)
       end

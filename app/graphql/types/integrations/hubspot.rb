@@ -3,7 +3,7 @@
 module Types
   module Integrations
     class Hubspot < Types::BaseObject
-      graphql_name 'HubspotIntegration'
+      graphql_name "HubspotIntegration"
 
       field :code, String, null: false
       field :connection_id, ID, null: false

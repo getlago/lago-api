@@ -49,13 +49,13 @@ module CreditNotes
         Utils::SegmentTrack.refund_status_changed(refund.status, credit_note.id, organization.id)
 
         if status.to_sym == :failed
-          deliver_error_webhook(message: 'Payment refund failed', code: nil)
-          result.service_failure!(code: 'refund_failed', message: 'Refund failed to perform')
+          deliver_error_webhook(message: "Payment refund failed", code: nil)
+          result.service_failure!(code: "refund_failed", message: "Refund failed to perform")
         end
 
         result
       rescue ArgumentError
-        result.single_validation_failure!(field: :refund_status, error_code: 'value_is_invalid')
+        result.single_validation_failure!(field: :refund_status, error_code: "value_is_invalid")
       end
 
       private
@@ -119,7 +119,7 @@ module CreditNotes
 
       def deliver_error_webhook(message:, code:)
         SendWebhookJob.perform_later(
-          'credit_note.provider_refund_failure',
+          "credit_note.provider_refund_failure",
           credit_note,
           provider_customer_id: customer.stripe_customer.provider_customer_id,
           provider_error: {
@@ -142,7 +142,7 @@ module CreditNotes
         # NOTE: Invoice does not belongs to this lago instance
         return result unless Invoice.find_by(id: metadata[:lago_invoice_id])
 
-        result.not_found_failure!(resource: 'stripe_refund')
+        result.not_found_failure!(resource: "stripe_refund")
       end
 
       def stripe_payment_provider

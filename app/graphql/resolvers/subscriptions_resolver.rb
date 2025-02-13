@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'subscriptions:view'
+    REQUIRED_PERMISSION = "subscriptions:view"
 
-    description 'Query subscriptions of an organization'
+    description "Query subscriptions of an organization"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false

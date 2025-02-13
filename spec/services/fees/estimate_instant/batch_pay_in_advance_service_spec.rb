@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
   subject { described_class.new(organization:, external_subscription_id:, events:) }
@@ -8,7 +8,7 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }
   let(:plan) { create(:plan, organization:) }
-  let(:charge) { create(:percentage_charge, :pay_in_advance, plan:, billable_metric:, properties: {rate: '0.1', fixed_amount: '0'}) }
+  let(:charge) { create(:percentage_charge, :pay_in_advance, plan:, billable_metric:, properties: {rate: "0.1", fixed_amount: "0"}) }
 
   let(:customer) { create(:customer, organization:) }
 
@@ -49,8 +49,8 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
 
   # TODO: these are copied from the non-batch service. does it make sense to creata a shared_example?
   context "with 1 event" do
-    describe '#call' do
-      it 'returns a list of fees' do
+    describe "#call" do
+      it "returns a list of fees" do
         result = subject.call
 
         expect(result).to be_success
@@ -66,10 +66,10 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
         )
       end
 
-      context 'when setting event properties' do
+      context "when setting event properties" do
         let(:properties) { {billable_metric.field_name => 500} }
 
-        it 'calculates the fee correctly' do
+        it "calculates the fee correctly" do
           result = subject.call
 
           expect(result).to be_success
@@ -81,9 +81,9 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
       end
 
       context "when charge is standard charge" do
-        let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, properties: {amount: '10'}) }
+        let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, properties: {amount: "10"}) }
 
-        it 'returns a list of fees' do
+        it "returns a list of fees" do
           result = subject.call
 
           expect(result).to be_success
@@ -99,10 +99,10 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
           )
         end
 
-        context 'when setting event properties' do
+        context "when setting event properties" do
           let(:properties) { {billable_metric.field_name => 500} }
 
-          it 'calculates the fee correctly' do
+          it "calculates the fee correctly" do
             result = subject.call
 
             expect(result).to be_success
@@ -113,11 +113,11 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
           end
         end
 
-        context 'when billable metric has an expression configured' do
-          let(:billable_metric) { create(:sum_billable_metric, organization:, expression: 'event.properties.test * 2') }
-          let(:properties) { {'test' => 200} }
+        context "when billable metric has an expression configured" do
+          let(:billable_metric) { create(:sum_billable_metric, organization:, expression: "event.properties.test * 2") }
+          let(:properties) { {"test" => 200} }
 
-          it 'calculates evaluates the expression before estimating' do
+          it "calculates evaluates the expression before estimating" do
             result = subject.call
 
             expect(result).to be_success
@@ -129,11 +129,11 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
         end
       end
 
-      context 'when billable metric has an expression configured' do
-        let(:billable_metric) { create(:sum_billable_metric, organization:, expression: 'event.properties.test * 2') }
-        let(:properties) { {'test' => 200} }
+      context "when billable metric has an expression configured" do
+        let(:billable_metric) { create(:sum_billable_metric, organization:, expression: "event.properties.test * 2") }
+        let(:properties) { {"test" => 200} }
 
-        it 'calculates evaluates the expression before estimating' do
+        it "calculates evaluates the expression before estimating" do
           result = subject.call
 
           expect(result).to be_success
@@ -144,26 +144,26 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
         end
       end
 
-      context 'when event code does not match an pay_in_advance charge' do
+      context "when event code does not match an pay_in_advance charge" do
         let(:charge) { create(:percentage_charge, plan:, billable_metric:) }
 
-        it 'fails with a validation error' do
+        it "fails with a validation error" do
           result = subject.call
 
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:code]).to eq(['does_not_match_an_instant_charge'])
+            expect(result.error.messages[:code]).to eq(["does_not_match_an_instant_charge"])
           end
         end
       end
 
-      context 'when event matches multiple charges' do
+      context "when event matches multiple charges" do
         let(:charge2) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:) }
 
         before { charge2 }
 
-        it 'returns a fee per charges' do
+        it "returns a fee per charges" do
           result = subject.call
 
           aggregate_failures do
@@ -173,16 +173,16 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
         end
       end
 
-      context 'when external subscription is not found' do
+      context "when external subscription is not found" do
         let(:external_subscription_id) { nil }
 
-        it 'fails with a not found error' do
+        it "fails with a not found error" do
           result = subject.call
 
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.error_code).to eq('subscription_not_found')
+            expect(result.error.error_code).to eq("subscription_not_found")
           end
         end
       end
@@ -191,7 +191,7 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
 
   context "with multiple events" do
     let(:billable_metric2) { create(:sum_billable_metric, organization:) }
-    let(:charge2) { create(:standard_charge, :pay_in_advance, plan:, billable_metric: billable_metric2, properties: {amount: '1'}) }
+    let(:charge2) { create(:standard_charge, :pay_in_advance, plan:, billable_metric: billable_metric2, properties: {amount: "1"}) }
     let(:event2) do
       {
         organization_id:,
@@ -209,7 +209,7 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
     before { charge2 }
 
     describe "#call" do
-      it 'returns a list of fees' do
+      it "returns a list of fees" do
         result = subject.call
 
         expect(result).to be_success
@@ -238,7 +238,7 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
       let(:properties) { {billable_metric.field_name => 100} }
       let(:properties2) { {billable_metric2.field_name => 500} }
 
-      it 'calculates the fee correctly' do
+      it "calculates the fee correctly" do
         result = subject.call
 
         expect(result).to be_success
@@ -251,16 +251,16 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
       end
     end
 
-    context 'when external subscription is not found' do
+    context "when external subscription is not found" do
       let(:external_subscription_id) { nil }
 
-      it 'fails with a not found error' do
+      it "fails with a not found error" do
         result = subject.call
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.error_code).to eq('subscription_not_found')
+          expect(result.error.error_code).to eq("subscription_not_found")
         end
       end
     end

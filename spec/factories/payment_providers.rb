@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :stripe_provider, class: 'PaymentProviders::StripeProvider' do
+  factory :stripe_provider, class: "PaymentProviders::StripeProvider" do
     organization
-    type { 'PaymentProviders::StripeProvider' }
+    type { "PaymentProviders::StripeProvider" }
     code { "stripe_account_#{SecureRandom.uuid}" }
-    name { 'Stripe Account 1' }
+    name { "Stripe Account 1" }
 
     secrets do
       {secret_key: SecureRandom.uuid}.to_json
@@ -20,11 +20,11 @@ FactoryBot.define do
     end
   end
 
-  factory :gocardless_provider, class: 'PaymentProviders::GocardlessProvider' do
+  factory :gocardless_provider, class: "PaymentProviders::GocardlessProvider" do
     organization
-    type { 'PaymentProviders::GocardlessProvider' }
+    type { "PaymentProviders::GocardlessProvider" }
     code { "gocardless_account_#{SecureRandom.uuid}" }
-    name { 'GoCardless Account 1' }
+    name { "GoCardless Account 1" }
 
     secrets do
       {access_token: SecureRandom.uuid}.to_json
@@ -39,11 +39,11 @@ FactoryBot.define do
     end
   end
 
-  factory :adyen_provider, class: 'PaymentProviders::AdyenProvider' do
+  factory :adyen_provider, class: "PaymentProviders::AdyenProvider" do
     organization
-    type { 'PaymentProviders::AdyenProvider' }
+    type { "PaymentProviders::AdyenProvider" }
     code { "adyen_account_#{SecureRandom.uuid}" }
-    name { 'Adyen Account 1' }
+    name { "Adyen Account 1" }
 
     secrets do
       {api_key:, hmac_key:}.to_json
@@ -62,11 +62,11 @@ FactoryBot.define do
     end
   end
 
-  factory :cashfree_provider, class: 'PaymentProviders::CashfreeProvider' do
+  factory :cashfree_provider, class: "PaymentProviders::CashfreeProvider" do
     organization
-    type { 'PaymentProviders::CashfreeProvider' }
+    type { "PaymentProviders::CashfreeProvider" }
     code { "cashfree_account_#{SecureRandom.uuid}" }
-    name { 'Cashfree Account 1' }
+    name { "Cashfree Account 1" }
 
     secrets do
       {client_id: SecureRandom.uuid, client_secret: SecureRandom.uuid}.to_json

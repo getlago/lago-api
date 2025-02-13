@@ -8,13 +8,13 @@ module Integrations
           def create_body
             [
               {
-                'name' => customer.display_name(prefer_legal_name: false),
-                'city' => customer.city,
-                'zip' => customer.zipcode,
-                'country' => customer.country,
-                'state' => customer.state,
-                'email' => email,
-                'phone' => phone
+                "name" => customer.display_name(prefer_legal_name: false),
+                "city" => customer.city,
+                "zip" => customer.zipcode,
+                "country" => customer.country,
+                "state" => customer.state,
+                "email" => email,
+                "phone" => phone
               }
             ]
           end
@@ -22,14 +22,14 @@ module Integrations
           def update_body
             [
               {
-                'id' => integration_customer.external_customer_id,
-                'name' => customer.display_name(prefer_legal_name: false),
-                'city' => customer.city,
-                'zip' => customer.zipcode,
-                'country' => customer.country,
-                'state' => customer.state,
-                'email' => email,
-                'phone' => phone
+                "id" => integration_customer.external_customer_id,
+                "name" => customer.display_name(prefer_legal_name: false),
+                "city" => customer.city,
+                "zip" => customer.zipcode,
+                "country" => customer.country,
+                "state" => customer.state,
+                "email" => email,
+                "phone" => phone
               }
             ]
           end

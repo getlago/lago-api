@@ -24,7 +24,7 @@ class IntegrationItemsQuery < BaseQuery
     return if search_term.blank?
 
     {
-      m: 'or',
+      m: "or",
       external_name_cont: search_term,
       external_id_cont: search_term,
       external_account_code_cont: search_term

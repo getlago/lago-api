@@ -10,16 +10,16 @@ module Fees
     end
 
     def call
-      return result.not_found_failure!(resource: 'fee') if fee.nil?
+      return result.not_found_failure!(resource: "fee") if fee.nil?
 
       if params.key?(:payment_status)
         # Once a fee is attached to an invoice, the payment status is irrelevant, it must be the same as the invoice
-        return result.not_allowed_failure!(code: 'invoiced_fee') if fee.invoice_id
+        return result.not_allowed_failure!(code: "invoiced_fee") if fee.invoice_id
 
         unless valid_payment_status?(params[:payment_status])
           return result.single_validation_failure!(
             field: :payment_status,
-            error_code: 'value_is_invalid'
+            error_code: "value_is_invalid"
           )
         end
 

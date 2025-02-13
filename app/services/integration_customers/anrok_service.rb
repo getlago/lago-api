@@ -17,7 +17,7 @@ module IntegrationCustomers
       new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
         integration:,
         customer:,
-        type: 'IntegrationCustomers::AnrokCustomer',
+        type: "IntegrationCustomers::AnrokCustomer",
         sync_with_provider: true
       )
 

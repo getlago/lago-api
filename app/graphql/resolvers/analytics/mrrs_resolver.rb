@@ -6,9 +6,9 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'analytics:view'
+      REQUIRED_PERMISSION = "analytics:view"
 
-      description 'Query MRR of an organization'
+      description "Query MRR of an organization"
 
       argument :currency, Types::CurrencyEnum, required: false
 

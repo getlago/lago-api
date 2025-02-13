@@ -7,7 +7,7 @@ class WalletTransactionsQuery < BaseQuery
   end
 
   def call
-    return result.not_found_failure!(resource: 'wallet') unless wallet
+    return result.not_found_failure!(resource: "wallet") unless wallet
 
     wallet_transactions = wallet.wallet_transactions
     wallet_transactions = paginate(wallet_transactions)

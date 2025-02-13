@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'plans:view'
+    REQUIRED_PERMISSION = "plans:view"
 
-    description 'Query plans of an organization'
+    description "Query plans of an organization"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false

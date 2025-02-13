@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Charge Models - Dynamic Pricing Scenarios', :scenarios, type: :request, transaction: false do
+describe "Charge Models - Dynamic Pricing Scenarios", :scenarios, type: :request, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 
@@ -27,7 +27,7 @@ describe 'Charge Models - Dynamic Pricing Scenarios', :scenarios, type: :request
     charge
   end
 
-  it 'returns the expected customer usage' do
+  it "returns the expected customer usage" do
     travel_to(DateTime.new(2023, 3, 5)) do
       create_subscription(
         {
@@ -44,35 +44,35 @@ describe 'Charge Models - Dynamic Pricing Scenarios', :scenarios, type: :request
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: customer.external_id,
-          precise_total_amount_cents: '10.1',
-          properties: {item_id: '10'}
+          precise_total_amount_cents: "10.1",
+          properties: {item_id: "10"}
         }
       )
 
       fetch_current_usage(customer:)
       expect(json[:customer_usage][:total_amount_cents]).to eq(10)
-      expect(json[:customer_usage][:charges_usage][0][:units]).to eq('10.0')
+      expect(json[:customer_usage][:charges_usage][0][:units]).to eq("10.0")
 
       create_event(
         {
           code: billable_metric.code,
           transaction_id: SecureRandom.uuid,
           external_subscription_id: customer.external_id,
-          precise_total_amount_cents: '901.9',
-          properties: {item_id: '10'}
+          precise_total_amount_cents: "901.9",
+          properties: {item_id: "10"}
         }
       )
 
       fetch_current_usage(customer:)
       expect(json[:customer_usage][:total_amount_cents]).to eq(912)
-      expect(json[:customer_usage][:charges_usage][0][:units]).to eq('20.0')
+      expect(json[:customer_usage][:charges_usage][0][:units]).to eq("20.0")
     end
   end
 
-  context 'with grouping' do
+  context "with grouping" do
     let(:charge_properties) { {grouped_by: [:group_key]} }
 
-    it 'returns the expected customer usage' do
+    it "returns the expected customer usage" do
       travel_to(DateTime.new(2023, 3, 5)) do
         create_subscription(
           {
@@ -89,15 +89,15 @@ describe 'Charge Models - Dynamic Pricing Scenarios', :scenarios, type: :request
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: customer.external_id,
-            precise_total_amount_cents: '10.1',
-            properties: {item_id: '10', group_key: 'value 1'}
+            precise_total_amount_cents: "10.1",
+            properties: {item_id: "10", group_key: "value 1"}
           }
         )
 
         fetch_current_usage(customer:)
 
         expect(json[:customer_usage][:total_amount_cents]).to eq(10)
-        expect(json[:customer_usage][:charges_usage][0][:units]).to eq('10.0')
+        expect(json[:customer_usage][:charges_usage][0][:units]).to eq("10.0")
         expect(json[:customer_usage][:charges_usage][0][:grouped_usage][0][:grouped_by]).to eq({group_key: "value 1"})
 
         create_event(
@@ -105,14 +105,14 @@ describe 'Charge Models - Dynamic Pricing Scenarios', :scenarios, type: :request
             code: billable_metric.code,
             transaction_id: SecureRandom.uuid,
             external_subscription_id: customer.external_id,
-            precise_total_amount_cents: '901.9',
-            properties: {item_id: '10', group_key: 'value 2'}
+            precise_total_amount_cents: "901.9",
+            properties: {item_id: "10", group_key: "value 2"}
           }
         )
 
         fetch_current_usage(customer:)
         expect(json[:customer_usage][:total_amount_cents]).to eq(912)
-        expect(json[:customer_usage][:charges_usage][0][:units]).to eq('20.0')
+        expect(json[:customer_usage][:charges_usage][0][:units]).to eq("20.0")
         expect(json[:customer_usage][:charges_usage][0][:grouped_usage].size).to eq(2)
 
         expect(json[:customer_usage][:charges_usage][0][:grouped_usage]).to match_array(

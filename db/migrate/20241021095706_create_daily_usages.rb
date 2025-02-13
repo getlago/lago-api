@@ -9,7 +9,7 @@ class CreateDailyUsages < ActiveRecord::Migration[7.1]
       t.string :external_subscription_id, null: false
       t.datetime :from_datetime, null: false
       t.datetime :to_datetime, null: false
-      t.jsonb :usage, null: false, default: '{}'
+      t.jsonb :usage, null: false, default: "{}"
       t.timestamps
 
       t.index %i[organization_id external_subscription_id]

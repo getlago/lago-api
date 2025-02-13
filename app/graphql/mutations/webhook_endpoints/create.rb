@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'developers:manage'
+      REQUIRED_PERMISSION = "developers:manage"
 
-      graphql_name 'CreateWebhookEndpoint'
-      description 'Create a new webhook endpoint'
+      graphql_name "CreateWebhookEndpoint"
+      description "Create a new webhook endpoint"
 
       input_object_class Types::WebhookEndpoints::CreateInput
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::CreditNotesController, type: :request do
   let(:organization) { create(:organization) }
@@ -12,23 +12,23 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       :invoice,
       organization:,
       customer:,
-      payment_status: 'succeeded',
-      currency: 'EUR',
+      payment_status: "succeeded",
+      currency: "EUR",
       fees_amount_cents: 100,
       taxes_amount_cents: 120,
       total_amount_cents: 120
     )
   end
 
-  describe 'GET /api/v1/credit_notes/:id' do
+  describe "GET /api/v1/credit_notes/:id" do
     subject { get_with_token(organization, "/api/v1/credit_notes/#{credit_note_id}") }
 
     let(:credit_note_id) { credit_note.id }
     let!(:credit_note_items) { create_list(:credit_note_item, 2, credit_note:) }
 
-    include_examples 'requires API permission', 'credit_note', 'read'
+    include_examples "requires API permission", "credit_note", "read"
 
-    it 'returns a credit note' do
+    it "returns a credit note" do
       subject
 
       expect(response).to have_http_status(:success)
@@ -67,36 +67,36 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       )
     end
 
-    context 'when credit note does not exists' do
+    context "when credit note does not exists" do
       let(:credit_note_id) { SecureRandom.uuid }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when credit note is draft' do
+    context "when credit note is draft" do
       let(:credit_note) { create(:credit_note, :draft) }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when credit note belongs to another organization' do
+    context "when credit note belongs to another organization" do
       let(:wrong_credit_note) { create(:credit_note) }
       let(:credit_note_id) { wrong_credit_note.id }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'PUT /api/v1/credit_notes/:id' do
+  describe "PUT /api/v1/credit_notes/:id" do
     subject do
       put_with_token(
         organization,
@@ -106,59 +106,59 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
 
     let(:credit_note_id) { credit_note.id }
-    let(:update_params) { {refund_status: 'succeeded'} }
+    let(:update_params) { {refund_status: "succeeded"} }
 
-    include_examples 'requires API permission', 'credit_note', 'write'
+    include_examples "requires API permission", "credit_note", "write"
 
-    context 'when credit not exists' do
-      it 'updates the credit note' do
+    context "when credit not exists" do
+      it "updates the credit note" do
         subject
 
         expect(response).to have_http_status(:success)
         expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
-        expect(json[:credit_note][:refund_status]).to eq('succeeded')
+        expect(json[:credit_note][:refund_status]).to eq("succeeded")
       end
     end
 
-    context 'when credit note does not exist' do
+    context "when credit note does not exist" do
       let(:credit_note_id) { SecureRandom.uuid }
 
-      it 'returns a not found error' do
+      it "returns a not found error" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when provided refund status is invalid' do
-      let(:update_params) { {refund_status: 'invalid_status'} }
+    context "when provided refund status is invalid" do
+      let(:update_params) { {refund_status: "invalid_status"} }
 
-      it 'returns an unprocessable entity error' do
+      it "returns an unprocessable entity error" do
         subject
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
 
-  describe 'POST /api/v1/credit_notes/:id/download' do
+  describe "POST /api/v1/credit_notes/:id/download" do
     subject do
       post_with_token(organization, "/api/v1/credit_notes/#{credit_note_id}/download")
     end
 
     let(:credit_note_id) { credit_note.id }
 
-    include_examples 'requires API permission', 'credit_note', 'write'
+    include_examples "requires API permission", "credit_note", "write"
 
-    it 'enqueues a job to generate the PDF' do
+    it "enqueues a job to generate the PDF" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(CreditNotes::GeneratePdfJob).to have_been_enqueued
     end
 
-    context 'when a file is attached to the credit note' do
+    context "when a file is attached to the credit note" do
       let(:credit_note) { create(:credit_note, :with_file, invoice:, customer:) }
 
-      it 'returns the credit note object' do
+      it "returns the credit note object" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -166,42 +166,42 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'when credit note does not exist' do
+    context "when credit note does not exist" do
       let(:credit_note_id) { SecureRandom.uuid }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when credit note is draft' do
+    context "when credit note is draft" do
       let(:credit_note) { create(:credit_note, :draft) }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when credit note belongs to another organization' do
+    context "when credit note belongs to another organization" do
       let(:wrong_credit_note) { create(:credit_note) }
       let(:credit_note_id) { wrong_credit_note.id }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'GET /api/v1/credit_notes' do
-    subject { get_with_token(organization, '/api/v1/credit_notes', params) }
+  describe "GET /api/v1/credit_notes" do
+    subject { get_with_token(organization, "/api/v1/credit_notes", params) }
 
     let(:organization) { customer.organization }
     let(:customer) { create(:customer) }
 
-    context 'with no params' do
+    context "with no params" do
       let(:params) { {} }
       let(:invoices) { create_pair(:invoice, organization:, customer:) }
 
@@ -209,9 +209,9 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         invoices.map { |invoice| create(:credit_note, invoice:, customer:) }
       end
 
-      include_examples 'requires API permission', 'credit_note', 'read'
+      include_examples "requires API permission", "credit_note", "read"
 
-      it 'returns a list of credit notes' do
+      it "returns a list of credit notes" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -220,7 +220,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'with pagination' do
+    context "with pagination" do
       let(:params) { {page: 1, per_page: 1} }
       let(:invoices) { create_pair(:invoice, organization:, customer:) }
 
@@ -228,7 +228,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         invoices.map { |invoice| create(:credit_note, invoice:, customer:) }
       end
 
-      it 'returns the metadata' do
+      it "returns the metadata" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -244,7 +244,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'with external_customer_id filter' do
+    context "with external_customer_id filter" do
       let(:params) { {external_customer_id: customer.external_id} }
       let!(:credit_note) { create(:credit_note, customer:) }
 
@@ -253,7 +253,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         create(:credit_note, customer: another_customer)
       end
 
-      it 'returns credit notes of the customer' do
+      it "returns credit notes of the customer" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -261,7 +261,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'with reason filter' do
+    context "with reason filter" do
       let(:params) { {reason: matching_reasons} }
       let(:matching_reasons) { CreditNote::REASON.sample(2) }
 
@@ -277,7 +277,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         )
       end
 
-      it 'returns credit notes with matching reasons' do
+      it "returns credit notes with matching reasons" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -285,7 +285,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'with credit status filter' do
+    context "with credit status filter" do
       let(:params) { {credit_status: matching_credit_statuses} }
       let(:matching_credit_statuses) { CreditNote::CREDIT_STATUS.sample(2) }
 
@@ -303,7 +303,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         )
       end
 
-      it 'returns credit notes with matching credit statuses' do
+      it "returns credit notes with matching credit statuses" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -311,7 +311,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'with refund status filter' do
+    context "with refund status filter" do
       let(:params) { {refund_status: matching_refund_statuses} }
       let(:matching_refund_statuses) { CreditNote::REFUND_STATUS.sample(2) }
 
@@ -329,7 +329,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         )
       end
 
-      it 'returns credit notes with matching refund statuses' do
+      it "returns credit notes with matching refund statuses" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -337,13 +337,13 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'with invoice number filter' do
+    context "with invoice number filter" do
       let(:params) { {invoice_number: matching_credit_note.invoice.number} }
       let!(:matching_credit_note) { create(:credit_note, customer:) }
 
       before { create(:credit_note, customer:) }
 
-      it 'returns credit notes with matching invoice number' do
+      it "returns credit notes with matching invoice number" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -351,7 +351,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'with issuing date filters' do
+    context "with issuing date filters" do
       let(:params) do
         {
           issuing_date_from: credit_notes.second.issuing_date,
@@ -365,7 +365,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         end.reverse # from oldest to newest
       end
 
-      it 'returns credit notes that were issued between provided dates' do
+      it "returns credit notes that were issued between provided dates" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -373,7 +373,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'with amount filters' do
+    context "with amount filters" do
       let(:params) do
         {
           amount_from: credit_notes.second.total_amount_cents,
@@ -387,7 +387,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         end # from smallest to biggest
       end
 
-      it 'returns credit notes with total cents amount in provided range' do
+      it "returns credit notes with total cents amount in provided range" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -445,13 +445,13 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context 'with search term' do
+    context "with search term" do
       let(:params) { {search_term: matching_credit_note.invoice.number} }
       let!(:matching_credit_note) { create(:credit_note, customer:) }
 
       before { create(:credit_note, customer:) }
 
-      it 'returns credit notes matching the search terms' do
+      it "returns credit notes matching the search terms" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -460,9 +460,9 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     end
   end
 
-  describe 'POST /api/v1/credit_notes' do
+  describe "POST /api/v1/credit_notes" do
     subject do
-      post_with_token(organization, '/api/v1/credit_notes', {credit_note: create_params})
+      post_with_token(organization, "/api/v1/credit_notes", {credit_note: create_params})
     end
 
     let(:fee1) { create(:fee, invoice:) }
@@ -472,8 +472,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     let(:create_params) do
       {
         invoice_id:,
-        reason: 'duplicated_charge',
-        description: 'Duplicated charge',
+        reason: "duplicated_charge",
+        description: "Duplicated charge",
         credit_amount_cents: 10,
         refund_amount_cents: 5,
         items: [
@@ -491,19 +491,19 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
     around { |test| lago_premium!(&test) }
 
-    include_examples 'requires API permission', 'credit_note', 'write'
+    include_examples "requires API permission", "credit_note", "write"
 
-    it 'creates a credit note' do
+    it "creates a credit note" do
       subject
 
       expect(response).to have_http_status(:success)
 
       expect(json[:credit_note]).to include(
-        credit_status: 'available',
-        refund_status: 'pending',
-        reason: 'duplicated_charge',
-        description: 'Duplicated charge',
-        currency: 'EUR',
+        credit_status: "available",
+        refund_status: "pending",
+        reason: "duplicated_charge",
+        description: "Duplicated charge",
+        currency: "EUR",
         total_amount_cents: 15,
         credit_amount_cents: 10,
         balance_amount_cents: 10,
@@ -513,65 +513,65 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
       expect(json[:credit_note][:items][0][:lago_id]).to be_present
       expect(json[:credit_note][:items][0][:amount_cents]).to eq(10)
-      expect(json[:credit_note][:items][0][:amount_currency]).to eq('EUR')
+      expect(json[:credit_note][:items][0][:amount_currency]).to eq("EUR")
       expect(json[:credit_note][:items][0][:fee][:lago_id]).to eq(fee1.id)
 
       expect(json[:credit_note][:items][1][:lago_id]).to be_present
       expect(json[:credit_note][:items][1][:amount_cents]).to eq(5)
-      expect(json[:credit_note][:items][1][:amount_currency]).to eq('EUR')
+      expect(json[:credit_note][:items][1][:amount_currency]).to eq("EUR")
       expect(json[:credit_note][:items][1][:fee][:lago_id]).to eq(fee2.id)
     end
 
-    context 'when invoice is not found' do
+    context "when invoice is not found" do
       let(:invoice_id) { SecureRandom.uuid }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'PUT /api/v1/credit_notes/:id/void' do
+  describe "PUT /api/v1/credit_notes/:id/void" do
     subject { put_with_token(organization, "/api/v1/credit_notes/#{credit_note_id}/void") }
 
     let(:credit_note_id) { credit_note.id }
 
-    include_examples 'requires API permission', 'credit_note', 'write'
+    include_examples "requires API permission", "credit_note", "write"
 
-    it 'voids the credit note' do
+    it "voids the credit note" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:credit_note][:lago_id]).to eq(credit_note.id)
-      expect(json[:credit_note][:credit_status]).to eq('voided')
+      expect(json[:credit_note][:credit_status]).to eq("voided")
       expect(json[:credit_note][:balance_amount_cents]).to eq(0)
     end
 
-    context 'when credit note does not exist' do
+    context "when credit note does not exist" do
       let(:credit_note_id) { SecureRandom.uuid }
 
-      it 'returns a not found error' do
+      it "returns a not found error" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when credit note is not voidable' do
+    context "when credit note is not voidable" do
       before { credit_note.update!(credit_amount_cents: 0, credit_status: :voided) }
 
-      it 'returns an unprocessable entity error' do
+      it "returns an unprocessable entity error" do
         subject
         expect(response).to have_http_status(:method_not_allowed)
       end
     end
   end
 
-  describe 'POST /api/v1/credit_notes/estimate' do
+  describe "POST /api/v1/credit_notes/estimate" do
     subject do
       post_with_token(
         organization,
-        '/api/v1/credit_notes/estimate',
+        "/api/v1/credit_notes/estimate",
         {credit_note: estimate_params}
       )
     end
@@ -588,9 +588,9 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
     around { |test| lago_premium!(&test) }
 
-    include_examples 'requires API permission', 'credit_note', 'write'
+    include_examples "requires API permission", "credit_note", "write"
 
-    it 'returns the computed amounts for credit note creation' do
+    it "returns the computed amounts for credit note creation" do
       subject
 
       expect(response).to have_http_status(:success)
@@ -598,7 +598,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       estimated_credit_note = json[:estimated_credit_note]
       expect(estimated_credit_note[:lago_invoice_id]).to eq(invoice.id)
       expect(estimated_credit_note[:invoice_number]).to eq(invoice.number)
-      expect(estimated_credit_note[:currency]).to eq('EUR')
+      expect(estimated_credit_note[:currency]).to eq("EUR")
       expect(estimated_credit_note[:taxes_amount_cents]).to eq(0)
       expect(estimated_credit_note[:sub_total_excluding_taxes_amount_cents]).to eq(100)
       expect(estimated_credit_note[:max_creditable_amount_cents]).to eq(100)
@@ -608,10 +608,10 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       expect(estimated_credit_note[:applied_taxes]).to be_blank
     end
 
-    context 'with invalid invoice' do
+    context "with invalid invoice" do
       let(:invoice) { create(:invoice) }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end

@@ -10,8 +10,8 @@ module Commitments
     end
 
     def call
-      return result.not_found_failure!(resource: 'commitment') unless commitment
-      return result.not_found_failure!(resource: 'tax') if (tax_codes - taxes.pluck(:code)).present?
+      return result.not_found_failure!(resource: "commitment") unless commitment
+      return result.not_found_failure!(resource: "tax") if (tax_codes - taxes.pluck(:code)).present?
 
       commitment.applied_taxes.where(
         tax_id: commitment.taxes.where.not(code: tax_codes).pluck(:id)

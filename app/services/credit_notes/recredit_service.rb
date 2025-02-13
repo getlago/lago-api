@@ -10,8 +10,8 @@ module CreditNotes
     end
 
     def call
-      return result.not_found_failure!(resource: 'credit_note') if credit_note.nil?
-      return result.not_allowed_failure!(code: 'credit_note_voided') if credit_note.voided?
+      return result.not_found_failure!(resource: "credit_note") if credit_note.nil?
+      return result.not_allowed_failure!(code: "credit_note_voided") if credit_note.voided?
 
       result.credit_note = credit_note
 

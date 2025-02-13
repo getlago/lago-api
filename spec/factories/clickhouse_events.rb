@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :clickhouse_events_raw, class: 'Clickhouse::EventsRaw' do
+  factory :clickhouse_events_raw, class: "Clickhouse::EventsRaw" do
     transient do
       organization { create(:organization) }
       billable_metric { create(:billable_metric, organization: organization) }

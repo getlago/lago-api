@@ -32,7 +32,7 @@ class FixQuantifiedEventMigration < ActiveRecord::Migration[7.0]
         timestamp: quantified_event.added_at,
         external_subscription_id: quantified_event.external_subscription_id,
         charge_filter_id: quantified_event.charge_filter_id,
-        current_aggregation: BigDecimal(quantified_event.properties['total_aggregated_units'] || '0'),
+        current_aggregation: BigDecimal(quantified_event.properties["total_aggregated_units"] || "0"),
         grouped_by: quantified_event.grouped_by,
         created_at: quantified_event.created_at,
         updated_at: quantified_event.updated_at

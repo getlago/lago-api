@@ -3,7 +3,7 @@
 module LifetimeUsages
   class RecalculateAndCheckJob < ApplicationJob
     queue_as do
-      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_BILLING'])
+      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_BILLING"])
         :billing
       else
         :default

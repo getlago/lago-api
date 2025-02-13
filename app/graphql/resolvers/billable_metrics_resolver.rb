@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'billable_metrics:view'
+    REQUIRED_PERMISSION = "billable_metrics:view"
 
-    description 'Query billable metrics of an organization'
+    description "Query billable metrics of an organization"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false

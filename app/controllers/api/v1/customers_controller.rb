@@ -63,7 +63,7 @@ module Api
       def show
         customer = current_organization.customers.find_by(external_id: params[:external_id])
 
-        return not_found_error(resource: 'customer') unless customer
+        return not_found_error(resource: "customer") unless customer
 
         render_customer(customer)
       end
@@ -88,7 +88,7 @@ module Api
           render(
             json: ::V1::PaymentProviders::CustomerCheckoutSerializer.new(
               customer,
-              root_name: 'customer',
+              root_name: "customer",
               checkout_url: result.checkout_url
             )
           )
@@ -168,14 +168,14 @@ module Api
         render(
           json: ::V1::CustomerSerializer.new(
             customer,
-            root_name: 'customer',
+            root_name: "customer",
             includes: %i[taxes integration_customers applicable_invoice_custom_sections]
           )
         )
       end
 
       def resource_name
-        'customer'
+        "customer"
       end
     end
   end

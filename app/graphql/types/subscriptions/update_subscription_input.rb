@@ -3,7 +3,7 @@
 module Types
   module Subscriptions
     class UpdateSubscriptionInput < BaseInputObject
-      description 'Update Subscription input arguments'
+      description "Update Subscription input arguments"
 
       argument :id, ID, required: true
 

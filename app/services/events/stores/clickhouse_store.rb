@@ -14,7 +14,7 @@ module Events
 
         scope = scope.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
         scope = scope.where("events_enriched.timestamp <= ?", to_datetime) if to_datetime
-        scope = scope.limit_by(1, 'events_enriched.transaction_id')
+        scope = scope.limit_by(1, "events_enriched.transaction_id")
 
         scope = with_grouped_by_values(scope) if grouped_by_values?
         filters_scope(scope)
@@ -26,7 +26,7 @@ module Events
           .where(organization_id: subscription.organization.id)
           .where("events_enriched.timestamp >= ?", from_datetime)
           .where("events_enriched.timestamp <= ?", to_datetime)
-          .pluck('DISTINCT(code)')
+          .pluck("DISTINCT(code)")
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)

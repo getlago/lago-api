@@ -14,12 +14,12 @@ class InvoiceSubscription < ApplicationRecord
   monetize :total_amount_cents, disable_validation: true, allow_nil: true
 
   INVOICING_REASONS = {
-    subscription_starting: 'subscription_starting',
-    subscription_periodic: 'subscription_periodic',
-    subscription_terminating: 'subscription_terminating',
-    in_advance_charge: 'in_advance_charge',
-    in_advance_charge_periodic: 'in_advance_charge_periodic',
-    progressive_billing: 'progressive_billing'
+    subscription_starting: "subscription_starting",
+    subscription_periodic: "subscription_periodic",
+    subscription_terminating: "subscription_terminating",
+    in_advance_charge: "in_advance_charge",
+    in_advance_charge_periodic: "in_advance_charge_periodic",
+    progressive_billing: "progressive_billing"
   }.freeze
 
   enum :invoicing_reason, INVOICING_REASONS
@@ -64,7 +64,7 @@ class InvoiceSubscription < ApplicationRecord
   def previous_invoice_subscription
     self.class
       .where(subscription:)
-      .where('from_datetime <= ?', from_datetime)
+      .where("from_datetime <= ?", from_datetime)
       .where.not(id:)
       .order(from_datetime: :desc)
       .find(&:subscription_fee)

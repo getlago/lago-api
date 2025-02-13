@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::InvoiceCreditNotesResolver, type: :graphql do
-  let(:required_permission) { 'credit_notes:view' }
+  let(:required_permission) { "credit_notes:view" }
   let(:query) do
     <<~GQL
       query($invoiceId: ID!) {
@@ -28,11 +28,11 @@ RSpec.describe Resolvers::InvoiceCreditNotesResolver, type: :graphql do
     create(:credit_note, :draft, organization:, customer:, invoice:)
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'credit_notes:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "credit_notes:view"
 
-  it 'returns a list of finalized credit_notes for an invoice' do
+  it "returns a list of finalized credit_notes for an invoice" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -43,30 +43,30 @@ RSpec.describe Resolvers::InvoiceCreditNotesResolver, type: :graphql do
       }
     )
 
-    credit_notes_response = result['data']['invoiceCreditNotes']
+    credit_notes_response = result["data"]["invoiceCreditNotes"]
 
     aggregate_failures do
-      expect(credit_notes_response['collection'].count).to eq(1)
-      expect(credit_notes_response['collection'].first['id']).to eq(credit_note.id)
+      expect(credit_notes_response["collection"].count).to eq(1)
+      expect(credit_notes_response["collection"].first["id"]).to eq(credit_note.id)
 
-      expect(credit_notes_response['metadata']['currentPage']).to eq(1)
-      expect(credit_notes_response['metadata']['totalCount']).to eq(1)
+      expect(credit_notes_response["metadata"]["currentPage"]).to eq(1)
+      expect(credit_notes_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
-  context 'when invoice does not exists' do
-    it 'returns an error' do
+  context "when invoice does not exists" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
         query:,
         variables: {
-          invoiceId: '123456'
+          invoiceId: "123456"
         }
       )
 
-      expect_graphql_error(result:, message: 'Resource not found')
+      expect_graphql_error(result:, message: "Resource not found")
     end
   end
 end

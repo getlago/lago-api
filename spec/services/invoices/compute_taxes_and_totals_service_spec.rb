@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
   subject(:totals_service) { described_class.new(invoice:) }
 
-  describe '#call' do
+  describe "#call" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
 
@@ -16,7 +16,7 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
         customer:,
         organization:,
         subscriptions: [subscription],
-        currency: 'EUR',
+        currency: "EUR",
         issuing_date: Time.zone.at(timestamp).to_date
       )
     end
@@ -33,9 +33,9 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
 
     let(:timestamp) { Time.zone.now - 1.year }
     let(:started_at) { Time.zone.now - 2.years }
-    let(:plan) { create(:plan, organization:, interval: 'monthly') }
-    let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
-    let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard', billable_metric:) }
+    let(:plan) { create(:plan, organization:, interval: "monthly") }
+    let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
+    let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: "standard", billable_metric:) }
 
     let(:fee_subscription) do
       create(
@@ -62,16 +62,16 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
       fee_charge
     end
 
-    context 'when invoice does not exist' do
-      it 'returns an error' do
+    context "when invoice does not exist" do
+      it "returns an error" do
         result = described_class.new(invoice: nil).call
 
         expect(result).not_to be_success
-        expect(result.error.error_code).to eq('invoice_not_found')
+        expect(result.error.error_code).to eq("invoice_not_found")
       end
     end
 
-    context 'when there is tax provider' do
+    context "when there is tax provider" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
 
@@ -79,32 +79,32 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
         integration_customer
       end
 
-      it 'enqueues a Invoices::ProviderTaxes::PullTaxesAndApplyJob' do
+      it "enqueues a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
         expect do
           totals_service.call
         end.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
       end
 
-      it 'sets correct statuses on invoice' do
+      it "sets correct statuses on invoice" do
         totals_service.call
 
-        expect(invoice.reload.status).to eq('pending')
-        expect(invoice.reload.tax_status).to eq('pending')
+        expect(invoice.reload.status).to eq("pending")
+        expect(invoice.reload.tax_status).to eq("pending")
       end
 
-      context 'when invoice is draft' do
+      context "when invoice is draft" do
         before { invoice.update!(status: :draft) }
 
-        it 'sets only tax status' do
+        it "sets only tax status" do
           described_class.new(invoice:, finalizing: false).call
 
-          expect(invoice.reload.status).to eq('draft')
-          expect(invoice.reload.tax_status).to eq('pending')
+          expect(invoice.reload.status).to eq("draft")
+          expect(invoice.reload.tax_status).to eq("pending")
         end
       end
     end
 
-    context 'when there is NO tax provider' do
+    context "when there is NO tax provider" do
       let(:result) { BaseService::Result.new }
 
       before do
@@ -113,7 +113,7 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
           .and_return(result)
       end
 
-      it 'calls the add on create service' do
+      it "calls the add on create service" do
         totals_service.call
 
         expect(Invoices::ComputeAmountsFromFees).to have_received(:call)

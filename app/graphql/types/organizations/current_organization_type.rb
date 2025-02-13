@@ -3,7 +3,7 @@
 module Types
   module Organizations
     class CurrentOrganizationType < BaseOrganizationType
-      description 'Current Organization Type'
+      description "Current Organization Type"
 
       field :id, ID, null: false
       field :logo_url, String
@@ -25,9 +25,9 @@ module Types
       field :state, String
       field :zipcode, String
 
-      field :api_key, String, permission: 'developers:keys:manage'
-      field :hmac_key, String, permission: 'developers:keys:manage'
-      field :webhook_url, String, permission: 'developers:manage'
+      field :api_key, String, permission: "developers:keys:manage"
+      field :hmac_key, String, permission: "developers:keys:manage"
+      field :webhook_url, String, permission: "developers:manage"
 
       field :document_number_prefix, String, null: false
       field :document_numbering, Types::Organizations::DocumentNumberingEnum, null: false
@@ -41,15 +41,15 @@ module Types
       #       This would enable us to use premium add_on logic on OSS version
       field :premium_integrations, [Types::Integrations::PremiumIntegrationTypeEnum], null: false
 
-      field :billing_configuration, Types::Organizations::BillingConfiguration, permission: 'organization:invoices:view'
-      field :email_settings, [Types::Organizations::EmailSettingsEnum], permission: 'organization:emails:view'
+      field :billing_configuration, Types::Organizations::BillingConfiguration, permission: "organization:invoices:view"
+      field :email_settings, [Types::Organizations::EmailSettingsEnum], permission: "organization:emails:view"
       field :finalize_zero_amount_invoice, Boolean, null: false
-      field :taxes, [Types::Taxes::Object], resolver: Resolvers::TaxesResolver, permission: 'organization:taxes:view'
+      field :taxes, [Types::Taxes::Object], resolver: Resolvers::TaxesResolver, permission: "organization:taxes:view"
 
-      field :adyen_payment_providers, [Types::PaymentProviders::Adyen], permission: 'organization:integrations:view'
-      field :cashfree_payment_providers, [Types::PaymentProviders::Cashfree], permission: 'organization:integrations:view'
-      field :gocardless_payment_providers, [Types::PaymentProviders::Gocardless], permission: 'organization:integrations:view'
-      field :stripe_payment_providers, [Types::PaymentProviders::Stripe], permission: 'organization:integrations:view'
+      field :adyen_payment_providers, [Types::PaymentProviders::Adyen], permission: "organization:integrations:view"
+      field :cashfree_payment_providers, [Types::PaymentProviders::Cashfree], permission: "organization:integrations:view"
+      field :gocardless_payment_providers, [Types::PaymentProviders::Gocardless], permission: "organization:integrations:view"
+      field :stripe_payment_providers, [Types::PaymentProviders::Stripe], permission: "organization:integrations:view"
 
       field :applied_dunning_campaign, Types::DunningCampaigns::Object
 

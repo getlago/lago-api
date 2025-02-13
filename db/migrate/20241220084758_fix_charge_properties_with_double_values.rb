@@ -2,7 +2,7 @@
 
 class FixChargePropertiesWithDoubleValues < ActiveRecord::Migration[7.1]
   def up
-    pairs = [['amount', 'graduated_ranges'], ['amount', 'graduated_percentage_ranges'], ['amount', 'volume_ranges']]
+    pairs = [["amount", "graduated_ranges"], ["amount", "graduated_percentage_ranges"], ["amount", "volume_ranges"]]
     pairs.each do |pair|
       ChargeFilter.includes(:charge).where("properties ?& array[:keys]", keys: pair).find_each do |cf|
         fix_charge_filter_properties(cf)
@@ -25,7 +25,7 @@ class FixChargePropertiesWithDoubleValues < ActiveRecord::Migration[7.1]
     charge_filter.properties = result.properties
     charge_filter.save!
   rescue ActiveRecord::RecordInvalid => e
-    say '-' * 50
+    say "-" * 50
     say e.message
     say "Please fix the following charge filter manually:"
     say "Failed charge_filter_id: #{charge_filter.id}"
@@ -40,7 +40,7 @@ class FixChargePropertiesWithDoubleValues < ActiveRecord::Migration[7.1]
     charge.properties = result.properties
     charge.save!
   rescue ActiveRecord::RecordInvalid => e
-    say '-' * 50
+    say "-" * 50
     say e.message
     say "Please fix the following charge manually:"
     say "Failed charge_id: #{charge.id}"

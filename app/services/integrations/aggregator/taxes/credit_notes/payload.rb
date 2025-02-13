@@ -16,20 +16,20 @@ module Integrations
           def body
             [
               {
-                'id' => "cn_#{credit_note.id}",
-                'issuing_date' => credit_note.issuing_date,
-                'currency' => credit_note.currency,
-                'contact' => {
-                  'external_id' => integration_customer&.external_customer_id || customer.external_id,
-                  'name' => customer.name,
-                  'address_line_1' => customer.shipping_address_line1 || customer.address_line1,
-                  'city' => customer.shipping_city || customer.city,
-                  'zip' => customer.shipping_zipcode || customer.zipcode,
-                  'country' => customer.shipping_country || customer.country,
-                  'taxable' => customer.tax_identification_number.present?,
-                  'tax_number' => customer.tax_identification_number
+                "id" => "cn_#{credit_note.id}",
+                "issuing_date" => credit_note.issuing_date,
+                "currency" => credit_note.currency,
+                "contact" => {
+                  "external_id" => integration_customer&.external_customer_id || customer.external_id,
+                  "name" => customer.name,
+                  "address_line_1" => customer.shipping_address_line1 || customer.address_line1,
+                  "city" => customer.shipping_city || customer.city,
+                  "zip" => customer.shipping_zipcode || customer.zipcode,
+                  "country" => customer.shipping_country || customer.country,
+                  "taxable" => customer.tax_identification_number.present?,
+                  "tax_number" => customer.tax_identification_number
                 },
-                'fees' => credit_note.items.order(created_at: :asc).map { |item| cn_item(item) }
+                "fees" => credit_note.items.order(created_at: :asc).map { |item| cn_item(item) }
               }
             ]
           end
@@ -49,9 +49,9 @@ module Integrations
             mapped_item ||= OpenStruct.new
 
             {
-              'item_id' => fee.item_id,
-              'item_code' => mapped_item.external_id,
-              'amount_cents' => item.sub_total_excluding_taxes_amount_cents.to_i * -1
+              "item_id" => fee.item_id,
+              "item_code" => mapped_item.external_id,
+              "amount_cents" => item.sub_total_excluding_taxes_amount_cents.to_i * -1
             }
           end
 

@@ -46,7 +46,7 @@ module Api
           id: params[:id]
         )
 
-        return not_found_error(resource: 'wallet') unless wallet
+        return not_found_error(resource: "wallet") unless wallet
 
         render_wallet(wallet)
       end
@@ -145,14 +145,14 @@ module Api
         render(
           json: ::V1::WalletSerializer.new(
             wallet,
-            root_name: 'wallet',
+            root_name: "wallet",
             includes: %i[recurring_transaction_rules]
           )
         )
       end
 
       def resource_name
-        'wallet'
+        "wallet"
       end
     end
   end

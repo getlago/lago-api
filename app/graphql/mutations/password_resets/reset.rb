@@ -3,8 +3,8 @@
 module Mutations
   module PasswordResets
     class Reset < BaseMutation
-      graphql_name 'ResetPassword'
-      description 'Reset password for user and log in'
+      graphql_name "ResetPassword"
+      description "Reset password for user and log in"
 
       argument :new_password, String, required: true
       argument :token, String, required: true

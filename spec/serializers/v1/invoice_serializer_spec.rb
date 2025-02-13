@@ -79,16 +79,16 @@ RSpec.describe ::V1::InvoiceSerializer do
     end
   end
 
-  context 'when including billing periods' do
+  context "when including billing periods" do
     let(:includes) { %i[billing_periods] }
     let(:invoice_subscription) { create(:invoice_subscription, :boundaries, invoice:) }
 
     before { invoice_subscription }
 
-    it 'serializes the invoice_subscription' do
+    it "serializes the invoice_subscription" do
       result = JSON.parse(serializer.to_json)
 
-      expect(result['invoice']['billing_periods']).to be_present
+      expect(result["invoice"]["billing_periods"]).to be_present
     end
   end
 end

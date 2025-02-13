@@ -36,7 +36,7 @@ module V1
       ::CollectionSerializer.new(
         model.charges,
         ::V1::ChargeSerializer,
-        collection_name: 'charges',
+        collection_name: "charges",
         includes: include?(:taxes) ? %i[taxes] : []
       ).serialize
     end
@@ -45,7 +45,7 @@ module V1
       ::CollectionSerializer.new(
         model.usage_thresholds,
         ::V1::UsageThresholdSerializer,
-        collection_name: 'usage_thresholds'
+        collection_name: "usage_thresholds"
       ).serialize
     end
 
@@ -62,7 +62,7 @@ module V1
       ::CollectionSerializer.new(
         model.taxes,
         ::V1::TaxSerializer,
-        collection_name: 'taxes'
+        collection_name: "taxes"
       ).serialize
     end
   end

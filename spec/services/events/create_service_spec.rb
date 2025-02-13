@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Events::CreateService, type: :service do
   subject(:create_service) do
@@ -14,7 +14,7 @@ RSpec.describe Events::CreateService, type: :service do
 
   let(:organization) { create(:organization) }
 
-  let(:code) { 'sum_agg' }
+  let(:code) { "sum_agg" }
   let(:external_subscription_id) { SecureRandom.uuid }
   let(:timestamp) { Time.current.to_f }
   let(:transaction_id) { SecureRandom.uuid }
@@ -28,15 +28,15 @@ RSpec.describe Events::CreateService, type: :service do
       code:,
       transaction_id:,
       precise_total_amount_cents:,
-      properties: {foo: 'bar'},
+      properties: {foo: "bar"},
       timestamp:
     }
   end
 
   let(:metadata) { {} }
 
-  describe '#call' do
-    it 'creates an event' do
+  describe "#call" do
+    it "creates an event" do
       result = nil
 
       aggregate_failures do
@@ -48,17 +48,17 @@ RSpec.describe Events::CreateService, type: :service do
           transaction_id:,
           code:,
           timestamp: Time.zone.at(timestamp),
-          properties: {'foo' => 'bar'},
+          properties: {"foo" => "bar"},
           precise_total_amount_cents: nil
         )
       end
     end
 
-    it 'enqueues a post processing job' do
+    it "enqueues a post processing job" do
       expect { create_service.call }.to have_enqueued_job(Events::PostProcessJob)
     end
 
-    context 'when event already exists' do
+    context "when event already exists" do
       let(:existing_event) do
         create(
           :event,
@@ -70,7 +70,7 @@ RSpec.describe Events::CreateService, type: :service do
 
       before { existing_event }
 
-      it 'returns an error' do
+      it "returns an error" do
         result = 0
 
         aggregate_failures do
@@ -79,15 +79,15 @@ RSpec.describe Events::CreateService, type: :service do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages.keys).to include(:transaction_id)
-          expect(result.error.messages[:transaction_id]).to include('value_already_exist')
+          expect(result.error.messages[:transaction_id]).to include("value_already_exist")
         end
       end
     end
 
-    context 'when timestamp is not present in the payload' do
+    context "when timestamp is not present in the payload" do
       let(:timestamp) { nil }
 
-      it 'creates an event by setting the timestamp to the current datetime' do
+      it "creates an event by setting the timestamp to the current datetime" do
         result = create_service.call
 
         expect(result).to be_success
@@ -95,10 +95,10 @@ RSpec.describe Events::CreateService, type: :service do
       end
     end
 
-    context 'when timestamp is given as string' do
+    context "when timestamp is given as string" do
       let(:timestamp) { Time.current.to_f.to_s }
 
-      it 'creates an event by setting timestamp' do
+      it "creates an event by setting timestamp" do
         result = create_service.call
 
         expect(result).to be_success
@@ -106,37 +106,37 @@ RSpec.describe Events::CreateService, type: :service do
       end
     end
 
-    context 'when timestamp is sent with decimal precision' do
-      let(:timestamp) { DateTime.parse('2023-09-04T15:45:12.344Z').to_f }
+    context "when timestamp is sent with decimal precision" do
+      let(:timestamp) { DateTime.parse("2023-09-04T15:45:12.344Z").to_f }
 
-      it 'creates an event by keeping the millisecond precision' do
+      it "creates an event by keeping the millisecond precision" do
         result = create_service.call
 
         expect(result).to be_success
-        expect(result.event.timestamp.iso8601(3)).to eq('2023-09-04T15:45:12.344Z')
+        expect(result.event.timestamp.iso8601(3)).to eq("2023-09-04T15:45:12.344Z")
       end
     end
 
-    context 'when timestamp is given in a wrong format' do
+    context "when timestamp is given in a wrong format" do
       let(:timestamp) { Time.current.to_s }
 
-      it 'returns an error' do
+      it "returns an error" do
         result = create_service.call
 
         expect(result).not_to be_success
-        expect(result.error.messages).to include({timestamp: ['invalid_format']})
+        expect(result.error.messages).to include({timestamp: ["invalid_format"]})
       end
     end
 
-    context 'when kafka is configured' do
+    context "when kafka is configured" do
       let(:karafka_producer) { instance_double(WaterDrop::Producer) }
 
       before do
-        ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'] = 'kafka'
-        ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'] = 'raw_events'
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"
+        ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] = "raw_events"
       end
 
-      it 'produces the event on kafka' do
+      it "produces the event on kafka" do
         allow(Karafka).to receive(:producer).and_return(karafka_producer)
         allow(karafka_producer).to receive(:produce_async)
 
@@ -155,7 +155,7 @@ RSpec.describe Events::CreateService, type: :service do
           code:,
           transaction_id:,
           precise_total_amount_cents:,
-          properties: {left: '1', right: '2'},
+          properties: {left: "1", right: "2"},
           timestamp:
         }
       end
@@ -191,20 +191,20 @@ RSpec.describe Events::CreateService, type: :service do
       end
     end
 
-    context 'with a precise_total_amount_cents' do
+    context "with a precise_total_amount_cents" do
       let(:precise_total_amount_cents) { "123.45" }
 
-      it 'creates an event with the precise_total_amount_cents' do
+      it "creates an event with the precise_total_amount_cents" do
         result = create_service.call
 
         expect(result).to be_success
         expect(result.event.precise_total_amount_cents).to eq(123.45)
       end
 
-      context 'when precise_total_amount_cents is not a valid decimal value' do
+      context "when precise_total_amount_cents is not a valid decimal value" do
         let(:precise_total_amount_cents) { "asdfa" }
 
-        it 'creates an event' do
+        it "creates an event" do
           result = create_service.call
 
           expect(result).to be_success

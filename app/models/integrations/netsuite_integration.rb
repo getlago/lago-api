@@ -14,11 +14,11 @@ module Integrations
     secrets_accessors :connection_id, :client_secret, :token_secret
 
     def account_id=(value)
-      push_to_settings(key: 'account_id', value: value&.downcase&.strip&.split(' ')&.join('-'))
+      push_to_settings(key: "account_id", value: value&.downcase&.strip&.split(" ")&.join("-"))
     end
 
     def account_id
-      get_from_settings('account_id')
+      get_from_settings("account_id")
     end
   end
 end

@@ -65,7 +65,7 @@ RSpec.describe Resolvers::Analytics::RevenueStreamsResolver, type: :graphql do
       )
 
       revenue_streams_response = result["data"]["revenueStreams"]
-      expect(revenue_streams_response['collection'].first).to include(
+      expect(revenue_streams_response["collection"].first).to include(
         {
           "startOfPeriodDt" => "2024-01-01",
           "endOfPeriodDt" => "2024-01-31"

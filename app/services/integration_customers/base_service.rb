@@ -10,7 +10,7 @@ module IntegrationCustomers
     end
 
     def call
-      result.not_found_failure!(resource: 'integration') unless integration
+      result.not_found_failure!(resource: "integration") unless integration
       result
     end
 

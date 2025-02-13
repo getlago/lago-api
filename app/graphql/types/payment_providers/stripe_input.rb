@@ -3,7 +3,7 @@
 module Types
   module PaymentProviders
     class StripeInput < BaseInputObject
-      description 'Stripe input arguments'
+      description "Stripe input arguments"
 
       argument :code, String, required: true
       argument :name, String, required: true

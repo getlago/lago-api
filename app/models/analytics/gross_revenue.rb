@@ -24,10 +24,10 @@ module Analytics
         end
 
         if args[:currency].present?
-          and_currency_sql = sanitize_sql(['AND cd.currency = :currency', args[:currency].upcase])
-          select_currency_sql = sanitize_sql(['COALESCE(cd.currency, :currency) as currency', args[:currency].upcase])
+          and_currency_sql = sanitize_sql(["AND cd.currency = :currency", args[:currency].upcase])
+          select_currency_sql = sanitize_sql(["COALESCE(cd.currency, :currency) as currency", args[:currency].upcase])
         else
-          select_currency_sql = 'cd.currency'
+          select_currency_sql = "cd.currency"
         end
 
         sql = <<~SQL.squish
@@ -114,13 +114,13 @@ module Analytics
 
       def cache_key(organization_id, **args)
         [
-          'gross-revenue',
-          Date.current.strftime('%Y-%m-%d'),
+          "gross-revenue",
+          Date.current.strftime("%Y-%m-%d"),
           organization_id,
           args[:external_customer_id],
           args[:currency],
           args[:months]
-        ].join('/')
+        ].join("/")
       end
 
       def expire_cache_for_customer(organization_id, external_customer_id)

@@ -3,7 +3,7 @@
 module Types
   module AppliedCoupons
     class Object < Types::BaseObject
-      graphql_name 'AppliedCoupon'
+      graphql_name "AppliedCoupon"
 
       field :coupon, Types::Coupons::Object, null: false
       field :id, ID, null: false

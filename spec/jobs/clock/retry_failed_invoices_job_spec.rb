@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 describe Clock::RetryFailedInvoicesJob, job: true do
   subject { described_class }
 
-  describe '.perform' do
+  describe ".perform" do
     let(:customer) { create(:customer) }
     let(:failed_invoice) do
       create(
         :invoice,
         status: :failed,
-        created_at: DateTime.parse('20 Jun 2022'),
+        created_at: DateTime.parse("20 Jun 2022"),
         customer:,
         organization: customer.organization
       )
@@ -23,7 +23,7 @@ describe Clock::RetryFailedInvoicesJob, job: true do
         organization: customer.organization,
         error_code: :tax_error,
         details: {
-          tax_error: 'validationError',
+          tax_error: "validationError",
           tax_error_message: "You've exceeded your API limit of 10 per second"
         }
       )
@@ -32,7 +32,7 @@ describe Clock::RetryFailedInvoicesJob, job: true do
       create(
         :invoice,
         status: :finalized,
-        created_at: DateTime.parse('20 Jun 2022'),
+        created_at: DateTime.parse("20 Jun 2022"),
         customer:,
         organization: customer.organization
       )
@@ -45,7 +45,7 @@ describe Clock::RetryFailedInvoicesJob, job: true do
       allow(Invoices::RetryService).to receive(:call)
     end
 
-    context 'with invalid product error' do
+    context "with invalid product error" do
       let(:error_detail) do
         create(
           :error_detail,
@@ -53,13 +53,13 @@ describe Clock::RetryFailedInvoicesJob, job: true do
           organization: customer.organization,
           error_code: :tax_error,
           details: {
-            tax_error: 'productExternalIdUnknown'
+            tax_error: "productExternalIdUnknown"
           }
         )
       end
 
-      it 'does not call the retry service' do
-        current_date = DateTime.parse('22 Jun 2022')
+      it "does not call the retry service" do
+        current_date = DateTime.parse("22 Jun 2022")
 
         travel_to(current_date) do
           described_class.perform_now
@@ -70,9 +70,9 @@ describe Clock::RetryFailedInvoicesJob, job: true do
       end
     end
 
-    context 'with api limit error' do
-      it 'calls the retry service' do
-        current_date = DateTime.parse('22 Jun 2022')
+    context "with api limit error" do
+      it "calls the retry service" do
+        current_date = DateTime.parse("22 Jun 2022")
 
         travel_to(current_date) do
           described_class.perform_now

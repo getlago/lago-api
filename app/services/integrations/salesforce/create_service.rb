@@ -15,7 +15,7 @@ module Integrations
         organization = Organization.find_by(id: params[:organization_id])
 
         unless organization.salesforce_enabled?
-          return result.not_allowed_failure!(code: 'premium_integration_missing')
+          return result.not_allowed_failure!(code: "premium_integration_missing")
         end
 
         integration = Integrations::SalesforceIntegration.new(

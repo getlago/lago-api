@@ -1,18 +1,18 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 describe Clockwork do
   after { Clockwork::Test.clear! }
 
-  let(:clock_file) { Rails.root.join('clock.rb') }
+  let(:clock_file) { Rails.root.join("clock.rb") }
 
-  describe 'schedule:bill_customers' do
-    let(:job) { 'schedule:bill_customers' }
-    let(:start_time) { Time.zone.parse('1 Apr 2022 00:01:00') }
-    let(:end_time) { Time.zone.parse('1 Apr 2022 01:01:00') }
+  describe "schedule:bill_customers" do
+    let(:job) { "schedule:bill_customers" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 01:01:00") }
 
-    it 'enqueue a subscription biller job' do
+    it "enqueue a subscription biller job" do
       Clockwork::Test.run(
         file: clock_file,
         start_time:,
@@ -28,12 +28,12 @@ describe Clockwork do
     end
   end
 
-  describe 'schedule:activate_subscriptions' do
-    let(:job) { 'schedule:activate_subscriptions' }
-    let(:start_time) { Time.zone.parse('1 Apr 2022 00:01:00') }
-    let(:end_time) { Time.zone.parse('1 Apr 2022 00:31:00') }
+  describe "schedule:activate_subscriptions" do
+    let(:job) { "schedule:activate_subscriptions" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 00:31:00") }
 
-    it 'enqueue a activate subscriptions job' do
+    it "enqueue a activate subscriptions job" do
       Clockwork::Test.run(
         file: clock_file,
         start_time:,
@@ -49,12 +49,12 @@ describe Clockwork do
     end
   end
 
-  describe 'schedule:post_validate_events' do
-    let(:job) { 'schedule:post_validate_events' }
-    let(:start_time) { Time.zone.parse('1 Apr 2022 01:00:00') }
-    let(:end_time) { Time.zone.parse('1 Apr 2022 03:00:00') }
+  describe "schedule:post_validate_events" do
+    let(:job) { "schedule:post_validate_events" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 01:00:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 03:00:00") }
 
-    it 'enqueue a activate subscriptions job' do
+    it "enqueue a activate subscriptions job" do
       Clockwork::Test.run(
         file: clock_file,
         start_time:,
@@ -70,12 +70,12 @@ describe Clockwork do
     end
   end
 
-  describe 'schedule:refresh_lifetime_usages' do
-    let(:job) { 'schedule:refresh_lifetime_usages' }
-    let(:start_time) { Time.zone.parse('1 Apr 2022 00:01:00') }
-    let(:end_time) { Time.zone.parse('1 Apr 2022 00:31:00') }
+  describe "schedule:refresh_lifetime_usages" do
+    let(:job) { "schedule:refresh_lifetime_usages" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 00:31:00") }
 
-    it 'enqueue a refresh lifetime usages job' do
+    it "enqueue a refresh lifetime usages job" do
       Clockwork::Test.run(
         file: clock_file,
         start_time:,
@@ -93,7 +93,7 @@ describe Clockwork do
     context "with a custom refresh interval configured" do
       before do
         allow(ENV).to receive(:[]).and_call_original
-        allow(ENV).to receive(:[]).with('LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS').and_return('150')
+        allow(ENV).to receive(:[]).with("LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS").and_return("150")
       end
 
       it 'uses the ENV["LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS"] to set a custom period' do
@@ -110,17 +110,17 @@ describe Clockwork do
         Clockwork::Test.block_for(job).call
         expect(Clock::RefreshLifetimeUsagesJob).to have_been_enqueued
 
-        expect(ENV).to have_received(:[]).with('LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS')
+        expect(ENV).to have_received(:[]).with("LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS")
       end
     end
   end
 
-  describe 'schedule:retry_generating_subscription_invoices' do
-    let(:job) { 'schedule:retry_generating_subscription_invoices' }
-    let(:start_time) { Time.zone.parse('1 Apr 2022 00:01:00') }
-    let(:end_time) { Time.zone.parse('1 Apr 2022 01:01:00') }
+  describe "schedule:retry_generating_subscription_invoices" do
+    let(:job) { "schedule:retry_generating_subscription_invoices" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 01:01:00") }
 
-    it 'enqueues a Clock::RetryGeneratingSubscriptionInvoiceJob' do
+    it "enqueues a Clock::RetryGeneratingSubscriptionInvoiceJob" do
       Clockwork::Test.run(
         file: clock_file,
         start_time:,
@@ -136,12 +136,12 @@ describe Clockwork do
     end
   end
 
-  describe 'schedule:compute_daily_usage' do
-    let(:job) { 'schedule:compute_daily_usage' }
-    let(:start_time) { Time.zone.parse('1 Apr 2022 00:01:00') }
-    let(:end_time) { Time.zone.parse('1 Apr 2022 01:01:00') }
+  describe "schedule:compute_daily_usage" do
+    let(:job) { "schedule:compute_daily_usage" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 01:01:00") }
 
-    it 'enqueue a activate subscriptions job' do
+    it "enqueue a activate subscriptions job" do
       Clockwork::Test.run(
         file: clock_file,
         start_time:,

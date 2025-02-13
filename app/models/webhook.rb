@@ -38,9 +38,9 @@ class Webhook < ApplicationRecord
     end
 
     {
-      'X-Lago-Signature' => signature,
-      'X-Lago-Signature-Algorithm' => webhook_endpoint.signature_algo.to_s,
-      'X-Lago-Unique-Key' => id
+      "X-Lago-Signature" => signature,
+      "X-Lago-Signature-Algorithm" => webhook_endpoint.signature_algo.to_s,
+      "X-Lago-Unique-Key" => id
     }
   end
 
@@ -51,17 +51,17 @@ class Webhook < ApplicationRecord
         iss: issuer
       },
       RsaPrivateKey,
-      'RS256'
+      "RS256"
     )
   end
 
   def hmac_signature
-    hmac = OpenSSL::HMAC.digest('sha-256', organization.hmac_key, payload.to_json)
+    hmac = OpenSSL::HMAC.digest("sha-256", organization.hmac_key, payload.to_json)
     Base64.strict_encode64(hmac)
   end
 
   def issuer
-    ENV['LAGO_API_URL']
+    ENV["LAGO_API_URL"]
   end
 end
 

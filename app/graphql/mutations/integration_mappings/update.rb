@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'organization:integrations:update'
+      REQUIRED_PERMISSION = "organization:integrations:update"
 
-      graphql_name 'UpdateIntegrationMapping'
-      description 'Update integration mapping'
+      graphql_name "UpdateIntegrationMapping"
+      description "Update integration mapping"
 
       input_object_class Types::IntegrationMappings::UpdateInput
 

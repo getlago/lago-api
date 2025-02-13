@@ -93,7 +93,7 @@ module BillableMetrics
       end
 
       def per_event_aggregation
-        period_aggregation = event_store.prorated_unique_count_breakdown.map { |row| row['prorated_value'].ceil(5) }
+        period_aggregation = event_store.prorated_unique_count_breakdown.map { |row| row["prorated_value"].ceil(5) }
 
         Result.new.tap do |result|
           result.event_aggregation = Array.new(period_aggregation.count) { 1 }

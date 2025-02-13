@@ -7,7 +7,7 @@ module Resolvers
 
     MAX_LIMIT = 1000
 
-    description 'Query events of an organization'
+    description "Query events of an organization"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false

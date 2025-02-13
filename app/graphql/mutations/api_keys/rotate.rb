@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'developers:keys:manage'
+      REQUIRED_PERMISSION = "developers:keys:manage"
 
-      graphql_name 'RotateApiKey'
-      description 'Create new ApiKey while expiring provided'
+      graphql_name "RotateApiKey"
+      description "Create new ApiKey while expiring provided"
 
       input_object_class Types::ApiKeys::RotateInput
 

@@ -43,7 +43,7 @@ class FeesQuery < BaseQuery
 
   def with_fee_type(scope)
     unless Fee::FEE_TYPES.include?(filters.fee_type.to_sym)
-      result.single_validation_failure!(field: :fee_type, error_code: 'value_is_invalid')
+      result.single_validation_failure!(field: :fee_type, error_code: "value_is_invalid")
         .raise_if_error!
     end
 
@@ -52,7 +52,7 @@ class FeesQuery < BaseQuery
 
   def with_payment_status(scope)
     unless Fee::PAYMENT_STATUS.include?(filters.payment_status.to_sym)
-      result.single_validation_failure!(field: :payment_status, error_code: 'value_is_invalid')
+      result.single_validation_failure!(field: :payment_status, error_code: "value_is_invalid")
         .raise_if_error!
     end
 

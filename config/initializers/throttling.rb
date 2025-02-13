@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'sidekiq/throttled'
-require 'sidekiq/throttled/web'
+require "sidekiq/throttled"
+require "sidekiq/throttled/web"
 
 ##
 # Configuration of 'sidekiq-throttled' gem

@@ -6,9 +6,9 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'developers:keys:manage'
+      REQUIRED_PERMISSION = "developers:keys:manage"
 
-      graphql_name 'UpdateApiKey'
+      graphql_name "UpdateApiKey"
 
       input_object_class Types::ApiKeys::UpdateInput
 

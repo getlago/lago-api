@@ -2,7 +2,7 @@
 
 class Commitment
   class AppliedTax < ApplicationRecord
-    self.table_name = 'commitments_taxes'
+    self.table_name = "commitments_taxes"
 
     belongs_to :commitment
     belongs_to :tax

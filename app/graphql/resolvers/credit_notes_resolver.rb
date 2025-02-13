@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'credit_notes:view'
+    REQUIRED_PERMISSION = "credit_notes:view"
 
-    description 'Query credit notes'
+    description "Query credit notes"
 
     argument :search_term, String, required: false
 
@@ -19,7 +19,7 @@ module Resolvers
     argument :credit_status, [Types::CreditNotes::CreditStatusTypeEnum], required: false
     argument :currency, Types::CurrencyEnum, required: false
     argument :customer_external_id, String, required: false
-    argument :customer_id, ID, required: false, description: 'Uniq ID of the customer'
+    argument :customer_id, ID, required: false, description: "Uniq ID of the customer"
     argument :invoice_number, String, required: false
     argument :issuing_date_from, GraphQL::Types::ISO8601Date, required: false
     argument :issuing_date_to, GraphQL::Types::ISO8601Date, required: false

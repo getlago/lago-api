@@ -10,7 +10,7 @@ module Charges
     end
 
     def call
-      return result.not_found_failure!(resource: 'plan') unless plan
+      return result.not_found_failure!(resource: "plan") unless plan
 
       ActiveRecord::Base.transaction do
         charge = plan.charges.new(

@@ -9,7 +9,7 @@ module PaymentProviders
     end
 
     def call
-      return result.not_found_failure!(resource: 'payment_provider') unless payment_provider
+      return result.not_found_failure!(resource: "payment_provider") unless payment_provider
 
       customer_ids = payment_provider.customer_ids
 

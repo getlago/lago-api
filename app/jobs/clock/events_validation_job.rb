@@ -5,7 +5,7 @@ module Clock
     include SentryCronConcern
 
     queue_as do
-      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_CLOCK'])
+      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_CLOCK"])
         :clock_worker
       else
         :clock
@@ -23,7 +23,7 @@ module Clock
       )
 
       organizations = Organization.where(
-        id: Events::LastHourMv.pluck('DISTINCT(organization_id)')
+        id: Events::LastHourMv.pluck("DISTINCT(organization_id)")
       )
 
       organizations.find_each do |organization|

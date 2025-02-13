@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Hubspot::Contacts::DeployPropertiesJob, type: :job do
-  describe '#perform' do
+  describe "#perform" do
     subject(:deploy_properties_job) { described_class }
 
     let(:deploy_contact_service) { instance_double(Integrations::Hubspot::Contacts::DeployPropertiesService) }
@@ -15,7 +15,7 @@ RSpec.describe Integrations::Hubspot::Contacts::DeployPropertiesJob, type: :job 
       allow(deploy_contact_service).to receive(:call).and_return(result)
     end
 
-    it 'calls the DeployPropertiesService to sync contacts custom properties' do
+    it "calls the DeployPropertiesService to sync contacts custom properties" do
       deploy_properties_job.perform_now(integration:)
 
       expect(Integrations::Hubspot::Contacts::DeployPropertiesService).to have_received(:new)

@@ -6,11 +6,11 @@ module Webhooks
       private
 
       def webhook_type
-        'customer.crm_provider_error'
+        "customer.crm_provider_error"
       end
 
       def object_type
-        'crm_provider_customer_error'
+        "crm_provider_customer_error"
       end
     end
   end

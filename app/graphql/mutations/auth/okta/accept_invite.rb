@@ -4,8 +4,8 @@ module Mutations
   module Auth
     module Okta
       class AcceptInvite < BaseMutation
-        graphql_name 'OktaAcceptInvite'
-        description 'Accepts a membership invite with Okta Oauth'
+        graphql_name "OktaAcceptInvite"
+        description "Accepts a membership invite with Okta Oauth"
 
         input_object_class Types::Auth::Okta::AcceptInviteInput
 

@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding, type: :graphql do
-  let(:required_permission) { 'invoices:update' }
+  let(:required_permission) { "invoices:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, payment_provider: 'gocardless') }
+  let(:customer) { create(:customer, organization:, payment_provider: "gocardless") }
   let(:user) { membership.user }
 
   let(:invoice) do
@@ -17,7 +17,7 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding, type: :graphql do
       organization:,
       customer:,
       subscriptions: [subscription],
-      currency: 'EUR'
+      currency: "EUR"
     )
   end
   let(:subscription) do
@@ -32,7 +32,7 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding, type: :graphql do
 
   let(:timestamp) { Time.zone.now - 1.year }
   let(:started_at) { Time.zone.now - 2.years }
-  let(:plan) { create(:plan, organization:, interval: 'monthly') }
+  let(:plan) { create(:plan, organization:, interval: "monthly") }
   let(:fee_subscription) do
     create(
       :fee,
@@ -47,9 +47,9 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding, type: :graphql do
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
   let(:response) { instance_double(Net::HTTPOK) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { 'https://api.nango.dev/v1/anrok/void_invoices' }
+  let(:endpoint) { "https://api.nango.dev/v1/anrok/void_invoices" }
   let(:body) do
-    path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json')
+    path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json")
     File.read(path)
   end
   let(:integration_collection_mapping) do
@@ -57,7 +57,7 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding, type: :graphql do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :fallback_item,
-      settings: {external_id: '1', external_account_code: '11', external_name: ''}
+      settings: {external_id: "1", external_account_code: "11", external_name: ""}
     )
   end
   let(:mutation) do
@@ -82,12 +82,12 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding, type: :graphql do
     allow(response).to receive(:body).and_return(body)
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'invoices:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "invoices:update"
 
-  context 'with valid preconditions' do
-    it 'returns the invoice after successful retry' do
+  context "with valid preconditions" do
+    it "returns the invoice after successful retry" do
       result = execute_graphql(
         current_organization: organization,
         current_user: user,
@@ -98,10 +98,10 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding, type: :graphql do
         }
       )
 
-      data = result['data']['retryTaxProviderVoiding']
+      data = result["data"]["retryTaxProviderVoiding"]
 
-      expect(data['id']).to eq(invoice.id)
-      expect(data['status']).to eq('voided')
+      expect(data["id"]).to eq(invoice.id)
+      expect(data["status"]).to eq("voided")
     end
   end
 end

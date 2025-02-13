@@ -5,15 +5,15 @@ class AddFiltersMissingIndexes < ActiveRecord::Migration[7.0]
 
   def change
     safety_assured do
-      add_index :charge_filters, :charge_id, where: 'deleted_at IS NULL', name: 'index_active_charge_filters'
+      add_index :charge_filters, :charge_id, where: "deleted_at IS NULL", name: "index_active_charge_filters"
       add_index :charge_filter_values,
         :charge_filter_id,
-        where: 'deleted_at IS NULL',
-        name: 'index_active_charge_filter_values'
+        where: "deleted_at IS NULL",
+        name: "index_active_charge_filter_values"
       add_index :billable_metric_filters,
         :billable_metric_id,
-        where: 'deleted_at IS NULL',
-        name: 'index_active_metric_filters'
+        where: "deleted_at IS NULL",
+        name: "index_active_metric_filters"
     end
   end
 end

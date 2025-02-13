@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :clickhouse_events_enriched, class: 'Clickhouse::EventsEnriched' do
+  factory :clickhouse_events_enriched, class: "Clickhouse::EventsEnriched" do
     transient do
       subscription { create(:subscription, customer:) }
       customer { create(:customer) }

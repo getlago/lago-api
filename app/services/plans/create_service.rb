@@ -26,7 +26,7 @@ module Plans
       if args[:charges].present?
         metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
         if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.not_found_failure!(resource: 'billable_metrics')
+          return result.not_found_failure!(resource: "billable_metrics")
         end
       end
 
@@ -147,7 +147,7 @@ module Plans
 
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'plan_created',
+        event: "plan_created",
         properties: {
           code: plan.code,
           name: plan.name,
@@ -155,13 +155,13 @@ module Plans
           description: plan.description,
           plan_interval: plan.interval,
           plan_amount_cents: plan.amount_cents,
-          plan_period: plan.pay_in_advance ? 'advance' : 'arrears',
+          plan_period: plan.pay_in_advance ? "advance" : "arrears",
           trial: plan.trial_period,
           nb_charges: plan.charges.count,
-          nb_standard_charges: count_by_charge_model['standard'] || 0,
-          nb_percentage_charges: count_by_charge_model['percentage'] || 0,
-          nb_graduated_charges: count_by_charge_model['graduated'] || 0,
-          nb_package_charges: count_by_charge_model['package'] || 0,
+          nb_standard_charges: count_by_charge_model["standard"] || 0,
+          nb_percentage_charges: count_by_charge_model["percentage"] || 0,
+          nb_graduated_charges: count_by_charge_model["graduated"] || 0,
+          nb_package_charges: count_by_charge_model["package"] || 0,
           organization_id: plan.organization_id,
           parent_id: plan.parent_id
         }

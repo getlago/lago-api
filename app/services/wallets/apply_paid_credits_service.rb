@@ -9,7 +9,7 @@ module Wallets
 
     def call
       return result unless wallet_transaction
-      return result if wallet_transaction.status == 'settled'
+      return result if wallet_transaction.status == "settled"
 
       ActiveRecord::Base.transaction do
         WalletTransactions::SettleService.new(wallet_transaction:).call

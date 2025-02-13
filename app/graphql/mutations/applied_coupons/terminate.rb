@@ -5,10 +5,10 @@ module Mutations
     class Terminate < BaseMutation
       include AuthenticableApiUser
 
-      REQUIRED_PERMISSION = 'coupons:detach'
+      REQUIRED_PERMISSION = "coupons:detach"
 
-      graphql_name 'TerminateAppliedCoupon'
-      description 'Unassign a coupon from a customer'
+      graphql_name "TerminateAppliedCoupon"
+      description "Unassign a coupon from a customer"
 
       argument :id, ID, required: true
 

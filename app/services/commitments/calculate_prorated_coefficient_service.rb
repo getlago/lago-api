@@ -31,11 +31,11 @@ module Commitments
       all_invoice_subscriptions = subscription
         .invoice_subscriptions
         .where(invoice_id: invoices_result.invoices.ids)
-        .where('from_datetime >= ?', dates_service.previous_beginning_of_period)
+        .where("from_datetime >= ?", dates_service.previous_beginning_of_period)
         .order(
           Arel.sql(
             ActiveRecord::Base.sanitize_sql_for_conditions(
-              'COALESCE(invoice_subscriptions.to_datetime, invoice_subscriptions.timestamp) ASC'
+              "COALESCE(invoice_subscriptions.to_datetime, invoice_subscriptions.timestamp) ASC"
             )
           )
         )

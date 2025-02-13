@@ -3,7 +3,7 @@
 module Types
   module UsageThresholds
     class Object < Types::BaseObject
-      graphql_name 'UsageThreshold'
+      graphql_name "UsageThreshold"
 
       field :id, ID, null: false
 

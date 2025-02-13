@@ -59,15 +59,15 @@ class Coupon < ApplicationRecord
       order(
         Arel.sql(
           [
-            'coupons.status ASC',
-            'coupons.expiration ASC',
-            'coupons.expiration_at ASC'
-          ].join(', ')
+            "coupons.status ASC",
+            "coupons.expiration ASC",
+            "coupons.expiration_at ASC"
+          ].join(", ")
         )
       )
     }
 
-  scope :expired, -> { where('coupons.expiration_at::timestamp(0) < ?', Time.current) }
+  scope :expired, -> { where("coupons.expiration_at::timestamp(0) < ?", Time.current) }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

@@ -51,20 +51,20 @@ class PastUsageQuery < BaseQuery
     if filters.external_customer_id.blank?
       return result.single_validation_failure!(
         field: :external_customer_id,
-        error_code: 'value_is_mandatory'
+        error_code: "value_is_mandatory"
       )
     end
 
     if filters.external_subscription_id.blank?
       return result.single_validation_failure!(
         field: :external_subscription_id,
-        error_code: 'value_is_mandatory'
+        error_code: "value_is_mandatory"
       )
     end
 
     return if filters.billable_metric_code.blank?
 
-    result.not_found_failure!(resource: 'billable_metric') if billable_metric.blank?
+    result.not_found_failure!(resource: "billable_metric") if billable_metric.blank?
   end
 
   def billable_metric

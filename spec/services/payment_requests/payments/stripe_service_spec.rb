@@ -387,8 +387,8 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
               payment_provider_customer_id: stripe_customer.id,
               amount_cents: payment_request.total_amount_cents,
               amount_currency: payment_request.currency,
-              provider_payment_id: 'ch_123456',
-              status: 'succeeded'
+              provider_payment_id: "ch_123456",
+              status: "succeeded"
             )
           end
         end

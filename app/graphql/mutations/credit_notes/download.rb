@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'credit_notes:view'
+      REQUIRED_PERMISSION = "credit_notes:view"
 
-      graphql_name 'DownloadCreditNote'
-      description 'Download a Credit Note PDF'
+      graphql_name "DownloadCreditNote"
+      description "Download a Credit Note PDF"
 
       argument :id, ID, required: true
 

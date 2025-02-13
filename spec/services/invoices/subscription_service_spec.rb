@@ -343,7 +343,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     end
 
     context "when creating invoice for partner" do
-      let(:customer) { create(:customer, :with_salesforce_integration, :with_hubspot_integration, organization:, account_type: 'partner') }
+      let(:customer) { create(:customer, :with_salesforce_integration, :with_hubspot_integration, organization:, account_type: "partner") }
       let(:salesforce_service) { instance_double(Integrations::Aggregator::Invoices::CreateService) }
       let(:hubspot_service) { instance_double(Integrations::Aggregator::Invoices::Hubspot::CreateService) }
       let(:result) { BaseService::Result.new }

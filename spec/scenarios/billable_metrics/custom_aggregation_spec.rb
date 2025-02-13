@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :request, transaction: false do
+RSpec.describe "Aggregation - Custom Aggregation Scenarios", :scenarios, type: :request, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 
@@ -61,7 +61,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
 
   let(:pay_in_advance) { false }
 
-  context 'with first aggregation scenario' do
+  context "with first aggregation scenario" do
     let(:standard_charge) do
       create(
         :standard_charge,
@@ -69,13 +69,13 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         plan:,
         pay_in_advance:,
         properties: {
-          amount: '2',
+          amount: "2",
           custom_properties: {
             ranges: [
-              {from: 0, to: 1_000, third_party: '0.15', first_party: '0.12'},
-              {from: 1_001, to: 20_000, third_party: '0.12', first_party: '0.10'},
-              {from: 20_001, to: 50_000, third_party: '0.10', first_party: '0.08'},
-              {from: 50_001, to: nil, third_party: '0.08', first_party: '0.06'}
+              {from: 0, to: 1_000, third_party: "0.15", first_party: "0.12"},
+              {from: 1_001, to: 20_000, third_party: "0.12", first_party: "0.10"},
+              {from: 20_001, to: 50_000, third_party: "0.10", first_party: "0.08"},
+              {from: 50_001, to: nil, third_party: "0.08", first_party: "0.06"}
             ]
           }
         }
@@ -91,10 +91,10 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         properties: {
           custom_properties: {
             ranges: [
-              {from: 0, to: 1_000, third_party: '0.15', first_party: '0.12'},
-              {from: 1_001, to: 20_000, third_party: '0.12', first_party: '0.10'},
-              {from: 20_001, to: 50_000, third_party: '0.10', first_party: '0.08'},
-              {from: 50_001, to: nil, third_party: '0.08', first_party: '0.06'}
+              {from: 0, to: 1_000, third_party: "0.15", first_party: "0.12"},
+              {from: 1_001, to: 20_000, third_party: "0.12", first_party: "0.10"},
+              {from: 20_001, to: 50_000, third_party: "0.10", first_party: "0.08"},
+              {from: 50_001, to: nil, third_party: "0.08", first_party: "0.06"}
             ]
           }
         }
@@ -106,8 +106,8 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       custom_charge
     end
 
-    context 'when in arrears aggregation' do
-      it 'create fees for each charges' do
+    context "when in arrears aggregation" do
+      it "create fees for each charges" do
         travel_to(DateTime.new(2024, 2, 1)) do
           create_subscription(
             {
@@ -129,7 +129,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1,
-                certif: 'first_party'
+                certif: "first_party"
               }
             }
           )
@@ -139,15 +139,15 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           expect(json[:customer_usage][:charges_usage].count).to eq(2)
 
           standard_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'standard'
+            cu[:charge][:charge_model] == "standard"
           end
-          expect(standard_usage[:units]).to eq('1.0')
+          expect(standard_usage[:units]).to eq("1.0")
           expect(standard_usage[:amount_cents]).to eq(200)
 
           custom_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'custom'
+            cu[:charge][:charge_model] == "custom"
           end
-          expect(custom_usage[:units]).to eq('1.0')
+          expect(custom_usage[:units]).to eq("1.0")
           expect(custom_usage[:amount_cents]).to eq(12)
         end
 
@@ -160,7 +160,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 999,
-                certif: 'first_party'
+                certif: "first_party"
               }
             }
           )
@@ -170,15 +170,15 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           expect(json[:customer_usage][:charges_usage].count).to eq(2)
 
           standard_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'standard'
+            cu[:charge][:charge_model] == "standard"
           end
-          expect(standard_usage[:units]).to eq('1000.0')
+          expect(standard_usage[:units]).to eq("1000.0")
           expect(standard_usage[:amount_cents]).to eq(200_000)
 
           custom_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'custom'
+            cu[:charge][:charge_model] == "custom"
           end
-          expect(custom_usage[:units]).to eq('1000.0')
+          expect(custom_usage[:units]).to eq("1000.0")
           expect(custom_usage[:amount_cents]).to eq(12_000)
         end
 
@@ -191,7 +191,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1,
-                certif: 'third_party'
+                certif: "third_party"
               }
             }
           )
@@ -201,15 +201,15 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           expect(json[:customer_usage][:charges_usage].count).to eq(2)
 
           standard_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'standard'
+            cu[:charge][:charge_model] == "standard"
           end
-          expect(standard_usage[:units]).to eq('1001.0')
+          expect(standard_usage[:units]).to eq("1001.0")
           expect(standard_usage[:amount_cents]).to eq(200_200)
 
           custom_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'custom'
+            cu[:charge][:charge_model] == "custom"
           end
-          expect(custom_usage[:units]).to eq('1001.0')
+          expect(custom_usage[:units]).to eq("1001.0")
           expect(custom_usage[:amount_cents]).to eq(12_012)
         end
 
@@ -222,7 +222,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1,
-                certif: 'first_party'
+                certif: "first_party"
               }
             }
           )
@@ -232,15 +232,15 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           expect(json[:customer_usage][:charges_usage].count).to eq(2)
 
           standard_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'standard'
+            cu[:charge][:charge_model] == "standard"
           end
-          expect(standard_usage[:units]).to eq('1002.0')
+          expect(standard_usage[:units]).to eq("1002.0")
           expect(standard_usage[:amount_cents]).to eq(200_400)
 
           custom_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'custom'
+            cu[:charge][:charge_model] == "custom"
           end
-          expect(custom_usage[:units]).to eq('1002.0')
+          expect(custom_usage[:units]).to eq("1002.0")
           expect(custom_usage[:amount_cents]).to eq(12_022)
         end
 
@@ -253,7 +253,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 18998,
-                certif: 'first_party'
+                certif: "first_party"
               }
             }
           )
@@ -263,15 +263,15 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           expect(json[:customer_usage][:charges_usage].count).to eq(2)
 
           standard_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'standard'
+            cu[:charge][:charge_model] == "standard"
           end
-          expect(standard_usage[:units]).to eq('20000.0')
+          expect(standard_usage[:units]).to eq("20000.0")
           expect(standard_usage[:amount_cents]).to eq(4_000_000)
 
           custom_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'custom'
+            cu[:charge][:charge_model] == "custom"
           end
-          expect(custom_usage[:units]).to eq('20000.0')
+          expect(custom_usage[:units]).to eq("20000.0")
           expect(custom_usage[:amount_cents]).to eq(202_002)
         end
 
@@ -284,7 +284,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1,
-                certif: 'first_party'
+                certif: "first_party"
               }
             }
           )
@@ -294,15 +294,15 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           expect(json[:customer_usage][:charges_usage].count).to eq(2)
 
           standard_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'standard'
+            cu[:charge][:charge_model] == "standard"
           end
-          expect(standard_usage[:units]).to eq('20001.0')
+          expect(standard_usage[:units]).to eq("20001.0")
           expect(standard_usage[:amount_cents]).to eq(4_000_200)
 
           custom_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'custom'
+            cu[:charge][:charge_model] == "custom"
           end
-          expect(custom_usage[:units]).to eq('20001.0')
+          expect(custom_usage[:units]).to eq("20001.0")
           expect(custom_usage[:amount_cents]).to eq(202_010)
         end
 
@@ -315,7 +315,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 30_002,
-                certif: 'first_party'
+                certif: "first_party"
               }
             }
           )
@@ -325,23 +325,23 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           expect(json[:customer_usage][:charges_usage].count).to eq(2)
 
           standard_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'standard'
+            cu[:charge][:charge_model] == "standard"
           end
-          expect(standard_usage[:units]).to eq('50003.0')
+          expect(standard_usage[:units]).to eq("50003.0")
           expect(standard_usage[:amount_cents]).to eq(10_000_600)
 
           custom_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'custom'
+            cu[:charge][:charge_model] == "custom"
           end
-          expect(custom_usage[:units]).to eq('50003.0')
+          expect(custom_usage[:units]).to eq("50003.0")
           expect(custom_usage[:amount_cents]).to eq(442_020)
         end
       end
 
-      context 'when recurring aggregation' do
+      context "when recurring aggregation" do
         let(:billable_metric) { create(:custom_billable_metric, organization:, custom_aggregator:, recurring: true) }
 
-        it 'create fees for each charges' do
+        it "create fees for each charges" do
           travel_to(DateTime.new(2024, 2, 1)) do
             create_subscription(
               {
@@ -363,7 +363,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 external_subscription_id: subscription.external_id,
                 properties: {
                   value: 1,
-                  certif: 'first_party'
+                  certif: "first_party"
                 }
               }
             )
@@ -373,15 +373,15 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             expect(json[:customer_usage][:charges_usage].count).to eq(2)
 
             standard_usage = json[:customer_usage][:charges_usage].find do |cu|
-              cu[:charge][:charge_model] == 'standard'
+              cu[:charge][:charge_model] == "standard"
             end
-            expect(standard_usage[:units]).to eq('1.0')
+            expect(standard_usage[:units]).to eq("1.0")
             expect(standard_usage[:amount_cents]).to eq(200)
 
             custom_usage = json[:customer_usage][:charges_usage].find do |cu|
-              cu[:charge][:charge_model] == 'custom'
+              cu[:charge][:charge_model] == "custom"
             end
-            expect(custom_usage[:units]).to eq('1.0')
+            expect(custom_usage[:units]).to eq("1.0")
             expect(custom_usage[:amount_cents]).to eq(12)
           end
 
@@ -394,7 +394,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 external_subscription_id: subscription.external_id,
                 properties: {
                   value: 10,
-                  certif: 'first_party'
+                  certif: "first_party"
                 }
               }
             )
@@ -404,15 +404,15 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             expect(json[:customer_usage][:charges_usage].count).to eq(2)
 
             standard_usage = json[:customer_usage][:charges_usage].find do |cu|
-              cu[:charge][:charge_model] == 'standard'
+              cu[:charge][:charge_model] == "standard"
             end
-            expect(standard_usage[:units]).to eq('11.0')
+            expect(standard_usage[:units]).to eq("11.0")
             expect(standard_usage[:amount_cents]).to eq(2_200)
 
             custom_usage = json[:customer_usage][:charges_usage].find do |cu|
-              cu[:charge][:charge_model] == 'custom'
+              cu[:charge][:charge_model] == "custom"
             end
-            expect(custom_usage[:units]).to eq('11.0')
+            expect(custom_usage[:units]).to eq("11.0")
             expect(custom_usage[:amount_cents]).to eq(132)
           end
 
@@ -437,7 +437,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
                 external_subscription_id: subscription.external_id,
                 properties: {
                   value: 1000,
-                  certif: 'first_party'
+                  certif: "first_party"
                 }
               }
             )
@@ -448,25 +448,25 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             expect(json[:customer_usage][:charges_usage].count).to eq(2)
 
             standard_usage = json[:customer_usage][:charges_usage].find do |cu|
-              cu[:charge][:charge_model] == 'standard'
+              cu[:charge][:charge_model] == "standard"
             end
-            expect(standard_usage[:units]).to eq('1011.0')
+            expect(standard_usage[:units]).to eq("1011.0")
             expect(standard_usage[:amount_cents]).to eq(202_200)
 
             custom_usage = json[:customer_usage][:charges_usage].find do |cu|
-              cu[:charge][:charge_model] == 'custom'
+              cu[:charge][:charge_model] == "custom"
             end
-            expect(custom_usage[:units]).to eq('1011.0')
+            expect(custom_usage[:units]).to eq("1011.0")
             expect(custom_usage[:amount_cents]).to eq(12_110) # 1000 * 0.12 + 11 * 0.12
           end
         end
       end
     end
 
-    context 'when in advance aggregation' do
+    context "when in advance aggregation" do
       let(:pay_in_advance) { true }
 
-      it 'creates a fee per events' do
+      it "creates a fee per events" do
         travel_to(DateTime.new(2024, 2, 1)) do
           create_subscription(
             {
@@ -488,7 +488,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1,
-                certif: 'first_party'
+                certif: "first_party"
               }
             }
           )
@@ -518,7 +518,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 10,
-                certif: 'first_party'
+                certif: "first_party"
               }
             }
           )
@@ -546,7 +546,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
               external_subscription_id: subscription.external_id,
               properties: {
                 value: 1000,
-                certif: 'third_party'
+                certif: "third_party"
               }
             }
           )
@@ -571,22 +571,22 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           expect(json[:customer_usage][:charges_usage].count).to eq(2)
 
           standard_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'standard'
+            cu[:charge][:charge_model] == "standard"
           end
-          expect(standard_usage[:units]).to eq('1011.0')
+          expect(standard_usage[:units]).to eq("1011.0")
           expect(standard_usage[:amount_cents]).to eq(202_200)
 
           custom_usage = json[:customer_usage][:charges_usage].find do |cu|
-            cu[:charge][:charge_model] == 'custom'
+            cu[:charge][:charge_model] == "custom"
           end
-          expect(custom_usage[:units]).to eq('1011.0')
+          expect(custom_usage[:units]).to eq("1011.0")
           expect(custom_usage[:amount_cents]).to eq(15_099) # 11 * 0.12 + 989 * 0.15 + 11 * 0.12
         end
       end
     end
   end
 
-  context 'with second aggregation scenario' do
+  context "with second aggregation scenario" do
     let(:pay_in_advance) { true }
 
     let(:custom_aggregator) do
@@ -636,15 +636,15 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
     end
 
     let(:billable_metric_currency_filter) do
-      create(:billable_metric_filter, billable_metric:, key: 'currency', values: %w[gbp eur chf])
+      create(:billable_metric_filter, billable_metric:, key: "currency", values: %w[gbp eur chf])
     end
 
     let(:billable_metric_direction_filter) do
-      create(:billable_metric_filter, billable_metric:, key: 'direction', values: %w[inbound outbound])
+      create(:billable_metric_filter, billable_metric:, key: "direction", values: %w[inbound outbound])
     end
 
     let(:billable_metric_scheme_filter) do
-      create(:billable_metric_filter, billable_metric:, key: 'scheme', values: %w[sepa swift bacs sic fps])
+      create(:billable_metric_filter, billable_metric:, key: "scheme", values: %w[sepa swift bacs sic fps])
     end
 
     let(:charge) do
@@ -661,7 +661,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: {custom_properties: {amount: '1'}}
+        properties: {custom_properties: {amount: "1"}}
       )
     end
 
@@ -669,7 +669,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: {custom_properties: {amount: '15'}}
+        properties: {custom_properties: {amount: "15"}}
       )
     end
 
@@ -677,7 +677,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: {custom_properties: {amount: '25'}}
+        properties: {custom_properties: {amount: "25"}}
       )
     end
 
@@ -688,10 +688,10 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         properties: {
           custom_properties: {
             ranges: [
-              {from: 0, to: 10_000, rate: '0.4'},
-              {from: 10_001, to: 15_000, rate: '0.3'},
-              {from: 15_001, to: 22_000, rate: '0.25'},
-              {from: 22_001, to: nil, rate: '0.2'}
+              {from: 0, to: 10_000, rate: "0.4"},
+              {from: 10_001, to: 15_000, rate: "0.3"},
+              {from: 15_001, to: 22_000, rate: "0.25"},
+              {from: 22_001, to: nil, rate: "0.2"}
             ],
             fx_rate: 0.88
           }
@@ -703,7 +703,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: {custom_properties: {amount: '25'}}
+        properties: {custom_properties: {amount: "25"}}
       )
     end
 
@@ -711,7 +711,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
       create(
         :charge_filter,
         charge:,
-        properties: {custom_properties: {rate: '0.2', min_amount: '25'}}
+        properties: {custom_properties: {rate: "0.2", min_amount: "25"}}
       )
     end
 
@@ -722,10 +722,10 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         properties: {
           custom_properties: {
             ranges: [
-              {from: 0, to: 10_000, amount: '0.6'},
-              {from: 10_001, to: 15_000, amount: '0.5'},
-              {from: 15_001, to: 22_000, amount: '0.45'},
-              {from: 22_001, to: nil, amount: '0.4'}
+              {from: 0, to: 10_000, amount: "0.6"},
+              {from: 10_001, to: 15_000, amount: "0.5"},
+              {from: 15_001, to: 22_000, amount: "0.45"},
+              {from: 22_001, to: nil, amount: "0.4"}
             ]
           }
         }
@@ -737,7 +737,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter,
         charge:,
         properties: {
-          custom_properties: {amount: '25'}
+          custom_properties: {amount: "25"}
         }
       )
     end
@@ -748,13 +748,13 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: eur_sepa_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['eur']
+        values: ["eur"]
       )
       create(
         :charge_filter_value,
         charge_filter: eur_sepa_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['sepa']
+        values: ["sepa"]
       )
 
       # EUR SWIFT inbound
@@ -762,19 +762,19 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: eur_swift_inbound_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['eur']
+        values: ["eur"]
       )
       create(
         :charge_filter_value,
         charge_filter: eur_swift_inbound_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['swift']
+        values: ["swift"]
       )
       create(
         :charge_filter_value,
         charge_filter: eur_swift_inbound_filter,
         billable_metric_filter: billable_metric_direction_filter,
-        values: ['inbound']
+        values: ["inbound"]
       )
 
       # EUR SWIFT outbound
@@ -782,19 +782,19 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: eur_swift_outbound_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['eur']
+        values: ["eur"]
       )
       create(
         :charge_filter_value,
         charge_filter: eur_swift_outbound_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['swift']
+        values: ["swift"]
       )
       create(
         :charge_filter_value,
         charge_filter: eur_swift_outbound_filter,
         billable_metric_filter: billable_metric_direction_filter,
-        values: ['outbound']
+        values: ["outbound"]
       )
 
       # CHF
@@ -802,7 +802,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: chf_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['chf']
+        values: ["chf"]
       )
 
       # GBP Swift inbound
@@ -810,19 +810,19 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: gbp_swift_inbound_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['gbp']
+        values: ["gbp"]
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_swift_inbound_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['swift']
+        values: ["swift"]
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_swift_inbound_filter,
         billable_metric_filter: billable_metric_direction_filter,
-        values: ['inbound']
+        values: ["inbound"]
       )
 
       # GBP Swift outbound
@@ -830,19 +830,19 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: gbp_swift_outbound_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['gbp']
+        values: ["gbp"]
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_swift_outbound_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['swift']
+        values: ["swift"]
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_swift_outbound_filter,
         billable_metric_filter: billable_metric_direction_filter,
-        values: ['outbound']
+        values: ["outbound"]
       )
 
       # GBP Domestic FPS
@@ -850,13 +850,13 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: gbp_domestic_fps_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['gbp']
+        values: ["gbp"]
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_domestic_fps_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['fps']
+        values: ["fps"]
       )
 
       # GBP Domestic BACS
@@ -864,17 +864,17 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         :charge_filter_value,
         charge_filter: gbp_domestic_bacs_filter,
         billable_metric_filter: billable_metric_currency_filter,
-        values: ['gbp']
+        values: ["gbp"]
       )
       create(
         :charge_filter_value,
         charge_filter: gbp_domestic_bacs_filter,
         billable_metric_filter: billable_metric_scheme_filter,
-        values: ['bacs']
+        values: ["bacs"]
       )
     end
 
-    it 'create fees for each event' do
+    it "create fees for each event" do
       travel_to(DateTime.new(2024, 2, 1)) do
         create_subscription(
           {
@@ -897,9 +897,9 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             external_subscription_id: subscription.external_id,
             properties: {
               value: 10_000,
-              direction: 'inbound',
-              scheme: 'fps',
-              currency: 'gbp'
+              direction: "inbound",
+              scheme: "fps",
+              currency: "gbp"
             }
           }
         )
@@ -936,9 +936,9 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             external_subscription_id: subscription.external_id,
             properties: {
               value: 10_000,
-              direction: 'outbound',
-              scheme: 'fps',
-              currency: 'gbp'
+              direction: "outbound",
+              scheme: "fps",
+              currency: "gbp"
             }
           }
         )
@@ -964,9 +964,9 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             external_subscription_id: subscription.external_id,
             properties: {
               value: 2_000_000,
-              direction: 'intbound',
-              scheme: 'bacs',
-              currency: 'gbp'
+              direction: "intbound",
+              scheme: "bacs",
+              currency: "gbp"
             }
           }
         )
@@ -992,9 +992,9 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             external_subscription_id: subscription.external_id,
             properties: {
               value: 10_000,
-              direction: 'outbound',
-              scheme: 'swift',
-              currency: 'gbp'
+              direction: "outbound",
+              scheme: "swift",
+              currency: "gbp"
             }
           }
         )
@@ -1019,9 +1019,9 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             external_subscription_id: subscription.external_id,
             properties: {
               value: 100_000,
-              direction: 'outbound',
-              scheme: 'swift',
-              currency: 'gbp'
+              direction: "outbound",
+              scheme: "swift",
+              currency: "gbp"
             }
           }
         )
@@ -1047,9 +1047,9 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             external_subscription_id: subscription.external_id,
             properties: {
               value: 10_000,
-              direction: 'outbound',
-              scheme: 'sepa',
-              currency: 'eur'
+              direction: "outbound",
+              scheme: "sepa",
+              currency: "eur"
             }
           }
         )
@@ -1075,9 +1075,9 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             external_subscription_id: subscription.external_id,
             properties: {
               value: 100_000,
-              direction: 'outbound',
-              scheme: 'sic',
-              currency: 'chf'
+              direction: "outbound",
+              scheme: "sic",
+              currency: "chf"
             }
           }
         )
@@ -1114,9 +1114,9 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
             external_subscription_id: subscription.external_id,
             properties: {
               value: 1000,
-              direction: 'outbound',
-              scheme: 'sic',
-              currency: 'chf'
+              direction: "outbound",
+              scheme: "sic",
+              currency: "chf"
             }
           }
         )
@@ -1140,7 +1140,7 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
         expect(json[:customer_usage][:charges_usage].count).to eq(1)
 
         charge_usage = json[:customer_usage][:charges_usage].first
-        expect(charge_usage[:units]).to eq('8.0')
+        expect(charge_usage[:units]).to eq("8.0")
         expect(charge_usage[:events_count]).to eq(8)
         expect(charge_usage[:amount_cents]).to eq(60_772)
         expect(charge_usage[:filters].count).to eq(9)
@@ -1149,49 +1149,49 @@ RSpec.describe 'Aggregation - Custom Aggregation Scenarios', :scenarios, type: :
           f[:values] == gbp_domestic_fps_filter.to_h.symbolize_keys
         end
         expect(gbp_domestic_fps_charge[:events_count]).to eq(2)
-        expect(gbp_domestic_fps_charge[:units]).to eq('2.0')
+        expect(gbp_domestic_fps_charge[:units]).to eq("2.0")
         expect(gbp_domestic_fps_charge[:amount_cents]).to eq(120)
 
         gbp_domestic_bacs_charge = charge_usage[:filters].find do |f|
           f[:values] == gbp_domestic_bacs_filter.to_h.symbolize_keys
         end
         expect(gbp_domestic_bacs_charge[:events_count]).to eq(1)
-        expect(gbp_domestic_bacs_charge[:units]).to eq('1.0')
+        expect(gbp_domestic_bacs_charge[:units]).to eq("1.0")
         expect(gbp_domestic_bacs_charge[:amount_cents]).to eq(2500)
 
         gbp_swift_outbound_charge = charge_usage[:filters].find do |f|
           f[:values] == gbp_swift_outbound_filter.to_h.symbolize_keys
         end
         expect(gbp_swift_outbound_charge[:events_count]).to eq(2)
-        expect(gbp_swift_outbound_charge[:units]).to eq('2.0')
+        expect(gbp_swift_outbound_charge[:units]).to eq("2.0")
         expect(gbp_swift_outbound_charge[:amount_cents]).to eq(22_500)
 
         eur_sepa_charge = charge_usage[:filters].find do |f|
           f[:values] == eur_sepa_filter.to_h.symbolize_keys
         end
         expect(eur_sepa_charge[:events_count]).to eq(1)
-        expect(eur_sepa_charge[:units]).to eq('1.0')
+        expect(eur_sepa_charge[:units]).to eq("1.0")
         expect(eur_sepa_charge[:amount_cents]).to eq(100)
 
         eur_swift_inbound_charge = charge_usage[:filters].find do |f|
           f[:values] == eur_swift_inbound_filter.to_h.symbolize_keys
         end
         expect(eur_swift_inbound_charge[:events_count]).to eq(0)
-        expect(eur_swift_inbound_charge[:units]).to eq('0.0')
+        expect(eur_swift_inbound_charge[:units]).to eq("0.0")
         expect(eur_swift_inbound_charge[:amount_cents]).to eq(0)
 
         eur_swift_outbound_charge = charge_usage[:filters].find do |f|
           f[:values] == eur_swift_outbound_filter.to_h.symbolize_keys
         end
         expect(eur_swift_outbound_charge[:events_count]).to eq(0)
-        expect(eur_swift_outbound_charge[:units]).to eq('0.0')
+        expect(eur_swift_outbound_charge[:units]).to eq("0.0")
         expect(eur_swift_outbound_charge[:amount_cents]).to eq(0)
 
         chf_charge = charge_usage[:filters].find do |f|
           f[:values] == chf_filter.to_h.symbolize_keys
         end
         expect(chf_charge[:events_count]).to eq(2)
-        expect(chf_charge[:units]).to eq('2.0')
+        expect(chf_charge[:units]).to eq("2.0")
         expect(chf_charge[:amount_cents]).to eq(35_552)
       end
     end

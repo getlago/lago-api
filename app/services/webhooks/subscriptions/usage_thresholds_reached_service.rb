@@ -10,18 +10,18 @@ module Webhooks
       def object_serializer
         ::V1::SubscriptionSerializer.new(
           object,
-          root_name: 'subscription',
+          root_name: "subscription",
           includes: %i[plan customer usage_threshold],
           usage_threshold: options[:usage_threshold]
         )
       end
 
       def webhook_type
-        'subscription.usage_threshold_reached'
+        "subscription.usage_threshold_reached"
       end
 
       def object_type
-        'subscription'
+        "subscription"
       end
     end
   end

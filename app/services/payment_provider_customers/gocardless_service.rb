@@ -39,7 +39,7 @@ module PaymentProviderCustomers
 
       if send_webhook
         SendWebhookJob.perform_later(
-          'customer.checkout_url_generated',
+          "customer.checkout_url_generated",
           customer,
           checkout_url: result.checkout_url
         )
@@ -71,7 +71,7 @@ module PaymentProviderCustomers
 
     def create_gocardless_customer
       customer_params = {
-        email: customer.email&.strip&.split(',')&.first,
+        email: customer.email&.strip&.split(",")&.first,
         company_name: customer.name.presence,
         given_name: customer.firstname.presence,
         family_name: customer.lastname.presence
@@ -86,14 +86,14 @@ module PaymentProviderCustomers
 
     def deliver_success_webhook
       SendWebhookJob.perform_later(
-        'customer.payment_provider_created',
+        "customer.payment_provider_created",
         customer
       )
     end
 
     def deliver_error_webhook(gocardless_error)
       SendWebhookJob.perform_later(
-        'customer.payment_provider_error',
+        "customer.payment_provider_error",
         customer,
         provider_error: {
           message: gocardless_error.message,
@@ -106,7 +106,7 @@ module PaymentProviderCustomers
       client.billing_requests.create(
         params: {
           mandate_request: {
-            scheme: 'bacs'
+            scheme: "bacs"
           },
           links: {
             customer: gocardless_customer_id

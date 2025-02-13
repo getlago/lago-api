@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreditNotes::EstimateService, type: :service do
   subject(:estimate_service) { described_class.new(invoice:, items:) }
@@ -13,7 +13,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
       :invoice,
       organization:,
       customer:,
-      currency: 'EUR',
+      currency: "EUR",
       fees_amount_cents: 20,
       coupons_amount_cents: 10,
       taxes_amount_cents: 2,
@@ -55,7 +55,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     create(:invoice_applied_tax, tax:, invoice:) if invoice
   end
 
-  it 'estimates the credit and refund amount' do
+  it "estimates the credit and refund amount" do
     result = estimate_service.call
 
     aggregate_failures do
@@ -93,7 +93,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     end
   end
 
-  context 'with invalid items' do
+  context "with invalid items" do
     let(:items) do
       [
         {
@@ -107,7 +107,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
       ]
     end
 
-    it 'returns a failed result' do
+    it "returns a failed result" do
       result = estimate_service.call
 
       aggregate_failures do
@@ -123,10 +123,10 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     end
   end
 
-  context 'with missing items' do
+  context "with missing items" do
     let(:items) {}
 
-    it 'returns a failed result' do
+    it "returns a failed result" do
       result = estimate_service.call
 
       expect(result).not_to be_success
@@ -140,27 +140,27 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     end
   end
 
-  context 'when invoice is not found' do
+  context "when invoice is not found" do
     let(:invoice) { nil }
     let(:items) { [] }
 
-    it 'returns a failure' do
+    it "returns a failure" do
       result = estimate_service.call
 
       aggregate_failures do
         expect(result).not_to be_success
 
         expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(result.error.message).to eq('invoice_not_found')
+        expect(result.error.message).to eq("invoice_not_found")
       end
     end
   end
 
-  context 'when invoice is legacy' do
+  context "when invoice is legacy" do
     let(:invoice) do
       create(
         :invoice,
-        currency: 'EUR',
+        currency: "EUR",
         sub_total_excluding_taxes_amount_cents: 20,
         total_amount_cents: 24,
         payment_status: :succeeded,
@@ -169,26 +169,26 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
       )
     end
 
-    it 'returns a failure' do
+    it "returns a failure" do
       result = estimate_service.call
 
       aggregate_failures do
         expect(result).not_to be_success
 
         expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-        expect(result.error.code).to eq('invalid_type_or_status')
+        expect(result.error.code).to eq("invalid_type_or_status")
       end
     end
   end
 
-  context 'when invoice is a prepaid credit invoice' do
+  context "when invoice is a prepaid credit invoice" do
     let(:invoice) do
       create(
         :invoice,
         invoice_type: :credit,
         organization:,
         customer:,
-        currency: 'EUR',
+        currency: "EUR",
         fees_amount_cents: 20,
         total_amount_cents: 12,
         payment_status: :succeeded,
@@ -209,8 +209,8 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
 
     before { credit_fee }
 
-    context 'when wallet for the credits is active' do
-      it 'estimates the credit and refund amount not higher than wallet.balance_cents' do
+    context "when wallet for the credits is active" do
+      it "estimates the credit and refund amount not higher than wallet.balance_cents" do
         result = estimate_service.call
 
         aggregate_failures do
@@ -228,7 +228,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
         end
       end
 
-      context 'when estimating with amount higher than in the active wallet' do
+      context "when estimating with amount higher than in the active wallet" do
         let(:items) do
           [
             {
@@ -238,7 +238,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
           ]
         end
 
-        it 'returns a failure' do
+        it "returns a failure" do
           result = estimate_service.call
 
           aggregate_failures do
@@ -256,10 +256,10 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
       end
     end
 
-    context 'when wallet for the credits is not active' do
+    context "when wallet for the credits is not active" do
       let(:wallet) { create(:wallet, customer:, balance_cents: 10, status: :terminated) }
 
-      it 'estimates the credit and refund amount hot higher than wallet.balance_amount_cents' do
+      it "estimates the credit and refund amount hot higher than wallet.balance_amount_cents" do
         result = estimate_service.call
 
         aggregate_failures do

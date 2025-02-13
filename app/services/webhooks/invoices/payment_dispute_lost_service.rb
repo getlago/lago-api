@@ -16,11 +16,11 @@ module Webhooks
       end
 
       def webhook_type
-        'invoice.payment_dispute_lost'
+        "invoice.payment_dispute_lost"
       end
 
       def object_type
-        'payment_dispute_lost'
+        "payment_dispute_lost"
       end
     end
   end

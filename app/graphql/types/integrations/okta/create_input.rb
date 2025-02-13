@@ -4,7 +4,7 @@ module Types
   module Integrations
     class Okta
       class CreateInput < Types::BaseInputObject
-        graphql_name 'CreateOktaIntegrationInput'
+        graphql_name "CreateOktaIntegrationInput"
 
         argument :client_id, String, required: true
         argument :client_secret, String, required: true

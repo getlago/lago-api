@@ -3,7 +3,7 @@
 module Types
   module IntegrationCustomers
     class Anrok < Types::BaseObject
-      graphql_name 'AnrokCustomer'
+      graphql_name "AnrokCustomer"
 
       field :external_account_id, String, null: true
       field :external_customer_id, String, null: true
@@ -16,8 +16,8 @@ module Types
       def integration_type
         object.integration&.type
         case object.integration&.type
-        when 'Integrations::AnrokIntegration'
-          'anrok'
+        when "Integrations::AnrokIntegration"
+          "anrok"
         end
       end
 
@@ -28,9 +28,9 @@ module Types
       def external_account_id
         api_key = object.integration.api_key
 
-        return nil unless api_key.include?('/')
+        return nil unless api_key.include?("/")
 
-        api_key.split('/')[0]
+        api_key.split("/")[0]
       end
     end
   end

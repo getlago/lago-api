@@ -17,19 +17,19 @@ module Integrations
           def body
             [
               {
-                'issuing_date' => invoice.issuing_date,
-                'currency' => invoice.currency,
-                'contact' => {
-                  'external_id' => integration_customer&.external_customer_id || customer.external_id,
-                  'name' => customer.name,
-                  'address_line_1' => customer.shipping_address_line1 || customer.address_line1,
-                  'city' => customer.shipping_city || customer.city,
-                  'zip' => customer.shipping_zipcode || customer.zipcode,
-                  'country' => customer.shipping_country || customer.country,
-                  'taxable' => customer.tax_identification_number.present?,
-                  'tax_number' => customer.tax_identification_number
+                "issuing_date" => invoice.issuing_date,
+                "currency" => invoice.currency,
+                "contact" => {
+                  "external_id" => integration_customer&.external_customer_id || customer.external_id,
+                  "name" => customer.name,
+                  "address_line_1" => customer.shipping_address_line1 || customer.address_line1,
+                  "city" => customer.shipping_city || customer.city,
+                  "zip" => customer.shipping_zipcode || customer.zipcode,
+                  "country" => customer.shipping_country || customer.country,
+                  "taxable" => customer.tax_identification_number.present?,
+                  "tax_number" => customer.tax_identification_number
                 },
-                'fees' => fees.map { |fee| fee_item(fee) }
+                "fees" => fees.map { |fee| fee_item(fee) }
               }
             ]
           end
@@ -47,10 +47,10 @@ module Integrations
             mapped_item ||= empty_struct
 
             {
-              'item_key' => fee.item_key,
-              'item_id' => fee.id || fee.item_id,
-              'item_code' => mapped_item.external_id,
-              'amount_cents' => fee.sub_total_excluding_taxes_amount_cents&.to_i
+              "item_key" => fee.item_key,
+              "item_id" => fee.id || fee.item_id,
+              "item_code" => mapped_item.external_id,
+              "amount_cents" => fee.sub_total_excluding_taxes_amount_cents&.to_i
             }
           end
 

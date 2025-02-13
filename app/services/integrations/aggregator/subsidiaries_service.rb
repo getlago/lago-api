@@ -10,7 +10,7 @@ module Integrations
       def call
         response = http_client.get(headers:)
 
-        result.subsidiaries = handle_subsidiaries(response['records'])
+        result.subsidiaries = handle_subsidiaries(response["records"])
 
         result
       end
@@ -19,15 +19,15 @@ module Integrations
 
       def headers
         {
-          'Connection-Id' => integration.connection_id,
-          'Authorization' => "Bearer #{secret_key}",
-          'Provider-Config-Key' => provider_key
+          "Connection-Id" => integration.connection_id,
+          "Authorization" => "Bearer #{secret_key}",
+          "Provider-Config-Key" => provider_key
         }
       end
 
       def handle_subsidiaries(subsidiaries)
         subsidiaries.map do |subsidiary|
-          OpenStruct.new(external_id: subsidiary['id'], external_name: subsidiary['name'])
+          OpenStruct.new(external_id: subsidiary["id"], external_name: subsidiary["name"])
         end
       end
     end

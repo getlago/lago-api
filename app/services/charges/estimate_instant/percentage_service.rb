@@ -30,21 +30,21 @@ module Charges
       attr_reader :properties, :units
 
       def rate
-        BigDecimal(properties['rate'].to_s)
+        BigDecimal(properties["rate"].to_s)
       end
 
       def per_transaction_max_amount
-        return nil if properties['per_transaction_max_amount'].blank?
-        BigDecimal(properties['per_transaction_max_amount'].to_s)
+        return nil if properties["per_transaction_max_amount"].blank?
+        BigDecimal(properties["per_transaction_max_amount"].to_s)
       end
 
       def fixed_amount
-        BigDecimal((properties['fixed_amount'] || 0).to_s)
+        BigDecimal((properties["fixed_amount"] || 0).to_s)
       end
 
       def per_transaction_min_amount
-        return nil if properties['per_transaction_min_amount'].blank?
-        BigDecimal(properties['per_transaction_min_amount'].to_s)
+        return nil if properties["per_transaction_min_amount"].blank?
+        BigDecimal(properties["per_transaction_min_amount"].to_s)
       end
     end
   end

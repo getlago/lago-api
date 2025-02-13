@@ -7,9 +7,9 @@ module Api
         fee = Fee.from_organization(current_organization)
           .find_by(id: params[:id])
 
-        return not_found_error(resource: 'fee') unless fee
+        return not_found_error(resource: "fee") unless fee
 
-        render(json: ::V1::FeeSerializer.new(fee, root_name: 'fee', includes: %i[applied_taxes]))
+        render(json: ::V1::FeeSerializer.new(fee, root_name: "fee", includes: %i[applied_taxes]))
       end
 
       def update
@@ -18,7 +18,7 @@ module Api
         result = Fees::UpdateService.call(fee:, params: update_params)
 
         if result.success?
-          render(json: ::V1::FeeSerializer.new(fee, root_name: 'fee', includes: %i[applied_taxes]))
+          render(json: ::V1::FeeSerializer.new(fee, root_name: "fee", includes: %i[applied_taxes]))
         else
           render_error_response(result)
         end
@@ -39,7 +39,7 @@ module Api
             json: ::CollectionSerializer.new(
               result.fees.includes(:applied_taxes, :invoice),
               ::V1::FeeSerializer,
-              collection_name: 'fees',
+              collection_name: "fees",
               meta: pagination_metadata(result.fees),
               includes: %i[applied_taxes]
             )
@@ -70,7 +70,7 @@ module Api
         render(
           json: ::V1::FeeSerializer.new(
             fee,
-            root_name: 'fee'
+            root_name: "fee"
           )
         )
       end
@@ -96,7 +96,7 @@ module Api
       end
 
       def resource_name
-        'fee'
+        "fee"
       end
     end
   end

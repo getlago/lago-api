@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::PlanResolver, type: :graphql do
-  let(:required_permission) { 'plans:view' }
+  let(:required_permission) { "plans:view" }
   let(:query) do
     <<~GQL
       query($planId: ID!) {
@@ -57,11 +57,11 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
     minimum_commitment
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'plans:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "plans:view"
 
-  it 'returns a single plan' do
+  it "returns a single plan" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -70,34 +70,34 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       variables: {planId: plan.id}
     )
 
-    plan_response = result['data']['plan']
+    plan_response = result["data"]["plan"]
 
     aggregate_failures do
-      expect(plan_response['id']).to eq(plan.id)
-      expect(plan_response['subscriptionsCount']).to eq(2)
-      expect(plan_response['customersCount']).to eq(1)
-      expect(plan_response['minimumCommitment']).to include(
-        'id' => minimum_commitment.id,
-        'amountCents' => minimum_commitment.amount_cents.to_s,
-        'invoiceDisplayName' => minimum_commitment.invoice_display_name,
-        'taxes' => []
+      expect(plan_response["id"]).to eq(plan.id)
+      expect(plan_response["subscriptionsCount"]).to eq(2)
+      expect(plan_response["customersCount"]).to eq(1)
+      expect(plan_response["minimumCommitment"]).to include(
+        "id" => minimum_commitment.id,
+        "amountCents" => minimum_commitment.amount_cents.to_s,
+        "invoiceDisplayName" => minimum_commitment.invoice_display_name,
+        "taxes" => []
       )
     end
   end
 
-  context 'when plan is not found' do
-    it 'returns an error' do
+  context "when plan is not found" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: {planId: 'foo'}
+        variables: {planId: "foo"}
       )
 
       expect_graphql_error(
         result:,
-        message: 'Resource not found'
+        message: "Resource not found"
       )
     end
   end

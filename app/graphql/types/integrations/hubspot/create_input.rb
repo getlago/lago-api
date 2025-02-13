@@ -4,7 +4,7 @@ module Types
   module Integrations
     class Hubspot
       class CreateInput < Types::BaseInputObject
-        graphql_name 'CreateHubspotIntegrationInput'
+        graphql_name "CreateHubspotIntegrationInput"
 
         argument :code, String, required: true
         argument :name, String, required: true

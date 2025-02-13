@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::OktaIntegration, type: :model do
   subject(:okta_integration) { build(:okta_integration) }
@@ -10,15 +10,15 @@ RSpec.describe Integrations::OktaIntegration, type: :model do
   it { is_expected.to validate_presence_of(:client_id) }
   it { is_expected.to validate_presence_of(:client_secret) }
 
-  describe 'validations' do
-    it 'validates uniqueness of domain' do
+  describe "validations" do
+    it "validates uniqueness of domain" do
       expect(okta_integration).to be_valid
     end
 
-    context 'when domain already exists' do
+    context "when domain already exists" do
       before { create(:okta_integration) }
 
-      it 'does not validate the record' do
+      it "does not validate the record" do
         expect(okta_integration).not_to be_valid
         expect(okta_integration.errors).to include(:domain)
       end

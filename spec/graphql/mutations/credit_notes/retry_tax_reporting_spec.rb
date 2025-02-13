@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
-  let(:required_permission) { 'credit_notes:update' }
+  let(:required_permission) { "credit_notes:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -15,7 +15,7 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
       organization:,
       customer:,
       subscriptions: [subscription],
-      currency: 'EUR'
+      currency: "EUR"
     )
   end
   let(:credit_note) do
@@ -39,7 +39,7 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
 
   let(:timestamp) { Time.zone.now - 1.year }
   let(:started_at) { Time.zone.now - 2.years }
-  let(:plan) { create(:plan, organization:, interval: 'monthly') }
+  let(:plan) { create(:plan, organization:, interval: "monthly") }
   let(:fee_subscription) do
     create(
       :fee,
@@ -54,9 +54,9 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
   let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
   let(:response) { instance_double(Net::HTTPOK) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+  let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
   let(:body) do
-    path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response.json')
+    path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
     File.read(path)
   end
   let(:integration_collection_mapping) do
@@ -64,7 +64,7 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :fallback_item,
-      settings: {external_id: '1', external_account_code: '11', external_name: ''}
+      settings: {external_id: "1", external_account_code: "11", external_name: ""}
     )
   end
   let(:mutation) do
@@ -88,12 +88,12 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
     allow(response).to receive(:body).and_return(body)
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'credit_notes:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "credit_notes:update"
 
-  context 'with valid preconditions' do
-    it 'returns the credit note after successful retry' do
+  context "with valid preconditions" do
+    it "returns the credit note after successful retry" do
       result = execute_graphql(
         current_organization: organization,
         current_user: user,
@@ -104,19 +104,19 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
         }
       )
 
-      data = result['data']['retryTaxReporting']
+      data = result["data"]["retryTaxReporting"]
 
-      expect(data['id']).to eq(credit_note.id)
+      expect(data["id"]).to eq(credit_note.id)
     end
   end
 
-  context 'when there is tax error' do
+  context "when there is tax error" do
     let(:body) do
-      path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+      path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
       File.read(path)
     end
 
-    it 'returns the error' do
+    it "returns the error" do
       result = execute_graphql(
         current_organization: organization,
         current_user: user,
@@ -129,7 +129,7 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
 
       expect_graphql_error(
         result:,
-        message: 'Unprocessable Entity'
+        message: "Unprocessable Entity"
       )
     end
   end

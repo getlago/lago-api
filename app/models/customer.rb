@@ -16,13 +16,13 @@ class Customer < ApplicationRecord
   ].freeze
 
   CUSTOMER_TYPES = {
-    company: 'company',
-    individual: 'individual'
+    company: "company",
+    individual: "individual"
   }.freeze
 
   ACCOUNT_TYPES = {
-    customer: 'customer',
-    partner: 'partner'
+    customer: "customer",
+    partner: "partner"
   }.freeze
 
   attribute :finalize_zero_amount_invoice, :integer
@@ -41,7 +41,7 @@ class Customer < ApplicationRecord
   has_many :events
   has_many :invoices
   has_many :applied_coupons
-  has_many :metadata, class_name: 'Metadata::CustomerMetadata', dependent: :destroy
+  has_many :metadata, class_name: "Metadata::CustomerMetadata", dependent: :destroy
   has_many :coupons, through: :applied_coupons
   has_many :credit_notes
   has_many :applied_add_ons
@@ -50,30 +50,30 @@ class Customer < ApplicationRecord
   has_many :wallets
   has_many :wallet_transactions, through: :wallets
   has_many :payment_provider_customers,
-    class_name: 'PaymentProviderCustomers::BaseCustomer',
+    class_name: "PaymentProviderCustomers::BaseCustomer",
     dependent: :destroy
   has_many :payment_requests, dependent: :destroy
   has_many :quantified_events
   has_many :integration_customers,
-    class_name: 'IntegrationCustomers::BaseCustomer',
+    class_name: "IntegrationCustomers::BaseCustomer",
     dependent: :destroy
 
-  has_many :applied_taxes, class_name: 'Customer::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "Customer::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
   has_many :invoice_custom_sections
   has_many :invoice_custom_section_selections
   has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section
 
-  has_one :stripe_customer, class_name: 'PaymentProviderCustomers::StripeCustomer'
-  has_one :gocardless_customer, class_name: 'PaymentProviderCustomers::GocardlessCustomer'
-  has_one :cashfree_customer, class_name: 'PaymentProviderCustomers::CashfreeCustomer'
-  has_one :adyen_customer, class_name: 'PaymentProviderCustomers::AdyenCustomer'
-  has_one :netsuite_customer, class_name: 'IntegrationCustomers::NetsuiteCustomer'
-  has_one :anrok_customer, class_name: 'IntegrationCustomers::AnrokCustomer'
-  has_one :xero_customer, class_name: 'IntegrationCustomers::XeroCustomer'
-  has_one :hubspot_customer, class_name: 'IntegrationCustomers::HubspotCustomer'
-  has_one :salesforce_customer, class_name: 'IntegrationCustomers::SalesforceCustomer'
+  has_one :stripe_customer, class_name: "PaymentProviderCustomers::StripeCustomer"
+  has_one :gocardless_customer, class_name: "PaymentProviderCustomers::GocardlessCustomer"
+  has_one :cashfree_customer, class_name: "PaymentProviderCustomers::CashfreeCustomer"
+  has_one :adyen_customer, class_name: "PaymentProviderCustomers::AdyenCustomer"
+  has_one :netsuite_customer, class_name: "IntegrationCustomers::NetsuiteCustomer"
+  has_one :anrok_customer, class_name: "IntegrationCustomers::AnrokCustomer"
+  has_one :xero_customer, class_name: "IntegrationCustomers::XeroCustomer"
+  has_one :hubspot_customer, class_name: "IntegrationCustomers::HubspotCustomer"
+  has_one :salesforce_customer, class_name: "IntegrationCustomers::SalesforceCustomer"
 
   PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen].freeze
 
@@ -106,11 +106,11 @@ class Customer < ApplicationRecord
     names = prefer_legal_name ? [legal_name.presence || name.presence] : [name.presence]
 
     if firstname.present? || lastname.present?
-      names << '-' if names.compact.present?
+      names << "-" if names.compact.present?
       names << firstname
       names << lastname
     end
-    names.compact.join(' ')
+    names.compact.join(" ")
   end
 
   def active_subscription
@@ -124,7 +124,7 @@ class Customer < ApplicationRecord
   def applicable_timezone
     return timezone if timezone.present?
 
-    organization.timezone || 'UTC'
+    organization.timezone || "UTC"
   end
 
   def applicable_invoice_grace_period
@@ -226,7 +226,7 @@ class Customer < ApplicationRecord
   def ensure_slug
     return if slug.present?
 
-    formatted_sequential_id = format('%03d', sequential_id)
+    formatted_sequential_id = format("%03d", sequential_id)
 
     self.slug = "#{organization.document_number_prefix}-#{formatted_sequential_id}"
   end

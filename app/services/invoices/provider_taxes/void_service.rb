@@ -10,7 +10,7 @@ module Invoices
       end
 
       def call
-        return result.not_found_failure!(resource: 'invoice') if invoice.blank?
+        return result.not_found_failure!(resource: "invoice") if invoice.blank?
 
         invoice.error_details.tax_voiding_error.discard_all
 
@@ -64,7 +64,7 @@ module Invoices
       # transactionFrozenForFiling error means that tax is already reported to the tax authority
       # We should call negate action instead
       def frozen_transaction?(tax_result)
-        !tax_result.success? && tax_result.error.code == 'transactionFrozenForFiling'
+        !tax_result.success? && tax_result.error.code == "transactionFrozenForFiling"
       end
     end
   end

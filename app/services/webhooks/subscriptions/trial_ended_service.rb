@@ -10,17 +10,17 @@ module Webhooks
       def object_serializer
         ::V1::SubscriptionSerializer.new(
           object,
-          root_name: 'subscription',
+          root_name: "subscription",
           includes: %i[plan customer]
         )
       end
 
       def webhook_type
-        'subscription.trial_ended'
+        "subscription.trial_ended"
       end
 
       def object_type
-        'subscription'
+        "subscription"
       end
     end
   end

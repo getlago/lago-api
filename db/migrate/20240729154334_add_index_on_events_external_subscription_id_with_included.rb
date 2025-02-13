@@ -5,8 +5,8 @@ class AddIndexOnEventsExternalSubscriptionIdWithIncluded < ActiveRecord::Migrati
 
   def change
     add_index :events, %i[external_subscription_id code timestamp],
-      name: 'index_events_on_external_subscription_id_with_included',
-      where: 'deleted_at IS NULL',
+      name: "index_events_on_external_subscription_id_with_included",
+      where: "deleted_at IS NULL",
       algorithm: :concurrently,
       if_not_exists: true,
       include: %i[organization_id properties]

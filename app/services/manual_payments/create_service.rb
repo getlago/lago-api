@@ -20,8 +20,8 @@ module ManualPayments
           amount_cents:,
           reference: params[:reference],
           amount_currency: invoice.currency,
-          status: 'succeeded',
-          payable_payment_status: 'succeeded',
+          status: "succeeded",
+          payable_payment_status: "succeeded",
           payment_type: :manual,
           created_at: parsed_paid_at
         )
@@ -30,8 +30,8 @@ module ManualPayments
 
         result.payment = payment
 
-        if invoice.payments.where(payable_payment_status: 'succeeded').sum(:amount_cents) == invoice.total_amount_cents
-          payment.payable.update!(payment_status: 'succeeded')
+        if invoice.payments.where(payable_payment_status: "succeeded").sum(:amount_cents) == invoice.total_amount_cents
+          payment.payable.update!(payment_status: "succeeded")
         end
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment&.should_sync_payment?
@@ -59,7 +59,7 @@ module ManualPayments
     def check_preconditions
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "invoice") unless invoice
-      return result.forbidden_failure! unless invoice.organization.premium_integrations.include?('manual_payments')
+      return result.forbidden_failure! unless invoice.organization.premium_integrations.include?("manual_payments")
       result.single_validation_failure!(error_code: "invalid_date", field: "paid_at") unless valid_paid_at?
     end
 

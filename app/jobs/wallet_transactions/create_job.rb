@@ -2,7 +2,7 @@
 
 module WalletTransactions
   class CreateJob < ApplicationJob
-    queue_as 'high_priority'
+    queue_as "high_priority"
 
     def perform(organization_id:, params:)
       organization = Organization.find(organization_id)

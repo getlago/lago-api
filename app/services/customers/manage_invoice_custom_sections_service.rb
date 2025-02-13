@@ -41,11 +41,11 @@ module Customers
     attr_reader :customer, :section_ids, :skip_invoice_custom_sections, :section_codes
 
     def fail_with_double_selection
-      result.validation_failure!(errors: {invoice_custom_sections: ['section_ids_and_section_codes_sent_together']})
+      result.validation_failure!(errors: {invoice_custom_sections: ["section_ids_and_section_codes_sent_together"]})
     end
 
     def fail_with_invalid_params
-      result.validation_failure!(errors: {invoice_custom_sections: ['skip_sections_and_selected_ids_sent_together']})
+      result.validation_failure!(errors: {invoice_custom_sections: ["skip_sections_and_selected_ids_sent_together"]})
     end
 
     def assign_selected_sections

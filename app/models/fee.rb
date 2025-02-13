@@ -14,18 +14,18 @@ class Fee < ApplicationRecord
   belongs_to :charge_filter, -> { with_discarded }, optional: true
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
-  belongs_to :true_up_parent_fee, class_name: 'Fee', optional: true
+  belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
 
   has_one :adjusted_fee, dependent: :nullify
   has_one :customer, through: :subscription
   has_one :organization, through: :invoice
   has_one :billable_metric, -> { with_discarded }, through: :charge
-  has_one :true_up_fee, class_name: 'Fee', foreign_key: :true_up_parent_fee_id, dependent: :destroy
+  has_one :true_up_fee, class_name: "Fee", foreign_key: :true_up_parent_fee_id, dependent: :destroy
 
   has_many :credit_note_items, dependent: :destroy
   has_many :credit_notes, through: :credit_note_items
 
-  has_many :applied_taxes, class_name: 'Fee::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "Fee::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
   monetize :amount_cents
@@ -49,7 +49,7 @@ class Fee < ApplicationRecord
   validates :true_up_fee_id, presence: false, unless: :charge?
   validates :total_aggregated_units, presence: true, if: :charge?
 
-  scope :positive_units, -> { where('units > ?', 0) }
+  scope :positive_units, -> { where("units > ?", 0) }
 
   # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
@@ -136,7 +136,7 @@ class Fee < ApplicationRecord
     subscription.plan.invoice_display_name
   end
 
-  def filter_display_name(separator: ', ')
+  def filter_display_name(separator: ", ")
     charge_filter&.display_name(separator:)
   end
 
@@ -159,9 +159,9 @@ class Fee < ApplicationRecord
     return false unless charge.percentage?
 
     if charge_filter
-      charge_filter.properties.keys == ['rate']
+      charge_filter.properties.keys == ["rate"]
     else
-      charge.properties.keys == ['rate']
+      charge.properties.keys == ["rate"]
     end
   end
 

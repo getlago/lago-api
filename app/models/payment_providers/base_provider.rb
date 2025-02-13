@@ -9,13 +9,13 @@ module PaymentProviders
     self.discard_column = :deleted_at
     default_scope -> { kept }
 
-    self.table_name = 'payment_providers'
+    self.table_name = "payment_providers"
 
     belongs_to :organization
 
     has_many :payment_provider_customers,
       dependent: :nullify,
-      class_name: 'PaymentProviderCustomers::BaseCustomer',
+      class_name: "PaymentProviderCustomers::BaseCustomer",
       foreign_key: :payment_provider_id
 
     has_many :customers, through: :payment_provider_customers

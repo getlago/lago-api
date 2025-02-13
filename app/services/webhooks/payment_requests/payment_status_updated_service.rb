@@ -16,11 +16,11 @@ module Webhooks
       end
 
       def webhook_type
-        'payment_request.payment_status_updated'
+        "payment_request.payment_status_updated"
       end
 
       def object_type
-        'payment_request'
+        "payment_request"
       end
     end
   end

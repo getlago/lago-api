@@ -6,9 +6,9 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'credit_notes:update'
+      REQUIRED_PERMISSION = "credit_notes:update"
 
-      description 'Retry tax reporting'
+      description "Retry tax reporting"
 
       argument :id, ID, required: true
 

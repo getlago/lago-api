@@ -8,11 +8,11 @@ module IntegrationMappings
 
     def self.service_class(integration)
       case integration&.type&.to_s
-      when 'Integrations::NetsuiteIntegration'
+      when "Integrations::NetsuiteIntegration"
         IntegrationMappings::NetsuiteMapping
-      when 'Integrations::AnrokIntegration'
+      when "Integrations::AnrokIntegration"
         IntegrationMappings::AnrokMapping
-      when 'Integrations::XeroIntegration'
+      when "Integrations::XeroIntegration"
         IntegrationMappings::XeroMapping
       else
         raise(NotImplementedError)

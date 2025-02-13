@@ -10,7 +10,7 @@ module IntegrationMappings
     end
 
     def call
-      return result.not_found_failure!(resource: 'integration_mapping') unless integration_mapping
+      return result.not_found_failure!(resource: "integration_mapping") unless integration_mapping
 
       integration_mapping.integration_id = params[:integration_id] if params.key?(:integration_id)
       integration_mapping.mappable_id = params[:mappable_id] if params.key?(:mappable_id)

@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'coupons:attach'
+      REQUIRED_PERMISSION = "coupons:attach"
 
-      graphql_name 'CreateAppliedCoupon'
-      description 'Assigns a Coupon to a Customer'
+      graphql_name "CreateAppliedCoupon"
+      description "Assigns a Coupon to a Customer"
 
       argument :coupon_id, ID, required: true
       argument :customer_id, ID, required: true

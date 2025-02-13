@@ -7,7 +7,7 @@ class AddChargeFilterIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
   end
 
   class ChargeFilter < ApplicationRecord
-    has_many :values, class_name: 'ChargeFilterValue'
+    has_many :values, class_name: "ChargeFilterValue"
 
     def to_h
       # NOTE: Ensure filters are keeping the initial ordering

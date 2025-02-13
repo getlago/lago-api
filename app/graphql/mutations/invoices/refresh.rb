@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'invoices:update'
+      REQUIRED_PERMISSION = "invoices:update"
 
-      graphql_name 'RefreshInvoice'
-      description 'Refresh a draft invoice'
+      graphql_name "RefreshInvoice"
+      description "Refresh a draft invoice"
 
       argument :id, ID, required: true
 

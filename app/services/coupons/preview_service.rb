@@ -10,8 +10,8 @@ module Coupons
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') unless invoice
-      return result.not_found_failure!(resource: 'applied_coupons') unless applied_coupons
+      return result.not_found_failure!(resource: "invoice") unless invoice
+      return result.not_found_failure!(resource: "applied_coupons") unless applied_coupons
 
       result.credits = []
 

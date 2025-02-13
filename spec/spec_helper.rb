@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require 'webmock/rspec'
+require "webmock/rspec"
 
 # Allow remote debugging when RUBY_DEBUG_PORT is set
-if ENV['RUBY_DEBUG_PORT']
-  require 'debug/open_nonstop'
+if ENV["RUBY_DEBUG_PORT"]
+  require "debug/open_nonstop"
 else
-  require 'debug'
+  require "debug"
 end
 
 RSpec.configure do |config|
@@ -20,7 +20,7 @@ RSpec.configure do |config|
 
   config.shared_context_metadata_behavior = :apply_to_host_groups
 
-  config.example_status_persistence_file_path = 'tmp/rspec_examples.txt'
+  config.example_status_persistence_file_path = "tmp/rspec_examples.txt"
   config.filter_run_when_matching :focus
 
   # NOTE: Database cleaner config to turn off/on transactional mode
@@ -63,7 +63,7 @@ RSpec.configure do |config|
 
   config.before(:each, clickhouse: true) do
     DatabaseCleaner.strategy = :deletion
-    WebMock.disable_net_connect!(allow: ENV.fetch('LAGO_CLICKHOUSE_HOST', 'clickhouse'))
+    WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))
   end
 
   config.define_derived_metadata do |meta|

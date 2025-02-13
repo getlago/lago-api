@@ -5,7 +5,7 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
 
   class BillableMetric < ApplicationRecord
     has_many :groups
-    has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: 'BillableMetricFilter'
+    has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: "BillableMetricFilter"
   end
 
   class BillableMetricFilter < ApplicationRecord
@@ -19,21 +19,21 @@ class MigrateGroupsToFilters < ActiveRecord::Migration[7.0]
 
   class Group < ApplicationRecord
     belongs_to :billable_metric
-    belongs_to :parent, class_name: 'Group', foreign_key: 'parent_group_id', optional: true
-    has_many :children, class_name: 'Group', foreign_key: 'parent_group_id'
-    has_many :properties, class_name: 'GroupProperty'
+    belongs_to :parent, class_name: "Group", foreign_key: "parent_group_id", optional: true
+    has_many :children, class_name: "Group", foreign_key: "parent_group_id"
+    has_many :properties, class_name: "GroupProperty"
   end
 
   class Charge < ApplicationRecord
     has_many :group_properties
     belongs_to :billable_metric
-    has_many :filters, class_name: 'ChargeFilter'
-    has_many :filter_values, through: :filters, class_name: 'ChargeFilterValue', source: :values
+    has_many :filters, class_name: "ChargeFilter"
+    has_many :filter_values, through: :filters, class_name: "ChargeFilterValue", source: :values
   end
 
   class ChargeFilter < ApplicationRecord
     belongs_to :charge
-    has_many :values, class_name: 'ChargeFilterValue', dependent: :destroy
+    has_many :values, class_name: "ChargeFilterValue", dependent: :destroy
   end
 
   def up

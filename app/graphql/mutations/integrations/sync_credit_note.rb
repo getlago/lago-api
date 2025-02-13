@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'organization:integrations:update'
+      REQUIRED_PERMISSION = "organization:integrations:update"
 
-      graphql_name 'SyncIntegrationCreditNote'
-      description 'Sync integration credit note'
+      graphql_name "SyncIntegrationCreditNote"
+      description "Sync integration credit note"
 
       input_object_class Types::Integrations::SyncCreditNoteInput
 

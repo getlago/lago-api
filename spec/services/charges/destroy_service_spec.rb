@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Charges::DestroyService, type: :service do
   subject(:destroy_service) { described_class.new(charge:) }
@@ -22,32 +22,32 @@ RSpec.describe Charges::DestroyService, type: :service do
     filter_value
   end
 
-  describe '#call' do
-    it 'soft deletes the charge' do
+  describe "#call" do
+    it "soft deletes the charge" do
       freeze_time do
         expect { destroy_service.call }.to change(Charge, :count).by(-1)
           .and change { charge.reload.deleted_at }.from(nil).to(Time.current)
       end
     end
 
-    it 'soft deletes all related filters' do
+    it "soft deletes all related filters" do
       freeze_time do
         expect { destroy_service.call }.to change { charge_filter.reload.deleted_at }.from(nil).to(Time.current)
       end
     end
 
-    it 'soft deletes all related filter values' do
+    it "soft deletes all related filter values" do
       freeze_time do
         expect { destroy_service.call }.to change { filter_value.reload.deleted_at }.from(nil).to(Time.current)
       end
     end
 
-    context 'when charge is not found' do
-      it 'returns an error' do
+    context "when charge is not found" do
+      it "returns an error" do
         result = described_class.new(charge: nil).call
 
         expect(result).not_to be_success
-        expect(result.error.error_code).to eq('charge_not_found')
+        expect(result.error.error_code).to eq("charge_not_found")
       end
     end
   end

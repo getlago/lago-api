@@ -9,7 +9,7 @@ module Charges
     end
 
     def call
-      return result.not_found_failure!(resource: 'charge') unless charge
+      return result.not_found_failure!(resource: "charge") unless charge
 
       ActiveRecord::Base.transaction do
         charge.discard!

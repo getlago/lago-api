@@ -25,7 +25,7 @@ module Api
         end
 
         def resource_name
-          'analytic'
+          "analytic"
         end
       end
     end

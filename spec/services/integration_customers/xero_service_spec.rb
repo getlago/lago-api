@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe IntegrationCustomers::XeroService, type: :service do
   let(:integration) { create(:xero_integration, organization:) }
@@ -8,7 +8,7 @@ RSpec.describe IntegrationCustomers::XeroService, type: :service do
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization:) }
 
-  describe '#create' do
+  describe "#create" do
     subject(:service_call) { described_class.new(integration:, customer:, subsidiary_id: nil).create }
 
     let(:contact_id) { SecureRandom.uuid }
@@ -28,7 +28,7 @@ RSpec.describe IntegrationCustomers::XeroService, type: :service do
       allow(aggregator_contacts_create_service).to receive(:call).and_return(create_result)
     end
 
-    it 'returns integration customer' do
+    it "returns integration customer" do
       result = service_call
 
       aggregate_failures do
@@ -37,11 +37,11 @@ RSpec.describe IntegrationCustomers::XeroService, type: :service do
         expect(result.integration_customer.external_customer_id).to eq(contact_id)
         expect(result.integration_customer.integration_id).to eq(integration.id)
         expect(result.integration_customer.customer_id).to eq(customer.id)
-        expect(result.integration_customer.type).to eq('IntegrationCustomers::XeroCustomer')
+        expect(result.integration_customer.type).to eq("IntegrationCustomers::XeroCustomer")
       end
     end
 
-    it 'creates integration customer' do
+    it "creates integration customer" do
       expect { service_call }.to change(IntegrationCustomers::XeroCustomer, :count).by(1)
     end
   end

@@ -3,7 +3,7 @@
 module Types
   module InvoiceCustomSections
     class UpdateInput < Types::BaseInputObject
-      graphql_name 'UpdateInvoiceCustomSectionInput'
+      graphql_name "UpdateInvoiceCustomSectionInput"
 
       argument :id, ID, required: true
 

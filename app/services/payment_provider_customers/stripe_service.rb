@@ -36,11 +36,11 @@ module PaymentProviderCustomers
     rescue ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
       deliver_error_webhook(e)
 
-      result.service_failure!(code: 'stripe_error', message: e.message)
+      result.service_failure!(code: "stripe_error", message: e.message)
     rescue ::Stripe::AuthenticationError => e
       deliver_error_webhook(e)
 
-      message = ['Stripe authentication failed.', e.message.presence].compact.join(' ')
+      message = ["Stripe authentication failed.", e.message.presence].compact.join(" ")
       result.unauthorized_failure!(message:)
     end
 
@@ -70,7 +70,7 @@ module PaymentProviderCustomers
       # NOTE: The payment method is no longer valid
       stripe_customer.update!(payment_method_id: nil)
 
-      result.single_validation_failure!(field: :payment_method_id, error_code: 'value_is_invalid')
+      result.single_validation_failure!(field: :payment_method_id, error_code: "value_is_invalid")
     end
 
     def generate_checkout_url(send_webhook: true)
@@ -84,11 +84,11 @@ module PaymentProviderCustomers
         }
       )
 
-      result.checkout_url = res['url']
+      result.checkout_url = res["url"]
 
       if send_webhook
         SendWebhookJob.perform_later(
-          'customer.checkout_url_generated',
+          "customer.checkout_url_generated",
           customer,
           checkout_url: result.checkout_url
         )
@@ -101,7 +101,7 @@ module PaymentProviderCustomers
     rescue ::Stripe::AuthenticationError => e
       deliver_error_webhook(e)
 
-      message = ['Stripe authentication failed.', e.message.presence].compact.join(' ')
+      message = ["Stripe authentication failed.", e.message.presence].compact.join(" ")
       result.unauthorized_failure!(message:)
     end
 
@@ -120,13 +120,13 @@ module PaymentProviderCustomers
     end
 
     def name
-      customer.name.presence || [customer.firstname, customer.lastname].compact.join(' ')
+      customer.name.presence || [customer.firstname, customer.lastname].compact.join(" ")
     end
 
     def checkout_link_params
       {
         success_url: success_redirect_url,
-        mode: 'setup',
+        mode: "setup",
         payment_method_types: stripe_customer.provider_payment_methods,
         customer: stripe_customer.provider_customer_id
       }
@@ -142,7 +142,7 @@ module PaymentProviderCustomers
         stripe_create_payload,
         {
           api_key:,
-          idempotency_key: [customer.id, customer.updated_at.to_i].join('-')
+          idempotency_key: [customer.id, customer.updated_at.to_i].join("-")
         }
       )
     rescue ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
@@ -151,7 +151,7 @@ module PaymentProviderCustomers
     rescue ::Stripe::AuthenticationError => e
       deliver_error_webhook(e)
 
-      message = ['Stripe authentication failed.', e.message.presence].compact.join(' ')
+      message = ["Stripe authentication failed.", e.message.presence].compact.join(" ")
       result.unauthorized_failure!(message:)
     rescue ::Stripe::IdempotencyError
       stripe_customers = ::Stripe::Customer.list({email: customer.email}, {api_key:})
@@ -172,7 +172,7 @@ module PaymentProviderCustomers
           postal_code: customer.zipcode,
           state: customer.state
         },
-        email: customer.email&.strip&.split(',')&.first,
+        email: customer.email&.strip&.split(",")&.first,
         name:,
         metadata: {
           lago_customer_id: customer.id,
@@ -192,7 +192,7 @@ module PaymentProviderCustomers
           postal_code: customer.zipcode,
           state: customer.state
         },
-        email: customer.email&.strip&.split(',')&.first,
+        email: customer.email&.strip&.split(",")&.first,
         name:,
         phone: customer.phone
       }
@@ -200,14 +200,14 @@ module PaymentProviderCustomers
 
     def deliver_success_webhook
       SendWebhookJob.perform_later(
-        'customer.payment_provider_created',
+        "customer.payment_provider_created",
         customer
       )
     end
 
     def deliver_error_webhook(stripe_error)
       SendWebhookJob.perform_later(
-        'customer.payment_provider_error',
+        "customer.payment_provider_error",
         customer,
         provider_error: {
           message: stripe_error.message,
@@ -225,7 +225,7 @@ module PaymentProviderCustomers
       #       (Happens when the Stripe API key is shared between organizations)
       return result if Customer.find_by(id: metadata[:lago_customer_id], organization_id:).nil?
 
-      result.not_found_failure!(resource: 'stripe_customer')
+      result.not_found_failure!(resource: "stripe_customer")
     end
 
     def stripe_payment_provider

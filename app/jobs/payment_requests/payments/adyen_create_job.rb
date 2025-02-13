@@ -3,7 +3,7 @@
 module PaymentRequests
   module Payments
     class AdyenCreateJob < ApplicationJob
-      queue_as 'providers'
+      queue_as "providers"
 
       unique :until_executed, on_conflict: :log
 
@@ -12,7 +12,7 @@ module PaymentRequests
       def perform(payable)
         # NOTE: Legacy job, kept only to avoid faileure with existing jobs
 
-        PaymentRequests::Payments::CreateService.call!(payable:, payment_provider: 'adyen')
+        PaymentRequests::Payments::CreateService.call!(payable:, payment_provider: "adyen")
       end
     end
   end

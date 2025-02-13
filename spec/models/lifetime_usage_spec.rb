@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe LifetimeUsage, type: :model do
   subject(:lifetime_usage) { create(:lifetime_usage) }
 
   it { is_expected.to belong_to(:organization) }
 
-  describe 'default scope' do
+  describe "default scope" do
     let!(:deleted_lifetime_usage) { create(:lifetime_usage, :deleted) }
 
     it "only returns non-deleted lifetime-usage objects" do
@@ -16,8 +16,8 @@ RSpec.describe LifetimeUsage, type: :model do
     end
   end
 
-  describe 'Validations' do
-    it 'requires that current_usage_amount_cents is postive' do
+  describe "Validations" do
+    it "requires that current_usage_amount_cents is postive" do
       lifetime_usage.current_usage_amount_cents = -1
       expect(lifetime_usage).not_to be_valid
 
@@ -25,7 +25,7 @@ RSpec.describe LifetimeUsage, type: :model do
       expect(lifetime_usage).to be_valid
     end
 
-    it 'requires that invoiced_usage_amount_cents is postive' do
+    it "requires that invoiced_usage_amount_cents is postive" do
       lifetime_usage.invoiced_usage_amount_cents = -1
       expect(lifetime_usage).not_to be_valid
 
@@ -33,7 +33,7 @@ RSpec.describe LifetimeUsage, type: :model do
       expect(lifetime_usage).to be_valid
     end
 
-    it 'requires that historical_usage_amount_cents is positive' do
+    it "requires that historical_usage_amount_cents is positive" do
       lifetime_usage.historical_usage_amount_cents = -1
       expect(lifetime_usage).not_to be_valid
 
@@ -61,8 +61,8 @@ RSpec.describe LifetimeUsage, type: :model do
     end
   end
 
-  describe '#total_amount_cents' do
-    it 'returns the sum of the historical, invoiced, and current usage' do
+  describe "#total_amount_cents" do
+    it "returns the sum of the historical, invoiced, and current usage" do
       lifetime_usage.historical_usage_amount_cents = 100
       lifetime_usage.invoiced_usage_amount_cents = 200
       lifetime_usage.current_usage_amount_cents = 300

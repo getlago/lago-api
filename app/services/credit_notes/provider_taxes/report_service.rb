@@ -10,7 +10,7 @@ module CreditNotes
       end
 
       def call
-        return result.not_found_failure!(resource: 'credit_note') unless credit_note
+        return result.not_found_failure!(resource: "credit_note") unless credit_note
 
         credit_note.error_details.tax_error.discard_all
 

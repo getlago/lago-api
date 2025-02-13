@@ -32,7 +32,7 @@ module Commitments
           invoice_ids_query = subscription
             .invoice_subscriptions
             .where(
-              'from_datetime >= ? AND to_datetime <= ?',
+              "from_datetime >= ? AND to_datetime <= ?",
               dates_service.previous_beginning_of_period,
               dates_service.end_of_period
             ).select(:invoice_id)

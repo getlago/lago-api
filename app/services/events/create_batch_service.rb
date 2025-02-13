@@ -15,11 +15,11 @@ module Events
 
     def call
       if events_params.blank?
-        return result.single_validation_failure!(error_code: 'no_events', field: :events)
+        return result.single_validation_failure!(error_code: "no_events", field: :events)
       end
 
       if events_params.count > MAX_LENGTH
-        return result.single_validation_failure!(error_code: 'too_many_events', field: :events)
+        return result.single_validation_failure!(error_code: "too_many_events", field: :events)
       end
 
       validate_events
@@ -56,7 +56,7 @@ module Events
         result.events.push(event)
         result.errors[index] = event.errors.messages unless event.valid?
       rescue ArgumentError
-        result.errors = result.errors.merge({index => {timestamp: ['invalid_format']}})
+        result.errors = result.errors.merge({index => {timestamp: ["invalid_format"]}})
       end
     end
 
@@ -72,11 +72,11 @@ module Events
     end
 
     def produce_kafka_event(event)
-      return if ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].blank?
-      return if ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'].blank?
+      return if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
+      return if ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"].blank?
 
       Karafka.producer.produce_async(
-        topic: ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'],
+        topic: ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"],
         key: "#{organization.id}-#{event.external_subscription_id}",
         payload: {
           organization_id: organization.id,
@@ -88,7 +88,7 @@ module Events
           properties: event.properties,
           ingested_at: Time.zone.now.iso8601[...-1],
           precise_total_amount_cents: event.precise_total_amount_cents.present? ? event.precise_total_amount_cents.to_s : "0.0",
-          source: 'http_ruby'
+          source: "http_ruby"
         }.to_json
       )
     end

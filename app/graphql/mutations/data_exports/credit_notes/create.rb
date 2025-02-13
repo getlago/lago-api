@@ -7,10 +7,10 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = 'credit_notes:export'
+        REQUIRED_PERMISSION = "credit_notes:export"
 
-        graphql_name 'CreateCreditNotesDataExport'
-        description 'Request data export of credit notes'
+        graphql_name "CreateCreditNotesDataExport"
+        description "Request data export of credit notes"
 
         input_object_class Types::DataExports::CreditNotes::CreateInput
 

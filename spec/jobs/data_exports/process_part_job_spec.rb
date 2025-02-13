@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe DataExports::ProcessPartJob, type: :job do
   let(:data_export_part) { create(:data_export_part) }

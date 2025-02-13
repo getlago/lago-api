@@ -21,11 +21,11 @@ module Webhooks
         end
 
         def webhook_type
-          'customer.tax_provider_error'
+          "customer.tax_provider_error"
         end
 
         def object_type
-          'tax_provider_customer_error'
+          "tax_provider_customer_error"
         end
       end
     end

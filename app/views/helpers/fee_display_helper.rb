@@ -2,7 +2,7 @@
 
 class FeeDisplayHelper
   def self.grouped_by_display(fee)
-    return '' if !fee.charge? || fee.grouped_by.values.compact.blank?
+    return "" if !fee.charge? || fee.grouped_by.values.compact.blank?
 
     " • #{fee.grouped_by.values.compact.join(" • ")}"
   end

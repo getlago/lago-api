@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::Analytics::OverdueBalancesResolver, type: :graphql do
-  let(:required_permission) { 'analytics:overdue_balances:view' }
+  let(:required_permission) { "analytics:overdue_balances:view" }
   let(:query) do
     <<~GQL
       query($currency: CurrencyEnum, $externalCustomerId: String, $months: Int, $expireCache: Boolean) {
@@ -22,11 +22,11 @@ RSpec.describe Resolvers::Analytics::OverdueBalancesResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'analytics:overdue_balances:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "analytics:overdue_balances:view"
 
-  it 'returns a list of overdue balances' do
+  it "returns a list of overdue balances" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -34,6 +34,6 @@ RSpec.describe Resolvers::Analytics::OverdueBalancesResolver, type: :graphql do
       query:
     )
 
-    expect(result['data']['overdueBalances']['collection']).to eq([])
+    expect(result["data"]["overdueBalances"]["collection"]).to eq([])
   end
 end

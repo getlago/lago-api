@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe BillableMetrics::Aggregations::ApplyRoundingService, type: :service do
   subject(:rounding_service) { described_class.new(billable_metric:, units:) }
 
-  let(:rounding_function) { 'round' }
+  let(:rounding_function) { "round" }
   let(:rounding_precision) { 2 }
 
   let(:billable_metric) do
@@ -14,83 +14,83 @@ RSpec.describe BillableMetrics::Aggregations::ApplyRoundingService, type: :servi
 
   let(:units) { 123.456 }
 
-  describe '#call' do
+  describe "#call" do
     let(:result) { rounding_service.call }
 
-    context 'with round function' do
-      it 'returns the rounded units' do
+    context "with round function" do
+      it "returns the rounded units" do
         expect(result.units).to eq(123.46)
       end
 
-      context 'without precision' do
+      context "without precision" do
         let(:rounding_precision) { nil }
 
-        it 'applies the rounding to the integer value' do
+        it "applies the rounding to the integer value" do
           expect(result.units).to eq(123)
         end
       end
 
-      context 'with negative precision' do
+      context "with negative precision" do
         let(:rounding_precision) { -2 }
 
-        it 'applies the rounding' do
+        it "applies the rounding" do
           expect(result.units).to eq(100)
         end
       end
     end
 
-    context 'with ceil function' do
-      let(:rounding_function) { 'ceil' }
+    context "with ceil function" do
+      let(:rounding_function) { "ceil" }
 
-      it 'returns the rounded units' do
+      it "returns the rounded units" do
         expect(result.units).to eq(123.46)
       end
 
-      context 'without precision' do
+      context "without precision" do
         let(:rounding_precision) { nil }
 
-        it 'applies the rounding to the integer value' do
+        it "applies the rounding to the integer value" do
           expect(result.units).to eq(124)
         end
       end
 
-      context 'with negative precision' do
+      context "with negative precision" do
         let(:rounding_precision) { -2 }
 
-        it 'applies the rounding' do
+        it "applies the rounding" do
           expect(result.units).to eq(200)
         end
       end
     end
 
-    context 'with floor function' do
-      let(:rounding_function) { 'floor' }
+    context "with floor function" do
+      let(:rounding_function) { "floor" }
 
-      it 'returns the rounded units' do
+      it "returns the rounded units" do
         expect(result.units).to eq(123.45)
       end
 
-      context 'without precision' do
+      context "without precision" do
         let(:rounding_precision) { nil }
 
-        it 'applies the rounding to the integer value' do
+        it "applies the rounding to the integer value" do
           expect(result.units).to eq(123)
         end
       end
 
-      context 'with negative precision' do
+      context "with negative precision" do
         let(:rounding_precision) { -2 }
 
-        it 'applies the rounding' do
+        it "applies the rounding" do
           expect(result.units).to eq(100)
         end
       end
     end
 
-    context 'without rounding function' do
+    context "without rounding function" do
       let(:rounding_function) { nil }
 
-      it 'returns the units' do
+      it "returns the units" do
         expect(result.units).to eq(units)
       end
     end

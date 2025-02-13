@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe IntegrationResource, type: :model do
   subject(:integration_resource) { build(:integration_resource) }
@@ -9,7 +9,7 @@ RSpec.describe IntegrationResource, type: :model do
     %i[invoice sales_order_deprecated payment credit_note subscription]
   end
 
-  it_behaves_like 'paper_trail traceable'
+  it_behaves_like "paper_trail traceable"
 
   it { is_expected.to belong_to(:syncable) }
   it { is_expected.to belong_to(:integration) }

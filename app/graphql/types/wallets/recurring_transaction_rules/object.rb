@@ -4,7 +4,7 @@ module Types
   module Wallets
     module RecurringTransactionRules
       class Object < Types::BaseObject
-        graphql_name 'RecurringTransactionRule'
+        graphql_name "RecurringTransactionRule"
 
         field :lago_id, ID, null: false, method: :id
 

@@ -5,7 +5,7 @@ module IntegrationMappings
     def call(**args)
       integration = Integrations::BaseIntegration.find_by(id: args[:integration_id])
 
-      return result.not_found_failure!(resource: 'integration') unless integration
+      return result.not_found_failure!(resource: "integration") unless integration
 
       integration_mapping = IntegrationMappings::Factory.new_instance(integration:).new(
         integration_id: args[:integration_id],

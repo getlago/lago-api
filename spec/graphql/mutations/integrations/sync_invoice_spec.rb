@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Integrations::SyncInvoice, type: :graphql do
   subject(:execute_graphql_call) do
@@ -15,7 +15,7 @@ RSpec.describe Mutations::Integrations::SyncInvoice, type: :graphql do
     )
   end
 
-  let(:required_permission) { 'organization:integrations:update' }
+  let(:required_permission) { "organization:integrations:update" }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { membership.organization }
@@ -46,11 +46,11 @@ RSpec.describe Mutations::Integrations::SyncInvoice, type: :graphql do
     execute_graphql_call
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:update"
 
-  it 'syncs an invoice' do
+  it "syncs an invoice" do
     aggregate_failures do
       expect(::Integrations::Aggregator::Invoices::CreateService).to have_received(:new).with(invoice:)
       expect(service).to have_received(:call_async)

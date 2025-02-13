@@ -7,7 +7,7 @@ module Integrations
         organization = Organization.find_by(id: args[:organization_id])
 
         unless organization.xero_enabled?
-          return result.not_allowed_failure!(code: 'premium_integration_missing')
+          return result.not_allowed_failure!(code: "premium_integration_missing")
         end
 
         integration = Integrations::XeroIntegration.new(

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::CustomerPortal::GenerateUrl, type: :graphql do
   let(:membership) { create(:membership) }
@@ -17,13 +17,13 @@ RSpec.describe Mutations::CustomerPortal::GenerateUrl, type: :graphql do
     GQL
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
 
-  context 'when licence is premium' do
+  context "when licence is premium" do
     around { |test| lago_premium!(&test) }
 
-    it 'returns customer portal url' do
+    it "returns customer portal url" do
       result = execute_graphql(
         current_organization: organization,
         current_user: user,
@@ -33,9 +33,9 @@ RSpec.describe Mutations::CustomerPortal::GenerateUrl, type: :graphql do
         }
       )
 
-      data = result['data']['generateCustomerPortalUrl']
+      data = result["data"]["generateCustomerPortalUrl"]
 
-      expect(data['url']).to include('/customer-portal/')
+      expect(data["url"]).to include("/customer-portal/")
     end
   end
 end

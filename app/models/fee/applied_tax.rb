@@ -2,7 +2,7 @@
 
 class Fee
   class AppliedTax < ApplicationRecord
-    self.table_name = 'fees_taxes'
+    self.table_name = "fees_taxes"
 
     include PaperTrailTraceable
 

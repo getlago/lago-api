@@ -12,7 +12,7 @@ module Events
       event.external_customer_id ||= customer&.external_id
 
       unless event.external_subscription_id
-        Deprecation.report('event_missing_external_subscription_id', organization.id)
+        Deprecation.report("event_missing_external_subscription_id", organization.id)
       end
 
       # NOTE: prevent subscription if more than 1 subscription is active
@@ -36,7 +36,7 @@ module Events
 
       result
     rescue ActiveRecord::RecordNotUnique
-      deliver_error_webhook(error: {transaction_id: ['value_already_exist']})
+      deliver_error_webhook(error: {transaction_id: ["value_already_exist"]})
 
       result
     end
@@ -69,7 +69,7 @@ module Events
           "terminated_at IS NULL OR date_trunc('millisecond', terminated_at::timestamp) >= ?",
           event.timestamp
         )
-        .order('terminated_at DESC NULLS FIRST, started_at DESC')
+        .order("terminated_at DESC NULLS FIRST, started_at DESC")
     end
 
     def billable_metric
@@ -119,7 +119,7 @@ module Events
     end
 
     def deliver_error_webhook(error:)
-      SendWebhookJob.perform_later('event.error', event, {error:})
+      SendWebhookJob.perform_later("event.error", event, {error:})
     end
   end
 end

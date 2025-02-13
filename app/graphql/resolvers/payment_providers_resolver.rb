@@ -25,13 +25,13 @@ module Resolvers
 
     def provider_type(type)
       case type
-      when 'adyen'
+      when "adyen"
         PaymentProviders::AdyenProvider.to_s
-      when 'stripe'
+      when "stripe"
         PaymentProviders::StripeProvider.to_s
-      when 'gocardless'
+      when "gocardless"
         PaymentProviders::GocardlessProvider.to_s
-      when 'cashfree'
+      when "cashfree"
         PaymentProviders::CashfreeProvider.to_s
       else
         raise(NotImplementedError)

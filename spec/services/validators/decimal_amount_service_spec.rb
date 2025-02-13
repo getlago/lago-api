@@ -1,69 +1,69 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Validators::DecimalAmountService, type: :service do
   subject(:decimal_amount_service) { described_class.new(amount) }
 
-  describe '.valid_amount?' do
-    let(:amount) { '15.00' }
+  describe ".valid_amount?" do
+    let(:amount) { "15.00" }
 
-    it 'returns true' do
+    it "returns true" do
       expect(decimal_amount_service).to be_valid_amount
     end
 
-    context 'with zero amount' do
-      let(:amount) { '0.00' }
+    context "with zero amount" do
+      let(:amount) { "0.00" }
 
-      it 'returns true' do
+      it "returns true" do
         expect(decimal_amount_service).to be_valid_amount
       end
     end
 
-    context 'with negative amount' do
-      let(:amount) { '-15.00' }
+    context "with negative amount" do
+      let(:amount) { "-15.00" }
 
-      it 'returns false' do
+      it "returns false" do
         expect(decimal_amount_service).not_to be_valid_amount
       end
     end
 
-    context 'with invalid amount' do
-      let(:amount) { 'foobar' }
+    context "with invalid amount" do
+      let(:amount) { "foobar" }
 
-      it 'returns false' do
+      it "returns false" do
         expect(decimal_amount_service).not_to be_valid_amount
       end
     end
 
-    context 'with not string amount' do
+    context "with not string amount" do
       let(:amount) { 1234 }
 
-      it 'returns false' do
+      it "returns false" do
         expect(decimal_amount_service).not_to be_valid_amount
       end
     end
   end
 
-  describe '.valid_positive_amount?' do
-    let(:amount) { '1.00' }
+  describe ".valid_positive_amount?" do
+    let(:amount) { "1.00" }
 
-    it 'returns true' do
+    it "returns true" do
       expect(decimal_amount_service).to be_valid_positive_amount
     end
 
-    context 'with zero amount' do
-      let(:amount) { '0.00' }
+    context "with zero amount" do
+      let(:amount) { "0.00" }
 
-      it 'returns false' do
+      it "returns false" do
         expect(decimal_amount_service).not_to be_valid_positive_amount
       end
     end
 
-    context 'with negative amount' do
-      let(:amount) { '-1.00' }
+    context "with negative amount" do
+      let(:amount) { "-1.00" }
 
-      it 'returns false' do
+      it "returns false" do
         expect(decimal_amount_service).not_to be_valid_positive_amount
       end
     end

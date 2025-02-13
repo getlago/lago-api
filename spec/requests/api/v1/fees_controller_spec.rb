@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::FeesController, type: :request do
   let(:organization) { create(:organization) }
 
-  describe 'GET /api/v1/fees/:id' do
+  describe "GET /api/v1/fees/:id" do
     subject { get_with_token(organization, "/api/v1/fees/#{fee_id}") }
 
     let(:customer) { create(:customer, organization:) }
@@ -13,9 +13,9 @@ RSpec.describe Api::V1::FeesController, type: :request do
     let(:fee) { create(:fee, subscription:, invoice: nil) }
     let(:fee_id) { fee.id }
 
-    include_examples 'requires API permission', 'fee', 'read'
+    include_examples "requires API permission", "fee", "read"
 
-    it 'returns a fee' do
+    it "returns a fee" do
       subject
 
       aggregate_failures do
@@ -39,11 +39,11 @@ RSpec.describe Api::V1::FeesController, type: :request do
       end
     end
 
-    context 'when fee is an add-on fee' do
+    context "when fee is an add-on fee" do
       let(:invoice) { create(:invoice, organization:) }
       let(:fee) { create(:add_on_fee, invoice:) }
 
-      it 'returns a fee' do
+      it "returns a fee" do
         subject
 
         aggregate_failures do
@@ -68,42 +68,42 @@ RSpec.describe Api::V1::FeesController, type: :request do
       end
     end
 
-    context 'when fee does not exist' do
+    context "when fee does not exist" do
       let(:fee_id) { SecureRandom.uuid }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when fee belongs to an other organization' do
+    context "when fee belongs to an other organization" do
       let(:fee) { create(:fee) }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'PUT /api/v1/fees/:id' do
+  describe "PUT /api/v1/fees/:id" do
     subject { put_with_token(organization, "/api/v1/fees/#{fee_id}", fee: update_params) }
 
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
-    let(:update_params) { {payment_status: 'succeeded'} }
+    let(:update_params) { {payment_status: "succeeded"} }
     let(:fee_id) { fee.id }
 
     let(:fee) do
-      create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice: nil)
+      create(:charge_fee, fee_type: "charge", pay_in_advance: true, subscription:, invoice: nil)
     end
 
     before { fee.charge.update!(invoiceable: false) }
 
-    include_examples 'requires API permission', 'fee', 'write'
+    include_examples "requires API permission", "fee", "write"
 
-    it 'updates the fee' do
+    it "updates the fee" do
       subject
 
       aggregate_failures do
@@ -132,72 +132,72 @@ RSpec.describe Api::V1::FeesController, type: :request do
       end
     end
 
-    context 'when fee does not exist' do
+    context "when fee does not exist" do
       let(:fee_id) { SecureRandom.uuid }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'DELETE /api/v1/fees/:id' do
+  describe "DELETE /api/v1/fees/:id" do
     subject { delete_with_token(organization, "/api/v1/fees/#{fee_id}") }
 
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
-    let(:update_params) { {payment_status: 'succeeded'} }
+    let(:update_params) { {payment_status: "succeeded"} }
     let(:fee_id) { fee.id }
 
-    context 'when fee exists' do
+    context "when fee exists" do
       let(:fee) do
-        create(:charge_fee, fee_type: 'charge', pay_in_advance: true, subscription:, invoice:)
+        create(:charge_fee, fee_type: "charge", pay_in_advance: true, subscription:, invoice:)
       end
       let(:invoice) { nil }
 
-      include_examples 'requires API permission', 'fee', 'write'
+      include_examples "requires API permission", "fee", "write"
 
-      context 'when fee does not attached to an invoice' do
-        it 'deletes the fee' do
+      context "when fee does not attached to an invoice" do
+        it "deletes the fee" do
           subject
           expect(response).to have_http_status(:ok)
         end
       end
 
-      context 'when fee is attached to an invoice' do
+      context "when fee is attached to an invoice" do
         let(:invoice) { create(:invoice, organization:, customer:) }
 
-        it 'dont delete the fee' do
+        it "dont delete the fee" do
           subject
           expect(response).to have_http_status(:method_not_allowed)
         end
       end
     end
 
-    context 'when fee does not exist' do
+    context "when fee does not exist" do
       let(:fee_id) { SecureRandom.uuid }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'GET /api/v1/fees' do
-    subject { get_with_token(organization, '/api/v1/fees', params) }
+  describe "GET /api/v1/fees" do
+    subject { get_with_token(organization, "/api/v1/fees", params) }
 
     let(:customer) { create(:customer, organization:) }
     let(:subscription) { create(:subscription, customer:) }
     let!(:fee) { create(:fee, subscription:, invoice: nil) }
 
-    context 'without params' do
+    context "without params" do
       let(:params) { {} }
 
-      include_examples 'requires API permission', 'fee', 'read'
+      include_examples "requires API permission", "fee", "read"
 
-      it 'returns a list of fees' do
+      it "returns a list of fees" do
         subject
 
         aggregate_failures do
@@ -209,10 +209,10 @@ RSpec.describe Api::V1::FeesController, type: :request do
       end
     end
 
-    context 'with an invalid filter' do
-      let(:params) { {fee_type: 'invalid_filter'} }
+    context "with an invalid filter" do
+      let(:params) { {fee_type: "invalid_filter"} }
 
-      it 'returns an error response' do
+      it "returns an error response" do
         subject
 
         aggregate_failures do

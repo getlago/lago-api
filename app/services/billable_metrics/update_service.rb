@@ -10,7 +10,7 @@ module BillableMetrics
     end
 
     def call
-      return result.not_found_failure!(resource: 'billable_metric') unless billable_metric
+      return result.not_found_failure!(resource: "billable_metric") unless billable_metric
 
       if params.key?(:aggregation_type) &&
           params[:aggregation_type]&.to_sym == :custom_agg &&

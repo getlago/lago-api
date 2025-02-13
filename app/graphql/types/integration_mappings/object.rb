@@ -3,7 +3,7 @@
 module Types
   module IntegrationMappings
     class Object < Types::BaseObject
-      graphql_name 'Mapping'
+      graphql_name "Mapping"
 
       field :external_account_code, String, null: true
       field :external_id, String, null: false

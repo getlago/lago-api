@@ -1,29 +1,29 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::CustomersController, type: :request do
-  describe 'POST /api/v1/customers' do
-    subject { post_with_token(organization, '/api/v1/customers', {customer: create_params}) }
+  describe "POST /api/v1/customers" do
+    subject { post_with_token(organization, "/api/v1/customers", {customer: create_params}) }
 
     let(:organization) { stripe_provider.organization }
     let(:stripe_provider) { create(:stripe_provider) }
     let(:create_params) do
       {
         external_id: SecureRandom.uuid,
-        name: 'Foo Bar Inc.',
-        firstname: 'Foo',
-        lastname: 'Bar',
-        customer_type: 'company',
-        currency: 'EUR',
-        timezone: 'America/New_York',
-        external_salesforce_id: 'foobar'
+        name: "Foo Bar Inc.",
+        firstname: "Foo",
+        lastname: "Bar",
+        customer_type: "company",
+        currency: "EUR",
+        timezone: "America/New_York",
+        external_salesforce_id: "foobar"
       }
     end
 
-    include_examples 'requires API permission', 'customer', 'write'
+    include_examples "requires API permission", "customer", "write"
 
-    it 'returns a success' do
+    it "returns a success" do
       subject
 
       expect(response).to have_http_status(:success)
@@ -40,18 +40,18 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       expect(json[:customer][:account_type]).to eq("customer")
     end
 
-    context 'with premium features' do
+    context "with premium features" do
       around { |test| lago_premium!(&test) }
 
       let(:create_params) do
         {
           external_id: SecureRandom.uuid,
-          name: 'Foo Bar',
-          timezone: 'America/New_York'
+          name: "Foo Bar",
+          timezone: "America/New_York"
         }
       end
 
-      it 'returns a success' do
+      it "returns a success" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -59,7 +59,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context 'with finalize_zero_amount_invoice' do
+    context "with finalize_zero_amount_invoice" do
       let(:create_params) do
         {
           external_id: SecureRandom.uuid,
@@ -67,7 +67,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         }
       end
 
-      it 'returns a success' do
+      it "returns a success" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -75,38 +75,38 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context 'with billing configuration' do
+    context "with billing configuration" do
       around { |test| lago_premium!(&test) }
 
       let(:create_params) do
         {
           external_id: SecureRandom.uuid,
-          name: 'Foo Bar',
+          name: "Foo Bar",
           billing_configuration: {
             invoice_grace_period: 3,
-            payment_provider: 'stripe',
+            payment_provider: "stripe",
             payment_provider_code: stripe_provider.code,
-            provider_customer_id: 'stripe_id',
-            document_locale: 'fr',
+            provider_customer_id: "stripe_id",
+            document_locale: "fr",
             provider_payment_methods:
           }
         }
       end
 
       before do
-        stub_request(:post, 'https://api.stripe.com/v1/checkout/sessions')
+        stub_request(:post, "https://api.stripe.com/v1/checkout/sessions")
           .to_return(status: 200, body: body.to_json, headers: {})
 
         allow(::Stripe::Checkout::Session).to receive(:create)
-          .and_return({'url' => 'https://example.com'})
+          .and_return({"url" => "https://example.com"})
 
         subject
       end
 
-      context 'when provider payment methods are not present' do
+      context "when provider payment methods are not present" do
         let(:provider_payment_methods) { nil }
 
-        it 'returns a success' do
+        it "returns a success" do
           expect(response).to have_http_status(:success)
 
           expect(json[:customer][:lago_id]).to be_present
@@ -115,20 +115,20 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           billing = json[:customer][:billing_configuration]
           aggregate_failures do
             expect(billing).to be_present
-            expect(billing[:payment_provider]).to eq('stripe')
+            expect(billing[:payment_provider]).to eq("stripe")
             expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
-            expect(billing[:provider_customer_id]).to eq('stripe_id')
+            expect(billing[:provider_customer_id]).to eq("stripe_id")
             expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:document_locale]).to eq('fr')
+            expect(billing[:document_locale]).to eq("fr")
             expect(billing[:provider_payment_methods]).to eq(%w[card])
           end
         end
       end
 
-      context 'when both provider payment methods are set' do
+      context "when both provider payment methods are set" do
         let(:provider_payment_methods) { %w[card sepa_debit] }
 
-        it 'returns a success' do
+        it "returns a success" do
           expect(response).to have_http_status(:success)
 
           expect(json[:customer][:lago_id]).to be_present
@@ -137,20 +137,20 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           billing = json[:customer][:billing_configuration]
           aggregate_failures do
             expect(billing).to be_present
-            expect(billing[:payment_provider]).to eq('stripe')
+            expect(billing[:payment_provider]).to eq("stripe")
             expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
-            expect(billing[:provider_customer_id]).to eq('stripe_id')
+            expect(billing[:provider_customer_id]).to eq("stripe_id")
             expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:document_locale]).to eq('fr')
+            expect(billing[:document_locale]).to eq("fr")
             expect(billing[:provider_payment_methods]).to eq(%w[card sepa_debit])
           end
         end
       end
 
-      context 'when provider payment methods contain only card' do
+      context "when provider payment methods contain only card" do
         let(:provider_payment_methods) { %w[card] }
 
-        it 'returns a success' do
+        it "returns a success" do
           expect(response).to have_http_status(:success)
 
           expect(json[:customer][:lago_id]).to be_present
@@ -159,20 +159,20 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           billing = json[:customer][:billing_configuration]
           aggregate_failures do
             expect(billing).to be_present
-            expect(billing[:payment_provider]).to eq('stripe')
+            expect(billing[:payment_provider]).to eq("stripe")
             expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
-            expect(billing[:provider_customer_id]).to eq('stripe_id')
+            expect(billing[:provider_customer_id]).to eq("stripe_id")
             expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:document_locale]).to eq('fr')
+            expect(billing[:document_locale]).to eq("fr")
             expect(billing[:provider_payment_methods]).to eq(%w[card])
           end
         end
       end
 
-      context 'when provider payment methods contain only sepa_debit' do
+      context "when provider payment methods contain only sepa_debit" do
         let(:provider_payment_methods) { %w[sepa_debit] }
 
-        it 'returns a success' do
+        it "returns a success" do
           expect(response).to have_http_status(:success)
 
           expect(json[:customer][:lago_id]).to be_present
@@ -181,11 +181,11 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           billing = json[:customer][:billing_configuration]
           aggregate_failures do
             expect(billing).to be_present
-            expect(billing[:payment_provider]).to eq('stripe')
+            expect(billing[:payment_provider]).to eq("stripe")
             expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
-            expect(billing[:provider_customer_id]).to eq('stripe_id')
+            expect(billing[:provider_customer_id]).to eq("stripe_id")
             expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:document_locale]).to eq('fr')
+            expect(billing[:document_locale]).to eq("fr")
             expect(billing[:provider_payment_methods]).to eq(%w[sepa_debit])
           end
         end
@@ -205,7 +205,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
       around { |test| lago_premium!(&test) }
 
-      it 'returns a success' do
+      it "returns a success" do
         subject
         expect(response).to have_http_status(:success)
 
@@ -215,22 +215,22 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context 'with metadata' do
+    context "with metadata" do
       let(:create_params) do
         {
           external_id: SecureRandom.uuid,
-          name: 'Foo Bar',
+          name: "Foo Bar",
           metadata: [
             {
-              key: 'Hello',
-              value: 'Hi',
+              key: "Hello",
+              value: "Hi",
               display_in_invoice: true
             }
           ]
         }
       end
 
-      it 'returns a success' do
+      it "returns a success" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -241,29 +241,29 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         metadata = json[:customer][:metadata]
         aggregate_failures do
           expect(metadata).to be_present
-          expect(metadata.first[:key]).to eq('Hello')
-          expect(metadata.first[:value]).to eq('Hi')
+          expect(metadata.first[:key]).to eq("Hello")
+          expect(metadata.first[:value]).to eq("Hi")
           expect(metadata.first[:display_in_invoice]).to eq(true)
         end
       end
     end
 
-    context 'with invalid params' do
+    context "with invalid params" do
       let(:create_params) do
-        {name: 'Foo Bar', currency: 'invalid'}
+        {name: "Foo Bar", currency: "invalid"}
       end
 
-      it 'returns an unprocessable_entity' do
+      it "returns an unprocessable_entity" do
         subject
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
 
-    context 'with invoice_custom_sections' do
+    context "with invoice_custom_sections" do
       let(:create_params) do
         {
           external_id: SecureRandom.uuid,
-          name: 'Foo Bar',
+          name: "Foo Bar",
           skip_invoice_custom_sections:,
           invoice_custom_section_codes:
         }
@@ -275,11 +275,11 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         subject
       end
 
-      context 'when sending custom invoice_custom_sections' do
+      context "when sending custom invoice_custom_sections" do
         let(:skip_invoice_custom_sections) { false }
         let(:invoice_custom_section_codes) { invoice_custom_sections.map(&:code) }
 
-        it 'returns a success' do
+        it "returns a success" do
           expect(response).to have_http_status(:success)
 
           expect(json[:customer][:lago_id]).to be_present
@@ -292,58 +292,58 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         end
       end
 
-      context 'when sending skip_invoice_custom_sections AND invoice_custom_section_codes' do
+      context "when sending skip_invoice_custom_sections AND invoice_custom_section_codes" do
         let(:skip_invoice_custom_sections) { true }
         let(:invoice_custom_section_codes) { invoice_custom_sections.map(&:code) }
 
-        it 'returns an error' do
+        it "returns an error" do
           expect(response).to have_http_status(:unprocessable_entity)
 
-          expect(json[:error_details][:invoice_custom_sections]).to include('skip_sections_and_selected_ids_sent_together')
+          expect(json[:error_details][:invoice_custom_sections]).to include("skip_sections_and_selected_ids_sent_together")
         end
       end
     end
   end
 
-  describe 'GET /api/v1/customers/:customer_external_id/portal_url' do
+  describe "GET /api/v1/customers/:customer_external_id/portal_url" do
     subject { get_with_token(organization, "/api/v1/customers/#{external_id}/portal_url") }
 
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
     let(:external_id) { customer.external_id }
 
-    include_examples 'requires API permission', 'customer', 'read'
+    include_examples "requires API permission", "customer", "read"
 
-    it 'returns the portal url' do
+    it "returns the portal url" do
       subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
-        expect(json[:customer][:portal_url]).to include('/customer-portal/')
+        expect(json[:customer][:portal_url]).to include("/customer-portal/")
       end
     end
 
-    context 'when customer does not belongs to the organization' do
+    context "when customer does not belongs to the organization" do
       let(:customer) { create(:customer) }
 
-      it 'returns not found error' do
+      it "returns not found error" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'GET /api/v1/customers' do
-    subject { get_with_token(organization, '/api/v1/customers', params) }
+  describe "GET /api/v1/customers" do
+    subject { get_with_token(organization, "/api/v1/customers", params) }
 
     let(:params) { {} }
     let(:organization) { create(:organization) }
 
     before { create_pair(:customer, organization:) }
 
-    include_examples 'requires API permission', 'customer', 'read'
+    include_examples "requires API permission", "customer", "read"
 
-    it 'returns all customers from organization' do
+    it "returns all customers from organization" do
       subject
 
       aggregate_failures do
@@ -372,17 +372,17 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     end
   end
 
-  describe 'GET /api/v1/customers/:customer_id' do
+  describe "GET /api/v1/customers/:customer_id" do
     subject { get_with_token(organization, "/api/v1/customers/#{external_id}") }
 
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
     let(:external_id) { customer.external_id }
 
-    context 'when customer exists' do
-      include_examples 'requires API permission', 'customer', 'read'
+    context "when customer exists" do
+      include_examples "requires API permission", "customer", "read"
 
-      it 'returns the customer' do
+      it "returns the customer" do
         subject
 
         aggregate_failures do
@@ -393,30 +393,30 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context 'when customer does not exist' do
+    context "when customer does not exist" do
       let(:external_id) { SecureRandom.uuid }
 
-      it 'returns a not found error' do
+      it "returns a not found error" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'DELETE /api/v1/customers/:customer_id' do
+  describe "DELETE /api/v1/customers/:customer_id" do
     subject { delete_with_token(organization, "/api/v1/customers/#{external_id}") }
 
     let(:organization) { create(:organization) }
     let!(:customer) { create(:customer, organization:) }
     let(:external_id) { customer.external_id }
 
-    include_examples 'requires API permission', 'customer', 'write'
+    include_examples "requires API permission", "customer", "write"
 
-    it 'deletes a customer' do
+    it "deletes a customer" do
       expect { subject }.to change(Customer, :count).by(-1)
     end
 
-    it 'returns deleted customer' do
+    it "returns deleted customer" do
       subject
 
       aggregate_failures do
@@ -427,17 +427,17 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context 'when customer does not exist' do
+    context "when customer does not exist" do
       let(:external_id) { SecureRandom.uuid }
 
-      it 'returns not_found error' do
+      it "returns not_found error" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'POST /api/v1/customers/:external_customer_id/checkout_url' do
+  describe "POST /api/v1/customers/:external_customer_id/checkout_url" do
     subject do
       post_with_token(organization, "/api/v1/customers/#{customer.external_id}/checkout_url")
     end
@@ -453,21 +453,21 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         payment_provider: stripe_provider
       )
 
-      customer.update!(payment_provider: 'stripe', payment_provider_code: stripe_provider.code)
+      customer.update!(payment_provider: "stripe", payment_provider_code: stripe_provider.code)
 
       allow(::Stripe::Checkout::Session).to receive(:create)
-        .and_return({'url' => 'https://example.com'})
+        .and_return({"url" => "https://example.com"})
     end
 
-    include_examples 'requires API permission', 'customer', 'write'
+    include_examples "requires API permission", "customer", "write"
 
-    it 'returns the new generated checkout url' do
+    it "returns the new generated checkout url" do
       subject
 
       aggregate_failures do
         expect(response).to have_http_status(:success)
 
-        expect(json[:customer][:checkout_url]).to eq('https://example.com')
+        expect(json[:customer][:checkout_url]).to eq("https://example.com")
       end
     end
   end

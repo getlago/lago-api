@@ -7,7 +7,7 @@ module Auth
 
       def check_state
         email = Rails.cache.read(state)
-        raise ValidationError, 'state_not_found' if email.blank?
+        raise ValidationError, "state_not_found" if email.blank?
 
         Rails.cache.delete(state)
 
@@ -15,13 +15,13 @@ module Auth
       end
 
       def check_okta_integration(email)
-        email_domain = email.split('@').last
+        email_domain = email.split("@").last
         okta_integration = ::Integrations::OktaIntegration
-          .where('settings->>\'domain\' IS NOT NULL')
-          .where('settings->>\'domain\' = ?', email_domain)
+          .where("settings->>'domain' IS NOT NULL")
+          .where("settings->>'domain' = ?", email_domain)
           .first
 
-        raise ValidationError, 'domain_not_configured' if okta_integration.blank?
+        raise ValidationError, "domain_not_configured" if okta_integration.blank?
 
         result.okta_integration = okta_integration
       end
@@ -29,8 +29,8 @@ module Auth
       def check_invite(email)
         invite = Invite.pending.find_by(token: invite_token)
 
-        raise ValidationError, 'invite_not_found' if invite.blank?
-        raise ValidationError, 'invite_email_mismatch' if invite.email != email
+        raise ValidationError, "invite_not_found" if invite.blank?
+        raise ValidationError, "invite_email_mismatch" if invite.email != email
 
         result.invite = invite
       end
@@ -39,22 +39,22 @@ module Auth
         params = {
           client_id: result.okta_integration.client_id,
           client_secret: result.okta_integration.client_secret,
-          grant_type: 'authorization_code',
+          grant_type: "authorization_code",
           code:,
           redirect_uri: "#{ENV["LAGO_FRONT_URL"]}/auth/okta/callback"
         }
 
         token_client = LagoHttpClient::Client.new("https://#{result.okta_integration.organization_name.downcase}.okta.com/oauth2/v1/token")
         response = token_client.post_url_encoded(params, {})
-        result.okta_access_token = response['access_token']
+        result.okta_access_token = response["access_token"]
       end
 
       def check_userinfo(email)
         userinfo_client = LagoHttpClient::Client.new("https://#{result.okta_integration.organization_name.downcase}.okta.com/oauth2/v1/userinfo")
-        userinfo_headers = {'Authorization' => "Bearer #{result.okta_access_token}"}
+        userinfo_headers = {"Authorization" => "Bearer #{result.okta_access_token}"}
         response = userinfo_client.get(headers: userinfo_headers)
 
-        raise ValidationError, 'okta_userinfo_error' if response['email'] != email
+        raise ValidationError, "okta_userinfo_error" if response["email"] != email
 
         result.userinfo = response
       end

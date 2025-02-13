@@ -12,17 +12,17 @@ module Webhooks
       def object_serializer
         ::V1::CustomerSerializer.new(
           object,
-          root_name: 'customer',
+          root_name: "customer",
           includes: %i[integration_customers]
         )
       end
 
       def webhook_type
-        'customer.created'
+        "customer.created"
       end
 
       def object_type
-        'customer'
+        "customer"
       end
     end
   end

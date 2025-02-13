@@ -20,7 +20,7 @@ class AddOnsQuery < BaseQuery
     return if search_term.blank?
 
     {
-      m: 'or',
+      m: "or",
       name_cont: search_term,
       code_cont: search_term
     }

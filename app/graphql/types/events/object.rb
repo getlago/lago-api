@@ -3,7 +3,7 @@
 module Types
   module Events
     class Object < Types::BaseObject
-      graphql_name 'Event'
+      graphql_name "Event"
 
       field :code, String, null: false
       field :id, ID, null: false
@@ -51,7 +51,7 @@ module Types
       end
 
       def customer_timezone
-        object.customer&.applicable_timezone || object.organization.timezone || 'UTC'
+        object.customer&.applicable_timezone || object.organization.timezone || "UTC"
       end
 
       def billable_metric_name

@@ -6,9 +6,9 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'analytics:overdue_balances:view'
+      REQUIRED_PERMISSION = "analytics:overdue_balances:view"
 
-      description 'Query overdue balances of an organization'
+      description "Query overdue balances of an organization"
 
       argument :currency, Types::CurrencyEnum, required: false
       argument :external_customer_id, String, required: false

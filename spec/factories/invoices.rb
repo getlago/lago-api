@@ -7,8 +7,8 @@ FactoryBot.define do
 
     issuing_date { Time.zone.now - 1.day }
     payment_due_date { issuing_date }
-    payment_status { 'pending' }
-    currency { 'EUR' }
+    payment_status { "pending" }
+    currency { "EUR" }
 
     organization_sequential_id { rand(1_000_000) }
 
@@ -26,13 +26,13 @@ FactoryBot.define do
 
     trait :with_tax_error do
       after :create do |i|
-        create(:error_detail, owner: i, error_code: 'tax_error')
+        create(:error_detail, owner: i, error_code: "tax_error")
       end
     end
 
     trait :with_tax_voiding_error do
       after :create do |i|
-        create(:error_detail, owner: i, error_code: 'tax_voiding_error')
+        create(:error_detail, owner: i, error_code: "tax_voiding_error")
       end
     end
 

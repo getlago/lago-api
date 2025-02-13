@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Delete Customer Scenarios', :scenarios, type: :request do
+describe "Delete Customer Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
   let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 1000) }
   let(:metric) { create(:billable_metric, organization:) }
 
-  it 'deletes the customer and terminate relations' do
+  it "deletes the customer and terminate relations" do
     ### 15 Dec: Create subscription + charge.
     dec15 = DateTime.new(2022, 12, 15)
 
@@ -21,7 +21,7 @@ describe 'Delete Customer Scenarios', :scenarios, type: :request do
         }
       )
 
-      create(:standard_charge, plan:, billable_metric: metric, properties: {amount: '3'})
+      create(:standard_charge, plan:, billable_metric: metric, properties: {amount: "3"})
     end
 
     subscription = customer.subscriptions.find_by(external_id: customer.external_id)
@@ -50,7 +50,7 @@ describe 'Delete Customer Scenarios', :scenarios, type: :request do
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: downgrade_plan.code,
-          subscription_at: '2023-02-01T00:00:00Z'
+          subscription_at: "2023-02-01T00:00:00Z"
         }
       )
       pending_subscription = customer.subscriptions.pending.first
@@ -58,13 +58,13 @@ describe 'Delete Customer Scenarios', :scenarios, type: :request do
       # Create coupon and apply it to customer
       create_coupon(
         {
-          name: 'coupon1',
-          code: 'coupon1_code',
-          coupon_type: 'fixed_amount',
-          frequency: 'once',
+          name: "coupon1",
+          code: "coupon1_code",
+          coupon_type: "fixed_amount",
+          frequency: "once",
           amount_cents: 123,
-          amount_currency: 'EUR',
-          expiration: 'time_limit',
+          amount_currency: "EUR",
+          expiration: "time_limit",
           expiration_at: Time.current + 15.days,
           reusable: false
         }
@@ -72,7 +72,7 @@ describe 'Delete Customer Scenarios', :scenarios, type: :request do
       apply_coupon(
         {
           external_customer_id: customer.external_id,
-          coupon_code: 'coupon1_code'
+          coupon_code: "coupon1_code"
         }
       )
       applied_coupon = customer.applied_coupons.active.first
@@ -81,11 +81,11 @@ describe 'Delete Customer Scenarios', :scenarios, type: :request do
       create_wallet(
         {
           external_customer_id: customer.external_id,
-          rate_amount: '1',
-          name: 'Wallet1',
-          currency: 'EUR',
-          paid_credits: '10',
-          granted_credits: '10',
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          paid_credits: "10",
+          granted_credits: "10",
           expiration_at: (Time.current + 15.days).iso8601
         }
       )

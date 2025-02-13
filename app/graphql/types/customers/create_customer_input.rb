@@ -3,7 +3,7 @@
 module Types
   module Customers
     class CreateCustomerInput < BaseInputObject
-      description 'Create Customer input arguments'
+      description "Create Customer input arguments"
 
       argument :account_type, Types::Customers::AccountTypeEnum, required: false
       argument :address_line1, String, required: false

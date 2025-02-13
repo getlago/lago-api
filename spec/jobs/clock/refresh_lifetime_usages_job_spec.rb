@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 describe Clock::RefreshLifetimeUsagesJob, job: true do
   subject { described_class }
 
-  describe '.perform' do
+  describe ".perform" do
     let(:organization) { create(:organization) }
     let(:lifetime_usage1) { create(:lifetime_usage, organization:, recalculate_invoiced_usage: true) }
     let(:lifetime_usage2) { create(:lifetime_usage, organization:, recalculate_current_usage: true) }
@@ -17,8 +17,8 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
       lifetime_usage3
     end
 
-    context 'when freemium' do
-      it 'does not call the refresh service' do
+    context "when freemium" do
+      it "does not call the refresh service" do
         described_class.perform_now
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage1)
         expect(LifetimeUsages::RecalculateAndCheckJob).not_to have_been_enqueued.with(lifetime_usage2)
@@ -26,7 +26,7 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
       end
     end
 
-    context 'when only premium' do
+    context "when only premium" do
       around { |test| lago_premium!(&test) }
 
       it "does not enqueue any job" do
@@ -38,8 +38,8 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
       end
     end
 
-    context 'when premium & with the premium_integration enabled' do
-      let(:organization) { create(:organization, premium_integrations: ['progressive_billing']) }
+    context "when premium & with the premium_integration enabled" do
+      let(:organization) { create(:organization, premium_integrations: ["progressive_billing"]) }
 
       around { |test| lago_premium!(&test) }
 

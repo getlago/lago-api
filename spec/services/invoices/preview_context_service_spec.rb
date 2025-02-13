@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::PreviewContextService, type: :service do
   let(:result) { described_class.call(organization:, params:) }
@@ -189,7 +189,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
 
       context "when billing time and subscription date are present" do
         let(:subscription_at) { generate(:past_date) }
-        let(:billing_time) { 'anniversary' }
+        let(:billing_time) { "anniversary" }
 
         it "returns new subscription with provided params" do
           expect(subject)
@@ -216,7 +216,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
               plan:,
               subscription_at: Time.current,
               started_at: Time.current,
-              billing_time: 'calendar'
+              billing_time: "calendar"
             )
         end
       end

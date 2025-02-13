@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::PlansResolver, type: :graphql do
-  let(:required_permission) { 'plans:view' }
+  let(:required_permission) { "plans:view" }
   let(:query) do
     <<~GQL
       query {
@@ -29,11 +29,11 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
     end
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'plans:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "plans:view"
 
-  it 'returns a list of plans' do
+  it "returns a list of plans" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -41,15 +41,15 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
       query:
     )
 
-    plans_response = result['data']['plans']
+    plans_response = result["data"]["plans"]
 
     aggregate_failures do
-      expect(plans_response['collection'].count).to eq(organization.plans.count)
-      expect(plans_response['collection'].first['id']).to eq(plan.id)
-      expect(plans_response['collection'].first['customersCount']).to eq(1)
+      expect(plans_response["collection"].count).to eq(organization.plans.count)
+      expect(plans_response["collection"].first["id"]).to eq(plan.id)
+      expect(plans_response["collection"].first["customersCount"]).to eq(1)
 
-      expect(plans_response['metadata']['currentPage']).to eq(1)
-      expect(plans_response['metadata']['totalCount']).to eq(1)
+      expect(plans_response["metadata"]["currentPage"]).to eq(1)
+      expect(plans_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 end

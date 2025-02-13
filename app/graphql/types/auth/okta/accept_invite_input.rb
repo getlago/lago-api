@@ -4,7 +4,7 @@ module Types
   module Auth
     module Okta
       class AcceptInviteInput < BaseInputObject
-        description 'Accept Invite with Okta Oauth input arguments'
+        description "Accept Invite with Okta Oauth input arguments"
 
         argument :code, String, required: true
         argument :invite_token, String, required: true

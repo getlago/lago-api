@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe InvoiceCustomSections::DestroyService do
   subject(:service_result) { described_class.call(invoice_custom_section:) }
@@ -15,9 +15,9 @@ RSpec.describe InvoiceCustomSections::DestroyService do
     customer.selected_invoice_custom_sections << invoice_custom_section
   end
 
-  describe '#call' do
-    context 'when destroy is successful' do
-      it 'discards the invoice custom section and destroys all selections' do
+  describe "#call" do
+    context "when destroy is successful" do
+      it "discards the invoice custom section and destroys all selections" do
         result = service_result
 
         expect(result.invoice_custom_section.discarded?).to be(true)

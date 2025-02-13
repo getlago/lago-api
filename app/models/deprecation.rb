@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
-require 'csv'
+require "csv"
 
 class Deprecation
   EXPIRE_IN = 1.month
 
   class << self
     def report(feature_name, organization_id)
-      Rails.cache.write(cache_key(feature_name, organization_id, 'last_seen_at'), Time.current, expires_in: EXPIRE_IN)
-      Rails.cache.increment(cache_key(feature_name, organization_id, 'count'), 1, expires_in: EXPIRE_IN)
+      Rails.cache.write(cache_key(feature_name, organization_id, "last_seen_at"), Time.current, expires_in: EXPIRE_IN)
+      Rails.cache.increment(cache_key(feature_name, organization_id, "count"), 1, expires_in: EXPIRE_IN)
     end
 
     def get_all(feature_name)
@@ -33,8 +33,8 @@ class Deprecation
     end
 
     def get(feature_name, organization_id)
-      last_seen_at = Rails.cache.read(cache_key(feature_name, organization_id, 'last_seen_at'))
-      count = Rails.cache.read(cache_key(feature_name, organization_id, 'count'), raw: true).to_i
+      last_seen_at = Rails.cache.read(cache_key(feature_name, organization_id, "last_seen_at"))
+      count = Rails.cache.read(cache_key(feature_name, organization_id, "count"), raw: true).to_i
 
       {organization_id:, last_seen_at:, count:}
     end
@@ -46,8 +46,8 @@ class Deprecation
     end
 
     def reset(feature_name, organization_id)
-      Rails.cache.delete(cache_key(feature_name, organization_id, 'count'))
-      Rails.cache.delete(cache_key(feature_name, organization_id, 'last_seen_at'))
+      Rails.cache.delete(cache_key(feature_name, organization_id, "count"))
+      Rails.cache.delete(cache_key(feature_name, organization_id, "last_seen_at"))
     end
 
     private

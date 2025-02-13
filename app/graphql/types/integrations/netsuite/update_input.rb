@@ -4,7 +4,7 @@ module Types
   module Integrations
     class Netsuite
       class UpdateInput < Types::BaseInputObject
-        graphql_name 'UpdateNetsuiteIntegrationInput'
+        graphql_name "UpdateNetsuiteIntegrationInput"
 
         argument :id, ID, required: false
 

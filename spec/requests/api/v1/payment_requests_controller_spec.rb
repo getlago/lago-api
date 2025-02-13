@@ -32,7 +32,7 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
       )
     end
 
-    include_examples 'requires API permission', 'payment_request', 'write'
+    include_examples "requires API permission", "payment_request", "write"
 
     it "delegates to PaymentRequests::CreateService", :aggregate_failures do
       subject
@@ -58,7 +58,7 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
 
     let(:params) { {} }
 
-    include_examples 'requires API permission', 'payment_request', 'read'
+    include_examples "requires API permission", "payment_request", "read"
 
     it "returns organization's payment requests", :aggregate_failures do
       first_customer = create(:customer, organization:)

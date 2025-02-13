@@ -63,7 +63,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         {
           trigger: "interval",
           interval: "weekly",
-          transaction_metadata: [{'key' => 'valid_key', 'value' => 'invalid_value'}]
+          transaction_metadata: [{"key" => "valid_key", "value" => "invalid_value"}]
         }
       end
 
@@ -77,7 +77,7 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         {
           trigger: "interval",
           interval: "weekly",
-          transaction_metadata: {'key' => 'valid_key', 'value' => 'invalid_value'}
+          transaction_metadata: {"key" => "valid_key", "value" => "invalid_value"}
         }
       end
 

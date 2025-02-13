@@ -11,10 +11,10 @@ module Integrations
       end
 
       def call
-        return result.not_found_failure!(resource: 'integration') unless integration
+        return result.not_found_failure!(resource: "integration") unless integration
 
         unless integration.organization.netsuite_enabled?
-          return result.not_allowed_failure!(code: 'premium_integration_missing')
+          return result.not_allowed_failure!(code: "premium_integration_missing")
         end
 
         old_script_url = integration.script_endpoint_url
@@ -28,7 +28,7 @@ module Integrations
 
         integration.save!
 
-        if integration.type == 'Integrations::NetsuiteIntegration' && integration.script_endpoint_url != old_script_url
+        if integration.type == "Integrations::NetsuiteIntegration" && integration.script_endpoint_url != old_script_url
           Integrations::Aggregator::SendRestletEndpointJob.perform_later(integration:)
           Integrations::Aggregator::PerformSyncJob.set(wait: 2.seconds).perform_later(integration:, sync_items: false)
         end

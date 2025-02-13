@@ -5,7 +5,7 @@ module Clock
     include SentryCronConcern
 
     queue_as do
-      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_CLOCK'])
+      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_CLOCK"])
         :clock_worker
       else
         :clock
@@ -15,7 +15,7 @@ module Clock
     THRESHOLD = -> { 1.day.ago }
 
     def perform
-      Invoice.subscription.generating.where.not(id: InvoiceError.select(:id)).where('created_at < ?', THRESHOLD.call).find_each do |invoice|
+      Invoice.subscription.generating.where.not(id: InvoiceError.select(:id)).where("created_at < ?", THRESHOLD.call).find_each do |invoice|
         next unless invoice.invoice_subscriptions.any?
         invoicing_reasons = invoice.invoice_subscriptions.pluck(:invoicing_reason).uniq.compact
         invoicing_reason = (invoicing_reasons.size == 1) ? invoicing_reasons.first : :upgrading

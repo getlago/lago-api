@@ -3,7 +3,7 @@
 module Types
   module PaymentProviders
     class CashfreeInput < BaseInputObject
-      description 'Cashfree input arguments'
+      description "Cashfree input arguments"
 
       argument :client_id, String, required: true
       argument :client_secret, String, required: true

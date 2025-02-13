@@ -24,7 +24,7 @@ module IntegrationCustomers
         integration:,
         customer:,
         external_customer_id: create_result.contact_id,
-        type: 'IntegrationCustomers::XeroCustomer',
+        type: "IntegrationCustomers::XeroCustomer",
         sync_with_provider: true
       )
 

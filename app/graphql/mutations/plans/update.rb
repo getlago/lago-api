@@ -5,10 +5,10 @@ module Mutations
     class Update < BaseMutation
       include AuthenticableApiUser
 
-      REQUIRED_PERMISSION = 'plans:update'
+      REQUIRED_PERMISSION = "plans:update"
 
-      graphql_name 'UpdatePlan'
-      description 'Updates an existing Plan'
+      graphql_name "UpdatePlan"
+      description "Updates an existing Plan"
 
       argument :amount_cents, GraphQL::Types::BigInt, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true

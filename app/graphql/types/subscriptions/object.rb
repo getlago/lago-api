@@ -3,7 +3,7 @@
 module Types
   module Subscriptions
     class Object < Types::BaseObject
-      graphql_name 'Subscription'
+      graphql_name "Subscription"
 
       field :customer, Types::Customers::Object, null: false
       field :external_id, String, null: false

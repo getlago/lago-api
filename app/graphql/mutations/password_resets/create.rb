@@ -3,8 +3,8 @@
 module Mutations
   module PasswordResets
     class Create < BaseMutation
-      graphql_name 'CreatePasswordReset'
-      description 'Creates a new password reset'
+      graphql_name "CreatePasswordReset"
+      description "Creates a new password reset"
 
       argument :email, String, required: true
       field :id, String, null: false

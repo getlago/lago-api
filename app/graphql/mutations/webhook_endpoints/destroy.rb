@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'developers:manage'
+      REQUIRED_PERMISSION = "developers:manage"
 
-      graphql_name 'DestroyWebhookEndpoint'
-      description 'Deletes a webhook endpoint'
+      graphql_name "DestroyWebhookEndpoint"
+      description "Deletes a webhook endpoint"
 
       argument :id, ID, required: true
 

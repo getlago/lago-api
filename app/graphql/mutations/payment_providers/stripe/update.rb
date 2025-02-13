@@ -4,10 +4,10 @@ module Mutations
   module PaymentProviders
     module Stripe
       class Update < Base
-        REQUIRED_PERMISSION = 'organization:integrations:update'
+        REQUIRED_PERMISSION = "organization:integrations:update"
 
-        graphql_name 'UpdateStripePaymentProvider'
-        description 'Update Stripe payment provider'
+        graphql_name "UpdateStripePaymentProvider"
+        description "Update Stripe payment provider"
 
         input_object_class Types::PaymentProviders::UpdateInput
 

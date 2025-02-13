@@ -13,7 +13,7 @@ module Utils
       "(#{sanitized_field_name})::timestamptz AT TIME ZONE '#{sanitized_timezone}'"
     end
 
-    def self.at_time_zone_sql(customer: 'customers', organization: 'organizations')
+    def self.at_time_zone_sql(customer: "customers", organization: "organizations")
       <<-SQL
         ::timestamptz AT TIME ZONE COALESCE(#{customer}.timezone, #{organization}.timezone, 'UTC')
       SQL

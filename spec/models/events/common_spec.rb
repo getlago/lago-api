@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Events::Common do
   subject(:event) do
@@ -26,55 +26,55 @@ RSpec.describe Events::Common do
   let(:started_at) { Time.current - 3.days }
   let(:external_subscription_id) { subscription.external_id }
 
-  describe '#event_id' do
-    it 'returns the transaction_id' do
+  describe "#event_id" do
+    it "returns the transaction_id" do
       expect(event.event_id).to eq(event.transaction_id)
     end
 
-    context 'when id is set' do
-      before { event.id = 'event-id' }
+    context "when id is set" do
+      before { event.id = "event-id" }
 
-      it 'returns the id' do
-        expect(event.event_id).to eq('event-id')
+      it "returns the id" do
+        expect(event.event_id).to eq("event-id")
       end
     end
   end
 
-  describe '#organization' do
-    it 'returns the organization' do
+  describe "#organization" do
+    it "returns the organization" do
       expect(event.organization).to eq(organization)
     end
   end
 
-  describe '#billable_metric' do
-    it 'returns the billable_metric' do
+  describe "#billable_metric" do
+    it "returns the billable_metric" do
       expect(event.billable_metric).to eq(billable_metric)
     end
   end
 
-  describe '#subscription' do
-    it 'returns the subscription' do
+  describe "#subscription" do
+    it "returns the subscription" do
       expect(event.subscription).to eq(subscription)
     end
 
-    context 'when subscription is terminated' do
+    context "when subscription is terminated" do
       let(:subscription) { create(:subscription, :terminated, organization:, customer:, started_at:) }
 
-      it 'returns the subscription' do
+      it "returns the subscription" do
         expect(event.subscription).to eq(subscription)
       end
 
-      context 'when subscription is terminated just after the ingestion' do
+      context "when subscription is terminated just after the ingestion" do
         before do
           subscription.update!(terminated_at: timestamp + 0.2.seconds)
         end
 
-        it 'returns the subscription' do
+        it "returns the subscription" do
           expect(event.subscription).to eq(subscription)
         end
       end
 
-      context 'when a new active subscription exists' do
+      context "when a new active subscription exists" do
         let(:started_at) { 1.month.ago }
         let(:timestamp) { 1.week.ago }
 
@@ -90,12 +90,12 @@ RSpec.describe Events::Common do
 
         before { active_subscription }
 
-        it 'returns the active subscription' do
+        it "returns the active subscription" do
           expect(event.subscription).to eq(subscription)
         end
       end
 
-      context 'when subscription is an upgrade/downgrade' do
+      context "when subscription is an upgrade/downgrade" do
         let(:started_at) { 1.week.ago }
 
         let(:terminated_subscription) do
@@ -112,22 +112,22 @@ RSpec.describe Events::Common do
 
         before { terminated_subscription }
 
-        it 'returns the subscription' do
+        it "returns the subscription" do
           expect(event.subscription).to eq(subscription)
         end
       end
     end
   end
 
-  describe '#as_json' do
-    it 'returns the event as json' do
+  describe "#as_json" do
+    it "returns the event as json" do
       expect(event.as_json).to include(
-        'organization_id' => organization.id,
-        'transaction_id' => event.transaction_id,
-        'external_subscription_id' => subscription.external_id,
-        'code' => billable_metric.code,
-        'properties' => {},
-        'timestamp' => timestamp.to_f
+        "organization_id" => organization.id,
+        "transaction_id" => event.transaction_id,
+        "external_subscription_id" => subscription.external_id,
+        "code" => billable_metric.code,
+        "properties" => {},
+        "timestamp" => timestamp.to_f
       )
     end
   end

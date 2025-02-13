@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::RetryService, type: :service do
   subject(:retry_service) { described_class.new(invoice:) }
 
-  describe '#call' do
+  describe "#call" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
 
@@ -17,7 +17,7 @@ RSpec.describe Invoices::RetryService, type: :service do
         customer:,
         organization:,
         subscriptions: [subscription],
-        currency: 'EUR',
+        currency: "EUR",
         issuing_date: Time.zone.at(timestamp).to_date
       )
     end
@@ -34,9 +34,9 @@ RSpec.describe Invoices::RetryService, type: :service do
 
     let(:timestamp) { Time.zone.now - 1.year }
     let(:started_at) { Time.zone.now - 2.years }
-    let(:plan) { create(:plan, organization:, interval: 'monthly') }
-    let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
-    let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard', billable_metric:) }
+    let(:plan) { create(:plan, organization:, interval: "monthly") }
+    let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
+    let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: "standard", billable_metric:) }
 
     let(:fee_subscription) do
       create(
@@ -63,39 +63,39 @@ RSpec.describe Invoices::RetryService, type: :service do
       fee_charge
     end
 
-    context 'when invoice does not exist' do
-      it 'returns an error' do
+    context "when invoice does not exist" do
+      it "returns an error" do
         result = described_class.new(invoice: nil).call
 
         expect(result).not_to be_success
-        expect(result.error.error_code).to eq('invoice_not_found')
+        expect(result.error.error_code).to eq("invoice_not_found")
       end
     end
 
-    context 'when invoice is not failed' do
+    context "when invoice is not failed" do
       before do
         invoice.update(status: %i[draft finalized voided generating].sample)
       end
 
-      it 'returns an error' do
+      it "returns an error" do
         result = retry_service.call
 
         expect(result).not_to be_success
-        expect(result.error.code).to eq('invalid_status')
+        expect(result.error.code).to eq("invalid_status")
       end
     end
 
-    it 'enqueues a Invoices::ProviderTaxes::PullTaxesAndApplyJob' do
+    it "enqueues a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
       expect do
         retry_service.call
       end.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
     end
 
-    it 'sets correct statuses' do
+    it "sets correct statuses" do
       retry_service.call
 
-      expect(invoice.reload.status).to eq('pending')
-      expect(invoice.reload.tax_status).to eq('pending')
+      expect(invoice.reload.status).to eq("pending")
+      expect(invoice.reload.tax_status).to eq("pending")
     end
   end
 end

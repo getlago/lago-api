@@ -11,7 +11,7 @@ module Integrations
 
           def call
             return result unless integration
-            return result unless integration.type == 'Integrations::AnrokIntegration'
+            return result unless integration.type == "Integrations::AnrokIntegration"
 
             throttle!(:anrok)
 

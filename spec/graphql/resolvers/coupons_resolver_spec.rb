@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::CouponsResolver, type: :graphql do
-  let(:required_permission) { 'coupons:view' }
+  let(:required_permission) { "coupons:view" }
   let(:query) do
     <<~GQL
       query {
@@ -25,11 +25,11 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
     create(:coupon, organization:, status: :terminated)
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'coupons:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "coupons:view"
 
-  it 'returns a list of coupons' do
+  it "returns a list of coupons" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -37,14 +37,14 @@ RSpec.describe Resolvers::CouponsResolver, type: :graphql do
       query:
     )
 
-    coupons_response = result['data']['coupons']
+    coupons_response = result["data"]["coupons"]
 
     aggregate_failures do
-      expect(coupons_response['collection'].count).to eq(organization.coupons.active.count)
-      expect(coupons_response['collection'].first['id']).to eq(coupon.id)
+      expect(coupons_response["collection"].count).to eq(organization.coupons.active.count)
+      expect(coupons_response["collection"].first["id"]).to eq(coupon.id)
 
-      expect(coupons_response['metadata']['currentPage']).to eq(1)
-      expect(coupons_response['metadata']['totalCount']).to eq(1)
+      expect(coupons_response["metadata"]["currentPage"]).to eq(1)
+      expect(coupons_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 end

@@ -17,7 +17,7 @@ module Integrations
             response = http_client.put_with_response(payload.update_body, headers)
             body = JSON.parse(response.body)
 
-            result.external_id = body['id']
+            result.external_id = body["id"]
             result
           rescue LagoHttpClient::HttpError => e
             raise RequestLimitError(e) if request_limit_error?(e)
@@ -31,7 +31,7 @@ module Integrations
           end
 
           def call_async
-            return result.not_found_failure!(resource: 'invoice') unless invoice
+            return result.not_found_failure!(resource: "invoice") unless invoice
 
             ::Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice:)
 

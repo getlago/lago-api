@@ -14,7 +14,7 @@ module Integrations
         organization = Organization.find_by(id: params[:organization_id])
 
         unless organization.hubspot_enabled?
-          return result.not_allowed_failure!(code: 'premium_integration_missing')
+          return result.not_allowed_failure!(code: "premium_integration_missing")
         end
 
         integration = Integrations::HubspotIntegration.new(
@@ -29,7 +29,7 @@ module Integrations
 
         integration.save!
 
-        if integration.type == 'Integrations::HubspotIntegration'
+        if integration.type == "Integrations::HubspotIntegration"
           Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob.perform_later(integration:)
           Integrations::Hubspot::SavePortalIdJob.perform_later(integration:)
         end

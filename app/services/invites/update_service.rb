@@ -10,9 +10,9 @@ module Invites
     end
 
     def call
-      return result.not_found_failure!(resource: 'invite') unless invite
-      return result.forbidden_failure!(code: 'cannot_update_accepted_invite') if invite.accepted?
-      return result.forbidden_failure!(code: 'cannot_update_revoked_invite') if invite.revoked?
+      return result.not_found_failure!(resource: "invite") unless invite
+      return result.forbidden_failure!(code: "cannot_update_accepted_invite") if invite.accepted?
+      return result.forbidden_failure!(code: "cannot_update_revoked_invite") if invite.revoked?
 
       invite.update!(
         role: params[:role]

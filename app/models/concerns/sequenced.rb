@@ -38,7 +38,7 @@ module Sequenced
       end
 
       # NOTE: If the application was unable to acquire the lock, the block returns false
-      raise(SequenceError, 'Unable to acquire lock on the database') unless result
+      raise(SequenceError, "Unable to acquire lock on the database") unless result
 
       result
     end

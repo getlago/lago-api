@@ -10,7 +10,7 @@ Rails.application.configure do
 
   # Settings specified here will take precedence over those in config/application.rb.
   config.middleware.use(ActionDispatch::Cookies)
-  config.middleware.use(ActionDispatch::Session::CookieStore, key: '_lago_dev')
+  config.middleware.use(ActionDispatch::Session::CookieStore, key: "_lago_dev")
   config.middleware.use(Rack::MethodOverride)
 
   config.eager_load_paths += %W[
@@ -22,7 +22,7 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.server_timing = true
 
-  config.cache_store = :redis_cache_store, {url: ENV['LAGO_REDIS_CACHE_URL'], db: 3}
+  config.cache_store = :redis_cache_store, {url: ENV["LAGO_REDIS_CACHE_URL"], db: 3}
 
   if Rails.root.join("tmp/caching-dev.txt").exist?
     config.public_file_server.headers = {
@@ -32,8 +32,8 @@ Rails.application.configure do
     config.action_controller.perform_caching = false
   end
 
-  config.active_storage.service = if ENV['LAGO_USE_AWS_S3'].present? && ENV['LAGO_USE_AWS_S3'] == 'true'
-    if ENV['LAGO_AWS_S3_ENDPOINT'].present?
+  config.active_storage.service = if ENV["LAGO_USE_AWS_S3"].present? && ENV["LAGO_USE_AWS_S3"] == "true"
+    if ENV["LAGO_AWS_S3_ENDPOINT"].present?
       :amazon_compatible_endpoint
     else
       :amazon
@@ -54,16 +54,16 @@ Rails.application.configure do
 
   config.action_controller.raise_on_missing_callback_actions = true
 
-  config.hosts << 'api.lago.dev'
-  config.hosts << 'api'
+  config.hosts << "api.lago.dev"
+  config.hosts << "api"
 
-  config.license_url = 'http://license:3000'
+  config.license_url = "http://license:3000"
 
   config.action_mailer.perform_deliveries = true
   config.action_mailer.raise_delivery_errors = true
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
-    address: 'mailhog',
+    address: "mailhog",
     port: 1025
   }
   config.action_mailer.preview_paths << Rails.root.join("spec/mailers/previews").to_s

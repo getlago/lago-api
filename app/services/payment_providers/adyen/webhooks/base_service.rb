@@ -16,7 +16,7 @@ module PaymentProviders
         attr_reader :organization, :event_json
 
         def event
-          @event ||= JSON.parse(event_json)['notificationItems'].first&.dig('NotificationRequestItem')
+          @event ||= JSON.parse(event_json)["notificationItems"].first&.dig("NotificationRequestItem")
         end
       end
     end

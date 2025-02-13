@@ -4,7 +4,7 @@ module Types
   module Wallets
     module RecurringTransactionRules
       class CreateInput < Types::BaseInputObject
-        graphql_name 'CreateRecurringTransactionRuleInput'
+        graphql_name "CreateRecurringTransactionRuleInput"
 
         argument :granted_credits, String, required: false
         argument :interval, Types::Wallets::RecurringTransactionRules::IntervalEnum, required: false

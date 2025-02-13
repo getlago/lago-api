@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Recurring Fees Subscription Downgrade', :scenarios, type: :request do
-  let(:organization) { create(:organization, webhook_url: 'http://fees.test/wh') }
+describe "Recurring Fees Subscription Downgrade", :scenarios, type: :request do
+  let(:organization) { create(:organization, webhook_url: "http://fees.test/wh") }
   let(:customer) { create(:customer, organization:) }
-  let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:, code: 'seats') }
-  let(:plan) { create(:plan, organization:, name: 'Premium plus', amount_cents: 99.99, pay_in_advance: true) }
+  let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:, code: "seats") }
+  let(:plan) { create(:plan, organization:, name: "Premium plus", amount_cents: 99.99, pay_in_advance: true) }
   let(:external_subscription_id) { SecureRandom.uuid }
   let(:charge) do
     create(:charge, {
@@ -15,7 +15,7 @@ describe 'Recurring Fees Subscription Downgrade', :scenarios, type: :request do
       invoiceable:,
       pay_in_advance:,
       prorated: true,
-      properties: {amount: '30', grouped_by:}
+      properties: {amount: "30", grouped_by:}
     })
   end
 
@@ -25,21 +25,21 @@ describe 'Recurring Fees Subscription Downgrade', :scenarios, type: :request do
         code: billable_metric.code,
         transaction_id: "tr_#{SecureRandom.hex(16)}",
         external_subscription_id:,
-        properties: {'item_id' => item_id}
+        properties: {"item_id" => item_id}
       }
     )
   end
 
   before do
     charge
-    WebMock.stub_request(:post, 'http://fees.test/wh').to_return(status: 200, body: '', headers: {})
+    WebMock.stub_request(:post, "http://fees.test/wh").to_return(status: 200, body: "", headers: {})
   end
 
-  describe 'when downgrading subscription' do
+  describe "when downgrading subscription" do
     let(:invoiceable) { false }
     let(:pay_in_advance) { true }
-    let(:grouped_by) { ['item_id'] }
-    let(:plan_2) { create(:plan, organization:, name: 'downgraded', amount_cents: 49.99, pay_in_advance: true) }
+    let(:grouped_by) { ["item_id"] }
+    let(:plan_2) { create(:plan, organization:, name: "downgraded", amount_cents: 49.99, pay_in_advance: true) }
 
     before do
       create(:charge, {
@@ -48,14 +48,14 @@ describe 'Recurring Fees Subscription Downgrade', :scenarios, type: :request do
         invoiceable:,
         pay_in_advance:,
         prorated: true,
-        properties: {amount: '60', grouped_by:}
+        properties: {amount: "60", grouped_by:}
       })
     end
 
-    context 'when all subscriptions are calendar' do
-      let(:billing_time) { 'calendar' }
+    context "when all subscriptions are calendar" do
+      let(:billing_time) { "calendar" }
 
-      it 'performs subscription downgrade and billing correctly' do
+      it "performs subscription downgrade and billing correctly" do
         travel_to(DateTime.new(2024, 6, 1, 0, 0)) do
           create_subscription(
             {
@@ -111,10 +111,10 @@ describe 'Recurring Fees Subscription Downgrade', :scenarios, type: :request do
       end
     end
 
-    context 'when all subscriptions are anniversary' do
-      let(:billing_time) { 'anniversary' }
+    context "when all subscriptions are anniversary" do
+      let(:billing_time) { "anniversary" }
 
-      it 'performs subscription downgrade and billing correctly' do
+      it "performs subscription downgrade and billing correctly" do
         travel_to(DateTime.new(2024, 6, 4, 0, 0)) do
           create_subscription(
             {

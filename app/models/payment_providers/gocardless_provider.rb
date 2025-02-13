@@ -2,7 +2,7 @@
 
 module PaymentProviders
   class GocardlessProvider < BaseProvider
-    SUCCESS_REDIRECT_URL = 'https://gocardless.com/'
+    SUCCESS_REDIRECT_URL = "https://gocardless.com/"
 
     PROCESSING_STATUSES = %w[pending_customer_approval pending_submission submitted confirmed].freeze
     SUCCESS_STATUSES = %w[paid_out].freeze
@@ -15,9 +15,9 @@ module PaymentProviders
 
     def self.auth_site
       if Rails.env.production?
-        'https://connect.gocardless.com'
+        "https://connect.gocardless.com"
       else
-        'https://connect-sandbox.gocardless.com'
+        "https://connect-sandbox.gocardless.com"
       end
     end
 

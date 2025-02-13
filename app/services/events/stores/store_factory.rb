@@ -5,7 +5,7 @@ module Events
     class StoreFactory
       class << self
         def supports_clickhouse?
-          ENV['LAGO_CLICKHOUSE_ENABLED'].present?
+          ENV["LAGO_CLICKHOUSE_ENABLED"].present?
         end
       end
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Wallets::ValidateService, type: :service do
   subject(:validate_service) { described_class.new(result, **args) }
@@ -11,8 +11,8 @@ RSpec.describe Wallets::ValidateService, type: :service do
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:customer_id) { customer.external_id }
-  let(:paid_credits) { '1.00' }
-  let(:granted_credits) { '0.00' }
+  let(:paid_credits) { "1.00" }
+  let(:granted_credits) { "0.00" }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
   let(:args) do
     {
@@ -26,12 +26,12 @@ RSpec.describe Wallets::ValidateService, type: :service do
 
   before { subscription }
 
-  describe '.valid?' do
-    it 'returns true' do
+  describe ".valid?" do
+    it "returns true" do
       expect(validate_service).to be_valid
     end
 
-    context 'when customer does not exist' do
+    context "when customer does not exist" do
       let(:args) do
         {
           customer: nil,
@@ -41,68 +41,68 @@ RSpec.describe Wallets::ValidateService, type: :service do
         }
       end
 
-      it 'returns false and result has errors' do
+      it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:customer]).to eq(['customer_not_found'])
+        expect(result.error.messages[:customer]).to eq(["customer_not_found"])
       end
     end
 
-    context 'when customer already has a wallet' do
+    context "when customer already has a wallet" do
       before { create(:wallet, customer:) }
 
-      it 'returns false and result has errors' do
+      it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:customer]).to eq(['wallet_already_exists'])
+        expect(result.error.messages[:customer]).to eq(["wallet_already_exists"])
       end
     end
 
-    context 'with invalid paid_credits' do
-      let(:paid_credits) { 'foobar' }
+    context "with invalid paid_credits" do
+      let(:paid_credits) { "foobar" }
 
-      it 'returns false and result has errors' do
+      it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:paid_credits]).to eq(['invalid_paid_credits'])
+        expect(result.error.messages[:paid_credits]).to eq(["invalid_paid_credits"])
       end
     end
 
-    context 'with invalid granted_credits' do
-      let(:granted_credits) { 'foobar' }
+    context "with invalid granted_credits" do
+      let(:granted_credits) { "foobar" }
 
-      it 'returns false and result has errors' do
+      it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:granted_credits]).to eq(['invalid_granted_credits'])
+        expect(result.error.messages[:granted_credits]).to eq(["invalid_granted_credits"])
       end
     end
 
-    context 'with invalid expiration_at' do
-      context 'when string cannot be parsed to date' do
-        let(:expiration_at) { 'invalid' }
+    context "with invalid expiration_at" do
+      context "when string cannot be parsed to date" do
+        let(:expiration_at) { "invalid" }
 
-        it 'returns false and result has errors' do
+        it "returns false and result has errors" do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
+          expect(result.error.messages[:expiration_at]).to eq(["invalid_date"])
         end
       end
 
-      context 'when expiration_at is integer' do
+      context "when expiration_at is integer" do
         let(:expiration_at) { 123 }
 
-        it 'returns false and result has errors' do
+        it "returns false and result has errors" do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
+          expect(result.error.messages[:expiration_at]).to eq(["invalid_date"])
         end
       end
 
-      context 'when expiration_at is less than current time' do
+      context "when expiration_at is less than current time" do
         let(:expiration_at) { (Time.current - 1.year).iso8601 }
 
-        it 'returns false and result has errors' do
+        it "returns false and result has errors" do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[:expiration_at]).to eq(['invalid_date'])
+          expect(result.error.messages[:expiration_at]).to eq(["invalid_date"])
         end
       end
 
-      context 'with invalid transaction metadata' do
+      context "with invalid transaction metadata" do
         let(:args) do
           {
             customer:,
@@ -114,23 +114,23 @@ RSpec.describe Wallets::ValidateService, type: :service do
           }
         end
 
-        it 'returns false and result has errors' do
+        it "returns false and result has errors" do
           expect(validate_service).not_to be_valid
-          expect(result.error.messages[:metadata]).to eq(['invalid_key_value_pair'])
+          expect(result.error.messages[:metadata]).to eq(["invalid_key_value_pair"])
         end
       end
     end
 
-    context 'with recurring transaction rules' do
+    context "with recurring transaction rules" do
       let(:rules) do
         [
           {
-            trigger: 'interval',
-            interval: 'monthly'
+            trigger: "interval",
+            interval: "monthly"
           },
           {
-            trigger: 'threshold',
-            threshold_credits: '-1.0'
+            trigger: "threshold",
+            threshold_credits: "-1.0"
           }
         ]
       end
@@ -144,9 +144,9 @@ RSpec.describe Wallets::ValidateService, type: :service do
         }
       end
 
-      it 'returns false and result has errors' do
+      it "returns false and result has errors" do
         expect(validate_service).not_to be_valid
-        expect(result.error.messages[:recurring_transaction_rules]).to eq(['invalid_number_of_recurring_rules'])
+        expect(result.error.messages[:recurring_transaction_rules]).to eq(["invalid_number_of_recurring_rules"])
       end
     end
   end

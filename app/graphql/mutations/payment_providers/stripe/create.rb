@@ -4,10 +4,10 @@ module Mutations
   module PaymentProviders
     module Stripe
       class Create < Base
-        REQUIRED_PERMISSION = 'organization:integrations:create'
+        REQUIRED_PERMISSION = "organization:integrations:create"
 
-        graphql_name 'AddStripePaymentProvider'
-        description 'Add Stripe API keys to the organization'
+        graphql_name "AddStripePaymentProvider"
+        description "Add Stripe API keys to the organization"
 
         input_object_class Types::PaymentProviders::StripeInput
 

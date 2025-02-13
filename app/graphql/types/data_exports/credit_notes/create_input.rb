@@ -4,7 +4,7 @@ module Types
   module DataExports
     module CreditNotes
       class CreateInput < Types::BaseInputObject
-        graphql_name 'CreateDataExportsCreditNotesInput'
+        graphql_name "CreateDataExportsCreditNotesInput"
 
         argument :filters, Types::DataExports::CreditNotes::FiltersInput
         argument :format, Types::DataExports::FormatTypeEnum

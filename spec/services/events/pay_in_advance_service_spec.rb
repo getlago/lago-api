@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Events::PayInAdvanceService, type: :service do
   let(:in_advance_service) { described_class.new(event:) }
@@ -27,88 +27,88 @@ RSpec.describe Events::PayInAdvanceService, type: :service do
     )
   end
 
-  describe '#call' do
+  describe "#call" do
     let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
     let(:billable_metric) do
-      create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'item_id')
+      create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "item_id")
     end
 
-    let(:event_properties) { {billable_metric.field_name => '12'} }
+    let(:event_properties) { {billable_metric.field_name => "12"} }
 
     before { charge }
 
-    it 'enqueues a job to perform the pay_in_advance aggregation' do
+    it "enqueues a job to perform the pay_in_advance aggregation" do
       expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
     end
 
-    context 'when charge is invoiceable' do
+    context "when charge is invoiceable" do
       before { charge.update!(invoiceable: true) }
 
-      it 'does not enqueue a job to perform the pay_in_advance aggregation' do
+      it "does not enqueue a job to perform the pay_in_advance aggregation" do
         expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
       end
     end
 
-    context 'when multiple charges have the billable metric' do
+    context "when multiple charges have the billable metric" do
       before { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
 
-      it 'enqueues a job for each charge' do
+      it "enqueues a job for each charge" do
         expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob).twice
       end
     end
 
-    context 'when event matches a pay_in_advance charge that is invoiceable' do
+    context "when event matches a pay_in_advance charge that is invoiceable" do
       let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: true) }
       let(:billable_metric) do
-        create(:billable_metric, organization:, aggregation_type: 'sum_agg', field_name: 'item_id')
+        create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "item_id")
       end
 
-      let(:event_properties) { {billable_metric.field_name => '12'} }
+      let(:event_properties) { {billable_metric.field_name => "12"} }
 
       before { charge }
 
-      it 'enqueues a job to create the pay_in_advance charge invoice' do
+      it "enqueues a job to create the pay_in_advance charge invoice" do
         expect { in_advance_service.call }.to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
       end
 
-      context 'when charge is not invoiceable' do
+      context "when charge is not invoiceable" do
         before { charge.update!(invoiceable: false) }
 
-        it 'does not enqueue a job to create the pay_in_advance charge invoice' do
+        it "does not enqueue a job to create the pay_in_advance charge invoice" do
           expect { in_advance_service.call }
             .not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
         end
       end
 
-      context 'when multiple charges have the billable metric' do
+      context "when multiple charges have the billable metric" do
         before { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: true) }
 
-        it 'enqueues a job for each charge' do
+        it "enqueues a job for each charge" do
           expect { in_advance_service.call }
             .to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob).twice
         end
       end
 
-      context 'when value for sum_agg is negative' do
-        let(:event_properties) { {billable_metric.field_name => '-5'} }
+      context "when value for sum_agg is negative" do
+        let(:event_properties) { {billable_metric.field_name => "-5"} }
 
-        it 'enqueues a job' do
+        it "enqueues a job" do
           expect { in_advance_service.call }
             .to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
         end
       end
 
-      context 'when event field name does not batch the BM one' do
-        let(:event_properties) { {'wrong_field_name' => '-5'} }
+      context "when event field name does not batch the BM one" do
+        let(:event_properties) { {"wrong_field_name" => "-5"} }
 
-        it 'does not enqueue a job' do
+        it "does not enqueue a job" do
           expect { in_advance_service.call }
             .not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
         end
       end
     end
 
-    context 'when fees exists with the same transaction_id' do
+    context "when fees exists with the same transaction_id" do
       before do
         create(
           :fee,
@@ -118,31 +118,31 @@ RSpec.describe Events::PayInAdvanceService, type: :service do
         )
       end
 
-      it 'does not enqueue a job' do
+      it "does not enqueue a job" do
         expect do
           expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
         end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
       end
     end
 
-    context 'when event is comming from kafka' do
+    context "when event is comming from kafka" do
       before do
-        ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'] ||= 'kafla:9092'
-        ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'] ||= 'raw_events'
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] ||= "kafla:9092"
+        ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] ||= "raw_events"
 
         event.id = nil
       end
 
-      it 'does not process the event' do
+      it "does not process the event" do
         expect do
           expect { in_advance_service.call }.not_to have_enqueued_job(Fees::CreatePayInAdvanceJob)
         end.not_to have_enqueued_job(Invoices::CreatePayInAdvanceChargeJob)
       end
 
-      context 'when organization is using clickhouse' do
+      context "when organization is using clickhouse" do
         before { organization.update!(clickhouse_events_store: true) }
 
-        it 'enqueues a job to perform the pay_in_advance aggregation' do
+        it "enqueues a job to perform the pay_in_advance aggregation" do
           expect { in_advance_service.call }.to have_enqueued_job(Fees::CreatePayInAdvanceJob)
         end
       end

@@ -50,12 +50,12 @@ module AppliedCoupons
     attr_reader :customer, :coupon, :params
 
     def check_preconditions
-      return result.not_found_failure!(resource: 'customer') unless customer
-      return result.not_found_failure!(resource: 'coupon') unless coupon&.active?
-      return result.not_allowed_failure!(code: 'plan_overlapping') if plan_limitation_overlapping?
+      return result.not_found_failure!(resource: "customer") unless customer
+      return result.not_found_failure!(resource: "coupon") unless coupon&.active?
+      return result.not_allowed_failure!(code: "plan_overlapping") if plan_limitation_overlapping?
       return if reusable_coupon?
 
-      result.single_validation_failure!(field: 'coupon', error_code: 'coupon_is_not_reusable')
+      result.single_validation_failure!(field: "coupon", error_code: "coupon_is_not_reusable")
     end
 
     def reusable_coupon?

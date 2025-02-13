@@ -3,7 +3,7 @@
 module Types
   module Integrations
     class Netsuite < Types::BaseObject
-      graphql_name 'NetsuiteIntegration'
+      graphql_name "NetsuiteIntegration"
 
       field :account_id, String, null: true
       field :client_id, String, null: true
@@ -34,7 +34,7 @@ module Types
 
       def has_mappings_configured
         object.integration_collection_mappings
-          .where(type: 'IntegrationCollectionMappings::NetsuiteCollectionMapping')
+          .where(type: "IntegrationCollectionMappings::NetsuiteCollectionMapping")
           .any?
       end
     end

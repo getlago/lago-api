@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob, type: :job do
   let(:organization) { create(:organization) }
@@ -15,7 +15,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyJob, type: :job do
       .and_return(result)
   end
 
-  it 'calls successfully the service' do
+  it "calls successfully the service" do
     described_class.perform_now(invoice:)
 
     expect(Invoices::ProviderTaxes::PullTaxesAndApplyService).to have_received(:call)

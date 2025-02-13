@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssociationJob, type: :job do
   subject(:create_job) { described_class }
@@ -15,7 +15,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Hubspot::CreateCustomerAssoci
     allow(service).to receive(:call).and_return(result)
   end
 
-  it 'calls the aggregator create invoice hubspot service' do
+  it "calls the aggregator create invoice hubspot service" do
     described_class.perform_now(invoice:)
 
     aggregate_failures do

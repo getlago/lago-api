@@ -8,9 +8,9 @@ class Charge < ApplicationRecord
 
   belongs_to :plan, -> { with_discarded }, touch: true
   belongs_to :billable_metric, -> { with_discarded }
-  belongs_to :parent, class_name: 'Charge', optional: true
+  belongs_to :parent, class_name: "Charge", optional: true
 
-  has_many :children, class_name: 'Charge', foreign_key: :parent_id, dependent: :nullify
+  has_many :children, class_name: "Charge", foreign_key: :parent_id, dependent: :nullify
   has_many :fees
   has_many :filters, dependent: :destroy, class_name: "ChargeFilter"
   has_many :filter_values, through: :filters, class_name: "ChargeFilterValue", source: :values

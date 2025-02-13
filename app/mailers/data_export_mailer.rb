@@ -12,9 +12,9 @@ class DataExportMailer < ApplicationMailer
     I18n.with_locale(:en) do
       mail(
         to: user.email,
-        from: ENV['LAGO_FROM_EMAIL'],
+        from: ENV["LAGO_FROM_EMAIL"],
         subject: I18n.t(
-          'email.data_export.completed.subject',
+          "email.data_export.completed.subject",
           resource_type: @resource_type
         )
       )

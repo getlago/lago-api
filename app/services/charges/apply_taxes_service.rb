@@ -10,8 +10,8 @@ module Charges
     end
 
     def call
-      return result.not_found_failure!(resource: 'charge') unless charge
-      return result.not_found_failure!(resource: 'tax') if (tax_codes - taxes.pluck(:code)).present?
+      return result.not_found_failure!(resource: "charge") unless charge
+      return result.not_found_failure!(resource: "tax") if (tax_codes - taxes.pluck(:code)).present?
 
       charge.applied_taxes.where(
         tax_id: charge.taxes.where.not(code: tax_codes).pluck(:id)

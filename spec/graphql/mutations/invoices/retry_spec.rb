@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Invoices::Retry, type: :graphql do
-  let(:required_permission) { 'invoices:update' }
+  let(:required_permission) { "invoices:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:, payment_provider: 'gocardless') }
+  let(:customer) { create(:customer, organization:, payment_provider: "gocardless") }
   let(:user) { membership.user }
 
   let(:invoice) do
@@ -16,7 +16,7 @@ RSpec.describe Mutations::Invoices::Retry, type: :graphql do
       organization:,
       customer:,
       subscriptions: [subscription],
-      currency: 'EUR'
+      currency: "EUR"
     )
   end
   let(:subscription) do
@@ -31,7 +31,7 @@ RSpec.describe Mutations::Invoices::Retry, type: :graphql do
 
   let(:timestamp) { Time.zone.now - 1.year }
   let(:started_at) { Time.zone.now - 2.years }
-  let(:plan) { create(:plan, organization:, interval: 'monthly') }
+  let(:plan) { create(:plan, organization:, interval: "monthly") }
   let(:fee_subscription) do
     create(
       :fee,
@@ -56,12 +56,12 @@ RSpec.describe Mutations::Invoices::Retry, type: :graphql do
     fee_subscription
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'invoices:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "invoices:update"
 
-  context 'with valid preconditions' do
-    it 'returns the invoice after retry' do
+  context "with valid preconditions" do
+    it "returns the invoice after retry" do
       result = execute_graphql(
         current_organization: organization,
         current_user: user,
@@ -72,10 +72,10 @@ RSpec.describe Mutations::Invoices::Retry, type: :graphql do
         }
       )
 
-      data = result['data']['retryInvoice']
+      data = result["data"]["retryInvoice"]
 
-      expect(data['id']).to eq(invoice.id)
-      expect(data['status']).to eq('pending')
+      expect(data["id"]).to eq(invoice.id)
+      expect(data["status"]).to eq("pending")
     end
   end
 end
