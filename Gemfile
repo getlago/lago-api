@@ -124,6 +124,7 @@ group :test do
   gem "guard-rspec", require: false
   gem "rspec-graphql_matchers"
   gem "shoulda-matchers"
+  gem "karafka-testing"
 end
 
 group :development do

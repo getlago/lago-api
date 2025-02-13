@@ -28,11 +28,6 @@ class KarafkaApp < Karafka::App
     config.consumer_persistence = !Rails.env.development?
   end
 
-  # Comment out this part if you are not using instrumentation and/or you are not
-  # interested in logging events for certain environments. Since instrumentation
-  # notifications add extra boilerplate, if you want to achieve max performance,
-  # listen to only what you really need for given environment.
-  Karafka.monitor.subscribe(Karafka::Instrumentation::LoggerListener.new)
   # Karafka.monitor.subscribe(Karafka::Instrumentation::ProctitleListener.new)
 
   # This logger prints the producer development info using the Karafka logger.
@@ -46,6 +41,16 @@ class KarafkaApp < Karafka::App
       log_messages: false
     )
   )
+
+  routes.draw do
+    consumer_group :lago do
+      topic ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'] do
+        consumer EventsConsumer
+
+        dead_letter_queue(topic: 'unprocessed_events', max_retries: 1, independent: true, dispatch_method: :produce_sync)
+      end
+    end
+  end
 end
 
 Karafka::Web.setup do |config|
