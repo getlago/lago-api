@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::AggregateAmountsAndTaxesFromFees, type: :service do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, invoice_type: :advance_charges, customer:) }
-  let(:tax_5) { create(:tax, rate: 5, name: 'VAT', description: 'VAT 5%', code: 'tax-1234') }
-  let(:tax_12) { create(:tax, rate: 12, name: 'VAT', description: 'VAT 12%', code: 'tax-8901') }
+  let(:tax_5) { create(:tax, rate: 5, name: "VAT", description: "VAT 5%", code: "tax-1234") }
+  let(:tax_12) { create(:tax, rate: 12, name: "VAT", description: "VAT 12%", code: "tax-8901") }
 
   it do
     fee1 = create(:charge_fee, :succeeded, invoice:, amount_cents: 200, taxes_amount_cents: 9)

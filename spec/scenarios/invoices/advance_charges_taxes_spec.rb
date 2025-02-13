@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
+describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:tax_rate_1) { 9.3 }
   let(:tax_rate_2) { 12 }
-  let(:billable_metric_cards) { create(:unique_count_billable_metric, organization:, code: 'cards', recurring: true) }
-  let(:billable_metric_transfer) { create(:sum_billable_metric, organization:, code: 'transfer', recurring: false) }
+  let(:billable_metric_cards) { create(:unique_count_billable_metric, organization:, code: "cards", recurring: true) }
+  let(:billable_metric_transfer) { create(:sum_billable_metric, organization:, code: "transfer", recurring: false) }
   let(:plan) { create(:plan, organization:, pay_in_advance: true, amount_cents: 49) }
-  let(:external_subscription_id) { 'sub_' + SecureRandom.uuid }
+  let(:external_subscription_id) { "sub_" + SecureRandom.uuid }
 
   def send_card_event!(item_id = SecureRandom.uuid)
     send_event!(code: billable_metric_cards.code, item_id:)
@@ -33,12 +33,12 @@ describe 'Advance Charges Invoices Scenarios', :scenarios, type: :request do
   before do
     create(:tax, organization:, rate: tax_rate_1)
     create(:tax, organization:, rate: tax_rate_2)
-    create(:standard_charge, billable_metric: billable_metric_cards, regroup_paid_fees: 'invoice', pay_in_advance: true, invoiceable: false, prorated: true, plan:, properties: {amount: '30', grouped_by: nil})
-    create(:standard_charge, billable_metric: billable_metric_transfer, regroup_paid_fees: 'invoice', pay_in_advance: true, invoiceable: false, prorated: false, plan:, properties: {amount: '1', grouped_by: nil})
+    create(:standard_charge, billable_metric: billable_metric_cards, regroup_paid_fees: "invoice", pay_in_advance: true, invoiceable: false, prorated: true, plan:, properties: {amount: "30", grouped_by: nil})
+    create(:standard_charge, billable_metric: billable_metric_transfer, regroup_paid_fees: "invoice", pay_in_advance: true, invoiceable: false, prorated: false, plan:, properties: {amount: "1", grouped_by: nil})
   end
 
-  context 'when subscription is renewed' do
-    it 'generates an invoice with the correct charges' do
+  context "when subscription is renewed" do
+    it "generates an invoice with the correct charges" do
       travel_to(DateTime.new(2024, 6, 5, 10)) do
         create_subscription(
           {
