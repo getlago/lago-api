@@ -27,7 +27,7 @@ module Events
           .where(organization_id: subscription.organization.id)
           .from_datetime(from_datetime)
           .to_datetime(to_datetime)
-          .pluck('DISTINCT(code)')
+          .pluck("DISTINCT(code)")
       end
 
       def events_values(limit: nil, force_from: false, exclude_event: false)

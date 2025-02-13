@@ -3,7 +3,7 @@
 module Types
   module Subscriptions
     class CreateSubscriptionInput < BaseInputObject
-      description 'Create Subscription input arguments'
+      description "Create Subscription input arguments"
 
       argument :ending_at, GraphQL::Types::ISO8601DateTime, required: false
       argument :external_id, String, required: false

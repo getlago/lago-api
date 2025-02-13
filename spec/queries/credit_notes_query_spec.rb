@@ -237,7 +237,7 @@ RSpec.describe CreditNotesQuery, type: :query do
         it "returns a failed result" do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:issuing_date_from]).to include('invalid_date')
+          expect(result.error.messages[:issuing_date_from]).to include("invalid_date")
         end
       end
     end
@@ -260,7 +260,7 @@ RSpec.describe CreditNotesQuery, type: :query do
         it "returns a failed result" do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:issuing_date_to]).to include('invalid_date')
+          expect(result.error.messages[:issuing_date_to]).to include("invalid_date")
         end
       end
     end
@@ -530,7 +530,7 @@ RSpec.describe CreditNotesQuery, type: :query do
     end
   end
 
-  context 'with multiple filters applied at the same time' do
+  context "with multiple filters applied at the same time" do
     let(:search_term) { credit_note.number.first(5) }
 
     let(:filters) do

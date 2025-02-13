@@ -9,8 +9,8 @@ module Fees
     end
 
     def call
-      return result.not_found_failure!(resource: 'fee') unless fee
-      return result.not_allowed_failure!(code: 'invoiced_fee') if fee.invoice_id
+      return result.not_found_failure!(resource: "fee") unless fee
+      return result.not_allowed_failure!(code: "invoiced_fee") if fee.invoice_id
 
       fee.discard!
 

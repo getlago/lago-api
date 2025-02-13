@@ -14,8 +14,8 @@ class PasswordResetMailer < ApplicationMailer
     I18n.with_locale(:en) do
       mail(
         to: @email,
-        from: ENV['LAGO_FROM_EMAIL'],
-        subject: I18n.t('email.password_reset.subject')
+        from: ENV["LAGO_FROM_EMAIL"],
+        subject: I18n.t("email.password_reset.subject")
       )
     end
   end

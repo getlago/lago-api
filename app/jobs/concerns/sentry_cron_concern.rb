@@ -9,29 +9,29 @@ module SentryCronConcern
     class_attribute :sentry # rubocop:disable ThreadSafety/ClassAndModuleAttributes
 
     after_perform do
-      if ENV['SENTRY_ENABLE_CRONS'] && self.class.sentry.present?
+      if ENV["SENTRY_ENABLE_CRONS"] && self.class.sentry.present?
         self.class.sentry_monitor_check_ins(
-          slug: self.class.sentry['slug'],
-          monitor_config: Sentry::Cron::MonitorConfig.from_crontab(self.class.sentry['cron'])
+          slug: self.class.sentry["slug"],
+          monitor_config: Sentry::Cron::MonitorConfig.from_crontab(self.class.sentry["cron"])
         )
       end
     end
 
     def serialize
       super.tap do |data|
-        data['sentry'] = self.class.sentry if self.class.sentry.present?
+        data["sentry"] = self.class.sentry if self.class.sentry.present?
       end
     end
 
     def deserialize(job_data)
       super
-      self.class.sentry = job_data['sentry']
+      self.class.sentry = job_data["sentry"]
     end
   end
 
   class_methods do
     def set(options)
-      if ENV['SENTRY_ENABLE_CRONS'] && options[:sentry].present?
+      if ENV["SENTRY_ENABLE_CRONS"] && options[:sentry].present?
         self.sentry = options[:sentry]
       end
 

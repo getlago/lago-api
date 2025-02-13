@@ -3,7 +3,7 @@
 module Types
   module IntegrationMappings
     class CreateInput < Types::BaseInputObject
-      graphql_name 'CreateIntegrationMappingInput'
+      graphql_name "CreateIntegrationMappingInput"
 
       argument :external_account_code, String, required: false
       argument :external_id, String, required: true

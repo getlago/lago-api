@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Events::PayInAdvanceJob, type: :job do
   let(:pay_in_advance_service) { instance_double(Events::PayInAdvanceService) }
@@ -8,7 +8,7 @@ RSpec.describe Events::PayInAdvanceJob, type: :job do
 
   let(:event) { build(:common_event) }
 
-  it 'calls the event pay in advance service' do
+  it "calls the event pay in advance service" do
     allow(Events::PayInAdvanceService).to receive(:call)
       .with(event:)
       .and_return(result)

@@ -13,7 +13,7 @@ module WebhookEndpoints
     def call
       webhook_endpoint = organization.webhook_endpoints.find_by(id:)
 
-      return result.not_found_failure!(resource: 'webhook_endpoint') if webhook_endpoint.blank?
+      return result.not_found_failure!(resource: "webhook_endpoint") if webhook_endpoint.blank?
 
       webhook_endpoint.update!(
         webhook_url: params[:webhook_url],

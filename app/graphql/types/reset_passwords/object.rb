@@ -3,8 +3,8 @@
 module Types
   module ResetPasswords
     class Object < Types::BaseObject
-      graphql_name 'ResetPassword'
-      description 'ResetPassword type'
+      graphql_name "ResetPassword"
+      description "ResetPassword type"
 
       field :user, Types::UserType, null: false
 

@@ -7,10 +7,10 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = 'organization:integrations:create'
+        REQUIRED_PERMISSION = "organization:integrations:create"
 
-        graphql_name 'CreateHubspotIntegration'
-        description 'Create Hubspot integration'
+        graphql_name "CreateHubspotIntegration"
+        description "Create Hubspot integration"
 
         input_object_class Types::Integrations::Hubspot::CreateInput
 

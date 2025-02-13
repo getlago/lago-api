@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Invoices::CreateService do
   subject(:service_call) { described_class.call(invoice:) }
@@ -11,7 +11,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { 'https://api.nango.dev/v1/netsuite/invoices' }
+  let(:endpoint) { "https://api.nango.dev/v1/netsuite/invoices" }
   let(:add_on) { create(:add_on, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, billable_metric:) }
@@ -22,7 +22,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :fallback_item,
-      settings: {external_id: '1', external_account_code: '11', external_name: ''}
+      settings: {external_id: "1", external_account_code: "11", external_name: ""}
     )
   end
   let(:integration_collection_mapping2) do
@@ -30,7 +30,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :coupon,
-      settings: {external_id: '2', external_account_code: '22', external_name: ''}
+      settings: {external_id: "2", external_account_code: "22", external_name: ""}
     )
   end
   let(:integration_collection_mapping3) do
@@ -38,7 +38,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :subscription_fee,
-      settings: {external_id: '3', external_account_code: '33', external_name: ''}
+      settings: {external_id: "3", external_account_code: "33", external_name: ""}
     )
   end
   let(:integration_collection_mapping4) do
@@ -46,7 +46,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :minimum_commitment,
-      settings: {external_id: '4', external_account_code: '44', external_name: ''}
+      settings: {external_id: "4", external_account_code: "44", external_name: ""}
     )
   end
   let(:integration_collection_mapping5) do
@@ -54,7 +54,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :tax,
-      settings: {external_id: '5', external_account_code: '55', external_name: ''}
+      settings: {external_id: "5", external_account_code: "55", external_name: ""}
     )
   end
   let(:integration_collection_mapping6) do
@@ -62,25 +62,25 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :prepaid_credit,
-      settings: {external_id: '6', external_account_code: '66', external_name: ''}
+      settings: {external_id: "6", external_account_code: "66", external_name: ""}
     )
   end
   let(:integration_mapping_add_on) do
     create(
       :netsuite_mapping,
       integration:,
-      mappable_type: 'AddOn',
+      mappable_type: "AddOn",
       mappable_id: add_on.id,
-      settings: {external_id: 'm1', external_account_code: 'm11', external_name: ''}
+      settings: {external_id: "m1", external_account_code: "m11", external_name: ""}
     )
   end
   let(:integration_mapping_bm) do
     create(
       :netsuite_mapping,
       integration:,
-      mappable_type: 'BillableMetric',
+      mappable_type: "BillableMetric",
       mappable_id: billable_metric.id,
-      settings: {external_id: 'm2', external_account_code: 'm22', external_name: ''}
+      settings: {external_id: "m2", external_account_code: "m22", external_name: ""}
     )
   end
 
@@ -122,9 +122,9 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
 
   let(:headers) do
     {
-      'Connection-Id' => integration.connection_id,
-      'Authorization' => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
-      'Provider-Config-Key' => 'netsuite-tba'
+      "Connection-Id" => integration.connection_id,
+      "Authorization" => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
+      "Provider-Config-Key" => "netsuite-tba"
     }
   end
 
@@ -139,79 +139,79 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
 
   let(:params) do
     {
-      'type' => 'invoice',
-      'isDynamic' => true,
-      'columns' => {
-        'tranid' => invoice.number,
-        'taxregoverride' => true,
-        'taxdetailsoverride' => true,
-        'entity' => integration_customer.external_customer_id,
-        'custbody_lago_id' => invoice.id,
-        'custbody_ava_disable_tax_calculation' => true,
-        'custbody_lago_invoice_link' => invoice_url,
-        'trandate' => anything,
-        'duedate' => due_date
+      "type" => "invoice",
+      "isDynamic" => true,
+      "columns" => {
+        "tranid" => invoice.number,
+        "taxregoverride" => true,
+        "taxdetailsoverride" => true,
+        "entity" => integration_customer.external_customer_id,
+        "custbody_lago_id" => invoice.id,
+        "custbody_ava_disable_tax_calculation" => true,
+        "custbody_lago_invoice_link" => invoice_url,
+        "trandate" => anything,
+        "duedate" => due_date
       },
-      'lines' => [
+      "lines" => [
         {
-          'sublistId' => 'item',
-          'lineItems' => [
+          "sublistId" => "item",
+          "lineItems" => [
             {
-              'item' => '3',
-              'account' => '33',
-              'quantity' => 0.0,
-              'rate' => 0.0,
-              'amount' => 2.0,
-              'taxdetailsreference' => anything,
-              'custcol_service_period_date_from' => anything,
-              'custcol_service_period_date_to' => anything
+              "item" => "3",
+              "account" => "33",
+              "quantity" => 0.0,
+              "rate" => 0.0,
+              "amount" => 2.0,
+              "taxdetailsreference" => anything,
+              "custcol_service_period_date_from" => anything,
+              "custcol_service_period_date_to" => anything
             },
             {
-              'item' => '4',
-              'account' => '44',
-              'quantity' => 0.0,
-              'rate' => 0.0,
-              'amount' => 2.0,
-              'taxdetailsreference' => anything,
-              'custcol_service_period_date_from' => anything,
-              'custcol_service_period_date_to' => anything
+              "item" => "4",
+              "account" => "44",
+              "quantity" => 0.0,
+              "rate" => 0.0,
+              "amount" => 2.0,
+              "taxdetailsreference" => anything,
+              "custcol_service_period_date_from" => anything,
+              "custcol_service_period_date_to" => anything
             },
             {
-              'item' => 'm2',
-              'account' => 'm22',
-              'quantity' => 2,
-              'rate' => 4.1212121212334,
-              'amount' => 2.0,
-              'taxdetailsreference' => anything,
-              'custcol_service_period_date_from' => anything,
-              'custcol_service_period_date_to' => anything
+              "item" => "m2",
+              "account" => "m22",
+              "quantity" => 2,
+              "rate" => 4.1212121212334,
+              "amount" => 2.0,
+              "taxdetailsreference" => anything,
+              "custcol_service_period_date_from" => anything,
+              "custcol_service_period_date_to" => anything
             },
             {
-              'item' => '2',
-              'account' => '22',
-              'quantity' => 1,
-              'rate' => -20.0,
-              'taxdetailsreference' => 'coupon_item'
+              "item" => "2",
+              "account" => "22",
+              "quantity" => 1,
+              "rate" => -20.0,
+              "taxdetailsreference" => "coupon_item"
             },
             {
-              'item' => '6',
-              'account' => '66',
-              'quantity' => 1,
-              'rate' => -40.0,
-              'taxdetailsreference' => 'credit_item'
+              "item" => "6",
+              "account" => "66",
+              "quantity" => 1,
+              "rate" => -40.0,
+              "taxdetailsreference" => "credit_item"
             },
             {
-              'item' => '1', # Fallback item instead of credit note
-              'account' => '11',
-              'quantity' => 1,
-              'rate' => -60.0,
-              'taxdetailsreference' => 'credit_note_item'
+              "item" => "1", # Fallback item instead of credit note
+              "account" => "11",
+              "quantity" => 1,
+              "rate" => -60.0,
+              "taxdetailsreference" => "credit_note_item"
             }
           ]
         }
       ],
-      'options' => {
-        'ignoreMandatoryFields' => false
+      "options" => {
+        "ignoreMandatoryFields" => false
       }
     }
   end
@@ -237,31 +237,31 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
     integration.save!
   end
 
-  describe '#call_async' do
+  describe "#call_async" do
     subject(:service_call_async) { described_class.new(invoice:).call_async }
 
-    context 'when invoice exists' do
-      it 'enqueues invoice create job' do
+    context "when invoice exists" do
+      it "enqueues invoice create job" do
         expect { service_call_async }.to enqueue_job(Integrations::Aggregator::Invoices::CreateJob)
       end
     end
 
-    context 'when invoice does not exist' do
+    context "when invoice does not exist" do
       let(:invoice) { nil }
 
-      it 'returns an error' do
+      it "returns an error" do
         result = service_call_async
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.error_code).to eq('invoice_not_found')
+          expect(result.error.error_code).to eq("invoice_not_found")
         end
       end
     end
   end
 
-  describe '#call' do
-    context 'when integration_invoice exists' do
+  describe "#call" do
+    context "when integration_invoice exists" do
       let(:integration_invoice) { create(:integration_resource, integration:, syncable: invoice) }
       let(:response) { instance_double(Net::HTTPOK) }
 
@@ -270,7 +270,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         integration_invoice
       end
 
-      it 'returns result without making an API call' do
+      it "returns result without making an API call" do
         expect(lago_client).not_to have_received(:post_with_response)
         result = service_call
 
@@ -281,7 +281,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       end
     end
 
-    context 'when service call is successful' do
+    context "when service call is successful" do
       let(:response) { instance_double(Net::HTTPOK) }
 
       before do
@@ -289,42 +289,42 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         allow(response).to receive(:body).and_return(body)
       end
 
-      context 'when response is a hash' do
-        context 'when invoice is succesfully created' do
+      context "when response is a hash" do
+        context "when invoice is succesfully created" do
           let(:body) do
-            path = Rails.root.join('spec/fixtures/integration_aggregator/invoices/success_hash_response.json')
+            path = Rails.root.join("spec/fixtures/integration_aggregator/invoices/success_hash_response.json")
             File.read(path)
           end
 
-          it 'returns external id' do
+          it "returns external id" do
             result = service_call
 
             aggregate_failures do
               expect(result).to be_success
-              expect(result.external_id).to eq('cc1576cf-7b1c-480e-8f25-ae10fa34d6d1')
+              expect(result.external_id).to eq("cc1576cf-7b1c-480e-8f25-ae10fa34d6d1")
             end
           end
 
-          it 'creates integration resource object' do
+          it "creates integration resource object" do
             expect { service_call }.to change(IntegrationResource, :count).by(1)
 
             integration_resource = IntegrationResource.order(created_at: :desc).first
 
             expect(integration_resource.syncable_id).to eq(invoice.id)
-            expect(integration_resource.syncable_type).to eq('Invoice')
-            expect(integration_resource.resource_type).to eq('invoice')
+            expect(integration_resource.syncable_type).to eq("Invoice")
+            expect(integration_resource.resource_type).to eq("invoice")
           end
 
-          it_behaves_like 'throttles!', :anrok, :netsuite, :xero
+          it_behaves_like "throttles!", :anrok, :netsuite, :xero
         end
 
-        context 'when invoice is not created' do
+        context "when invoice is not created" do
           let(:body) do
-            path = Rails.root.join('spec/fixtures/integration_aggregator/invoices/failure_hash_response.json')
+            path = Rails.root.join("spec/fixtures/integration_aggregator/invoices/failure_hash_response.json")
             File.read(path)
           end
 
-          it 'does not return external id' do
+          it "does not return external id" do
             result = service_call
 
             aggregate_failures do
@@ -333,47 +333,47 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
             end
           end
 
-          it 'does not create integration resource object' do
+          it "does not create integration resource object" do
             expect { service_call }.not_to change(IntegrationResource, :count)
           end
 
-          it_behaves_like 'throttles!', :anrok, :netsuite, :xero
+          it_behaves_like "throttles!", :anrok, :netsuite, :xero
         end
       end
 
-      context 'when response is a string' do
+      context "when response is a string" do
         let(:body) do
-          path = Rails.root.join('spec/fixtures/integration_aggregator/invoices/success_string_response.json')
+          path = Rails.root.join("spec/fixtures/integration_aggregator/invoices/success_string_response.json")
           File.read(path)
         end
 
-        it 'returns external id' do
+        it "returns external id" do
           result = service_call
 
           aggregate_failures do
             expect(result).to be_success
-            expect(result.external_id).to eq('456')
+            expect(result.external_id).to eq("456")
           end
         end
 
-        it 'creates integration resource object' do
+        it "creates integration resource object" do
           expect { service_call }
             .to change(IntegrationResource, :count).by(1)
 
           integration_resource = IntegrationResource.order(created_at: :desc).first
 
           expect(integration_resource.syncable_id).to eq(invoice.id)
-          expect(integration_resource.syncable_type).to eq('Invoice')
-          expect(integration_resource.resource_type).to eq('invoice')
+          expect(integration_resource.syncable_type).to eq("Invoice")
+          expect(integration_resource.resource_type).to eq("invoice")
         end
 
-        it_behaves_like 'throttles!', :anrok, :netsuite, :xero
+        it_behaves_like "throttles!", :anrok, :netsuite, :xero
       end
     end
 
-    context 'when service call is not successful' do
+    context "when service call is not successful" do
       let(:body) do
-        path = Rails.root.join('spec/fixtures/integration_aggregator/error_response.json')
+        path = Rails.root.join("spec/fixtures/integration_aggregator/error_response.json")
         File.read(path)
       end
 
@@ -383,42 +383,42 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
       end
 
-      context 'when it is a server error' do
+      context "when it is a server error" do
         let(:error_code) { 500 }
 
-        it 'returns an error' do
+        it "returns an error" do
           expect do
             service_call
           end.to raise_error(http_error)
         end
 
-        it 'enqueues a SendWebhookJob' do
+        it "enqueues a SendWebhookJob" do
           expect { service_call }.to have_enqueued_job(SendWebhookJob).and raise_error(http_error)
         end
       end
 
-      context 'when it is a client error' do
+      context "when it is a client error" do
         let(:error_code) { 400 }
 
-        it 'does not return an error' do
+        it "does not return an error" do
           expect { service_call }.not_to raise_error
         end
 
-        it 'returns result' do
+        it "returns result" do
           expect(service_call).to be_a(BaseService::Result)
         end
 
-        it 'enqueues a SendWebhookJob' do
+        it "enqueues a SendWebhookJob" do
           expect { service_call }.to have_enqueued_job(SendWebhookJob)
         end
       end
     end
 
-    context 'when there is payload error' do
+    context "when there is payload error" do
       let(:integration) { create(:xero_integration, organization:) }
       let(:integration_customer) { create(:xero_customer, integration:, customer:) }
       let(:lago_client) { instance_double(LagoHttpClient::Client) }
-      let(:endpoint) { 'https://api.nango.dev/v1/xero/invoices' }
+      let(:endpoint) { "https://api.nango.dev/v1/xero/invoices" }
       let(:integration_collection_mapping1) { nil }
       let(:integration_collection_mapping2) { nil }
       let(:integration_collection_mapping3) { nil }
@@ -430,13 +430,13 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
       let(:response) { instance_double(Net::HTTPOK) }
       let(:headers) do
         {
-          'Connection-Id' => integration.connection_id,
-          'Authorization' => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
-          'Provider-Config-Key' => 'xero'
+          "Connection-Id" => integration.connection_id,
+          "Authorization" => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
+          "Provider-Config-Key" => "xero"
         }
       end
       let(:body) do
-        path = Rails.root.join('spec/fixtures/integration_aggregator/invoices/success_hash_response.json')
+        path = Rails.root.join("spec/fixtures/integration_aggregator/invoices/success_hash_response.json")
         File.read(path)
       end
 
@@ -445,15 +445,15 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         allow(response).to receive(:body).and_return(body)
       end
 
-      it 'sends error webhook' do
+      it "sends error webhook" do
         expect { service_call }.to have_enqueued_job(SendWebhookJob)
       end
 
-      it 'returns result' do
+      it "returns result" do
         expect(service_call).to be_a(BaseService::Result)
       end
 
-      it_behaves_like 'throttles!', :anrok, :netsuite, :xero
+      it_behaves_like "throttles!", :anrok, :netsuite, :xero
     end
   end
 end

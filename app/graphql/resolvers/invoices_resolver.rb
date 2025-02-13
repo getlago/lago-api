@@ -5,15 +5,15 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'invoices:view'
+    REQUIRED_PERMISSION = "invoices:view"
 
-    description 'Query invoices'
+    description "Query invoices"
 
     argument :amount_from, Integer, required: false
     argument :amount_to, Integer, required: false
     argument :currency, Types::CurrencyEnum, required: false
     argument :customer_external_id, String, required: false
-    argument :customer_id, ID, required: false, description: 'Uniq ID of the customer'
+    argument :customer_id, ID, required: false, description: "Uniq ID of the customer"
     argument :invoice_type, [Types::Invoices::InvoiceTypeEnum], required: false
     argument :issuing_date_from, GraphQL::Types::ISO8601Date, required: false
     argument :issuing_date_to, GraphQL::Types::ISO8601Date, required: false

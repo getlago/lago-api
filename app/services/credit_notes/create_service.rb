@@ -17,9 +17,9 @@ module CreditNotes
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') unless invoice
+      return result.not_found_failure!(resource: "invoice") unless invoice
       return result.forbidden_failure! unless should_create_credit_note?
-      return result.not_allowed_failure!(code: 'invalid_type_or_status') unless valid_type_or_status?
+      return result.not_allowed_failure!(code: "invalid_type_or_status") unless valid_type_or_status?
 
       ActiveRecord::Base.transaction do
         result.credit_note = CreditNote.create!(
@@ -34,7 +34,7 @@ module CreditNotes
           refund_amount_cents:,
           reason:,
           description:,
-          credit_status: 'available',
+          credit_status: "available",
           status: invoice.status
         )
 
@@ -46,8 +46,8 @@ module CreditNotes
         valid_credit_note?
         result.raise_if_error!
 
-        credit_note.credit_status = 'available' if credit_note.credited?
-        credit_note.refund_status = 'pending' if credit_note.refunded?
+        credit_note.credit_status = "available" if credit_note.credited?
+        credit_note.refund_status = "pending" if credit_note.refunded?
 
         credit_note.update!(
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
@@ -78,7 +78,7 @@ module CreditNotes
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ArgumentError
-      result.single_validation_failure!(field: :reason, error_code: 'value_is_invalid')
+      result.single_validation_failure!(field: :reason, error_code: "value_is_invalid")
     rescue BaseService::FailedResult => e
       e.result
     end
@@ -106,7 +106,7 @@ module CreditNotes
 
     def valid_type_or_status?
       return true if automatic
-      return false if invoice.credit? && (invoice.payment_status != 'succeeded' || associated_wallet.nil?)
+      return false if invoice.credit? && (invoice.payment_status != "succeeded" || associated_wallet.nil?)
 
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
     end
@@ -117,7 +117,7 @@ module CreditNotes
     end
 
     def create_items
-      return result.validation_failure!(errors: {items: ['must_be_an_array']}) unless items_attr.is_a?(Array)
+      return result.validation_failure!(errors: {items: ["must_be_an_array"]}) unless items_attr.is_a?(Array)
 
       items_attr.each do |item_attr|
         amount_cents = item_attr[:amount_cents] || 0
@@ -144,16 +144,16 @@ module CreditNotes
 
     def track_credit_note_created
       types = if credit_note.credited? && credit_note.refunded?
-        'both'
+        "both"
       elsif credit_note.credited?
-        'credit'
+        "credit"
       elsif credit_note.refunded?
-        'refund'
+        "refund"
       end
 
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'credit_note_issued',
+        event: "credit_note_issued",
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
@@ -165,14 +165,14 @@ module CreditNotes
 
     def deliver_webhook
       SendWebhookJob.perform_later(
-        'credit_note.created',
+        "credit_note.created",
         credit_note
       )
     end
 
     def deliver_email
       # NOTE: We already check the premium state for the credit note creation
-      return unless credit_note.organization.email_settings.include?('credit_note.created')
+      return unless credit_note.organization.email_settings.include?("credit_note.created")
 
       CreditNoteMailer.with(credit_note:)
         .created.deliver_later(wait: 3.seconds)

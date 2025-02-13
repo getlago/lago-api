@@ -4,7 +4,7 @@ module Types
   module Fees
     module AppliedTaxes
       class Object < Types::BaseObject
-        graphql_name 'FeeAppliedTax'
+        graphql_name "FeeAppliedTax"
         implements Types::Taxes::AppliedTax
 
         field :fee, Types::Fees::Object, null: false

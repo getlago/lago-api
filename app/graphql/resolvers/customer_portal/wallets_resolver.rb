@@ -5,7 +5,7 @@ module Resolvers
     class WalletsResolver < Resolvers::BaseResolver
       include AuthenticableCustomerPortalUser
 
-      description 'Query wallets'
+      description "Query wallets"
 
       argument :limit, Integer, required: false
       argument :page, Integer, required: false
@@ -20,7 +20,7 @@ module Resolvers
           .per(limit)
           .order(created_at: :desc)
       rescue ActiveRecord::RecordNotFound
-        not_found_error(resource: 'customer')
+        not_found_error(resource: "customer")
       end
     end
   end

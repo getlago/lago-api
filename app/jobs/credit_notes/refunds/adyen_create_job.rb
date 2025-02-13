@@ -3,7 +3,7 @@
 module CreditNotes
   module Refunds
     class AdyenCreateJob < ApplicationJob
-      queue_as 'providers'
+      queue_as "providers"
 
       def perform(credit_note)
         result = CreditNotes::Refunds::AdyenService.new(credit_note).create

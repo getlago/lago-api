@@ -4,7 +4,7 @@ module Mutations
   module Auth
     module Okta
       class Login < BaseMutation
-        graphql_name 'OktaLogin'
+        graphql_name "OktaLogin"
 
         argument :code, String, required: true
         argument :state, String, required: true

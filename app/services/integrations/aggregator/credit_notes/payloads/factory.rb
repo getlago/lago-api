@@ -7,11 +7,11 @@ module Integrations
         class Factory
           def self.new_instance(integration_customer:, credit_note:)
             case integration_customer&.integration&.type&.to_s
-            when 'Integrations::NetsuiteIntegration'
+            when "Integrations::NetsuiteIntegration"
               Integrations::Aggregator::CreditNotes::Payloads::Netsuite.new(integration_customer:, credit_note:)
-            when 'Integrations::XeroIntegration'
+            when "Integrations::XeroIntegration"
               Integrations::Aggregator::CreditNotes::Payloads::Xero.new(integration_customer:, credit_note:)
-            when 'Integrations::AnrokIntegration'
+            when "Integrations::AnrokIntegration"
               Integrations::Aggregator::CreditNotes::Payloads::Anrok.new(integration_customer:, credit_note:)
             else
               raise(NotImplementedError)

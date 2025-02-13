@@ -6,9 +6,9 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'invoices:update'
+      REQUIRED_PERMISSION = "invoices:update"
 
-      description 'Retry voided invoice sync'
+      description "Retry voided invoice sync"
 
       argument :id, ID, required: true
 

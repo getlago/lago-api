@@ -55,7 +55,7 @@ class BaseQuery < BaseService
 
     DateTime.iso8601(value)
   rescue Date::Error
-    result.single_validation_failure!(field: field_name.to_sym, error_code: 'invalid_date')
+    result.single_validation_failure!(field: field_name.to_sym, error_code: "invalid_date")
       .raise_if_error!
   end
 

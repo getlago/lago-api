@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::PerformSyncJob, type: :job do
   subject(:perform_sync_job) { described_class.perform_now(integration:, sync_items:) }
@@ -20,17 +20,17 @@ RSpec.describe Integrations::Aggregator::PerformSyncJob, type: :job do
     perform_sync_job
   end
 
-  context 'when sync_items is true' do
+  context "when sync_items is true" do
     let(:sync_items) { true }
 
-    it 'calls the aggregator sync service' do
+    it "calls the aggregator sync service" do
       aggregate_failures do
         expect(Integrations::Aggregator::SyncService).to have_received(:new)
         expect(sync_service).to have_received(:call)
       end
     end
 
-    it 'calls the aggregator items service' do
+    it "calls the aggregator items service" do
       aggregate_failures do
         expect(Integrations::Aggregator::ItemsService).to have_received(:new)
         expect(items_service).to have_received(:call)
@@ -38,17 +38,17 @@ RSpec.describe Integrations::Aggregator::PerformSyncJob, type: :job do
     end
   end
 
-  context 'when sync_items is false' do
+  context "when sync_items is false" do
     let(:sync_items) { false }
 
-    it 'calls the aggregator sync service' do
+    it "calls the aggregator sync service" do
       aggregate_failures do
         expect(Integrations::Aggregator::SyncService).to have_received(:new)
         expect(sync_service).to have_received(:call)
       end
     end
 
-    it 'does not call the aggregator items service' do
+    it "does not call the aggregator items service" do
       aggregate_failures do
         expect(Integrations::Aggregator::ItemsService).not_to have_received(:new)
         expect(items_service).not_to have_received(:call)

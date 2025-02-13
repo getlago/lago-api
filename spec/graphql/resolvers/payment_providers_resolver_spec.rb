@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
-  let(:required_permission) { 'customers:view' }
+  let(:required_permission) { "customers:view" }
   let(:query) do
     <<~GQL
       query {
@@ -50,11 +50,11 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
     stripe_provider
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', %w[customers:view organization:integrations:view]
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", %w[customers:view organization:integrations:view]
 
-  context 'when type is present' do
+  context "when type is present" do
     let(:query) do
       <<~GQL
         query {
@@ -87,7 +87,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
       GQL
     end
 
-    it 'returns a list of payment providers' do
+    it "returns a list of payment providers" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -95,19 +95,19 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
         query:
       )
 
-      payment_providers_response = result['data']['paymentProviders']
+      payment_providers_response = result["data"]["paymentProviders"]
 
       aggregate_failures do
-        expect(payment_providers_response['collection'].count).to eq(1)
-        expect(payment_providers_response['collection'].first['id']).to eq(stripe_provider.id)
+        expect(payment_providers_response["collection"].count).to eq(1)
+        expect(payment_providers_response["collection"].first["id"]).to eq(stripe_provider.id)
 
-        expect(payment_providers_response['metadata']['currentPage']).to eq(1)
-        expect(payment_providers_response['metadata']['totalCount']).to eq(1)
+        expect(payment_providers_response["metadata"]["currentPage"]).to eq(1)
+        expect(payment_providers_response["metadata"]["totalCount"]).to eq(1)
       end
     end
   end
 
-  context 'when type is not present' do
+  context "when type is not present" do
     let(:query) do
       <<~GQL
         query {
@@ -140,7 +140,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
       GQL
     end
 
-    it 'returns a list of all payment providers' do
+    it "returns a list of all payment providers" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -148,36 +148,36 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
         query:
       )
 
-      payment_providers_response = result['data']['paymentProviders']
+      payment_providers_response = result["data"]["paymentProviders"]
 
-      adyen_provider_result = payment_providers_response['collection'].find do |record|
-        record['__typename'] == 'AdyenProvider'
+      adyen_provider_result = payment_providers_response["collection"].find do |record|
+        record["__typename"] == "AdyenProvider"
       end
-      cashfree_provider_result = payment_providers_response['collection'].find do |record|
-        record['__typename'] == 'CashfreeProvider'
+      cashfree_provider_result = payment_providers_response["collection"].find do |record|
+        record["__typename"] == "CashfreeProvider"
       end
-      gocardless_provider_result = payment_providers_response['collection'].find do |record|
-        record['__typename'] == 'GocardlessProvider'
+      gocardless_provider_result = payment_providers_response["collection"].find do |record|
+        record["__typename"] == "GocardlessProvider"
       end
-      stripe_provider_result = payment_providers_response['collection'].find do |record|
-        record['__typename'] == 'StripeProvider'
+      stripe_provider_result = payment_providers_response["collection"].find do |record|
+        record["__typename"] == "StripeProvider"
       end
 
       aggregate_failures do
-        expect(payment_providers_response['collection'].count).to eq(4)
+        expect(payment_providers_response["collection"].count).to eq(4)
 
-        expect(adyen_provider_result['id']).to eq(adyen_provider.id)
-        expect(cashfree_provider_result['id']).to eq(cashfree_provider.id)
-        expect(gocardless_provider_result['id']).to eq(gocardless_provider.id)
-        expect(stripe_provider_result['id']).to eq(stripe_provider.id)
+        expect(adyen_provider_result["id"]).to eq(adyen_provider.id)
+        expect(cashfree_provider_result["id"]).to eq(cashfree_provider.id)
+        expect(gocardless_provider_result["id"]).to eq(gocardless_provider.id)
+        expect(stripe_provider_result["id"]).to eq(stripe_provider.id)
 
-        expect(payment_providers_response['metadata']['currentPage']).to eq(1)
-        expect(payment_providers_response['metadata']['totalCount']).to eq(4)
+        expect(payment_providers_response["metadata"]["currentPage"]).to eq(1)
+        expect(payment_providers_response["metadata"]["totalCount"]).to eq(4)
       end
     end
   end
 
-  context 'when requesting protected fields' do
+  context "when requesting protected fields" do
     let(:query) do
       <<~GQL
         query {
@@ -203,8 +203,8 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
       GQL
     end
 
-    context 'without organization:integrations:view permission' do
-      it 'filters out protected fields' do
+    context "without organization:integrations:view permission" do
+      it "filters out protected fields" do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
@@ -218,21 +218,21 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
         expect(gocardless_provider.access_token).to be_a String
         expect(stripe_provider.success_redirect_url).to be_a String
 
-        payment_providers_response = result['data']['paymentProviders']['collection']
+        payment_providers_response = result["data"]["paymentProviders"]["collection"]
         expect(payment_providers_response.map(&:values)).to eq [[nil], [nil, nil], [nil], [nil]]
       end
     end
 
-    context 'with permission' do
-      it 'filters out protected fields' do
+    context "with permission" do
+      it "filters out protected fields" do
         result = execute_graphql(
           current_user: membership.user,
           current_organization: organization,
-          permissions: ['organization:integrations:view'],
+          permissions: ["organization:integrations:view"],
           query:
         )
 
-        payment_providers_response = result['data']['paymentProviders']['collection']
+        payment_providers_response = result["data"]["paymentProviders"]["collection"]
         expect(payment_providers_response.map(&:values)).to eq [[adyen_provider.live_prefix], [cashfree_provider.client_id, cashfree_provider.client_secret], [true], [stripe_provider.success_redirect_url]]
       end
     end

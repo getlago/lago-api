@@ -15,7 +15,7 @@ module DataExports
       after_commit { DataExports::ProcessPartJob.perform_later(result.data_export_part) }
       result
     rescue => e
-      result.service_failure!(code: 'data_export_part_creation_failed', message: e.full_message)
+      result.service_failure!(code: "data_export_part_creation_failed", message: e.full_message)
     end
 
     private

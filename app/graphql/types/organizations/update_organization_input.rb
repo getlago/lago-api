@@ -3,7 +3,7 @@
 module Types
   module Organizations
     class UpdateOrganizationInput < BaseInputObject
-      description 'Update Organization input arguments'
+      description "Update Organization input arguments"
 
       argument :default_currency, Types::CurrencyEnum, required: false
       argument :email, String, required: false
@@ -20,7 +20,7 @@ module Types
       argument :state, String, required: false
       argument :zipcode, String, required: false
 
-      argument :webhook_url, String, required: false, permission: 'developers:manage'
+      argument :webhook_url, String, required: false, permission: "developers:manage"
 
       argument :timezone, Types::TimezoneEnum, required: false
 
@@ -29,8 +29,8 @@ module Types
       argument :document_number_prefix, String, required: false
       argument :document_numbering, Types::Organizations::DocumentNumberingEnum, required: false
 
-      argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false, permission: 'organization:invoices:view'
-      argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false, permission: 'organization:emails:view'
+      argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false, permission: "organization:invoices:view"
+      argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false, permission: "organization:emails:view"
       argument :finalize_zero_amount_invoice, Boolean, required: false
     end
   end

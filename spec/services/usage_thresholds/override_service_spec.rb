@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe UsageThresholds::OverrideService, type: :service do
   subject(:override_service) { described_class.new(usage_thresholds_params:, new_plan: plan) }
@@ -8,7 +8,7 @@ RSpec.describe UsageThresholds::OverrideService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  describe '#call' do
+  describe "#call" do
     let(:threshold) { create(:usage_threshold, plan:) }
     let(:plan) { create(:plan, organization:) }
 
@@ -16,7 +16,7 @@ RSpec.describe UsageThresholds::OverrideService, type: :service do
       [
         {
           plan_id: plan.id,
-          threshold_display_name: 'Overriden threshold',
+          threshold_display_name: "Overriden threshold",
           amount_cents: 1000
         }
       ]
@@ -24,7 +24,7 @@ RSpec.describe UsageThresholds::OverrideService, type: :service do
 
     before { threshold }
 
-    it 'creates a threshold based on the given threshold', :aggregate_failures do
+    it "creates a threshold based on the given threshold", :aggregate_failures do
       expect { override_service.call }.to change(UsageThreshold, :count).by(1)
 
       threshold = UsageThreshold.order(:created_at).last
@@ -33,7 +33,7 @@ RSpec.describe UsageThresholds::OverrideService, type: :service do
         recurring: threshold.recurring,
         # Overriden attributes
         plan_id: plan.id,
-        threshold_display_name: 'Overriden threshold',
+        threshold_display_name: "Overriden threshold",
         amount_cents: 1000
       )
     end

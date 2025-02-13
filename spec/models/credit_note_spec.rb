@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreditNote, type: :model do
   subject(:credit_note) do
@@ -10,17 +10,17 @@ RSpec.describe CreditNote, type: :model do
 
   let(:item) { create(:credit_note_item, credit_note:, precise_amount_cents: 10000, amount_cents: 1000) }
 
-  it_behaves_like 'paper_trail traceable'
+  it_behaves_like "paper_trail traceable"
 
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
 
-  describe 'sequential_id' do
+  describe "sequential_id" do
     let(:invoice) { create(:invoice) }
     let(:customer) { invoice.customer }
     let(:credit_note) { build(:credit_note, invoice:, customer:) }
 
-    it 'assigns a sequential_id is present' do
+    it "assigns a sequential_id is present" do
       credit_note.save
 
       aggregate_failures do
@@ -29,10 +29,10 @@ RSpec.describe CreditNote, type: :model do
       end
     end
 
-    context 'when sequential_id is present' do
+    context "when sequential_id is present" do
       before { credit_note.sequential_id = 3 }
 
-      it 'does not replace the sequential_id' do
+      it "does not replace the sequential_id" do
         credit_note.save
 
         aggregate_failures do
@@ -42,12 +42,12 @@ RSpec.describe CreditNote, type: :model do
       end
     end
 
-    context 'when credit note already exists' do
+    context "when credit note already exists" do
       before do
         create(:credit_note, invoice:, sequential_id: 5)
       end
 
-      it 'takes the next available id' do
+      it "takes the next available id" do
         credit_note.save!
 
         aggregate_failures do
@@ -57,12 +57,12 @@ RSpec.describe CreditNote, type: :model do
       end
     end
 
-    context 'with credit note on other invoice' do
+    context "with credit note on other invoice" do
       before do
         create(:credit_note, sequential_id: 1)
       end
 
-      it 'scopes the sequence to the invoice' do
+      it "scopes the sequence to the invoice" do
         credit_note.save
 
         aggregate_failures do
@@ -73,49 +73,49 @@ RSpec.describe CreditNote, type: :model do
     end
   end
 
-  describe 'number' do
-    let(:invoice) { create(:invoice, number: 'CUST-001') }
+  describe "number" do
+    let(:invoice) { create(:invoice, number: "CUST-001") }
     let(:customer) { invoice.customer }
     let(:credit_note) { build(:credit_note, invoice:, customer:) }
 
-    it 'generates the credit_note_number' do
+    it "generates the credit_note_number" do
       credit_note.save
 
-      expect(credit_note.number).to eq('CUST-001-CN001')
+      expect(credit_note.number).to eq("CUST-001-CN001")
     end
   end
 
-  describe '#currency' do
-    let(:credit_note) { build(:credit_note, total_amount_currency: 'JPY') }
+  describe "#currency" do
+    let(:credit_note) { build(:credit_note, total_amount_currency: "JPY") }
 
-    it { expect(credit_note.currency).to eq('JPY') }
+    it { expect(credit_note.currency).to eq("JPY") }
   end
 
-  describe '#credited?' do
+  describe "#credited?" do
     let(:credit_note) { build(:credit_note, credit_amount_cents: 0) }
 
     it { expect(credit_note).not_to be_credited }
 
-    context 'when credit amount is present' do
+    context "when credit amount is present" do
       let(:credit_note) { build(:credit_note, credit_amount_cents: 10) }
 
       it { expect(credit_note).to be_credited }
     end
   end
 
-  describe '#refunded?' do
+  describe "#refunded?" do
     let(:credit_note) { build(:credit_note) }
 
     it { expect(credit_note).not_to be_refunded }
   end
 
-  describe '#refund_amount_cents' do
+  describe "#refund_amount_cents" do
     let(:credit_note) { build(:credit_note) }
 
     it { expect(credit_note.refund_amount_cents).to be_zero }
   end
 
-  describe '#subscription_ids' do
+  describe "#subscription_ids" do
     let(:invoice) { credit_note.invoice }
     let(:subscription_fee) { create(:fee, invoice:) }
     let(:credit_note_item1) do
@@ -132,14 +132,14 @@ RSpec.describe CreditNote, type: :model do
       credit_note_item2
     end
 
-    it 'returns the list of subscription ids' do
+    it "returns the list of subscription ids" do
       expect(credit_note.subscription_ids).to contain_exactly(
         subscription_fee.subscription_id,
         charge_fee.subscription_id
       )
     end
 
-    context 'with add_on fee' do
+    context "with add_on fee" do
       let(:add_on_fee) { create(:add_on_fee, invoice:) }
       let(:credit_note_item3) do
         create(:credit_note_item, credit_note:, fee: add_on_fee)
@@ -147,7 +147,7 @@ RSpec.describe CreditNote, type: :model do
 
       before { credit_note_item3 }
 
-      it 'returns an empty subscription id' do
+      it "returns an empty subscription id" do
         expect(credit_note.subscription_ids).to include(
           subscription_fee.subscription_id,
           charge_fee.subscription_id,
@@ -156,7 +156,7 @@ RSpec.describe CreditNote, type: :model do
       end
     end
 
-    describe '#subscription_item' do
+    describe "#subscription_item" do
       let(:invoice) { credit_note.invoice }
       let(:subscription_fee) { create(:fee, invoice:) }
       let(:credit_note_item1) do
@@ -174,14 +174,14 @@ RSpec.describe CreditNote, type: :model do
         credit_note_item2
       end
 
-      it 'returns the item for the subscription fee' do
+      it "returns the item for the subscription fee" do
         expect(credit_note.subscription_item(subscription.id)).to eq(credit_note_item1)
       end
 
-      context 'when subscription id does not match an existing fee' do
+      context "when subscription id does not match an existing fee" do
         let(:missing_subscription) { create(:subscription) }
 
-        it 'returns a new fee' do
+        it "returns a new fee" do
           fee = credit_note.subscription_item(missing_subscription.id)
 
           expect(fee).to be_new_record
@@ -189,7 +189,7 @@ RSpec.describe CreditNote, type: :model do
       end
     end
 
-    describe '#subscription_charge_items' do
+    describe "#subscription_charge_items" do
       let(:invoice) { credit_note.invoice }
       let(:subscription_fee) { create(:fee, invoice:) }
       let(:credit_note_item1) do
@@ -208,13 +208,13 @@ RSpec.describe CreditNote, type: :model do
         credit_note_item2
       end
 
-      it 'returns the item for the subscription fee' do
+      it "returns the item for the subscription fee" do
         expect(credit_note.subscription_charge_items(subscription.id)).to eq([credit_note_item2])
       end
     end
   end
 
-  describe '#add_on_items' do
+  describe "#add_on_items" do
     let(:invoice) { credit_note.invoice }
     let(:add_on) { create(:add_on, organization: credit_note.organization) }
     let(:applied_add_on) { create(:applied_add_on, add_on:) }
@@ -223,135 +223,135 @@ RSpec.describe CreditNote, type: :model do
 
     before { credit_note_item }
 
-    it 'returns items of the add-on' do
+    it "returns items of the add-on" do
       expect(credit_note.add_on_items).to eq([credit_note_item])
     end
   end
 
-  describe '#voidable?' do
+  describe "#voidable?" do
     let(:credit_note) { create(:credit_note, balance_amount_cents:, credit_status:) }
     let(:balance_amount_cents) { 10 }
     let(:credit_status) { :available }
 
     it { expect(credit_note).to be_voidable }
 
-    context 'when balance is consumed' do
+    context "when balance is consumed" do
       let(:balance_amount_cents) { 0 }
 
       it { expect(credit_note).not_to be_voidable }
     end
 
-    context 'when already voided' do
+    context "when already voided" do
       let(:credit_status) { :voided }
 
       it { expect(credit_note).not_to be_voidable }
     end
   end
 
-  context 'when calculating depends on related items' do
+  context "when calculating depends on related items" do
     before do
       item
       credit_note.reload
     end
 
-    describe '#sub_total_excluding_taxes_amount_cents' do
-      it 'returs the total amount without the taxes' do
+    describe "#sub_total_excluding_taxes_amount_cents" do
+      it "returs the total amount without the taxes" do
         expect(credit_note.sub_total_excluding_taxes_amount_cents)
           .to eq(credit_note.items.sum(&:precise_amount_cents) - credit_note.precise_coupons_adjustment_amount_cents)
       end
     end
 
-    describe '#precise_total' do
-      it 'returns the total precise amount including precise taxes' do
+    describe "#precise_total" do
+      it "returns the total precise amount including precise taxes" do
         expect(credit_note.precise_total).to eq(11000)
       end
     end
   end
 
-  describe '#taxes_rounding_adjustment' do
-    it 'returns the difference between taxes and precise taxes' do
+  describe "#taxes_rounding_adjustment" do
+    it "returns the difference between taxes and precise taxes" do
       expect(credit_note.taxes_rounding_adjustment).to eq(0)
     end
   end
 
-  describe '#rounding_adjustment' do
-    it 'returns the difference between credit note total and credit note precise total' do
+  describe "#rounding_adjustment" do
+    it "returns the difference between credit note total and credit note precise total" do
       expect(credit_note.taxes_rounding_adjustment).to eq(0)
     end
   end
 
-  describe '#should_sync_credit_note?' do
+  describe "#should_sync_credit_note?" do
     subject(:method_call) { credit_note.should_sync_credit_note? }
 
     let(:credit_note) { create(:credit_note, customer:, organization:, status:) }
     let(:organization) { create(:organization) }
 
-    context 'when credit note is not finalized' do
+    context "when credit note is not finalized" do
       let(:status) { :draft }
 
-      context 'without integration customer' do
+      context "without integration customer" do
         let(:customer) { create(:customer, organization:) }
 
-        it 'returns false' do
+        it "returns false" do
           expect(method_call).to eq(false)
         end
       end
 
-      context 'with integration customer' do
+      context "with integration customer" do
         let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
         let(:integration) { create(:netsuite_integration, organization:, sync_credit_notes:) }
         let(:customer) { create(:customer, organization:) }
 
         before { integration_customer }
 
-        context 'when sync credit notes is true' do
+        context "when sync credit notes is true" do
           let(:sync_credit_notes) { true }
 
-          it 'returns false' do
+          it "returns false" do
             expect(method_call).to eq(false)
           end
         end
 
-        context 'when sync credit notes is false' do
+        context "when sync credit notes is false" do
           let(:sync_credit_notes) { false }
 
-          it 'returns false' do
+          it "returns false" do
             expect(method_call).to eq(false)
           end
         end
       end
     end
 
-    context 'when credit note is finalized' do
+    context "when credit note is finalized" do
       let(:status) { :finalized }
 
-      context 'without integration customer' do
+      context "without integration customer" do
         let(:customer) { create(:customer, organization:) }
 
-        it 'returns false' do
+        it "returns false" do
           expect(method_call).to eq(false)
         end
       end
 
-      context 'with integration customer' do
+      context "with integration customer" do
         let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
         let(:integration) { create(:netsuite_integration, organization:, sync_credit_notes:) }
         let(:customer) { create(:customer, organization:) }
 
         before { integration_customer }
 
-        context 'when sync credit notes is true' do
+        context "when sync credit notes is true" do
           let(:sync_credit_notes) { true }
 
-          it 'returns true' do
+          it "returns true" do
             expect(method_call).to eq(true)
           end
         end
 
-        context 'when sync credit notes is false' do
+        context "when sync credit notes is false" do
           let(:sync_credit_notes) { false }
 
-          it 'returns false' do
+          it "returns false" do
             expect(method_call).to eq(false)
           end
         end
@@ -359,7 +359,7 @@ RSpec.describe CreditNote, type: :model do
     end
   end
 
-  context 'when taxes are not precise' do
+  context "when taxes are not precise" do
     subject(:credit_note) do
       create :credit_note, credit_amount_cents: 8200, total_amount_cents: 8200, taxes_amount_cents: 1367,
         taxes_rate: 20.0, precise_taxes_amount_cents: 1366.6
@@ -372,20 +372,20 @@ RSpec.describe CreditNote, type: :model do
       credit_note.reload
     end
 
-    describe '#precise_total' do
-      it 'returns the total precise amount including precise taxes' do
+    describe "#precise_total" do
+      it "returns the total precise amount including precise taxes" do
         expect(credit_note.precise_total).to eq(8199.6)
       end
     end
 
-    describe '#taxes_rounding_adjustment' do
-      it 'returns the difference between taxes and precise taxes' do
+    describe "#taxes_rounding_adjustment" do
+      it "returns the difference between taxes and precise taxes" do
         expect(credit_note.taxes_rounding_adjustment).to eq(0.4)
       end
     end
 
-    describe '#rounding_adjustment' do
-      it 'returns the difference between credit note total and credit note precise total' do
+    describe "#rounding_adjustment" do
+      it "returns the difference between credit note total and credit note precise total" do
         expect(credit_note.taxes_rounding_adjustment).to eq(0.4)
       end
     end

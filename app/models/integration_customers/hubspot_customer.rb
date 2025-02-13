@@ -5,10 +5,10 @@ module IntegrationCustomers
     settings_accessors :targeted_object, :email
 
     def object_type
-      if targeted_object == 'contacts'
-        'contact'
+      if targeted_object == "contacts"
+        "contact"
       else
-        'company'
+        "company"
       end
     end
   end

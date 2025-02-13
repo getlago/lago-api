@@ -4,7 +4,7 @@ module Types
   module Integrations
     module AnrokObjects
       class BreakdownObject < Types::BaseObject
-        graphql_name 'AnrokBreakdownObject'
+        graphql_name "AnrokBreakdownObject"
 
         # we need to show how this tax will behave when invoice is generated - will it be applied
         # on whole invoice specific rule or just a normal tax
@@ -19,7 +19,7 @@ module Types
         end
 
         def tax_code
-          @tax_code ||= object.name&.parameterize(separator: '_')
+          @tax_code ||= object.name&.parameterize(separator: "_")
         end
 
         def enumed_tax_code

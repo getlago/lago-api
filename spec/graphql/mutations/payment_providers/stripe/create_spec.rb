@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
-  let(:required_permission) { 'organization:integrations:create' }
+  let(:required_permission) { "organization:integrations:create" }
   let(:membership) { create(:membership) }
 
   let(:mutation) do
@@ -20,22 +20,22 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
     GQL
   end
 
-  let(:code) { 'stripe_1' }
-  let(:name) { 'Stripe 1' }
-  let(:secret_key) { 'sk_12345678901234567890' }
+  let(:code) { "stripe_1" }
+  let(:name) { "Stripe 1" }
+  let(:secret_key) { "sk_12345678901234567890" }
   let(:success_redirect_url) { Faker::Internet.url }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:create'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:create"
 
-  it 'creates a stripe provider' do
+  it "creates a stripe provider" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
       # You wouldn't have `create` without `view` permission
       # `view` is necessary to retrieve the created record in the response
-      permissions: [required_permission, 'organization:integrations:view'],
+      permissions: [required_permission, "organization:integrations:view"],
       query: mutation,
       variables: {
         input: {
@@ -47,14 +47,14 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Create, type: :graphql do
       }
     )
 
-    result_data = result['data']['addStripePaymentProvider']
+    result_data = result["data"]["addStripePaymentProvider"]
 
     aggregate_failures do
-      expect(result_data['id']).to be_present
-      expect(result_data['secretKey']).to eq('••••••••…890')
-      expect(result_data['code']).to eq(code)
-      expect(result_data['name']).to eq(name)
-      expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
+      expect(result_data["id"]).to be_present
+      expect(result_data["secretKey"]).to eq("••••••••…890")
+      expect(result_data["code"]).to eq(code)
+      expect(result_data["name"]).to eq(name)
+      expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
     end
   end
 end

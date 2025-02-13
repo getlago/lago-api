@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Auth::Okta::AuthorizeService do
   subject(:service) { described_class.new(email:) }
@@ -11,8 +11,8 @@ RSpec.describe Auth::Okta::AuthorizeService do
 
   before { okta_integration }
 
-  describe '#authorize' do
-    it 'returns an authorize url' do
+  describe "#authorize" do
+    it "returns an authorize url" do
       result = service.call
 
       aggregate_failures do
@@ -22,25 +22,25 @@ RSpec.describe Auth::Okta::AuthorizeService do
       end
     end
 
-    context 'when domain is not configured with an integration' do
-      let(:email) { 'foo@bar.com' }
+    context "when domain is not configured with an integration" do
+      let(:email) { "foo@bar.com" }
 
-      it 'returns a failure result' do
+      it "returns a failure result" do
         result = service.call
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include('domain_not_configured')
+          expect(result.error.messages.values.flatten).to include("domain_not_configured")
         end
       end
     end
 
-    context 'with invite token' do
+    context "with invite token" do
       subject(:service) { described_class.new(email:, invite_token: invite.token) }
 
       let(:invite) { create(:invite, email:) }
 
-      it 'returns an authorize url' do
+      it "returns an authorize url" do
         result = service.call
 
         aggregate_failures do
@@ -50,28 +50,28 @@ RSpec.describe Auth::Okta::AuthorizeService do
         end
       end
 
-      context 'when invite email is different from the email' do
-        let(:invite) { create(:invite, email: 'foo@b.com') }
+      context "when invite email is different from the email" do
+        let(:invite) { create(:invite, email: "foo@b.com") }
 
-        it 'returns a failure result' do
+        it "returns a failure result" do
           result = service.call
 
           aggregate_failures do
             expect(result).not_to be_success
-            expect(result.error.messages.values.flatten).to include('invite_email_mismatch')
+            expect(result.error.messages.values.flatten).to include("invite_email_mismatch")
           end
         end
       end
 
-      context 'when pending invite does not exists' do
+      context "when pending invite does not exists" do
         let(:invite) { create(:invite, email:, status: :accepted) }
 
-        it 'returns a failure result' do
+        it "returns a failure result" do
           result = service.call
 
           aggregate_failures do
             expect(result).not_to be_success
-            expect(result.error.messages.values.flatten).to include('invite_not_found')
+            expect(result.error.messages.values.flatten).to include("invite_not_found")
           end
         end
       end

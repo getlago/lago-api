@@ -37,9 +37,9 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
           credits = Credit
             .joins(:invoice)
             .joins(applied_coupon: :coupon)
-            .where('credits.amount_cents > 0')
+            .where("credits.amount_cents > 0")
             .where(invoices: {version_number: 3})
-            .order('credits.created_at ASC')
+            .order("credits.created_at ASC")
 
           # NOTE: prevent migration of fees already using the field
           fees_id = Fee.where.not(precise_coupons_amount_cents: 0).pluck(:id)
@@ -85,7 +85,7 @@ class PopulateFeesPreciseCouponsAmountCents < ActiveRecord::Migration[7.0]
                 # NOTE: When applying coupons without limitations,
                 #       the base of computation is the remaining amount of all fees.
                 base_amount_cents = Fee.where(invoice_id: fee.invoice_id)
-                  .sum('fees.amount_cents - fees.precise_coupons_amount_cents')
+                  .sum("fees.amount_cents - fees.precise_coupons_amount_cents")
                 next if base_amount_cents.zero?
 
                 fee.precise_coupons_amount_cents += (credit.amount_cents * fee.amount_cents).fdiv(base_amount_cents)

@@ -3,7 +3,7 @@
 module Types
   module Integrations
     class Object < Types::BaseUnion
-      graphql_name 'Integration'
+      graphql_name "Integration"
 
       possible_types Types::Integrations::Netsuite,
         Types::Integrations::Okta,
@@ -14,17 +14,17 @@ module Types
 
       def self.resolve_type(object, _context)
         case object.class.to_s
-        when 'Integrations::NetsuiteIntegration'
+        when "Integrations::NetsuiteIntegration"
           Types::Integrations::Netsuite
-        when 'Integrations::OktaIntegration'
+        when "Integrations::OktaIntegration"
           Types::Integrations::Okta
-        when 'Integrations::AnrokIntegration'
+        when "Integrations::AnrokIntegration"
           Types::Integrations::Anrok
-        when 'Integrations::XeroIntegration'
+        when "Integrations::XeroIntegration"
           Types::Integrations::Xero
-        when 'Integrations::HubspotIntegration'
+        when "Integrations::HubspotIntegration"
           Types::Integrations::Hubspot
-        when 'Integrations::SalesforceIntegration'
+        when "Integrations::SalesforceIntegration"
           Types::Integrations::Salesforce
         else
           raise "Unexpected integration type: #{object.inspect}"

@@ -3,7 +3,7 @@
 module Types
   module ApiKeys
     class SanitizedObject < Object
-      graphql_name 'SanitizedApiKey'
+      graphql_name "SanitizedApiKey"
 
       def value
         "••••••••" + object.value.last(3)

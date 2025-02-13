@@ -13,15 +13,15 @@ class Event < EventsRecord
   validates :code, presence: true
 
   default_scope -> { kept }
-  scope :from_datetime, ->(from_datetime) { where('events.timestamp >= ?', from_datetime) }
-  scope :to_datetime, ->(to_datetime) { where('events.timestamp <= ?', to_datetime) }
+  scope :from_datetime, ->(from_datetime) { where("events.timestamp >= ?", from_datetime) }
+  scope :to_datetime, ->(to_datetime) { where("events.timestamp <= ?", to_datetime) }
 
   def api_client
-    metadata['user_agent']
+    metadata["user_agent"]
   end
 
   def ip_address
-    metadata['ip_address']
+    metadata["ip_address"]
   end
 
   def billable_metric
@@ -33,8 +33,8 @@ class Event < EventsRecord
       .customers
       .with_discarded
       .where(external_id: external_customer_id)
-      .where('deleted_at IS NULL OR deleted_at > ?', timestamp)
-      .order('deleted_at DESC NULLS LAST')
+      .where("deleted_at IS NULL OR deleted_at > ?", timestamp)
+      .order("deleted_at DESC NULLS LAST")
       .first
   end
 
@@ -55,7 +55,7 @@ class Event < EventsRecord
         "terminated_at IS NULL OR date_trunc('millisecond', terminated_at::timestamp) >= ?",
         timestamp
       )
-      .order('terminated_at DESC NULLS FIRST, started_at DESC')
+      .order("terminated_at DESC NULLS FIRST, started_at DESC")
       .first
   end
 end

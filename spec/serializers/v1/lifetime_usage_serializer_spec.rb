@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe ::V1::LifetimeUsageSerializer do
-  subject(:serializer) { described_class.new(lifetime_usage, root_name: 'lifetime_usage', includes: %i[usage_thresholds]) }
+  subject(:serializer) { described_class.new(lifetime_usage, root_name: "lifetime_usage", includes: %i[usage_thresholds]) }
 
   let(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:, historical_usage_amount_cents:, invoiced_usage_amount_cents:, current_usage_amount_cents:) }
   let(:historical_usage_amount_cents) { 15 }
@@ -12,16 +12,16 @@ RSpec.describe ::V1::LifetimeUsageSerializer do
   let(:subscription) { create(:subscription) }
   let(:organization) { subscription.organization }
 
-  it 'serializes the object' do
+  it "serializes the object" do
     result = JSON.parse(serializer.to_json)
     aggregate_failures do
-      expect(result['lifetime_usage']).to include(
-        'lago_id' => lifetime_usage.id,
-        'lago_subscription_id' => lifetime_usage.subscription.id,
-        'external_subscription_id' => lifetime_usage.subscription.external_id,
-        'external_historical_usage_amount_cents' => historical_usage_amount_cents,
-        'invoiced_usage_amount_cents' => invoiced_usage_amount_cents,
-        'current_usage_amount_cents' => current_usage_amount_cents
+      expect(result["lifetime_usage"]).to include(
+        "lago_id" => lifetime_usage.id,
+        "lago_subscription_id" => lifetime_usage.subscription.id,
+        "external_subscription_id" => lifetime_usage.subscription.external_id,
+        "external_historical_usage_amount_cents" => historical_usage_amount_cents,
+        "invoiced_usage_amount_cents" => invoiced_usage_amount_cents,
+        "current_usage_amount_cents" => current_usage_amount_cents
       )
     end
   end
@@ -49,12 +49,12 @@ RSpec.describe ::V1::LifetimeUsageSerializer do
       applied_usage_threshold
     end
 
-    it 'serializes the usage_thresholds' do
+    it "serializes the usage_thresholds" do
       result = JSON.parse(serializer.to_json)
       aggregate_failures do
-        expect(result['lifetime_usage']).to include(
-          'lago_id' => lifetime_usage.id,
-          'usage_thresholds' => [
+        expect(result["lifetime_usage"]).to include(
+          "lago_id" => lifetime_usage.id,
+          "usage_thresholds" => [
             {"amount_cents" => 100, "completion_ratio" => 1.0, "reached_at" => applied_usage_threshold.created_at.iso8601(3)},
             {"amount_cents" => 200, "completion_ratio" => 0.47, "reached_at" => nil}
           ]

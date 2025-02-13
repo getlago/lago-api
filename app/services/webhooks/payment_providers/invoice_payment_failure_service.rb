@@ -19,11 +19,11 @@ module Webhooks
       end
 
       def webhook_type
-        'invoice.payment_failure'
+        "invoice.payment_failure"
       end
 
       def object_type
-        'payment_provider_invoice_payment_error'
+        "payment_provider_invoice_payment_error"
       end
     end
   end

@@ -25,7 +25,7 @@ module Fees
             organization_id: organization.id,
             subscription:,
             fee_type: :commitment,
-            invoiceable_type: 'Commitment',
+            invoiceable_type: "Commitment",
             invoiceable_id: minimum_commitment.id,
             amount_cents: true_up_fee_result.amount_cents,
             precise_amount_cents: true_up_fee_result.precise_amount_cents,

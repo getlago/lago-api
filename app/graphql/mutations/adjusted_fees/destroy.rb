@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'invoices:update'
+      REQUIRED_PERMISSION = "invoices:update"
 
-      graphql_name 'DestroyAdjustedFee'
-      description 'Deletes an adjusted fee'
+      graphql_name "DestroyAdjustedFee"
+      description "Deletes an adjusted fee"
 
       argument :id, ID, required: true
 

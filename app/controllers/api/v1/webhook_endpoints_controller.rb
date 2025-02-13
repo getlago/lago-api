@@ -56,7 +56,7 @@ module Api
       def show
         webhook_endpoint = current_organization.webhook_endpoints.find_by(id: params[:id])
 
-        return not_found_error(resource: 'webhook_endpoint') unless webhook_endpoint
+        return not_found_error(resource: "webhook_endpoint") unless webhook_endpoint
 
         render_webhook_endpoint(webhook_endpoint)
       end
@@ -93,13 +93,13 @@ module Api
         render(
           json: ::V1::WebhookEndpointSerializer.new(
             webhook_endpoint,
-            root_name: 'webhook_endpoint'
+            root_name: "webhook_endpoint"
           )
         )
       end
 
       def resource_name
-        'webhook_endpoint'
+        "webhook_endpoint"
       end
     end
   end

@@ -3,12 +3,12 @@
 module Resolvers
   module Customers
     class SubscriptionsResolver < Resolvers::BaseResolver
-      REQUIRED_PERMISSION = 'customers:view'
+      REQUIRED_PERMISSION = "customers:view"
 
-      description 'Query subscriptions of a customer'
+      description "Query subscriptions of a customer"
 
       argument :status, [Types::Subscriptions::StatusTypeEnum], required: false do
-        description 'Statuses of subscriptions to retrieve'
+        description "Statuses of subscriptions to retrieve"
       end
 
       type Types::Subscriptions::Object, null: false
@@ -24,9 +24,9 @@ module Resolvers
         return subscriptions.order(created_at: :desc) if statuses.blank?
 
         # if requested statuses do not include pending ones we should just perform filtering by given statuses
-        return subscriptions.where(status: statuses).order(created_at: :desc) unless statuses&.include?('pending')
+        return subscriptions.where(status: statuses).order(created_at: :desc) unless statuses&.include?("pending")
 
-        statuses -= ['pending']
+        statuses -= ["pending"]
 
         # if requested status is only pending, we should return only subscriptions that are starting later
         return subscriptions.starting_in_the_future.order(created_at: :desc) if statuses.blank?

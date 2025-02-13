@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::IntegrationResolver, type: :graphql do
-  let(:required_permission) { 'organization:integrations:view' }
+  let(:required_permission) { "organization:integrations:view" }
   let(:query) do
     <<~GQL
       query($integrationId: ID!) {
@@ -30,11 +30,11 @@ RSpec.describe Resolvers::IntegrationResolver, type: :graphql do
     netsuite_integration
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:view"
 
-  it 'returns a single integration' do
+  it "returns a single integration" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -43,29 +43,29 @@ RSpec.describe Resolvers::IntegrationResolver, type: :graphql do
       variables: {integrationId: netsuite_integration.id}
     )
 
-    integration_response = result['data']['integration']
+    integration_response = result["data"]["integration"]
 
     aggregate_failures do
-      expect(integration_response['id']).to eq(netsuite_integration.id)
-      expect(integration_response['code']).to eq(netsuite_integration.code)
-      expect(integration_response['name']).to eq(netsuite_integration.name)
-      expect(integration_response['scriptEndpointUrl']).to eq(netsuite_integration.script_endpoint_url)
+      expect(integration_response["id"]).to eq(netsuite_integration.id)
+      expect(integration_response["code"]).to eq(netsuite_integration.code)
+      expect(integration_response["name"]).to eq(netsuite_integration.name)
+      expect(integration_response["scriptEndpointUrl"]).to eq(netsuite_integration.script_endpoint_url)
     end
   end
 
-  context 'when integration is not found' do
-    it 'returns an error' do
+  context "when integration is not found" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: {integrationId: 'foo'}
+        variables: {integrationId: "foo"}
       )
 
       expect_graphql_error(
         result:,
-        message: 'Resource not found'
+        message: "Resource not found"
       )
     end
   end

@@ -11,8 +11,8 @@ module ErrorDetails
     end
 
     def call
-      result.not_found_failure!(resource: 'owner') unless owner
-      result.not_found_failure!(resource: 'organization') unless organization
+      result.not_found_failure!(resource: "owner") unless owner
+      result.not_found_failure!(resource: "organization") unless organization
       result
     end
 

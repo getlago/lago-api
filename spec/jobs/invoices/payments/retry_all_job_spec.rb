@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::Payments::RetryAllJob, type: :job do
   subject(:retry_all_job) { described_class }
@@ -17,7 +17,7 @@ RSpec.describe Invoices::Payments::RetryAllJob, type: :job do
       .and_return(result)
   end
 
-  it 'calls the retry batch service' do
+  it "calls the retry batch service" do
     retry_all_job.perform_now(organization_id: organization.id, invoice_ids: [invoice.id])
 
     expect(Invoices::Payments::RetryBatchService).to have_received(:new)

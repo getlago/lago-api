@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Taxes::Update, type: :graphql do
   let(:membership) { create(:membership) }
@@ -8,9 +8,9 @@ RSpec.describe Mutations::Taxes::Update, type: :graphql do
   let(:input) do
     {
       id: tax.id,
-      name: 'Updated tax name',
-      code: 'updated-tax-code',
-      description: 'Updated tax description',
+      name: "Updated tax name",
+      code: "updated-tax-code",
+      description: "Updated tax description",
       rate: 30.0,
       appliedToOrganization: false
     }
@@ -26,7 +26,7 @@ RSpec.describe Mutations::Taxes::Update, type: :graphql do
     GQL
   end
 
-  it 'updates a tax' do
+  it "updates a tax" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -34,13 +34,13 @@ RSpec.describe Mutations::Taxes::Update, type: :graphql do
       variables: {input:}
     )
 
-    expect(result['data']['updateTax']).to include(
-      'id' => String,
-      'name' => 'Updated tax name',
-      'code' => 'updated-tax-code',
-      'description' => 'Updated tax description',
-      'rate' => 30.0,
-      'appliedToOrganization' => false
+    expect(result["data"]["updateTax"]).to include(
+      "id" => String,
+      "name" => "Updated tax name",
+      "code" => "updated-tax-code",
+      "description" => "Updated tax description",
+      "rate" => 30.0,
+      "appliedToOrganization" => false
     )
   end
 end

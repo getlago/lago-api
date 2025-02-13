@@ -12,8 +12,8 @@ module AddOns
     end
 
     def call
-      return result.not_found_failure!(resource: 'add_on') unless add_on
-      return result.not_found_failure!(resource: 'tax') if (tax_codes - taxes.pluck(:code)).present?
+      return result.not_found_failure!(resource: "add_on") unless add_on
+      return result.not_found_failure!(resource: "tax") if (tax_codes - taxes.pluck(:code)).present?
 
       add_on.applied_taxes.where(
         tax_id: add_on.taxes.where.not(code: tax_codes).pluck(:id)

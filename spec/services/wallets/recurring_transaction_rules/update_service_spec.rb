@@ -92,11 +92,11 @@ RSpec.describe Wallets::RecurringTransactionRules::UpdateService do
       end
     end
 
-    context 'when sending transaction_metadata' do
-      context 'when transaction_metadata is valid' do
-        let(:transaction_metadata) { [{'key' => 'key'}, {'value' => 'value'}] }
+    context "when sending transaction_metadata" do
+      context "when transaction_metadata is valid" do
+        let(:transaction_metadata) { [{"key" => "key"}, {"value" => "value"}] }
 
-        it 'updates existing recurring transaction rule with new transaction_metadata' do
+        it "updates existing recurring transaction rule with new transaction_metadata" do
           result = update_service.call
 
           rule = result.wallet.reload.recurring_transaction_rules.first

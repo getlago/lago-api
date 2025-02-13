@@ -3,7 +3,7 @@
 module Types
   module Commitments
     class Input < Types::BaseInputObject
-      graphql_name 'CommitmentInput'
+      graphql_name "CommitmentInput"
 
       argument :amount_cents, GraphQL::Types::BigInt, required: false
       argument :commitment_type, Types::Commitments::CommitmentTypeEnum, required: false

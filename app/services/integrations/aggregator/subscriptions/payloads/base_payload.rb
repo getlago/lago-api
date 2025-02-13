@@ -14,7 +14,7 @@ module Integrations
 
           def integration_subscription
             @integration_subscription ||=
-              IntegrationResource.find_by(integration:, syncable: subscription, resource_type: 'subscription')
+              IntegrationResource.find_by(integration:, syncable: subscription, resource_type: "subscription")
           end
 
           private

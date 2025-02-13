@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService, type: :service do
   subject(:service) { described_class.new(organization_id:, event:) }
@@ -9,91 +9,91 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService, t
   let(:organization) { create(:organization) }
   let(:membership) { create(:membership, organization:) }
   let(:customer) { create(:customer, organization:) }
-  let(:payment) { create(:payment, payable: invoice, provider_payment_id: 'pi_3OzgpDH4tiDZlIUa0Ezzggtg') }
+  let(:payment) { create(:payment, payable: invoice, provider_payment_id: "pi_3OzgpDH4tiDZlIUa0Ezzggtg") }
   let(:lose_dispute_service) { Invoices::LoseDisputeService.new(invoice:) }
-  let(:invoice) { create(:invoice, customer:, organization:, status:, payment_status: 'succeeded') }
+  let(:invoice) { create(:invoice, customer:, organization:, status:, payment_status: "succeeded") }
 
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
 
-  describe '#call' do
+  describe "#call" do
     before { payment }
 
-    context 'when dispute is lost' do
+    context "when dispute is lost" do
       let(:event_json) do
-        path = Rails.root.join('spec/fixtures/stripe/charge_dispute_lost_event.json')
+        path = Rails.root.join("spec/fixtures/stripe/charge_dispute_lost_event.json")
         File.read(path)
       end
 
-      context 'when invoice is draft' do
-        let(:status) { 'draft' }
+      context "when invoice is draft" do
+        let(:status) { "draft" }
 
-        it 'does not updates invoice payment dispute lost' do
+        it "does not updates invoice payment dispute lost" do
           expect do
             service.call
             payment.payable.reload
           end.not_to change(payment.payable.reload, :payment_dispute_lost_at).from(nil)
         end
 
-        it 'does not deliver webhook' do
+        it "does not deliver webhook" do
           expect { service.call }.not_to have_enqueued_job(SendWebhookJob)
         end
       end
 
-      context 'when invoice is finalized' do
-        let(:status) { 'finalized' }
+      context "when invoice is finalized" do
+        let(:status) { "finalized" }
 
-        it 'updates invoice payment dispute lost' do
+        it "updates invoice payment dispute lost" do
           expect do
             service.call
             payment.payable.reload
           end.to change(payment.payable, :payment_dispute_lost_at).from(nil)
         end
 
-        it 'delivers a webhook' do
+        it "delivers a webhook" do
           expect do
             service.call
             payment.payable.reload
           end.to have_enqueued_job(SendWebhookJob).with(
-            'invoice.payment_dispute_lost',
+            "invoice.payment_dispute_lost",
             payment.payable,
-            provider_error: 'fraudulent'
+            provider_error: "fraudulent"
           )
         end
       end
     end
 
-    context 'when dispute is won' do
+    context "when dispute is won" do
       let(:event_json) do
-        path = Rails.root.join('spec/fixtures/stripe/charge_dispute_won_event.json')
+        path = Rails.root.join("spec/fixtures/stripe/charge_dispute_won_event.json")
         File.read(path)
       end
 
-      context 'when invoice is draft' do
-        let(:status) { 'draft' }
+      context "when invoice is draft" do
+        let(:status) { "draft" }
 
-        it 'does not updates invoice payment dispute lost' do
+        it "does not updates invoice payment dispute lost" do
           expect do
             service.call
             payment.payable.reload
           end.not_to change(payment.payable.reload, :payment_dispute_lost_at).from(nil)
         end
 
-        it 'does not deliver webhook' do
+        it "does not deliver webhook" do
           expect { service.call }.not_to have_enqueued_job(SendWebhookJob)
         end
       end
 
-      context 'when invoice is finalized' do
-        let(:status) { 'finalized' }
+      context "when invoice is finalized" do
+        let(:status) { "finalized" }
 
-        it 'does not updates invoice payment dispute lost' do
+        it "does not updates invoice payment dispute lost" do
           expect do
             service.call
             payment.payable.reload
           end.not_to change(payment.payable.reload, :payment_dispute_lost_at).from(nil)
         end
 
-        it 'does not deliver webhook' do
+        it "does not deliver webhook" do
           expect { service.call }.not_to have_enqueued_job(SendWebhookJob)
         end
       end

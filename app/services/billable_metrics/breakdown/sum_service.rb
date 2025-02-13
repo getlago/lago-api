@@ -39,7 +39,7 @@ module BillableMetrics
         [
           OpenStruct.new(
             date: from_date_in_customer_timezone,
-            action: persisted_sum.negative? ? 'remove' : 'add',
+            action: persisted_sum.negative? ? "remove" : "add",
             amount: persisted_sum,
             duration: (to_date_in_customer_timezone + 1.day - from_date_in_customer_timezone).to_i,
             total_duration: period_duration
@@ -51,7 +51,7 @@ module BillableMetrics
         event_store.sum_date_breakdown.map do |aggregation|
           OpenStruct.new(
             date: aggregation[:date],
-            action: aggregation[:value].negative? ? 'remove' : 'add',
+            action: aggregation[:value].negative? ? "remove" : "add",
             amount: aggregation[:value],
             duration: (to_date_in_customer_timezone + 1.day - aggregation[:date]).to_i,
             total_duration: period_duration

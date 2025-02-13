@@ -3,7 +3,7 @@
 module Types
   module PaymentProviders
     class AdyenInput < BaseInputObject
-      description 'Adyen input arguments'
+      description "Adyen input arguments"
 
       argument :api_key, String, required: true
       argument :code, String, required: true

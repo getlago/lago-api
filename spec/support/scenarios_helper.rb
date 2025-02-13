@@ -4,7 +4,7 @@ module ScenariosHelper
   ### Billable metrics
 
   def create_metric(params)
-    post_with_token(organization, '/api/v1/billable_metrics', {billable_metric: params})
+    post_with_token(organization, "/api/v1/billable_metrics", {billable_metric: params})
   end
 
   def update_metric(metric, params)
@@ -14,7 +14,7 @@ module ScenariosHelper
   ### Customers
 
   def create_or_update_customer(params)
-    post_with_token(organization, '/api/v1/customers', {customer: params})
+    post_with_token(organization, "/api/v1/customers", {customer: params})
     perform_all_enqueued_jobs
   end
 
@@ -32,7 +32,7 @@ module ScenariosHelper
   ### Plans
 
   def create_plan(params)
-    post_with_token(organization, '/api/v1/plans', {plan: params})
+    post_with_token(organization, "/api/v1/plans", {plan: params})
   end
 
   def update_plan(plan, params)
@@ -46,7 +46,7 @@ module ScenariosHelper
   ### Subscriptions
 
   def create_subscription(params)
-    post_with_token(organization, '/api/v1/subscriptions', {subscription: params})
+    post_with_token(organization, "/api/v1/subscriptions", {subscription: params})
     perform_all_enqueued_jobs
   end
 
@@ -95,35 +95,35 @@ module ScenariosHelper
   ### Coupons
 
   def create_coupon(params)
-    post_with_token(organization, '/api/v1/coupons', {coupon: params})
+    post_with_token(organization, "/api/v1/coupons", {coupon: params})
   end
 
   def apply_coupon(params)
-    post_with_token(organization, '/api/v1/applied_coupons', {applied_coupon: params})
+    post_with_token(organization, "/api/v1/applied_coupons", {applied_coupon: params})
   end
 
   ### Taxes
 
   def create_tax(params)
-    post_with_token(organization, '/api/v1/taxes', {tax: params})
+    post_with_token(organization, "/api/v1/taxes", {tax: params})
   end
 
   ### Wallets
 
   def create_wallet(params)
-    post_with_token(organization, '/api/v1/wallets', {wallet: params})
+    post_with_token(organization, "/api/v1/wallets", {wallet: params})
     perform_all_enqueued_jobs
   end
 
   def create_wallet_transaction(params)
-    post_with_token(organization, '/api/v1/wallet_transactions', {wallet_transaction: params})
+    post_with_token(organization, "/api/v1/wallet_transactions", {wallet_transaction: params})
     perform_all_enqueued_jobs
   end
 
   ### Events
 
   def create_event(params)
-    post_with_token(organization, '/api/v1/events', {event: params})
+    post_with_token(organization, "/api/v1/events", {event: params})
     perform_all_enqueued_jobs
     JSON.parse(response.body) unless response.body.empty?
   end
@@ -131,11 +131,11 @@ module ScenariosHelper
   ### Credit notes
 
   def create_credit_note(params)
-    post_with_token(organization, '/api/v1/credit_notes', {credit_note: params})
+    post_with_token(organization, "/api/v1/credit_notes", {credit_note: params})
   end
 
   def estimate_credit_note(params)
-    post_with_token(organization, '/api/v1/credit_notes/estimate', {credit_note: params})
+    post_with_token(organization, "/api/v1/credit_notes/estimate", {credit_note: params})
   end
 
   ### Analytics
@@ -153,7 +153,7 @@ module ScenariosHelper
   def setup_stripe_for(customer:)
     stripe_provider = create(:stripe_provider, organization:)
     create(:stripe_customer, customer_id: customer.id, payment_provider: stripe_provider)
-    customer.update!(payment_provider: 'stripe', payment_provider_code: stripe_provider.code)
+    customer.update!(payment_provider: "stripe", payment_provider_code: stripe_provider.code)
   end
 
   ### Fees

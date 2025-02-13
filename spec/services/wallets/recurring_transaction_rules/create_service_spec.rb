@@ -27,13 +27,13 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
   end
 
   describe "#call" do
-    context 'when freemium' do
-      it 'does not create any recurring transaction rule' do
+    context "when freemium" do
+      it "does not create any recurring transaction rule" do
         expect { create_service.call }.not_to change { wallet.reload.recurring_transaction_rules.count }
       end
     end
 
-    context 'when premium' do
+    context "when premium" do
       around { |test| lago_premium!(&test) }
 
       it "creates rule with expected attributes" do
@@ -52,7 +52,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         )
       end
 
-      context 'when method is fixed' do
+      context "when method is fixed" do
         let(:rule_params) do
           {
             trigger: "threshold",
@@ -74,7 +74,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         end
       end
 
-      context 'when invoice_requires_successful_payment is present' do
+      context "when invoice_requires_successful_payment is present" do
         let(:rule_params) do
           {
             trigger: "threshold",
@@ -101,7 +101,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           }
         end
 
-        let(:transaction_metadata) { [{'key' => 'valid_value', 'value' => 'also_valid'}] }
+        let(:transaction_metadata) { [{"key" => "valid_value", "value" => "also_valid"}] }
 
         it "creates rule with expected attributes" do
           expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
@@ -112,7 +112,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         end
       end
 
-      context 'when invoice_requires_successful_payment is blank' do
+      context "when invoice_requires_successful_payment is blank" do
         let(:wallet) { create(:wallet, invoice_requires_successful_payment: true) }
         let(:wallet_params) do
           {
@@ -125,7 +125,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           }
         end
 
-        it 'follows the wallet configuration' do
+        it "follows the wallet configuration" do
           expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
 
           expect(wallet.recurring_transaction_rules.first).to have_attributes(

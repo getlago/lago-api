@@ -84,36 +84,36 @@ module Charges
       end
 
       def free_units_per_total_aggregation
-        @free_units_per_total_aggregation ||= BigDecimal(properties['free_units_per_total_aggregation'] || 0)
+        @free_units_per_total_aggregation ||= BigDecimal(properties["free_units_per_total_aggregation"] || 0)
       end
 
       def free_units_per_events
-        @free_units_per_events ||= properties['free_units_per_events'].to_i
+        @free_units_per_events ||= properties["free_units_per_events"].to_i
       end
 
       # NOTE: FE divides percentage rate with 100 and sends to BE.
       def rate
-        BigDecimal(properties['rate'].to_s)
+        BigDecimal(properties["rate"].to_s)
       end
 
       def fixed_amount
-        @fixed_amount ||= BigDecimal((properties['fixed_amount'] || 0).to_s)
+        @fixed_amount ||= BigDecimal((properties["fixed_amount"] || 0).to_s)
       end
 
       def per_transaction_max_amount?
-        properties['per_transaction_max_amount'].present?
+        properties["per_transaction_max_amount"].present?
       end
 
       def per_transaction_min_amount?
-        properties['per_transaction_min_amount'].present?
+        properties["per_transaction_min_amount"].present?
       end
 
       def per_transaction_max_amount
-        BigDecimal(properties['per_transaction_max_amount'])
+        BigDecimal(properties["per_transaction_max_amount"])
       end
 
       def per_transaction_min_amount
-        BigDecimal(properties['per_transaction_min_amount'])
+        BigDecimal(properties["per_transaction_min_amount"])
       end
 
       def should_apply_min_max?

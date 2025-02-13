@@ -26,10 +26,10 @@ module Invoices
     def should_finalize_invoice?
       return true unless invoice.fees_amount_cents.zero?
       customer_setting = customer.finalize_zero_amount_invoice
-      if customer_setting == 'inherit'
+      if customer_setting == "inherit"
         organization.finalize_zero_amount_invoice
       else
-        customer_setting == 'finalize'
+        customer_setting == "finalize"
       end
     end
   end

@@ -22,12 +22,12 @@ module PaymentProviders
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
       rescue ::Stripe::AuthenticationError => e
-        deliver_error_webhook(action: 'payment_provider.register_webhook', error: e)
+        deliver_error_webhook(action: "payment_provider.register_webhook", error: e)
         result
       rescue ::Stripe::InvalidRequestError => e
         raise if e.message != "You have reached the maximum of 16 test webhook endpoints."
 
-        deliver_error_webhook(action: 'payment_provider.register_webhook', error: e)
+        deliver_error_webhook(action: "payment_provider.register_webhook", error: e)
         result
       end
 
@@ -35,7 +35,7 @@ module PaymentProviders
 
       def webhook_end_point
         URI.join(
-          ENV['LAGO_API_URL'],
+          ENV["LAGO_API_URL"],
           "webhooks/stripe/#{organization_id}?code=#{URI.encode_www_form_component(payment_provider.code)}"
         )
       end

@@ -26,7 +26,7 @@ module Coupons
 
       return true if expiration_at && expiration_at.to_date >= Time.current.to_date
 
-      add_error(field: :expiration_at, error_code: 'invalid_date')
+      add_error(field: :expiration_at, error_code: "invalid_date")
 
       false
     end

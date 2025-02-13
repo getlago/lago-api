@@ -11,7 +11,7 @@ module Admin
       end
 
       def call
-        return result.not_found_failure!(resource: 'organization') unless organization
+        return result.not_found_failure!(resource: "organization") unless organization
 
         organization.name = params[:name] if params.key?(:name)
 

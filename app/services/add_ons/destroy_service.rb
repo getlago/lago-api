@@ -10,7 +10,7 @@ module AddOns
     end
 
     def call
-      return result.not_found_failure!(resource: 'add_on') unless add_on
+      return result.not_found_failure!(resource: "add_on") unless add_on
 
       add_on.discard!
 

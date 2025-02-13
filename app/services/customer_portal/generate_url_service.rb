@@ -9,9 +9,9 @@ module CustomerPortal
     end
 
     def call
-      return result.not_found_failure!(resource: 'customer') if customer.blank?
+      return result.not_found_failure!(resource: "customer") if customer.blank?
 
-      public_authenticator = ActiveSupport::MessageVerifier.new(ENV['SECRET_KEY_BASE'])
+      public_authenticator = ActiveSupport::MessageVerifier.new(ENV["SECRET_KEY_BASE"])
       message = public_authenticator.generate(customer.id, expires_in: 12.hours)
 
       result.url = "#{ENV["LAGO_FRONT_URL"]}/customer-portal/#{message}"

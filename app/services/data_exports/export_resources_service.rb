@@ -2,8 +2,8 @@
 
 module DataExports
   class ExportResourcesService < BaseService
-    EXPIRED_FAILURE_MESSAGE = 'Data Export already expired'
-    PROCESSED_FAILURE_MESSAGE = 'Data Export already processed'
+    EXPIRED_FAILURE_MESSAGE = "Data Export already expired"
+    PROCESSED_FAILURE_MESSAGE = "Data Export already processed"
     DEFAULT_BATCH_SIZE = 20
 
     ResourceTypeNotSupportedError = Class.new(StandardError)
@@ -20,8 +20,8 @@ module DataExports
     end
 
     def call
-      return result.service_failure!(code: 'data_export_expired', message: EXPIRED_FAILURE_MESSAGE) if data_export.expired?
-      return result.service_failure!(code: 'data_export_processed', message: PROCESSED_FAILURE_MESSAGE) unless data_export.pending?
+      return result.service_failure!(code: "data_export_expired", message: EXPIRED_FAILURE_MESSAGE) if data_export.expired?
+      return result.service_failure!(code: "data_export_processed", message: PROCESSED_FAILURE_MESSAGE) unless data_export.pending?
 
       data_export.processing!
       result.data_export = data_export

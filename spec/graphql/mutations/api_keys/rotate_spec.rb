@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::ApiKeys::Rotate, type: :graphql do
   subject(:result) do
@@ -21,53 +21,53 @@ RSpec.describe Mutations::ApiKeys::Rotate, type: :graphql do
     GQL
   end
 
-  let(:required_permission) { 'developers:keys:manage' }
+  let(:required_permission) { "developers:keys:manage" }
   let!(:membership) { create(:membership) }
   let(:expires_at) { generate(:future_date).iso8601 }
-  let(:name) { Faker::Lorem.words.join(' ') }
+  let(:name) { Faker::Lorem.words.join(" ") }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'developers:keys:manage'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "developers:keys:manage"
 
-  context 'when api key with such ID exists in the current organization' do
+  context "when api key with such ID exists in the current organization" do
     let(:api_key) { membership.organization.api_keys.first }
 
     around { |test| lago_premium!(&test) }
 
-    it 'expires the api key' do
+    it "expires the api key" do
       expect { result }
         .to change { api_key.reload.expires_at&.iso8601 }
         .to(expires_at)
     end
 
-    it 'returns newly created api key' do
-      api_key_response = result['data']['rotateApiKey']
+    it "returns newly created api key" do
+      api_key_response = result["data"]["rotateApiKey"]
       new_api_key = membership.organization.api_keys.order(:created_at).last
 
       aggregate_failures do
-        expect(api_key_response['id']).to eq(new_api_key.id)
-        expect(api_key_response['value']).to eq(new_api_key.value)
-        expect(api_key_response['name']).to eq(name)
-        expect(api_key_response['createdAt']).to eq(new_api_key.created_at.iso8601)
-        expect(api_key_response['expiresAt']).to be_nil
+        expect(api_key_response["id"]).to eq(new_api_key.id)
+        expect(api_key_response["value"]).to eq(new_api_key.value)
+        expect(api_key_response["name"]).to eq(name)
+        expect(api_key_response["createdAt"]).to eq(new_api_key.created_at.iso8601)
+        expect(api_key_response["expiresAt"]).to be_nil
       end
     end
   end
 
-  context 'when api key with such ID does not exist in the current organization' do
+  context "when api key with such ID does not exist in the current organization" do
     let!(:api_key) { create(:api_key) }
 
-    it 'does not change the api key' do
+    it "does not change the api key" do
       expect { result }.not_to change { api_key.reload.expires_at }
     end
 
-    it 'does not create an api key' do
+    it "does not create an api key" do
       expect { result }.not_to change(ApiKey, :count)
     end
 
-    it 'returns an error' do
-      expect_graphql_error(result:, message: 'Resource not found')
+    it "returns an error" do
+      expect_graphql_error(result:, message: "Resource not found")
     end
   end
 end

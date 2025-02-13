@@ -71,7 +71,7 @@ module Events
     end
 
     def deliver_webhook(errors)
-      SendWebhookJob.perform_later('events.errors', organization, errors:)
+      SendWebhookJob.perform_later("events.errors", organization, errors:)
     end
   end
 end

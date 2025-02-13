@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, type: :service do
   subject(:webhook_service) { described_class.new(organization_id: organization.id, event:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:event_json) { File.read('spec/fixtures/stripe/setup_intent_event.json') }
+  let(:event_json) { File.read("spec/fixtures/stripe/setup_intent_event.json") }
 
   let(:event) { Stripe::Event.construct_from(JSON.parse(event_json)) }
   let(:provider_customer_id) { event.data.object.customer }
@@ -20,8 +20,8 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
 
   before { stripe_customer }
 
-  describe '#call' do
-    it 'updates provider default payment method', aggregate_failures: true do
+  describe "#call" do
+    it "updates provider default payment method", aggregate_failures: true do
       allow(Stripe::Customer).to receive(:update).and_return(true)
 
       result = webhook_service.call
@@ -38,20 +38,20 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
       )
     end
 
-    context 'when stripe customer is not found', aggregate_failures: true do
-      let(:provider_customer_id) { 'cus_InvaLid' }
+    context "when stripe customer is not found", aggregate_failures: true do
+      let(:provider_customer_id) { "cus_InvaLid" }
 
-      it 'returns an empty result' do
+      it "returns an empty result" do
         result = webhook_service.call
 
         expect(result).to be_success
         expect(result.payment_method).to be_nil
       end
 
-      context 'when customer in metadata is not found' do
-        let(:event_json) { File.read('spec/fixtures/stripe/setup_intent_event_with_metadata.json') }
+      context "when customer in metadata is not found" do
+        let(:event_json) { File.read("spec/fixtures/stripe/setup_intent_event_with_metadata.json") }
 
-        it 'returns an empty response', aggregate_failures: true do
+        it "returns an empty response", aggregate_failures: true do
           result = webhook_service.call
 
           expect(result).to be_success
@@ -59,25 +59,25 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
         end
       end
 
-      context 'when customer in metadata exists' do
-        let(:event_json) { File.read('spec/fixtures/stripe/setup_intent_event_with_metadata.json') }
-        let(:customer) { create(:customer, id: event.data.object.metadata['lago_customer_id'], organization:) }
+      context "when customer in metadata exists" do
+        let(:event_json) { File.read("spec/fixtures/stripe/setup_intent_event_with_metadata.json") }
+        let(:customer) { create(:customer, id: event.data.object.metadata["lago_customer_id"], organization:) }
 
-        it 'returns a not found error', aggregate_failures: true do
+        it "returns a not found error", aggregate_failures: true do
           result = webhook_service.call
 
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq('stripe_customer_not_found')
+          expect(result.error.message).to eq("stripe_customer_not_found")
         end
       end
     end
 
-    context 'when stripe customer id is nil' do
-      let(:event_json) { File.read('spec/fixtures/stripe/setup_intent_event_without_customer.json') }
-      let(:provider_customer_id) { 'cus_InvaLid' }
+    context "when stripe customer id is nil" do
+      let(:event_json) { File.read("spec/fixtures/stripe/setup_intent_event_without_customer.json") }
+      let(:provider_customer_id) { "cus_InvaLid" }
 
-      it 'returns an empty result', aggregate_failures: true do
+      it "returns an empty result", aggregate_failures: true do
         result = webhook_service.call
 
         expect(result).to be_success

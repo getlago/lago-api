@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe EventsQuery, type: :query do
   subject(:events_query) { described_class.new(organization:, pagination:, filters:) }
@@ -13,8 +13,8 @@ RSpec.describe EventsQuery, type: :query do
 
   before { event }
 
-  describe 'call' do
-    it 'returns a list of events' do
+  describe "call" do
+    it "returns a list of events" do
       result = events_query.call
 
       aggregate_failures do
@@ -24,10 +24,10 @@ RSpec.describe EventsQuery, type: :query do
       end
     end
 
-    context 'with pagination' do
+    context "with pagination" do
       let(:pagination) { {page: 2, limit: 10} }
 
-      it 'applies the pagination' do
+      it "applies the pagination" do
         result = events_query.call
 
         aggregate_failures do
@@ -38,13 +38,13 @@ RSpec.describe EventsQuery, type: :query do
       end
     end
 
-    context 'with code filter' do
+    context "with code filter" do
       let(:event2) { create(:event, organization:) }
       let(:filters) { {code: event.code} }
 
       before { event2 }
 
-      it 'applies the filter' do
+      it "applies the filter" do
         result = events_query.call
 
         aggregate_failures do
@@ -54,13 +54,13 @@ RSpec.describe EventsQuery, type: :query do
       end
     end
 
-    context 'with external subscription id filter' do
+    context "with external subscription id filter" do
       let(:event2) { create(:event, organization:) }
       let(:filters) { {external_subscription_id: event.external_subscription_id} }
 
       before { event2 }
 
-      it 'applies the filter' do
+      it "applies the filter" do
         result = events_query.call
 
         aggregate_failures do
@@ -70,7 +70,7 @@ RSpec.describe EventsQuery, type: :query do
       end
     end
 
-    context 'with timestamp from filter' do
+    context "with timestamp from filter" do
       let(:filters) {
         {
           timestamp_from: 2.days.ago.iso8601.to_date.to_s,
@@ -78,7 +78,7 @@ RSpec.describe EventsQuery, type: :query do
         }
       }
 
-      it 'applies the filter' do
+      it "applies the filter" do
         result = events_query.call
 
         aggregate_failures do

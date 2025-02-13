@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 module AuthenticableApiUserSpec
   class ThingType < Types::BaseObject
@@ -11,7 +11,7 @@ module AuthenticableApiUserSpec
   class RenameThingMutation < Mutations::BaseMutation
     include AuthenticableApiUser
 
-    graphql_name 'RenameThing'
+    graphql_name "RenameThing"
     argument :new_name, String, required: true
     type ThingType
 
@@ -40,34 +40,34 @@ RSpec.describe AuthenticableApiUser, type: :graphql do
     GQL
   end
 
-  context 'with a current user' do
-    it 'renames the thing' do
+  context "with a current user" do
+    it "renames the thing" do
       membership = create(:membership)
 
       result = AuthenticableApiUserSpec::TestApiSchema.execute(
         mutation,
-        variables: {input: {newName: 'new name'}},
+        variables: {input: {newName: "new name"}},
         context: {current_user: membership.user}
       )
 
-      expect(result['data']['renameThing']['name']).to eq 'new name'
+      expect(result["data"]["renameThing"]["name"]).to eq "new name"
     end
   end
 
-  context 'without a current user' do
-    it 'returns an error' do
+  context "without a current user" do
+    it "returns an error" do
       result = AuthenticableApiUserSpec::TestApiSchema.execute(
         mutation,
-        variables: {input: {newName: 'new name'}},
+        variables: {input: {newName: "new name"}},
         context: {current_user: nil}
       )
 
       partial_error = {
-        'message' => 'unauthorized',
-        'extensions' => {'status' => :unauthorized, 'code' => 'unauthorized'}
+        "message" => "unauthorized",
+        "extensions" => {"status" => :unauthorized, "code" => "unauthorized"}
       }
 
-      expect(result['errors']).to include hash_including(partial_error)
+      expect(result["errors"]).to include hash_including(partial_error)
     end
   end
 end

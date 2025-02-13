@@ -7,10 +7,10 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = 'organization:integrations:update'
+        REQUIRED_PERMISSION = "organization:integrations:update"
 
-        graphql_name 'UpdateAnrokIntegration'
-        description 'Update Anrok integration'
+        graphql_name "UpdateAnrokIntegration"
+        description "Update Anrok integration"
 
         input_object_class Types::Integrations::Anrok::UpdateInput
 

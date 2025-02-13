@@ -11,7 +11,7 @@ module ApiResponses
     render(
       json: {
         status: 404,
-        error: 'Not Found',
+        error: "Not Found",
         code: "#{resource}_not_found"
       },
       status: :not_found

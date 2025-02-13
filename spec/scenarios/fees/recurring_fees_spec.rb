@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
-  let(:organization) { create(:organization, webhook_url: 'http://fees.test/wh') }
+describe "Recurring Non Invoiceable Fees", :scenarios, type: :request do
+  let(:organization) { create(:organization, webhook_url: "http://fees.test/wh") }
   let(:customer) { create(:customer, organization:) }
-  let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:, code: 'seats') }
+  let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:, code: "seats") }
   let(:plan) { create(:plan, organization:, amount_cents: 49.99, pay_in_advance: true) }
   let(:external_subscription_id) { SecureRandom.uuid }
   let(:charge) do
@@ -15,7 +15,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
       invoiceable:,
       pay_in_advance:,
       prorated: true,
-      properties: {amount: '30', grouped_by:}
+      properties: {amount: "30", grouped_by:}
     })
   end
   let(:subscription) { customer.subscriptions.first }
@@ -26,26 +26,26 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         code: billable_metric.code,
         transaction_id: "tr_#{SecureRandom.hex(16)}",
         external_subscription_id:,
-        properties: {'item_id' => item_id}
+        properties: {"item_id" => item_id}
       }
     )
   end
 
   before do
     charge
-    WebMock.stub_request(:post, 'http://fees.test/wh').to_return(status: 200, body: '', headers: {})
+    WebMock.stub_request(:post, "http://fees.test/wh").to_return(status: 200, body: "", headers: {})
   end
 
-  context 'when charge is pay in advance' do
+  context "when charge is pay in advance" do
     let(:pay_in_advance) { true }
 
-    context 'with invoiceable = false' do
+    context "with invoiceable = false" do
       let(:invoiceable) { false }
 
-      context 'without grace period' do
+      context "without grace period" do
         # rubocop:disable RSpec/ExpectInHook
         before do
-          travel_to(Time.zone.parse('2024-06-05T12:12:00')) do
+          travel_to(Time.zone.parse("2024-06-05T12:12:00")) do
             create_subscription(
               {
                 external_customer_id: customer.external_id,
@@ -67,11 +67,11 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         end
         # rubocop:enable RSpec/ExpectInHook
 
-        context 'without grouped_by' do
+        context "without grouped_by" do
           let(:grouped_by) { nil }
 
-          it 'creates one fee for all events' do
-            travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
+          it "creates one fee for all events" do
+            travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # BILLING DAY !
               perform_billing
 
               expect(subscription.invoices.count).to eq 2
@@ -82,12 +82,12 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
               expect(recurring_fee.amount_cents).to eq(30 * 5 * 100)
             end
 
-            travel_to(Time.zone.parse('2024-07-12T01:10:00')) do
+            travel_to(Time.zone.parse("2024-07-12T01:10:00")) do
               send_event! "user_july_1"
               send_event! "user_july_2"
             end
 
-            travel_to(Time.zone.parse('2024-08-01T01:10:00')) do # August BILLING DAY !
+            travel_to(Time.zone.parse("2024-08-01T01:10:00")) do # August BILLING DAY !
               expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
 
               perform_billing
@@ -95,10 +95,10 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
               expect(subscription.invoices.count).to eq 3
 
               expect(a_request(:post, "http://fees.test/wh").with(
-                body: hash_including(webhook_type: 'fee.created', fee: hash_including({
-                  'units' => '7.0',
-                  'from_date' => "2024-08-01T00:00:00+00:00",
-                  'to_date' => "2024-08-31T23:59:59+00:00"
+                body: hash_including(webhook_type: "fee.created", fee: hash_including({
+                  "units" => "7.0",
+                  "from_date" => "2024-08-01T00:00:00+00:00",
+                  "to_date" => "2024-08-31T23:59:59+00:00"
                 }))
               )).to have_been_made.once
 
@@ -109,7 +109,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             end
 
             # Test termination of subscription
-            travel_to(Time.zone.parse('2024-08-15T01:10:00')) do
+            travel_to(Time.zone.parse("2024-08-15T01:10:00")) do
               terminate_subscription(subscription)
               perform_billing
               expect(subscription.reload).to be_terminated
@@ -122,11 +122,11 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           end
         end
 
-        context 'with grouped_by on unique field_name' do
-          let(:grouped_by) { ['item_id'] }
+        context "with grouped_by on unique field_name" do
+          let(:grouped_by) { ["item_id"] }
 
-          it 'creates a fee per event' do
-            travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # July BILLING DAY !
+          it "creates a fee per event" do
+            travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # July BILLING DAY !
               expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
 
               perform_billing
@@ -137,12 +137,12 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
               expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, pay_in_advance: true, amount_cents: 30 * 100))
             end
 
-            travel_to(Time.zone.parse('2024-07-12T01:10:00')) do
+            travel_to(Time.zone.parse("2024-07-12T01:10:00")) do
               send_event! "user_july_1"
               send_event! "user_july_2"
             end
 
-            travel_to(Time.zone.parse('2024-08-01T01:10:00')) do # August BILLING DAY !
+            travel_to(Time.zone.parse("2024-08-01T01:10:00")) do # August BILLING DAY !
               expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
 
               WebMock.reset_executed_requests!
@@ -151,11 +151,11 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
               expect(subscription.invoices.count).to eq 3
 
               expect(a_request(:post, "http://fees.test/wh").with(
-                body: hash_including(webhook_type: 'fee.created', fee: hash_including({
-                  'lago_invoice_id' => nil,
-                  'units' => '1.0',
-                  'from_date' => "2024-08-01T00:00:00+00:00",
-                  'to_date' => "2024-08-31T23:59:59+00:00"
+                body: hash_including(webhook_type: "fee.created", fee: hash_including({
+                  "lago_invoice_id" => nil,
+                  "units" => "1.0",
+                  "from_date" => "2024-08-01T00:00:00+00:00",
+                  "to_date" => "2024-08-31T23:59:59+00:00"
                 }))
               )).to have_been_made.times(7)
 
@@ -165,7 +165,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             end
 
             # Test termination of subscription
-            travel_to(Time.zone.parse('2024-08-15T01:10:00')) do
+            travel_to(Time.zone.parse("2024-08-15T01:10:00")) do
               terminate_subscription(subscription)
               perform_billing
               expect(subscription.reload).to be_terminated
@@ -178,12 +178,12 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         end
       end
 
-      context 'with grace period' do
-        let(:organization) { create(:organization, webhook_url: 'http://fees.test/wh', invoice_grace_period: 3) }
-        let(:grouped_by) { ['item_id'] }
+      context "with grace period" do
+        let(:organization) { create(:organization, webhook_url: "http://fees.test/wh", invoice_grace_period: 3) }
+        let(:grouped_by) { ["item_id"] }
 
-        it 'creates the recurring fees without the grace period' do
-          travel_to(Time.zone.parse('2024-06-05T12:12:00')) do
+        it "creates the recurring fees without the grace period" do
+          travel_to(Time.zone.parse("2024-06-05T12:12:00")) do
             create_subscription(
               {
                 external_customer_id: customer.external_id,
@@ -202,36 +202,36 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
             expect(subscription.fees.charge.order(created_at: :desc)).to all(have_attributes(amount_cents: 2100))
           end
 
-          travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # July BILLING DAY !
+          travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # July BILLING DAY !
             expect(Fee.where(subscription:, charge:, created_at: Time.current.to_date..).count).to eq 0
 
             WebMock.reset_executed_requests!
             perform_billing
 
             expect(a_request(:post, "http://fees.test/wh").with(
-              body: hash_including(webhook_type: 'fee.created', fee: hash_including({
-                'lago_invoice_id' => nil,
-                'units' => '1.0',
-                'from_date' => "2024-07-01T00:00:00+00:00",
-                'to_date' => "2024-07-31T23:59:59+00:00"
+              body: hash_including(webhook_type: "fee.created", fee: hash_including({
+                "lago_invoice_id" => nil,
+                "units" => "1.0",
+                "from_date" => "2024-07-01T00:00:00+00:00",
+                "to_date" => "2024-07-31T23:59:59+00:00"
               }))
             )).to have_been_made.times(2)
 
             expect(subscription.invoices.draft.count).to eq 2
-            expect(subscription.invoices).to all(have_attributes(status: 'draft'))
+            expect(subscription.invoices).to all(have_attributes(status: "draft"))
 
             recurring_fees = Fee.where(subscription:, charge:, created_at: Time.current.beginning_of_month..)
             expect(recurring_fees.count).to eq 2
             expect(recurring_fees).to all(have_attributes(units: 1, invoice_id: nil, pay_in_advance: true, amount_cents: 30 * 100))
           end
 
-          travel_to(Time.zone.parse('2024-07-04T01:10:00')) do
+          travel_to(Time.zone.parse("2024-07-04T01:10:00")) do
             WebMock.reset_executed_requests!
             perform_finalize_refresh
 
             expect(a_request(:post, "http://fees.test/wh").with(
-              body: hash_including(webhook_type: 'fee.created', fee: hash_including({
-                'lago_invoice_id' => nil
+              body: hash_including(webhook_type: "fee.created", fee: hash_including({
+                "lago_invoice_id" => nil
               }))
             )).not_to have_been_made
 
@@ -241,7 +241,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           end
 
           # Test termination of subscription
-          travel_to(Time.zone.parse('2024-07-05T01:30:00')) do
+          travel_to(Time.zone.parse("2024-07-05T01:30:00")) do
             terminate_subscription(subscription)
             perform_billing
             expect(subscription.reload).to be_terminated
@@ -253,12 +253,12 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
       end
     end
 
-    context 'with invoiceable = true' do
+    context "with invoiceable = true" do
       let(:invoiceable) { true }
 
       # rubocop:disable RSpec/ExpectInHook
       before do
-        travel_to(Time.zone.parse('2024-06-05T12:12:00')) do
+        travel_to(Time.zone.parse("2024-06-05T12:12:00")) do
           create_subscription(
             {
               external_customer_id: customer.external_id,
@@ -280,11 +280,11 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
       end
       # rubocop:enable RSpec/ExpectInHook
 
-      context 'without grouped_by' do
+      context "without grouped_by" do
         let(:grouped_by) { nil }
 
-        it 'creates one fee for all events' do
-          travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
+        it "creates one fee for all events" do
+          travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # BILLING DAY !
             perform_billing
 
             expect(subscription.invoices.count).to eq 7
@@ -297,7 +297,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           end
 
           # Test termination of subscription
-          travel_to(Time.zone.parse('2024-07-15T01:10:00')) do
+          travel_to(Time.zone.parse("2024-07-15T01:10:00")) do
             terminate_subscription(subscription)
             perform_billing
             expect(subscription.reload).to be_terminated
@@ -308,11 +308,11 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         end
       end
 
-      context 'with grouped_by on unique field_name' do
-        let(:grouped_by) { ['item_id'] }
+      context "with grouped_by on unique field_name" do
+        let(:grouped_by) { ["item_id"] }
 
-        it 'creates a fee per event' do
-          travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
+        it "creates a fee per event" do
+          travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # BILLING DAY !
             perform_billing
 
             expect(subscription.invoices.count).to eq 7
@@ -327,7 +327,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           end
 
           # Test termination of subscription
-          travel_to(Time.zone.parse('2024-07-15T01:10:00')) do
+          travel_to(Time.zone.parse("2024-07-15T01:10:00")) do
             terminate_subscription(subscription)
             perform_billing
             expect(subscription.reload).to be_terminated
@@ -340,15 +340,15 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
     end
   end
 
-  context 'when charge is pay in arrears' do
+  context "when charge is pay in arrears" do
     let(:pay_in_advance) { false }
 
-    context 'with invoiceable = false' do
+    context "with invoiceable = false" do
       let(:invoiceable) { false }
 
       # rubocop:disable RSpec/ExpectInHook
       before do
-        travel_to(Time.zone.parse('2024-06-05T12:12:00')) do
+        travel_to(Time.zone.parse("2024-06-05T12:12:00")) do
           create_subscription(
             {
               external_customer_id: customer.external_id,
@@ -369,11 +369,11 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
       end
       # rubocop:enable RSpec/ExpectInHook
 
-      context 'without grouped_by' do
+      context "without grouped_by" do
         let(:grouped_by) { nil }
 
-        it 'creates one fee for all events' do
-          travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
+        it "creates one fee for all events" do
+          travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # BILLING DAY !
             perform_billing
 
             expect(subscription.invoices.count).to eq 2
@@ -389,11 +389,11 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         end
       end
 
-      context 'with grouped_by on unique field_name' do
-        let(:grouped_by) { ['item_id'] }
+      context "with grouped_by on unique field_name" do
+        let(:grouped_by) { ["item_id"] }
 
-        it 'creates a fee per event' do
-          travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
+        it "creates a fee per event" do
+          travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # BILLING DAY !
             perform_billing
 
             expect(subscription.invoices.count).to eq 2
@@ -410,12 +410,12 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
       end
     end
 
-    context 'with invoiceable = true' do
+    context "with invoiceable = true" do
       let(:invoiceable) { true }
 
       # rubocop:disable RSpec/ExpectInHook
       before do
-        travel_to(Time.zone.parse('2024-06-05T12:12:00')) do
+        travel_to(Time.zone.parse("2024-06-05T12:12:00")) do
           create_subscription(
             {
               external_customer_id: customer.external_id,
@@ -436,11 +436,11 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
       end
       # rubocop:enable RSpec/ExpectInHook
 
-      context 'without grouped_by' do
+      context "without grouped_by" do
         let(:grouped_by) { nil }
 
-        it 'creates one fee for all events' do
-          travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
+        it "creates one fee for all events" do
+          travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # BILLING DAY !
             perform_billing
 
             expect(subscription.invoices.count).to eq 2
@@ -453,7 +453,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           end
 
           # Test termination of subscription
-          travel_to(Time.zone.parse('2024-07-15T01:10:00')) do
+          travel_to(Time.zone.parse("2024-07-15T01:10:00")) do
             terminate_subscription(subscription)
             perform_billing
             expect(subscription.reload).to be_terminated
@@ -466,11 +466,11 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
         end
       end
 
-      context 'with grouped_by on unique field_name' do
-        let(:grouped_by) { ['item_id'] }
+      context "with grouped_by on unique field_name" do
+        let(:grouped_by) { ["item_id"] }
 
-        it 'creates a fee per event' do
-          travel_to(Time.zone.parse('2024-07-01T00:10:00')) do # BILLING DAY !
+        it "creates a fee per event" do
+          travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # BILLING DAY !
             perform_billing
 
             expect(subscription.invoices.count).to eq 2
@@ -486,7 +486,7 @@ describe 'Recurring Non Invoiceable Fees', :scenarios, type: :request do
           end
 
           # Test termination of subscription
-          travel_to(Time.zone.parse('2024-07-15T01:10:00')) do
+          travel_to(Time.zone.parse("2024-07-15T01:10:00")) do
             terminate_subscription(subscription)
             perform_billing
             expect(subscription.reload).to be_terminated

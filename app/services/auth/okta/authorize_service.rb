@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'redis'
+require "redis"
 
 module Auth
   module Okta
@@ -19,15 +19,15 @@ module Auth
 
         params = {
           client_id: result.okta_integration.client_id,
-          response_type: 'code',
-          response_mode: 'query',
-          scope: 'openid profile email',
+          response_type: "code",
+          response_mode: "query",
+          scope: "openid profile email",
           redirect_uri: "#{ENV["LAGO_FRONT_URL"]}/auth/okta/callback",
           state:
         }
         result.url = URI::HTTPS.build(
           host: "#{result.okta_integration.organization_name.downcase}.okta.com",
-          path: '/oauth2/v1/authorize',
+          path: "/oauth2/v1/authorize",
           query: params.to_query
         ).to_s
 

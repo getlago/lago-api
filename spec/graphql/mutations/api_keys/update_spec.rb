@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::ApiKeys::Update, type: :graphql do
   subject(:result) do
@@ -23,57 +23,57 @@ RSpec.describe Mutations::ApiKeys::Update, type: :graphql do
     GQL
   end
 
-  let(:required_permission) { 'developers:keys:manage' }
+  let(:required_permission) { "developers:keys:manage" }
   let!(:membership) { create(:membership) }
   let(:input_params) { {id: api_key.id, permissions:, name:} }
-  let(:permissions) { api_key.permissions.merge("add_on" => ['read']) }
-  let(:name) { Faker::Lorem.words.join(' ') }
+  let(:permissions) { api_key.permissions.merge("add_on" => ["read"]) }
+  let(:name) { Faker::Lorem.words.join(" ") }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'developers:keys:manage'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "developers:keys:manage"
 
-  context 'when api key with such ID exists in the current organization' do
+  context "when api key with such ID exists in the current organization" do
     let(:api_key) { membership.organization.api_keys.first }
 
-    before { membership.organization.update!(premium_integrations: ['api_permissions']) }
+    before { membership.organization.update!(premium_integrations: ["api_permissions"]) }
 
-    context 'when permissions are present' do
-      it 'returns updated api key' do
-        api_key_response = result['data']['updateApiKey']
+    context "when permissions are present" do
+      it "returns updated api key" do
+        api_key_response = result["data"]["updateApiKey"]
 
         aggregate_failures do
-          expect(api_key_response['id']).to eq(api_key.id)
-          expect(api_key_response['name']).to eq(name)
-          expect(api_key_response['permissions']).to eq(permissions)
+          expect(api_key_response["id"]).to eq(api_key.id)
+          expect(api_key_response["name"]).to eq(name)
+          expect(api_key_response["permissions"]).to eq(permissions)
         end
       end
     end
 
-    context 'when permissions are missing' do
+    context "when permissions are missing" do
       let(:input_params) { {id: api_key.id, name:} }
 
-      it 'returns updated api key' do
-        api_key_response = result['data']['updateApiKey']
+      it "returns updated api key" do
+        api_key_response = result["data"]["updateApiKey"]
 
         aggregate_failures do
-          expect(api_key_response['id']).to eq(api_key.id)
-          expect(api_key_response['name']).to eq(name)
-          expect(api_key_response['permissions']).to eq(api_key.permissions)
+          expect(api_key_response["id"]).to eq(api_key.id)
+          expect(api_key_response["name"]).to eq(name)
+          expect(api_key_response["permissions"]).to eq(api_key.permissions)
         end
       end
     end
   end
 
-  context 'when api key with such ID does not exist in the current organization' do
+  context "when api key with such ID does not exist in the current organization" do
     let!(:api_key) { create(:api_key) }
 
-    it 'does not change the api key' do
+    it "does not change the api key" do
       expect { result }.not_to change { api_key.reload.name }
     end
 
-    it 'returns an error' do
-      expect_graphql_error(result:, message: 'Resource not found')
+    it "returns an error" do
+      expect_graphql_error(result:, message: "Resource not found")
     end
   end
 end

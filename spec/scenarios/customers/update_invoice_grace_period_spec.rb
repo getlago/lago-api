@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Update Customer Invoice Grace Period Scenarios', :scenarios, type: :request do
+describe "Update Customer Invoice Grace Period Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
   let(:plan) { create(:plan, pay_in_advance: true, organization:) }
@@ -13,7 +13,7 @@ describe 'Update Customer Invoice Grace Period Scenarios', :scenarios, type: :re
     stub_pdf_generation
   end
 
-  it 'updates the grace period of the customer' do
+  it "updates the grace period of the customer" do
     ### 15 Dec: Create subscription + charge.
     dec15 = DateTime.new(2022, 12, 15)
 

@@ -6,7 +6,7 @@ module Charges
       protected
 
       def ranges
-        properties['graduated_percentage_ranges']&.map(&:with_indifferent_access)
+        properties["graduated_percentage_ranges"]&.map(&:with_indifferent_access)
       end
 
       def amount_details

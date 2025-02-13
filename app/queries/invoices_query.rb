@@ -39,7 +39,7 @@ class InvoicesQuery < BaseQuery
     return if search_term.blank?
 
     terms = {
-      m: 'or',
+      m: "or",
       id_cont: search_term,
       number_cont: search_term
     }

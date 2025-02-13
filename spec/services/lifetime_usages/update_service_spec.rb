@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe LifetimeUsages::UpdateService, type: :service do
   subject(:update_service) { described_class.new(lifetime_usage:, params:) }
@@ -28,7 +28,7 @@ RSpec.describe LifetimeUsages::UpdateService, type: :service do
         result = update_service.call
 
         expect(result).not_to be_success
-        expect(result.error.error_code).to eq('lifetime_usage_not_found')
+        expect(result.error.error_code).to eq("lifetime_usage_not_found")
       end
     end
 
@@ -39,7 +39,7 @@ RSpec.describe LifetimeUsages::UpdateService, type: :service do
         result = update_service.call
 
         expect(result).not_to be_success
-        expect(result.error.messages[:historical_usage_amount_cents]).to eq(['value_is_out_of_range'])
+        expect(result.error.messages[:historical_usage_amount_cents]).to eq(["value_is_out_of_range"])
       end
     end
   end

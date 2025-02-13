@@ -4,7 +4,7 @@ module Types
   module Integrations
     module AnrokObjects
       class FeeObject < Types::BaseObject
-        graphql_name 'AnrokFeeObject'
+        graphql_name "AnrokFeeObject"
 
         field :amount_cents, GraphQL::Types::BigInt, null: true
         field :item_code, String, null: true

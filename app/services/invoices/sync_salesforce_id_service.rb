@@ -9,14 +9,14 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') if invoice.nil?
-      return result.not_found_failure!(resource: 'integration') unless integration
+      return result.not_found_failure!(resource: "invoice") if invoice.nil?
+      return result.not_found_failure!(resource: "integration") unless integration
 
       integration_resource = IntegrationResource.find_or_initialize_by(
         integration:,
         external_id: params[:external_id],
         syncable_id: invoice.id,
-        syncable_type: 'Invoice',
+        syncable_type: "Invoice",
         resource_type: :invoice
       )
 

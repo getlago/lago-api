@@ -3,7 +3,7 @@
 module Types
   module IntegrationCustomers
     class Input < Types::BaseInputObject
-      graphql_name 'IntegrationCustomerInput'
+      graphql_name "IntegrationCustomerInput"
 
       argument :id, ID, required: false
 

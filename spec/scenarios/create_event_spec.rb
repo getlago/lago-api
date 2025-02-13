@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Create Event Scenarios', :scenarios, type: :request do
+describe "Create Event Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
@@ -13,12 +13,12 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
 
   before { subscription }
 
-  context 'without external_subscription_id' do
-    it 'returns the created event' do
+  context "without external_subscription_id" do
+    it "returns the created event" do
       result = create_event params
 
-      expect(result['event']).to be_present
-      expect(result['event']['code']).to eq(billable_metric.code)
+      expect(result["event"]).to be_present
+      expect(result["event"]["code"]).to eq(billable_metric.code)
 
       perform_all_enqueued_jobs
 
@@ -32,35 +32,35 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'with unknown external_subscription_id' do
-    it 'returns the created event' do
-      result = create_event(params.merge(external_subscription_id: 'unknown'))
+  context "with unknown external_subscription_id" do
+    it "returns the created event" do
+      result = create_event(params.merge(external_subscription_id: "unknown"))
 
-      expect(result['event']).to be_present
-      expect(result['event']['code']).to eq(billable_metric.code)
-      expect(result['event']['external_subscription_id']).to eq('unknown')
+      expect(result["event"]).to be_present
+      expect(result["event"]["code"]).to eq(billable_metric.code)
+      expect(result["event"]["external_subscription_id"]).to eq("unknown")
 
       perform_all_enqueued_jobs
 
       event = organization.events.order(created_at: :asc).last
       expect(event).to have_attributes(
         code: billable_metric.code,
-        external_subscription_id: 'unknown'
+        external_subscription_id: "unknown"
       )
     end
   end
 
-  context 'with external_subscription_id from another organization' do
+  context "with external_subscription_id from another organization" do
     let(:organization2) { create(:organization, webhook_url: nil) }
     let(:customer2) { create(:customer, organization: organization2) }
     let(:subscription2) { create(:subscription, customer: customer2) }
 
-    it 'returns the created event' do
+    it "returns the created event" do
       result = create_event(params.merge(external_subscription_id: subscription2.external_id))
 
-      expect(result['event']).to be_present
-      expect(result['event']['code']).to eq(billable_metric.code)
-      expect(result['event']['external_subscription_id']).to eq(subscription2.external_id)
+      expect(result["event"]).to be_present
+      expect(result["event"]["code"]).to eq(billable_metric.code)
+      expect(result["event"]["external_subscription_id"]).to eq(subscription2.external_id)
 
       perform_all_enqueued_jobs
 
@@ -72,8 +72,8 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'with valid external_subscription_id' do
-    it 'creates the event successfully' do
+  context "with valid external_subscription_id" do
+    it "creates the event successfully" do
       expect do
         create_event(params.merge(external_subscription_id: subscription.external_id))
       end.to change(Event, :count)
@@ -88,14 +88,14 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'with not yet started subscription' do
+  context "with not yet started subscription" do
     let(:subscription) { create(:subscription, customer:, started_at: 1.day.from_now) }
 
-    it 'returns the created event' do
+    it "returns the created event" do
       result = create_event(params.merge(external_subscription_id: subscription.external_id))
 
-      expect(result['event']).to be_present
-      expect(result['event']['external_subscription_id']).to eq(subscription.external_id)
+      expect(result["event"]).to be_present
+      expect(result["event"]["external_subscription_id"]).to eq(subscription.external_id)
 
       perform_all_enqueued_jobs
 
@@ -107,10 +107,10 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'with subscription started in the same second' do
+  context "with subscription started in the same second" do
     let(:subscription) { create(:subscription, customer:, started_at: Time.current) }
 
-    it 'returns the created event' do
+    it "returns the created event" do
       expect do
         create_event(params.merge(external_subscription_id: subscription.external_id))
       end.to change(Event, :count)
@@ -125,14 +125,14 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'with terminated subscription' do
+  context "with terminated subscription" do
     let(:subscription) { create(:subscription, :terminated, customer:, terminated_at: 1.hour.ago) }
 
-    it 'returns the created event' do
+    it "returns the created event" do
       result = create_event(params.merge(external_subscription_id: subscription.external_id))
 
-      expect(result['event']).to be_present
-      expect(result['event']['external_subscription_id']).to eq(subscription.external_id)
+      expect(result["event"]).to be_present
+      expect(result["event"]["external_subscription_id"]).to eq(subscription.external_id)
 
       perform_all_enqueued_jobs
 
@@ -144,10 +144,10 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'with subscription terminated in the same second' do
+  context "with subscription terminated in the same second" do
     let(:subscription) { create(:subscription, :terminated, customer:, terminated_at: Time.current) }
 
-    it 'creates the event successfully' do
+    it "creates the event successfully" do
       expect do
         create_event(params.merge(external_subscription_id: subscription.external_id))
       end.to change(Event, :count)
@@ -162,10 +162,10 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'with terminated subscription but timestamp when active' do
+  context "with terminated subscription but timestamp when active" do
     let(:subscription) { create(:subscription, :terminated, customer:, terminated_at: 24.hours.ago) }
 
-    it 'creates the event successfully' do
+    it "creates the event successfully" do
       expect do
         create_event(
           params.merge(
@@ -185,7 +185,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'with external_subscription_id but multiple subscriptions' do
+  context "with external_subscription_id but multiple subscriptions" do
     let(:subscription2) do
       create(
         :subscription,
@@ -197,7 +197,7 @@ describe 'Create Event Scenarios', :scenarios, type: :request do
 
     before { subscription2 }
 
-    it 'creates the event' do
+    it "creates the event" do
       expect do
         create_event(params.merge(external_subscription_id: subscription.external_id))
       end.to change { Event.where(external_subscription_id: subscription.external_id).count }

@@ -9,7 +9,7 @@ class GraphqlController < ApplicationController
   before_action :set_context_source
 
   rescue_from JWT::ExpiredSignature do
-    render_graphql_error(code: 'expired_jwt_token', status: 401)
+    render_graphql_error(code: "expired_jwt_token", status: 401)
   end
 
   # If accessing from outside this domain, nullify the session
@@ -38,7 +38,7 @@ class GraphqlController < ApplicationController
 
     render(json: result)
   rescue JWT::ExpiredSignature
-    render_graphql_error(code: 'expired_jwt_token', status: 401)
+    render_graphql_error(code: "expired_jwt_token", status: 401)
   rescue => e
     raise e unless Rails.env.development?
 
@@ -89,6 +89,6 @@ class GraphqlController < ApplicationController
   end
 
   def set_context_source
-    CurrentContext.source = 'graphql'
+    CurrentContext.source = "graphql"
   end
 end

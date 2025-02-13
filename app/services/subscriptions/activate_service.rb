@@ -25,7 +25,7 @@ module Subscriptions
             Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
           end
 
-          SendWebhookJob.perform_later('subscription.started', subscription)
+          SendWebhookJob.perform_later("subscription.started", subscription)
 
           if subscription.plan.pay_in_advance? && !subscription.in_trial_period?
             BillSubscriptionJob.perform_later([subscription], timestamp, invoicing_reason: :subscription_starting)

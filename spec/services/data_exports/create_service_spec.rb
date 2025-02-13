@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe DataExports::CreateService, type: :service do
   subject(:result) do
@@ -27,7 +27,7 @@ RSpec.describe DataExports::CreateService, type: :service do
     allow(DataExports::ExportResourcesJob).to receive(:perform_later)
   end
 
-  it 'creates a new data export record' do
+  it "creates a new data export record" do
     aggregate_failures do
       expect(result).to be_success
 
@@ -42,7 +42,7 @@ RSpec.describe DataExports::CreateService, type: :service do
     end
   end
 
-  it 'calls ExportResourcesJob' do
+  it "calls ExportResourcesJob" do
     data_export = result.data_export
 
     expect(DataExports::ExportResourcesJob)

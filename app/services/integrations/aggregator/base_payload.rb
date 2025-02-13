@@ -20,13 +20,13 @@ module Integrations
       def billable_metric_item(fee)
         integration
           .integration_mappings
-          .find_by(mappable_type: 'BillableMetric', mappable_id: fee.billable_metric.id) || fallback_item
+          .find_by(mappable_type: "BillableMetric", mappable_id: fee.billable_metric.id) || fallback_item
       end
 
       def add_on_item(fee)
         integration
           .integration_mappings
-          .find_by(mappable_type: 'AddOn', mappable_id: fee.add_on_id) || fallback_item
+          .find_by(mappable_type: "AddOn", mappable_id: fee.add_on_id) || fallback_item
       end
 
       def account_item
@@ -80,7 +80,7 @@ module Integrations
       end
 
       def formatted_date(date)
-        date&.strftime('%Y-%m-%d')
+        date&.strftime("%Y-%m-%d")
       end
     end
   end

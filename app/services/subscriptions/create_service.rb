@@ -24,7 +24,7 @@ module Subscriptions
     def call
       return result unless valid?(customer:, plan:, subscription_at:, ending_at: params[:ending_at])
       return result.forbidden_failure! if !License.premium? && params.key?(:plan_overrides)
-      return result.validation_failure!(errors: {external_customer_id: ['value_is_mandatory']}) if params[:external_customer_id].blank? && api_context?
+      return result.validation_failure!(errors: {external_customer_id: ["value_is_mandatory"]}) if params[:external_customer_id].blank? && api_context?
 
       plan.amount_currency = plan_overrides[:amount_currency] if plan_overrides[:amount_currency]
       plan.amount_cents = plan_overrides[:amount_cents] if plan_overrides[:amount_cents]
@@ -44,7 +44,7 @@ module Subscriptions
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ArgumentError
-      result.validation_failure!(errors: {billing_time: ['value_is_invalid']})
+      result.validation_failure!(errors: {billing_time: ["value_is_invalid"]})
     rescue BaseService::FailedResult => e
       e.result
     end
@@ -124,7 +124,7 @@ module Subscriptions
       end
 
       if new_subscription.active?
-        after_commit { SendWebhookJob.perform_later('subscription.started', new_subscription) }
+        after_commit { SendWebhookJob.perform_later("subscription.started", new_subscription) }
       end
 
       if new_subscription.should_sync_hubspot_subscription?
@@ -177,10 +177,10 @@ module Subscriptions
     end
 
     def subscription_type
-      return 'downgrade' if downgrade?
-      return 'upgrade' if upgrade?
+      return "downgrade" if downgrade?
+      return "upgrade" if upgrade?
 
-      'create'
+      "create"
     end
 
     def currency_missmatch?(old_plan, new_plan)

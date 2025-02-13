@@ -5,14 +5,14 @@ module PaymentProviders
     module Webhooks
       class ChargebackService < BaseService
         def call
-          status = event['additionalData']['disputeStatus']
-          reason = event['reason']
-          provider_payment_id = event['pspReference']
+          status = event["additionalData"]["disputeStatus"]
+          reason = event["reason"]
+          provider_payment_id = event["pspReference"]
 
           payment = Payment.find_by(provider_payment_id:)
-          return result.not_found_failure!(resource: 'adyen_payment') unless payment
+          return result.not_found_failure!(resource: "adyen_payment") unless payment
 
-          if status == 'Lost' && event['success'] == 'true'
+          if status == "Lost" && event["success"] == "true"
             return Invoices::LoseDisputeService.call(invoice: payment.payable, payment_dispute_lost_at:, reason:)
           end
 
@@ -22,7 +22,7 @@ module PaymentProviders
         private
 
         def payment_dispute_lost_at
-          Time.zone.parse(event['eventDate'])
+          Time.zone.parse(event["eventDate"])
         end
       end
     end

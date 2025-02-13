@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe InboundWebhook, type: :model do
   subject(:inbound_webhook) { build(:inbound_webhook) }

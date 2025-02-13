@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::PaymentProviders::Stripe::Update, type: :graphql do
-  let(:required_permission) { 'organization:integrations:update' }
+  let(:required_permission) { "organization:integrations:update" }
   let(:membership) { create(:membership) }
   let(:stripe_provider) { create(:stripe_provider, organization: membership.organization) }
   let(:success_redirect_url) { Faker::Internet.url }
@@ -21,17 +21,17 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update, type: :graphql do
 
   before { stripe_provider }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:update"
 
-  it 'updates an stripe provider' do
+  it "updates an stripe provider" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
       # You wouldn't have `create` without `view` permission
       # `view` is necessary to retrieve the created record in the response
-      permissions: [required_permission, 'organization:integrations:view'],
+      permissions: [required_permission, "organization:integrations:view"],
       query: mutation,
       variables: {
         input: {
@@ -41,13 +41,13 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update, type: :graphql do
       }
     )
 
-    result_data = result['data']['updateStripePaymentProvider']
+    result_data = result["data"]["updateStripePaymentProvider"]
 
-    expect(result_data['successRedirectUrl']).to eq(success_redirect_url)
+    expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
   end
 
-  context 'when success redirect url is nil' do
-    it 'removes success redirect url from the provider' do
+  context "when success redirect url is nil" do
+    it "removes success redirect url from the provider" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: membership.organization,
@@ -61,9 +61,9 @@ RSpec.describe Mutations::PaymentProviders::Stripe::Update, type: :graphql do
         }
       )
 
-      result_data = result['data']['updateStripePaymentProvider']
+      result_data = result["data"]["updateStripePaymentProvider"]
 
-      expect(result_data['successRedirectUrl']).to eq(nil)
+      expect(result_data["successRedirectUrl"]).to eq(nil)
     end
   end
 end

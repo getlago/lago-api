@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::WebhookEndpoints::Destroy, type: :graphql do
-  let(:required_permission) { 'developers:manage' }
+  let(:required_permission) { "developers:manage" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:webhook_endpoint) { create(:webhook_endpoint, organization:) }
@@ -18,11 +18,11 @@ RSpec.describe Mutations::WebhookEndpoints::Destroy, type: :graphql do
 
   before { webhook_endpoint }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'developers:manage'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "developers:manage"
 
-  it 'destroys a webhook_endpoint' do
+  it "destroys a webhook_endpoint" do
     expect do
       execute_graphql(
         current_user: membership.user,

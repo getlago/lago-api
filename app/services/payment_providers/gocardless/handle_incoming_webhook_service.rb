@@ -16,7 +16,7 @@ module PaymentProviders
         payment_provider_result = PaymentProviders::FindService.call(
           organization_id:,
           code:,
-          payment_provider_type: 'gocardless'
+          payment_provider_type: "gocardless"
         )
         return payment_provider_result unless payment_provider_result.success?
 
@@ -35,9 +35,9 @@ module PaymentProviders
 
         result
       rescue JSON::ParserError
-        result.service_failure!(code: 'webhook_error', message: 'Invalid payload')
+        result.service_failure!(code: "webhook_error", message: "Invalid payload")
       rescue GoCardlessPro::Webhook::InvalidSignatureError
-        result.service_failure!(code: 'webhook_error', message: 'Invalid signature')
+        result.service_failure!(code: "webhook_error", message: "Invalid signature")
       end
 
       private

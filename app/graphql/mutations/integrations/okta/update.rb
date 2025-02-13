@@ -7,10 +7,10 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = 'organization:integrations:update'
+        REQUIRED_PERMISSION = "organization:integrations:update"
 
-        graphql_name 'UpdateOktaIntegration'
-        description 'Update Okta integration'
+        graphql_name "UpdateOktaIntegration"
+        description "Update Okta integration"
 
         input_object_class Types::Integrations::Okta::UpdateInput
 

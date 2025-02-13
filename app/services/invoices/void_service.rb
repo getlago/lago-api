@@ -8,7 +8,7 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') if invoice.nil?
+      return result.not_found_failure!(resource: "invoice") if invoice.nil?
 
       result.invoice = invoice
 
@@ -32,13 +32,13 @@ module Invoices
         end
       end
 
-      SendWebhookJob.perform_later('invoice.voided', result.invoice)
+      SendWebhookJob.perform_later("invoice.voided", result.invoice)
       Invoices::ProviderTaxes::VoidJob.perform_later(invoice:)
       Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice:) if invoice.should_update_hubspot_invoice?
 
       result
     rescue AASM::InvalidTransition => _e
-      result.not_allowed_failure!(code: 'not_voidable')
+      result.not_allowed_failure!(code: "not_voidable")
     end
 
     private

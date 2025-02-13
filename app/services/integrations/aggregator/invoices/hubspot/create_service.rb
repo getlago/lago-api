@@ -18,14 +18,14 @@ module Integrations
             response = http_client.post_with_response(payload.create_body, headers)
             body = JSON.parse(response.body)
 
-            result.external_id = body['id']
+            result.external_id = body["id"]
             return result unless result.external_id
 
             IntegrationResource.create!(
               integration:,
               external_id: result.external_id,
               syncable_id: invoice.id,
-              syncable_type: 'Invoice',
+              syncable_type: "Invoice",
               resource_type: :invoice
             )
 
@@ -42,7 +42,7 @@ module Integrations
           end
 
           def call_async
-            return result.not_found_failure!(resource: 'invoice') unless invoice
+            return result.not_found_failure!(resource: "invoice") unless invoice
 
             ::Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:)
 

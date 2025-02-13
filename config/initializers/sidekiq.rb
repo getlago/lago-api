@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'socket'
+require "socket"
 
 LIVENESS_PORT = 8080
 
 redis_config = {
-  url: ENV['REDIS_URL'],
+  url: ENV["REDIS_URL"],
   pool_timeout: 5,
   timeout: 5,
   ssl_params: {
@@ -13,14 +13,14 @@ redis_config = {
   }
 }
 
-if ENV['REDIS_PASSWORD'].present? && !ENV['REDIS_PASSWORD'].empty?
-  redis_config = redis_config.merge({password: ENV['REDIS_PASSWORD']})
+if ENV["REDIS_PASSWORD"].present? && !ENV["REDIS_PASSWORD"].empty?
+  redis_config = redis_config.merge({password: ENV["REDIS_PASSWORD"]})
 end
 
-if ENV['LAGO_SIDEKIQ_WEB'] == 'true'
-  require 'sidekiq/web'
+if ENV["LAGO_SIDEKIQ_WEB"] == "true"
+  require "sidekiq/web"
   Sidekiq::Web.use(ActionDispatch::Cookies)
-  Sidekiq::Web.use(ActionDispatch::Session::CookieStore, key: '_interslice_session')
+  Sidekiq::Web.use(ActionDispatch::Session::CookieStore, key: "_interslice_session")
 end
 
 Sidekiq.configure_server do |config|

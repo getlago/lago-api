@@ -6,8 +6,8 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      graphql_name 'GenerateCustomerPortalUrl'
-      description 'Generate customer portal URL'
+      graphql_name "GenerateCustomerPortalUrl"
+      description "Generate customer portal URL"
 
       argument :id, ID, required: true
 

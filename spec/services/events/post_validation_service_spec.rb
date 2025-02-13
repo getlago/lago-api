@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Events::PostValidationService, type: :service, transaction: false do
   subject(:validation_service) { described_class.new(organization:) }
@@ -54,7 +54,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
     create(
       :billable_metric_filter,
       billable_metric: billable_metric_with_filter,
-      key: 'region',
+      key: "region",
       values: %w[eu-west-1 us-east-1]
     )
   end
@@ -64,7 +64,7 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       :event,
       organization:,
       code: billable_metric_with_filter.code,
-      properties: {billable_metric_filter.key => 'us-west-4'},
+      properties: {billable_metric_filter.key => "us-west-4"},
       created_at: Time.current.beginning_of_hour - 25.minutes
     )
   end
@@ -82,19 +82,19 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
     )
   end
 
-  describe '.call' do
-    context 'when does not belong to the organization' do
+  describe ".call" do
+    context "when does not belong to the organization" do
       before { allow(SendWebhookJob).to receive(:perform_later) }
 
       let(:other_organization) { create(:organization) }
 
-      it 'does not send the webhook' do
+      it "does not send the webhook" do
         described_class.new(organization: other_organization).call
         expect(SendWebhookJob).not_to have_received(:perform_later)
       end
     end
 
-    it 'checks last hour events returns the list of transaction_id' do
+    it "checks last hour events returns the list of transaction_id" do
       result = validation_service.call
 
       expect(result.errors[:invalid_code]).to include(invalid_code_event.transaction_id)
@@ -105,12 +105,12 @@ RSpec.describe Events::PostValidationService, type: :service, transaction: false
       expect(result.errors[:invalid_filter_values]).to include(invalid_filter_values_event.transaction_id)
     end
 
-    it 'delivers a webhook with the list of transaction_id' do
+    it "delivers a webhook with the list of transaction_id" do
       validation_service.call
 
       expect(SendWebhookJob).to have_been_enqueued
         .with(
-          'events.errors',
+          "events.errors",
           organization,
           errors: {
             invalid_code: [invalid_code_event.transaction_id],

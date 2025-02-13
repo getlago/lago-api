@@ -25,7 +25,7 @@ module IntegrationCustomers
         customer:,
         external_customer_id: create_result.contact_id,
         email: create_result.email,
-        type: 'IntegrationCustomers::HubspotCustomer',
+        type: "IntegrationCustomers::HubspotCustomer",
         sync_with_provider: true,
         targeted_object:
       )
@@ -39,7 +39,7 @@ module IntegrationCustomers
     attr_reader :integration, :customer, :subsidiary_id, :params
 
     def create_service_class
-      @create_service_class ||= if targeted_object == 'contacts'
+      @create_service_class ||= if targeted_object == "contacts"
         Integrations::Aggregator::Contacts::CreateService
       else
         Integrations::Aggregator::Companies::CreateService
@@ -49,8 +49,8 @@ module IntegrationCustomers
     def targeted_object
       @targeted_object ||=
         params[:targeted_object].presence ||
-        ((customer.customer_type == 'individual') ? 'contacts' : nil) ||
-        ((customer.customer_type == 'company') ? 'companies' : nil) ||
+        ((customer.customer_type == "individual") ? "contacts" : nil) ||
+        ((customer.customer_type == "company") ? "companies" : nil) ||
         integration.default_targeted_object
     end
   end

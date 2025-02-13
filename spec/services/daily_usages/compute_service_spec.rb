@@ -41,7 +41,7 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
         billable_metric = create(:billable_metric, organization:)
         billable_metric_filter = create(:billable_metric_filter, billable_metric:)
         charge = create(:standard_charge, plan:, billable_metric:)
-        charge_filter = create(:charge_filter, charge:, properties: {amount: '10'})
+        charge_filter = create(:charge_filter, charge:, properties: {amount: "10"})
         create(:charge_filter_value, charge_filter:, billable_metric_filter:, values: [billable_metric_filter.values.first])
 
         travel_to(timestamp) do

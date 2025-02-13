@@ -37,7 +37,7 @@ module Integrations
             integration:,
             external_id: result.external_id,
             syncable_id: credit_note.id,
-            syncable_type: 'CreditNote',
+            syncable_type: "CreditNote",
             resource_type: :credit_note
           )
 
@@ -58,7 +58,7 @@ module Integrations
         end
 
         def call_async
-          return result.not_found_failure!(resource: 'credit_note') unless credit_note
+          return result.not_found_failure!(resource: "credit_note") unless credit_note
 
           ::Integrations::Aggregator::CreditNotes::CreateJob.perform_later(credit_note:)
 
@@ -80,13 +80,13 @@ module Integrations
         end
 
         def process_hash_result(body)
-          external_id = body['succeededCreditNotes']&.first.try(:[], 'id')
+          external_id = body["succeededCreditNotes"]&.first.try(:[], "id")
 
           if external_id
             result.external_id = external_id
           else
-            message = body['failedCreditNotes'].first['validation_errors'].map { |error| error['Message'] }.join(". ")
-            code = 'Validation error'
+            message = body["failedCreditNotes"].first["validation_errors"].map { |error| error["Message"] }.join(". ")
+            code = "Validation error"
 
             deliver_error_webhook(customer:, code:, message:)
           end

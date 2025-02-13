@@ -6,7 +6,7 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      description 'Fetch amounts for credit note creation'
+      description "Fetch amounts for credit note creation"
 
       argument :invoice_id, ID, required: true
       argument :items, [Types::CreditNoteItems::Input], required: true

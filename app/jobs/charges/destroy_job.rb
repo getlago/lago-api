@@ -2,7 +2,7 @@
 
 module Charges
   class DestroyJob < ApplicationJob
-    queue_as 'default'
+    queue_as "default"
 
     def perform(charge:)
       Charges::DestroyService.call(charge:).raise_if_error!

@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
   subject(:void_service) { described_class.new(invoice:) }
 
-  describe '#call' do
+  describe "#call" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
 
@@ -17,7 +17,7 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
         customer:,
         organization:,
         subscriptions: [subscription],
-        currency: 'EUR',
+        currency: "EUR",
         issuing_date: Time.zone.at(timestamp).to_date
       )
     end
@@ -34,9 +34,9 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
 
     let(:timestamp) { Time.zone.now - 1.year }
     let(:started_at) { Time.zone.now - 2.years }
-    let(:plan) { create(:plan, organization:, interval: 'monthly') }
-    let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
-    let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard', billable_metric:) }
+    let(:plan) { create(:plan, organization:, interval: "monthly") }
+    let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
+    let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: "standard", billable_metric:) }
 
     let(:fee_subscription) do
       create(
@@ -64,14 +64,14 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
     let(:lago_client1) { instance_double(LagoHttpClient::Client) }
     let(:response2) { instance_double(Net::HTTPOK) }
     let(:lago_client2) { instance_double(LagoHttpClient::Client) }
-    let(:void_endpoint) { 'https://api.nango.dev/v1/anrok/void_invoices' }
-    let(:negate_endpoint) { 'https://api.nango.dev/v1/anrok/negate_invoices' }
+    let(:void_endpoint) { "https://api.nango.dev/v1/anrok/void_invoices" }
+    let(:negate_endpoint) { "https://api.nango.dev/v1/anrok/negate_invoices" }
     let(:body_void) do
-      path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json')
+      path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json")
       File.read(path)
     end
     let(:body_negate) do
-      path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_negate.json')
+      path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_negate.json")
       File.read(path)
     end
     let(:integration_collection_mapping) do
@@ -79,7 +79,7 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
         :netsuite_collection_mapping,
         integration:,
         mapping_type: :fallback_item,
-        settings: {external_id: '1', external_account_code: '11', external_name: ''}
+        settings: {external_id: "1", external_account_code: "11", external_name: ""}
       )
     end
 
@@ -98,19 +98,19 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
       allow(response2).to receive(:body).and_return(body_negate)
     end
 
-    context 'when invoice does not exist' do
-      it 'returns an error' do
+    context "when invoice does not exist" do
+      it "returns an error" do
         result = described_class.new(invoice: nil).call
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.error_code).to eq('invoice_not_found')
+          expect(result.error.error_code).to eq("invoice_not_found")
         end
       end
     end
 
-    context 'when voided invoice is successfully synced' do
-      it 'returns successful result' do
+    context "when voided invoice is successfully synced" do
+      it "returns successful result" do
         result = void_service.call
 
         aggregate_failures do
@@ -119,19 +119,19 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
         end
       end
 
-      it 'discards previous tax errors' do
+      it "discards previous tax errors" do
         expect { void_service.call }
           .to change(invoice.error_details.tax_voiding_error, :count).from(1).to(0)
       end
     end
 
-    context 'when failed result is returned from void endpoint' do
+    context "when failed result is returned from void endpoint" do
       let(:body_void) do
-        path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+        path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
         File.read(path)
       end
 
-      it 'keeps invoice in voided status' do
+      it "keeps invoice in voided status" do
         result = void_service.call
 
         aggregate_failures do
@@ -139,11 +139,11 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
           expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
           expect(LagoHttpClient::Client).not_to have_received(:new).with(negate_endpoint)
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(invoice.reload.status).to eq('voided')
+          expect(invoice.reload.status).to eq("voided")
         end
       end
 
-      it 'resolves old tax error and creates new one' do
+      it "resolves old tax error and creates new one" do
         old_error_id = invoice.reload.error_details.last.id
 
         void_service.call
@@ -156,17 +156,17 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
       end
     end
 
-    context 'when failed result is returned from negate endpoint' do
+    context "when failed result is returned from negate endpoint" do
       let(:body_void) do
-        path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response_void.json')
+        path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response_void.json")
         File.read(path)
       end
       let(:body_negate) do
-        path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+        path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
         File.read(path)
       end
 
-      it 'keeps invoice in voided status' do
+      it "keeps invoice in voided status" do
         result = void_service.call
 
         aggregate_failures do
@@ -174,11 +174,11 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
           expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
           expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint)
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(invoice.reload.status).to eq('voided')
+          expect(invoice.reload.status).to eq("voided")
         end
       end
 
-      it 'resolves old tax error and creates new one' do
+      it "resolves old tax error and creates new one" do
         old_error_id = invoice.reload.error_details.last.id
 
         void_service.call

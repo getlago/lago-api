@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::AddOnResolver, type: :graphql do
-  let(:required_permission) { 'addons:view' }
+  let(:required_permission) { "addons:view" }
   let(:query) do
     <<~GQL
       query($addOnId: ID!) {
@@ -33,11 +33,11 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
     end
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'addons:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "addons:view"
 
-  it 'returns a single add-on' do
+  it "returns a single add-on" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -46,27 +46,27 @@ RSpec.describe Resolvers::AddOnResolver, type: :graphql do
       variables: {addOnId: add_on.id}
     )
 
-    add_on_response = result['data']['addOn']
+    add_on_response = result["data"]["addOn"]
 
     aggregate_failures do
-      expect(add_on_response['id']).to eq(add_on.id)
-      expect(add_on_response['name']).to eq(add_on.name)
-      expect(add_on_response['customersCount']).to eq(2)
-      expect(add_on_response['appliedAddOnsCount']).to eq(4)
+      expect(add_on_response["id"]).to eq(add_on.id)
+      expect(add_on_response["name"]).to eq(add_on.name)
+      expect(add_on_response["customersCount"]).to eq(2)
+      expect(add_on_response["appliedAddOnsCount"]).to eq(4)
     end
   end
 
-  context 'when add-on is not found' do
-    it 'returns an error' do
+  context "when add-on is not found" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: {addOnId: 'invalid'}
+        variables: {addOnId: "invalid"}
       )
 
-      expect_graphql_error(result:, message: 'Resource not found')
+      expect_graphql_error(result:, message: "Resource not found")
     end
   end
 end

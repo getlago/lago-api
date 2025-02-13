@@ -4,7 +4,7 @@ module Types
   module Analytics
     module OverdueBalances
       class Object < Types::BaseObject
-        graphql_name 'OverdueBalance'
+        graphql_name "OverdueBalance"
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :currency, Types::CurrencyEnum, null: false

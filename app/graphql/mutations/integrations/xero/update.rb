@@ -7,10 +7,10 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = 'organization:integrations:update'
+        REQUIRED_PERMISSION = "organization:integrations:update"
 
-        graphql_name 'UpdateXeroIntegration'
-        description 'Update Xero integration'
+        graphql_name "UpdateXeroIntegration"
+        description "Update Xero integration"
 
         input_object_class Types::Integrations::Xero::UpdateInput
 

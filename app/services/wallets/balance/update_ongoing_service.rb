@@ -17,7 +17,7 @@ module Wallets
 
         after_commit do
           if update_params[:depleted_ongoing_balance] == true
-            SendWebhookJob.perform_later('wallet.depleted_ongoing_balance', wallet)
+            SendWebhookJob.perform_later("wallet.depleted_ongoing_balance", wallet)
           end
 
           ::Wallets::ThresholdTopUpService.call(wallet:)

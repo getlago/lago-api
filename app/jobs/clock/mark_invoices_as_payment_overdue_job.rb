@@ -5,7 +5,7 @@ module Clock
     include SentryCronConcern
 
     queue_as do
-      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_CLOCK'])
+      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_CLOCK"])
         :clock_worker
       else
         :clock
@@ -21,7 +21,7 @@ module Clock
         .where(payment_due_date: ...Time.current)
         .find_each do |invoice|
           invoice.update!(payment_overdue: true)
-          SendWebhookJob.perform_later('invoice.payment_overdue', invoice)
+          SendWebhookJob.perform_later("invoice.payment_overdue", invoice)
         end
     end
   end

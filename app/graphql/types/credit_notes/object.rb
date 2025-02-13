@@ -3,8 +3,8 @@
 module Types
   module CreditNotes
     class Object < Types::BaseObject
-      description 'CreditNote'
-      graphql_name 'CreditNote'
+      description "CreditNote"
+      graphql_name "CreditNote"
 
       field :id, ID, null: false
       field :number, String, null: false
@@ -42,7 +42,7 @@ module Types
       field :items, [Types::CreditNoteItems::Object], null: false
 
       field :can_be_voided, Boolean, null: false, method: :voidable? do
-        description 'Check if credit note can be voided'
+        description "Check if credit note can be voided"
       end
 
       field :error_details, [Types::ErrorDetails::Object], null: true
@@ -60,7 +60,7 @@ module Types
           object.integration_resources
             .joins(:integration)
             .where(integration: {type: ::Integrations::BaseIntegration::INTEGRATION_ACCOUNTING_TYPES})
-            .where(resource_type: 'credit_note', syncable_type: 'CreditNote').none?
+            .where(resource_type: "credit_note", syncable_type: "CreditNote").none?
       end
 
       def tax_provider_syncable
@@ -78,7 +78,7 @@ module Types
         IntegrationResource.find_by(
           integration: integration_customer.integration,
           syncable_id: object.id,
-          syncable_type: 'CreditNote',
+          syncable_type: "CreditNote",
           resource_type: :credit_note
         )&.external_id
       end

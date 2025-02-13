@@ -10,7 +10,7 @@ module Wallets
     end
 
     def call
-      return result.not_found_failure!(resource: 'wallet') unless wallet
+      return result.not_found_failure!(resource: "wallet") unless wallet
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
       return result unless valid_recurring_transaction_rules?
 
@@ -27,7 +27,7 @@ module Wallets
         wallet.save!
       end
 
-      SendWebhookJob.perform_later('wallet.updated', wallet)
+      SendWebhookJob.perform_later("wallet.updated", wallet)
 
       Wallets::Balance::RefreshOngoingService.call(wallet:)
 
@@ -58,7 +58,7 @@ module Wallets
         return true if parsed_expiration_at.to_date > Time.current.to_date
       end
 
-      result.single_validation_failure!(field: :expiration_at, error_code: 'invalid_date')
+      result.single_validation_failure!(field: :expiration_at, error_code: "invalid_date")
 
       false
     end

@@ -3,7 +3,7 @@
 module CreditNotes
   module ProviderTaxes
     class ReportJob < ApplicationJob
-      queue_as 'integrations'
+      queue_as "integrations"
 
       def perform(credit_note:)
         return if credit_note.invoice.credit?

@@ -8,7 +8,7 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') if invoice.nil?
+      return result.not_found_failure!(resource: "invoice") if invoice.nil?
       return result unless invoice.draft?
       drafted_issuing_date = invoice.issuing_date
 
@@ -32,7 +32,7 @@ module Invoices
       after_commit do
         clear_invoice_errors(invoice)
         unless invoice.closed?
-          SendWebhookJob.perform_later('invoice.created', invoice)
+          SendWebhookJob.perform_later("invoice.created", invoice)
           GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -42,7 +42,7 @@ module Invoices
 
         invoice.credit_notes.each do |credit_note|
           track_credit_note_created(credit_note)
-          SendWebhookJob.perform_later('credit_note.created', credit_note)
+          SendWebhookJob.perform_later("credit_note.created", credit_note)
           CreditNotes::GeneratePdfJob.perform_later(credit_note)
         end
       end
@@ -65,19 +65,19 @@ module Invoices
     def track_credit_note_created(credit_note)
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
-        event: 'credit_note_issued',
+        event: "credit_note_issued",
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
           invoice_id: credit_note.invoice_id,
-          credit_note_method: 'credit'
+          credit_note_method: "credit"
         }
       )
     end
 
     def should_deliver_email?
       License.premium? &&
-        invoice.organization.email_settings.include?('invoice.finalized')
+        invoice.organization.email_settings.include?("invoice.finalized")
     end
 
     def clear_invoice_errors(invoice)
@@ -88,7 +88,7 @@ module Invoices
     end
 
     def delete_generating_sequence_number_error(invoice_error)
-      error = invoice_error.where('backtrace LIKE ?', '%generate_organization_sequential_id%').first
+      error = invoice_error.where("backtrace LIKE ?", "%generate_organization_sequential_id%").first
       error&.delete
     end
   end

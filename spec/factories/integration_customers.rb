@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :netsuite_customer, class: 'IntegrationCustomers::NetsuiteCustomer' do
+  factory :netsuite_customer, class: "IntegrationCustomers::NetsuiteCustomer" do
     association :integration, factory: :netsuite_integration
     customer
-    type { 'IntegrationCustomers::NetsuiteCustomer' }
+    type { "IntegrationCustomers::NetsuiteCustomer" }
     external_customer_id { SecureRandom.uuid }
 
     settings do
@@ -12,10 +12,10 @@ FactoryBot.define do
     end
   end
 
-  factory :anrok_customer, class: 'IntegrationCustomers::AnrokCustomer' do
+  factory :anrok_customer, class: "IntegrationCustomers::AnrokCustomer" do
     association :integration, factory: :anrok_integration
     customer
-    type { 'IntegrationCustomers::AnrokCustomer' }
+    type { "IntegrationCustomers::AnrokCustomer" }
     external_customer_id { SecureRandom.uuid }
 
     settings do
@@ -23,10 +23,10 @@ FactoryBot.define do
     end
   end
 
-  factory :xero_customer, class: 'IntegrationCustomers::XeroCustomer' do
+  factory :xero_customer, class: "IntegrationCustomers::XeroCustomer" do
     association :integration, factory: :xero_integration
     customer
-    type { 'IntegrationCustomers::XeroCustomer' }
+    type { "IntegrationCustomers::XeroCustomer" }
     external_customer_id { SecureRandom.uuid }
 
     settings do
@@ -34,10 +34,10 @@ FactoryBot.define do
     end
   end
 
-  factory :hubspot_customer, class: 'IntegrationCustomers::HubspotCustomer' do
+  factory :hubspot_customer, class: "IntegrationCustomers::HubspotCustomer" do
     association :integration, factory: :hubspot_integration
     customer
-    type { 'IntegrationCustomers::HubspotCustomer' }
+    type { "IntegrationCustomers::HubspotCustomer" }
     external_customer_id { SecureRandom.uuid }
 
     settings do
@@ -49,10 +49,10 @@ FactoryBot.define do
     end
   end
 
-  factory :salesforce_customer, class: 'IntegrationCustomers::SalesforceCustomer' do
+  factory :salesforce_customer, class: "IntegrationCustomers::SalesforceCustomer" do
     association :integration, factory: :salesforce_integration
     customer
-    type { 'IntegrationCustomers::SalesforceCustomer' }
+    type { "IntegrationCustomers::SalesforceCustomer" }
     external_customer_id { SecureRandom.uuid }
     settings { {} }
   end

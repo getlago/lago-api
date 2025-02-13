@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Webhooks::PaymentRequests::CreatedService do
   subject(:webhook_service) { described_class.new(object: payment_request) }

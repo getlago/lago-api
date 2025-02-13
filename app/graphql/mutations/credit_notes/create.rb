@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'credit_notes:create'
+      REQUIRED_PERMISSION = "credit_notes:create"
 
-      graphql_name 'CreateCreditNote'
-      description 'Creates a new Credit Note'
+      graphql_name "CreateCreditNote"
+      description "Creates a new Credit Note"
 
       argument :description, String, required: false
       argument :invoice_id, ID, required: true

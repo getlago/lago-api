@@ -15,7 +15,7 @@ class RemoveIntegrationReferenceFromErrorDetail < ActiveRecord::Migration[7.1]
     change_table :error_details, bulk: true do |t|
       t.remove :error_code
       t.references :integration, polymorphic: true
-      t.string :error_code, index: true, null: false, default: 'not_provided'
+      t.string :error_code, index: true, null: false, default: "not_provided"
     end
   end
 end

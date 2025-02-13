@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
   subject(:service) { described_class.new(lifetime_usage:) }
@@ -12,8 +12,8 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
   let(:organization) { subscription.organization }
   let(:customer) { create(:customer) }
 
-  let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
-  let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: '10'}) }
+  let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
+  let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "10"}) }
   let(:timestamp) { Time.current }
 
   let(:events) do
@@ -57,7 +57,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
     it "sends a webhook for that threshold" do
       expect { service.call }.to enqueue_job(SendWebhookJob)
         .with(
-          'subscription.usage_threshold_reached',
+          "subscription.usage_threshold_reached",
           subscription,
           usage_threshold:
         ).on_queue(webhook_queue)
@@ -67,8 +67,8 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
       expect { service.call }.to change(Invoice, :count).by(1)
     end
 
-    context 'when there is tax provider error' do
-      let(:error_result) { BaseService::Result.new.unknown_tax_failure!(code: 'tax_error', message: '') }
+    context "when there is tax provider error" do
+      let(:error_result) { BaseService::Result.new.unknown_tax_failure!(code: "tax_error", message: "") }
 
       before do
         allow(Invoices::ProgressiveBillingService).to receive(:call).and_return(error_result)
@@ -102,7 +102,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
     it "sends a webhook for the first threshold" do
       expect { service.call }.to enqueue_job(SendWebhookJob)
         .with(
-          'subscription.usage_threshold_reached',
+          "subscription.usage_threshold_reached",
           subscription,
           usage_threshold:
         ).on_queue(webhook_queue)
@@ -111,7 +111,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
     it "sends a webhook for the last threshold" do
       expect { service.call }.to enqueue_job(SendWebhookJob)
         .with(
-          'subscription.usage_threshold_reached',
+          "subscription.usage_threshold_reached",
           subscription,
           usage_threshold: usage_threshold2
         ).on_queue(webhook_queue)
@@ -130,7 +130,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
         :invoice,
         organization:,
         customer:,
-        status: 'finalized',
+        status: "finalized",
         invoice_type: :progressive_billing,
         subscriptions: [subscription]
       )
@@ -157,7 +157,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
     it "sends a webhook for the last threshold" do
       expect { service.call }.to enqueue_job(SendWebhookJob)
         .with(
-          'subscription.usage_threshold_reached',
+          "subscription.usage_threshold_reached",
           subscription,
           usage_threshold: usage_threshold2
         ).on_queue(webhook_queue)
@@ -188,7 +188,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
     it "does not send a webhook for the threshold" do
       expect { service.call }.not_to enqueue_job(SendWebhookJob)
         .with(
-          'subscription.usage_threshold_reached',
+          "subscription.usage_threshold_reached",
           subscription,
           usage_threshold:
         ).on_queue(:webhook)

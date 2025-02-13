@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Invoices::Finalize, type: :graphql do
-  let(:required_permission) { 'invoices:update' }
+  let(:required_permission) { "invoices:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -21,11 +21,11 @@ RSpec.describe Mutations::Invoices::Finalize, type: :graphql do
     GQL
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'invoices:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "invoices:update"
 
-  it 'finalizes the given invoice' do
+  it "finalizes the given invoice" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -36,15 +36,15 @@ RSpec.describe Mutations::Invoices::Finalize, type: :graphql do
       }
     )
 
-    result_data = result['data']['finalizeInvoice']
+    result_data = result["data"]["finalizeInvoice"]
 
     aggregate_failures do
-      expect(result_data['id']).to be_present
-      expect(result_data['status']).to eq('finalized')
+      expect(result_data["id"]).to be_present
+      expect(result_data["status"]).to eq("finalized")
     end
   end
 
-  context 'with tax provider' do
+  context "with tax provider" do
     let(:integration) { create(:anrok_integration, organization:) }
     let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
 
@@ -52,7 +52,7 @@ RSpec.describe Mutations::Invoices::Finalize, type: :graphql do
       integration_customer
     end
 
-    it 'returns pending invoice' do
+    it "returns pending invoice" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -63,11 +63,11 @@ RSpec.describe Mutations::Invoices::Finalize, type: :graphql do
         }
       )
 
-      result_data = result['data']['finalizeInvoice']
+      result_data = result["data"]["finalizeInvoice"]
 
-      expect(result_data['id']).to be_present
-      expect(result_data['status']).to eq('pending')
-      expect(result_data['taxStatus']).to eq('pending')
+      expect(result_data["id"]).to be_present
+      expect(result_data["status"]).to eq("pending")
+      expect(result_data["taxStatus"]).to eq("pending")
     end
   end
 end

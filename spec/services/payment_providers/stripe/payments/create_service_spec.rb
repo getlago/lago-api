@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service do
   subject(:create_service) { described_class.new(payment:, reference:, metadata:) }
 
-  let(:customer) { create(:customer, payment_provider_code: code, country: 'CA') }
+  let(:customer) { create(:customer, payment_provider_code: code, country: "CA") }
   let(:organization) { customer.organization }
   let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
   let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: "pm_123456", payment_provider: stripe_payment_provider) }
@@ -252,7 +252,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       end
     end
 
-    context 'when invoice amount is too big to pay with Boleto' do
+    context "when invoice amount is too big to pay with Boleto" do
       let(:organization) { create(:organization) }
       let(:customer) { create(:customer, organization:) }
       let(:subscription) { create(:subscription, organization:, customer:) }
@@ -386,7 +386,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       context "when customers country is IN" do
         let(:off_session) { false }
         let(:error_on_requires_action) { false }
-        let(:customer) { create(:customer, payment_provider_code: code, country: 'IN') }
+        let(:customer) { create(:customer, payment_provider_code: code, country: "IN") }
 
         it "returns the payload" do
           expect(payment_intent_payload).to eq(payload)

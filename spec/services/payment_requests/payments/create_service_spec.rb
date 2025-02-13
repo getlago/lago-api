@@ -87,7 +87,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
         end
       end
 
-      it 'creates a payment and  calls the adyen service' do
+      it "creates a payment and  calls the adyen service" do
         result = create_service.call
 
         expect(result).to be_success
@@ -144,7 +144,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       let(:provider_class) { PaymentProviders::Gocardless::Payments::CreateService }
       let(:provider_service) { instance_double(provider_class) }
 
-      it 'creates a payment and calls the gocardless service' do
+      it "creates a payment and calls the gocardless service" do
         result = create_service.call
 
         expect(result).to be_success
@@ -194,7 +194,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
     end
 
     context "with stripe payment provider" do
-      it 'creates a payment and calls the stripe service' do
+      it "creates a payment and calls the stripe service" do
         result = create_service.call
 
         expect(result).to be_success
@@ -437,7 +437,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context 'when a payment exits' do
+    context "when a payment exits" do
       let(:payment) do
         create(
           :payment,

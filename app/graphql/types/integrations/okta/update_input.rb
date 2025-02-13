@@ -4,7 +4,7 @@ module Types
   module Integrations
     class Okta
       class UpdateInput < Types::BaseInputObject
-        graphql_name 'UpdateOktaIntegrationInput'
+        graphql_name "UpdateOktaIntegrationInput"
 
         argument :id, ID, required: false
 

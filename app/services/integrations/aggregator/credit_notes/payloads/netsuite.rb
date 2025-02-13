@@ -7,25 +7,25 @@ module Integrations
         class Netsuite < BasePayload
           def body
             result = {
-              'type' => 'creditmemo',
-              'isDynamic' => true,
-              'columns' => columns,
-              'lines' => [
+              "type" => "creditmemo",
+              "isDynamic" => true,
+              "columns" => columns,
+              "lines" => [
                 {
-                  'sublistId' => 'item',
-                  'lineItems' => credit_note_items + coupons
+                  "sublistId" => "item",
+                  "lineItems" => credit_note_items + coupons
                 }
               ],
-              'options' => {
-                'ignoreMandatoryFields' => false
+              "options" => {
+                "ignoreMandatoryFields" => false
               }
             }
 
             if tax_item_complete?
-              result['taxdetails'] = [
+              result["taxdetails"] = [
                 {
-                  'sublistId' => 'taxdetails',
-                  'lineItems' => tax_line_items_with_adjusted_taxes + coupon_taxes
+                  "sublistId" => "taxdetails",
+                  "lineItems" => tax_line_items_with_adjusted_taxes + coupon_taxes
                 }
               ]
             end
@@ -49,18 +49,18 @@ module Integrations
 
           def columns
             result = {
-              'tranid' => credit_note.number,
-              'entity' => integration_customer.external_customer_id,
-              'taxregoverride' => true,
-              'taxdetailsoverride' => true,
-              'otherrefnum' => credit_note.number,
-              'custbody_ava_disable_tax_calculation' => true,
-              'custbody_lago_id' => credit_note.id,
-              'tranId' => credit_note.id
+              "tranid" => credit_note.number,
+              "entity" => integration_customer.external_customer_id,
+              "taxregoverride" => true,
+              "taxdetailsoverride" => true,
+              "otherrefnum" => credit_note.number,
+              "custbody_ava_disable_tax_calculation" => true,
+              "custbody_lago_id" => credit_note.id,
+              "tranId" => credit_note.id
             }
 
             if tax_item&.tax_nexus.present?
-              result['nexus'] = tax_item.tax_nexus
+              result["nexus"] = tax_item.tax_nexus
             end
 
             result
@@ -82,40 +82,40 @@ module Integrations
             end
 
             unless mapped_item
-              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invalid_mapping')
+              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: "invalid_mapping")
             end
 
             {
-              'item' => mapped_item.external_id,
-              'account' => mapped_item.external_account_code,
-              'quantity' => 1,
-              'rate' => amount(credit_note_item.amount_cents, resource: credit_note_item.credit_note),
-              'taxdetailsreference' => credit_note_item.id
+              "item" => mapped_item.external_id,
+              "account" => mapped_item.external_account_code,
+              "quantity" => 1,
+              "rate" => amount(credit_note_item.amount_cents, resource: credit_note_item.credit_note),
+              "taxdetailsreference" => credit_note_item.id
             }
           end
 
           def tax_line_item(credit_note_item)
             {
-              'taxdetailsreference' => credit_note_item.id,
-              'taxamount' => amount(taxes_amount(credit_note_item), resource: credit_note_item.credit_note),
-              'taxbasis' => 1,
-              'taxrate' => credit_note_item.fee.taxes_rate,
-              'taxtype' => tax_item.tax_type,
-              'taxcode' => tax_item.tax_code
+              "taxdetailsreference" => credit_note_item.id,
+              "taxamount" => amount(taxes_amount(credit_note_item), resource: credit_note_item.credit_note),
+              "taxbasis" => 1,
+              "taxrate" => credit_note_item.fee.taxes_rate,
+              "taxtype" => tax_item.tax_type,
+              "taxcode" => tax_item.tax_code
             }
           end
 
           def tax_line_items_with_adjusted_taxes
-            taxes_amount_cents_sum = tax_line_items.sum { |f| f['taxamount'].to_d }
+            taxes_amount_cents_sum = tax_line_items.sum { |f| f["taxamount"].to_d }
 
             return tax_line_items if taxes_amount_cents_sum == credit_note.taxes_amount_cents
 
             adjusted_first_tax = false
 
             tax_line_items.map do |credit_note_item|
-              if credit_note_item['taxamount'] > 0 && !adjusted_first_tax
+              if credit_note_item["taxamount"] > 0 && !adjusted_first_tax
                 amount = amount(credit_note.taxes_amount_cents, resource: credit_note)
-                credit_note_item['taxamount'] += amount - taxes_amount_cents_sum
+                credit_note_item["taxamount"] += amount - taxes_amount_cents_sum
                 adjusted_first_tax = true
               end
 
@@ -134,11 +134,11 @@ module Integrations
 
             if credit_note.coupons_adjustment_amount_cents > 0
               output << {
-                'item' => coupon_item&.external_id,
-                'account' => coupon_item&.external_account_code,
-                'quantity' => 1,
-                'rate' => -amount(credit_note.coupons_adjustment_amount_cents, resource: credit_note),
-                'taxdetailsreference' => 'coupon_item'
+                "item" => coupon_item&.external_id,
+                "account" => coupon_item&.external_account_code,
+                "quantity" => 1,
+                "rate" => -amount(credit_note.coupons_adjustment_amount_cents, resource: credit_note),
+                "taxdetailsreference" => "coupon_item"
               }
             end
 
@@ -150,12 +150,12 @@ module Integrations
 
             if credit_note.coupons_adjustment_amount_cents > 0
               output << {
-                'taxbasis' => 1,
-                'taxamount' => 0,
-                'taxrate' => credit_note.taxes_rate,
-                'taxtype' => tax_item.tax_type,
-                'taxcode' => tax_item.tax_code,
-                'taxdetailsreference' => 'coupon_item'
+                "taxbasis" => 1,
+                "taxamount" => 0,
+                "taxrate" => credit_note.taxes_rate,
+                "taxtype" => tax_item.tax_type,
+                "taxcode" => tax_item.tax_code,
+                "taxdetailsreference" => "coupon_item"
               }
             end
 

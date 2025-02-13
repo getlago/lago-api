@@ -3,7 +3,7 @@
 module Types
   module IntegrationCustomers
     class Salesforce < Types::BaseObject
-      graphql_name 'SalesforceCustomer'
+      graphql_name "SalesforceCustomer"
 
       field :external_customer_id, String, null: true
       field :id, ID, null: false
@@ -15,8 +15,8 @@ module Types
       def integration_type
         object.integration&.type
         case object.integration&.type
-        when 'Integrations::SalesforceIntegration'
-          'salesforce'
+        when "Integrations::SalesforceIntegration"
+          "salesforce"
         end
       end
 

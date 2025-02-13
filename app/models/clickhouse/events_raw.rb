@@ -2,7 +2,7 @@
 
 module Clickhouse
   class EventsRaw < BaseRecord
-    self.table_name = 'events_raw'
+    self.table_name = "events_raw"
     self.primary_key = nil
 
     def id
@@ -28,7 +28,7 @@ module Clickhouse
         .where(external_id: external_subscription_id)
         .where("date_trunc('millisecond', started_at::timestamp) <= ?::timestamp", timestamp)
         .where("terminated_at is NULL OR date_trunc('millisecond', terminated_at::timestamp) >= ?::timestamp", timestamp)
-        .order('terminated_at DESC NULLS FIRST, started_at DESC')
+        .order("terminated_at DESC NULLS FIRST, started_at DESC")
         .first
     end
 

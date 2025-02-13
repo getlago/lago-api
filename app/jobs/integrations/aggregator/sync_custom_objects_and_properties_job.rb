@@ -3,7 +3,7 @@
 module Integrations
   module Aggregator
     class SyncCustomObjectsAndPropertiesJob < ApplicationJob
-      queue_as 'integrations'
+      queue_as "integrations"
 
       retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
 

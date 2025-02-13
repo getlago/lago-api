@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::InvoiceCustomSectionsResolver, type: :graphql do
-  let(:required_permission) { 'invoice_custom_sections:view' }
+  let(:required_permission) { "invoice_custom_sections:view" }
   let(:query) do
     <<~GQL
       query() {
@@ -20,12 +20,12 @@ RSpec.describe Resolvers::InvoiceCustomSectionsResolver, type: :graphql do
   let(:customer) { create(:customer, organization:) }
   let(:invoice_custom_sections) do
     [
-      create(:invoice_custom_section, organization:, name: 'x'),
-      create(:invoice_custom_section, organization:, name: 'r'),
-      create(:invoice_custom_section, organization:, name: 'c'),
-      create(:invoice_custom_section, organization:, name: 'a'),
-      create(:invoice_custom_section, organization:, name: 'z'),
-      create(:invoice_custom_section, organization:, name: 'n')
+      create(:invoice_custom_section, organization:, name: "x"),
+      create(:invoice_custom_section, organization:, name: "r"),
+      create(:invoice_custom_section, organization:, name: "c"),
+      create(:invoice_custom_section, organization:, name: "a"),
+      create(:invoice_custom_section, organization:, name: "z"),
+      create(:invoice_custom_section, organization:, name: "n")
     ]
   end
 
@@ -34,11 +34,11 @@ RSpec.describe Resolvers::InvoiceCustomSectionsResolver, type: :graphql do
     customer.selected_invoice_custom_sections.concat(invoice_custom_sections[0..1])
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'invoice_custom_sections:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "invoice_custom_sections:view"
 
-  it 'returns a list of sorted invoice_custom_sections: alphabetical, selected first without duplicates' do
+  it "returns a list of sorted invoice_custom_sections: alphabetical, selected first without duplicates" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -46,14 +46,14 @@ RSpec.describe Resolvers::InvoiceCustomSectionsResolver, type: :graphql do
       query:
     )
 
-    invoice_custom_sections_response = result['data']['invoiceCustomSections']
+    invoice_custom_sections_response = result["data"]["invoiceCustomSections"]
 
     aggregate_failures do
-      expect(invoice_custom_sections_response['collection'].count).to eq(5)
-      expect(invoice_custom_sections_response['collection'].map { |ics| ics['name'] }.join('')).to eq('acznr')
+      expect(invoice_custom_sections_response["collection"].count).to eq(5)
+      expect(invoice_custom_sections_response["collection"].map { |ics| ics["name"] }.join("")).to eq("acznr")
 
-      expect(invoice_custom_sections_response['metadata']['currentPage']).to eq(1)
-      expect(invoice_custom_sections_response['metadata']['totalCount']).to eq(6)
+      expect(invoice_custom_sections_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoice_custom_sections_response["metadata"]["totalCount"]).to eq(6)
     end
   end
 end

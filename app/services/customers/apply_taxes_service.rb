@@ -10,8 +10,8 @@ module Customers
     end
 
     def call
-      return result.not_found_failure!(resource: 'customer') unless customer
-      return result.not_found_failure!(resource: 'tax') if (tax_codes - taxes.pluck(:code)).present?
+      return result.not_found_failure!(resource: "customer") unless customer
+      return result.not_found_failure!(resource: "tax") if (tax_codes - taxes.pluck(:code)).present?
 
       customer.applied_taxes.where(
         tax_id: customer.taxes.where.not(code: tax_codes).pluck(:id)

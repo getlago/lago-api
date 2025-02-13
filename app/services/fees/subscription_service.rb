@@ -47,7 +47,7 @@ module Fees
         precise_amount_cents: new_precise_amount_cents.to_d,
         amount_currency: plan.amount_currency,
         fee_type: :subscription,
-        invoiceable_type: 'Subscription',
+        invoiceable_type: "Subscription",
         invoiceable: subscription,
         units: 1,
         properties: boundaries.to_h,
@@ -141,7 +141,7 @@ module Fees
       # However, we should not bill full amount if subscription is downgraded since in that case, first invoice
       # should be prorated (this part is covered with first_subscription_amount method).
       return true if plan.pay_in_advance? && subscription.anniversary? && !subscription.previous_subscription_id
-      return true if subscription.fees.subscription.where('created_at < ?', invoice.created_at).exists?
+      return true if subscription.fees.subscription.where("created_at < ?", invoice.created_at).exists?
       return true if subscription.started_in_past? && plan.pay_in_advance?
 
       if subscription.started_in_past? &&

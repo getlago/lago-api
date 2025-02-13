@@ -12,8 +12,8 @@ module Invoices
 
     def call
       return result.forbidden_failure! unless License.premium?
-      return result.not_found_failure!(resource: 'customer') unless customer
-      return result.not_found_failure!(resource: 'subscription') unless subscription
+      return result.not_found_failure!(resource: "customer") unless customer
+      return result.not_found_failure!(resource: "subscription") unless subscription
 
       @invoice = Invoice.new(
         organization: customer.organization,
@@ -178,7 +178,7 @@ module Invoices
     end
 
     def provider_taxation?
-      customer.integration_customers&.find { |ic| ic.type == 'IntegrationCustomers::AnrokCustomer' }
+      customer.integration_customers&.find { |ic| ic.type == "IntegrationCustomers::AnrokCustomer" }
     end
   end
 end

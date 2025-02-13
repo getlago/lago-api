@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::AddOnService, type: :service do
   subject(:invoice_service) do
@@ -17,12 +17,12 @@ RSpec.describe Invoices::AddOnService, type: :service do
 
   before { tax }
 
-  describe 'create' do
+  describe "create" do
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
     end
 
-    it 'creates an invoice' do
+    it "creates an invoice" do
       result = invoice_service.create
 
       aggregate_failures do
@@ -31,9 +31,9 @@ RSpec.describe Invoices::AddOnService, type: :service do
         expect(result.invoice.subscriptions.first).to be_nil
         expect(result.invoice).to have_attributes(
           issuing_date: datetime.to_date,
-          invoice_type: 'add_on',
-          payment_status: 'pending',
-          currency: 'EUR',
+          invoice_type: "add_on",
+          payment_status: "pending",
+          currency: "EUR",
           fees_amount_cents: 200,
           sub_total_excluding_taxes_amount_cents: 200,
           taxes_amount_cents: 40,
@@ -48,31 +48,31 @@ RSpec.describe Invoices::AddOnService, type: :service do
       end
     end
 
-    it 'enqueues a SendWebhookJob' do
+    it "enqueues a SendWebhookJob" do
       expect do
         invoice_service.create
       end.to have_enqueued_job(SendWebhookJob)
     end
 
-    it 'enqueue an GeneratePdfAndNotifyJob with email false' do
+    it "enqueue an GeneratePdfAndNotifyJob with email false" do
       expect do
         invoice_service.create
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
-    context 'with lago_premium' do
+    context "with lago_premium" do
       around { |test| lago_premium!(&test) }
 
-      it 'enqueues an GeneratePdfAndNotifyJob with email true' do
+      it "enqueues an GeneratePdfAndNotifyJob with email true" do
         expect do
           invoice_service.create
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
-      context 'when organization does not have right email settings' do
+      context "when organization does not have right email settings" do
         before { applied_add_on.customer.organization.update!(email_settings: []) }
 
-        it 'enqueue an GeneratePdfAndNotifyJob with email false' do
+        it "enqueue an GeneratePdfAndNotifyJob with email false" do
           expect do
             invoice_service.create
           end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
@@ -80,12 +80,12 @@ RSpec.describe Invoices::AddOnService, type: :service do
       end
     end
 
-    it 'calls SegmentTrackJob' do
+    it "calls SegmentTrackJob" do
       invoice = invoice_service.create.invoice
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'invoice_created',
+        event: "invoice_created",
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
@@ -94,7 +94,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
       )
     end
 
-    it 'creates a payment' do
+    it "creates a payment" do
       allow(Invoices::Payments::CreateService)
         .to receive(:call_async)
 
@@ -103,7 +103,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
       expect(Invoices::Payments::CreateService).to have_received(:call_async)
     end
 
-    it_behaves_like 'syncs invoice' do
+    it_behaves_like "syncs invoice" do
       let(:service_call) { invoice_service.create }
     end
 
@@ -111,15 +111,15 @@ RSpec.describe Invoices::AddOnService, type: :service do
       let(:service_call) { invoice_service.create }
     end
 
-    context 'with customer timezone' do
-      before { applied_add_on.customer.update!(timezone: 'America/Los_Angeles') }
+    context "with customer timezone" do
+      before { applied_add_on.customer.update!(timezone: "America/Los_Angeles") }
 
-      let(:datetime) { DateTime.parse('2022-11-25 01:00:00') }
+      let(:datetime) { DateTime.parse("2022-11-25 01:00:00") }
 
-      it 'assigns the issuing date in the customer timezone' do
+      it "assigns the issuing date in the customer timezone" do
         result = invoice_service.create
 
-        expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
+        expect(result.invoice.issuing_date.to_s).to eq("2022-11-24")
       end
     end
   end

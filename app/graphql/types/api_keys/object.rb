@@ -3,7 +3,7 @@
 module Types
   module ApiKeys
     class Object < Types::BaseObject
-      graphql_name 'ApiKey'
+      graphql_name "ApiKey"
 
       field :id, ID, null: false
       field :name, String, null: true

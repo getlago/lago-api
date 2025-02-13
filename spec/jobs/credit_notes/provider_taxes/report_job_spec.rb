@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreditNotes::ProviderTaxes::ReportJob, type: :job do
   let(:organization) { create(:organization) }
@@ -15,21 +15,21 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportJob, type: :job do
       .and_return(result)
   end
 
-  context 'when there is anrok customer' do
+  context "when there is anrok customer" do
     let(:integration) { create(:anrok_integration, organization:) }
     let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
 
     before { integration_customer }
 
-    it 'calls successfully report service' do
+    it "calls successfully report service" do
       described_class.perform_now(credit_note:)
 
       expect(CreditNotes::ProviderTaxes::ReportService).to have_received(:call)
     end
   end
 
-  context 'when there is NOT anrok customer' do
-    it 'does not call report service' do
+  context "when there is NOT anrok customer" do
+    it "does not call report service" do
       described_class.perform_now(credit_note:)
 
       expect(CreditNotes::ProviderTaxes::ReportService).not_to have_received(:call)

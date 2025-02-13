@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 module RequiredOrganizationSpec
   class ThingType < Types::BaseObject
@@ -11,7 +11,7 @@ module RequiredOrganizationSpec
   class RenameThingMutation < Mutations::BaseMutation
     include RequiredOrganization
 
-    graphql_name 'RenameThing'
+    graphql_name "RenameThing"
     argument :new_name, String, required: true
     type ThingType
 
@@ -40,51 +40,51 @@ RSpec.describe RequiredOrganization, type: :graphql do
     GQL
   end
 
-  context 'with a current organization and a member' do
-    it 'renames the thing' do
+  context "with a current organization and a member" do
+    it "renames the thing" do
       membership = create(:membership)
 
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
-        variables: {input: {newName: 'new name'}},
+        variables: {input: {newName: "new name"}},
         context: {current_user: membership.user, current_organization: membership.organization}
       )
 
-      expect(result['data']['renameThing']['name']).to eq 'new name'
+      expect(result["data"]["renameThing"]["name"]).to eq "new name"
     end
   end
 
-  context 'without a current organization' do
-    it 'returns an error' do
+  context "without a current organization" do
+    it "returns an error" do
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
-        variables: {input: {newName: 'new name'}},
+        variables: {input: {newName: "new name"}},
         context: {current_user: create(:user), permissions: Permission::ADMIN_PERMISSIONS_HASH}
       )
 
       partial_error = {
-        'message' => 'Missing organization id',
-        'extensions' => {'status' => :forbidden, 'code' => 'forbidden'}
+        "message" => "Missing organization id",
+        "extensions" => {"status" => :forbidden, "code" => "forbidden"}
       }
 
-      expect(result['errors']).to include hash_including(partial_error)
+      expect(result["errors"]).to include hash_including(partial_error)
     end
   end
 
-  context 'without a current organization but the current is not a member' do
-    it 'returns an error' do
+  context "without a current organization but the current is not a member" do
+    it "returns an error" do
       result = RequiredOrganizationSpec::TestApiSchema.execute(
         mutation,
-        variables: {input: {newName: 'new name'}},
+        variables: {input: {newName: "new name"}},
         context: {current_user: create(:user), current_organization: create(:organization)}
       )
 
       partial_error = {
-        'message' => 'Not in organization',
-        'extensions' => {'status' => :forbidden, 'code' => 'forbidden'}
+        "message" => "Not in organization",
+        "extensions" => {"status" => :forbidden, "code" => "forbidden"}
       }
 
-      expect(result['errors']).to include hash_including(partial_error)
+      expect(result["errors"]).to include hash_including(partial_error)
     end
   end
 end

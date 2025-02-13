@@ -49,7 +49,7 @@ module V1
       ::CollectionSerializer.new(
         model.items.order(created_at: :asc),
         ::V1::CreditNoteItemSerializer,
-        collection_name: 'items'
+        collection_name: "items"
       ).serialize
     end
 
@@ -57,7 +57,7 @@ module V1
       ::CollectionSerializer.new(
         model.applied_taxes,
         ::V1::CreditNotes::AppliedTaxSerializer,
-        collection_name: 'applied_taxes'
+        collection_name: "applied_taxes"
       ).serialize
     end
 
@@ -65,7 +65,7 @@ module V1
       ::CollectionSerializer.new(
         model.error_details,
         ::V1::ErrorDetailSerializer,
-        collection_name: 'error_details'
+        collection_name: "error_details"
       ).serialize
     end
   end

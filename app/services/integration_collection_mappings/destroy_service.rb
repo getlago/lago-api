@@ -9,7 +9,7 @@ module IntegrationCollectionMappings
     end
 
     def call
-      return result.not_found_failure!(resource: 'integration_collection_mapping') unless integration_collection_mapping
+      return result.not_found_failure!(resource: "integration_collection_mapping") unless integration_collection_mapping
 
       integration_collection_mapping.destroy!
 

@@ -3,7 +3,7 @@
 module Types
   module WalletTransactions
     class TransactionStatusEnum < Types::BaseEnum
-      graphql_name 'WalletTransactionTransactionStatusEnum'
+      graphql_name "WalletTransactionTransactionStatusEnum"
 
       WalletTransaction::TRANSACTION_STATUSES.each do |type|
         value type

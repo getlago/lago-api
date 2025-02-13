@@ -4,7 +4,7 @@ module Mutations
   module Auth
     module Okta
       class Authorize < BaseMutation
-        graphql_name 'OktaAuthorize'
+        graphql_name "OktaAuthorize"
 
         argument :email, String, required: true
         argument :invite_token, String, required: false

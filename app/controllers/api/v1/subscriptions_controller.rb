@@ -30,7 +30,7 @@ module Api
       # NOTE: We can't destroy a subscription, it will terminate it
       def terminate
         query = current_organization.subscriptions.where(external_id: params[:external_id])
-        subscription = if params[:status] == 'pending'
+        subscription = if params[:status] == "pending"
           query.pending
         else
           query.active
@@ -50,7 +50,7 @@ module Api
           .where(external_id: params[:external_id])
           .order(subscription_at: :desc)
         subscription = if query.count > 1
-          if params[:status] == 'pending'
+          if params[:status] == "pending"
             query.pending
           else
             query.active
@@ -76,7 +76,7 @@ module Api
           external_id: params[:external_id],
           status: params[:status] || :active
         )
-        return not_found_error(resource: 'subscription') unless subscription
+        return not_found_error(resource: "subscription") unless subscription
 
         render_subscription(subscription)
       end
@@ -96,7 +96,7 @@ module Api
             json: ::CollectionSerializer.new(
               result.subscriptions,
               ::V1::SubscriptionSerializer,
-              collection_name: 'subscriptions',
+              collection_name: "subscriptions",
               meta: pagination_metadata(result.subscriptions)
             )
           )
@@ -184,14 +184,14 @@ module Api
         render(
           json: ::V1::SubscriptionSerializer.new(
             subscription,
-            root_name: 'subscription',
+            root_name: "subscription",
             includes: %i[plan]
           )
         )
       end
 
       def resource_name
-        'subscription'
+        "subscription"
       end
     end
   end

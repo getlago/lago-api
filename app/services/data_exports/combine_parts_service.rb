@@ -12,7 +12,7 @@ module DataExports
       result.data_export = data_export
 
       Tempfile.create([data_export.resource_type, ".#{data_export.format}"]) do |tempfile|
-        tempfile.write(data_export.export_class.headers.join(','))
+        tempfile.write(data_export.export_class.headers.join(","))
         tempfile.write("\n")
 
         # Note the order here, this is crucial to make sure the data is in the expected order

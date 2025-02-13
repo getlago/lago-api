@@ -6,9 +6,9 @@ module Resolvers
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'invoices:view'
+      REQUIRED_PERMISSION = "invoices:view"
 
-      description 'Query invoices of a customer'
+      description "Query invoices of a customer"
 
       argument :customer_id, type: ID, required: true
       argument :limit, Integer, required: false
@@ -31,7 +31,7 @@ module Resolvers
 
         result.invoices
       rescue ActiveRecord::RecordNotFound
-        not_found_error(resource: 'customer')
+        not_found_error(resource: "customer")
       end
     end
   end

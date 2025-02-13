@@ -1,30 +1,30 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Customers::UpdateService, type: :service do
   subject(:customers_service) { described_class.new(customer:, args: update_args) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:payment_provider_code) { 'stripe_1' }
+  let(:payment_provider_code) { "stripe_1" }
 
-  describe 'update' do
-    let(:customer) { create(:customer, organization:, payment_provider: 'stripe', payment_provider_code:) }
+  describe "update" do
+    let(:customer) { create(:customer, organization:, payment_provider: "stripe", payment_provider_code:) }
     let(:external_id) { SecureRandom.uuid }
 
     let(:update_args) do
       {
         id: customer.id,
-        name: 'Updated customer name',
-        firstname: 'Updated customer firstname',
-        lastname: 'Updated customer lastname',
-        customer_type: 'individual',
-        tax_identification_number: '2246',
+        name: "Updated customer name",
+        firstname: "Updated customer firstname",
+        lastname: "Updated customer lastname",
+        customer_type: "individual",
+        tax_identification_number: "2246",
         net_payment_term: 8,
         external_id:,
         shipping_address: {
-          city: 'Paris'
+          city: "Paris"
         },
         account_type: account_type
       }
@@ -32,7 +32,7 @@ RSpec.describe Customers::UpdateService, type: :service do
 
     let(:account_type) { "customer" }
 
-    it 'updates a customer and calls SendWebhookJob' do
+    it "updates a customer and calls SendWebhookJob" do
       allow(SendWebhookJob).to receive(:perform_later)
 
       result = customers_service.call
@@ -46,7 +46,7 @@ RSpec.describe Customers::UpdateService, type: :service do
 
         shipping_address = update_args[:shipping_address]
         expect(updated_customer.shipping_city).to eq(shipping_address[:city])
-        expect(SendWebhookJob).to have_received(:perform_later).with('customer.updated', updated_customer)
+        expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", updated_customer)
       end
     end
 
@@ -79,14 +79,14 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context 'with premium features' do
+    context "with premium features" do
       around { |test| lago_premium!(&test) }
 
       let(:update_args) do
         {
           id: customer.id,
           name: "Updated customer name",
-          timezone: 'Europe/Paris',
+          timezone: "Europe/Paris",
           billing_configuration: {
             invoice_grace_period: 3
           },
@@ -94,12 +94,12 @@ RSpec.describe Customers::UpdateService, type: :service do
         }
       end
 
-      it 'updates a customer' do
+      it "updates a customer" do
         result = customers_service.call
 
         updated_customer = result.customer
         aggregate_failures do
-          expect(updated_customer.timezone).to eq('Europe/Paris')
+          expect(updated_customer.timezone).to eq("Europe/Paris")
 
           billing = update_args[:billing_configuration]
           expect(updated_customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
@@ -149,23 +149,23 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context 'with metadata' do
+    context "with metadata" do
       let(:customer_metadata) { create(:customer_metadata, customer:) }
-      let(:another_customer_metadata) { create(:customer_metadata, customer:, key: 'test', value: '1') }
+      let(:another_customer_metadata) { create(:customer_metadata, customer:, key: "test", value: "1") }
       let(:update_args) do
         {
           id: customer.id,
-          name: 'Updated customer name',
+          name: "Updated customer name",
           metadata: [
             {
               id: customer_metadata.id,
-              key: 'new key',
-              value: 'new value',
+              key: "new key",
+              value: "new value",
               display_in_invoice: true
             },
             {
-              key: 'Added key',
-              value: 'Added value',
+              key: "Added key",
+              value: "Added value",
               display_in_invoice: true
             }
           ]
@@ -177,34 +177,34 @@ RSpec.describe Customers::UpdateService, type: :service do
         another_customer_metadata
       end
 
-      it 'updates metadata' do
+      it "updates metadata" do
         result = customers_service.call
 
         metadata_keys = result.customer.metadata.pluck(:key)
         metadata_ids = result.customer.metadata.pluck(:id)
 
         expect(result.customer.metadata.count).to eq(2)
-        expect(metadata_keys).to eq(['new key', 'Added key'])
+        expect(metadata_keys).to eq(["new key", "Added key"])
         expect(metadata_ids).to include(customer_metadata.id)
         expect(metadata_ids).not_to include(another_customer_metadata.id)
       end
     end
 
-    context 'with validation error' do
+    context "with validation error" do
       let(:external_id) { nil }
 
-      it 'returns an error' do
+      it "returns an error" do
         result = customers_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:external_id]).to eq(['value_is_mandatory'])
+          expect(result.error.messages[:external_id]).to eq(["value_is_mandatory"])
         end
       end
     end
 
-    context 'when attached to a subscription' do
+    context "when attached to a subscription" do
       let(:account_type) { "partner" }
 
       before do
@@ -212,43 +212,43 @@ RSpec.describe Customers::UpdateService, type: :service do
         customer.update!(currency: subscription.plan.amount_currency)
       end
 
-      it 'updates only the name' do
+      it "updates only the name" do
         result = customers_service.call
 
         updated_customer = result.customer
-        expect(updated_customer.name).to eq('Updated customer name')
+        expect(updated_customer.name).to eq("Updated customer name")
         expect(updated_customer.external_id).to eq(customer.external_id)
         expect(updated_customer.account_type).to eq customer.account_type
       end
 
-      context 'when updating the currency' do
+      context "when updating the currency" do
         let(:update_args) do
           {
             id: customer.id,
-            currency: 'CAD'
+            currency: "CAD"
           }
         end
 
-        it 'fails' do
+        it "fails" do
           result = customers_service.call
 
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::ValidationFailure)
             expect(result.error.messages.keys).to include(:currency)
-            expect(result.error.messages[:currency]).to include('currencies_does_not_match')
+            expect(result.error.messages[:currency]).to include("currencies_does_not_match")
           end
         end
       end
     end
 
-    context 'when updating payment provider' do
+    context "when updating payment provider" do
       let(:update_args) do
         {
           id: customer.id,
-          name: 'Updated customer name',
+          name: "Updated customer name",
           external_id:,
-          payment_provider: 'stripe',
+          payment_provider: "stripe",
           payment_provider_code:
         }
       end
@@ -262,40 +262,40 @@ RSpec.describe Customers::UpdateService, type: :service do
           .and_return(BaseService::Result.new)
       end
 
-      it 'creates a payment provider customer' do
+      it "creates a payment provider customer" do
         result = customers_service.call
         expect(result).to be_success
 
         updated_customer = result.customer
         aggregate_failures do
-          expect(updated_customer.payment_provider).to eq('stripe')
+          expect(updated_customer.payment_provider).to eq("stripe")
           expect(updated_customer.stripe_customer).to be_present
         end
       end
 
-      it 'does not call payment provider customer update service' do
+      it "does not call payment provider customer update service" do
         customers_service.call
         expect(PaymentProviderCustomers::UpdateService).not_to have_received(:call).with(customer)
       end
 
-      context 'with provider customer id' do
+      context "with provider customer id" do
         let(:update_args) do
           {
             id: customer.id,
             external_id: SecureRandom.uuid,
-            name: 'Foo Bar',
+            name: "Foo Bar",
             organization_id: organization.id,
-            payment_provider: 'stripe',
-            provider_customer: {provider_customer_id: 'cus_12345'}
+            payment_provider: "stripe",
+            provider_customer: {provider_customer_id: "cus_12345"}
           }
         end
 
-        it 'calls payment provider customer update service' do
+        it "calls payment provider customer update service" do
           customers_service.call
           expect(PaymentProviderCustomers::UpdateService).to have_received(:call).with(customer)
         end
 
-        it 'creates a payment provider customer' do
+        it "creates a payment provider customer" do
           result = customers_service.call
 
           aggregate_failures do
@@ -303,18 +303,18 @@ RSpec.describe Customers::UpdateService, type: :service do
 
             customer = result.customer
             expect(customer.id).to be_present
-            expect(customer.payment_provider).to eq('stripe')
+            expect(customer.payment_provider).to eq("stripe")
             expect(customer.stripe_customer).to be_present
-            expect(customer.stripe_customer.provider_customer_id).to eq('cus_12345')
+            expect(customer.stripe_customer.provider_customer_id).to eq("cus_12345")
           end
         end
 
-        context 'when removing a provider customer id' do
+        context "when removing a provider customer id" do
           let(:update_args) do
             {
               id: customer.id,
               external_id: SecureRandom.uuid,
-              name: 'Foo Bar',
+              name: "Foo Bar",
               organization_id: organization.id,
               payment_provider: nil,
               provider_customer: {provider_customer_id: nil}
@@ -325,10 +325,10 @@ RSpec.describe Customers::UpdateService, type: :service do
 
           before do
             stripe_customer
-            customer.update!(payment_provider: 'stripe')
+            customer.update!(payment_provider: "stripe")
           end
 
-          it 'removes the provider customer id' do
+          it "removes the provider customer id" do
             result = customers_service.call
 
             aggregate_failures do
@@ -346,7 +346,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context 'when partialy updating' do
+    context "when partialy updating" do
       let(:stripe_customer) { create(:stripe_customer, customer:, provider_payment_methods: %w[sepa_debit]) }
 
       let(:update_args) do
@@ -359,7 +359,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       around { |test| lago_premium!(&test) }
       before { stripe_customer }
 
-      it 'updates only the updated args' do
+      it "updates only the updated args" do
         result = customers_service.call
 
         aggregate_failures do
@@ -371,8 +371,8 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context 'when updating net payment term' do
-      it 'updates the net payment term of all draft invoices' do
+    context "when updating net payment term" do
+      it "updates the net payment term of all draft invoices" do
         create(:invoice, :draft, customer:, net_payment_term: 30)
         create(:invoice, customer:, net_payment_term: 30)
         create(:invoice, :draft, customer:, net_payment_term: 30)
@@ -386,7 +386,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context 'when updating invoice_custom_sections' do
+    context "when updating invoice_custom_sections" do
       let(:invoice_custom_sections) { create_list(:invoice_custom_section, 4, organization:) }
 
       before do
@@ -394,7 +394,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         organization.selected_invoice_custom_sections = invoice_custom_sections[2..3]
       end
 
-      context 'when customer is set to skip_invoice_custom_sections: true' do
+      context "when customer is set to skip_invoice_custom_sections: true" do
         let(:update_args) do
           {
             id: customer.id,
@@ -402,7 +402,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           }
         end
 
-        it 'clears customer selected invoice custom sections' do
+        it "clears customer selected invoice custom sections" do
           result = customers_service.call
           expect(result).to be_success
           expect(customer.reload.selected_invoice_custom_sections).to be_empty
@@ -410,7 +410,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context 'when setting to invoice custom sections that match with organization selected invoice custom sections' do
+      context "when setting to invoice custom sections that match with organization selected invoice custom sections" do
         let(:update_args) do
           {
             id: customer.id,
@@ -418,7 +418,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           }
         end
 
-        it 'assigns organization sections to customer' do
+        it "assigns organization sections to customer" do
           result = customers_service.call
           expect(result).to be_success
           expect(customer.reload.selected_invoice_custom_sections).to be_empty
@@ -426,7 +426,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context 'when setting custom invoice_custom_sections for the customer' do
+      context "when setting custom invoice_custom_sections for the customer" do
         let(:update_args) do
           {
             id: customer.id,
@@ -434,14 +434,14 @@ RSpec.describe Customers::UpdateService, type: :service do
           }
         end
 
-        it 'assigns customer sections' do
+        it "assigns customer sections" do
           result = customers_service.call
           expect(result).to be_success
           expect(customer.reload.selected_invoice_custom_sections.ids).to match_array(invoice_custom_sections[1..2].map(&:id))
         end
       end
 
-      context 'when setting custom invoice_custom_sections for the customer with skipped invoice_custom_sections' do
+      context "when setting custom invoice_custom_sections for the customer with skipped invoice_custom_sections" do
         let(:update_args) do
           {
             id: customer.id,
@@ -451,7 +451,7 @@ RSpec.describe Customers::UpdateService, type: :service do
 
         before { customer.update!(skip_invoice_custom_sections: true) }
 
-        it 'updates skip_invoice_custom_sections to false' do
+        it "updates skip_invoice_custom_sections to false" do
           result = customers_service.call
           expect(result).to be_success
           expect(customer.reload.skip_invoice_custom_sections).to be false
@@ -459,7 +459,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context 'when sending both: skip_invoice_custom_sections and applicable_invoice_custom_section_ids' do
+      context "when sending both: skip_invoice_custom_sections and applicable_invoice_custom_section_ids" do
         let(:update_args) do
           {
             id: customer.id,
@@ -468,22 +468,22 @@ RSpec.describe Customers::UpdateService, type: :service do
           }
         end
 
-        it 'returns an error' do
+        it "returns an error" do
           result = customers_service.call
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:invoice_custom_sections]).to include('skip_sections_and_selected_ids_sent_together')
+          expect(result.error.messages[:invoice_custom_sections]).to include("skip_sections_and_selected_ids_sent_together")
         end
       end
     end
 
-    context 'when organization has eu tax management' do
+    context "when organization has eu tax management" do
       let(:eu_auto_tax_service) { instance_double(Customers::EuAutoTaxesService) }
-      let(:tax_code) { 'lago_eu_fr_standard' }
+      let(:tax_code) { "lago_eu_fr_standard" }
       let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new }
 
       before do
-        create(:tax, organization:, code: 'lago_eu_fr_standard', rate: 20.0)
+        create(:tax, organization:, code: "lago_eu_fr_standard", rate: 20.0)
         organization.update(eu_tax_management: true)
 
         eu_tax_result.tax_code = tax_code
@@ -491,7 +491,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         allow(eu_auto_tax_service).to receive(:call).and_return(eu_tax_result)
       end
 
-      it 'assigns the right tax to the customer' do
+      it "assigns the right tax to the customer" do
         result = customers_service.call
 
         aggregate_failures do
@@ -502,10 +502,10 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context 'when eu tax code is not applicable' do
-        let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new.not_allowed_failure!(code: '') }
+      context "when eu tax code is not applicable" do
+        let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new.not_allowed_failure!(code: "") }
 
-        it 'does not apply tax' do
+        it "does not apply tax" do
           result = customers_service.call
 
           expect(result).to be_success

@@ -7,25 +7,25 @@ module Integrations
         class Netsuite < BasePayload
           def body
             {
-              'isDynamic' => true,
-              'columns' => {
-                'customer' => integration_customer.external_customer_id,
-                'payment' => amount(payment.amount_cents, resource: invoice)
+              "isDynamic" => true,
+              "columns" => {
+                "customer" => integration_customer.external_customer_id,
+                "payment" => amount(payment.amount_cents, resource: invoice)
               },
-              'options' => {
-                'ignoreMandatoryFields' => false
+              "options" => {
+                "ignoreMandatoryFields" => false
               },
-              'type' => 'customerpayment',
-              'lines' => [
+              "type" => "customerpayment",
+              "lines" => [
                 {
-                  'lineItems' => [
+                  "lineItems" => [
                     {
-                      'amount' => amount(payment.amount_cents, resource: invoice),
-                      'apply' => true,
-                      'doc' => integration_invoice.external_id
+                      "amount" => amount(payment.amount_cents, resource: invoice),
+                      "apply" => true,
+                      "doc" => integration_invoice.external_id
                     }
                   ],
-                  'sublistId' => 'apply'
+                  "sublistId" => "apply"
                 }
               ]
             }

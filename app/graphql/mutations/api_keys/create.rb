@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'developers:keys:manage'
+      REQUIRED_PERMISSION = "developers:keys:manage"
 
-      graphql_name 'CreateApiKey'
-      description 'Creates a new API key'
+      graphql_name "CreateApiKey"
+      description "Creates a new API key"
 
       argument :name, String, required: false
       argument :permissions, GraphQL::Types::JSON, required: false

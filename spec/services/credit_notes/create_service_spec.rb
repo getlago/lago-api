@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreditNotes::CreateService, type: :service do
   subject(:create_service) do
@@ -22,7 +22,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       :invoice,
       organization:,
       customer:,
-      currency: 'EUR',
+      currency: "EUR",
       total_amount_cents: 24,
       payment_status: :succeeded,
       taxes_rate: 20,
@@ -56,8 +56,8 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     create(:invoice_applied_tax, tax:, invoice:) if invoice
   end
 
-  describe '.call' do
-    it 'creates a credit note' do
+  describe ".call" do
+    it "creates a credit note" do
       result = create_service.call
 
       aggregate_failures do
@@ -80,11 +80,11 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         expect(credit_note.credit_amount_cents).to eq(12)
         expect(credit_note.balance_amount_currency).to eq(invoice.currency)
         expect(credit_note.balance_amount_cents).to eq(12)
-        expect(credit_note.credit_status).to eq('available')
+        expect(credit_note.credit_status).to eq("available")
 
         expect(credit_note.refund_amount_currency).to eq(invoice.currency)
         expect(credit_note.refund_amount_cents).to eq(6)
-        expect(credit_note.refund_status).to eq('pending')
+        expect(credit_note.refund_status).to eq("pending")
 
         expect(credit_note).to be_other
 
@@ -101,64 +101,64 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
     end
 
-    it 'calls SegmentTrackJob' do
+    it "calls SegmentTrackJob" do
       allow(SegmentTrackJob).to receive(:perform_later)
 
       credit_note = create_service.call.credit_note
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
-        event: 'credit_note_issued',
+        event: "credit_note_issued",
         properties: {
           organization_id: credit_note.organization.id,
           credit_note_id: credit_note.id,
           invoice_id: credit_note.invoice_id,
-          credit_note_method: 'both'
+          credit_note_method: "both"
         }
       )
     end
 
-    it 'delivers a webhook' do
+    it "delivers a webhook" do
       create_service.call
 
       aggregate_failures do
-        expect(SendWebhookJob).to have_been_enqueued.with('credit_note.created', CreditNote)
+        expect(SendWebhookJob).to have_been_enqueued.with("credit_note.created", CreditNote)
 
         expect(CreditNotes::GeneratePdfJob).to have_been_enqueued
       end
     end
 
-    it 'delivers an email' do
+    it "delivers an email" do
       expect do
         create_service.call
       end.to have_enqueued_job(SendEmailJob)
     end
 
-    it_behaves_like 'syncs credit note' do
+    it_behaves_like "syncs credit note" do
       let(:service_call) { create_service.call }
     end
 
-    context 'when customer has tax_provider set up' do
+    context "when customer has tax_provider set up" do
       let(:customer) { create(:customer, :with_tax_integration, organization:) }
 
-      it 'sync with tax provider' do
+      it "sync with tax provider" do
         expect do
           create_service.call
         end.to have_enqueued_job(CreditNotes::ProviderTaxes::ReportJob)
       end
     end
 
-    context 'when organization does not have right email settings' do
+    context "when organization does not have right email settings" do
       before { invoice.organization.update!(email_settings: []) }
 
-      it 'does not enqueue an SendEmailJob' do
+      it "does not enqueue an SendEmailJob" do
         expect do
           create_service.call
         end.not_to have_enqueued_job(SendEmailJob)
       end
     end
 
-    context 'with invalid items' do
+    context "with invalid items" do
       let(:credit_amount_cents) { 10 }
       let(:refund_amount_cents) { 15 }
       let(:items) do
@@ -174,7 +174,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         ]
       end
 
-      it 'returns a failed result' do
+      it "returns a failed result" do
         result = create_service.call
 
         aggregate_failures do
@@ -190,10 +190,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
     end
 
-    context 'when items are missing' do
+    context "when items are missing" do
       let(:items) {}
 
-      it 'returns a failed result' do
+      it "returns a failed result" do
         result = create_service.call
 
         expect(result).not_to be_success
@@ -207,19 +207,19 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
     end
 
-    context 'with a refund, a payment and a succeeded invoice' do
+    context "with a refund, a payment and a succeeded invoice" do
       let(:payment) { create(:payment, payable: invoice) }
 
       before { payment }
 
-      it 'enqueues a refund job' do
+      it "enqueues a refund job" do
         create_service.call
 
         expect(CreditNotes::Refunds::StripeCreateJob).to have_been_enqueued
           .with(CreditNote)
       end
 
-      context 'when Gocardless provider' do
+      context "when Gocardless provider" do
         let(:gocardless_provider) { create(:gocardless_provider) }
         let(:gocardless_customer) { create(:gocardless_customer) }
         let(:payment) do
@@ -231,83 +231,83 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           )
         end
 
-        it 'enqueues a refund job' do
+        it "enqueues a refund job" do
           create_service.call
 
           expect(CreditNotes::Refunds::GocardlessCreateJob).to have_been_enqueued.with(CreditNote)
         end
       end
 
-      context 'when credit note does not have refund amount' do
+      context "when credit note does not have refund amount" do
         let(:credit_amount_cents) { 15 }
         let(:refund_amount_cents) { 0 }
 
-        it 'does not enqueue a refund job' do
+        it "does not enqueue a refund job" do
           expect { create_service.call }.not_to have_enqueued_job(CreditNotes::Refunds::StripeCreateJob)
         end
       end
     end
 
-    context 'with customer timezone' do
-      before { invoice.customer.update!(timezone: 'America/Los_Angeles') }
+    context "with customer timezone" do
+      before { invoice.customer.update!(timezone: "America/Los_Angeles") }
 
-      let(:timestamp) { DateTime.parse('2022-11-25 01:00:00').to_i }
+      let(:timestamp) { DateTime.parse("2022-11-25 01:00:00").to_i }
 
-      it 'assigns the issuing date in the customer timezone' do
-        travel_to(DateTime.parse('2022-11-25 01:00:00')) do
+      it "assigns the issuing date in the customer timezone" do
+        travel_to(DateTime.parse("2022-11-25 01:00:00")) do
           result = create_service.call
 
-          expect(result.credit_note.issuing_date.to_s).to eq('2022-11-24')
+          expect(result.credit_note.issuing_date.to_s).to eq("2022-11-24")
         end
       end
     end
 
-    context 'when invoice is not found' do
+    context "when invoice is not found" do
       let(:invoice) { nil }
       let(:items) { [] }
 
-      it 'returns a failure' do
+      it "returns a failure" do
         result = create_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
 
           expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq('invoice_not_found')
+          expect(result.error.message).to eq("invoice_not_found")
         end
       end
     end
 
-    context 'when invoice is not automatic' do
+    context "when invoice is not automatic" do
       let(:automatic) { false }
 
-      it 'returns a failure' do
+      it "returns a failure" do
         result = create_service.call
 
         aggregate_failures do
           expect(result).not_to be_success
 
           expect(result.error).to be_a(BaseService::ForbiddenFailure)
-          expect(result.error.code).to eq('feature_unavailable')
+          expect(result.error.code).to eq("feature_unavailable")
         end
       end
 
-      context 'with a valid license' do
+      context "with a valid license" do
         around { |test| lago_premium!(&test) }
 
-        it 'returns a success' do
+        it "returns a success" do
           result = create_service.call
           expect(result).to be_success
         end
 
-        context 'when invoice is draft' do
+        context "when invoice is draft" do
           let(:invoice) do
             create(
               :invoice,
               :draft,
               organization:,
               customer:,
-              currency: 'EUR',
+              currency: "EUR",
               fees_amount_cents: 20,
               total_amount_cents: 24,
               payment_status: :succeeded,
@@ -315,7 +315,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             )
           end
 
-          it 'creates a draft credit note' do
+          it "creates a draft credit note" do
             result = create_service.call
 
             aggregate_failures do
@@ -324,23 +324,23 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             end
           end
 
-          it 'does not deliver a webhook' do
+          it "does not deliver a webhook" do
             create_service.call
-            expect(SendWebhookJob).not_to have_been_enqueued.with('credit_note.created', CreditNote)
+            expect(SendWebhookJob).not_to have_been_enqueued.with("credit_note.created", CreditNote)
           end
 
-          it 'does not call SegmentTrackJob' do
+          it "does not call SegmentTrackJob" do
             allow(SegmentTrackJob).to receive(:perform_later)
             create_service.call
             expect(SegmentTrackJob).not_to have_received(:perform_later)
           end
         end
 
-        context 'when invoice is legacy' do
+        context "when invoice is legacy" do
           let(:invoice) do
             create(
               :invoice,
-              currency: 'EUR',
+              currency: "EUR",
               sub_total_excluding_taxes_amount_cents: 20,
               total_amount_cents: 24,
               payment_status: :succeeded,
@@ -349,27 +349,27 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             )
           end
 
-          it 'returns a failure' do
+          it "returns a failure" do
             result = create_service.call
 
             aggregate_failures do
               expect(result).not_to be_success
 
               expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-              expect(result.error.code).to eq('invalid_type_or_status')
+              expect(result.error.code).to eq("invalid_type_or_status")
             end
           end
         end
       end
     end
 
-    context 'when invoice is v3 with coupons' do
+    context "when invoice is v3 with coupons" do
       let(:invoice) do
         create(
           :invoice,
           organization:,
           customer:,
-          currency: 'EUR',
+          currency: "EUR",
           fees_amount_cents: 20,
           coupons_amount_cents: 10,
           taxes_amount_cents: 2,
@@ -403,7 +403,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         ]
       end
 
-      it 'takes coupons amount into account' do
+      it "takes coupons amount into account" do
         result = create_service.call
 
         aggregate_failures do
@@ -414,9 +414,9 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             invoice:,
             customer: invoice.customer,
             currency: invoice.currency,
-            credit_status: 'available',
-            refund_status: 'pending',
-            reason: 'other',
+            credit_status: "available",
+            refund_status: "pending",
+            reason: "other",
             total_amount_cents: 9,
             credit_amount_cents: 6,
             refund_amount_cents: 3,
@@ -446,14 +446,14 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
     end
 
-    context 'when invoice is credit' do
+    context "when invoice is credit" do
       let(:invoice) do
         create(
           :invoice,
           :credit,
           organization:,
           customer:,
-          currency: 'EUR',
+          currency: "EUR",
           fees_amount_cents: 1000,
           total_amount_cents: 1000,
           payment_status: :succeeded
@@ -482,7 +482,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
 
       around { |test| lago_premium!(&test) }
 
-      it 'Creates credit note and voids corresponding amount of credits from the wallet' do
+      it "Creates credit note and voids corresponding amount of credits from the wallet" do
         result = create_service.call
 
         aggregate_failures do
@@ -501,10 +501,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         end
       end
 
-      context 'with different rate amount' do
+      context "with different rate amount" do
         let(:rate_amount) { 20 }
 
-        it 'calculates correct credits amount' do
+        it "calculates correct credits amount" do
           result = create_service.call
 
           aggregate_failures do
@@ -519,25 +519,25 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         end
       end
 
-      context 'when wallet is terminated' do
+      context "when wallet is terminated" do
         let(:wallet) { create :wallet, customer:, balance_cents: 1000, rate_amount:, status: :terminated }
 
-        it 'returns error' do
+        it "returns error" do
           result = create_service.call
 
           aggregate_failures do
             expect(result).not_to be_success
 
             expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-            expect(result.error.code).to eq('invalid_type_or_status')
+            expect(result.error.code).to eq("invalid_type_or_status")
           end
         end
       end
 
-      context 'when associated wallet balance is less than requested sum' do
+      context "when associated wallet balance is less than requested sum" do
         let(:wallet) { create :wallet, customer:, balance_cents: 500, rate_amount: }
 
-        it 'returns error' do
+        it "returns error" do
           result = create_service.call
 
           aggregate_failures do
@@ -549,10 +549,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         end
       end
 
-      context 'when creating credit_note with credit amount' do
+      context "when creating credit_note with credit amount" do
         let(:credit_amount_cents) { 10 }
 
-        it 'returns error' do
+        it "returns error" do
           result = create_service.call
 
           aggregate_failures do

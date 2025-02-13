@@ -5,7 +5,7 @@ module Clock
     include SentryCronConcern
 
     queue_as do
-      if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_CLOCK'])
+      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_CLOCK"])
         :clock_worker
       else
         :clock

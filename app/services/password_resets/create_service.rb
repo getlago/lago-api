@@ -9,7 +9,7 @@ module PasswordResets
     end
 
     def call
-      return result.not_found_failure!(resource: 'user') if user.blank?
+      return result.not_found_failure!(resource: "user") if user.blank?
 
       password_reset = PasswordReset.create!(
         user:,

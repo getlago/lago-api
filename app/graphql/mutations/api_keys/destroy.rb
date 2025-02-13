@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'developers:keys:manage'
+      REQUIRED_PERMISSION = "developers:keys:manage"
 
-      graphql_name 'DestroyApiKey'
-      description 'Deletes an API key'
+      graphql_name "DestroyApiKey"
+      description "Deletes an API key"
 
       argument :id, ID, required: true
 

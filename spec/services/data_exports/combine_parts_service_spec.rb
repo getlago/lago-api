@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe DataExports::CombinePartsService, type: :service do
   subject(:result) { described_class.call(data_export:) }
 
-  let(:data_export) { create :data_export, :processing, resource_type: 'invoice_fees' }
+  let(:data_export) { create :data_export, :processing, resource_type: "invoice_fees" }
   let(:data_export_part) { create :data_export_part, data_export:, csv_lines:, index: 1 }
   let(:csv_lines) do
     <<~CSV

@@ -3,8 +3,8 @@
 module Types
   module Wallets
     class Object < Types::BaseObject
-      graphql_name 'Wallet'
-      description 'Wallet'
+      graphql_name "Wallet"
+      description "Wallet"
 
       field :id, ID, null: false
 

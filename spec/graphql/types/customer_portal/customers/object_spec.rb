@@ -30,7 +30,7 @@ RSpec.describe Types::CustomerPortal::Customers::Object do
 
     expect(subject).to have_field(:shipping_address).of_type("CustomerAddress")
 
-    expect(subject).to have_field(:billing_configuration).of_type('CustomerBillingConfiguration')
+    expect(subject).to have_field(:billing_configuration).of_type("CustomerBillingConfiguration")
 
     expect(subject).to have_field(:premium).of_type("Boolean!")
   end

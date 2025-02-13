@@ -4,7 +4,7 @@ module Types
   module Customers
     module Metadata
       class Input < Types::BaseInputObject
-        graphql_name 'CustomerMetadataInput'
+        graphql_name "CustomerMetadataInput"
 
         argument :id, ID, required: false
         argument :key, String, required: true

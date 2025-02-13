@@ -10,7 +10,7 @@ module LifetimeUsages
     end
 
     def call
-      return result.not_found_failure!(resource: 'lifetime_usage') unless lifetime_usage
+      return result.not_found_failure!(resource: "lifetime_usage") unless lifetime_usage
 
       lifetime_usage.update!(historical_usage_amount_cents: params[:external_historical_usage_amount_cents])
 

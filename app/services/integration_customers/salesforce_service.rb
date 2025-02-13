@@ -15,7 +15,7 @@ module IntegrationCustomers
       new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
         integration:,
         customer:,
-        type: 'IntegrationCustomers::SalesforceCustomer',
+        type: "IntegrationCustomers::SalesforceCustomer",
         sync_with_provider: true
       )
 

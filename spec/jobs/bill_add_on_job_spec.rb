@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe BillAddOnJob, type: :job do
   let(:applied_add_on) { create(:applied_add_on) }
@@ -17,19 +17,19 @@ RSpec.describe BillAddOnJob, type: :job do
       .and_return(result)
   end
 
-  it 'calls the add on create service' do
+  it "calls the add on create service" do
     described_class.perform_now(applied_add_on, datetime.to_i)
 
     expect(Invoices::AddOnService).to have_received(:new)
     expect(invoice_service).to have_received(:create)
   end
 
-  context 'when result is a failure' do
+  context "when result is a failure" do
     let(:result) do
-      BaseService::Result.new.single_validation_failure!(error_code: 'error')
+      BaseService::Result.new.single_validation_failure!(error_code: "error")
     end
 
-    it 'raises an error' do
+    it "raises an error" do
       expect do
         described_class.perform_now(applied_add_on, datetime.to_i)
       end.to raise_error(BaseService::FailedResult)

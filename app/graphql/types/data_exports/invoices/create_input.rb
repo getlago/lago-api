@@ -4,7 +4,7 @@ module Types
   module DataExports
     module Invoices
       class CreateInput < Types::BaseInputObject
-        graphql_name 'CreateDataExportsInvoicesInput'
+        graphql_name "CreateDataExportsInvoicesInput"
 
         argument :filters, Types::DataExports::Invoices::FiltersInput
         argument :format, Types::DataExports::FormatTypeEnum

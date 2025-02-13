@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'ostruct'
+require "ostruct"
 
 module LagoUtils
   class Version
-    VERSION_FILE = Rails.root.join('LAGO_VERSION')
-    GITHUB_BASE_URL = 'https://github.com/getlago/lago-api'
+    VERSION_FILE = Rails.root.join("LAGO_VERSION")
+    GITHUB_BASE_URL = "https://github.com/getlago/lago-api"
 
     class << self
       def call(default:)

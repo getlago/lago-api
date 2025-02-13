@@ -38,7 +38,7 @@ module Invoices
       # TODO: deduct previous progressive billing invoices
 
       Utils::SegmentTrack.invoice_created(invoice)
-      SendWebhookJob.perform_later('invoice.created', invoice)
+      SendWebhookJob.perform_later("invoice.created", invoice)
       Invoices::GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -122,7 +122,7 @@ module Invoices
     end
 
     def should_deliver_email?
-      License.premium? && subscription.organization.email_settings.include?('invoice.finalized')
+      License.premium? && subscription.organization.email_settings.include?("invoice.finalized")
     end
 
     def create_credit_note_credit

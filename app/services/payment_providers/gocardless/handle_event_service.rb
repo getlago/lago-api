@@ -19,7 +19,7 @@ module PaymentProviders
 
       def call
         case event.resource_type
-        when 'payments'
+        when "payments"
           if PAYMENT_ACTIONS.include?(event.action)
             payment_service_klass(event)
               .new.update_payment_status(
@@ -27,7 +27,7 @@ module PaymentProviders
                 status: event.action
               ).raise_if_error!
           end
-        when 'refunds'
+        when "refunds"
           if REFUND_ACTIONS.include?(event.action)
             CreditNotes::Refunds::GocardlessService
               .new.update_status(

@@ -1,23 +1,23 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe User, type: :model do
-  subject { described_class.new(email: 'gavin@hooli.com', password: 'f**k_piedpiper') }
+  subject { described_class.new(email: "gavin@hooli.com", password: "f**k_piedpiper") }
 
-  it_behaves_like 'paper_trail traceable'
+  it_behaves_like "paper_trail traceable"
 
-  describe 'Validations' do
-    it 'is valid with valid attributes' do
+  describe "Validations" do
+    it "is valid with valid attributes" do
       expect(subject).to be_valid
     end
 
-    it 'is not valid with no email' do
+    it "is not valid with no email" do
       subject.email = nil
       expect(subject).not_to be_valid
     end
 
-    it 'is not valid with no password' do
+    it "is not valid with no password" do
       subject.password = nil
       expect(subject).not_to be_valid
     end

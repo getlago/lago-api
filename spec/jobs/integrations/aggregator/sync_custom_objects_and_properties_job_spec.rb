@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob, type: :job do
-  describe '#perform' do
+  describe "#perform" do
     subject(:sync_job) { described_class }
 
     let(:integration) { create(:hubspot_integration) }
@@ -15,7 +15,7 @@ RSpec.describe Integrations::Aggregator::SyncCustomObjectsAndPropertiesJob, type
       allow(Integrations::Hubspot::Contacts::DeployPropertiesService).to receive(:call)
     end
 
-    it 'call all the services with the current integration' do
+    it "call all the services with the current integration" do
       sync_job.perform_now(integration: integration)
 
       expect(Integrations::Hubspot::Subscriptions::DeployObjectService).to have_received(:call).with(integration:)

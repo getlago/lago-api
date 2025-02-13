@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe InvoiceMailer, type: :mailer do
   subject(:invoice_mailer) { described_class }
@@ -8,10 +8,10 @@ RSpec.describe InvoiceMailer, type: :mailer do
   let(:invoice) { create(:invoice, fees_amount_cents: 100) }
 
   before do
-    invoice.file.attach(io: File.open(Rails.root.join('spec/fixtures/blank.pdf')), filename: 'blank.pdf')
+    invoice.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "blank.pdf")
   end
 
-  describe '#finalized' do
+  describe "#finalized" do
     specify do
       mailer = invoice_mailer.with(invoice:).finalized
 
@@ -20,7 +20,7 @@ RSpec.describe InvoiceMailer, type: :mailer do
       expect(mailer.attachments).not_to be_empty
     end
 
-    context 'with no pdf file' do
+    context "with no pdf file" do
       let(:pdf_service) { instance_double(Invoices::GeneratePdfService) }
 
       before do
@@ -31,7 +31,7 @@ RSpec.describe InvoiceMailer, type: :mailer do
         allow(pdf_service).to receive(:call)
       end
 
-      it 'calls the invoice pdf generate service' do
+      it "calls the invoice pdf generate service" do
         mailer = invoice_mailer.with(invoice:).finalized
 
         expect(mailer.to).not_to be_nil
@@ -39,36 +39,36 @@ RSpec.describe InvoiceMailer, type: :mailer do
       end
     end
 
-    context 'when organization email is nil' do
+    context "when organization email is nil" do
       before do
         invoice.organization.update(email: nil)
       end
 
-      it 'returns a mailer with nil values' do
+      it "returns a mailer with nil values" do
         mailer = invoice_mailer.with(invoice:).finalized
 
         expect(mailer.to).to be_nil
       end
     end
 
-    context 'when customer email is nil' do
+    context "when customer email is nil" do
       before do
         invoice.customer.update(email: nil)
       end
 
-      it 'returns a mailer with nil values' do
+      it "returns a mailer with nil values" do
         mailer = invoice_mailer.with(invoice:).finalized
 
         expect(mailer.to).to be_nil
       end
     end
 
-    context 'when invoice fees amount is zero' do
+    context "when invoice fees amount is zero" do
       before do
         invoice.update(fees_amount_cents: 0)
       end
 
-      it 'returns a mailer with nil values' do
+      it "returns a mailer with nil values" do
         mailer = invoice_mailer.with(invoice:).finalized
 
         expect(mailer.to).to be_nil

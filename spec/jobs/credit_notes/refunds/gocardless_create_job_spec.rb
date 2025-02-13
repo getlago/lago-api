@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreditNotes::Refunds::GocardlessCreateJob, type: :job do
   let(:credit_note) { create(:credit_note) }
@@ -9,7 +9,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessCreateJob, type: :job do
     instance_double(CreditNotes::Refunds::GocardlessService)
   end
 
-  it 'delegates to the gocardless refund service' do
+  it "delegates to the gocardless refund service" do
     allow(CreditNotes::Refunds::GocardlessService).to receive(:new)
       .with(credit_note)
       .and_return(refund_service)

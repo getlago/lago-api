@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
   subject(:compute_amounts) { described_class.new(invoice:) }
@@ -25,7 +25,7 @@ RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
     create(:credit, invoice:, amount_cents: 100)
   end
 
-  it 'applied taxes to the fees' do
+  it "applied taxes to the fees" do
     compute_amounts.call
 
     aggregate_failures do
@@ -39,31 +39,31 @@ RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
     end
   end
 
-  it 'sets fees_amount_cents from the list of fees' do
+  it "sets fees_amount_cents from the list of fees" do
     expect { compute_amounts.call }.to change(invoice, :fees_amount_cents).from(0).to(530)
   end
 
-  it 'sets coupons_amount_cents from the list of fees' do
+  it "sets coupons_amount_cents from the list of fees" do
     expect { compute_amounts.call }.to change(invoice, :coupons_amount_cents).from(0).to(100)
   end
 
-  it 'sets sub_total_excluding_taxes_amount_cents from the list of fees' do
+  it "sets sub_total_excluding_taxes_amount_cents from the list of fees" do
     expect { compute_amounts.call }.to change(invoice, :sub_total_excluding_taxes_amount_cents).from(0).to(430)
   end
 
-  it 'sets taxes_amount_cents from the list of fees' do
+  it "sets taxes_amount_cents from the list of fees" do
     expect { compute_amounts.call }.to change(invoice, :taxes_amount_cents).from(0).to(129)
   end
 
-  it 'sets sub_total_including_taxes_amount_cents' do
+  it "sets sub_total_including_taxes_amount_cents" do
     expect { compute_amounts.call }.to change(invoice, :sub_total_including_taxes_amount_cents).from(0).to(559)
   end
 
-  it 'sets total_amount_cents' do
+  it "sets total_amount_cents" do
     expect { compute_amounts.call }.to change(invoice, :total_amount_cents).from(0).to(559)
   end
 
-  context 'when taxes are fetched from external provider' do
+  context "when taxes are fetched from external provider" do
     let(:integration) { create(:anrok_integration, organization:) }
     let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
     let(:fee2) { create(:fee, invoice: nil) }
@@ -73,8 +73,8 @@ RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
         item_id: fee1.id,
         item_code: "lago_default_b2b",
         tax_breakdown: [
-          OpenStruct.new(name: 'tax 1', type: 'type1', rate: '0.50', tax_amount: 75.5),
-          OpenStruct.new(name: 'tax 2', type: 'type2', rate: '0.30', tax_amount: 45.3)
+          OpenStruct.new(name: "tax 1", type: "type1", rate: "0.50", tax_amount: 75.5),
+          OpenStruct.new(name: "tax 2", type: "type2", rate: "0.30", tax_amount: 45.3)
         ]
       )
     end
@@ -85,7 +85,7 @@ RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
       invoice.credits.destroy_all
     end
 
-    it 'creates fee and invoice applied taxes and calculate totals' do
+    it "creates fee and invoice applied taxes and calculate totals" do
       described_class.new(invoice:, provider_taxes: [fee_taxes]).call
 
       aggregate_failures do

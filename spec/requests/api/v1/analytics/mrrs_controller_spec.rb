@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::Analytics::MrrsController, type: :request do # rubocop:disable RSpec/FilePath
-  describe 'GET /analytics/mrr' do
-    subject { get_with_token(organization, '/api/v1/analytics/mrr') }
+  describe "GET /analytics/mrr" do
+    subject { get_with_token(organization, "/api/v1/analytics/mrr") }
 
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
 
-    context 'when license is premium' do
+    context "when license is premium" do
       around { |test| lago_premium!(&test) }
 
-      include_examples 'requires API permission', 'analytic', 'read'
+      include_examples "requires API permission", "analytic", "read"
 
-      it 'returns the mrr' do
+      it "returns the mrr" do
         subject
 
         aggregate_failures do
@@ -29,8 +29,8 @@ RSpec.describe Api::V1::Analytics::MrrsController, type: :request do # rubocop:d
       end
     end
 
-    context 'when license is not premium' do
-      it 'returns forbidden status' do
+    context "when license is not premium" do
+      it "returns forbidden status" do
         subject
         expect(response).to have_http_status(:forbidden)
       end

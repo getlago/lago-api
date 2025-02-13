@@ -1,26 +1,26 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::TaxesController, type: :request do
   let(:organization) { create(:organization) }
 
-  describe 'POST /api/v1/taxes' do
-    subject { post_with_token(organization, '/api/v1/taxes', {tax: create_params}) }
+  describe "POST /api/v1/taxes" do
+    subject { post_with_token(organization, "/api/v1/taxes", {tax: create_params}) }
 
     let(:create_params) do
       {
-        name: 'tax',
-        code: 'tax_code',
+        name: "tax",
+        code: "tax_code",
         rate: 20.0,
-        description: 'tax_description',
+        description: "tax_description",
         applied_to_organization: false
       }
     end
 
-    include_examples 'requires API permission', 'tax', 'write'
+    include_examples "requires API permission", "tax", "write"
 
-    it 'creates a tax' do
+    it "creates a tax" do
       expect { subject }.to change(Tax, :count).by(1)
 
       aggregate_failures do
@@ -36,7 +36,7 @@ RSpec.describe Api::V1::TaxesController, type: :request do
     end
   end
 
-  describe 'PUT /api/v1/taxes/:code' do
+  describe "PUT /api/v1/taxes/:code" do
     subject do
       put_with_token(
         organization,
@@ -47,8 +47,8 @@ RSpec.describe Api::V1::TaxesController, type: :request do
 
     let(:tax) { create(:tax, organization:) }
     let(:tax_code) { tax.code }
-    let(:code) { 'code_updated' }
-    let(:name) { 'name_updated' }
+    let(:code) { "code_updated" }
+    let(:name) { "name_updated" }
     let(:rate) { 15.0 }
     let(:applied_to_organization) { false }
 
@@ -56,9 +56,9 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       {code:, name:, rate:, applied_to_organization:}
     end
 
-    include_examples 'requires API permission', 'tax', 'write'
+    include_examples "requires API permission", "tax", "write"
 
-    it 'updates a tax' do
+    it "updates a tax" do
       subject
 
       aggregate_failures do
@@ -71,35 +71,35 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       end
     end
 
-    context 'when tax does not exist' do
+    context "when tax does not exist" do
       let(:tax_code) { SecureRandom.uuid }
 
-      it 'returns not_found error' do
+      it "returns not_found error" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when tax code already exists in organization scope (validation error)' do
+    context "when tax code already exists in organization scope (validation error)" do
       let(:tax2) { create(:tax, organization:) }
       let(:code) { tax2.code }
 
-      it 'returns unprocessable_entity error' do
+      it "returns unprocessable_entity error" do
         subject
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
 
-  describe 'GET /api/v1/taxes/:code' do
+  describe "GET /api/v1/taxes/:code" do
     subject { get_with_token(organization, "/api/v1/taxes/#{tax_code}") }
 
     let(:tax) { create(:tax, organization:) }
     let(:tax_code) { tax.code }
 
-    include_examples 'requires API permission', 'tax', 'read'
+    include_examples "requires API permission", "tax", "read"
 
-    it 'returns a tax' do
+    it "returns a tax" do
       subject
 
       aggregate_failures do
@@ -109,29 +109,29 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       end
     end
 
-    context 'when tax does not exist' do
+    context "when tax does not exist" do
       let(:tax_code) { SecureRandom.uuid }
 
-      it 'returns not found' do
+      it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'DELETE /api/v1/taxes/:code' do
+  describe "DELETE /api/v1/taxes/:code" do
     subject { delete_with_token(organization, "/api/v1/taxes/#{tax_code}") }
 
     let!(:tax) { create(:tax, organization:) }
     let(:tax_code) { tax.code }
 
-    include_examples 'requires API permission', 'tax', 'write'
+    include_examples "requires API permission", "tax", "write"
 
-    it 'deletes a tax' do
+    it "deletes a tax" do
       expect { subject }.to change(Tax, :count).by(-1)
     end
 
-    it 'returns deleted tax' do
+    it "returns deleted tax" do
       subject
 
       aggregate_failures do
@@ -141,24 +141,24 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       end
     end
 
-    context 'when tax does not exist' do
+    context "when tax does not exist" do
       let(:tax_code) { SecureRandom.uuid }
 
-      it 'returns not_found error' do
+      it "returns not_found error" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'GET /api/v1/taxes' do
-    subject { get_with_token(organization, '/api/v1/taxes?page=1&per_page=1') }
+  describe "GET /api/v1/taxes" do
+    subject { get_with_token(organization, "/api/v1/taxes?page=1&per_page=1") }
 
     let!(:tax) { create(:tax, organization:) }
 
-    include_examples 'requires API permission', 'tax', 'read'
+    include_examples "requires API permission", "tax", "read"
 
-    it 'returns taxes' do
+    it "returns taxes" do
       subject
 
       aggregate_failures do
@@ -169,10 +169,10 @@ RSpec.describe Api::V1::TaxesController, type: :request do
       end
     end
 
-    context 'with pagination' do
+    context "with pagination" do
       before { create(:tax, organization:) }
 
-      it 'returns taxes with correct meta data' do
+      it "returns taxes with correct meta data" do
         subject
 
         aggregate_failures do

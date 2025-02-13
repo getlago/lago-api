@@ -64,7 +64,7 @@ module Subscriptions
       end
 
       def subscription_day_name
-        @subscription_day_name ||= subscription_at.strftime('%A').downcase.to_sym
+        @subscription_day_name ||= subscription_at.strftime("%A").downcase.to_sym
       end
 
       def compute_duration(*)

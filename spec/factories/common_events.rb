@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :common_event, class: 'Events::Common' do
+  factory :common_event, class: "Events::Common" do
     transient do
       organization { create(:organization) }
       billable_metric { create(:billable_metric, organization: organization) }

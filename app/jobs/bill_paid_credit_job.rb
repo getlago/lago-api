@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class BillPaidCreditJob < ApplicationJob
-  queue_as 'high_priority'
+  queue_as "high_priority"
 
   retry_on Sequenced::SequenceError
 

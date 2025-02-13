@@ -183,7 +183,7 @@ RSpec.describe BaseResult do
       expect(result_class.new).to respond_to(:property=)
     end
 
-    context 'with multiple properties' do
+    context "with multiple properties" do
       let(:result_class) { described_class[:property, :another_property] }
 
       it "defines the attributes" do

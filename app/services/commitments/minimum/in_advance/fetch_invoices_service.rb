@@ -42,7 +42,7 @@ module Commitments
           invoice_ids_query = subscription
             .invoice_subscriptions
             .where(
-              'charges_from_datetime >= ? AND charges_to_datetime <= ?',
+              "charges_from_datetime >= ? AND charges_to_datetime <= ?",
               ds.previous_beginning_of_period,
               ds.end_of_period
             ).select(:invoice_id)

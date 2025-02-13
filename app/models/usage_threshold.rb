@@ -23,7 +23,7 @@ class UsageThreshold < ApplicationRecord
   default_scope -> { kept }
 
   def invoice_name
-    threshold_display_name || I18n.t('invoice.usage_threshold')
+    threshold_display_name || I18n.t("invoice.usage_threshold")
   end
 end
 

@@ -16,14 +16,14 @@ module Integrations
             response = http_client.post_with_response(payload.create_body, headers)
             body = JSON.parse(response.body)
 
-            result.external_id = body['id']
+            result.external_id = body["id"]
             return result unless result.external_id
 
             IntegrationResource.create!(
               integration:,
               external_id: result.external_id,
               syncable_id: subscription.id,
-              syncable_type: 'Subscription',
+              syncable_type: "Subscription",
               resource_type: :subscription
             )
 
@@ -40,7 +40,7 @@ module Integrations
           end
 
           def call_async
-            return result.not_found_failure!(resource: 'subscription') unless subscription
+            return result.not_found_failure!(resource: "subscription") unless subscription
 
             ::Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription:)
 

@@ -8,7 +8,7 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') if invoice.nil?
+      return result.not_found_failure!(resource: "invoice") if invoice.nil?
 
       result.invoice = invoice
       return result if invoice.finalized?
@@ -20,7 +20,7 @@ module Invoices
         invoice.save!
       end
 
-      SendWebhookJob.perform_later('invoice.paid_credit_added', result.invoice)
+      SendWebhookJob.perform_later("invoice.paid_credit_added", result.invoice)
       GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
       Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
       Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -39,7 +39,7 @@ module Invoices
 
     def should_deliver_email?
       License.premium? &&
-        invoice.organization.email_settings.include?('invoice.finalized')
+        invoice.organization.email_settings.include?("invoice.finalized")
     end
   end
 end

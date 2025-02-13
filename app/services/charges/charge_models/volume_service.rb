@@ -6,7 +6,7 @@ module Charges
       protected
 
       def ranges
-        properties['volume_ranges']&.map(&:with_indifferent_access)&.sort_by { |h| h[:from_value] }
+        properties["volume_ranges"]&.map(&:with_indifferent_access)&.sort_by { |h| h[:from_value] }
       end
 
       def compute_amount

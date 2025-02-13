@@ -61,13 +61,13 @@ module V1
 
     def subscriptions
       ::CollectionSerializer.new(
-        model.subscriptions.includes([:customer, :plan]), ::V1::SubscriptionSerializer, collection_name: 'subscriptions'
+        model.subscriptions.includes([:customer, :plan]), ::V1::SubscriptionSerializer, collection_name: "subscriptions"
       ).serialize
     end
 
     def preview_subscriptions
       ::CollectionSerializer.new(
-        model.subscriptions, ::V1::SubscriptionSerializer, collection_name: 'subscriptions'
+        model.subscriptions, ::V1::SubscriptionSerializer, collection_name: "subscriptions"
       ).serialize
     end
 
@@ -84,25 +84,25 @@ module V1
           ]
         ),
         ::V1::FeeSerializer,
-        collection_name: 'fees'
+        collection_name: "fees"
       ).serialize
     end
 
     def preview_fees
       ::CollectionSerializer.new(
-        model.fees, ::V1::FeeSerializer, collection_name: 'fees'
+        model.fees, ::V1::FeeSerializer, collection_name: "fees"
       ).serialize
     end
 
     def credits
-      ::CollectionSerializer.new(model.credits, ::V1::CreditSerializer, collection_name: 'credits').serialize
+      ::CollectionSerializer.new(model.credits, ::V1::CreditSerializer, collection_name: "credits").serialize
     end
 
     def metadata
       ::CollectionSerializer.new(
         model.metadata,
         ::V1::Invoices::MetadataSerializer,
-        collection_name: 'metadata'
+        collection_name: "metadata"
       ).serialize
     end
 
@@ -110,7 +110,7 @@ module V1
       ::CollectionSerializer.new(
         model.applied_taxes,
         ::V1::Invoices::AppliedTaxSerializer,
-        collection_name: 'applied_taxes'
+        collection_name: "applied_taxes"
       ).serialize
     end
 
@@ -118,7 +118,7 @@ module V1
       ::CollectionSerializer.new(
         model.error_details,
         ::V1::ErrorDetailSerializer,
-        collection_name: 'error_details'
+        collection_name: "error_details"
       ).serialize
     end
 
@@ -126,7 +126,7 @@ module V1
       ::CollectionSerializer.new(
         model.applied_usage_thresholds,
         ::V1::AppliedUsageThresholdSerializer,
-        collection_name: 'applied_usage_thresholds'
+        collection_name: "applied_usage_thresholds"
       ).serialize
     end
 
@@ -134,7 +134,7 @@ module V1
       ::CollectionSerializer.new(
         model.applied_invoice_custom_sections,
         ::V1::Invoices::AppliedInvoiceCustomSectionSerializer,
-        collection_name: 'applied_invoice_custom_sections'
+        collection_name: "applied_invoice_custom_sections"
       ).serialize
     end
 
@@ -142,7 +142,7 @@ module V1
       ::CollectionSerializer.new(
         model.invoice_subscriptions,
         ::V1::Invoices::BillingPeriodSerializer,
-        collection_name: 'billing_periods'
+        collection_name: "billing_periods"
       ).serialize
     end
   end

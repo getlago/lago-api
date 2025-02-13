@@ -13,11 +13,11 @@ module BillableMetrics
 
     def cache_key
       [
-        'expression',
+        "expression",
         CACHE_KEY_VERSION,
         organization_id,
         billable_metric_code
-      ].compact.join('/')
+      ].compact.join("/")
     end
 
     private

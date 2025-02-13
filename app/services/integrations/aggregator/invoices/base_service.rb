@@ -18,9 +18,9 @@ module Integrations
 
         def headers
           {
-            'Connection-Id' => integration.connection_id,
-            'Authorization' => "Bearer #{secret_key}",
-            'Provider-Config-Key' => provider_key
+            "Connection-Id" => integration.connection_id,
+            "Authorization" => "Bearer #{secret_key}",
+            "Provider-Config-Key" => provider_key
           }
         end
 

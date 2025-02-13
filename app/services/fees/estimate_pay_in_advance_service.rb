@@ -15,7 +15,7 @@ module Fees
       return validation_result unless validation_result.success?
 
       if charges.none?
-        return result.single_validation_failure!(field: :code, error_code: 'does_not_match_an_instant_charge')
+        return result.single_validation_failure!(field: :code, error_code: "does_not_match_an_instant_charge")
       end
 
       fees = []
@@ -78,7 +78,7 @@ module Fees
       @subscriptions = subscriptions
         .where("date_trunc('second', started_at::timestamp) <= ?", timestamp)
         .where("terminated_at IS NULL OR date_trunc('second', terminated_at::timestamp) >= ?", timestamp)
-        .order('terminated_at DESC NULLS FIRST, started_at DESC')
+        .order("terminated_at DESC NULLS FIRST, started_at DESC")
     end
 
     def charges

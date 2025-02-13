@@ -36,7 +36,7 @@ module Integrations
             integration:,
             external_id: result.external_id,
             syncable_id: invoice.id,
-            syncable_type: 'Invoice',
+            syncable_type: "Invoice",
             resource_type: :invoice
           )
 
@@ -60,7 +60,7 @@ module Integrations
         end
 
         def call_async
-          return result.not_found_failure!(resource: 'invoice') unless invoice
+          return result.not_found_failure!(resource: "invoice") unless invoice
 
           ::Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:)
 
@@ -71,13 +71,13 @@ module Integrations
         private
 
         def process_hash_result(body)
-          external_id = body['succeededInvoices']&.first.try(:[], 'id')
+          external_id = body["succeededInvoices"]&.first.try(:[], "id")
 
           if external_id
             result.external_id = external_id
           else
-            message = body['failedInvoices'].first['validation_errors'].map { |error| error['Message'] }.join(". ")
-            code = 'Validation error'
+            message = body["failedInvoices"].first["validation_errors"].map { |error| error["Message"] }.join(". ")
+            code = "Validation error"
 
             deliver_error_webhook(customer:, code:, message:)
           end

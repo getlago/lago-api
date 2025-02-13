@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
+describe "Multiple Subscription Upgrade Scenario", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
 
   let(:customer) { create(:customer, organization:) }
@@ -12,7 +12,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
     create(
       :plan,
       organization:,
-      interval: 'monthly',
+      interval: "monthly",
       amount_cents: 1_000,
       pay_in_advance: true
     )
@@ -22,7 +22,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
     create(
       :plan,
       organization:,
-      interval: 'monthly',
+      interval: "monthly",
       amount_cents: 1_500,
       pay_in_advance: true
     )
@@ -32,18 +32,18 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
     create(
       :plan,
       organization:,
-      interval: 'monthly',
+      interval: "monthly",
       amount_cents: 1_900,
       pay_in_advance: true
     )
   end
 
-  let(:subscription_at) { Time.zone.parse('2024-03-05T12:12:00') }
+  let(:subscription_at) { Time.zone.parse("2024-03-05T12:12:00") }
 
   before { tax }
 
-  context 'with calendar billing' do
-    it 'upgrades and bill subscriptions' do
+  context "with calendar billing" do
+    it "upgrades and bill subscriptions" do
       subscription = nil
 
       travel_to(subscription_at) do
@@ -52,7 +52,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan1.code,
-            billing_time: 'calendar'
+            billing_time: "calendar"
           }
         )
 
@@ -66,13 +66,13 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
         expect(invoice.fees_amount_cents).to eq(871) # 1000 / 31 * (31 - 4)
       end
 
-      travel_to(Time.zone.parse('2024-03-12T12:12:00')) do
+      travel_to(Time.zone.parse("2024-03-12T12:12:00")) do
         create_subscription(
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan2.code,
-            billing_time: 'calendar'
+            billing_time: "calendar"
           }
         )
 
@@ -91,13 +91,13 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
         expect(credit_note.credit_amount_cents).to eq(806) # 1000 / 31 * 20 * 1.25
       end
 
-      travel_to(Time.zone.parse('2024-03-12T13:12:00')) do
+      travel_to(Time.zone.parse("2024-03-12T13:12:00")) do
         create_subscription(
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan3.code,
-            billing_time: 'calendar'
+            billing_time: "calendar"
           }
         )
 
@@ -119,8 +119,8 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
     end
   end
 
-  context 'with anniversary billing' do
-    it 'upgrades and bill subscriptions' do
+  context "with anniversary billing" do
+    it "upgrades and bill subscriptions" do
       subscription = nil
 
       travel_to(subscription_at) do
@@ -129,7 +129,7 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan1.code,
-            billing_time: 'anniversary'
+            billing_time: "anniversary"
           }
         )
 
@@ -143,13 +143,13 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
         expect(invoice.fees_amount_cents).to eq(1000)
       end
 
-      travel_to(Time.zone.parse('2024-03-12T12:12:00')) do
+      travel_to(Time.zone.parse("2024-03-12T12:12:00")) do
         create_subscription(
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan2.code,
-            billing_time: 'anniversary'
+            billing_time: "anniversary"
           }
         )
 
@@ -168,13 +168,13 @@ describe 'Multiple Subscription Upgrade Scenario', :scenarios, type: :request do
         expect(credit_note.credit_amount_cents).to eq(968) # 1000 / 31 * 24 * 1.25
       end
 
-      travel_to(Time.zone.parse('2024-03-12T13:12:00')) do
+      travel_to(Time.zone.parse("2024-03-12T13:12:00")) do
         create_subscription(
           {
             external_customer_id: customer.external_id,
             external_id: customer.external_id,
             plan_code: plan3.code,
-            billing_time: 'anniversary'
+            billing_time: "anniversary"
           }
         )
 

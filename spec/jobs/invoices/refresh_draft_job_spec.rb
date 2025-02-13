@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::RefreshDraftJob, type: :job do
   let(:invoice) { create(:invoice, ready_to_be_refreshed: true) }
@@ -10,7 +10,7 @@ RSpec.describe Invoices::RefreshDraftJob, type: :job do
     instance_double(Invoices::RefreshDraftService)
   end
 
-  it 'delegates to the RefreshDraft service' do
+  it "delegates to the RefreshDraft service" do
     allow(Invoices::RefreshDraftService).to receive(:new).with(invoice:).and_return(refresh_service)
     allow(refresh_service).to receive(:call).and_return(result)
 
@@ -20,7 +20,7 @@ RSpec.describe Invoices::RefreshDraftJob, type: :job do
     expect(refresh_service).to have_received(:call)
   end
 
-  it 'does not delegate to the RefreshDraft service if the ready_to_be_refreshed? is false' do
+  it "does not delegate to the RefreshDraft service if the ready_to_be_refreshed? is false" do
     allow(Invoices::RefreshDraftService).to receive(:new).with(invoice:).and_return(refresh_service)
     allow(refresh_service).to receive(:call)
 
@@ -31,28 +31,28 @@ RSpec.describe Invoices::RefreshDraftJob, type: :job do
     expect(refresh_service).not_to have_received(:call)
   end
 
-  it 'has a lock_ttl of 12.hours' do
+  it "has a lock_ttl of 12.hours" do
     # When there's lots of draft invoices to be refreshed, we might end up enqueueing multiple of them.
     # This will block all queues with lower prio than the `invoices` queue. (e.g. wallets). This is undesirable,
     # so we bump the lock_ttl for this job to 6 hours
     expect(described_class.new.lock_options[:lock_ttl]).to eq(12.hours)
   end
 
-  context 'when there was a tax fetching error in RefreshDraft service' do
+  context "when there was a tax fetching error in RefreshDraft service" do
     let(:integration_customer) { create(:anrok_customer, customer: invoice.customer) }
     let(:response) { instance_double(Net::HTTPOK) }
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+    let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
     let(:integration_collection_mapping) do
       create(
         :netsuite_collection_mapping,
         integration: integration_customer.integration,
         mapping_type: :fallback_item,
-        settings: {external_id: '1', external_account_code: '11', external_name: ''}
+        settings: {external_id: "1", external_account_code: "11", external_name: ""}
       )
     end
     let(:body) do
-      p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+      p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
       File.read(p)
     end
 
@@ -64,7 +64,7 @@ RSpec.describe Invoices::RefreshDraftJob, type: :job do
       allow(response).to receive(:body).and_return(body)
     end
 
-    it 'does not throw an error when it is a tax error' do
+    it "does not throw an error when it is a tax error" do
       expect { described_class.perform_now(invoice) }.not_to raise_error
     end
   end

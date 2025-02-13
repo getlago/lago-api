@@ -14,7 +14,7 @@ module LifetimeUsages
       usage_thresholds = result.passed_thresholds
       if usage_thresholds.any?
         usage_thresholds.each do |usage_threshold|
-          SendWebhookJob.perform_later('subscription.usage_threshold_reached', subscription, usage_threshold:)
+          SendWebhookJob.perform_later("subscription.usage_threshold_reached", subscription, usage_threshold:)
         end
         invoice_result = Invoices::ProgressiveBillingService.call(usage_thresholds:, lifetime_usage:)
         # If there is tax error, invoice is marked as failed and it can be retried manually

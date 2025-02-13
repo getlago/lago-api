@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Coupons::PreviewService do
   subject(:preview_service) { described_class.new(invoice:, applied_coupons:) }
@@ -10,7 +10,7 @@ RSpec.describe Coupons::PreviewService do
       :invoice,
       fees_amount_cents: 100,
       sub_total_excluding_taxes_amount_cents: 100,
-      currency: 'EUR',
+      currency: "EUR",
       customer: subscription.customer
     )
   end
@@ -29,7 +29,7 @@ RSpec.describe Coupons::PreviewService do
   let(:started_at) { Time.zone.now - 2.years }
   let(:created_at) { started_at }
 
-  describe '#call' do
+  describe "#call" do
     let(:timestamp) { Time.zone.now.beginning_of_month }
     let(:fee) { build(:fee, amount_cents: 100, invoice:, subscription:) }
     let(:applied_coupon) do
@@ -40,7 +40,7 @@ RSpec.describe Coupons::PreviewService do
         amount_currency: plan.amount_currency
       )
     end
-    let(:coupon_latest) { build(:coupon, coupon_type: 'percentage', percentage_rate: 10.00) }
+    let(:coupon_latest) { build(:coupon, coupon_type: "percentage", percentage_rate: 10.00) }
     let(:applied_coupon_latest) do
       build(
         :applied_coupon,
@@ -56,7 +56,7 @@ RSpec.describe Coupons::PreviewService do
       ]
     end
 
-    let(:plan) { create(:plan, interval: 'monthly') }
+    let(:plan) { create(:plan, interval: "monthly") }
 
     before do
       invoice.subscriptions = [subscription]
@@ -65,7 +65,7 @@ RSpec.describe Coupons::PreviewService do
       applied_coupon_latest
     end
 
-    it 'updates the invoice accordingly' do
+    it "updates the invoice accordingly" do
       result = preview_service.call
 
       expect(result).to be_success
@@ -74,20 +74,20 @@ RSpec.describe Coupons::PreviewService do
       expect(result.invoice.credits.length).to eq(2)
     end
 
-    context 'when first coupon covers the invoice' do
+    context "when first coupon covers the invoice" do
       let(:invoice) do
         build(
           :invoice,
           fees_amount_cents: 5,
           sub_total_excluding_taxes_amount_cents: 5,
-          currency: 'EUR',
+          currency: "EUR",
           customer: subscription.customer
         )
       end
 
       before { fee.amount_cents = 5 }
 
-      it 'updates the invoice accordingly and spends only the first coupon' do
+      it "updates the invoice accordingly and spends only the first coupon" do
         result = preview_service.call
 
         expect(result).to be_success
@@ -97,8 +97,8 @@ RSpec.describe Coupons::PreviewService do
       end
     end
 
-    context 'when both coupons are fixed amount' do
-      let(:coupon_latest) { build(:coupon, coupon_type: 'fixed_amount') }
+    context "when both coupons are fixed amount" do
+      let(:coupon_latest) { build(:coupon, coupon_type: "fixed_amount") }
       let(:applied_coupon_latest) do
         create(
           :applied_coupon,
@@ -109,7 +109,7 @@ RSpec.describe Coupons::PreviewService do
         )
       end
 
-      it 'updates the invoice accordingly' do
+      it "updates the invoice accordingly" do
         result = preview_service.call
 
         expect(result).to be_success
@@ -119,8 +119,8 @@ RSpec.describe Coupons::PreviewService do
       end
     end
 
-    context 'when both coupons are percentage' do
-      let(:coupon) { build(:coupon, coupon_type: 'percentage', percentage_rate: 10.00) }
+    context "when both coupons are percentage" do
+      let(:coupon) { build(:coupon, coupon_type: "percentage", percentage_rate: 10.00) }
       let(:applied_coupon) do
         build(
           :applied_coupon,
@@ -130,7 +130,7 @@ RSpec.describe Coupons::PreviewService do
         )
       end
 
-      it 'updates the invoice accordingly' do
+      it "updates the invoice accordingly" do
         result = preview_service.call
 
         expect(result).to be_success
@@ -140,18 +140,18 @@ RSpec.describe Coupons::PreviewService do
       end
     end
 
-    context 'when coupon has a difference currency' do
+    context "when coupon has a difference currency" do
       let(:applied_coupons) { [applied_coupon] }
       let(:applied_coupon) do
         build(
           :applied_coupon,
           customer: subscription.customer,
           amount_cents: 10,
-          amount_currency: 'NOK'
+          amount_currency: "NOK"
         )
       end
 
-      it 'ignores the coupon' do
+      it "ignores the coupon" do
         result = preview_service.call
 
         expect(result).to be_success
@@ -159,8 +159,8 @@ RSpec.describe Coupons::PreviewService do
       end
     end
 
-    context 'when both coupons have plan limitations which are not applicable' do
-      let(:coupon) { build(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+    context "when both coupons have plan limitations which are not applicable" do
+      let(:coupon) { build(:coupon, coupon_type: "fixed_amount", limited_plans: true) }
       let(:coupon_plan) { build(:coupon_plan, coupon:, plan: create(:plan)) }
       let(:applied_coupon) do
         build(
@@ -171,7 +171,7 @@ RSpec.describe Coupons::PreviewService do
           amount_currency: plan.amount_currency
         )
       end
-      let(:coupon_latest) { build(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+      let(:coupon_latest) { build(:coupon, coupon_type: "fixed_amount", limited_plans: true) }
       let(:coupon_plan_latest) { build(:coupon_plan, coupon: coupon_latest, plan: create(:plan)) }
       let(:applied_coupon_latest) do
         build(
@@ -188,7 +188,7 @@ RSpec.describe Coupons::PreviewService do
         coupon_plan_latest
       end
 
-      it 'ignores coupons' do
+      it "ignores coupons" do
         result = preview_service.call
 
         expect(result).to be_success
@@ -198,8 +198,8 @@ RSpec.describe Coupons::PreviewService do
       end
     end
 
-    context 'when only one coupon is applicable due to plan limitations' do
-      let(:coupon) { build(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+    context "when only one coupon is applicable due to plan limitations" do
+      let(:coupon) { build(:coupon, coupon_type: "fixed_amount", limited_plans: true) }
       let(:coupon_plan) { build(:coupon_plan, coupon:, plan: create(:plan)) }
       let(:applied_coupon) do
         build(
@@ -210,7 +210,7 @@ RSpec.describe Coupons::PreviewService do
           amount_currency: plan.amount_currency
         )
       end
-      let(:coupon_latest) { build(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+      let(:coupon_latest) { build(:coupon, coupon_type: "fixed_amount", limited_plans: true) }
       let(:coupon_plan_latest) { build(:coupon_plan, coupon: coupon_latest, plan:) }
       let(:applied_coupon_latest) do
         build(
@@ -229,7 +229,7 @@ RSpec.describe Coupons::PreviewService do
         coupon_latest.plans = [plan]
       end
 
-      it 'ignores only one coupon and applies the other one' do
+      it "ignores only one coupon and applies the other one" do
         result = preview_service.call
 
         expect(result).to be_success
@@ -239,8 +239,8 @@ RSpec.describe Coupons::PreviewService do
       end
     end
 
-    context 'when both coupons are applicable due to plan limitations' do
-      let(:coupon) { build(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+    context "when both coupons are applicable due to plan limitations" do
+      let(:coupon) { build(:coupon, coupon_type: "fixed_amount", limited_plans: true) }
       let(:coupon_plan) { build(:coupon_plan, coupon:, plan:) }
       let(:applied_coupon) do
         build(
@@ -251,7 +251,7 @@ RSpec.describe Coupons::PreviewService do
           amount_currency: plan.amount_currency
         )
       end
-      let(:coupon_latest) { build(:coupon, coupon_type: 'fixed_amount', limited_plans: true) }
+      let(:coupon_latest) { build(:coupon, coupon_type: "fixed_amount", limited_plans: true) }
       let(:coupon_plan_latest) { build(:coupon_plan, coupon: coupon_latest, plan:) }
       let(:applied_coupon_latest) do
         build(
@@ -270,7 +270,7 @@ RSpec.describe Coupons::PreviewService do
         coupon_latest.plans = [plan]
       end
 
-      it 'applies two coupons' do
+      it "applies two coupons" do
         result = preview_service.call
 
         expect(result).to be_success

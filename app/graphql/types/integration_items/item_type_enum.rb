@@ -3,7 +3,7 @@
 module Types
   module IntegrationItems
     class ItemTypeEnum < Types::BaseEnum
-      graphql_name 'IntegrationItemTypeEnum'
+      graphql_name "IntegrationItemTypeEnum"
 
       IntegrationItem::ITEM_TYPES.each do |type|
         value type

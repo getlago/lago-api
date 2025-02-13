@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe DunningCampaigns::BulkProcessJob, type: :job do
   let(:result) { BaseService::Result.new }

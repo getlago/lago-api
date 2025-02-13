@@ -8,7 +8,7 @@ module Plans
     end
 
     def call
-      return result.not_found_failure!(resource: 'plan') unless plan
+      return result.not_found_failure!(resource: "plan") unless plan
 
       # NOTE: Terminate active subscriptions.
       plan.subscriptions.active.find_each do |subscription|

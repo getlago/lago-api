@@ -20,7 +20,7 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
       {
         invoice_id: invoice.id,
         amount_cents: 100,
-        reference: 'ref1'
+        reference: "ref1"
       }
     end
 
@@ -32,7 +32,7 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
       )
     end
 
-    include_examples 'requires API permission', 'payment', 'write'
+    include_examples "requires API permission", "payment", "write"
 
     it "delegates to ManualPayments::CreateService", :aggregate_failures do
       subject
@@ -50,7 +50,7 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
 
     let(:params) { {} }
 
-    include_examples 'requires API permission', 'payment', 'read'
+    include_examples "requires API permission", "payment", "read"
 
     it "returns organization's payments", :aggregate_failures do
       invoice = create(:invoice, organization:)
@@ -105,19 +105,19 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
     end
   end
 
-  describe 'GET /api/v1/payments/:id' do
+  describe "GET /api/v1/payments/:id" do
     subject { get_with_token(organization, "/api/v1/payments/#{id}") }
 
     let(:customer) { create(:customer, organization:) }
     let(:invoice) { create(:invoice, customer:, organization:) }
     let(:payment) { create(:payment, payable: invoice) }
 
-    context 'when payment exists' do
+    context "when payment exists" do
       let(:id) { payment.id }
 
-      include_examples 'requires API permission', 'payment', 'read'
+      include_examples "requires API permission", "payment", "read"
 
-      it 'returns the payment' do
+      it "returns the payment" do
         subject
         expect(response).to have_http_status(:ok)
         expect(json[:payment][:lago_id]).to eq(payment.id)
@@ -125,7 +125,7 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
       end
     end
 
-    context 'when payment for a payment request exits' do
+    context "when payment for a payment request exits" do
       let(:payment_request) { create(:payment_request, customer:, organization:) }
       let(:payment) { create(:payment, payable: payment_request) }
       let(:id) { payment.id }
@@ -134,9 +134,9 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
         create(:payment_request_applied_invoice, invoice:, payment_request:)
       end
 
-      include_examples 'requires API permission', 'payment', 'read'
+      include_examples "requires API permission", "payment", "read"
 
-      it 'returns the payment' do
+      it "returns the payment" do
         subject
         expect(response).to have_http_status(:ok)
         expect(json[:payment][:lago_id]).to eq(payment.id)
@@ -144,10 +144,10 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
       end
     end
 
-    context 'when payment does not exist' do
+    context "when payment does not exist" do
       let(:id) { SecureRandom.uuid }
 
-      it 'returns a not found error' do
+      it "returns a not found error" do
         subject
         expect(response).to have_http_status(:not_found)
       end

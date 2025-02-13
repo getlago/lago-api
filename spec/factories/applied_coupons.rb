@@ -6,8 +6,8 @@ FactoryBot.define do
     coupon
 
     amount_cents { 200 }
-    amount_currency { 'EUR' }
-    status { 'active' }
-    frequency { 'once' }
+    amount_currency { "EUR" }
+    status { "active" }
+    frequency { "once" }
   end
 end

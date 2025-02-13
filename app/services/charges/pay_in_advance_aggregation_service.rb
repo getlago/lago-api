@@ -36,8 +36,8 @@ module Charges
 
     def aggregation_options
       {
-        free_units_per_events: properties['free_units_per_events'].to_i,
-        free_units_per_total_aggregation: BigDecimal(properties['free_units_per_total_aggregation'] || 0)
+        free_units_per_events: properties["free_units_per_events"].to_i,
+        free_units_per_total_aggregation: BigDecimal(properties["free_units_per_total_aggregation"] || 0)
       }
     end
 
@@ -45,8 +45,8 @@ module Charges
       filters = {event:}
 
       properties = charge_filter&.properties || charge.properties
-      if charge.supports_grouped_by? && properties['grouped_by'].present?
-        filters[:grouped_by_values] = properties['grouped_by'].index_with do |grouped_by|
+      if charge.supports_grouped_by? && properties["grouped_by"].present?
+        filters[:grouped_by_values] = properties["grouped_by"].index_with do |grouped_by|
           event.properties[grouped_by]
         end
       end

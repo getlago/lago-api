@@ -20,7 +20,7 @@ module Api
           render(
             json: ::V1::AppliedCouponSerializer.new(
               result.applied_coupon,
-              root_name: 'applied_coupon'
+              root_name: "applied_coupon"
             )
           )
         else
@@ -43,7 +43,7 @@ module Api
             json: ::CollectionSerializer.new(
               result.applied_coupons.includes(:credits),
               ::V1::AppliedCouponSerializer,
-              collection_name: 'applied_coupons',
+              collection_name: "applied_coupons",
               meta: pagination_metadata(result.applied_coupons),
               includes: %i[credits]
             )
@@ -72,7 +72,7 @@ module Api
       end
 
       def resource_name
-        'applied_coupon'
+        "applied_coupon"
       end
     end
   end

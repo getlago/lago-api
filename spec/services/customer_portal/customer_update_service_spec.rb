@@ -105,10 +105,10 @@ RSpec.describe CustomerPortal::CustomerUpdateService, type: :service do
       expect(tax.code).to eq(tax_code)
     end
 
-    context 'when eu tax code is not applicable' do
-      let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new.not_allowed_failure!(code: '') }
+    context "when eu tax code is not applicable" do
+      let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new.not_allowed_failure!(code: "") }
 
-      it 'does not apply tax' do
+      it "does not apply tax" do
         expect(result).to be_success
 
         expect(result.customer.taxes).to eq([])

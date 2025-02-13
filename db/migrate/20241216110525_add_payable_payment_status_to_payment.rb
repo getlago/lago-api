@@ -15,7 +15,7 @@ class AddPayablePaymentStatusToPayment < ActiveRecord::Migration[7.1]
     add_column :payments,
       :payable_payment_status,
       :enum,
-      enum_type: 'payment_payable_payment_status',
+      enum_type: "payment_payable_payment_status",
       null: true
 
     add_index :payments,

@@ -7,26 +7,26 @@ module Integrations
         class Hubspot < BasePayload
           def create_body
             unless invoice.file_url
-              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invoice.file_url missing')
+              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: "invoice.file_url missing")
             end
 
             {
-              'objectType' => 'LagoInvoices',
-              'input' => {
-                'associations' => [],
-                'properties' => {
-                  'lago_invoice_id' => invoice.id,
-                  'lago_invoice_number' => invoice.number,
-                  'lago_invoice_issuing_date' => formatted_date(invoice.issuing_date),
-                  'lago_invoice_payment_due_date' => formatted_date(invoice.payment_due_date),
-                  'lago_invoice_payment_overdue' => invoice.payment_overdue,
-                  'lago_invoice_type' => invoice.invoice_type,
-                  'lago_invoice_status' => invoice.status,
-                  'lago_invoice_payment_status' => invoice.payment_status,
-                  'lago_invoice_currency' => invoice.currency,
-                  'lago_invoice_total_amount' => total_amount,
-                  'lago_invoice_subtotal_excluding_taxes' => subtotal_excluding_taxes,
-                  'lago_invoice_file_url' => invoice.file_url
+              "objectType" => "LagoInvoices",
+              "input" => {
+                "associations" => [],
+                "properties" => {
+                  "lago_invoice_id" => invoice.id,
+                  "lago_invoice_number" => invoice.number,
+                  "lago_invoice_issuing_date" => formatted_date(invoice.issuing_date),
+                  "lago_invoice_payment_due_date" => formatted_date(invoice.payment_due_date),
+                  "lago_invoice_payment_overdue" => invoice.payment_overdue,
+                  "lago_invoice_type" => invoice.invoice_type,
+                  "lago_invoice_status" => invoice.status,
+                  "lago_invoice_payment_status" => invoice.payment_status,
+                  "lago_invoice_currency" => invoice.currency,
+                  "lago_invoice_total_amount" => total_amount,
+                  "lago_invoice_subtotal_excluding_taxes" => subtotal_excluding_taxes,
+                  "lago_invoice_file_url" => invoice.file_url
                 }
               }
             }
@@ -34,26 +34,26 @@ module Integrations
 
           def update_body
             unless invoice.file_url
-              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: 'invoice.file_url missing')
+              raise Integrations::Aggregator::BasePayload::Failure.new(nil, code: "invoice.file_url missing")
             end
 
             {
-              'objectId' => integration_invoice.external_id,
-              'objectType' => 'LagoInvoices',
-              'input' => {
-                'properties' => {
-                  'lago_invoice_id' => invoice.id,
-                  'lago_invoice_number' => invoice.number,
-                  'lago_invoice_issuing_date' => formatted_date(invoice.issuing_date),
-                  'lago_invoice_payment_due_date' => formatted_date(invoice.payment_due_date),
-                  'lago_invoice_payment_overdue' => invoice.payment_overdue,
-                  'lago_invoice_type' => invoice.invoice_type,
-                  'lago_invoice_status' => invoice.status,
-                  'lago_invoice_payment_status' => invoice.payment_status,
-                  'lago_invoice_currency' => invoice.currency,
-                  'lago_invoice_total_amount' => total_amount,
-                  'lago_invoice_subtotal_excluding_taxes' => subtotal_excluding_taxes,
-                  'lago_invoice_file_url' => invoice.file_url
+              "objectId" => integration_invoice.external_id,
+              "objectType" => "LagoInvoices",
+              "input" => {
+                "properties" => {
+                  "lago_invoice_id" => invoice.id,
+                  "lago_invoice_number" => invoice.number,
+                  "lago_invoice_issuing_date" => formatted_date(invoice.issuing_date),
+                  "lago_invoice_payment_due_date" => formatted_date(invoice.payment_due_date),
+                  "lago_invoice_payment_overdue" => invoice.payment_overdue,
+                  "lago_invoice_type" => invoice.invoice_type,
+                  "lago_invoice_status" => invoice.status,
+                  "lago_invoice_payment_status" => invoice.payment_status,
+                  "lago_invoice_currency" => invoice.currency,
+                  "lago_invoice_total_amount" => total_amount,
+                  "lago_invoice_subtotal_excluding_taxes" => subtotal_excluding_taxes,
+                  "lago_invoice_file_url" => invoice.file_url
                 }
               }
             }
@@ -61,11 +61,11 @@ module Integrations
 
           def customer_association_body
             {
-              'objectType' => integration.reload.invoices_object_type_id,
-              'objectId' => integration_invoice.external_id,
-              'toObjectType' => integration_customer.object_type,
-              'toObjectId' => integration_customer.external_customer_id,
-              'input' => []
+              "objectType" => integration.reload.invoices_object_type_id,
+              "objectId" => integration_invoice.external_id,
+              "toObjectType" => integration_customer.object_type,
+              "toObjectId" => integration_customer.external_customer_id,
+              "input" => []
             }
           end
 

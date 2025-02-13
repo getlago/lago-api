@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
   subject(:custom_service) do
@@ -82,12 +82,12 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
   let(:charge) { create(:standard_charge, billable_metric:, properties: charge_properties) }
   let(:charge_properties) do
     {
-      amount: '10',
+      amount: "10",
       custom_properties: {
         ranges: [
-          {from: 0, to: 10, storage_eu: '0', storage_us: '0', storage_asia: '0'},
-          {from: 10, to: 20, storage_eu: '0.10', storage_us: '0.20', storage_asia: '0.30'},
-          {from: 20, to: nil, storage_eu: '0.20', storage_us: '0.30', storage_asia: '0.40'}
+          {from: 0, to: 10, storage_eu: "0", storage_us: "0", storage_asia: "0"},
+          {from: 10, to: 20, storage_eu: "0.10", storage_us: "0.20", storage_asia: "0.30"},
+          {from: 20, to: nil, storage_eu: "0.20", storage_us: "0.30", storage_asia: "0.40"}
         ]
       }
     }
@@ -105,7 +105,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         subscription:,
         customer:,
         timestamp: Time.zone.now - 4.days,
-        properties: {value: 1, storage_zone: 'storage_eu'}
+        properties: {value: 1, storage_zone: "storage_eu"}
       ),
       create(
         :event,
@@ -114,7 +114,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         subscription:,
         customer:,
         timestamp: Time.zone.now - 3.days,
-        properties: {value: 10, storage_zone: 'storage_asia'}
+        properties: {value: 10, storage_zone: "storage_asia"}
       ),
       create(
         :event,
@@ -123,7 +123,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         subscription:,
         customer:,
         timestamp: Time.zone.now - 2.days,
-        properties: {value: 35, storage_zone: 'storage_us'}
+        properties: {value: 35, storage_zone: "storage_us"}
       )
     ]
   end
@@ -132,7 +132,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
     event_list
   end
 
-  it 'aggregates the events' do
+  it "aggregates the events" do
     result = custom_service.aggregate
 
     expect(result.aggregation).to eq(46)
@@ -141,10 +141,10 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
     expect(result.custom_aggregation).to eq({total_units: 46, amount: 8.1})
   end
 
-  context 'when there are no events' do
+  context "when there are no events" do
     let(:event_list) { [] }
 
-    it 'returns an empty state' do
+    it "returns an empty state" do
       result = custom_service.aggregate
 
       expect(result.aggregation).to eq(0)
@@ -154,10 +154,10 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
     end
   end
 
-  context 'when bypass_aggregation is set to true' do
+  context "when bypass_aggregation is set to true" do
     let(:bypass_aggregation) { true }
 
-    it 'returns a default empty result' do
+    it "returns a default empty result" do
       result = custom_service.aggregate
 
       expect(result.aggregation).to eq(0)
@@ -167,7 +167,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
     end
   end
 
-  context 'when the charge is payed in advance' do
+  context "when the charge is payed in advance" do
     let(:charge) { create(:standard_charge, billable_metric:, properties: charge_properties, pay_in_advance: true) }
 
     let(:event_list) do
@@ -179,13 +179,13 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           subscription:,
           customer:,
           timestamp: Time.zone.now - 4.days,
-          properties: {value: 11, storage_zone: 'storage_eu'}
+          properties: {value: 11, storage_zone: "storage_eu"}
         )
       ]
     end
     let(:event) { event_list.first }
 
-    it 'aggregates the events', :aggregate_failures do
+    it "aggregates the events", :aggregate_failures do
       result = custom_service.aggregate
 
       expect(result.aggregation).to eq(11)
@@ -200,7 +200,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
       expect(result.current_amount).to eq(0.1)
     end
 
-    context 'with a cached aggregation' do
+    context "with a cached aggregation" do
       before do
         create(
           :cached_aggregation,
@@ -214,7 +214,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         )
       end
 
-      it 'aggregates the events with the cached aggregation', :aggregate_failures do
+      it "aggregates the events with the cached aggregation", :aggregate_failures do
         result = custom_service.aggregate
 
         expect(result.aggregation).to eq(11)
@@ -231,8 +231,8 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
     end
   end
 
-  context 'when the charge is a standard with grouped by properties' do
-    let(:grouped_by) { ['agent_name'] }
+  context "when the charge is a standard with grouped by properties" do
+    let(:grouped_by) { ["agent_name"] }
     let(:agent_names) { %w[aragorn frodo gimli legolas] }
 
     let(:event_list) do
@@ -247,7 +247,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           properties: {
             agent_name:,
             value: 11,
-            storage_zone: 'storage_eu'
+            storage_zone: "storage_eu"
           }
         )
       end + [
@@ -258,17 +258,17 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
           customer:,
           subscription:,
           timestamp: Time.zone.now - 2.days,
-          properties: {value: 11, storage_zone: 'storage_eu'}
+          properties: {value: 11, storage_zone: "storage_eu"}
         )
       ]
     end
 
-    it 'aggregates the events in groups', :aggregate_failures do
+    it "aggregates the events in groups", :aggregate_failures do
       result = custom_service.aggregate
 
       expect(result.aggregations.count).to eq(5)
 
-      result.aggregations.sort_by { |a| a.grouped_by['agent_name'] || '' }.each_with_index do |aggregation, _index|
+      result.aggregations.sort_by { |a| a.grouped_by["agent_name"] || "" }.each_with_index do |aggregation, _index|
         expect(aggregation.aggregation).to eq(11)
         expect(aggregation.count).to eq(1)
         expect(aggregation.current_usage_units).to eq(11)
@@ -276,10 +276,10 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
       end
     end
 
-    context 'when bypass_aggregation is set to true' do
+    context "when bypass_aggregation is set to true" do
       let(:bypass_aggregation) { true }
 
-      it 'returns an empty result' do
+      it "returns an empty result" do
         result = custom_service.aggregate
 
         expect(result.aggregations.count).to eq(1)
@@ -287,17 +287,17 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         aggregation = result.aggregations.first
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
-        expect(aggregation.grouped_by).to eq({'agent_name' => nil})
+        expect(aggregation.grouped_by).to eq({"agent_name" => nil})
       end
     end
   end
 
-  context 'when the billable metric is recurring' do
+  context "when the billable metric is recurring" do
     let(:billable_metric) do
       create(:custom_billable_metric, :recurring, organization:, custom_aggregator:)
     end
 
-    it 'aggregates the events' do
+    it "aggregates the events" do
       result = custom_service.aggregate
 
       expect(result.aggregation).to eq(46)
@@ -306,7 +306,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
       expect(result.custom_aggregation).to eq({total_units: 46, amount: 8.1})
     end
 
-    context 'with a cached aggregation from a previous period' do
+    context "with a cached aggregation from a previous period" do
       before do
         create(
           :cached_aggregation,
@@ -320,7 +320,7 @@ RSpec.describe BillableMetrics::Aggregations::CustomService, type: :service do
         )
       end
 
-      it 'aggregates the events with the cached aggregation', :aggregate_failures do
+      it "aggregates the events with the cached aggregation", :aggregate_failures do
         result = custom_service.aggregate
 
         expect(result.aggregation).to eq(57)

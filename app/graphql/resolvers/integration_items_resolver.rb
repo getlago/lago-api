@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'organization:integrations:view'
+    REQUIRED_PERMISSION = "organization:integrations:view"
 
-    description 'Query integration items of an integration'
+    description "Query integration items of an integration"
 
     argument :integration_id, ID, required: true
     argument :item_type, Types::IntegrationItems::ItemTypeEnum, required: false
@@ -20,7 +20,7 @@ module Resolvers
     def resolve(integration_id:, page: nil, limit: nil, search_term: nil, item_type: nil)
       integration = current_organization.integrations.where(id: integration_id).first
 
-      return not_found_error(resource: 'integration') unless integration
+      return not_found_error(resource: "integration") unless integration
 
       result = ::IntegrationItemsQuery.call(
         organization: current_organization,

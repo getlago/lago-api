@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
   subject(:service_call) { described_class.call(invoice:) }
@@ -10,7 +10,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
-  let(:endpoint) { 'https://api.nango.dev/v1/anrok/void_invoices' }
+  let(:endpoint) { "https://api.nango.dev/v1/anrok/void_invoices" }
   let(:current_time) { Time.current }
 
   let(:integration_collection_mapping1) do
@@ -18,7 +18,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
       :netsuite_collection_mapping,
       integration:,
       mapping_type: :fallback_item,
-      settings: {external_id: '1', external_account_code: '11', external_name: ''}
+      settings: {external_id: "1", external_account_code: "11", external_name: ""}
     )
   end
 
@@ -32,16 +32,16 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
 
   let(:headers) do
     {
-      'Connection-Id' => integration.connection_id,
-      'Authorization' => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
-      'Provider-Config-Key' => 'anrok'
+      "Connection-Id" => integration.connection_id,
+      "Authorization" => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
+      "Provider-Config-Key" => "anrok"
     }
   end
 
   let(:params) do
     [
       {
-        'id' => invoice.id
+        "id" => invoice.id
       }
     ]
   end
@@ -53,8 +53,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
     integration_collection_mapping1
   end
 
-  describe '#call' do
-    context 'when service call is successful' do
+  describe "#call" do
+    context "when service call is successful" do
       let(:response) { instance_double(Net::HTTPOK) }
 
       before do
@@ -62,13 +62,13 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         allow(response).to receive(:body).and_return(body)
       end
 
-      context 'when void invoice sync is successful' do
+      context "when void invoice sync is successful" do
         let(:body) do
-          path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json')
+          path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json")
           File.read(path)
         end
 
-        it 'returns invoice_id' do
+        it "returns invoice_id" do
           result = service_call
 
           aggregate_failures do
@@ -78,41 +78,41 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         end
       end
 
-      context 'when void invoice sync is NOT successful' do
+      context "when void invoice sync is NOT successful" do
         let(:body) do
-          path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+          path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
           File.read(path)
         end
 
-        it 'returns errors' do
+        it "returns errors" do
           result = service_call
 
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq('taxDateTooFarInFuture')
+            expect(result.error.code).to eq("taxDateTooFarInFuture")
           end
         end
 
-        it 'delivers an error webhook' do
+        it "delivers an error webhook" do
           expect { service_call }.to enqueue_job(SendWebhookJob)
             .with(
-              'customer.tax_provider_error',
+              "customer.tax_provider_error",
               customer,
-              provider: 'anrok',
+              provider: "anrok",
               provider_code: integration.code,
               provider_error: {
-                message: 'Service failure',
-                error_code: 'taxDateTooFarInFuture'
+                message: "Service failure",
+                error_code: "taxDateTooFarInFuture"
               }
             )
         end
       end
     end
 
-    context 'when service call is not successful' do
+    context "when service call is not successful" do
       let(:body) do
-        path = Rails.root.join('spec/fixtures/integration_aggregator/error_response.json')
+        path = Rails.root.join("spec/fixtures/integration_aggregator/error_response.json")
         File.read(path)
       end
 
@@ -122,17 +122,17 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         allow(lago_client).to receive(:post_with_response).with(params, headers).and_raise(http_error)
       end
 
-      context 'when it is a server error' do
+      context "when it is a server error" do
         let(:error_code) { Faker::Number.between(from: 500, to: 599) }
 
-        it 'returns an error' do
+        it "returns an error" do
           result = service_call
 
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.fees).to be(nil)
             expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq('action_script_runtime_error')
+            expect(result.error.code).to eq("action_script_runtime_error")
           end
         end
       end

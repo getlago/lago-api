@@ -13,7 +13,7 @@ module PaymentProviders
         organization_id: args[:organization].id,
         code: args[:code],
         id: args[:id],
-        payment_provider_type: 'gocardless'
+        payment_provider_type: "gocardless"
       )
 
       gocardless_provider = if payment_provider_result.success?
@@ -43,18 +43,18 @@ module PaymentProviders
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue OAuth2::Error => e
-      result.service_failure!(code: 'internal_error', message: e.description)
+      result.service_failure!(code: "internal_error", message: e.description)
     end
 
     private
 
     def oauth
       OAuth2::Client.new(
-        ENV['GOCARDLESS_CLIENT_ID'],
-        ENV['GOCARDLESS_CLIENT_SECRET'],
+        ENV["GOCARDLESS_CLIENT_ID"],
+        ENV["GOCARDLESS_CLIENT_SECRET"],
         site: PaymentProviders::GocardlessProvider.auth_site,
-        authorize_url: '/oauth/authorize',
-        token_url: '/oauth/access_token',
+        authorize_url: "/oauth/authorize",
+        token_url: "/oauth/access_token",
         auth_scheme: :request_body
       )
     end

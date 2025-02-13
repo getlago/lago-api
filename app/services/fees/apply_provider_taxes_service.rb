@@ -23,7 +23,7 @@ module Fees
 
         applied_tax = Fee::AppliedTax.new(
           tax_description: tax.type,
-          tax_code: tax.name.parameterize(separator: '_'),
+          tax_code: tax.name.parameterize(separator: "_"),
           tax_name: tax.name,
           tax_rate: tax_rate,
           amount_currency: fee.amount_currency

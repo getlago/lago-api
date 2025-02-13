@@ -37,7 +37,7 @@ module Api
 
       def show
         tax = current_organization.taxes.find_by(code: params[:code])
-        return not_found_error(resource: 'tax') unless tax
+        return not_found_error(resource: "tax") unless tax
 
         render_tax(tax)
       end
@@ -72,11 +72,11 @@ module Api
       end
 
       def render_tax(tax)
-        render(json: ::V1::TaxSerializer.new(tax, root_name: 'tax'))
+        render(json: ::V1::TaxSerializer.new(tax, root_name: "tax"))
       end
 
       def resource_name
-        'tax'
+        "tax"
       end
     end
   end

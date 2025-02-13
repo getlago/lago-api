@@ -20,11 +20,11 @@ module Webhooks
       end
 
       def webhook_type
-        'integration.provider_error'
+        "integration.provider_error"
       end
 
       def object_type
-        'provider_error'
+        "provider_error"
       end
     end
   end

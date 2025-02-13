@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe TaxesQuery, type: :query do
   subject(:result) do
@@ -15,15 +15,15 @@ RSpec.describe TaxesQuery, type: :query do
   let(:order) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:tax_first) { create(:tax, organization:, name: 'defgh', code: '11', rate: 10) }
-  let(:tax_second) { create(:tax, organization:, name: 'abcde', code: '22', rate: 5) }
+  let(:tax_first) { create(:tax, organization:, name: "defgh", code: "11", rate: 10) }
+  let(:tax_second) { create(:tax, organization:, name: "abcde", code: "22", rate: 5) }
 
   let(:tax_third) do
     create(
       :tax,
       organization:,
-      name: 'presuv',
-      code: '33',
+      name: "presuv",
+      code: "33",
       applied_to_organization: false,
       rate: 20
     )
@@ -33,8 +33,8 @@ RSpec.describe TaxesQuery, type: :query do
     create(
       :tax,
       organization:,
-      name: 'auto_generated',
-      code: 'auto_generated',
+      name: "auto_generated",
+      code: "auto_generated",
       rate: 0.0,
       auto_generated: true
     )
@@ -47,7 +47,7 @@ RSpec.describe TaxesQuery, type: :query do
     auto_generated_tax
   end
 
-  it 'returns all taxes ordered by name asc' do
+  it "returns all taxes ordered by name asc" do
     expect(result.taxes).to eq([tax_second, auto_generated_tax, tax_first, tax_third])
   end
 
@@ -58,7 +58,7 @@ RSpec.describe TaxesQuery, type: :query do
         organization:,
         id: "00000000-0000-0000-0000-000000000000",
         name: tax_first.name,
-        code: '22',
+        code: "22",
         created_at: tax_first.created_at
       )
     end
@@ -72,10 +72,10 @@ RSpec.describe TaxesQuery, type: :query do
     end
   end
 
-  context 'with pagination' do
+  context "with pagination" do
     let(:pagination) { {page: 2, limit: 3} }
 
-    it 'applies the pagination' do
+    it "applies the pagination" do
       expect(result).to be_success
       expect(result.taxes.count).to eq(1)
       expect(result.taxes.current_page).to eq(2)
@@ -86,34 +86,34 @@ RSpec.describe TaxesQuery, type: :query do
     end
   end
 
-  context 'when searching for /de/ term' do
-    let(:search_term) { 'de' }
+  context "when searching for /de/ term" do
+    let(:search_term) { "de" }
 
-    it 'returns only two taxs' do
+    it "returns only two taxs" do
       expect(result.taxes).to eq([tax_second, tax_first])
     end
   end
 
-  context 'with a filter on applied by default' do
+  context "with a filter on applied by default" do
     let(:filters) { {applied_to_organization: false} }
 
-    it 'returns only one tax' do
+    it "returns only one tax" do
       expect(result.taxes).to eq([tax_third])
     end
   end
 
-  context 'with a filter on auto generated' do
+  context "with a filter on auto generated" do
     let(:filters) { {auto_generated: true} }
 
-    it 'returns only one tax' do
+    it "returns only one tax" do
       expect(result.taxes).to eq([auto_generated_tax])
     end
   end
 
-  context 'with order on rate' do
-    let(:order) { 'rate' }
+  context "with order on rate" do
+    let(:order) { "rate" }
 
-    it 'returns the taxes ordered by rate' do
+    it "returns the taxes ordered by rate" do
       expect(result.taxes).to eq([auto_generated_tax, tax_second, tax_first, tax_third])
     end
   end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice, type: :service do
   subject(:credit_service) { described_class.new(progressive_billing_invoice:, amount:, reason:) }
@@ -17,7 +17,7 @@ RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice, type: :service 
       :invoice,
       customer:,
       organization:,
-      currency: 'EUR',
+      currency: "EUR",
       fees_amount_cents: 120,
       total_amount_cents: 120,
       invoice_type:
@@ -65,7 +65,7 @@ RSpec.describe CreditNotes::CreateFromProgressiveBillingInvoice, type: :service 
     context "with amount greater than zero" do
       let(:amount) { 100 }
 
-      context 'when called with a subscription invoice' do
+      context "when called with a subscription invoice" do
         let(:invoice_type) { :subscription }
 
         it "fails when the passed in invoice is not a progressive billing invoice" do

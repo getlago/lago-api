@@ -21,10 +21,10 @@ module PaymentProviders
 
       def deliver_error_webhook(action:, error:)
         SendWebhookJob.perform_later(
-          'payment_provider.error',
+          "payment_provider.error",
           payment_provider,
           provider_error: {
-            source: 'stripe',
+            source: "stripe",
             action: action,
             message: error.message,
             code: error.code

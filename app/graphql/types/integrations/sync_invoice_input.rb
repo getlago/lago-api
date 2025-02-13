@@ -3,7 +3,7 @@
 module Types
   module Integrations
     class SyncInvoiceInput < Types::BaseInputObject
-      graphql_name 'SyncIntegrationInvoiceInput'
+      graphql_name "SyncIntegrationInvoiceInput"
 
       argument :invoice_id, ID, required: true
     end

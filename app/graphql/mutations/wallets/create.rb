@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'wallets:create'
+      REQUIRED_PERMISSION = "wallets:create"
 
-      graphql_name 'CreateCustomerWallet'
-      description 'Creates a new Customer Wallet'
+      graphql_name "CreateCustomerWallet"
+      description "Creates a new Customer Wallet"
 
       input_object_class Types::Wallets::CreateInput
 

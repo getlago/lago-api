@@ -3,7 +3,7 @@
 module Types
   module Invoices
     class PaymentStatusTypeEnum < Types::BaseEnum
-      graphql_name 'InvoicePaymentStatusTypeEnum'
+      graphql_name "InvoicePaymentStatusTypeEnum"
 
       Invoice::PAYMENT_STATUS.each do |type|
         value type

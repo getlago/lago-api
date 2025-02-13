@@ -16,7 +16,7 @@ module Fees
         fees.each do |fee|
           add_on = add_on(identifier: fee[add_on_identifier])
 
-          result.not_found_failure!(resource: 'add_on').raise_if_error! unless add_on
+          result.not_found_failure!(resource: "add_on").raise_if_error! unless add_on
 
           unit_amount_cents = fee[:unit_amount_cents] || add_on.amount_cents
           units = fee[:units]&.to_f || 1
@@ -33,7 +33,7 @@ module Fees
             precise_amount_cents: unit_amount_cents * units.to_d,
             amount_currency: invoice.currency,
             fee_type: :add_on,
-            invoiceable_type: 'AddOn',
+            invoiceable_type: "AddOn",
             invoiceable: add_on,
             units:,
             payment_status: :pending,
@@ -61,7 +61,7 @@ module Fees
           fee_taxes_result = apply_provider_taxes(fees_result)
 
           unless fee_taxes_result.success?
-            return result.service_failure!(code: 'tax_error', message: fee_taxes_result.error.code)
+            return result.service_failure!(code: "tax_error", message: fee_taxes_result.error.code)
           end
         end
       end
@@ -125,7 +125,7 @@ module Fees
           details: {
             tax_error: error.code
           }.tap do |details|
-            details[:tax_error_message] = error.error_message if error.code == 'validationError'
+            details[:tax_error_message] = error.error_message if error.code == "validationError"
           end
         }
       )

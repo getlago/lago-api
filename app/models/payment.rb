@@ -6,13 +6,13 @@ class Payment < ApplicationRecord
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
   belongs_to :payable, polymorphic: true
-  belongs_to :payment_provider, optional: true, class_name: 'PaymentProviders::BaseProvider'
-  belongs_to :payment_provider_customer, optional: true, class_name: 'PaymentProviderCustomers::BaseCustomer'
+  belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
+  belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
 
   has_many :refunds
   has_many :integration_resources, as: :syncable
 
-  PAYMENT_TYPES = {provider: 'provider', manual: 'manual'}.freeze
+  PAYMENT_TYPES = {provider: "provider", manual: "manual"}.freeze
   attribute :payment_type, :string
   enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
   validates :payment_type, presence: true
@@ -41,7 +41,7 @@ class Payment < ApplicationRecord
       {org_id: organization.id, visible_statuses: Invoice::VISIBLE_STATUS.values}
     ])
     joins(payables_join)
-      .where('invoices.id IS NOT NULL OR payment_requests.id IS NOT NULL')
+      .where("invoices.id IS NOT NULL OR payment_requests.id IS NOT NULL")
   }
 
   def should_sync_payment?
@@ -62,7 +62,7 @@ class Payment < ApplicationRecord
   def payment_request_succeeded
     return if !payable.is_a?(Invoice) || payment_type_provider?
 
-    return unless payable.payment_requests.where(payment_status: 'succeeded').exists?
+    return unless payable.payment_requests.where(payment_status: "succeeded").exists?
 
     errors.add(:base, :payment_request_is_already_succeeded)
   end

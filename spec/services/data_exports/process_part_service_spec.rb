@@ -1,45 +1,45 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe DataExports::ProcessPartService, type: :service do
   subject(:result) { described_class.call(data_export_part:) }
 
-  let(:data_export) { create :data_export, resource_type: 'invoices', format: 'csv' }
+  let(:data_export) { create :data_export, resource_type: "invoices", format: "csv" }
   let(:data_export_part) { create :data_export_part, data_export:, object_ids: [invoice.id] }
   let(:invoice) { create :invoice }
   let(:serialized_invoice) do
     {
-      lago_id: 'invoice-lago-id-123',
-      sequential_id: 'SEQ123',
-      issuing_date: '2023-01-01',
+      lago_id: "invoice-lago-id-123",
+      sequential_id: "SEQ123",
+      issuing_date: "2023-01-01",
       self_billed: false,
       customer: {
-        name: 'customer name',
-        lago_id: 'customer-lago-id-456',
-        external_id: 'CUST123',
-        country: 'US',
-        tax_identification_number: '123456789'
+        name: "customer name",
+        lago_id: "customer-lago-id-456",
+        external_id: "CUST123",
+        country: "US",
+        tax_identification_number: "123456789"
       },
-      number: 'INV123',
-      invoice_type: 'credit',
-      payment_status: 'pending',
-      status: 'finalized',
-      file_url: 'http://api.lago.com/invoice.pdf',
-      currency: 'USD',
+      number: "INV123",
+      invoice_type: "credit",
+      payment_status: "pending",
+      status: "finalized",
+      file_url: "http://api.lago.com/invoice.pdf",
+      currency: "USD",
       fees_amount_cents: 70000,
       coupons_amount_cents: 1655,
       taxes_amount_cents: 10500,
       credit_notes_amount_cents: 334,
       prepaid_credit_amount_cents: 1000,
       total_amount_cents: 77511,
-      payment_due_date: '2023-02-01',
-      payment_dispute_lost_at: '2023-12-22',
+      payment_due_date: "2023-02-01",
+      payment_dispute_lost_at: "2023-12-22",
       payment_overdue: false
     }
   end
   let(:invoice_serializer) do
-    instance_double('V1::InvoiceSerializer', serialize: serialized_invoice)
+    instance_double("V1::InvoiceSerializer", serialize: serialized_invoice)
   end
 
   before do
@@ -62,7 +62,7 @@ RSpec.describe DataExports::ProcessPartService, type: :service do
     end
   end
 
-  context 'when other parts have not been complete' do
+  context "when other parts have not been complete" do
     let(:other_part) { create :data_export_part, data_export:, object_ids: [invoice.id], index: 2 }
 
     before { other_part }

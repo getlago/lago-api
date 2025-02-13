@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::IntegrationsResolver, type: :graphql do
-  let(:required_permission) { 'organization:integrations:view' }
+  let(:required_permission) { "organization:integrations:view" }
   let(:query) do
     <<~GQL
       query {
@@ -27,11 +27,11 @@ RSpec.describe Resolvers::IntegrationsResolver, type: :graphql do
 
   before { netsuite_integration }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:view"
 
-  context 'when type is present' do
+  context "when type is present" do
     let(:query) do
       <<~GQL
         query {
@@ -49,7 +49,7 @@ RSpec.describe Resolvers::IntegrationsResolver, type: :graphql do
       GQL
     end
 
-    it 'returns a list of integrations' do
+    it "returns a list of integrations" do
       result = execute_graphql(
         current_user: membership.user,
         current_organization: organization,
@@ -57,14 +57,14 @@ RSpec.describe Resolvers::IntegrationsResolver, type: :graphql do
         query:
       )
 
-      integrations_response = result['data']['integrations']
+      integrations_response = result["data"]["integrations"]
 
       aggregate_failures do
-        expect(integrations_response['collection'].count).to eq(1)
-        expect(integrations_response['collection'].first['id']).to eq(netsuite_integration.id)
+        expect(integrations_response["collection"].count).to eq(1)
+        expect(integrations_response["collection"].first["id"]).to eq(netsuite_integration.id)
 
-        expect(integrations_response['metadata']['currentPage']).to eq(1)
-        expect(integrations_response['metadata']['totalCount']).to eq(1)
+        expect(integrations_response["metadata"]["currentPage"]).to eq(1)
+        expect(integrations_response["metadata"]["totalCount"]).to eq(1)
       end
     end
   end

@@ -14,7 +14,7 @@ module Api
             json: ::CollectionSerializer.new(
               result.wallet_transactions,
               ::V1::WalletTransactionSerializer,
-              collection_name: 'wallet_transactions'
+              collection_name: "wallet_transactions"
             )
           )
         else
@@ -42,7 +42,7 @@ module Api
           json: ::CollectionSerializer.new(
             result.wallet_transactions,
             ::V1::WalletTransactionSerializer,
-            collection_name: 'wallet_transactions',
+            collection_name: "wallet_transactions",
             meta: pagination_metadata(result.wallet_transactions)
           )
         )
@@ -53,12 +53,12 @@ module Api
           id: params[:id]
         )
 
-        return not_found_error(resource: 'wallet_transaction') unless wallet_transaction
+        return not_found_error(resource: "wallet_transaction") unless wallet_transaction
 
         render(
           json: ::V1::WalletTransactionSerializer.new(
             wallet_transaction,
-            root_name: 'wallet_transaction'
+            root_name: "wallet_transaction"
           )
         )
       end
@@ -80,7 +80,7 @@ module Api
       end
 
       def resource_name
-        'wallet_transaction'
+        "wallet_transaction"
       end
     end
   end

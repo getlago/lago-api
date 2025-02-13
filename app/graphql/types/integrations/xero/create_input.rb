@@ -4,7 +4,7 @@ module Types
   module Integrations
     class Xero
       class CreateInput < Types::BaseInputObject
-        graphql_name 'CreateXeroIntegrationInput'
+        graphql_name "CreateXeroIntegrationInput"
 
         argument :code, String, required: true
         argument :name, String, required: true

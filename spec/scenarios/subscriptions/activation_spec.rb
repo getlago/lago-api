@@ -1,18 +1,18 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Subscriptions Activation Scenario', :scenarios, type: :request do
+describe "Subscriptions Activation Scenario", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
 
-  let(:timezone) { 'America/Bogota' }
+  let(:timezone) { "America/Bogota" }
   let(:customer) { create(:customer, organization:, timezone:) }
 
   let(:plan) do
     create(
       :plan,
       organization:,
-      interval: 'monthly',
+      interval: "monthly",
       pay_in_advance: false
     )
   end
@@ -20,7 +20,7 @@ describe 'Subscriptions Activation Scenario', :scenarios, type: :request do
   let(:subscription_at) { DateTime.new(2023, 8, 24, 4, 17) }
   let(:creation_time) { DateTime.new(2023, 8, 24, 0, 7) }
 
-  it 'activates the subscription when it reaches its subscription date' do
+  it "activates the subscription when it reaches its subscription date" do
     subscription = nil
 
     travel_to(creation_time) do
@@ -29,7 +29,7 @@ describe 'Subscriptions Activation Scenario', :scenarios, type: :request do
           external_customer_id: customer.external_id,
           external_id: customer.external_id,
           plan_code: plan.code,
-          billing_time: 'calendar',
+          billing_time: "calendar",
           subscription_at: subscription_at.iso8601
         }
       )

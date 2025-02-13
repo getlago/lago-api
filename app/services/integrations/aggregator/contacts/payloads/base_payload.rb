@@ -16,13 +16,13 @@ module Integrations
           def create_body
             [
               {
-                'name' => customer.name,
-                'city' => customer.city,
-                'zip' => customer.zipcode,
-                'country' => customer.country,
-                'state' => customer.state,
-                'email' => email,
-                'phone' => phone
+                "name" => customer.name,
+                "city" => customer.city,
+                "zip" => customer.zipcode,
+                "country" => customer.country,
+                "state" => customer.state,
+                "email" => email,
+                "phone" => phone
               }.merge(contact_names)
             ]
           end
@@ -30,14 +30,14 @@ module Integrations
           def update_body
             [
               {
-                'id' => integration_customer.external_customer_id,
-                'name' => customer.name,
-                'city' => customer.city,
-                'zip' => customer.zipcode,
-                'country' => customer.country,
-                'state' => customer.state,
-                'email' => email,
-                'phone' => phone
+                "id" => integration_customer.external_customer_id,
+                "name" => customer.name,
+                "city" => customer.city,
+                "zip" => customer.zipcode,
+                "country" => customer.country,
+                "state" => customer.state,
+                "email" => email,
+                "phone" => phone
               }.merge(contact_names)
             ]
           end
@@ -47,15 +47,15 @@ module Integrations
           attr_reader :customer, :integration_customer, :subsidiary_id
 
           def contact_names
-            {'firstname' => customer.firstname, 'lastname' => customer.lastname}.compact_blank
+            {"firstname" => customer.firstname, "lastname" => customer.lastname}.compact_blank
           end
 
           def email
-            customer.email.to_s.split(',').first&.strip
+            customer.email.to_s.split(",").first&.strip
           end
 
           def phone
-            customer.phone.to_s.split(',').first&.strip
+            customer.phone.to_s.split(",").first&.strip
           end
 
           def customer_url

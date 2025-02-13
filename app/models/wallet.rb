@@ -30,7 +30,7 @@ class Wallet < ApplicationRecord
     terminated!
   end
 
-  scope :expired, -> { where('wallets.expiration_at::timestamp(0) <= ?', Time.current) }
+  scope :expired, -> { where("wallets.expiration_at::timestamp(0) <= ?", Time.current) }
   scope :ready_to_be_refreshed, -> { where(ready_to_be_refreshed: true) }
 
   def currency=(currency)

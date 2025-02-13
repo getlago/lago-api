@@ -9,11 +9,11 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') unless invoice
-      return result.not_allowed_failure!(code: 'invalid_status') unless invoice.failed?
+      return result.not_found_failure!(resource: "invoice") unless invoice
+      return result.not_allowed_failure!(code: "invalid_status") unless invoice.failed?
 
-      invoice.status = 'pending'
-      invoice.tax_status = 'pending'
+      invoice.status = "pending"
+      invoice.tax_status = "pending"
       invoice.save!
 
       Invoices::ProviderTaxes::PullTaxesAndApplyJob.perform_later(invoice:)

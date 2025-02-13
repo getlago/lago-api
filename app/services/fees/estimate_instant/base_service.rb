@@ -48,7 +48,7 @@ module Fees
           lago_customer_id: customer.id,
           external_customer_id: customer.external_id,
           item: {
-            type: 'charge',
+            type: "charge",
             code: billable_metric.code,
             name: billable_metric.name,
             description: billable_metric.description,

@@ -6,7 +6,7 @@ module Webhooks
       private
 
       def webhook_type
-        'customer.crm_provider_created'
+        "customer.crm_provider_created"
       end
     end
   end

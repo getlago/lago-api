@@ -107,7 +107,7 @@ module Api
       end
 
       def resource_name
-        'coupon'
+        "coupon"
       end
     end
   end

@@ -3,7 +3,7 @@
 module Types
   module Integrations
     class Salesforce < Types::BaseObject
-      graphql_name 'SalesforceIntegration'
+      graphql_name "SalesforceIntegration"
 
       field :code, String, null: false
       field :id, ID, null: false

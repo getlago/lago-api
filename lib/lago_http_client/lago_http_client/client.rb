@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'net/http/post/multipart'
+require "net/http/post/multipart"
 
 module LagoHttpClient
   class Client
@@ -10,11 +10,11 @@ module LagoHttpClient
       @uri = URI(url)
       @http_client = Net::HTTP.new(uri.host, uri.port)
       @http_client.read_timeout = read_timeout if read_timeout.present?
-      @http_client.use_ssl = true if uri.scheme == 'https'
+      @http_client.use_ssl = true if uri.scheme == "https"
     end
 
     def post(body, headers)
-      req = Net::HTTP::Post.new(uri.request_uri, 'Content-Type' => 'application/json')
+      req = Net::HTTP::Post.new(uri.request_uri, "Content-Type" => "application/json")
 
       headers.each do |header|
         key = header.keys.first
@@ -28,13 +28,13 @@ module LagoHttpClient
 
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
 
-      JSON.parse(response.body.presence || '{}')
+      JSON.parse(response.body.presence || "{}")
     rescue JSON::ParserError
-      response.body.presence || '{}'
+      response.body.presence || "{}"
     end
 
     def post_with_response(body, headers)
-      req = Net::HTTP::Post.new(uri.request_uri, 'Content-Type' => 'application/json')
+      req = Net::HTTP::Post.new(uri.request_uri, "Content-Type" => "application/json")
 
       headers.keys.each do |key|
         req[key] = headers[key]
@@ -49,7 +49,7 @@ module LagoHttpClient
     end
 
     def put_with_response(body, headers)
-      req = Net::HTTP::Put.new(uri.request_uri, 'Content-Type' => 'application/json')
+      req = Net::HTTP::Put.new(uri.request_uri, "Content-Type" => "application/json")
 
       headers.keys.each do |key|
         req[key] = headers[key]
@@ -79,7 +79,7 @@ module LagoHttpClient
     def post_url_encoded(params, headers)
       encoded_form = URI.encode_www_form(params)
 
-      req = Net::HTTP::Post.new(uri.request_uri, 'Content-Type' => 'application/x-www-form-urlencoded')
+      req = Net::HTTP::Post.new(uri.request_uri, "Content-Type" => "application/x-www-form-urlencoded")
       headers.keys.each do |key|
         req[key] = headers[key]
       end
@@ -88,7 +88,7 @@ module LagoHttpClient
 
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
 
-      JSON.parse(response.body.presence || '{}')
+      JSON.parse(response.body.presence || "{}")
     end
 
     def get(headers: {}, params: nil, body: nil)
@@ -104,7 +104,7 @@ module LagoHttpClient
 
       raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
 
-      JSON.parse(response.body.presence || '{}')
+      JSON.parse(response.body.presence || "{}")
     end
 
     private

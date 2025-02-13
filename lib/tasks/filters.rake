@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 namespace :filters do
-  desc 'Clean duplicated filters'
+  desc "Clean duplicated filters"
   task deduplicate: :environment do
     charges = Charge.joins(:filters).includes(filters: {values: :billable_metric_filter}).distinct
 

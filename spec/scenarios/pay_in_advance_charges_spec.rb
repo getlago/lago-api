@@ -977,7 +977,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
                 code: billable_metric.code,
                 transaction_id: SecureRandom.uuid,
                 external_subscription_id: subscription.external_id,
-                properties: {amount: '20'}
+                properties: {amount: "20"}
               }
             )
           end.to change { subscription.reload.fees.count }.from(3).to(4)
@@ -986,7 +986,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
           expect(fee).to have_attributes(
             invoice_id: nil,
             charge_id: charge.id,
-            fee_type: 'charge',
+            fee_type: "charge",
             pay_in_advance: true,
             units: 20,
             events_count: 1,

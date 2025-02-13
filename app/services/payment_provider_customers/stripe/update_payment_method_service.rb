@@ -11,7 +11,7 @@ module PaymentProviderCustomers
       end
 
       def call
-        return result.not_found_failure!(resource: 'stripe_customer') unless stripe_customer
+        return result.not_found_failure!(resource: "stripe_customer") unless stripe_customer
 
         stripe_customer.payment_method_id = payment_method_id
         stripe_customer.save!
@@ -32,7 +32,7 @@ module PaymentProviderCustomers
         invoices = customer.invoices
           .payment_pending
           .where(ready_for_payment_processing: true)
-          .where(status: 'finalized')
+          .where(status: "finalized")
 
         invoices.find_each do |invoice|
           Invoices::Payments::CreateJob.perform_later(invoice:, payment_provider: :stripe)

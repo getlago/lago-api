@@ -29,7 +29,7 @@ module BillableMetricFilters
             if deleted_values.present?
               filter_values = filter.filter_values
                 .where(
-                  deleted_values.map { '? = ANY(values)' }.join(' OR '),
+                  deleted_values.map { "? = ANY(values)" }.join(" OR "),
                   *deleted_values
                 )
 

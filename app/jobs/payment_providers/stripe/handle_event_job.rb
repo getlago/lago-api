@@ -3,7 +3,7 @@
 module PaymentProviders
   module Stripe
     class HandleEventJob < ApplicationJob
-      queue_as 'providers'
+      queue_as "providers"
 
       # NOTE: Sometimes, the stripe webhook is received before the DB update of the impacted resource
       retry_on BaseService::NotFoundFailure

@@ -3,7 +3,7 @@
 module Types
   module Customers
     class Object < Types::BaseObject
-      graphql_name 'Customer'
+      graphql_name "Customer"
 
       field :id, ID, null: false
 
@@ -74,28 +74,28 @@ module Types
       field :active_subscriptions_count,
         Integer,
         null: false,
-        description: 'Number of active subscriptions per customer'
+        description: "Number of active subscriptions per customer"
       field :credit_notes_balance_amount_cents,
         GraphQL::Types::BigInt,
         null: false,
-        description: 'Credit notes credits balance available per customer'
+        description: "Credit notes credits balance available per customer"
       field :credit_notes_credits_available_count,
         Integer,
         null: false,
-        description: 'Number of available credits from credit notes per customer'
-      field :has_active_wallet, Boolean, null: false, description: 'Define if a customer has an active wallet'
-      field :has_credit_notes, Boolean, null: false, description: 'Define if a customer has any credit note'
-      field :has_overdue_invoices, Boolean, null: false, description: 'Define if a customer has overdue invoices'
+        description: "Number of available credits from credit notes per customer"
+      field :has_active_wallet, Boolean, null: false, description: "Define if a customer has an active wallet"
+      field :has_credit_notes, Boolean, null: false, description: "Define if a customer has any credit note"
+      field :has_overdue_invoices, Boolean, null: false, description: "Define if a customer has overdue invoices"
 
       field :can_edit_attributes, Boolean, null: false, method: :editable? do
-        description 'Check if customer attributes are editable'
+        description "Check if customer attributes are editable"
       end
 
-      field :finalize_zero_amount_invoice, Types::Customers::FinalizeZeroAmountInvoiceEnum, null: true, description: 'Options for handling invoices with a zero total amount.'
+      field :finalize_zero_amount_invoice, Types::Customers::FinalizeZeroAmountInvoiceEnum, null: true, description: "Options for handling invoices with a zero total amount."
 
-      field :applicable_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true, description: 'Invoice custom sections applicable to the customer'
-      field :has_overwritten_invoice_custom_sections_selection, Boolean, null: true, description: 'Define if the customer has custom invoice custom sections selection'
-      field :skip_invoice_custom_sections, Boolean, null: true, description: 'Skip invoice custom sections for the customer'
+      field :applicable_invoice_custom_sections, [Types::InvoiceCustomSections::Object], null: true, description: "Invoice custom sections applicable to the customer"
+      field :has_overwritten_invoice_custom_sections_selection, Boolean, null: true, description: "Define if the customer has custom invoice custom sections selection"
+      field :skip_invoice_custom_sections, Boolean, null: true, description: "Skip invoice custom sections for the customer"
 
       def invoices
         object.invoices.visible.order(created_at: :desc)
@@ -139,11 +139,11 @@ module Types
       end
 
       def credit_notes_credits_available_count
-        object.credit_notes.finalized.where('credit_notes.credit_amount_cents > 0').count
+        object.credit_notes.finalized.where("credit_notes.credit_amount_cents > 0").count
       end
 
       def credit_notes_balance_amount_cents
-        object.credit_notes.finalized.sum('credit_notes.balance_amount_cents')
+        object.credit_notes.finalized.sum("credit_notes.balance_amount_cents")
       end
 
       def billing_configuration

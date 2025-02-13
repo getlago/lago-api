@@ -10,15 +10,15 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') unless invoice
+      return result.not_found_failure!(resource: "invoice") unless invoice
 
       if customer_provider_taxation?
-        invoice.status = 'pending' if finalizing
-        invoice.tax_status = 'pending'
+        invoice.status = "pending" if finalizing
+        invoice.tax_status = "pending"
         invoice.save!
         after_commit { Invoices::ProviderTaxes::PullTaxesAndApplyJob.perform_later(invoice:) }
 
-        return result.unknown_tax_failure!(code: 'tax_error', message: 'unknown taxes')
+        return result.unknown_tax_failure!(code: "tax_error", message: "unknown taxes")
       else
         Invoices::ComputeAmountsFromFees.call(invoice:)
       end

@@ -23,12 +23,12 @@ module Wallets
     def valid_customer?
       result.current_customer = args[:customer]
 
-      return add_error(field: :customer, error_code: 'customer_not_found') unless result.current_customer
+      return add_error(field: :customer, error_code: "customer_not_found") unless result.current_customer
 
       if result.current_customer.wallets.active.exists?
         return add_error(
           field: :customer,
-          error_code: 'wallet_already_exists'
+          error_code: "wallet_already_exists"
         )
       end
 
@@ -38,13 +38,13 @@ module Wallets
     def valid_paid_credits_amount?
       return true if ::Validators::DecimalAmountService.new(args[:paid_credits]).valid_amount?
 
-      add_error(field: :paid_credits, error_code: 'invalid_paid_credits')
+      add_error(field: :paid_credits, error_code: "invalid_paid_credits")
     end
 
     def valid_granted_credits_amount?
       return true if ::Validators::DecimalAmountService.new(args[:granted_credits]).valid_amount?
 
-      add_error(field: :granted_credits, error_code: 'invalid_granted_credits')
+      add_error(field: :granted_credits, error_code: "invalid_granted_credits")
     end
 
     def valid_expiration_at?
@@ -53,7 +53,7 @@ module Wallets
       future = Utils::Datetime.valid_format?(args[:expiration_at]) && expiration_at.to_date > Time.current.to_date
       return true if future
 
-      add_error(field: :expiration_at, error_code: 'invalid_date')
+      add_error(field: :expiration_at, error_code: "invalid_date")
 
       false
     end
@@ -68,7 +68,7 @@ module Wallets
 
     def valid_recurring_transaction_rules?
       if args[:recurring_transaction_rules].count > 1
-        return add_error(field: :recurring_transaction_rules, error_code: 'invalid_number_of_recurring_rules')
+        return add_error(field: :recurring_transaction_rules, error_code: "invalid_number_of_recurring_rules")
       end
 
       unless Wallets::RecurringTransactionRules::ValidateService.call(params: args[:recurring_transaction_rules].first)

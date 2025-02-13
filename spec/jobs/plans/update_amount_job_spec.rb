@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Plans::UpdateAmountJob, type: :job do
   let(:plan) { create(:plan) }
@@ -11,7 +11,7 @@ RSpec.describe Plans::UpdateAmountJob, type: :job do
     allow(Plans::UpdateAmountService).to receive(:call).with(plan:, amount_cents:, expected_amount_cents:).and_call_original
   end
 
-  it 'calls the service' do
+  it "calls the service" do
     described_class.perform_now(plan:, amount_cents:, expected_amount_cents:)
 
     expect(Plans::UpdateAmountService).to have_received(:call).with(plan:, amount_cents:, expected_amount_cents:)

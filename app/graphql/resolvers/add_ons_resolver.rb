@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'addons:view'
+    REQUIRED_PERMISSION = "addons:view"
 
-    description 'Query add-ons of an organization'
+    description "Query add-ons of an organization"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false

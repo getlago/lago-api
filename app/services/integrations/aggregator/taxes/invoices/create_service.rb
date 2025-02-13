@@ -11,7 +11,7 @@ module Integrations
 
           def call
             return result unless integration
-            return result unless integration.type == 'Integrations::AnrokIntegration'
+            return result unless integration.type == "Integrations::AnrokIntegration"
 
             throttle!(:anrok)
 
@@ -43,7 +43,7 @@ module Integrations
             ).body
 
             invoice_data = payload_body.first
-            invoice_data['id'] = invoice.id
+            invoice_data["id"] = invoice.id
 
             [invoice_data]
           end

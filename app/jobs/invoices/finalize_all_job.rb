@@ -2,7 +2,7 @@
 
 module Invoices
   class FinalizeAllJob < ApplicationJob
-    queue_as 'invoices'
+    queue_as "invoices"
 
     def perform(organization:, invoice_ids:)
       result = Invoices::FinalizeBatchService.new(organization:).call(invoice_ids)

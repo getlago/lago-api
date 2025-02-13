@@ -22,7 +22,7 @@ module Api
       private
 
       def resource_name
-        'webhook_jwt_public_key'
+        "webhook_jwt_public_key"
       end
     end
   end

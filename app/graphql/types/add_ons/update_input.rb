@@ -3,7 +3,7 @@
 module Types
   module AddOns
     class UpdateInput < Types::BaseInputObject
-      graphql_name 'UpdateAddOnInput'
+      graphql_name "UpdateAddOnInput"
 
       argument :amount_cents, GraphQL::Types::BigInt, required: true
       argument :amount_currency, Types::CurrencyEnum, required: true

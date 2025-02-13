@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Permission, type: :model do
-  it 'defines permission hashes' do
+  it "defines permission hashes" do
     names = %w[DEFAULT_PERMISSIONS_HASH ADMIN_PERMISSIONS_HASH MANAGER_PERMISSIONS_HASH FINANCE_PERMISSIONS_HASH]
 
     names.each do |name|

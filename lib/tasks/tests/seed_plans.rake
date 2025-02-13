@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require 'faker'
-require 'factory_bot_rails'
+require "faker"
+require "factory_bot_rails"
 
 namespace :tests do
-  desc 'creates plans with children plans - creates [<num_plans>] of parents plans and 10 children for each plan; <delete_charge_parents> decides if charges of children plans will be unlinked from parent charges'
+  desc "creates plans with children plans - creates [<num_plans>] of parents plans and 10 children for each plan; <delete_charge_parents> decides if charges of children plans will be unlinked from parent charges"
   task :seed_plans, [:num_plans, :delete_charge_parents] => :environment do |_task, args|
-    organization = Organization.find_or_create_by!(name: 'Hooli')
+    organization = Organization.find_or_create_by!(name: "Hooli")
     all_metrics = find_or_create_metrics(organization)
 
-    delete_charge_parents = args[:delete_charge_parents] == 'true'
+    delete_charge_parents = args[:delete_charge_parents] == "true"
     create_plans = args[:num_plans].to_i || 10
     create_plans.times do |i|
       args = build_plan_args(organization, all_metrics, i)
@@ -22,21 +22,21 @@ end
 
 def find_or_create_metrics(organization)
   metrics_params = [
-    {name: 'metered_count', agg_type: :count_agg, recurring: false},
-    {name: 'metered_count_uniq', agg_type: :unique_count_agg, recurring: false},
-    {name: 'metered_latest', agg_type: :latest_agg, recurring: false},
-    {name: 'metered_max', agg_type: :max_agg, recurring: false},
-    {name: 'metered_sum', agg_type: :sum_agg, recurring: false},
-    {name: 'metered_weighted_sum', agg_type: :weighted_sum_agg, recurring: false},
-    {name: 'recurring_sum', agg_type: :sum_agg, recurring: true},
-    {name: 'recurring_weighted_sum', agg_type: :weighted_sum_agg, recurring: true}
+    {name: "metered_count", agg_type: :count_agg, recurring: false},
+    {name: "metered_count_uniq", agg_type: :unique_count_agg, recurring: false},
+    {name: "metered_latest", agg_type: :latest_agg, recurring: false},
+    {name: "metered_max", agg_type: :max_agg, recurring: false},
+    {name: "metered_sum", agg_type: :sum_agg, recurring: false},
+    {name: "metered_weighted_sum", agg_type: :weighted_sum_agg, recurring: false},
+    {name: "recurring_sum", agg_type: :sum_agg, recurring: true},
+    {name: "recurring_weighted_sum", agg_type: :weighted_sum_agg, recurring: true}
   ]
   metrics_params.map do |params|
     organization.billable_metrics.find_or_create_by!(name: params[:name],
       code: params[:name],
       recurring: params[:recurring],
       aggregation_type: params[:agg_type],
-      field_name: 'test',
+      field_name: "test",
       weighted_interval: "seconds")
   end
 end
@@ -71,7 +71,7 @@ def build_plan_args(organization, all_metrics, i)
     code: "plan_parent_#{i + 1}-#{SecureRandom.hex(5)}",
     pay_in_advance: [true, false].sample,
     amount_cents: Faker::Number.number(digits: 4),
-    amount_currency: 'USD',
+    amount_currency: "USD",
     interval: %i[monthly yearly].sample,
     trial_period: [0, 10].sample,
     charges: charges_params
@@ -118,8 +118,8 @@ def override_charges_rand(plan, all_metrics)
     end
 
     pay_in_advance = (metric.payable_in_advance? && charge_model != :volume) ? [true, false].sample : false
-    puts 'before charge_mode: ' + charge.charge_model.to_s
-    puts 'after charge_mode: ' + charge_model.to_s
+    puts "before charge_mode: " + charge.charge_model.to_s
+    puts "after charge_mode: " + charge_model.to_s
     {
       id: charge.id,
       billable_metric_id: metric.id,
@@ -144,17 +144,17 @@ def new_properties_for(charge_model)
 end
 
 def default_standard_properties
-  {amount: '10'}
+  {amount: "10"}
 end
 
 def default_graduated_properties
   {
-    'graduated_ranges' => [
+    "graduated_ranges" => [
       {
         from_value: 0,
         to_value: nil,
-        per_unit_amount: '10',
-        flat_amount: '5'
+        per_unit_amount: "10",
+        flat_amount: "5"
       }
     ]
   }
@@ -163,23 +163,23 @@ end
 def default_package_properties
   {
     package_size: 1,
-    amount: '5',
+    amount: "5",
     free_units: 10
   }
 end
 
 def default_percentage_properties
-  {rate: '20'}
+  {rate: "20"}
 end
 
 def default_volume_properties
   {
-    'volume_ranges' => [
+    "volume_ranges" => [
       {
         from_value: 0,
         to_value: nil,
-        per_unit_amount: '20',
-        flat_amount: '10'
+        per_unit_amount: "20",
+        flat_amount: "10"
       }
     ]
   }
@@ -187,13 +187,13 @@ end
 
 def default_graduated_percentage_properties
   {
-    'graduated_percentage_ranges' => [
+    "graduated_percentage_ranges" => [
       {
         from_value: 0,
         to_value: nil,
-        rate: '20',
-        fixed_amount: '20',
-        flat_amount: '20'
+        rate: "20",
+        fixed_amount: "20",
+        flat_amount: "20"
       }
     ]
   }

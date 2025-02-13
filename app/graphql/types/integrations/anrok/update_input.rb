@@ -4,7 +4,7 @@ module Types
   module Integrations
     class Anrok
       class UpdateInput < Types::BaseInputObject
-        graphql_name 'UpdateAnrokIntegrationInput'
+        graphql_name "UpdateAnrokIntegrationInput"
 
         argument :id, ID, required: false
 

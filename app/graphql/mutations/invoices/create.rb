@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'invoices:create'
+      REQUIRED_PERMISSION = "invoices:create"
 
-      graphql_name 'CreateInvoice'
-      description 'Creates a new Invoice'
+      graphql_name "CreateInvoice"
+      description "Creates a new Invoice"
 
       input_object_class Types::Invoices::CreateInvoiceInput
 

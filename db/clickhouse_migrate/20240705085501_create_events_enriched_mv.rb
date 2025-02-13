@@ -15,6 +15,6 @@ class CreateEventsEnrichedMv < ActiveRecord::Migration[7.1]
       FROM events_enriched_queue
     SQL
 
-    create_view :events_enriched_mv, materialized: true, as: sql, to: 'events_enriched'
+    create_view :events_enriched_mv, materialized: true, as: sql, to: "events_enriched"
   end
 end

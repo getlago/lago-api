@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'coupons:view'
+    REQUIRED_PERMISSION = "coupons:view"
 
-    description 'Query coupons of an organization'
+    description "Query coupons of an organization"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false

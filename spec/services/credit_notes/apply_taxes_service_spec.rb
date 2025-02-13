@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
   subject(:apply_service) { described_class.new(invoice:, items:) }
@@ -13,7 +13,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       :invoice,
       customer:,
       organization:,
-      currency: 'EUR',
+      currency: "EUR",
       fees_amount_cents: 120,
       coupons_amount_cents: 20,
       taxes_amount_cents: 20,
@@ -67,7 +67,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
     ]
   end
 
-  context 'when local taxes are applied' do
+  context "when local taxes are applied" do
     let(:tax1) { create(:tax, organization:, rate: 12) }
     let(:tax2) { create(:tax, organization:, rate: 8) }
 
@@ -115,8 +115,8 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       fee_applied_tax22
     end
 
-    describe 'call' do
-      it 'creates applied taxes' do
+    describe "call" do
+      it "creates applied taxes" do
         result = apply_service.call
 
         aggregate_failures do
@@ -157,9 +157,9 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
     end
   end
 
-  context 'when taxes from tax provider are applied' do
-    let(:provider_tax_1) { OpenStruct.new(name: 'provider tax 1', type: 'providerTax1', rate: 12.0, code: 'provider_tax_1') }
-    let(:provider_tax_2) { OpenStruct.new(name: 'provider tax 2', type: 'providerTax2', rate: 8.0, code: 'provider_tax_2') }
+  context "when taxes from tax provider are applied" do
+    let(:provider_tax_1) { OpenStruct.new(name: "provider tax 1", type: "providerTax1", rate: 12.0, code: "provider_tax_1") }
+    let(:provider_tax_2) { OpenStruct.new(name: "provider tax 2", type: "providerTax2", rate: 8.0, code: "provider_tax_2") }
 
     let(:fee_applied_tax11) do
       create(
@@ -205,9 +205,9 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       fee_applied_tax22
     end
 
-    context 'when coupons are applied' do
-      describe 'call' do
-        it 'creates applied taxes' do
+    context "when coupons are applied" do
+      describe "call" do
+        it "creates applied taxes" do
           result = apply_service.call
 
           aggregate_failures do
@@ -248,7 +248,7 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
       end
     end
 
-    context 'when there are plain fees without coupons' do
+    context "when there are plain fees without coupons" do
       let(:fee1) do
         create(
           :fee,
@@ -271,11 +271,11 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
         )
       end
 
-      let(:provider_tax_1) { OpenStruct.new(name: 'provider tax 1', type: 'providerTax1', rate: 20.0, code: 'provider_tax_1') }
-      let(:provider_tax_2) { OpenStruct.new(name: 'provider tax 2', type: 'providerTax2', rate: 10.0, code: 'provider_tax_2') }
+      let(:provider_tax_1) { OpenStruct.new(name: "provider tax 1", type: "providerTax1", rate: 20.0, code: "provider_tax_1") }
+      let(:provider_tax_2) { OpenStruct.new(name: "provider tax 2", type: "providerTax2", rate: 10.0, code: "provider_tax_2") }
 
-      describe 'call' do
-        it 'creates applied taxes' do
+      describe "call" do
+        it "creates applied taxes" do
           result = apply_service.call
 
           aggregate_failures do
@@ -317,9 +317,9 @@ RSpec.describe CreditNotes::ApplyTaxesService, type: :service do
     end
   end
 
-  context 'when no taxes are applied on the invoice' do
-    describe 'call' do
-      it 'succeeds' do
+  context "when no taxes are applied on the invoice" do
+    describe "call" do
+      it "succeeds" do
         result = apply_service.call
         expect(result).to be_success
         aggregate_failures do

@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'customers:view'
+    REQUIRED_PERMISSION = "customers:view"
 
-    description 'Query customers of an organization'
+    description "Query customers of an organization"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false

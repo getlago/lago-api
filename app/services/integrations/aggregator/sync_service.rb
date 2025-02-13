@@ -4,7 +4,7 @@ module Integrations
   module Aggregator
     class SyncService < BaseService
       def action_path
-        'sync/trigger'
+        "sync/trigger"
       end
 
       def call
@@ -24,15 +24,15 @@ module Integrations
       # NOTE: Extend it with other providers if needed
       def sync_list
         list = case integration.type
-        when 'Integrations::NetsuiteIntegration'
+        when "Integrations::NetsuiteIntegration"
           {
-            subsidiaries: 'netsuite-subsidiaries-sync'
+            subsidiaries: "netsuite-subsidiaries-sync"
           }
-        when 'Integrations::XeroIntegration'
+        when "Integrations::XeroIntegration"
           {
-            accounts: 'xero-accounts-sync',
-            items: 'xero-items-sync',
-            contacts: 'xero-contacts-sync'
+            accounts: "xero-accounts-sync",
+            items: "xero-items-sync",
+            contacts: "xero-contacts-sync"
           }
         end
 

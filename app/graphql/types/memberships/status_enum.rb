@@ -3,7 +3,7 @@
 module Types
   module Memberships
     class StatusEnum < Types::BaseEnum
-      graphql_name 'MembershipStatus'
+      graphql_name "MembershipStatus"
 
       Membership::STATUSES.each do |type|
         value type

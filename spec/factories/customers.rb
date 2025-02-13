@@ -20,7 +20,7 @@ FactoryBot.define do
     logo_url { Faker::Internet.url }
     legal_name { Faker::Company.name }
     legal_number { Faker::Company.duns_number }
-    currency { 'EUR' }
+    currency { "EUR" }
 
     trait :with_shipping_address do
       shipping_address_line1 { Faker::Address.street_address }

@@ -3,7 +3,7 @@
 module Types
   module IntegrationItems
     class Object < Types::BaseObject
-      graphql_name 'IntegrationItem'
+      graphql_name "IntegrationItem"
 
       field :external_account_code, String, null: true
       field :external_id, String, null: false

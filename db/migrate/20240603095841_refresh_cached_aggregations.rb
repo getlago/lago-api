@@ -35,7 +35,7 @@ class RefreshCachedAggregations < ActiveRecord::Migration[7.0]
       .joins(plan: {charges: :billable_metric})
       .includes(plan: {charges: :billable_metric})
       .merge(BillableMetric.weighted_sum_agg.where(recurring: true))
-      .where(started_at: ...Time.zone.parse('2024-05-23'))
+      .where(started_at: ...Time.zone.parse("2024-05-23"))
 
     subscriptions.find_each do |subscription|
       # NOTE: All recurring weighted sum charges
@@ -45,7 +45,7 @@ class RefreshCachedAggregations < ActiveRecord::Migration[7.0]
         # NOTE: All fees for the charge created after the QuantifiedEvent migration
         fees = charge.fees
           .includes(:charge_filter)
-          .where(created_at: Time.zone.parse('2024-05-23')...)
+          .where(created_at: Time.zone.parse("2024-05-23")...)
 
         fees.find_each do |fee|
           filters = {}
@@ -55,7 +55,7 @@ class RefreshCachedAggregations < ActiveRecord::Migration[7.0]
           end
 
           properties = charge_filter&.properties || charge.properties
-          filters[:grouped_by] = properties['grouped_by'] if charge.standard? && properties['grouped_by'].present?
+          filters[:grouped_by] = properties["grouped_by"] if charge.standard? && properties["grouped_by"].present?
           if charge_filter.present?
             result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
             filters[:charge_filter] = charge_filter

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe AppliedInvoiceCustomSection, type: :model do
   subject(:applied_invoice_custom_section) { build(:applied_invoice_custom_section) }

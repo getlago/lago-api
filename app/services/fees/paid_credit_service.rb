@@ -22,7 +22,7 @@ module Fees
         invoice:,
         organization_id: organization.id,
         fee_type: :credit,
-        invoiceable_type: 'WalletTransaction',
+        invoiceable_type: "WalletTransaction",
         invoiceable: wallet_transaction,
         amount_cents:,
         precise_amount_cents:,
@@ -51,7 +51,7 @@ module Fees
     delegate :organization, to: :customer
 
     def already_billed?
-      existing_fee = invoice.fees.find_by(invoiceable_id: wallet_transaction.id, invoiceable_type: 'WalletTransaction')
+      existing_fee = invoice.fees.find_by(invoiceable_id: wallet_transaction.id, invoiceable_type: "WalletTransaction")
       return false unless existing_fee
 
       result.fee = existing_fee

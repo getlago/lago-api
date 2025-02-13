@@ -212,7 +212,7 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
       end
     end
 
-    context 'when payment url failed to generate' do
+    context "when payment url failed to generate" do
       let(:payment_links_response) { Net::HTTPResponse.new("1.0", "400", "Bad Request") }
       let(:payment_links_body) do
         {
@@ -232,12 +232,12 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
           .and_raise(::LagoHttpClient::HttpError.new(payment_links_response.code, payment_links_body, nil))
       end
 
-      it 'returns a third party error' do
+      it "returns a third party error" do
         result = cashfree_service.generate_payment_url
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ThirdPartyFailure)
-        expect(result.error.third_party).to eq('Cashfree')
+        expect(result.error.third_party).to eq("Cashfree")
         expect(result.error.error_message).to eq(payment_links_body)
       end
     end

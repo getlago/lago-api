@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class TaxesQuery < BaseQuery
-  DEFAULT_ORDER = 'name'
+  DEFAULT_ORDER = "name"
 
   def call
     taxes = base_scope.result
@@ -26,7 +26,7 @@ class TaxesQuery < BaseQuery
     return if search_term.blank?
 
     {
-      m: 'or',
+      m: "or",
       name_cont: search_term,
       code_cont: search_term
     }

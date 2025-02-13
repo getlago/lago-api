@@ -10,15 +10,15 @@ module Webhooks
       end
 
       def object_serializer
-        ::V1::WalletSerializer.new(object, root_name: 'wallet', includes: %i[recurring_transaction_rules])
+        ::V1::WalletSerializer.new(object, root_name: "wallet", includes: %i[recurring_transaction_rules])
       end
 
       def webhook_type
-        'wallet.updated'
+        "wallet.updated"
       end
 
       def object_type
-        'wallet'
+        "wallet"
       end
     end
   end

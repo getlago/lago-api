@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::FinalizeJob, type: :job do
   let(:invoice) { create(:invoice) }
@@ -11,7 +11,7 @@ RSpec.describe Invoices::FinalizeJob, type: :job do
     instance_double(Invoices::RefreshDraftAndFinalizeService)
   end
 
-  it 'delegates to the RefreshDraftAndFinalizeService service' do
+  it "delegates to the RefreshDraftAndFinalizeService service" do
     allow(Invoices::RefreshDraftAndFinalizeService).to receive(:new)
       .with(invoice:)
       .and_return(finalize_service)
@@ -24,21 +24,21 @@ RSpec.describe Invoices::FinalizeJob, type: :job do
     expect(finalize_service).to have_received(:call)
   end
 
-  context 'when there was a tax fetching error in RefreshDraftAndFinalize service' do
+  context "when there was a tax fetching error in RefreshDraftAndFinalize service" do
     let(:integration_customer) { create(:anrok_customer, customer: invoice.customer) }
     let(:response) { instance_double(Net::HTTPOK) }
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+    let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
     let(:integration_collection_mapping) do
       create(
         :netsuite_collection_mapping,
         integration: integration_customer.integration,
         mapping_type: :fallback_item,
-        settings: {external_id: '1', external_account_code: '11', external_name: ''}
+        settings: {external_id: "1", external_account_code: "11", external_name: ""}
       )
     end
     let(:body) do
-      p = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+      p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
       File.read(p)
     end
 
@@ -50,7 +50,7 @@ RSpec.describe Invoices::FinalizeJob, type: :job do
       allow(response).to receive(:body).and_return(body)
     end
 
-    it 'does not throw an error when it is a tax error' do
+    it "does not throw an error when it is a tax error" do
       expect { described_class.perform_now(invoice) }.not_to raise_error
     end
   end

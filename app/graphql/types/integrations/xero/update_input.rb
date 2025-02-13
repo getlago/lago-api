@@ -4,7 +4,7 @@ module Types
   module Integrations
     class Xero
       class UpdateInput < Types::BaseInputObject
-        graphql_name 'UpdateXeroIntegrationInput'
+        graphql_name "UpdateXeroIntegrationInput"
 
         argument :id, ID, required: false
 

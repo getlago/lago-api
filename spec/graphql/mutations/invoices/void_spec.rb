@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Invoices::Void, type: :graphql do
-  let(:required_permission) { 'invoices:void' }
+  let(:required_permission) { "invoices:void" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -20,11 +20,11 @@ RSpec.describe Mutations::Invoices::Void, type: :graphql do
     GQL
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'invoices:void'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "invoices:void"
 
-  it 'voids the given invoice' do
+  it "voids the given invoice" do
     freeze_time do
       result = execute_graphql(
         current_user: membership.user,
@@ -36,11 +36,11 @@ RSpec.describe Mutations::Invoices::Void, type: :graphql do
         }
       )
 
-      result_data = result['data']['voidInvoice']
+      result_data = result["data"]["voidInvoice"]
 
       aggregate_failures do
-        expect(result_data['id']).to be_present
-        expect(result_data['status']).to eq('voided')
+        expect(result_data["id"]).to be_present
+        expect(result_data["status"]).to eq("voided")
       end
     end
   end

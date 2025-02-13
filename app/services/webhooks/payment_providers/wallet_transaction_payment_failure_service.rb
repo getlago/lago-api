@@ -19,11 +19,11 @@ module Webhooks
       end
 
       def webhook_type
-        'wallet_transaction.payment_failure'
+        "wallet_transaction.payment_failure"
       end
 
       def object_type
-        'payment_provider_wallet_transaction_payment_error'
+        "payment_provider_wallet_transaction_payment_error"
       end
     end
   end

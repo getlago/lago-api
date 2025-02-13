@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Webhooks::Subscriptions::UsageThresholdsReachedService do
   subject(:webhook_service) { described_class.new(object: subscription, options: {usage_threshold:}) }
@@ -11,7 +11,7 @@ RSpec.describe Webhooks::Subscriptions::UsageThresholdsReachedService do
   let(:subscription) { create(:subscription, plan: plan, customer: customer) }
   let(:usage_threshold) { create(:usage_threshold, plan: plan) }
 
-  describe '.call' do
-    it_behaves_like 'creates webhook', 'subscription.usage_threshold_reached', 'subscription', {'usage_threshold' => Hash}
+  describe ".call" do
+    it_behaves_like "creates webhook", "subscription.usage_threshold_reached", "subscription", {"usage_threshold" => Hash}
   end
 end

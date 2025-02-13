@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service do
   subject(:result) { described_class.call(lifetime_usage:) }
@@ -14,7 +14,7 @@ RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service 
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, plan:, customer:) }
 
-  it 'computes the usage thresholds' do
+  it "computes the usage thresholds" do
     expect(result.usage_thresholds).to be_empty
   end
 
@@ -25,7 +25,7 @@ RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service 
       usage_threshold
     end
 
-    it 'computes the usage thresholds' do
+    it "computes the usage thresholds" do
       thresholds = result.usage_thresholds
       expect(thresholds.size).to eq(1)
       threshold = thresholds.first
@@ -36,10 +36,10 @@ RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service 
       expect(threshold[:reached_at]).to be_nil
     end
 
-    context 'with a lifetime_usage' do
+    context "with a lifetime_usage" do
       let(:current_usage_amount_cents) { 23 }
 
-      it 'computes the usage thresholds' do
+      it "computes the usage thresholds" do
         thresholds = result.usage_thresholds
         expect(thresholds.size).to eq(1)
         threshold = thresholds.first
@@ -52,7 +52,7 @@ RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service 
     end
   end
 
-  context 'with a past threshold' do
+  context "with a past threshold" do
     let(:usage_threshold1) { create(:usage_threshold, plan:, amount_cents: 100) }
     let(:usage_threshold2) { create(:usage_threshold, plan:, amount_cents: 200) }
 
@@ -71,7 +71,7 @@ RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service 
       applied_usage_threshold
     end
 
-    it 'computes the usage thresholds' do
+    it "computes the usage thresholds" do
       thresholds = result.usage_thresholds
       expect(thresholds.size).to eq(2)
       threshold1 = thresholds.first
@@ -88,7 +88,7 @@ RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service 
       expect(threshold2[:reached_at]).to be_nil
     end
 
-    context 'when lifetime_usage is above last threshold' do
+    context "when lifetime_usage is above last threshold" do
       let(:applied_usage_threshold2) { create(:applied_usage_threshold, usage_threshold: usage_threshold2, invoice:) }
       let(:current_usage_amount_cents) { 223 }
 
@@ -96,7 +96,7 @@ RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service 
         applied_usage_threshold2
       end
 
-      it 'computes the usage thresholds' do
+      it "computes the usage thresholds" do
         thresholds = result.usage_thresholds
         expect(thresholds.size).to eq(2)
         threshold1 = thresholds.first
@@ -114,10 +114,10 @@ RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service 
       end
     end
 
-    context 'when next threshold is recurring' do
+    context "when next threshold is recurring" do
       let(:usage_threshold2) { create(:usage_threshold, :recurring, plan:, amount_cents: 200) }
 
-      it 'computes the usage thresholds' do
+      it "computes the usage thresholds" do
         thresholds = result.usage_thresholds
         expect(thresholds.size).to eq(2)
         threshold1 = thresholds.first
@@ -134,7 +134,7 @@ RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service 
         expect(threshold2[:reached_at]).to be_nil
       end
 
-      context 'when lifetime_usage is above next threshold' do
+      context "when lifetime_usage is above next threshold" do
         let(:applied_usage_threshold2) { create(:applied_usage_threshold, lifetime_usage_amount_cents: 700, usage_threshold: usage_threshold2, invoice:) }
         let(:current_usage_amount_cents) { 723 }
 
@@ -142,7 +142,7 @@ RSpec.describe LifetimeUsages::UsageThresholdsCompletionService, type: :service 
           applied_usage_threshold2
         end
 
-        it 'computes the usage thresholds' do
+        it "computes the usage thresholds" do
           thresholds = result.usage_thresholds
           expect(thresholds.size).to eq(5)
           threshold1 = thresholds.shift

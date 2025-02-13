@@ -32,7 +32,7 @@ class WebhooksQuery < BaseQuery
     return nil if search_term.blank?
 
     {
-      m: 'or',
+      m: "or",
       id_cont: search_term,
       webhook_type_cont: search_term
     }

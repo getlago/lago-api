@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe PaymentProviders::Stripe::HandleEventService do
   subject(:event_service) { described_class.new(organization:, event_json:) }
@@ -18,13 +18,13 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
       .and_return(service_result)
   end
 
-  context 'when payment intent event' do
+  context "when payment intent event" do
     let(:event_json) do
-      path = Rails.root.join('spec/fixtures/stripe/payment_intent_event.json')
+      path = Rails.root.join("spec/fixtures/stripe/payment_intent_event.json")
       File.read(path)
     end
 
-    it 'routes the event to an other service' do
+    it "routes the event to an other service" do
       result = event_service.call
 
       expect(result).to be_success
@@ -33,12 +33,12 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
       expect(payment_service).to have_received(:update_payment_status)
         .with(
           organization_id: organization.id,
-          status: 'succeeded',
+          status: "succeeded",
           stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
-            id: 'pi_1JKS2Y2VYugoKSBzNHPFBNj9',
-            status: 'success',
+            id: "pi_1JKS2Y2VYugoKSBzNHPFBNj9",
+            status: "success",
             metadata: {
-              lago_invoice_id: 'a587e552-36bc-4334-81f2-abcbf034ad3f'
+              lago_invoice_id: "a587e552-36bc-4334-81f2-abcbf034ad3f"
             }
           )
         )
@@ -71,8 +71,8 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
           organization_id: organization.id,
           status: "succeeded",
           stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
-            id: 'pi_1JKS2Y2VYugoKSBzNHPFBNj9',
-            status: 'success',
+            id: "pi_1JKS2Y2VYugoKSBzNHPFBNj9",
+            status: "success",
             metadata: {
               lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
               lago_payable_type: "PaymentRequest"
@@ -93,13 +93,13 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
     end
   end
 
-  context 'when charge event' do
+  context "when charge event" do
     let(:event_json) do
-      path = Rails.root.join('spec/fixtures/stripe/charge_event.json')
+      path = Rails.root.join("spec/fixtures/stripe/charge_event.json")
       File.read(path)
     end
 
-    it 'routes the event to an other service' do
+    it "routes the event to an other service" do
       result = event_service.call
 
       expect(result).to be_success
@@ -108,10 +108,10 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
       expect(payment_service).to have_received(:update_payment_status)
         .with(
           organization_id: organization.id,
-          status: 'succeeded',
+          status: "succeeded",
           stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
-            id: 'pi_123456',
-            status: 'succeeded',
+            id: "pi_123456",
+            status: "succeeded",
             metadata: {}
           )
         )
@@ -144,8 +144,8 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
           organization_id: organization.id,
           status: "succeeded",
           stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
-            id: 'pi_123456',
-            status: 'succeeded',
+            id: "pi_123456",
+            status: "succeeded",
             metadata: {
               lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
               lago_payable_type: "PaymentRequest"
@@ -166,9 +166,9 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
     end
   end
 
-  context 'when setup intent event' do
+  context "when setup intent event" do
     let(:event_json) do
-      path = Rails.root.join('spec/fixtures/stripe/setup_intent_event.json')
+      path = Rails.root.join("spec/fixtures/stripe/setup_intent_event.json")
       File.read(path)
     end
 
@@ -177,7 +177,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
         .and_return(service_result)
     end
 
-    it 'routes the event to an other service' do
+    it "routes the event to an other service" do
       result = event_service.call
 
       expect(result).to be_success
@@ -186,9 +186,9 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
     end
   end
 
-  context 'when customer updated event' do
+  context "when customer updated event" do
     let(:event_json) do
-      path = Rails.root.join('spec/fixtures/stripe/customer_updated_event.json')
+      path = Rails.root.join("spec/fixtures/stripe/customer_updated_event.json")
       File.read(path)
     end
 
@@ -197,7 +197,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
         .and_return(service_result)
     end
 
-    it 'routes the event to an other service' do
+    it "routes the event to an other service" do
       result = event_service.call
 
       expect(result).to be_success
@@ -206,9 +206,9 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
     end
   end
 
-  context 'when payment method detached event' do
+  context "when payment method detached event" do
     let(:event_json) do
-      path = Rails.root.join('spec/fixtures/stripe/payment_method_detached_event.json')
+      path = Rails.root.join("spec/fixtures/stripe/payment_method_detached_event.json")
       File.read(path)
     end
 
@@ -219,7 +219,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
         .and_return(service_result)
     end
 
-    it 'routes the event to an other service' do
+    it "routes the event to an other service" do
       result = event_service.call
 
       expect(result).to be_success
@@ -229,11 +229,11 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
     end
   end
 
-  context 'when refund updated event' do
+  context "when refund updated event" do
     let(:refund_service) { instance_double(CreditNotes::Refunds::StripeService) }
 
     let(:event_json) do
-      path = Rails.root.join('spec/fixtures/stripe/charge_refund_updated_event.json')
+      path = Rails.root.join("spec/fixtures/stripe/charge_refund_updated_event.json")
       File.read(path)
     end
 
@@ -244,7 +244,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
         .and_return(service_result)
     end
 
-    it 'routes the event to an other service' do
+    it "routes the event to an other service" do
       result = event_service.call
 
       expect(result).to be_success
@@ -254,18 +254,18 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
     end
   end
 
-  context 'when event does not match an expected event type' do
+  context "when event does not match an expected event type" do
     let(:event_json) do
       {
-        id: 'foo',
-        type: 'invalid',
+        id: "foo",
+        type: "invalid",
         data: {
-          object: {id: 'foo'}
+          object: {id: "foo"}
         }
       }.to_json
     end
 
-    it 'returns an empty result' do
+    it "returns an empty result" do
       result = event_service.call
 
       aggregate_failures do

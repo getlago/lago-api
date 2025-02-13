@@ -10,9 +10,9 @@ module CreditNotes
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') unless invoice
+      return result.not_found_failure!(resource: "invoice") unless invoice
       return result.forbidden_failure! unless License.premium?
-      return result.not_allowed_failure!(code: 'invalid_type_or_status') unless valid_type_or_status?
+      return result.not_allowed_failure!(code: "invalid_type_or_status") unless valid_type_or_status?
 
       @credit_note = CreditNote.new(
         customer: invoice.customer,
@@ -37,13 +37,13 @@ module CreditNotes
     attr_reader :invoice, :items, :credit_note
 
     def valid_type_or_status?
-      return false if invoice.credit? && (invoice.payment_status != 'succeeded' || invoice.associated_active_wallet.nil?)
+      return false if invoice.credit? && (invoice.payment_status != "succeeded" || invoice.associated_active_wallet.nil?)
 
       invoice.version_number >= Invoice::CREDIT_NOTES_MIN_VERSION
     end
 
     def validate_items
-      return result.validation_failure!(errors: {items: ['must_be_an_array']}) unless items.is_a?(Array)
+      return result.validation_failure!(errors: {items: ["must_be_an_array"]}) unless items.is_a?(Array)
 
       items.each do |item_attr|
         amount_cents = item_attr[:amount_cents]&.to_i || 0

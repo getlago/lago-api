@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::FetchItemsJob, type: :job do
   subject(:fetch_items_job) { described_class }
@@ -14,7 +14,7 @@ RSpec.describe Integrations::Aggregator::FetchItemsJob, type: :job do
     allow(items_service).to receive(:call).and_return(result)
   end
 
-  it 'calls the items service' do
+  it "calls the items service" do
     described_class.perform_now(integration:)
 
     expect(Integrations::Aggregator::ItemsService).to have_received(:new)

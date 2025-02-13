@@ -25,17 +25,17 @@ module Fees
               "terminated_at IS NULL OR date_trunc('millisecond', terminated_at::timestamp) >= ?",
               timestamp
             )
-            .order('terminated_at DESC NULLS FIRST, started_at DESC')
+            .order("terminated_at DESC NULLS FIRST, started_at DESC")
             .first
 
         super(organization:, subscription:)
       end
 
       def call
-        return result.not_found_failure!(resource: 'subscription') unless subscription
+        return result.not_found_failure!(resource: "subscription") unless subscription
 
         if charges.none?
-          return result.single_validation_failure!(field: :code, error_code: 'does_not_match_an_instant_charge')
+          return result.single_validation_failure!(field: :code, error_code: "does_not_match_an_instant_charge")
         end
 
         fees = []

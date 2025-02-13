@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
-  let(:required_permission) { 'subscriptions:create' }
+  let(:required_permission) { "subscriptions:create" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:plan) { create(:plan, organization:) }
@@ -41,13 +41,13 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
-  before { organization.update!(premium_integrations: ['progressive_billing']) }
+  before { organization.update!(premium_integrations: ["progressive_billing"]) }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'subscriptions:create'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "subscriptions:create"
 
-  it 'creates a subscription', :aggregate_failures do
+  it "creates a subscription", :aggregate_failures do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -57,47 +57,47 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
         input: {
           customerId: customer.id,
           planId: plan.id,
-          name: 'name',
-          externalId: 'custom-external-id',
-          billingTime: 'anniversary',
+          name: "name",
+          externalId: "custom-external-id",
+          billingTime: "anniversary",
           endingAt: ending_at.iso8601,
           planOverrides: {
             amountCents: 100,
             charges: [
               id: charge.id,
               billableMetricId: charge.billable_metric_id,
-              invoiceDisplayName: 'invoice display name'
+              invoiceDisplayName: "invoice display name"
             ],
             usageThresholds: [
               amountCents: 100,
-              thresholdDisplayName: 'threshold display name'
+              thresholdDisplayName: "threshold display name"
             ]
           }
         }
       }
     )
 
-    result_data = result['data']['createSubscription']
+    result_data = result["data"]["createSubscription"]
 
     expect(result_data).to include(
-      'id' => String,
-      'status' => 'active',
-      'name' => 'name',
-      'externalId' => 'custom-external-id',
-      'startedAt' => String,
-      'billingTime' => 'anniversary',
-      'endingAt' => ending_at.iso8601
+      "id" => String,
+      "status" => "active",
+      "name" => "name",
+      "externalId" => "custom-external-id",
+      "startedAt" => String,
+      "billingTime" => "anniversary",
+      "endingAt" => ending_at.iso8601
     )
-    expect(result_data['customer']).to include(
-      'id' => customer.id
+    expect(result_data["customer"]).to include(
+      "id" => customer.id
     )
-    expect(result_data['plan']).to include(
-      'id' => String,
-      'amountCents' => '100'
+    expect(result_data["plan"]).to include(
+      "id" => String,
+      "amountCents" => "100"
     )
-    expect(result_data['plan']['usageThresholds'].first).to include(
-      'thresholdDisplayName' => 'threshold display name',
-      'amountCents' => '100'
+    expect(result_data["plan"]["usageThresholds"].first).to include(
+      "thresholdDisplayName" => "threshold display name",
+      "amountCents" => "100"
     )
   end
 end

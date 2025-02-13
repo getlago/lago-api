@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe InvoiceSubscription, type: :model do
   let(:invoice_subscription) do
@@ -16,13 +16,13 @@ RSpec.describe InvoiceSubscription, type: :model do
   let(:invoice) { invoice_subscription.invoice }
   let(:subscription) { invoice_subscription.subscription }
 
-  let(:from_datetime) { '2022-01-01 00:00:00' }
-  let(:to_datetime) { '2022-01-31 23:59:59' }
-  let(:charges_from_datetime) { '2022-01-01 00:00:00' }
-  let(:charges_to_datetime) { '2022-01-31 23:59:59' }
+  let(:from_datetime) { "2022-01-01 00:00:00" }
+  let(:to_datetime) { "2022-01-31 23:59:59" }
+  let(:charges_from_datetime) { "2022-01-01 00:00:00" }
+  let(:charges_to_datetime) { "2022-01-31 23:59:59" }
 
-  describe '#fees' do
-    it 'returns corresponding fees' do
+  describe "#fees" do
+    it "returns corresponding fees" do
       first_fee = create(:fee, subscription_id: subscription.id, invoice_id: invoice.id)
       create(:fee, subscription_id: subscription.id)
       create(:fee, invoice_id: invoice.id)
@@ -31,8 +31,8 @@ RSpec.describe InvoiceSubscription, type: :model do
     end
   end
 
-  describe '#charge_amount_cents' do
-    it 'returns the sum of the related charge fees' do
+  describe "#charge_amount_cents" do
+    it "returns the sum of the related charge fees" do
       charge = create(:standard_charge)
       create(
         :charge_fee,
@@ -61,8 +61,8 @@ RSpec.describe InvoiceSubscription, type: :model do
     end
   end
 
-  describe '#subscription_amount_cents' do
-    it 'returns the amount of the subscription fees' do
+  describe "#subscription_amount_cents" do
+    it "returns the amount of the subscription fees" do
       create(
         :fee,
         subscription_id: subscription.id,
@@ -82,8 +82,8 @@ RSpec.describe InvoiceSubscription, type: :model do
     end
   end
 
-  describe '#total_amount_cents' do
-    it 'returns the sum of the related fees' do
+  describe "#total_amount_cents" do
+    it "returns the sum of the related fees" do
       charge = create(:standard_charge)
       create(
         :fee,
@@ -112,28 +112,28 @@ RSpec.describe InvoiceSubscription, type: :model do
     end
   end
 
-  describe '#total_amount_currency' do
-    it 'returns the currency of the total amount' do
+  describe "#total_amount_currency" do
+    it "returns the currency of the total amount" do
       expect(invoice_subscription.total_amount_currency).to eq(subscription.plan.amount_currency)
     end
   end
 
-  describe '#charge_amount_currency' do
-    it 'returns the currency of the charge amount' do
+  describe "#charge_amount_currency" do
+    it "returns the currency of the charge amount" do
       expect(invoice_subscription.charge_amount_currency).to eq(subscription.plan.amount_currency)
     end
   end
 
-  describe '#subscription_amount_currency' do
-    it 'returns the currency of the subscription amount' do
+  describe "#subscription_amount_currency" do
+    it "returns the currency of the subscription amount" do
       expect(invoice_subscription.subscription_amount_currency).to eq(subscription.plan.amount_currency)
     end
   end
 
-  describe '#previous_invoice_subscription' do
+  describe "#previous_invoice_subscription" do
     subject(:previous_invoice_subscription_call) { invoice_subscription.previous_invoice_subscription }
 
-    context 'when it has previous invoice subscription' do
+    context "when it has previous invoice subscription" do
       let(:previous_invoice_subscription) do
         create(
           :invoice_subscription,
@@ -156,12 +156,12 @@ RSpec.describe InvoiceSubscription, type: :model do
         )
       end
 
-      it 'returns previous invoice subscription' do
+      it "returns previous invoice subscription" do
         expect(previous_invoice_subscription_call).to eq(previous_invoice_subscription)
       end
     end
 
-    context 'when there is a previous invoice subscription for different subscription' do
+    context "when there is a previous invoice subscription for different subscription" do
       let(:previous_invoice_subscription) do
         create(
           :invoice_subscription,
@@ -184,12 +184,12 @@ RSpec.describe InvoiceSubscription, type: :model do
         )
       end
 
-      it 'returns nil' do
+      it "returns nil" do
         expect(previous_invoice_subscription_call).to be(nil)
       end
     end
 
-    context 'when it has no previous invoice subscription' do
+    context "when it has no previous invoice subscription" do
       before do
         create(
           :invoice_subscription,
@@ -200,7 +200,7 @@ RSpec.describe InvoiceSubscription, type: :model do
         )
       end
 
-      it 'returns nil' do
+      it "returns nil" do
         expect(previous_invoice_subscription_call).to be(nil)
       end
     end

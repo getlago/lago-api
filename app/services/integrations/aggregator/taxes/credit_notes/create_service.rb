@@ -17,7 +17,7 @@ module Integrations
 
           def call
             return result unless integration
-            return result unless integration.type == 'Integrations::AnrokIntegration'
+            return result unless integration.type == "Integrations::AnrokIntegration"
 
             response = http_client.post_with_response(payload, headers)
             body = JSON.parse(response.body)
@@ -52,10 +52,10 @@ module Integrations
           def create_integration_resource
             IntegrationResource.create!(
               syncable_id: credit_note.id,
-              syncable_type: 'CreditNote',
+              syncable_type: "CreditNote",
               external_id: result.succeeded_id,
               integration_id: integration.id,
-              resource_type: 'credit_note'
+              resource_type: "credit_note"
             )
           end
         end

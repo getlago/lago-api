@@ -2,7 +2,7 @@
 
 module CreditNotes
   class CreateFromTermination < BaseService
-    def initialize(subscription:, reason: 'order_change', upgrade: false)
+    def initialize(subscription:, reason: "order_change", upgrade: false)
       @subscription = subscription
       @reason = reason
       @upgrade = upgrade
@@ -63,7 +63,7 @@ module CreditNotes
     end
 
     def plan_amount_cents
-      last_subscription_fee&.amount_details&.[]('plan_amount_cents') || plan.amount_cents
+      last_subscription_fee&.amount_details&.[]("plan_amount_cents") || plan.amount_cents
     end
 
     def to_date

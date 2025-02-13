@@ -9,12 +9,12 @@ class ApplicationController < ActionController::API
   rescue_from ActiveRecord::RecordNotFound, with: :not_found
 
   def health
-    ActiveRecord::Base.connection.execute('')
+    ActiveRecord::Base.connection.execute("")
     render(
       json: {
         version: LAGO_VERSION.number,
         github_url: LAGO_VERSION.github_url,
-        message: 'Success'
+        message: "Success"
       },
       status: :ok
     )
@@ -23,7 +23,7 @@ class ApplicationController < ActionController::API
       json: {
         version: LAGO_VERSION.number,
         github_url: LAGO_VERSION.github_url,
-        message: 'Unhealthy',
+        message: "Unhealthy",
         details: e.message
       },
       status: :internal_server_error
@@ -31,7 +31,7 @@ class ApplicationController < ActionController::API
   end
 
   def not_found
-    not_found_error(resource: 'resource')
+    not_found_error(resource: "resource")
   end
 
   def append_info_to_payload(payload)

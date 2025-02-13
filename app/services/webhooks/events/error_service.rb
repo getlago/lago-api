@@ -15,16 +15,16 @@ module Webhooks
             error: options[:error],
             event: object
           ),
-          root_name: 'event_error'
+          root_name: "event_error"
         )
       end
 
       def webhook_type
-        'event.error'
+        "event.error"
       end
 
       def object_type
-        'event_error'
+        "event_error"
       end
     end
   end

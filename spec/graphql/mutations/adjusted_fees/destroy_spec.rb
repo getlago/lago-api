@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::AdjustedFees::Destroy, type: :graphql do
-  let(:required_permission) { 'invoices:update' }
+  let(:required_permission) { "invoices:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, status: :draft, organization:) }
@@ -20,11 +20,11 @@ RSpec.describe Mutations::AdjustedFees::Destroy, type: :graphql do
 
   before { adjusted_fee }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'invoices:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "invoices:update"
 
-  it 'destroys an adjusted fee' do
+  it "destroys an adjusted fee" do
     expect do
       execute_graphql(
         current_user: membership.user,

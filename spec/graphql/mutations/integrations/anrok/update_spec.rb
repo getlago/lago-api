@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Integrations::Anrok::Update, type: :graphql do
-  let(:required_permission) { 'organization:integrations:update' }
+  let(:required_permission) { "organization:integrations:update" }
   let(:integration) { create(:anrok_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
-  let(:code) { 'anrok1' }
-  let(:name) { 'Anrok 1' }
-  let(:api_key) { '123456789' }
+  let(:code) { "anrok1" }
+  let(:name) { "Anrok 1" }
+  let(:api_key) { "123456789" }
 
   let(:mutation) do
     <<-GQL
@@ -28,14 +28,14 @@ RSpec.describe Mutations::Integrations::Anrok::Update, type: :graphql do
 
   before do
     integration
-    membership.organization.update!(premium_integrations: ['anrok'])
+    membership.organization.update!(premium_integrations: ["anrok"])
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:update"
 
-  it 'updates aan anrok integration' do
+  it "updates aan anrok integration" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -51,12 +51,12 @@ RSpec.describe Mutations::Integrations::Anrok::Update, type: :graphql do
       }
     )
 
-    result_data = result['data']['updateAnrokIntegration']
+    result_data = result["data"]["updateAnrokIntegration"]
 
     aggregate_failures do
-      expect(result_data['name']).to eq(name)
-      expect(result_data['code']).to eq(code)
-      expect(result_data['apiKey']).to eq('••••••••…789')
+      expect(result_data["name"]).to eq(name)
+      expect(result_data["code"]).to eq(code)
+      expect(result_data["apiKey"]).to eq("••••••••…789")
     end
   end
 end

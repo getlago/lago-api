@@ -18,7 +18,7 @@ module Api
             render(
               json: ::V1::Customers::UsageSerializer.new(
                 result.usage,
-                root_name: 'customer_usage',
+                root_name: "customer_usage",
                 includes: %i[charges_usage]
               )
             )
@@ -42,7 +42,7 @@ module Api
               json: ::CollectionSerializer.new(
                 result.usage_periods,
                 ::V1::Customers::PastUsageSerializer,
-                collection_name: 'usage_periods',
+                collection_name: "usage_periods",
                 meta: pagination_metadata(result),
                 includes: %i[charges_usage]
               )
@@ -65,7 +65,7 @@ module Api
         end
 
         def resource_name
-          'customer_usage'
+          "customer_usage"
         end
       end
     end

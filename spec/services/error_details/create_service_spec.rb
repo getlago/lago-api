@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe ErrorDetails::CreateService, type: :service do
   let(:membership) { create(:membership) }
@@ -8,23 +8,23 @@ RSpec.describe ErrorDetails::CreateService, type: :service do
   let(:customer) { create(:customer, organization:) }
   let(:owner) { create(:invoice, organization:, customer:) }
 
-  describe '#call' do
+  describe "#call" do
     subject(:service_call) { described_class.call(params:, owner:, organization:) }
 
     let(:params) do
       {
-        error_code: 'tax_error',
-        details: {'tax_error' => 'taxDateTooFarInFuture'}
+        error_code: "tax_error",
+        details: {"tax_error" => "taxDateTooFarInFuture"}
       }
     end
 
-    context 'when created succesfully' do
-      context 'when all - owner and organization are provided' do
-        it 'creates an error_detail' do
+    context "when created succesfully" do
+      context "when all - owner and organization are provided" do
+        it "creates an error_detail" do
           expect { service_call }.to change(ErrorDetail, :count).by(1)
         end
 
-        it 'returns created error_detail' do
+        it "returns created error_detail" do
           result = service_call
 
           aggregate_failures do
@@ -38,38 +38,38 @@ RSpec.describe ErrorDetails::CreateService, type: :service do
       end
     end
 
-    context 'when not created succesfully' do
-      context 'when no owner is provided' do
+    context "when not created succesfully" do
+      context "when no owner is provided" do
         subject(:service_call) { described_class.call(params:, organization:, owner: nil) }
 
-        it 'does not create an error_detail' do
+        it "does not create an error_detail" do
           expect { service_call }.to change(ErrorDetail, :count).by(0)
         end
 
-        it 'returns error for error_detail' do
+        it "returns error for error_detail" do
           result = service_call
           aggregate_failures do
             expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to include('owner_not_found')
+            expect(result.error.message).to include("owner_not_found")
           end
         end
       end
 
-      context 'when error code is not registered in enum' do
+      context "when error code is not registered in enum" do
         subject(:service_call) { described_class.call(params:, owner:, organization:) }
 
         let(:params) do
           {
-            error_code: 'this_error_code_will_never_achieve_its_goal',
-            details: {'this_error_code_will_never_achieve_its_goal' => 'does not matter what we send here'}
+            error_code: "this_error_code_will_never_achieve_its_goal",
+            details: {"this_error_code_will_never_achieve_its_goal" => "does not matter what we send here"}
           }
         end
 
-        it 'does not create an error_detail' do
+        it "does not create an error_detail" do
           expect { service_call }.to change(ErrorDetail, :count).by(0)
         end
 
-        it 'returns error for error_detail' do
+        it "returns error for error_detail" do
           result = service_call
           aggregate_failures do
             expect(result.error).to be_a(BaseService::ValidationFailure)

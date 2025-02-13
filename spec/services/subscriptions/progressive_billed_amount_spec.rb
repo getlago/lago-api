@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
   subject(:service) { described_class.new(subscription:, timestamp:) }

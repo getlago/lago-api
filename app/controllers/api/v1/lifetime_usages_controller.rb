@@ -7,7 +7,7 @@ module Api
         lifetime_usage = current_organization.subscriptions
           .find_by(external_id: params[:subscription_external_id])&.lifetime_usage
 
-        return not_found_error(resource: 'lifetime_usage') unless lifetime_usage
+        return not_found_error(resource: "lifetime_usage") unless lifetime_usage
         render_lifetime_usage lifetime_usage
       end
 
@@ -38,14 +38,14 @@ module Api
         render(
           json: ::V1::LifetimeUsageSerializer.new(
             lifetime_usage,
-            root_name: 'lifetime_usage',
+            root_name: "lifetime_usage",
             includes: %i[usage_thresholds]
           )
         )
       end
 
       def resource_name
-        'lifetime_usage'
+        "lifetime_usage"
       end
     end
   end

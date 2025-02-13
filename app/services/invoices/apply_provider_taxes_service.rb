@@ -19,7 +19,7 @@ module Invoices
 
         applied_tax = invoice.applied_taxes.new(
           tax_description: tax.type,
-          tax_code: tax.name.parameterize(separator: '_'),
+          tax_code: tax.name.parameterize(separator: "_"),
           tax_name: tax.name,
           tax_rate: tax_rate,
           amount_currency: invoice.currency

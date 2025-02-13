@@ -294,7 +294,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       end
     end
 
-    context 'when a payment exits' do
+    context "when a payment exits" do
       let(:payment) do
         create(
           :payment,

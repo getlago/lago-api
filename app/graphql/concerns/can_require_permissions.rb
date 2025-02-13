@@ -20,10 +20,10 @@ module CanRequirePermissions
   def not_enough_permissions_error
     extensions = {
       status: :forbidden,
-      code: 'forbidden',
+      code: "forbidden",
       required_permissions: Array.wrap(self.class::REQUIRED_PERMISSION)
     }
 
-    GraphQL::ExecutionError.new('Missing permissions', extensions:)
+    GraphQL::ExecutionError.new("Missing permissions", extensions:)
   end
 end

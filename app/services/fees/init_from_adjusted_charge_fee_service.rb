@@ -74,7 +74,7 @@ module Fees
         precise_amount_cents:,
         amount_currency: currency,
         fee_type: :charge,
-        invoiceable_type: 'Charge',
+        invoiceable_type: "Charge",
         invoiceable: charge,
         units:,
         total_aggregated_units: units,

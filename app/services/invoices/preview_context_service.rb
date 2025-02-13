@@ -74,7 +74,7 @@ module Invoices
       billing_time = if Subscription::BILLING_TIME.include?(params[:billing_time]&.to_sym)
         params[:billing_time]
       else
-        'calendar'
+        "calendar"
       end
 
       Subscription.new(
@@ -96,7 +96,7 @@ module Invoices
       applied_coupons = result.customer
         .applied_coupons.active
         .joins(:coupon)
-        .order('coupons.limited_billable_metrics DESC, coupons.limited_plans DESC, applied_coupons.created_at ASC')
+        .order("coupons.limited_billable_metrics DESC, coupons.limited_plans DESC, applied_coupons.created_at ASC")
         .presence
 
       applied_coupons || Array(params[:coupons]).map do |coupon_attr|
@@ -119,14 +119,14 @@ module Invoices
 
     def integration_type(type)
       case type
-      when 'anrok'
-        'Integrations::AnrokIntegration'
-      when 'xero'
-        'Integrations::XeroIntegration'
-      when 'hubspot'
-        'Integrations::HubspotIntegration'
-      when 'salesforce'
-        'Integrations::SalesforceIntegration'
+      when "anrok"
+        "Integrations::AnrokIntegration"
+      when "xero"
+        "Integrations::XeroIntegration"
+      when "hubspot"
+        "Integrations::HubspotIntegration"
+      when "salesforce"
+        "Integrations::SalesforceIntegration"
       else
         raise(NotImplementedError)
       end

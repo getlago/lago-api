@@ -2,7 +2,7 @@
 
 module QueuesHelper
   def webhook_queue
-    if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_WEBHOOK'])
+    if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
       :webhook_worker
     else
       :webhook

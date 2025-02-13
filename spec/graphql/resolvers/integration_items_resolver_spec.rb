@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::IntegrationItemsResolver, type: :graphql do
-  let(:required_permission) { 'organization:integrations:view' }
+  let(:required_permission) { "organization:integrations:view" }
   let(:query) do
     <<~GQL
       query($integrationId: ID!, $itemType: IntegrationItemTypeEnum) {
@@ -16,7 +16,7 @@ RSpec.describe Resolvers::IntegrationItemsResolver, type: :graphql do
   end
 
   let(:integration_item) { create(:integration_item, integration:) }
-  let(:integration_item2) { create(:integration_item, item_type: 'tax', integration:) }
+  let(:integration_item2) { create(:integration_item, item_type: "tax", integration:) }
   let(:integration) { create(:netsuite_integration, organization:) }
   let(:organization) { membership.organization }
   let(:membership) { create(:membership) }
@@ -26,11 +26,11 @@ RSpec.describe Resolvers::IntegrationItemsResolver, type: :graphql do
     integration_item2
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:view"
 
-  it 'returns a list of integration items' do
+  it "returns a list of integration items" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -38,23 +38,23 @@ RSpec.describe Resolvers::IntegrationItemsResolver, type: :graphql do
       query:,
       variables: {
         integrationId: integration.id,
-        itemType: 'tax'
+        itemType: "tax"
       }
     )
 
-    integration_items_response = result['data']['integrationItems']
+    integration_items_response = result["data"]["integrationItems"]
 
     aggregate_failures do
-      expect(integration_items_response['collection'].count).to eq(1)
-      expect(integration_items_response['collection'].first['id']).to eq(integration_item2.id)
+      expect(integration_items_response["collection"].count).to eq(1)
+      expect(integration_items_response["collection"].first["id"]).to eq(integration_item2.id)
 
-      expect(integration_items_response['metadata']['currentPage']).to eq(1)
-      expect(integration_items_response['metadata']['totalCount']).to eq(1)
+      expect(integration_items_response["metadata"]["currentPage"]).to eq(1)
+      expect(integration_items_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
-  context 'without integration id' do
-    it 'returns an error' do
+  context "without integration id" do
+    it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
         permissions: required_permission,
@@ -63,7 +63,7 @@ RSpec.describe Resolvers::IntegrationItemsResolver, type: :graphql do
 
       expect_graphql_error(
         result:,
-        message: 'Variable $integrationId of type ID! was provided invalid value'
+        message: "Variable $integrationId of type ID! was provided invalid value"
       )
     end
   end

@@ -11,7 +11,7 @@ module Subscriptions
     end
 
     def call
-      return result.not_found_failure!(resource: 'subscription') if subscription.blank?
+      return result.not_found_failure!(resource: "subscription") if subscription.blank?
 
       if subscription.pending?
         subscription.mark_as_canceled!
@@ -27,7 +27,7 @@ module Subscriptions
           #       we have to create a credit note for the days that were not consumed
           credit_note_result = CreditNotes::CreateFromTermination.new(
             subscription:,
-            reason: 'order_cancellation',
+            reason: "order_cancellation",
             upgrade:
           ).call
           credit_note_result.raise_if_error!
@@ -49,7 +49,7 @@ module Subscriptions
 
       # NOTE: Wait to ensure job is performed at the end of the database transaction.
       # See https://github.com/getlago/lago-api/blob/main/app/services/subscriptions/create_service.rb#L46.
-      SendWebhookJob.set(wait: 2.seconds).perform_later('subscription.terminated', subscription)
+      SendWebhookJob.set(wait: 2.seconds).perform_later("subscription.terminated", subscription)
 
       result.subscription = subscription
       result
@@ -88,8 +88,8 @@ module Subscriptions
       BillSubscriptionJob.perform_later(billable_subscriptions, timestamp, invoicing_reason: :upgrading)
       BillNonInvoiceableFeesJob.perform_later([subscription], rotation_date) # Ignore next subscription since there can't be events
 
-      SendWebhookJob.perform_later('subscription.terminated', subscription)
-      SendWebhookJob.perform_later('subscription.started', next_subscription)
+      SendWebhookJob.perform_later("subscription.terminated", subscription)
+      SendWebhookJob.perform_later("subscription.started", next_subscription)
 
       result.subscription = next_subscription
 

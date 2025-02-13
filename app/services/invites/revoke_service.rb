@@ -8,8 +8,8 @@ module Invites
     end
 
     def call
-      return result.not_found_failure!(resource: 'invite') unless invite
-      return result.not_found_failure!(resource: 'invite') unless invite.pending?
+      return result.not_found_failure!(resource: "invite") unless invite
+      return result.not_found_failure!(resource: "invite") unless invite.pending?
 
       invite.mark_as_revoked!
 

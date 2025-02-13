@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Auth::Okta::Authorize, type: :graphql do
   let(:user) { create(:user) }
@@ -16,7 +16,7 @@ RSpec.describe Mutations::Auth::Okta::Authorize, type: :graphql do
     GQL
   end
 
-  it 'returns authorize url' do
+  it "returns authorize url" do
     result = execute_graphql(
       query: mutation,
       variables: {
@@ -26,37 +26,37 @@ RSpec.describe Mutations::Auth::Okta::Authorize, type: :graphql do
       }
     )
 
-    response = result['data']['oktaAuthorize']
+    response = result["data"]["oktaAuthorize"]
 
     aggregate_failures do
-      expect(response['url']).to include(okta_integration.organization_name.downcase)
+      expect(response["url"]).to include(okta_integration.organization_name.downcase)
     end
   end
 
-  context 'when email domain is not configured with an integration' do
-    it 'returns an error' do
+  context "when email domain is not configured with an integration" do
+    it "returns an error" do
       result = execute_graphql(
         query: mutation,
         variables: {
           input: {
-            email: 'foo@b.ar'
+            email: "foo@b.ar"
           }
         }
       )
 
-      response = result['errors'].first['extensions']
+      response = result["errors"].first["extensions"]
 
       aggregate_failures do
-        expect(response['status']).to eq(422)
-        expect(response['details']['base']).to include('domain_not_configured')
+        expect(response["status"]).to eq(422)
+        expect(response["details"]["base"]).to include("domain_not_configured")
       end
     end
   end
 
-  context 'when invite token is provided' do
+  context "when invite token is provided" do
     let(:invite) { create(:invite, email: "foo@#{okta_integration.domain}") }
 
-    it 'returns authorize url' do
+    it "returns authorize url" do
       result = execute_graphql(
         query: mutation,
         variables: {
@@ -67,10 +67,10 @@ RSpec.describe Mutations::Auth::Okta::Authorize, type: :graphql do
         }
       )
 
-      response = result['data']['oktaAuthorize']
+      response = result["data"]["oktaAuthorize"]
 
       aggregate_failures do
-        expect(response['url']).to include(okta_integration.organization_name.downcase)
+        expect(response["url"]).to include(okta_integration.organization_name.downcase)
       end
     end
   end

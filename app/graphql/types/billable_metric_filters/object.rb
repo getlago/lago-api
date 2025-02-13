@@ -3,8 +3,8 @@
 module Types
   module BillableMetricFilters
     class Object < BaseObject
-      graphql_name 'BillableMetricFilter'
-      description 'Billable metric filters'
+      graphql_name "BillableMetricFilter"
+      description "Billable metric filters"
 
       field :id, ID, null: false
 

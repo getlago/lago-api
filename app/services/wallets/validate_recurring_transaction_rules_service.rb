@@ -21,7 +21,7 @@ module Wallets
     def valid_transaction_rules_number?
       return true if args[:recurring_transaction_rules].count.zero? || args[:recurring_transaction_rules].count == 1
 
-      add_error(field: :recurring_transaction_rules, error_code: 'invalid_number_of_recurring_rules')
+      add_error(field: :recurring_transaction_rules, error_code: "invalid_number_of_recurring_rules")
     end
 
     def valid_transaction_rules?

@@ -9,7 +9,7 @@ module Resolvers
 
     REQUIRED_PERMISSION = "dunning_campaigns:view"
 
-    argument :id, ID, required: true, description: 'Unique ID of the dunning campaign'
+    argument :id, ID, required: true, description: "Unique ID of the dunning campaign"
 
     type Types::DunningCampaigns::Object, null: false
 

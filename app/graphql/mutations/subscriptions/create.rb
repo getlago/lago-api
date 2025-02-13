@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'subscriptions:create'
+      REQUIRED_PERMISSION = "subscriptions:create"
 
-      graphql_name 'CreateSubscription'
-      description 'Create a new Subscription'
+      graphql_name "CreateSubscription"
+      description "Create a new Subscription"
 
       input_object_class Types::Subscriptions::CreateSubscriptionInput
 

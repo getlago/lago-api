@@ -22,6 +22,6 @@ class WebhookEndpointsQuery < BaseQuery
   def search_params
     return if search_term.blank?
 
-    {webhook_url_cont: search_term, m: 'or'}
+    {webhook_url_cont: search_term, m: "or"}
   end
 end

@@ -6,7 +6,7 @@ module Integrations
       class CreateJob < ApplicationJob
         include ConcurrencyThrottlable
 
-        queue_as 'integrations'
+        queue_as "integrations"
 
         unique :until_executed, on_conflict: :log
 

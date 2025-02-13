@@ -96,9 +96,9 @@ module Invoices
 
       fee = invoice.fees.first
       # NOTE: Adding 1 second because of to_i rounding.
-      return invoice.created_at + 1.second unless fee&.properties&.[]('timestamp')
+      return invoice.created_at + 1.second unless fee&.properties&.[]("timestamp")
 
-      DateTime.parse(fee.properties['timestamp'])
+      DateTime.parse(fee.properties["timestamp"])
     end
 
     def invoice_credit_note_items

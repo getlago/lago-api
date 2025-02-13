@@ -19,11 +19,11 @@ module Lago
         {
           applicationInfo: {
             externalPlatform: {
-              name: 'Lago',
-              integrator: 'Lago'
+              name: "Lago",
+              integrator: "Lago"
             },
             merchantApplication: {
-              name: 'Lago'
+              name: "Lago"
             }
           }
         }

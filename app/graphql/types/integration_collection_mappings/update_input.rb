@@ -3,7 +3,7 @@
 module Types
   module IntegrationCollectionMappings
     class UpdateInput < Types::BaseInputObject
-      graphql_name 'UpdateIntegrationCollectionMappingInput'
+      graphql_name "UpdateIntegrationCollectionMappingInput"
 
       argument :id, ID, required: true
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::PaidCreditService, type: :service do
   subject(:invoice_service) do
@@ -9,14 +9,14 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
 
   let(:timestamp) { Time.current.to_i }
 
-  describe 'call' do
+  describe "call" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:, payment_provider: :stripe) }
     let(:subscription) { create(:subscription, plan:, customer:) }
     let(:plan) { create(:plan, organization:) }
     let(:wallet) { create(:wallet, customer:) }
     let(:wallet_transaction) do
-      create(:wallet_transaction, wallet:, amount: '15.00', credit_amount: '15.00', invoice_requires_successful_payment:)
+      create(:wallet_transaction, wallet:, amount: "15.00", credit_amount: "15.00", invoice_requires_successful_payment:)
     end
     let(:invoice_requires_successful_payment) { false }
 
@@ -27,7 +27,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       subscription
     end
 
-    it 'creates an invoice' do
+    it "creates an invoice" do
       result = invoice_service.call
 
       aggregate_failures do
@@ -35,9 +35,9 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
 
         expect(result.invoice).to have_attributes(
           issuing_date: Time.zone.at(timestamp).to_date,
-          invoice_type: 'credit',
-          payment_status: 'pending',
-          currency: 'EUR',
+          invoice_type: "credit",
+          payment_status: "pending",
+          currency: "EUR",
           fees_amount_cents: 1500,
           sub_total_excluding_taxes_amount_cents: 1500,
           taxes_amount_cents: 0,
@@ -52,13 +52,13 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end
     end
 
-    it 'enqueues a SendWebhookJob' do
+    it "enqueues a SendWebhookJob" do
       expect do
         invoice_service.call
       end.to have_enqueued_job(SendWebhookJob)
     end
 
-    it_behaves_like 'syncs invoice' do
+    it_behaves_like "syncs invoice" do
       let(:service_call) { invoice_service.call }
     end
 
@@ -66,25 +66,25 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       let(:service_call) { invoice_service.call }
     end
 
-    it 'does not enqueue an SendEmailJob' do
+    it "does not enqueue an SendEmailJob" do
       expect do
         invoice_service.call
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
-    context 'with lago_premium' do
+    context "with lago_premium" do
       around { |test| lago_premium!(&test) }
 
-      it 'enqueues an SendEmailJob' do
+      it "enqueues an SendEmailJob" do
         expect do
           invoice_service.call
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
-      context 'when organization does not have right email settings' do
+      context "when organization does not have right email settings" do
         before { customer.organization.update!(email_settings: []) }
 
-        it 'does not enqueue an SendEmailJob' do
+        it "does not enqueue an SendEmailJob" do
           expect do
             invoice_service.call
           end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
@@ -92,12 +92,12 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end
     end
 
-    it 'calls SegmentTrackJob' do
+    it "calls SegmentTrackJob" do
       invoice = invoice_service.call.invoice
 
       expect(SegmentTrackJob).to have_been_enqueued.with(
         membership_id: CurrentContext.membership,
-        event: 'invoice_created',
+        event: "invoice_created",
         properties: {
           organization_id: invoice.organization.id,
           invoice_id: invoice.id,
@@ -106,29 +106,29 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       )
     end
 
-    it 'creates a payment' do
+    it "creates a payment" do
       result = invoice_service.call
       expect(Invoices::Payments::CreateJob).to have_been_enqueued.with(invoice: result.invoice, payment_provider: :stripe)
     end
 
-    context 'with customer timezone' do
-      before { customer.update!(timezone: 'America/Los_Angeles') }
+    context "with customer timezone" do
+      before { customer.update!(timezone: "America/Los_Angeles") }
 
-      let(:timestamp) { DateTime.parse('2022-11-25 01:00:00').to_i }
+      let(:timestamp) { DateTime.parse("2022-11-25 01:00:00").to_i }
 
-      it 'assigns the issuing date in the customer timezone' do
+      it "assigns the issuing date in the customer timezone" do
         result = invoice_service.call
 
-        expect(result.invoice.issuing_date.to_s).to eq('2022-11-24')
+        expect(result.invoice.issuing_date.to_s).to eq("2022-11-24")
       end
     end
 
-    context 'with provided invoice' do
+    context "with provided invoice" do
       let(:invoice) do
         create(:invoice, organization: customer.organization, customer:, invoice_type: :credit, status: :generating)
       end
 
-      it 'does not re-create an invoice' do
+      it "does not re-create an invoice" do
         result = invoice_service.call
 
         expect(result).to be_success
@@ -145,12 +145,12 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end
     end
 
-    context 'with wallet_transaction.invoice_requires_successful_payment' do
+    context "with wallet_transaction.invoice_requires_successful_payment" do
       let(:invoice_requires_successful_payment) { true }
 
       around { |test| lago_premium!(&test) }
 
-      it 'creates an open invoice' do
+      it "creates an open invoice" do
         result = invoice_service.call
 
         expect(result).to be_success

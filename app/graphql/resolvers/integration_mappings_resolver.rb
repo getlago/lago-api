@@ -5,9 +5,9 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'organization:integrations:view'
+    REQUIRED_PERMISSION = "organization:integrations:view"
 
-    description 'Query netsuite integration mappings'
+    description "Query netsuite integration mappings"
 
     argument :integration_id, ID, required: false
     argument :limit, Integer, required: false

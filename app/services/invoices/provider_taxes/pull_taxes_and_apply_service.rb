@@ -10,10 +10,10 @@ module Invoices
       end
 
       def call
-        return result.not_found_failure!(resource: 'invoice') unless invoice
-        return result.not_found_failure!(resource: 'integration_customer') unless customer.anrok_customer
-        return result.not_allowed_failure!(code: 'invalid_status') unless invoice.pending? || invoice.draft?
-        return result.not_allowed_failure!(code: 'invalid_tax_status') unless invoice.tax_pending?
+        return result.not_found_failure!(resource: "invoice") unless invoice
+        return result.not_found_failure!(resource: "integration_customer") unless customer.anrok_customer
+        return result.not_allowed_failure!(code: "invalid_status") unless invoice.pending? || invoice.draft?
+        return result.not_allowed_failure!(code: "invalid_tax_status") unless invoice.tax_pending?
 
         invoice.error_details.tax_error.discard_all
         taxes_result = if invoice.draft?
@@ -24,8 +24,8 @@ module Invoices
 
         unless taxes_result.success?
           create_error_detail(taxes_result.error)
-          invoice.tax_status = 'failed'
-          invoice.status = 'failed' unless invoice.draft?
+          invoice.tax_status = "failed"
+          invoice.status = "failed" unless invoice.draft?
           invoice.save!
 
           return result
@@ -45,7 +45,7 @@ module Invoices
           create_applied_prepaid_credit if should_create_applied_prepaid_credit?
 
           invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
-          invoice.tax_status = 'succeeded'
+          invoice.tax_status = "succeeded"
           Invoices::TransitionToFinalStatusService.call(invoice:) unless invoice.draft?
 
           invoice.save!
@@ -55,7 +55,7 @@ module Invoices
         end
 
         if invoice.finalized?
-          SendWebhookJob.perform_later('invoice.created', invoice)
+          SendWebhookJob.perform_later("invoice.created", invoice)
           GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -76,7 +76,7 @@ module Invoices
 
       def should_deliver_email?
         License.premium? &&
-          invoice.organization.email_settings.include?('invoice.finalized')
+          invoice.organization.email_settings.include?("invoice.finalized")
       end
 
       def wallet
@@ -135,7 +135,7 @@ module Invoices
             details: {
               tax_error: error.code
             }.tap do |details|
-              details[:tax_error_message] = error.error_message if error.code == 'validationError'
+              details[:tax_error_message] = error.error_message if error.code == "validationError"
             end
           }
         )

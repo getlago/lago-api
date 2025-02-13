@@ -4,7 +4,7 @@ module Integrations
   module Aggregator
     class AccountInformationService < BaseService
       def action_path
-        'v1/account-information'
+        "v1/account-information"
       end
 
       def call
@@ -20,9 +20,9 @@ module Integrations
 
       def headers
         {
-          'Connection-Id' => integration.connection_id,
-          'Authorization' => "Bearer #{secret_key}",
-          'Provider-Config-Key' => provider_key
+          "Connection-Id" => integration.connection_id,
+          "Authorization" => "Bearer #{secret_key}",
+          "Provider-Config-Key" => provider_key
         }
       end
     end

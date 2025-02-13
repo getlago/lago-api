@@ -144,7 +144,7 @@ module Fees
         precise_amount_cents:,
         amount_currency: currency,
         fee_type: :charge,
-        invoiceable_type: 'Charge',
+        invoiceable_type: "Charge",
         invoiceable: charge,
         units:,
         total_aggregated_units: amount_result.total_aggregated_units || units,
@@ -193,9 +193,9 @@ module Fees
         charge_filter&.id,
         (grouped_by || {}).map do |k, v|
           "#{k}-#{v}"
-        end.sort.join('|')
-      ].compact.join('|')
-      key = 'default' if key.blank?
+        end.sort.join("|")
+      ].compact.join("|")
+      key = "default" if key.blank?
 
       return @adjusted_fee[key] if @adjusted_fee.key?(key)
 
@@ -231,8 +231,8 @@ module Fees
 
     def options(properties)
       {
-        free_units_per_events: properties['free_units_per_events'].to_i,
-        free_units_per_total_aggregation: BigDecimal(properties['free_units_per_total_aggregation'] || 0),
+        free_units_per_events: properties["free_units_per_events"].to_i,
+        free_units_per_total_aggregation: BigDecimal(properties["free_units_per_total_aggregation"] || 0),
         is_current_usage: current_usage,
         is_pay_in_advance: charge.pay_in_advance?
       }
@@ -304,7 +304,7 @@ module Fees
       filters = {}
 
       properties = charge_filter&.properties || charge.properties
-      filters[:grouped_by] = properties['grouped_by'] if charge.supports_grouped_by? && properties['grouped_by'].present?
+      filters[:grouped_by] = properties["grouped_by"] if charge.supports_grouped_by? && properties["grouped_by"].present?
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)

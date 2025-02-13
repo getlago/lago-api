@@ -8,7 +8,7 @@ module BillableMetrics
     end
 
     def call
-      return result.not_found_failure!(resource: 'billable_metric') unless metric
+      return result.not_found_failure!(resource: "billable_metric") unless metric
 
       BillableMetrics::ExpressionCacheService.expire_cache(metric.organization.id, metric.code)
 

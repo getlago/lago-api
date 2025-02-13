@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 module CanRequirePermissionsSpec
   class ThingType < Types::BaseObject
@@ -11,9 +11,9 @@ module CanRequirePermissionsSpec
   class RenameThingMutation < Mutations::BaseMutation
     include CanRequirePermissions
 
-    REQUIRED_PERMISSION = 'things:rename'
+    REQUIRED_PERMISSION = "things:rename"
 
-    graphql_name 'RenameThing'
+    graphql_name "RenameThing"
     argument :new_name, String, required: true
     type ThingType
 
@@ -42,32 +42,32 @@ RSpec.describe CanRequirePermissions, type: :graphql do
     GQL
   end
 
-  context 'with a the correct permissions' do
-    it 'renames the thing' do
+  context "with a the correct permissions" do
+    it "renames the thing" do
       result = CanRequirePermissionsSpec::TestApiSchema.execute(
         mutation,
-        variables: {input: {newName: 'new name'}},
-        context: {permissions: {'things:rename' => true}}
+        variables: {input: {newName: "new name"}},
+        context: {permissions: {"things:rename" => true}}
       )
 
-      expect(result['data']['renameThing']['name']).to eq 'new name'
+      expect(result["data"]["renameThing"]["name"]).to eq "new name"
     end
   end
 
-  context 'without a current user' do
-    it 'returns an error' do
+  context "without a current user" do
+    it "returns an error" do
       result = CanRequirePermissionsSpec::TestApiSchema.execute(
         mutation,
-        variables: {input: {newName: 'new name'}},
+        variables: {input: {newName: "new name"}},
         context: {permissions: Permission::EMPTY_PERMISSIONS_HASH}
       )
 
       partial_error = {
-        'message' => 'Missing permissions',
-        'extensions' => {'status' => :forbidden, 'code' => 'forbidden', 'required_permissions' => ['things:rename']}
+        "message" => "Missing permissions",
+        "extensions" => {"status" => :forbidden, "code" => "forbidden", "required_permissions" => ["things:rename"]}
       }
 
-      expect(result['errors']).to include hash_including(partial_error)
+      expect(result["errors"]).to include hash_including(partial_error)
     end
   end
 end

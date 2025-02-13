@@ -37,7 +37,7 @@ module Integrations
             integration:,
             external_id: result.external_id,
             syncable_id: payment.id,
-            syncable_type: 'Payment',
+            syncable_type: "Payment",
             resource_type: :payment
           )
 
@@ -56,7 +56,7 @@ module Integrations
         end
 
         def call_async
-          return result.not_found_failure!(resource: 'payment') unless payment
+          return result.not_found_failure!(resource: "payment") unless payment
 
           ::Integrations::Aggregator::Payments::CreateJob.perform_later(payment:)
 
@@ -79,13 +79,13 @@ module Integrations
         end
 
         def process_hash_result(body)
-          external_id = body['succeededPayment']&.first.try(:[], 'id')
+          external_id = body["succeededPayment"]&.first.try(:[], "id")
 
           if external_id
             result.external_id = external_id
           else
-            message = body['failedPayments'].first['validation_errors'].map { |error| error['Message'] }.join(". ")
-            code = 'Validation error'
+            message = body["failedPayments"].first["validation_errors"].map { |error| error["Message"] }.join(". ")
+            code = "Validation error"
 
             deliver_error_webhook(customer:, code:, message:)
           end

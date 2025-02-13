@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
-describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
+describe "Taxes on Invoice Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
 
   before do
@@ -12,76 +12,76 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
 
   around { |test| lago_premium!(&test) }
 
-  context 'when timezone is negative and not the same day as UTC' do
-    it 'creates an invoice for the expected period' do
+  context "when timezone is negative and not the same day as UTC" do
+    it "creates an invoice for the expected period" do
       travel_to(DateTime.new(2023, 1, 1)) do
-        create_tax(name: 'Banking rates', code: 'banking_rates', rate: 10.0)
-        create_tax(name: 'Sales tax - FR', code: 'sales_tax_fr', rate: 0.0)
-        create_tax(name: 'Sales tax', code: 'sales_tax', rate: 20.0)
+        create_tax(name: "Banking rates", code: "banking_rates", rate: 10.0)
+        create_tax(name: "Sales tax - FR", code: "sales_tax_fr", rate: 0.0)
+        create_tax(name: "Sales tax", code: "sales_tax", rate: 20.0)
 
-        create_or_update_customer(external_id: 'customer-1')
+        create_or_update_customer(external_id: "customer-1")
 
-        create_metric(name: 'FX Transfers', code: 'fx_transfers', aggregation_type: 'sum_agg', field_name: 'total')
-        fx_transfers = organization.billable_metrics.find_by(code: 'fx_transfers')
-        create_metric(name: 'Cards', code: 'cards', aggregation_type: 'count_agg')
-        cards = organization.billable_metrics.find_by(code: 'cards')
+        create_metric(name: "FX Transfers", code: "fx_transfers", aggregation_type: "sum_agg", field_name: "total")
+        fx_transfers = organization.billable_metrics.find_by(code: "fx_transfers")
+        create_metric(name: "Cards", code: "cards", aggregation_type: "count_agg")
+        cards = organization.billable_metrics.find_by(code: "cards")
 
         create_plan(
           {
-            name: 'P1',
-            code: 'plan_code',
-            interval: 'monthly',
+            name: "P1",
+            code: "plan_code",
+            interval: "monthly",
             amount_cents: 10_000,
-            amount_currency: 'EUR',
+            amount_currency: "EUR",
             pay_in_advance: false,
-            tax_codes: ['banking_rates'],
+            tax_codes: ["banking_rates"],
             charges: [
               {
                 billable_metric_id: fx_transfers.id,
-                charge_model: 'standard',
-                properties: {amount: '1'},
-                tax_codes: [organization.taxes.find_by(code: 'sales_tax_fr').code]
+                charge_model: "standard",
+                properties: {amount: "1"},
+                tax_codes: [organization.taxes.find_by(code: "sales_tax_fr").code]
               },
               {
                 billable_metric_id: cards.id,
-                charge_model: 'standard',
+                charge_model: "standard",
                 min_amount_cents: 5000,
-                properties: {amount: '30'},
-                tax_codes: [organization.taxes.find_by(code: 'sales_tax').code]
+                properties: {amount: "30"},
+                tax_codes: [organization.taxes.find_by(code: "sales_tax").code]
               }
             ]
           }
         )
-        plan = organization.plans.find_by(code: 'plan_code')
+        plan = organization.plans.find_by(code: "plan_code")
 
         create_subscription(
           {
-            external_customer_id: 'customer-1',
-            external_id: 'sub_external_id',
+            external_customer_id: "customer-1",
+            external_id: "sub_external_id",
             plan_code: plan.code
           }
         )
 
         create_coupon(
           {
-            name: 'coupon1',
-            code: 'coupon1_code',
-            coupon_type: 'fixed_amount',
-            frequency: 'once',
+            name: "coupon1",
+            code: "coupon1_code",
+            coupon_type: "fixed_amount",
+            frequency: "once",
             amount_cents: 1000,
-            amount_currency: 'EUR',
-            expiration: 'time_limit',
+            amount_currency: "EUR",
+            expiration: "time_limit",
             expiration_at: Time.current + 15.days,
             reusable: false
           }
         )
-        apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
+        apply_coupon({external_customer_id: "customer-1", coupon_code: "coupon1_code"})
 
         create_event(
           {
             code: fx_transfers.code,
             transaction_id: SecureRandom.uuid,
-            external_subscription_id: 'sub_external_id',
+            external_subscription_id: "sub_external_id",
             properties: {total: 50}
           }
         )
@@ -90,7 +90,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
           {
             code: cards.code,
             transaction_id: SecureRandom.uuid,
-            external_subscription_id: 'sub_external_id'
+            external_subscription_id: "sub_external_id"
           }
         )
       end
@@ -99,7 +99,7 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
         perform_billing
       end
 
-      customer = organization.customers.find_by(external_id: 'customer-1')
+      customer = organization.customers.find_by(external_id: "customer-1")
       invoice = customer.invoices.first
       fees = invoice.fees
 
@@ -114,8 +114,8 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
         precise_coupons_amount_cents: 500
       )
 
-      fx_transfers = organization.billable_metrics.find_by(code: 'fx_transfers')
-      cards = organization.billable_metrics.find_by(code: 'cards')
+      fx_transfers = organization.billable_metrics.find_by(code: "fx_transfers")
+      cards = organization.billable_metrics.find_by(code: "cards")
 
       # FX Transfers fee
       fx_transfers_fee = fees.charge.find_by(charge: fx_transfers.charges.first)
@@ -161,71 +161,71 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'when coupons amount is greater than fees total amount' do
-    it 'creates an invoice for the expected period' do
+  context "when coupons amount is greater than fees total amount" do
+    it "creates an invoice for the expected period" do
       travel_to(DateTime.new(2023, 1, 1)) do
-        create_tax(name: 'Banking rates', code: 'banking_rates', rate: 10.0)
+        create_tax(name: "Banking rates", code: "banking_rates", rate: 10.0)
 
-        create_or_update_customer(external_id: 'customer-1')
+        create_or_update_customer(external_id: "customer-1")
 
         create_plan(
           {
-            name: 'P1',
-            code: 'plan_code',
-            interval: 'monthly',
+            name: "P1",
+            code: "plan_code",
+            interval: "monthly",
             amount_cents: 10_000,
-            amount_currency: 'EUR',
+            amount_currency: "EUR",
             pay_in_advance: false,
-            tax_codes: ['banking_rates'],
+            tax_codes: ["banking_rates"],
             charges: []
           }
         )
-        plan = organization.plans.find_by(code: 'plan_code')
+        plan = organization.plans.find_by(code: "plan_code")
 
         create_subscription(
           {
-            external_customer_id: 'customer-1',
-            external_id: 'sub_external_id',
+            external_customer_id: "customer-1",
+            external_id: "sub_external_id",
             plan_code: plan.code
           }
         )
 
         create_coupon(
           {
-            name: 'coupon1',
-            code: 'coupon1_code',
-            coupon_type: 'fixed_amount',
-            frequency: 'once',
+            name: "coupon1",
+            code: "coupon1_code",
+            coupon_type: "fixed_amount",
+            frequency: "once",
             amount_cents: 1000,
-            amount_currency: 'EUR',
-            expiration: 'time_limit',
+            amount_currency: "EUR",
+            expiration: "time_limit",
             expiration_at: Time.current + 15.days,
             reusable: false
           }
         )
-        apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
+        apply_coupon({external_customer_id: "customer-1", coupon_code: "coupon1_code"})
 
         create_coupon(
           {
-            name: 'coupon2',
-            code: 'coupon2_code',
-            coupon_type: 'fixed_amount',
-            frequency: 'once',
+            name: "coupon2",
+            code: "coupon2_code",
+            coupon_type: "fixed_amount",
+            frequency: "once",
             amount_cents: 11_000,
-            amount_currency: 'EUR',
-            expiration: 'time_limit',
+            amount_currency: "EUR",
+            expiration: "time_limit",
             expiration_at: Time.current + 15.days,
             reusable: false
           }
         )
-        apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon2_code'})
+        apply_coupon({external_customer_id: "customer-1", coupon_code: "coupon2_code"})
       end
 
       travel_to(DateTime.new(2023, 2, 1)) do
         perform_billing
       end
 
-      customer = organization.customers.find_by(external_id: 'customer-1')
+      customer = organization.customers.find_by(external_id: "customer-1")
       invoice = customer.invoices.first
       fees = invoice.fees
 
@@ -242,97 +242,97 @@ describe 'Taxes on Invoice Scenarios', :scenarios, type: :request do
     end
   end
 
-  context 'when there are multiple subscriptions and coupons are covering total amount' do
-    it 'creates an invoice for the expected period' do
+  context "when there are multiple subscriptions and coupons are covering total amount" do
+    it "creates an invoice for the expected period" do
       travel_to(DateTime.new(2023, 1, 1)) do
-        create_tax(name: 'Banking rates', code: 'banking_rates', rate: 10.0)
+        create_tax(name: "Banking rates", code: "banking_rates", rate: 10.0)
 
-        create_or_update_customer(external_id: 'customer-1')
+        create_or_update_customer(external_id: "customer-1")
 
         create_plan(
           {
-            name: 'P1',
-            code: 'plan_code',
-            interval: 'monthly',
+            name: "P1",
+            code: "plan_code",
+            interval: "monthly",
             amount_cents: 10_000,
-            amount_currency: 'EUR',
+            amount_currency: "EUR",
             pay_in_advance: false,
-            tax_codes: ['banking_rates'],
+            tax_codes: ["banking_rates"],
             charges: []
           }
         )
-        plan = organization.plans.find_by(code: 'plan_code')
+        plan = organization.plans.find_by(code: "plan_code")
 
         create_subscription(
           {
-            external_customer_id: 'customer-1',
-            external_id: 'sub_external_id',
+            external_customer_id: "customer-1",
+            external_id: "sub_external_id",
             plan_code: plan.code
           }
         )
 
         create_plan(
           {
-            name: 'P2',
-            code: 'plan_code2',
-            interval: 'monthly',
+            name: "P2",
+            code: "plan_code2",
+            interval: "monthly",
             amount_cents: 5_000,
-            amount_currency: 'EUR',
+            amount_currency: "EUR",
             pay_in_advance: false,
-            tax_codes: ['banking_rates'],
+            tax_codes: ["banking_rates"],
             charges: []
           }
         )
-        plan2 = organization.plans.find_by(code: 'plan_code2')
+        plan2 = organization.plans.find_by(code: "plan_code2")
 
         create_subscription(
           {
-            external_customer_id: 'customer-1',
-            external_id: 'sub_external_id2',
+            external_customer_id: "customer-1",
+            external_id: "sub_external_id2",
             plan_code: plan2.code
           }
         )
 
         create_coupon(
           {
-            name: 'coupon1',
-            code: 'coupon1_code',
-            coupon_type: 'fixed_amount',
-            frequency: 'once',
+            name: "coupon1",
+            code: "coupon1_code",
+            coupon_type: "fixed_amount",
+            frequency: "once",
             amount_cents: 10_000,
-            amount_currency: 'EUR',
-            expiration: 'time_limit',
+            amount_currency: "EUR",
+            expiration: "time_limit",
             expiration_at: Time.current + 15.days,
             reusable: false
           }
         )
-        apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon1_code'})
+        apply_coupon({external_customer_id: "customer-1", coupon_code: "coupon1_code"})
 
         create_coupon(
           {
-            name: 'coupon2',
-            code: 'coupon2_code',
-            coupon_type: 'fixed_amount',
-            frequency: 'once',
+            name: "coupon2",
+            code: "coupon2_code",
+            coupon_type: "fixed_amount",
+            frequency: "once",
             amount_cents: 10_000,
-            amount_currency: 'EUR',
-            expiration: 'time_limit',
+            amount_currency: "EUR",
+            expiration: "time_limit",
             expiration_at: Time.current + 15.days,
             reusable: false
           }
         )
-        apply_coupon({external_customer_id: 'customer-1', coupon_code: 'coupon2_code'})
+        apply_coupon({external_customer_id: "customer-1", coupon_code: "coupon2_code"})
       end
 
       travel_to(DateTime.new(2023, 2, 1)) do
         perform_billing
       end
 
-      customer = organization.customers.find_by(external_id: 'customer-1')
+      customer = organization.customers.find_by(external_id: "customer-1")
       invoice = customer.invoices.first
       fees = invoice.fees
-      subscription1 = Subscription.find_by(external_id: 'sub_external_id')
-      subscription2 = Subscription.find_by(external_id: 'sub_external_id2')
+      subscription1 = Subscription.find_by(external_id: "sub_external_id")
+      subscription2 = Subscription.find_by(external_id: "sub_external_id2")
 
       expect(invoice.fees.count).to eq(2)
 

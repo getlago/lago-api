@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'organization:members:create'
+      REQUIRED_PERMISSION = "organization:members:create"
 
-      graphql_name 'CreateInvite'
-      description 'Creates a new Invite'
+      graphql_name "CreateInvite"
+      description "Creates a new Invite"
 
       argument :email, String, required: true
       argument :role, Types::Memberships::RoleEnum, required: true

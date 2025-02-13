@@ -24,11 +24,11 @@ class Invoice < ApplicationRecord
   has_many :invoice_subscriptions
   has_many :subscriptions, through: :invoice_subscriptions
   has_many :plans, through: :subscriptions
-  has_many :metadata, class_name: 'Metadata::InvoiceMetadata', dependent: :destroy
+  has_many :metadata, class_name: "Metadata::InvoiceMetadata", dependent: :destroy
   has_many :credit_notes
-  has_many :progressive_billing_credits, class_name: 'Credit', foreign_key: :progressive_billing_invoice_id
+  has_many :progressive_billing_credits, class_name: "Credit", foreign_key: :progressive_billing_invoice_id
 
-  has_many :applied_taxes, class_name: 'Invoice::AppliedTax', dependent: :destroy
+  has_many :applied_taxes, class_name: "Invoice::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
   has_many :integration_resources, as: :syncable
   has_many :error_details, as: :owner, dependent: :destroy
@@ -64,9 +64,9 @@ class Invoice < ApplicationRecord
   INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
   TAX_STATUSES = {
-    pending: 'pending',
-    succeeded: 'succeeded',
-    failed: 'failed'
+    pending: "pending",
+    succeeded: "succeeded",
+    failed: "failed"
   }.freeze
 
   VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7}.freeze
@@ -81,7 +81,7 @@ class Invoice < ApplicationRecord
   attribute :tax_status, :string
   enum :tax_status, TAX_STATUSES, prefix: :tax
 
-  aasm column: 'status', timestamps: true do
+  aasm column: "status", timestamps: true do
     state :generating
     state :draft
     state :open
@@ -107,19 +107,19 @@ class Invoice < ApplicationRecord
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
   scope :ready_to_be_refreshed, -> { draft.where(ready_to_be_refreshed: true) }
-  scope :ready_to_be_finalized, -> { draft.where('issuing_date <= ?', Time.current.to_date) }
+  scope :ready_to_be_finalized, -> { draft.where("issuing_date <= ?", Time.current.to_date) }
 
   scope :created_before,
     lambda { |invoice|
       where.not(id: invoice.id)
-        .where('invoices.created_at < ?', invoice.created_at)
+        .where("invoices.created_at < ?", invoice.created_at)
     }
 
   scope :payment_overdue, -> { where(payment_overdue: true) }
 
   scope :with_active_subscriptions, -> {
     joins(:subscriptions)
-      .where(subscriptions: {status: 'active'})
+      .where(subscriptions: {status: "active"})
       .distinct
   }
 
@@ -152,10 +152,10 @@ class Invoice < ApplicationRecord
 
     blob_path = Rails.application.routes.url_helpers.rails_blob_path(
       file,
-      host: 'void'
+      host: "void"
     )
 
-    File.join(ENV['LAGO_API_URL'], blob_path)
+    File.join(ENV["LAGO_API_URL"], blob_path)
   end
 
   def fee_total_amount_cents
@@ -227,9 +227,9 @@ class Invoice < ApplicationRecord
       charge: fee.charge,
       subscription: fee.subscription,
       boundaries: {
-        from_datetime: Time.zone.parse(fee.properties['charges_from_datetime']),
-        to_datetime: Time.zone.parse(fee.properties['charges_to_datetime']),
-        charges_duration: fee.properties['charges_duration']
+        from_datetime: Time.zone.parse(fee.properties["charges_from_datetime"]),
+        to_datetime: Time.zone.parse(fee.properties["charges_to_datetime"]),
+        charges_duration: fee.properties["charges_duration"]
       },
       filters:
     ).breakdown.breakdown
@@ -367,16 +367,16 @@ class Invoice < ApplicationRecord
 
   def document_invoice_name
     return I18n.t("invoice.self_billed.document_name") if self_billed?
-    return I18n.t('invoice.prepaid_credit_invoice') if credit?
+    return I18n.t("invoice.prepaid_credit_invoice") if credit?
 
     if TAX_INVOICE_LABEL_COUNTRIES.include?(organization.country)
-      return I18n.t('invoice.paid_tax_invoice') if advance_charges?
-      return I18n.t('invoice.document_tax_name')
+      return I18n.t("invoice.paid_tax_invoice") if advance_charges?
+      return I18n.t("invoice.document_tax_name")
     end
 
-    return I18n.t('invoice.paid_invoice') if advance_charges?
+    return I18n.t("invoice.paid_invoice") if advance_charges?
 
-    I18n.t('invoice.document_name')
+    I18n.t("invoice.document_name")
   end
 
   private
@@ -397,12 +397,12 @@ class Invoice < ApplicationRecord
     if organization.per_customer? || self_billed
       # NOTE: Example of expected customer slug format is ORG_PREFIX-005
       customer_slug = "#{organization.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
-      formatted_sequential_id = format('%03d', sequential_id)
+      formatted_sequential_id = format("%03d", sequential_id)
 
       self.number = "#{customer_slug}-#{formatted_sequential_id}"
     else
-      org_formatted_sequential_id = format('%03d', organization_sequential_id)
-      formatted_year_and_month = Time.now.in_time_zone(organization.timezone || 'UTC').strftime('%Y%m')
+      org_formatted_sequential_id = format("%03d", organization_sequential_id)
+      formatted_year_and_month = Time.now.in_time_zone(organization.timezone || "UTC").strftime("%Y%m")
 
       self.number = "#{organization.document_number_prefix}-#{formatted_year_and_month}-#{org_formatted_sequential_id}"
     end
@@ -416,7 +416,7 @@ class Invoice < ApplicationRecord
   end
 
   def generate_organization_sequential_id
-    timezone = organization.timezone || 'UTC'
+    timezone = organization.timezone || "UTC"
     organization_sequence_scope = organization.invoices.with_generated_number.where(
       "date_trunc('month', created_at::timestamptz AT TIME ZONE ?)::date = ?",
       timezone,
@@ -450,7 +450,7 @@ class Invoice < ApplicationRecord
     end
 
     # NOTE: If the application was unable to acquire the lock, the block returns false
-    raise(SequenceError, 'Unable to acquire lock on the database') unless result
+    raise(SequenceError, "Unable to acquire lock on the database") unless result
 
     result
   end
@@ -464,11 +464,11 @@ class Invoice < ApplicationRecord
   end
 
   def status_changed_to_finalized?
-    status_changed?(from: 'draft', to: 'finalized') ||
-      status_changed?(from: 'generating', to: 'finalized') ||
-      status_changed?(from: 'open', to: 'finalized') ||
-      status_changed?(from: 'failed', to: 'finalized') ||
-      status_changed?(from: 'pending', to: 'finalized')
+    status_changed?(from: "draft", to: "finalized") ||
+      status_changed?(from: "generating", to: "finalized") ||
+      status_changed?(from: "open", to: "finalized") ||
+      status_changed?(from: "failed", to: "finalized") ||
+      status_changed?(from: "pending", to: "finalized")
   end
 end
 

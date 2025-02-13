@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    description 'Query memberships of an organization'
+    description "Query memberships of an organization"
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false

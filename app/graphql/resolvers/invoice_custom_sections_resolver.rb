@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'invoice_custom_sections:view'
+    REQUIRED_PERMISSION = "invoice_custom_sections:view"
 
     description "Query invoice_custom_sections"
 
@@ -19,7 +19,7 @@ module Resolvers
         .joins('LEFT JOIN invoice_custom_section_selections ON invoice_custom_sections.id = invoice_custom_section_selections.invoice_custom_section_id
                 AND invoice_custom_section_selections.customer_id is NULL')
         .order(
-          Arel.sql('CASE WHEN invoice_custom_section_selections.id IS NOT NULL THEN 0 ELSE 1 END'),
+          Arel.sql("CASE WHEN invoice_custom_section_selections.id IS NOT NULL THEN 0 ELSE 1 END"),
           :name
         ).page(page).per(limit)
     end

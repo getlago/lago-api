@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Organizations::CreateService, type: :service do
-  describe '#call' do
+  describe "#call" do
     subject(:service_result) { described_class.call(params) }
 
-    context 'with valid params' do
+    context "with valid params" do
       let(:params) do
         {
           name: Faker::Company.name,
@@ -14,7 +14,7 @@ RSpec.describe Organizations::CreateService, type: :service do
         }
       end
 
-      it 'creates an organization with provided params' do
+      it "creates an organization with provided params" do
         expect { service_result }.to change(Organization, :count).by(1)
 
         expect(service_result.organization)
@@ -22,7 +22,7 @@ RSpec.describe Organizations::CreateService, type: :service do
           .and have_attributes(params)
       end
 
-      it 'creates an API key for created organization' do
+      it "creates an API key for created organization" do
         expect { service_result }.to change(ApiKey, :count).by(1)
 
         expect(service_result.organization.api_keys).to all(
@@ -31,18 +31,18 @@ RSpec.describe Organizations::CreateService, type: :service do
       end
     end
 
-    context 'with invalid params' do
+    context "with invalid params" do
       let(:params) { {} }
 
-      it 'does not create an organization' do
+      it "does not create an organization" do
         expect { service_result }.not_to change(Organization, :count)
       end
 
-      it 'does not create an API key' do
+      it "does not create an API key" do
         expect { service_result }.not_to change(ApiKey, :count)
       end
 
-      it 'returns an error' do
+      it "returns an error" do
         aggregate_failures do
           expect(service_result).not_to be_success
           expect(service_result.error).to be_a(BaseService::ValidationFailure)

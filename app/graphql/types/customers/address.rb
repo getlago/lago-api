@@ -3,7 +3,7 @@
 module Types
   module Customers
     class Address < Types::BaseObject
-      graphql_name 'CustomerAddress'
+      graphql_name "CustomerAddress"
 
       field :address_line1, String, null: true
       field :address_line2, String, null: true

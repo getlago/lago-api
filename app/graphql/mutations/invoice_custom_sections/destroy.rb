@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'invoice_custom_sections:delete'
+      REQUIRED_PERMISSION = "invoice_custom_sections:delete"
 
-      graphql_name 'DestroyInvoiceCustomSection'
-      description 'Deletes an invoice_custom_section'
+      graphql_name "DestroyInvoiceCustomSection"
+      description "Deletes an invoice_custom_section"
 
       argument :id, ID, required: true
 

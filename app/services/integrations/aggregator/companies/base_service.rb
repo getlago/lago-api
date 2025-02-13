@@ -11,21 +11,21 @@ module Integrations
         private
 
         def process_hash_result(body)
-          contact = body['succeededCompanies']&.first
-          contact_id = contact&.dig('id')
-          email = contact&.dig('email')
+          contact = body["succeededCompanies"]&.first
+          contact_id = contact&.dig("id")
+          email = contact&.dig("email")
 
           if contact_id
             result.contact_id = contact_id
             result.email = email if email.present?
           else
-            message = if body.key?('failedCompanies')
-              body['failedCompanies'].first['validation_errors'].map { |error| error['Message'] }.join(". ")
+            message = if body.key?("failedCompanies")
+              body["failedCompanies"].first["validation_errors"].map { |error| error["Message"] }.join(". ")
             else
-              body.dig('error', 'payload', 'message')
+              body.dig("error", "payload", "message")
             end
 
-            code = 'Validation error'
+            code = "Validation error"
 
             deliver_error_webhook(customer:, code:, message:)
           end

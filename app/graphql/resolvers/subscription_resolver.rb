@@ -5,18 +5,18 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = 'subscriptions:view'
+    REQUIRED_PERMISSION = "subscriptions:view"
 
-    description 'Query a single subscription of an organization'
+    description "Query a single subscription of an organization"
 
-    argument :id, ID, required: true, description: 'Uniq ID of the subscription'
+    argument :id, ID, required: true, description: "Uniq ID of the subscription"
 
     type Types::Subscriptions::Object, null: true
 
     def resolve(id: nil)
       current_organization.subscriptions.find(id)
     rescue ActiveRecord::RecordNotFound
-      not_found_error(resource: 'subscription')
+      not_found_error(resource: "subscription")
     end
   end
 end

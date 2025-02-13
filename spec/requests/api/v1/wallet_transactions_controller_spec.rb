@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Api::V1::WalletTransactionsController, type: :request do
   let(:organization) { create(:organization) }
@@ -14,11 +14,11 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     wallet
   end
 
-  describe 'POST /api/v1/wallet_transactions' do
+  describe "POST /api/v1/wallet_transactions" do
     subject do
       post_with_token(
         organization,
-        '/api/v1/wallet_transactions',
+        "/api/v1/wallet_transactions",
         {wallet_transaction: params}
       )
     end
@@ -26,14 +26,14 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     let(:params) do
       {
         wallet_id:,
-        paid_credits: '10',
-        granted_credits: '10'
+        paid_credits: "10",
+        granted_credits: "10"
       }
     end
 
-    include_examples 'requires API permission', 'wallet_transaction', 'write'
+    include_examples "requires API permission", "wallet_transaction", "write"
 
-    it 'creates a wallet transactions' do
+    it "creates a wallet transactions" do
       subject
 
       expect(response).to have_http_status(:success)
@@ -41,22 +41,22 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       expect(json[:wallet_transactions].count).to eq(2)
       expect(json[:wallet_transactions].first[:lago_id]).to be_present
       expect(json[:wallet_transactions].second[:lago_id]).to be_present
-      expect(json[:wallet_transactions].first[:status]).to eq('pending')
-      expect(json[:wallet_transactions].second[:status]).to eq('settled')
+      expect(json[:wallet_transactions].first[:status]).to eq("pending")
+      expect(json[:wallet_transactions].second[:status]).to eq("settled")
       expect(json[:wallet_transactions].first[:lago_wallet_id]).to eq(wallet.id)
       expect(json[:wallet_transactions].second[:lago_wallet_id]).to eq(wallet.id)
     end
 
-    context 'with voided credits' do
+    context "with voided credits" do
       let(:wallet) { create(:wallet, customer:, credits_balance: 20, balance_cents: 2000) }
       let(:params) do
         {
           wallet_id:,
-          voided_credits: '10'
+          voided_credits: "10"
         }
       end
 
-      it 'creates a wallet transactions' do
+      it "creates a wallet transactions" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -64,47 +64,47 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
         expect(json[:wallet_transactions].count).to eq(1)
         expect(json[:wallet_transactions].first).to include(
           lago_id: String,
-          status: 'settled',
-          transaction_status: 'voided',
+          status: "settled",
+          transaction_status: "voided",
           lago_wallet_id: wallet.id
         )
         expect(wallet.reload.credits_balance).to eq(10)
       end
     end
 
-    context 'when metadata is present' do
+    context "when metadata is present" do
       let(:params) do
         {
           wallet_id:,
-          paid_credits: '10',
-          granted_credits: '10',
-          metadata: [{'key' => 'valid_value', 'value' => 'also_valid'}]
+          paid_credits: "10",
+          granted_credits: "10",
+          metadata: [{"key" => "valid_value", "value" => "also_valid"}]
         }
       end
 
-      it 'creates the wallet transactions with correct data' do
+      it "creates the wallet transactions with correct data" do
         subject
 
         expect(response).to have_http_status(:success)
         expect(json[:wallet_transactions].count).to eq(2)
         expect(json[:wallet_transactions].first[:metadata]).to be_present
         expect(json[:wallet_transactions].second[:metadata]).to be_present
-        expect(json[:wallet_transactions].first[:metadata]).to include(key: 'valid_value', value: 'also_valid')
-        expect(json[:wallet_transactions].second[:metadata]).to include(key: 'valid_value', value: 'also_valid')
+        expect(json[:wallet_transactions].first[:metadata]).to include(key: "valid_value", value: "also_valid")
+        expect(json[:wallet_transactions].second[:metadata]).to include(key: "valid_value", value: "also_valid")
       end
     end
 
-    context 'when wallet does not exist' do
+    context "when wallet does not exist" do
       let(:wallet_id) { "#{wallet.id}123" }
 
-      it 'returns unprocessable_entity error' do
+      it "returns unprocessable_entity error" do
         subject
         expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
 
-  describe 'GET /api/v1/wallet_transactions' do
+  describe "GET /api/v1/wallet_transactions" do
     subject do
       get_with_token(organization, "/api/v1/wallets/#{wallet_id}/wallet_transactions", params)
     end
@@ -120,9 +120,9 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       wallet_transaction_third
     end
 
-    include_examples 'requires API permission', 'wallet_transaction', 'read'
+    include_examples "requires API permission", "wallet_transaction", "read"
 
-    it 'returns wallet transactions' do
+    it "returns wallet transactions" do
       subject
 
       expect(response).to have_http_status(:success)
@@ -131,10 +131,10 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       expect(json[:wallet_transactions].last[:lago_id]).to eq(wallet_transaction_first.id)
     end
 
-    context 'with pagination' do
+    context "with pagination" do
       let(:params) { {page: 1, per_page: 1} }
 
-      it 'returns wallet transactions with correct meta data' do
+      it "returns wallet transactions with correct meta data" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -148,11 +148,11 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       end
     end
 
-    context 'with status param' do
-      let(:params) { {status: 'pending'} }
-      let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, status: 'pending') }
+    context "with status param" do
+      let(:params) { {status: "pending"} }
+      let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, status: "pending") }
 
-      it 'returns wallet transactions with correct status' do
+      it "returns wallet transactions with correct status" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -161,11 +161,11 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       end
     end
 
-    context 'with transaction type param' do
-      let(:params) { {transaction_type: 'outbound'} }
-      let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, transaction_type: 'outbound') }
+    context "with transaction type param" do
+      let(:params) { {transaction_type: "outbound"} }
+      let(:wallet_transaction_second) { create(:wallet_transaction, wallet:, transaction_type: "outbound") }
 
-      it 'returns wallet transactions with correct transaction type' do
+      it "returns wallet transactions with correct transaction type" do
         subject
 
         expect(response).to have_http_status(:success)
@@ -174,17 +174,17 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       end
     end
 
-    context 'when wallet does not exist' do
+    context "when wallet does not exist" do
       let(:wallet_id) { SecureRandom.uuid }
 
-      it 'returns not_found error' do
+      it "returns not_found error" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
   end
 
-  describe 'GET /api/v1/wallet_transactions/:id' do
+  describe "GET /api/v1/wallet_transactions/:id" do
     subject do
       get_with_token(organization, "/api/v1/wallet_transactions/#{wallet_transaction_id}", params)
     end
@@ -193,31 +193,31 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
     let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
     let(:wallet_transaction_id) { wallet_transaction.id }
 
-    include_examples 'requires API permission', 'wallet_transaction', 'read'
+    include_examples "requires API permission", "wallet_transaction", "read"
 
-    it 'returns the wallet transaction' do
+    it "returns the wallet transaction" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:wallet_transaction][:lago_id]).to eq(wallet_transaction.id)
     end
 
-    context 'when wallet transaction belongs to another organization' do
+    context "when wallet transaction belongs to another organization" do
       let(:customer) { create(:customer, organization: create(:organization)) }
       let(:subscription) { create(:subscription, customer:) }
       let(:wallet) { create(:wallet, customer:) }
       let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
 
-      it 'returns not_found error' do
+      it "returns not_found error" do
         subject
         expect(response).to have_http_status(:not_found)
       end
     end
 
-    context 'when wallet_transaction does not exist' do
+    context "when wallet_transaction does not exist" do
       let(:wallet_transaction_id) { SecureRandom.uuid }
 
-      it 'returns not_found error' do
+      it "returns not_found error" do
         subject
         expect(response).to have_http_status(:not_found)
       end

@@ -74,7 +74,7 @@ module Api
       end
 
       def resource_name
-        'payment'
+        "payment"
       end
     end
   end

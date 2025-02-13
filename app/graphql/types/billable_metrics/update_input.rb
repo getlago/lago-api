@@ -3,7 +3,7 @@
 module Types
   module BillableMetrics
     class UpdateInput < BaseInputObject
-      description 'Update Billable metric input arguments'
+      description "Update Billable metric input arguments"
 
       argument :id, String, required: true
 

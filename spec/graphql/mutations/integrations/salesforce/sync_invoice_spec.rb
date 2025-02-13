@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::Integrations::Salesforce::SyncInvoice, type: :graphql do
   subject(:execute_graphql_call) do
@@ -15,7 +15,7 @@ RSpec.describe Mutations::Integrations::Salesforce::SyncInvoice, type: :graphql 
     )
   end
 
-  let(:required_permission) { 'organization:integrations:update' }
+  let(:required_permission) { "organization:integrations:update" }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { membership.organization }
@@ -34,13 +34,13 @@ RSpec.describe Mutations::Integrations::Salesforce::SyncInvoice, type: :graphql 
     execute_graphql_call
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'organization:integrations:update'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "organization:integrations:update"
 
-  it 'sends resync invoice webhook' do
+  it "sends resync invoice webhook" do
     aggregate_failures do
-      expect(SendWebhookJob).to have_received(:perform_later).with('invoice.resynced', invoice)
+      expect(SendWebhookJob).to have_received(:perform_later).with("invoice.resynced", invoice)
     end
   end
 end

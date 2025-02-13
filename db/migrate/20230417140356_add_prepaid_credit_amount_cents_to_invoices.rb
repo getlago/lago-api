@@ -13,7 +13,7 @@ class AddPrepaidCreditAmountCentsToInvoices < ActiveRecord::Migration[7.0]
 
     reversible do |dir|
       dir.up do
-        currency_list = WalletTransaction.joins(:wallet).pluck('DISTINCT(wallets.balance_currency)')
+        currency_list = WalletTransaction.joins(:wallet).pluck("DISTINCT(wallets.balance_currency)")
         next if currency_list.blank?
 
         currency_sql = currency_list.each_with_object([]) do |code, currencies|

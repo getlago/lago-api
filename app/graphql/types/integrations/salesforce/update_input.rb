@@ -4,7 +4,7 @@ module Types
   module Integrations
     class Salesforce
       class UpdateInput < Types::BaseInputObject
-        graphql_name 'UpdateSalesforceIntegrationInput'
+        graphql_name "UpdateSalesforceIntegrationInput"
 
         argument :id, ID, required: false
 

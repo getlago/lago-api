@@ -26,7 +26,7 @@ module V1
 
       def items
         {
-          'items' => model.items.map { |i| {lago_fee_id: i.fee_id, amount_cents: i.amount_cents} }
+          "items" => model.items.map { |i| {lago_fee_id: i.fee_id, amount_cents: i.amount_cents} }
         }
       end
 
@@ -37,7 +37,7 @@ module V1
         ).serialize[:data]
 
         {
-          'applied_taxes' => collection.map { |t| t.except(%i[lago_id lago_credit_note_id created_at]) }
+          "applied_taxes" => collection.map { |t| t.except(%i[lago_id lago_credit_note_id created_at]) }
         }
       end
     end

@@ -2,7 +2,7 @@
 
 class SendHttpWebhookJob < ApplicationJob
   queue_as do
-    if ActiveModel::Type::Boolean.new.cast(ENV['SIDEKIQ_WEBHOOK'])
+    if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_WEBHOOK"])
       :webhook_worker
     else
       :webhook

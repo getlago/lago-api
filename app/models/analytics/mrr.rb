@@ -18,7 +18,7 @@ module Analytics
         end
 
         if args[:currency].present?
-          and_currency_sql = sanitize_sql(['AND cm.currency = :currency', args[:currency].upcase])
+          and_currency_sql = sanitize_sql(["AND cm.currency = :currency", args[:currency].upcase])
         end
 
         sql = <<~SQL.squish
@@ -184,12 +184,12 @@ module Analytics
 
       def cache_key(organization_id, **args)
         [
-          'mrr',
-          Date.current.strftime('%Y-%m-%d'),
+          "mrr",
+          Date.current.strftime("%Y-%m-%d"),
           organization_id,
           args[:currency],
           args[:months]
-        ].join('/')
+        ].join("/")
       end
     end
   end

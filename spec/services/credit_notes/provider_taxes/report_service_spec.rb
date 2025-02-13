@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
   subject(:report_service) { described_class.new(credit_note:) }
 
-  describe '#call' do
+  describe "#call" do
     let(:organization) { create(:organization) }
     let(:customer) { create(:customer, organization:) }
 
@@ -16,7 +16,7 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
         customer:,
         organization:,
         subscriptions: [subscription],
-        currency: 'EUR',
+        currency: "EUR",
         issuing_date: Time.zone.at(timestamp).to_date
       )
     end
@@ -42,9 +42,9 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
 
     let(:timestamp) { Time.zone.now - 1.year }
     let(:started_at) { Time.zone.now - 2.years }
-    let(:plan) { create(:plan, organization:, interval: 'monthly') }
-    let(:billable_metric) { create(:billable_metric, aggregation_type: 'count_agg') }
-    let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: 'standard', billable_metric:) }
+    let(:plan) { create(:plan, organization:, interval: "monthly") }
+    let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
+    let(:charge) { create(:standard_charge, plan: subscription.plan, charge_model: "standard", billable_metric:) }
 
     let(:fee_subscription) do
       create(
@@ -70,9 +70,9 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
     let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
     let(:response) { instance_double(Net::HTTPOK) }
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
-    let(:endpoint) { 'https://api.nango.dev/v1/anrok/finalized_invoices' }
+    let(:endpoint) { "https://api.nango.dev/v1/anrok/finalized_invoices" }
     let(:body) do
-      path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json')
+      path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_multiple_fees.json")
       File.read(path)
     end
     let(:integration_collection_mapping) do
@@ -80,7 +80,7 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
         :netsuite_collection_mapping,
         integration:,
         mapping_type: :fallback_item,
-        settings: {external_id: '1', external_account_code: '11', external_name: ''}
+        settings: {external_id: "1", external_account_code: "11", external_name: ""}
       )
     end
 
@@ -95,19 +95,19 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
       allow(response).to receive(:body).and_return(body)
     end
 
-    context 'when credit note does not exist' do
-      it 'returns an error' do
+    context "when credit note does not exist" do
+      it "returns an error" do
         result = described_class.new(credit_note: nil).call
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.error_code).to eq('credit_note_not_found')
+          expect(result.error.error_code).to eq("credit_note_not_found")
         end
       end
     end
 
-    context 'when credit note is successfully synced' do
-      it 'returns successful result' do
+    context "when credit note is successfully synced" do
+      it "returns successful result" do
         result = report_service.call
 
         aggregate_failures do
@@ -118,19 +118,19 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
         end
       end
 
-      it 'discards previous tax errors' do
+      it "discards previous tax errors" do
         expect { report_service.call }
           .to change(credit_note.error_details.tax_error, :count).from(1).to(0)
       end
     end
 
-    context 'when failed result is returned' do
+    context "when failed result is returned" do
       let(:body) do
-        path = Rails.root.join('spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json')
+        path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
         File.read(path)
       end
 
-      it 'returns validation error' do
+      it "returns validation error" do
         result = report_service.call
 
         aggregate_failures do
@@ -141,7 +141,7 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
         end
       end
 
-      it 'resolves old tax error and creates new one' do
+      it "resolves old tax error and creates new one" do
         old_error_id = credit_note.reload.error_details.order(created_at: :asc).last.id
 
         report_service.call

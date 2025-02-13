@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
   subject(:service) { described_class.new(timestamp:) }
 
   let(:timestamp) { Time.zone.now }
 
-  describe '#call' do
+  describe "#call" do
     let(:plan) { create(:plan, trial_period: 10, pay_in_advance: true) }
 
-    context 'with a plan witout trial period' do
-      it 'does not set trial_ended_at' do
+    context "with a plan witout trial period" do
+      it "does not set trial_ended_at" do
         sub = create(:subscription, plan: create(:plan, trial_period: 0, pay_in_advance: true), started_at: 2.days.ago)
         sub2 = create(:subscription, plan: create(:plan, pay_in_advance: true), started_at: 2.days.ago)
         service.call
@@ -20,17 +20,17 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
       end
     end
 
-    context 'without any ending trial subscriptions' do
-      it 'does not set trial_ended_at', :aggregate_failures do
+    context "without any ending trial subscriptions" do
+      it "does not set trial_ended_at", :aggregate_failures do
         sub1 = create(:subscription, plan:, started_at: 2.days.ago)
 
         expect { service.call }.not_to change { sub1.reload.trial_ended_at }.from(nil)
       end
     end
 
-    context 'with ending trial subscriptions' do
-      it 'sets trial_ended_at to trial end date' do
-        sub = create(:subscription, plan:, started_at: Time.zone.parse('2024-04-05T12:12:00'))
+    context "with ending trial subscriptions" do
+      it "sets trial_ended_at to trial end date" do
+        sub = create(:subscription, plan:, started_at: Time.zone.parse("2024-04-05T12:12:00"))
         sub2 = create(:subscription, plan:, started_at: 15.days.ago)
         service.call
         expect(sub.reload.trial_ended_at).to match_datetime(sub.trial_end_datetime)
@@ -38,10 +38,10 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
       end
     end
 
-    context 'with trial ended due to previous subscription with the same external_id' do
-      it 'sets trial_ended_at' do
+    context "with trial ended due to previous subscription with the same external_id" do
+      it "sets trial_ended_at" do
         customer = create(:customer)
-        attr = {customer:, plan:, external_id: 'abc123'}
+        attr = {customer:, plan:, external_id: "abc123"}
         started_at = timestamp - 10.days - 1.hour
         create(:subscription, started_at:, terminated_at: 6.days.ago, status: :terminated, **attr)
         sub = create(:subscription, started_at: 6.days.ago, **attr)
@@ -50,20 +50,20 @@ RSpec.describe Subscriptions::FreeTrialBillingService, type: :service do
       end
     end
 
-    context 'with customer timezone' do
-      let(:timestamp) { DateTime.parse('2024-03-11 13:03:00 UTC') }
+    context "with customer timezone" do
+      let(:timestamp) { DateTime.parse("2024-03-11 13:03:00 UTC") }
 
-      it 'sets trial_ended_at to the expected subscription (timezone is irrelevant)', :aggregate_failures do
-        started_at = DateTime.parse('2024-03-01 12:00:00 UTC')
-        customer = create(:customer, timezone: 'America/Los_Angeles')
+      it "sets trial_ended_at to the expected subscription (timezone is irrelevant)", :aggregate_failures do
+        started_at = DateTime.parse("2024-03-01 12:00:00 UTC")
+        customer = create(:customer, timezone: "America/Los_Angeles")
         sub = create(:subscription, plan:, customer:, started_at:)
         service.call
         expect(sub.reload.trial_ended_at).to match_datetime(sub.trial_end_datetime)
       end
     end
 
-    context 'when the subscription should sync with Hubspot' do
-      it 'calls the Hubspot update job' do
+    context "when the subscription should sync with Hubspot" do
+      it "calls the Hubspot update job" do
         customer = create(:customer, :with_hubspot_integration)
         plan = create(:plan, trial_period: 10, pay_in_advance: true)
         subscription = create(:subscription, customer:, plan:, started_at: 15.days.ago)

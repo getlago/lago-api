@@ -20,7 +20,7 @@ module PaymentProviderCustomers
     end
 
     def generate_checkout_url(send_webhook: true)
-      result.not_allowed_failure!(code: 'feature_not_supported')
+      result.not_allowed_failure!(code: "feature_not_supported")
     end
 
     private

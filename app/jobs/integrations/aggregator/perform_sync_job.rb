@@ -3,7 +3,7 @@
 module Integrations
   module Aggregator
     class PerformSyncJob < ApplicationJob
-      queue_as 'integrations'
+      queue_as "integrations"
 
       retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 3
       retry_on RequestLimitError, wait: :polynomially_longer, attempts: 100

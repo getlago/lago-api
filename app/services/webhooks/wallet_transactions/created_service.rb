@@ -10,15 +10,15 @@ module Webhooks
       end
 
       def object_serializer
-        ::V1::WalletTransactionSerializer.new(object, root_name: 'wallet_transaction')
+        ::V1::WalletTransactionSerializer.new(object, root_name: "wallet_transaction")
       end
 
       def webhook_type
-        'wallet_transaction.created'
+        "wallet_transaction.created"
       end
 
       def object_type
-        'wallet_transaction'
+        "wallet_transaction"
       end
     end
   end

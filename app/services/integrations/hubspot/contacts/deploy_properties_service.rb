@@ -11,7 +11,7 @@ module Integrations
         end
 
         def call
-          return result unless integration.type == 'Integrations::HubspotIntegration'
+          return result unless integration.type == "Integrations::HubspotIntegration"
           return result if integration.contacts_properties_version == VERSION
 
           throttle!(:hubspot)
@@ -26,7 +26,7 @@ module Integrations
           result
         rescue LagoHttpClient::HttpError => e
           message = message(e)
-          deliver_integration_error_webhook(integration:, code: 'integration_error', message:)
+          deliver_integration_error_webhook(integration:, code: "integration_error", message:)
           result
         end
 
@@ -34,9 +34,9 @@ module Integrations
 
         def headers
           {
-            'Provider-Config-Key' => 'hubspot',
-            'Authorization' => "Bearer #{secret_key}",
-            'Connection-Id' => integration.connection_id
+            "Provider-Config-Key" => "hubspot",
+            "Authorization" => "Bearer #{secret_key}",
+            "Connection-Id" => integration.connection_id
           }
         end
 

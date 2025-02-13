@@ -4,8 +4,8 @@ module Types
   module DataExports
     module Invoices
       class FiltersInput < BaseInputObject
-        graphql_name 'DataExportInvoiceFiltersInput'
-        description 'Export Invoices search query and filters input argument'
+        graphql_name "DataExportInvoiceFiltersInput"
+        description "Export Invoices search query and filters input argument"
 
         argument :amount_from, Integer, required: false
         argument :amount_to, Integer, required: false

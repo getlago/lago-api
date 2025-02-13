@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe LifetimeUsages::UsageThresholds::CheckService, type: :service do
   subject(:service) { described_class.new(lifetime_usage:, progressive_billed_amount:) }

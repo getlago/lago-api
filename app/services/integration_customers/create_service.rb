@@ -41,7 +41,7 @@ module IntegrationCustomers
     end
 
     def link_customer!
-      sync_with_provider = integration&.type&.to_s == 'Integrations::SalesforceIntegration'
+      sync_with_provider = integration&.type&.to_s == "Integrations::SalesforceIntegration"
 
       new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
         integration:,
@@ -51,12 +51,12 @@ module IntegrationCustomers
         sync_with_provider: sync_with_provider
       )
 
-      if integration&.type&.to_s == 'Integrations::NetsuiteIntegration'
+      if integration&.type&.to_s == "Integrations::NetsuiteIntegration"
         new_integration_customer.subsidiary_id = subsidiary_id
         new_integration_customer.save!
       end
 
-      if integration&.type&.to_s == 'Integrations::HubspotIntegration'
+      if integration&.type&.to_s == "Integrations::HubspotIntegration"
         new_integration_customer.targeted_object = targeted_object
         new_integration_customer.save!
       end

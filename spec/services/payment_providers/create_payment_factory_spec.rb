@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::CreatePaymentFactory, type: :service do
-  subject(:new_instance) { described_class.new_instance(provider:, payment:, reference: '', metadata: {}) }
+  subject(:new_instance) { described_class.new_instance(provider:, payment:, reference: "", metadata: {}) }
 
   let(:provider) { "stripe" }
   let(:payment) { create(:payment) }

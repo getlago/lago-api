@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe ApiKeys::TrackUsageService, cache: :memory do
-  describe '#call' do
+  describe "#call" do
     subject { described_class.call }
 
     let(:used_api_key) { create(:api_key) }
@@ -13,15 +13,15 @@ RSpec.describe ApiKeys::TrackUsageService, cache: :memory do
 
     before { Rails.cache.write(cache_key, last_used_at) }
 
-    it 'updates when API key was last used' do
+    it "updates when API key was last used" do
       expect { subject }.to change { used_api_key.reload.last_used_at&.iso8601 }.to last_used_at
     end
 
-    it 'clears cache after processing' do
+    it "clears cache after processing" do
       expect { subject }.to change { Rails.cache.exist?(cache_key) }.to(false)
     end
 
-    it 'does not update unused key' do
+    it "does not update unused key" do
       expect { subject }.not_to change { unused_api_key.reload.last_used_at }
     end
   end

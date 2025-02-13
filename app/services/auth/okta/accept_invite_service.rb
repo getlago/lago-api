@@ -27,7 +27,7 @@ module Auth
       rescue ValidationError => e
         result.single_validation_failure!(error_code: e.message)
       rescue LagoHttpClient::HttpError
-        result.single_validation_failure!(error_code: 'okta_request_error')
+        result.single_validation_failure!(error_code: "okta_request_error")
         result
       end
 

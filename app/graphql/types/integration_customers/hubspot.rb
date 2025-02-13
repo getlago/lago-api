@@ -3,7 +3,7 @@
 module Types
   module IntegrationCustomers
     class Hubspot < Types::BaseObject
-      graphql_name 'HubspotCustomer'
+      graphql_name "HubspotCustomer"
 
       field :external_customer_id, String, null: true
       field :id, ID, null: false
@@ -16,8 +16,8 @@ module Types
       def integration_type
         object.integration&.type
         case object.integration&.type
-        when 'Integrations::HubspotIntegration'
-          'hubspot'
+        when "Integrations::HubspotIntegration"
+          "hubspot"
         end
       end
 

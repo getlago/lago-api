@@ -11,7 +11,7 @@ module Integrations
       end
 
       def call
-        @cursor = ''
+        @cursor = ""
         @items = []
 
         ActiveRecord::Base.transaction do
@@ -20,8 +20,8 @@ module Integrations
           MAX_SUBSEQUENT_REQUESTS.times do |_i|
             response = http_client.get(headers:, params:)
 
-            handle_accounts(response['records'])
-            @cursor = response['next_cursor']
+            handle_accounts(response["records"])
+            @cursor = response["next_cursor"]
 
             break if cursor.blank?
           end
@@ -37,9 +37,9 @@ module Integrations
 
       def headers
         {
-          'Connection-Id' => integration.connection_id,
-          'Authorization' => "Bearer #{secret_key}",
-          'Provider-Config-Key' => provider_key
+          "Connection-Id" => integration.connection_id,
+          "Authorization" => "Bearer #{secret_key}",
+          "Provider-Config-Key" => provider_key
         }
       end
 
@@ -47,9 +47,9 @@ module Integrations
         new_items.each do |item|
           integration_item = IntegrationItem.new(
             integration:,
-            external_id: item['id'],
-            external_account_code: item['code'],
-            external_name: item['name'],
+            external_id: item["id"],
+            external_account_code: item["code"],
+            external_name: item["name"],
             item_type: :account
           )
 

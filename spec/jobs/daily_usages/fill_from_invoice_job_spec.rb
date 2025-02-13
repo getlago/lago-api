@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe DailyUsages::FillFromInvoiceJob, type: :job do
   subject(:compute_job) { described_class }
@@ -10,8 +10,8 @@ RSpec.describe DailyUsages::FillFromInvoiceJob, type: :job do
 
   let(:result) { BaseService::Result.new }
 
-  describe '.perform' do
-    it 'delegates its logic to the DailyUsages::FillFromInvoiceService' do
+  describe ".perform" do
+    it "delegates its logic to the DailyUsages::FillFromInvoiceService" do
       allow(DailyUsages::FillFromInvoiceService).to receive(:call)
         .with(invoice:, subscriptions: [subscription])
         .and_return(result)

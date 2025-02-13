@@ -3,7 +3,7 @@
 module Types
   module ChargeFilters
     class Values < Types::BaseScalar
-      graphql_name 'ChargeFilterValues'
+      graphql_name "ChargeFilterValues"
 
       def self.coerce_input(input_value, _context)
         input_value.to_h.each_with_object({}) do |(key, values), result|

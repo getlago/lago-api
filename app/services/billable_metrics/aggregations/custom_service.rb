@@ -3,7 +3,7 @@
 module BillableMetrics
   module Aggregations
     class CustomService < BillableMetrics::Aggregations::BaseService
-      INITIAL_STATE = {total_units: BigDecimal('0'), amount: BigDecimal('0')}.freeze
+      INITIAL_STATE = {total_units: BigDecimal("0"), amount: BigDecimal("0")}.freeze
       BATCH_SIZE = 1000
 
       def compute_aggregation(options: {})
@@ -78,9 +78,9 @@ module BillableMetrics
       private
 
       def custom_properties
-        return charge_filter.properties['custom_properties'] if charge_filter.present?
+        return charge_filter.properties["custom_properties"] if charge_filter.present?
 
-        charge.properties['custom_properties']
+        charge.properties["custom_properties"]
       end
 
       def current_state(grouped_by_values:)
@@ -94,7 +94,7 @@ module BillableMetrics
           .where(organization_id: billable_metric.organization_id)
           .where(external_subscription_id: subscription.external_id)
           .where(charge_id: charge.id)
-          .where('cached_aggregations.timestamp::timestamp(0) < ?', to_datetime)
+          .where("cached_aggregations.timestamp::timestamp(0) < ?", to_datetime)
           .where(grouped_by: grouped_by_values.presence || {})
           .order(timestamp: :desc, created_at: :desc)
 
@@ -145,8 +145,8 @@ module BillableMetrics
         sandboxed_result = LagoUtils::RubySandbox.run(aggregator(events_properties, state))
 
         {
-          total_units: BigDecimal(sandboxed_result['total_units'].to_s),
-          amount: BigDecimal(sandboxed_result['amount'].to_s)
+          total_units: BigDecimal(sandboxed_result["total_units"].to_s),
+          amount: BigDecimal(sandboxed_result["amount"].to_s)
         }
       end
 

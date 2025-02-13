@@ -42,7 +42,7 @@ module Invoices
         @invoices = begin
           invoices = organization.invoices.where(payment_status: %w[pending failed])
           invoices = invoices.where(ready_for_payment_processing: true)
-          invoices = invoices.where(status: 'finalized')
+          invoices = invoices.where(status: "finalized")
 
           invoices
         end

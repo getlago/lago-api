@@ -11,8 +11,8 @@ module Integrations
         end
 
         def call
-          return result.not_found_failure!(resource: 'invoice') unless invoice
-          SendWebhookJob.perform_later('invoice.resynced', invoice)
+          return result.not_found_failure!(resource: "invoice") unless invoice
+          SendWebhookJob.perform_later("invoice.resynced", invoice)
           result.invoice_id = invoice.id
           result
         end

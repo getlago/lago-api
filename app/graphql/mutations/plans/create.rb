@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'plans:create'
+      REQUIRED_PERMISSION = "plans:create"
 
-      graphql_name 'CreatePlan'
-      description 'Creates a new Plan'
+      graphql_name "CreatePlan"
+      description "Creates a new Plan"
 
       argument :amount_cents, GraphQL::Types::BigInt, required: true
       argument :amount_currency, Types::CurrencyEnum

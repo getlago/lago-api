@@ -9,7 +9,7 @@ module Plans
     end
 
     def call
-      return result.not_found_failure!(resource: 'plan') unless plan
+      return result.not_found_failure!(resource: "plan") unless plan
 
       old_amount_cents = plan.amount_cents
 
@@ -32,7 +32,7 @@ module Plans
       if params[:charges].present?
         metric_ids = params[:charges].map { |c| c[:billable_metric_id] }.uniq
         if metric_ids.present? && organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.not_found_failure!(resource: 'billable_metrics')
+          return result.not_found_failure!(resource: "billable_metrics")
         end
       end
 
@@ -165,7 +165,7 @@ module Plans
 
     def process_minimum_commitment(plan, params)
       if params.present?
-        minimum_commitment = plan.minimum_commitment || Commitment.new(plan:, commitment_type: 'minimum_commitment')
+        minimum_commitment = plan.minimum_commitment || Commitment.new(plan:, commitment_type: "minimum_commitment")
 
         minimum_commitment.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
         minimum_commitment.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)

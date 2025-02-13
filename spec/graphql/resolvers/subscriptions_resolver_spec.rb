@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
-  let(:required_permission) { 'subscriptions:view' }
+  let(:required_permission) { "subscriptions:view" }
   let(:query) do
     <<~GQL
       query {
@@ -24,11 +24,11 @@ RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
     customer
   end
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'subscriptions:view'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "subscriptions:view"
 
-  it 'returns a list of subscriptions' do
+  it "returns a list of subscriptions" do
     first_subscription = create(:subscription, customer:, plan:)
     second_subscription = create(:subscription, customer:, plan:)
     create(:subscription, customer:, plan:, status: :terminated)
@@ -40,20 +40,20 @@ RSpec.describe Resolvers::SubscriptionsResolver, type: :graphql do
       permissions: required_permission,
       query:
     )
-    response = result['data']['subscriptions']
+    response = result["data"]["subscriptions"]
 
     aggregate_failures do
-      expect(response['collection'].count).to eq(2)
-      expect(response['collection'].map { |s| s['id'] }).to contain_exactly(
+      expect(response["collection"].count).to eq(2)
+      expect(response["collection"].map { |s| s["id"] }).to contain_exactly(
         first_subscription.id,
         second_subscription.id
       )
-      expect(response['collection'].first['plan']).to include(
-        'code' => plan.code
+      expect(response["collection"].first["plan"]).to include(
+        "code" => plan.code
       )
 
-      expect(response['metadata']['currentPage']).to eq(1)
-      expect(response['metadata']['totalCount']).to eq(2)
+      expect(response["metadata"]["currentPage"]).to eq(1)
+      expect(response["metadata"]["totalCount"]).to eq(2)
     end
   end
 end

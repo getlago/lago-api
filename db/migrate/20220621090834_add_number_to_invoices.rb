@@ -8,7 +8,7 @@ class AddNumberToInvoices < ActiveRecord::Migration[7.0]
         t.remove_index :sequential_id
         t.remove :sequential_id, type: :integer
 
-        t.string :number, null: false, index: true, default: ''
+        t.string :number, null: false, index: true, default: ""
         t.integer :sequential_id, index: true
       end
     end

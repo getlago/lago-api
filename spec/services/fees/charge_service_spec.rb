@@ -60,7 +60,7 @@ RSpec.describe Fees::ChargeService do
         expect(result.fees.count).to be_zero
       end
 
-      context 'with an event' do
+      context "with an event" do
         let(:event) do
           create(
             :event,
@@ -117,7 +117,7 @@ RSpec.describe Fees::ChargeService do
             expect(result.fees.count).to eq(0)
           end
 
-          context 'when organization as zero_amount_fees premium integration' do
+          context "when organization as zero_amount_fees premium integration" do
             before do
               organization.update!(premium_integrations: ["zero_amount_fees"])
             end

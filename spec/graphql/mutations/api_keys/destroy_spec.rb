@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::ApiKeys::Destroy, type: :graphql do
   subject(:result) do
@@ -21,40 +21,40 @@ RSpec.describe Mutations::ApiKeys::Destroy, type: :graphql do
     GQL
   end
 
-  let(:required_permission) { 'developers:keys:manage' }
+  let(:required_permission) { "developers:keys:manage" }
   let!(:membership) { create(:membership) }
 
-  it_behaves_like 'requires current user'
-  it_behaves_like 'requires current organization'
-  it_behaves_like 'requires permission', 'developers:keys:manage'
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "developers:keys:manage"
 
-  context 'when api key with such ID exists in the current organization' do
+  context "when api key with such ID exists in the current organization" do
     let(:api_key) { create(:api_key, organization: membership.organization) }
 
-    it 'expires the api key' do
+    it "expires the api key" do
       expect { result }.to change { api_key.reload.expires_at }.from(nil).to(Time)
     end
 
-    it 'returns expired api key' do
-      api_key_response = result['data']['destroyApiKey']
+    it "returns expired api key" do
+      api_key_response = result["data"]["destroyApiKey"]
       api_key.reload
 
       aggregate_failures do
-        expect(api_key_response['id']).to eq(api_key.id)
-        expect(api_key_response['expiresAt']).to eq(api_key.expires_at.iso8601)
+        expect(api_key_response["id"]).to eq(api_key.id)
+        expect(api_key_response["expiresAt"]).to eq(api_key.expires_at.iso8601)
       end
     end
   end
 
-  context 'when api key with such ID does not exist in the current organization' do
+  context "when api key with such ID does not exist in the current organization" do
     let!(:api_key) { create(:api_key) }
 
-    it 'does not change the api key' do
+    it "does not change the api key" do
       expect { result }.not_to change { api_key.reload.expires_at }
     end
 
-    it 'returns an error' do
-      expect_graphql_error(result:, message: 'Resource not found')
+    it "returns an error" do
+      expect_graphql_error(result:, message: "Resource not found")
     end
   end
 end

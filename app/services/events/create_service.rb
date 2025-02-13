@@ -35,9 +35,9 @@ module Events
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue ActiveRecord::RecordNotUnique
-      result.single_validation_failure!(field: :transaction_id, error_code: 'value_already_exist')
+      result.single_validation_failure!(field: :transaction_id, error_code: "value_already_exist")
     rescue ArgumentError
-      result.single_validation_failure!(field: :timestamp, error_code: 'invalid_format')
+      result.single_validation_failure!(field: :timestamp, error_code: "invalid_format")
     end
 
     private
@@ -45,11 +45,11 @@ module Events
     attr_reader :organization, :params, :timestamp, :metadata
 
     def produce_kafka_event(event)
-      return if ENV['LAGO_KAFKA_BOOTSTRAP_SERVERS'].blank?
-      return if ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'].blank?
+      return if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
+      return if ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"].blank?
 
       Karafka.producer.produce_async(
-        topic: ENV['LAGO_KAFKA_RAW_EVENTS_TOPIC'],
+        topic: ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"],
         key: "#{organization.id}-#{event.external_subscription_id}",
         payload: {
           organization_id: organization.id,
@@ -63,7 +63,7 @@ module Events
           precise_total_amount_cents: event.precise_total_amount_cents.present? ? event.precise_total_amount_cents.to_s : "0.0",
           properties: event.properties,
           ingested_at: Time.zone.now.iso8601[...-1],
-          source: 'http_ruby'
+          source: "http_ruby"
         }.to_json
       )
     end

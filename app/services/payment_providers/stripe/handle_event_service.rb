@@ -4,9 +4,9 @@ module PaymentProviders
   module Stripe
     class HandleEventService < BaseService
       EVENT_MAPPING = {
-        'setup_intent.succeeded' => PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService,
-        'customer.updated' => PaymentProviders::Stripe::Webhooks::CustomerUpdatedService,
-        'charge.dispute.closed' => PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService
+        "setup_intent.succeeded" => PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService,
+        "customer.updated" => PaymentProviders::Stripe::Webhooks::CustomerUpdatedService,
+        "charge.dispute.closed" => PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService
       }.freeze
 
       PAYMENT_SERVICE_CLASS_MAP = {
@@ -37,19 +37,19 @@ module PaymentProviders
         end
 
         case event.type
-        when 'charge.succeeded'
+        when "charge.succeeded"
           payment_service_klass(event)
             .new.update_payment_status(
               organization_id: organization.id,
-              status: 'succeeded',
+              status: "succeeded",
               stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
                 id: event.data.object.payment_intent,
                 status: event.data.object.status,
                 metadata: event.data.object.metadata.to_h.symbolize_keys
               )
             ).raise_if_error!
-        when 'payment_intent.payment_failed', 'payment_intent.succeeded'
-          status = (event.type == 'payment_intent.succeeded') ? 'succeeded' : 'failed'
+        when "payment_intent.payment_failed", "payment_intent.succeeded"
+          status = (event.type == "payment_intent.succeeded") ? "succeeded" : "failed"
           payment_service_klass(event)
             .new.update_payment_status(
               organization_id: organization.id,
@@ -60,7 +60,7 @@ module PaymentProviders
                 metadata: event.data.object.metadata.to_h.symbolize_keys
               )
             ).raise_if_error!
-        when 'payment_method.detached'
+        when "payment_method.detached"
           PaymentProviderCustomers::StripeService
             .new
             .delete_payment_method(
@@ -69,7 +69,7 @@ module PaymentProviders
               payment_method_id: event.data.object.id,
               metadata: event.data.object.metadata.to_h.symbolize_keys
             ).raise_if_error!
-        when 'charge.refund.updated'
+        when "charge.refund.updated"
           CreditNotes::Refunds::StripeService
             .new.update_status(
               provider_refund_id: event.data.object.id,

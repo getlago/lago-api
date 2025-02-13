@@ -5,7 +5,7 @@ module Integrations
     module Subscriptions
       module Hubspot
         class CreateCustomerAssociationJob < ApplicationJob
-          queue_as 'integrations'
+          queue_as "integrations"
 
           retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 10
           retry_on RequestLimitError, wait: :polynomially_longer, attempts: 100

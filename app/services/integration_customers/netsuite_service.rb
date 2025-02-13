@@ -19,7 +19,7 @@ module IntegrationCustomers
         integration:,
         customer:,
         external_customer_id: create_result.contact_id,
-        type: 'IntegrationCustomers::NetsuiteCustomer',
+        type: "IntegrationCustomers::NetsuiteCustomer",
         subsidiary_id:,
         sync_with_provider: true
       )

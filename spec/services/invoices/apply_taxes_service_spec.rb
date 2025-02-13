@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Invoices::ApplyTaxesService, type: :service do
   subject(:apply_service) { described_class.new(invoice:) }
@@ -24,8 +24,8 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
   let(:tax1) { create(:tax, organization:, rate: 10) }
   let(:tax2) { create(:tax, organization:, rate: 12) }
 
-  describe 'call' do
-    context 'with non zero fees amount' do
+  describe "call" do
+    context "with non zero fees amount" do
       before do
         fee1 = create(:fee, invoice:, amount_cents: 1000, precise_coupons_amount_cents: 0)
         create(:fee_applied_tax, tax: tax1, fee: fee1, amount_cents: 100)
@@ -35,7 +35,7 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
         create(:fee_applied_tax, tax: tax2, fee: fee2, amount_cents: 240)
       end
 
-      it 'creates applied taxes' do
+      it "creates applied taxes" do
         result = apply_service.call
 
         aggregate_failures do
@@ -77,7 +77,7 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
       end
     end
 
-    context 'when invoices fees_amount_cents is zero' do
+    context "when invoices fees_amount_cents is zero" do
       let(:fees_amount_cents) { 0 }
 
       before do
@@ -89,7 +89,7 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
         create(:fee_applied_tax, tax: tax2, fee: fee2, amount_cents: 0)
       end
 
-      it 'creates applied_taxes' do
+      it "creates applied_taxes" do
         result = apply_service.call
 
         aggregate_failures do
@@ -131,7 +131,7 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
       end
     end
 
-    context 'with coupon applied to invoice' do
+    context "with coupon applied to invoice" do
       let(:coupons_amount_cents) { 1000 }
 
       before do
@@ -143,7 +143,7 @@ RSpec.describe Invoices::ApplyTaxesService, type: :service do
         create(:fee_applied_tax, tax: tax2, fee: fee2, amount_cents: (2000 - 1000.fdiv(3) * 2 * 12).fdiv(100))
       end
 
-      it 'taxes the coupon at pro-rata of each fees' do
+      it "taxes the coupon at pro-rata of each fees" do
         result = apply_service.call
 
         aggregate_failures do

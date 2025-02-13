@@ -3,15 +3,15 @@
 class DottedHash < Hash
   attr_reader :separator
 
-  def initialize(hash = {}, separator: '.')
+  def initialize(hash = {}, separator: ".")
     super()
     @separator = separator
-    to_dotted_hash(hash, recursive_key: '')
+    to_dotted_hash(hash, recursive_key: "")
   end
 
   private
 
-  def to_dotted_hash(hash, recursive_key: '')
+  def to_dotted_hash(hash, recursive_key: "")
     hash.each do |k, v|
       key = recursive_key + k.to_s
       if v.is_a?(Hash)

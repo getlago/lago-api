@@ -11,11 +11,11 @@ module Invoices
       def call_async
         if invoice.credit? && (invoice.open? || invoice.visible?)
           wallet_transaction = invoice.fees.credit.first.invoiceable
-          SendWebhookJob.perform_later('wallet_transaction.payment_failure', wallet_transaction, params)
+          SendWebhookJob.perform_later("wallet_transaction.payment_failure", wallet_transaction, params)
         end
 
         if invoice.visible?
-          SendWebhookJob.perform_later('invoice.payment_failure', invoice, params)
+          SendWebhookJob.perform_later("invoice.payment_failure", invoice, params)
         end
 
         result

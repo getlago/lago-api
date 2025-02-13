@@ -11,7 +11,7 @@ module Integrations
 
           def call
             return result unless integration
-            return result unless integration.type == 'Integrations::AnrokIntegration'
+            return result unless integration.type == "Integrations::AnrokIntegration"
 
             response = http_client.post_with_response(payload, headers)
             body = JSON.parse(response.body)
@@ -33,8 +33,8 @@ module Integrations
           def payload
             [
               {
-                'id' => invoice.id,
-                'voided_id' => "#{invoice.id}_voided"
+                "id" => invoice.id,
+                "voided_id" => "#{invoice.id}_voided"
               }
             ]
           end

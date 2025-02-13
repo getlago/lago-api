@@ -15,7 +15,7 @@ module Integrations
         organization = Organization.find_by(id: params[:organization_id])
 
         unless organization.netsuite_enabled?
-          return result.not_allowed_failure!(code: 'premium_integration_missing')
+          return result.not_allowed_failure!(code: "premium_integration_missing")
         end
 
         integration = Integrations::NetsuiteIntegration.new(
@@ -36,7 +36,7 @@ module Integrations
 
         integration.save!
 
-        if integration.type == 'Integrations::NetsuiteIntegration'
+        if integration.type == "Integrations::NetsuiteIntegration"
           Integrations::Aggregator::SendRestletEndpointJob.perform_later(integration:)
           Integrations::Aggregator::PerformSyncJob.set(wait: 2.seconds).perform_later(integration:, sync_items: false)
         end

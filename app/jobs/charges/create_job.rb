@@ -2,7 +2,7 @@
 
 module Charges
   class CreateJob < ApplicationJob
-    queue_as 'default'
+    queue_as "default"
 
     def perform(plan:, params:)
       Charges::CreateService.call(plan:, params:).raise_if_error!

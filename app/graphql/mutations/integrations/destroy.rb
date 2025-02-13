@@ -6,10 +6,10 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = 'organization:integrations:delete'
+      REQUIRED_PERMISSION = "organization:integrations:delete"
 
-      graphql_name 'DestroyIntegration'
-      description 'Destroy an integration'
+      graphql_name "DestroyIntegration"
+      description "Destroy an integration"
 
       argument :id, ID, required: true
 

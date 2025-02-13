@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 describe Clock::FinalizeInvoicesJob, job: true do
   subject { described_class }
 
-  describe '.perform' do
+  describe ".perform" do
     let(:customer) { create(:customer, invoice_grace_period: 3) }
     let(:draft_invoice) do
       create(
         :invoice,
         status: :draft,
-        issuing_date: DateTime.parse('23 Jun 2022').to_date,
+        issuing_date: DateTime.parse("23 Jun 2022").to_date,
         customer:,
         organization: customer.organization
       )
@@ -20,7 +20,7 @@ describe Clock::FinalizeInvoicesJob, job: true do
       create(
         :invoice,
         status: :finalized,
-        issuing_date: DateTime.parse('23 Jun 2022').to_date,
+        issuing_date: DateTime.parse("23 Jun 2022").to_date,
         customer:,
         organization: customer.organization
       )
@@ -32,9 +32,9 @@ describe Clock::FinalizeInvoicesJob, job: true do
       allow(Invoices::RefreshDraftAndFinalizeService).to receive(:call)
     end
 
-    context 'when during the grace period' do
-      it 'does not call the finalize service' do
-        current_date = DateTime.parse('22 Jun 2022')
+    context "when during the grace period" do
+      it "does not call the finalize service" do
+        current_date = DateTime.parse("22 Jun 2022")
 
         travel_to(current_date) do
           described_class.perform_now
@@ -44,9 +44,9 @@ describe Clock::FinalizeInvoicesJob, job: true do
       end
     end
 
-    context 'when after the grace period' do
-      it 'calls the finalize service' do
-        current_date = DateTime.parse('24 Jun 2022')
+    context "when after the grace period" do
+      it "calls the finalize service" do
+        current_date = DateTime.parse("24 Jun 2022")
 
         travel_to(current_date) do
           described_class.perform_now

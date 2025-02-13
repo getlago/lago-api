@@ -18,11 +18,11 @@ module Webhooks
       end
 
       def webhook_type
-        'payment.requires_action'
+        "payment.requires_action"
       end
 
       def object_type
-        'payment'
+        "payment"
       end
     end
   end

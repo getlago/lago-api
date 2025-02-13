@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Mutations::CustomerPortal::DownloadInvoice, type: :graphql do
   let(:membership) { create(:membership) }
@@ -20,9 +20,9 @@ RSpec.describe Mutations::CustomerPortal::DownloadInvoice, type: :graphql do
 
   before { stub_pdf_generation }
 
-  it_behaves_like 'requires a customer portal user'
+  it_behaves_like "requires a customer portal user"
 
-  it 'generates the PDF for the given invoice' do
+  it "generates the PDF for the given invoice" do
     freeze_time do
       result = execute_graphql(
         customer_portal_user: customer,
@@ -32,16 +32,16 @@ RSpec.describe Mutations::CustomerPortal::DownloadInvoice, type: :graphql do
         }
       )
 
-      result_data = result['data']['downloadCustomerPortalInvoice']
+      result_data = result["data"]["downloadCustomerPortalInvoice"]
 
       aggregate_failures do
-        expect(result_data['id']).to eq(invoice.id)
+        expect(result_data["id"]).to eq(invoice.id)
       end
     end
   end
 
-  context 'without customer portal user' do
-    it 'returns an error' do
+  context "without customer portal user" do
+    it "returns an error" do
       result = execute_graphql(
         query: mutation,
         variables: {

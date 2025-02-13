@@ -41,7 +41,7 @@ module Api
         plan = current_organization.plans.parents
           .includes(:usage_thresholds, charges: {filters: {values: :billable_metric_filter}})
           .find_by(code: params[:code])
-        return not_found_error(resource: 'plan') unless plan
+        return not_found_error(resource: "plan") unless plan
 
         render_plan(plan)
       end
@@ -135,14 +135,14 @@ module Api
         render(
           json: ::V1::PlanSerializer.new(
             plan,
-            root_name: 'plan',
+            root_name: "plan",
             includes: %i[charges usage_thresholds taxes minimum_commitment]
           )
         )
       end
 
       def resource_name
-        'plan'
+        "plan"
       end
     end
   end

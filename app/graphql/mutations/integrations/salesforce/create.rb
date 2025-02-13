@@ -7,10 +7,10 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = 'organization:integrations:create'
+        REQUIRED_PERMISSION = "organization:integrations:create"
 
-        graphql_name 'CreateSalesforceIntegration'
-        description 'Create Salesforce integration'
+        graphql_name "CreateSalesforceIntegration"
+        description "Create Salesforce integration"
 
         input_object_class Types::Integrations::Salesforce::CreateInput
 

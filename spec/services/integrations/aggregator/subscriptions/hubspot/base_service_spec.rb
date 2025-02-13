@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::BaseService, type: :service do
   let(:service) { described_class.new(subscription:) }
@@ -11,23 +11,23 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::BaseService, ty
   let(:integration) { create(:hubspot_integration, organization:) }
   let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
 
-  describe '#initialize' do
-    it 'assigns the subscription' do
+  describe "#initialize" do
+    it "assigns the subscription" do
       expect(service.instance_variable_get(:@subscription)).to eq(subscription)
     end
   end
 
-  describe '#integration_customer' do
+  describe "#integration_customer" do
     before do
       integration_customer
       create(:netsuite_customer, customer:)
     end
 
-    it 'returns the first hubspot kind integration customer' do
+    it "returns the first hubspot kind integration customer" do
       expect(service.send(:integration_customer)).to eq(integration_customer)
     end
 
-    it 'memoizes the integration customer' do
+    it "memoizes the integration customer" do
       service.send(:integration_customer)
       expect(service.instance_variable_get(:@integration_customer)).to eq(integration_customer)
     end

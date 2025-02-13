@@ -2,7 +2,7 @@
 
 module PaymentProviders
   class AdyenProvider < BaseProvider
-    SUCCESS_REDIRECT_URL = 'https://www.adyen.com/'
+    SUCCESS_REDIRECT_URL = "https://www.adyen.com/"
 
     PROCESSING_STATUSES = %w[AuthorisedPending Received].freeze
     SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze

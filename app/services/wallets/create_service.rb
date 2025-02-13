@@ -39,7 +39,7 @@ module Wallets
 
       result.wallet = wallet
 
-      SendWebhookJob.perform_later('wallet.created', wallet)
+      SendWebhookJob.perform_later("wallet.created", wallet)
 
       WalletTransactions::CreateJob.perform_later(
         organization_id: params[:organization_id],
