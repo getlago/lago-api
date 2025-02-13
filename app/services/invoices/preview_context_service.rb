@@ -71,8 +71,6 @@ module Invoices
     end
 
     def build_subscription
-      return if !plan || !result.customer
-
       billing_time = if Subscription::BILLING_TIME.include?(params[:billing_time]&.to_sym)
         params[:billing_time]
       else
@@ -91,7 +89,15 @@ module Invoices
     end
 
     def find_or_build_subscriptions
-      [build_subscription]
+      subscriptions_params = params[:subscriptions] || {}
+
+      if subscriptions_params[:external_ids].present?
+        result.customer.subscriptions.active.where(external_id: subscriptions_params[:external_ids])
+      else
+        return [] if !plan || !result.customer
+
+        [build_subscription]
+      end
     end
 
     def plan

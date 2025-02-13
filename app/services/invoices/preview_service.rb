@@ -17,6 +17,7 @@ module Invoices
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_found_failure!(resource: 'subscription') if subscriptions.empty?
       return result unless currencies_aligned?
+      return result unless billing_times_aligned?
 
       @invoice = Invoice.new(
         organization: customer.organization,
@@ -61,16 +62,54 @@ module Invoices
       true
     end
 
+    def billing_times_aligned?
+      return true if subscriptions.size == 1
+
+      if end_of_periods.map { |e| e.to_date.to_s }.uniq.count > 1
+        result.single_validation_failure!(error_code: "billing_periods_does_not_match")
+        return false
+      end
+
+      true
+    end
+
+    def end_of_periods
+      return @end_of_periods if defined? @end_of_periods
+
+      end_of_periods = []
+      subscriptions.each do |s|
+        date_service = Subscriptions::DatesService.new_instance(s, Time.current, current_usage: true)
+        end_of_periods << date_service.end_of_period
+      end
+
+      @end_of_periods = end_of_periods
+    end
+
+    def boundaries(subscription)
+      date_service = Subscriptions::DatesService.new_instance(subscription, billing_time)
+
+      {
+        from_datetime: date_service.from_datetime,
+        to_datetime: date_service.to_datetime,
+        charges_from_datetime: date_service.charges_from_datetime,
+        charges_to_datetime: date_service.charges_to_datetime,
+        timestamp: billing_time
+      }
+    end
+
     def billing_time
       return @billing_time if defined? @billing_time
 
       subscription = subscriptions.first
 
-      return subscription.subscription_at if subscription.plan.pay_in_advance?
-
-      ds = Subscriptions::DatesService.new_instance(subscription, subscription.subscription_at, current_usage: true)
-
-      @billing_time = ds.end_of_period + 1.day
+      @billing_time = if subscriptions.size > 1 || subscription.persisted?
+        end_of_periods.first + 1.day
+      elsif subscription.plan.pay_in_advance?
+        subscription.subscription_at
+      else
+        ds = Subscriptions::DatesService.new_instance(subscription, subscription.subscription_at, current_usage: true)
+        ds.end_of_period + 1.day
+      end
     end
 
     def issuing_date
@@ -83,20 +122,10 @@ module Invoices
 
     def add_subscription_fees
       invoice.fees = subscriptions.map do |subscription|
-        date_service = Subscriptions::DatesService.new_instance(subscription, billing_time)
-
-        boundaries = {
-          from_datetime: date_service.from_datetime,
-          to_datetime: date_service.to_datetime,
-          charges_from_datetime: date_service.charges_from_datetime,
-          charges_to_datetime: date_service.charges_to_datetime,
-          timestamp: billing_time
-        }
-
         fee = Fees::SubscriptionService.call(
           invoice:,
           subscription:,
-          boundaries:,
+          boundaries: boundaries(subscription),
           context: :preview
         ).raise_if_error!.fee
 
