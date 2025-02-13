@@ -32,7 +32,7 @@ class AddOrganizationIdToQuantifiedEvents < ActiveRecord::Migration[7.0]
         AND customers.organization_id = quantified_events.organization_id
     SQL
 
-    change_column_null :quantified_events, :customer_id, false
+    change_column_null :quantified_events, :customer_id, false # rubocop:disable Rails/BulkChangeTable
     remove_column :quantified_events, :organization_id
   end
 end

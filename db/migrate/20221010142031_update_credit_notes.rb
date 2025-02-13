@@ -12,8 +12,7 @@ class UpdateCreditNotes < ActiveRecord::Migration[7.0]
       change_table :credit_notes, bulk: true do |t|
         t.bigint :total_amount_cents, null: false, default: 0
 
-        # NOTE: Disable rubocop comment as table is not used in production yet
-        t.string :total_amount_currency, null: false
+        t.string :total_amount_currency, null: false # rubocop:disable Rails/NotNullColumn
       end
     end
   end
