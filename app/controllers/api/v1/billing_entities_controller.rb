@@ -42,10 +42,9 @@ module Api
       end
 
       def show
-        billing_entity = current_organization.billing_entitises.find_by(
+        billing_entity = current_organization.billing_entities.find_by(
           code: params[:code]
         )
-
         return not_found_error(resource: "billing_entity") unless billing_entity
 
         render_billing_entity(billing_entity)
@@ -96,7 +95,8 @@ module Api
         render(
           json: ::V1::BillingEntitySerializer.new(
             billing_entity,
-            root_name: "billing_entity"
+            root_name: "billing_entity",
+            includes: %i[taxes invoice_custom_sections]
           )
         )
       end

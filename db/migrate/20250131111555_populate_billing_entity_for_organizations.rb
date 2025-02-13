@@ -47,6 +47,7 @@ class PopulateBillingEntityForOrganizations < ActiveRecord::Migration[7.1]
         legal_number: organization.legal_number,
         logo: organization.logo,
         name: organization.name,
+        code: organization.name.parameterize(separator: '_'),
         tax_identification_number: organization.tax_identification_number,
         vat_rate: organization.vat_rate,
         applied_dunning_campaign_id: organization.applied_dunning_campaign&.id,
@@ -57,12 +58,6 @@ class PopulateBillingEntityForOrganizations < ActiveRecord::Migration[7.1]
       # rubocop:disable Rails/SkipsModelValidations
       organization.customers.update_all(billing_entity_id: billing_entity.id)
       organization.invoices.update_all(billing_entity_id: billing_entity.id)
-      # organization.daily_usages.update_all(billing_entity_id: billing_entity.id)
-      # organization.integrations.update_all(billing_entity_id: billing_entity.id)
-      # organization.payment_providers.update_all(billing_entity_id: billing_entity.id)
-      # organization.payment_requests.update_all(billing_entity_id: billing_entity.id)
-      # organization.cached_aggregations.update_all(billing_entity_id: billing_entity.id)
-      # organization.data_exports.update_all(billing_entity_id: billing_entity.id)
       organization.invoice_custom_section_selections.update_all(billing_entity_id: billing_entity.id)
       Fee.where(organization_id: organization.id).update_all(billing_entity_id: billing_entity.id)
       ErrorDetail.where(organization_id: organization.id).update_all(billing_entity_id: billing_entity.id)

@@ -230,6 +230,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.string "legal_number"
     t.string "logo"
     t.string "name", null: false
+    t.string "code", null: false
     t.string "tax_identification_number"
     t.float "vat_rate", default: 0.0, null: false
     t.boolean "is_default", default: false, null: false

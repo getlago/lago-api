@@ -32,6 +32,7 @@ class CreateBillingEntities < ActiveRecord::Migration[7.1]
       t.string :legal_number
       t.string :logo
       t.string :name, null: false
+      t.string :code, null: false
       t.string :tax_identification_number
       t.float :vat_rate, default: 0.0, null: false
 
