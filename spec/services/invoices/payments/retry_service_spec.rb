@@ -34,7 +34,7 @@ RSpec.describe Invoices::Payments::RetryService, type: :service do
       end
     end
 
-    context "with one_off invoice type" do
+    context "with progressive billing invoice type" do
       let(:invoice) do
         create(:invoice, customer:, organization: customer.organization, invoice_type: :progressive_billing)
       end
