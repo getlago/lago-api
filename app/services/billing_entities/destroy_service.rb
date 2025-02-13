@@ -9,6 +9,8 @@ module BillingEntity
       super
     end
 
+    # Note: we don't open endpoints to use this service, but for us to correctly
+    # archive an entity it makes sense to have this service
     def call
       return result.not_found_failure!(resource: 'billing_entity') unless billing_entity
 

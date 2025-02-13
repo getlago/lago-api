@@ -30,17 +30,6 @@ module Api
         end
       end
 
-      def destroy
-        billing_entity = current_organization.billing_entitys.find_by(code: params[:code])
-        result = BillingEntities::DestroyService.call(billing_entity:)
-
-        if result.success?
-          render_billing_entity(result.billing_entity)
-        else
-          render_error_response(result)
-        end
-      end
-
       def show
         billing_entity = current_organization.billing_entities.find_by(
           code: params[:code]
