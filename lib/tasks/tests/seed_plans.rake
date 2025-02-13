@@ -92,12 +92,12 @@ def generate_children_plans(plan, all_metrics, delete_charge_parents)
     # change plan, do not change charges
     res = Plans::OverrideService.call(plan: plan, params: {name: "Plan '#{plan.code}' child"})
     pl = res.plan
-    pl.charges.update_all(parent_id: nil) if delete_charge_parents
+    pl.charges.update_all(parent_id: nil) if delete_charge_parents # rubocop:disable Rails/SkipsModelValidations
 
     # change charges models and properties (randomly)
     res = Plans::OverrideService.call(plan: plan, params: {charges: override_charges_rand(plan, all_metrics)})
     pl = res.plan
-    pl.charges.update_all(parent_id: nil) if delete_charge_parents
+    pl.charges.update_all(parent_id: nil) if delete_charge_parents # rubocop:disable Rails/SkipsModelValidations
   end
 end
 

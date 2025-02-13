@@ -28,6 +28,18 @@ AllCops:
     - 'coverage/**/*'
     - 'log/**/*'
 
+# TODO: Fix these services
+Lago/ServiceCall:
+  Exclude:
+    - 'app/services/integration_mappings/create_service.rb'
+    - 'app/services/integrations/anrok/create_service.rb'
+    - 'app/services/integrations/okta/create_service.rb'
+    - 'app/services/integrations/xero/create_service.rb'
+    - 'app/services/invites/accept_service.rb'
+    - 'app/services/invoices/finalize_batch_service.rb'
+    - 'app/services/invoices/payments/retry_batch_service.rb'
+    - 'app/services/invoices/retry_batch_service.rb'
+
 # TODO: Enable when we have time to fix all the offenses
 Style/StringLiterals:
   Enabled: false

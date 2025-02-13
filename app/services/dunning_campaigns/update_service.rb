@@ -37,8 +37,6 @@ module DunningCampaigns
     end
 
     def handle_thresholds
-      thresholds_updated = false
-
       input_threshold_ids = params[:thresholds].map { |t| t[:id] }.compact
 
       # Delete thresholds not included in the payload

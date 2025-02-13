@@ -11,7 +11,7 @@ class RemoveAmountCurrencyFromUsageTresholds < ActiveRecord::Migration[7.1]
 
   def down
     change_table :usage_thresholds, bulk: true do |t|
-      t.string :amount_currency, null: false
+      t.string :amount_currency, null: false # rubocop:disable Rails/NotNullColumn
     end
   end
 end

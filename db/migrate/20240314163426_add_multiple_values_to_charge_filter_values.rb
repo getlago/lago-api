@@ -13,7 +13,7 @@ class AddMultipleValuesToChargeFilterValues < ActiveRecord::Migration[7.0]
   def down
     change_table :charge_filter_values, bulk: true do |t|
       t.remove :values
-      t.string :value, null: false
+      t.string :value, null: false # rubocop:disable Rails/NotNullColumn
     end
   end
 end
