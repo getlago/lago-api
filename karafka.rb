@@ -3,23 +3,23 @@
 class KarafkaApp < Karafka::App
   setup do |config|
     config.kafka = {
-      'bootstrap.servers': ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"]
+      "bootstrap.servers": ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"]
     }
 
     if ENV["LAGO_KAFKA_SECURITY_PROTOCOL"].present?
-      config.kafka = config.kafka.merge({'security.protocol': ENV["LAGO_KAFKA_SECURITY_PROTOCOL"]})
+      config.kafka = config.kafka.merge({"security.protocol": ENV["LAGO_KAFKA_SECURITY_PROTOCOL"]})
     end
 
     if ENV["LAGO_KAFKA_SASL_MECHANISMS"].present?
-      config.kafka = config.kafka.merge({'sasl.mechanisms': ENV["LAGO_KAFKA_SASL_MECHANISMS"]})
+      config.kafka = config.kafka.merge({"sasl.mechanisms": ENV["LAGO_KAFKA_SASL_MECHANISMS"]})
     end
 
     if ENV["LAGO_KAFKA_USERNAME"].present?
-      config.kafka = config.kafka.merge({'sasl.username': ENV["LAGO_KAFKA_USERNAME"]})
+      config.kafka = config.kafka.merge({"sasl.username": ENV["LAGO_KAFKA_USERNAME"]})
     end
 
     if ENV["LAGO_KAFKA_PASSWORD"].present?
-      config.kafka = config.kafka.merge({'sasl.password': ENV["LAGO_KAFKA_PASSWORD"]})
+      config.kafka = config.kafka.merge({"sasl.password": ENV["LAGO_KAFKA_PASSWORD"]})
     end
 
     config.client_id = "Lago"
@@ -51,7 +51,10 @@ end
 Karafka::Web.setup do |config|
   # Set this to false in all apps except one
   config.processing.active = false
-  config.ui.sessions.secret = ENV["LAGO_KARAFKA_WEB_SECRET"]
+
+  if ENV["LAGO_KARAFKA_WEB_USERNAME"].present?
+    config.ui.sessions.secret = ENV["LAGO_KARAFKA_WEB_SECRET"]
+  end
 end
 
 Karafka::Web.enable! if ENV["LAGO_KARAFKA_WEB"]
