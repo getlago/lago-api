@@ -221,7 +221,7 @@ module Api
 
         result = Invoices::PreviewService.call(
           customer: result.customer,
-          subscription: result.subscription,
+          subscriptions: result.subscriptions,
           applied_coupons: result.applied_coupons
         )
         if result.success?

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
-  subject(:preview_service) { described_class.new(customer:, subscription:) }
+  subject(:preview_service) { described_class.new(customer:, subscriptions: [subscription]) }
 
   describe "#call" do
     let(:organization) { create(:organization) }
@@ -44,19 +44,30 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
 
       context "when customer does not exist" do
         it "returns an error" do
-          result = described_class.new(customer: nil, subscription:).call
+          result = described_class.new(customer: nil, subscriptions: [subscription]).call
 
           expect(result).not_to be_success
           expect(result.error.error_code).to eq("customer_not_found")
         end
       end
 
-      context "when subscription does not exist" do
+      context "when subscriptions are missing" do
         it "returns an error" do
-          result = described_class.new(customer:, subscription: nil).call
+          result = described_class.new(customer:, subscriptions: []).call
 
           expect(result).not_to be_success
           expect(result.error.error_code).to eq("subscription_not_found")
+        end
+      end
+
+      context "when currencies do not match" do
+        let(:customer) { build(:customer, organization:, currency: "USD") }
+
+        it "returns an error" do
+          result = preview_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:base]).to include("customer_currency_does_not_match")
         end
       end
 
@@ -124,7 +135,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
 
           it "creates preview invoice for 2 days with applied coupons" do
             travel_to(timestamp) do
-              result = described_class.new(customer:, subscription:, applied_coupons: [applied_coupon]).call
+              result = described_class.new(customer:, subscriptions: [subscription], applied_coupons: [applied_coupon]).call
 
               expect(result).to be_success
               expect(result.invoice.subscriptions.first).to eq(subscription)

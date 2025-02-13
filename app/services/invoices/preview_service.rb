@@ -2,9 +2,11 @@
 
 module Invoices
   class PreviewService < BaseService
-    def initialize(customer:, subscription:, applied_coupons: [])
+    Result = BaseResult[:subscriptions, :invoice, :fees_taxes]
+
+    def initialize(customer:, subscriptions:, applied_coupons: [])
       @customer = customer
-      @subscription = subscription
+      @subscriptions = subscriptions
       @applied_coupons = applied_coupons
 
       super
@@ -13,13 +15,14 @@ module Invoices
     def call
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "customer") unless customer
-      return result.not_found_failure!(resource: "subscription") unless subscription
+      return result.not_found_failure!(resource: "subscription") if subscriptions.empty?
+      return result unless currencies_aligned?
 
       @invoice = Invoice.new(
         organization: customer.organization,
         customer:,
         invoice_type: :subscription,
-        currency: subscription.plan&.amount_currency,
+        currency: subscriptions.first.plan.amount_currency,
         timezone: customer.applicable_timezone,
         issuing_date:,
         payment_due_date:,
@@ -28,36 +31,41 @@ module Invoices
         updated_at: Time.current
       )
       invoice.credits = []
-      invoice.subscriptions = [subscription]
+      invoice.subscriptions = subscriptions
 
-      add_subscription_fee
+      add_subscription_fees
       compute_tax_and_totals
 
       result.invoice = invoice
-      result.subscription = subscription
+      result.subscriptions = subscriptions
       result
     end
 
     private
 
-    attr_accessor :customer, :subscription, :invoice, :applied_coupons
+    attr_accessor :customer, :subscriptions, :invoice, :applied_coupons
 
-    def boundaries
-      {
-        from_datetime: date_service.from_datetime,
-        to_datetime: date_service.to_datetime,
-        charges_from_datetime: date_service.charges_from_datetime,
-        charges_to_datetime: date_service.charges_to_datetime,
-        timestamp: billing_time
-      }
-    end
+    def currencies_aligned?
+      subscription_currencies = subscriptions.filter_map { |s| s.plan&.amount_currency }
 
-    def date_service
-      Subscriptions::DatesService.new_instance(subscription, billing_time)
+      if subscription_currencies.uniq.count > 1
+        result.single_validation_failure!(error_code: "subscription_currencies_does_not_match")
+        return false
+      end
+
+      if customer.currency && customer.currency != subscription_currencies.first
+        result.single_validation_failure!(error_code: "customer_currency_does_not_match")
+        return false
+      end
+
+      true
     end
 
     def billing_time
       return @billing_time if defined? @billing_time
+
+      subscription = subscriptions.first
+
       return subscription.subscription_at if subscription.plan.pay_in_advance?
 
       ds = Subscriptions::DatesService.new_instance(subscription, subscription.subscription_at, current_usage: true)
@@ -73,16 +81,29 @@ module Invoices
       (issuing_date + customer.applicable_net_payment_term.days).to_date
     end
 
-    def add_subscription_fee
-      invoice.fees =
-        [
-          Fees::SubscriptionService.call(
-            invoice:,
-            subscription:,
-            boundaries:,
-            context: :preview
-          ).raise_if_error!.fee
-        ]
+    def add_subscription_fees
+      invoice.fees = subscriptions.map do |subscription|
+        date_service = Subscriptions::DatesService.new_instance(subscription, billing_time)
+
+        boundaries = {
+          from_datetime: date_service.from_datetime,
+          to_datetime: date_service.to_datetime,
+          charges_from_datetime: date_service.charges_from_datetime,
+          charges_to_datetime: date_service.charges_to_datetime,
+          timestamp: billing_time
+        }
+
+        fee = Fees::SubscriptionService.call(
+          invoice:,
+          subscription:,
+          boundaries:,
+          context: :preview
+        ).raise_if_error!.fee
+
+        subscription.fees = [fee]
+
+        fee
+      end
     end
 
     def compute_tax_and_totals
@@ -178,7 +199,7 @@ module Invoices
     end
 
     def provider_taxation?
-      customer.integration_customers&.find { |ic| ic.type == "IntegrationCustomers::AnrokCustomer" }
+      customer.integration_customers.find { |ic| ic.type == "IntegrationCustomers::AnrokCustomer" }
     end
   end
 end
