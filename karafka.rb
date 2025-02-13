@@ -51,6 +51,9 @@ end
 Karafka::Web.setup do |config|
   # Set this to false in all apps except one
   config.processing.active = false
+  config.ui.sessions.secret = ENV['LAGO_KARAFKA_WEB_SECRET']
 end
+
+Karafka::Web.enable! if ENV['LAGO_KARAFKA_WEB']
 
 Karafka::Process.tags.add(:application_name, 'lago-api')
