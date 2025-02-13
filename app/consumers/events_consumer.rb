@@ -22,7 +22,7 @@ class EventsConsumer < ApplicationConsumer
       end
 
       # Check pay in advance
-      if event_payload['source'] != 'http_ruby' && bm.charges.pay_in_advance.exists?
+      if event_payload["source"] != "http_ruby" && bm.charges.pay_in_advance.exists?
         Events::PayInAdvanceKafkaJob.perform_later(event.as_json)
       end
 
@@ -31,7 +31,7 @@ class EventsConsumer < ApplicationConsumer
       event_payload["value"] = value
 
       producer.produce_async(
-        topic: ENV['LAGO_KAFKA_ENRICHED_EVENTS_TOPIC'],
+        topic: ENV["LAGO_KAFKA_ENRICHED_EVENTS_TOPIC"],
         payload: event_payload.to_json
       )
       mark_as_consumed(message)

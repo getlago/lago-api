@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe EventsConsumer do
-  subject(:consumer) { karafka.consumer_for('events-raw') }
+  subject(:consumer) { karafka.consumer_for("events-raw") }
 
   let(:bm) { create(:sum_billable_metric) }
   let(:organization) { bm.organization }
@@ -12,16 +12,16 @@ RSpec.describe EventsConsumer do
 
   before do
     karafka.produce({
-      'code' => code,
-      'organization_id' => organization.id,
-      'properties' => {}
+      "code" => code,
+      "organization_id" => organization.id,
+      "properties" => {}
     }.to_json)
   end
 
   it "produces events-enriched messages" do
     consumer.consume
 
-    expect(karafka.produced_messages.last[:topic]).to eq('events_enriched')
+    expect(karafka.produced_messages.last[:topic]).to eq("events_enriched")
   end
 
   context "when billable metric does not exists" do
@@ -30,7 +30,7 @@ RSpec.describe EventsConsumer do
     it "moves the message to the DLQ" do
       consumer.consume
 
-      expect(karafka.produced_messages.last[:topic]).to eq('unprocessed_events')
+      expect(karafka.produced_messages.last[:topic]).to eq("unprocessed_events")
     end
   end
 

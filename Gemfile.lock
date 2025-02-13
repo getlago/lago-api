@@ -357,16 +357,16 @@ GEM
     karafka-core (2.4.8)
       karafka-rdkafka (>= 0.17.6, < 0.19.0)
       logger (>= 1.6.0)
-    karafka-rdkafka (0.17.6)
+    karafka-rdkafka (0.18.1)
       ffi (~> 1.15)
       mini_portile2 (~> 2.6)
       rake (> 12)
     karafka-testing (2.4.6)
       karafka (>= 2.4.0, < 2.5.0)
       waterdrop (>= 2.7.0)
-    karafka-web (0.9.1)
+    karafka-web (0.10.4)
       erubi (~> 1.4)
-      karafka (>= 2.4.0, < 2.5.0)
+      karafka (>= 2.4.10, < 2.5.0)
       karafka-core (>= 2.4.0, < 2.5.0)
       roda (~> 3.68, >= 3.69)
       tilt (~> 2.0)
@@ -375,7 +375,7 @@ GEM
     listen (3.9.0)
       rb-fsevent (~> 0.10, >= 0.10.3)
       rb-inotify (~> 0.9, >= 0.9.10)
-    logger (1.6.5)
+    logger (1.6.6)
     lograge (0.14.0)
       actionpack (>= 4)
       activesupport (>= 4)
@@ -737,7 +737,7 @@ GEM
       rack (>= 1.4)
     retriable (3.1.2)
     rexml (3.4.0)
-    roda (3.83.0)
+    roda (3.89.0)
       rack
     rspec (3.13.0)
       rspec-core (~> 3.13.0)
@@ -906,9 +906,9 @@ GEM
     valvat (2.0.1)
       rexml (>= 3.3.6, < 4.0.0)
     version_gem (1.1.4)
-    waterdrop (2.7.4)
+    waterdrop (2.8.2)
       karafka-core (>= 2.4.3, < 3.0.0)
-      karafka-rdkafka (>= 0.15.1)
+      karafka-rdkafka (>= 0.17.5)
       zeitwerk (~> 2.3)
     webmock (3.23.1)
       addressable (>= 2.8.0)
@@ -922,7 +922,7 @@ GEM
     with_advisory_lock (5.1.0)
       activerecord (>= 6.1)
       zeitwerk (>= 2.6)
-    zeitwerk (2.6.18)
+    zeitwerk (2.7.1)
 
 PLATFORMS
   aarch64-linux
@@ -975,9 +975,9 @@ DEPENDENCIES
   i18n-tasks!
   jwt
   kaminari-activerecord
-  karafka (~> 2.4.0)
+  karafka (~> 2.4.17)
   karafka-testing
-  karafka-web (~> 0.9.0)
+  karafka-web (~> 0.10.4)
   lago-expression!
   lograge
   logstash-event
@@ -1031,4 +1031,4 @@ RUBY VERSION
    ruby 3.3.6p108
 
 BUNDLED WITH
-   2.5.5
+   2.5.22

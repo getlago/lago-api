@@ -1,3 +1,3 @@
 #!/bin/bash
 
-exec bundle exec karafka server
+bundle exec karafka server

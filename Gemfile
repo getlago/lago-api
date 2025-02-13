@@ -68,7 +68,7 @@ gem "multipart-post"
 gem "mutex_m"
 
 # Monitoring
-gem "newrelic_rpm"
+gem "newrelic_rpm", require: false
 gem "opentelemetry-exporter-otlp"
 gem "opentelemetry-instrumentation-all"
 gem "opentelemetry-sdk"
@@ -85,8 +85,8 @@ gem "slim"
 gem "slim-rails"
 
 # Kafka
-gem "karafka", "~> 2.4.0"
-gem "karafka-web", "~> 0.9.0"
+gem "karafka", "~> 2.4.17"
+gem "karafka-web", "~> 0.10.4"
 
 # Taxes
 gem "valvat", require: false
