@@ -14,7 +14,6 @@ RSpec.describe Resolvers::Analytics::RevenueStreamsResolver, type: :graphql do
             grossRevenueAmountCents
             netRevenueAmountCents
             commitmentFeeAmountCents
-            inAdvanceFeeAmountCents
             oneOffFeeAmountCents
             subscriptionFeeAmountCents
             usageBasedFeeAmountCents
