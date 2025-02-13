@@ -2,6 +2,8 @@
 
 module Invoices
   class PreviewContextService < BaseService
+    Result = BaseResult[:customer, :subscriptions, :applied_coupons]
+
     def initialize(organization:, params:)
       @organization = organization
       @params = params.presence || {}
@@ -10,7 +12,7 @@ module Invoices
 
     def call
       result.customer = find_or_build_customer
-      result.subscription = build_subscription
+      result.subscriptions = find_or_build_subscriptions
       result.applied_coupons = find_or_build_applied_coupons
       result
     rescue ActiveRecord::RecordNotFound => exception
@@ -86,6 +88,10 @@ module Invoices
         created_at: params[:subscription_at].presence || Time.current,
         updated_at: Time.current
       )
+    end
+
+    def find_or_build_subscriptions
+      [build_subscription]
     end
 
     def plan
