@@ -658,7 +658,7 @@ GEM
     puma (6.5.0)
       nio4r (~> 2.0)
     racc (1.8.1)
-    rack (2.2.10)
+    rack (2.2.11)
     rack-cors (1.1.1)
       rack (>= 2.0.0)
     rack-session (1.0.2)
