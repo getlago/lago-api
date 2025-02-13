@@ -48,7 +48,7 @@ module Charges
       def compute_percentage_amount
         return 0 if free_units_value > units
 
-        (units - free_units_value) * rate.fdiv(100)
+        (units - free_units_value) * rate / 100
       end
 
       def compute_fixed_amount
@@ -156,7 +156,7 @@ module Charges
           end
 
           # NOTE: apply rate
-          event_amount = (value * rate).fdiv(100)
+          event_amount = (value * rate) / 100
 
           # NOTE: apply fixed amount
           event_amount += fixed_amount

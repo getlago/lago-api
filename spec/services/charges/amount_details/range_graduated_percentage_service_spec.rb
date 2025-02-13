@@ -8,9 +8,9 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedPercentageService, type: :s
   let(:total_units) { 15 }
   let(:range) do
     {
-      from_value: 0,
+      from_value: 7,
       to_value: 10,
-      rate: '2',
+      rate: '2.9',
       flat_amount: '2'
     }
   end
@@ -18,13 +18,13 @@ RSpec.describe Charges::AmountDetails::RangeGraduatedPercentageService, type: :s
   it 'returns expected amount details' do
     expect(service.call).to eq(
       {
-        from_value: 0,
+        from_value: 7,
         to_value: 10,
         flat_unit_amount: 2,
-        rate: 2,
-        units: '10.0',
-        per_unit_total_amount: '0.2',
-        total_with_flat_amount: 2.2
+        rate: 2.9,
+        units: '4.0',
+        per_unit_total_amount: '0.116',
+        total_with_flat_amount: 2.116
       }
     )
   end

@@ -17,7 +17,7 @@ module Charges
           return result
         end
 
-        amount = units * rate.fdiv(100)
+        amount = units * rate / 100
         amount += fixed_amount
         amount = amount.clamp(per_transaction_min_amount, per_transaction_max_amount)
 
@@ -35,7 +35,7 @@ module Charges
 
       def per_transaction_max_amount
         return nil if properties['per_transaction_max_amount'].blank?
-        BigDecimal(properties['per_transaction_max_amount'])
+        BigDecimal(properties['per_transaction_max_amount'].to_s)
       end
 
       def fixed_amount
@@ -44,7 +44,7 @@ module Charges
 
       def per_transaction_min_amount
         return nil if properties['per_transaction_min_amount'].blank?
-        BigDecimal(properties['per_transaction_min_amount'])
+        BigDecimal(properties['per_transaction_min_amount'].to_s)
       end
     end
   end
