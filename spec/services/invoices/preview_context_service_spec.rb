@@ -25,7 +25,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
     it "assigns customer, plan, and applied coupons to result" do
       expect(result)
         .to be_success
-        .and have_attributes(customer:, subscription: Subscription, applied_coupons: customer.applied_coupons)
+        .and have_attributes(customer:, subscriptions: [Subscription], applied_coupons: customer.applied_coupons)
     end
   end
 
@@ -167,8 +167,8 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
     end
   end
 
-  describe "#subscription" do
-    subject { result.subscription }
+  describe "#subscriptions" do
+    subject { result.subscriptions }
 
     let(:organization) { customer.organization }
     let(:customer) { create(:customer) }
@@ -193,13 +193,15 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
 
         it "returns new subscription with provided params" do
           expect(subject)
-            .to be_a(Subscription)
-            .and have_attributes(
-              customer:,
-              plan:,
-              subscription_at: subscription_at,
-              started_at: subscription_at,
-              billing_time: params[:billing_time]
+            .to all(
+              be_a(Subscription)
+                .and(have_attributes(
+                  customer:,
+                  plan:,
+                  subscription_at: subscription_at,
+                  started_at: subscription_at,
+                  billing_time: params[:billing_time]
+                ))
             )
         end
       end
@@ -210,13 +212,14 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
 
         it "returns new subscription with default values for subscription date and billing time" do
           expect(subject)
-            .to be_a(Subscription)
-            .and have_attributes(
-              customer:,
-              plan:,
-              subscription_at: Time.current,
-              started_at: Time.current,
-              billing_time: "calendar"
+            .to all(
+              be_a(Subscription).and(have_attributes(
+                customer:,
+                plan:,
+                subscription_at: Time.current,
+                started_at: Time.current,
+                billing_time: "calendar"
+              ))
             )
         end
       end
