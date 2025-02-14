@@ -24,7 +24,7 @@ RSpec.describe Invoices::AggregateAmountsAndTaxesFromFees, type: :service do
     expect(invoice.fees_amount_cents).to eq(200 + 50 + 120)
     # if we compute taxes: 200 * 0.05 + 50 * 0.12 + 120 * 0.05 + 120 * 0.12 = 36.4
     # but this service sums already computed taxes
-    expect(invoice.taxes_amount_cents).to eq(33)
+    expect(invoice.taxes_amount_cents).to eq(9 + 1 + 23)
     expect(invoice.total_amount_cents).to eq(200 + 50 + 120 + 33)
     expect(invoice.sub_total_excluding_taxes_amount_cents).to eq invoice.fees_amount_cents
     expect(invoice.sub_total_including_taxes_amount_cents).to eq invoice.total_amount_cents

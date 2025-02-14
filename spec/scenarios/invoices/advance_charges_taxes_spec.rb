@@ -31,14 +31,14 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
   end
 
   before do
-    create(:tax, organization:, rate: tax_rate_1)
-    create(:tax, organization:, rate: tax_rate_2)
+    create(:tax, organization:, rate: tax_rate_1, code: "tax-1", description: "VAT 1", name: "VAT")
+    create(:tax, organization:, rate: tax_rate_2, code: "tax-2", description: "VAT 2", name: "bug VAT")
     create(:standard_charge, billable_metric: billable_metric_cards, regroup_paid_fees: "invoice", pay_in_advance: true, invoiceable: false, prorated: true, plan:, properties: {amount: "30", grouped_by: nil})
     create(:standard_charge, billable_metric: billable_metric_transfer, regroup_paid_fees: "invoice", pay_in_advance: true, invoiceable: false, prorated: false, plan:, properties: {amount: "1", grouped_by: nil})
   end
 
   context "when subscription is renewed" do
-    it "generates an invoice with the correct charges" do
+    it "generates an invoice with the correct taxes" do
       travel_to(DateTime.new(2024, 6, 5, 10)) do
         create_subscription(
           {
@@ -61,6 +61,8 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           expect(created_fee.amount_cents).to eq((21 - i) * 100)
           expect(created_fee.taxes_rate).to eq(tax_rate_1 + tax_rate_2)
           expect(created_fee.applied_taxes.count).to eq(2)
+          expect(created_fee.applied_taxes.find { _1.tax_code == "tax-1" }.amount_cents).to eq (created_fee.amount_cents * tax_rate_1 / 100).round
+          expect(created_fee.applied_taxes.find { _1.tax_code == "tax-2" }.amount_cents).to eq (created_fee.amount_cents * tax_rate_2 / 100).round
         end
       end
 
@@ -87,6 +89,18 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
 
         advance_charges_invoice = customer.invoices.where(invoice_type: :advance_charges).sole
         expect(advance_charges_invoice.applied_taxes.count).to eq(2)
+
+        total_tax_1 = 0
+        total_tax_2 = 0
+        advance_charges_invoice.fees.flat_map(&:applied_taxes).each do |applied_tax|
+          if applied_tax.tax_code == "tax-1"
+            total_tax_1 += applied_tax.amount_cents
+          elsif applied_tax.tax_code == "tax-2"
+            total_tax_2 += applied_tax.amount_cents
+          end
+        end
+        expect(advance_charges_invoice.applied_taxes.find { _1.tax_code == "tax-1" }.amount_cents).to eq total_tax_1
+        expect(advance_charges_invoice.applied_taxes.find { _1.tax_code == "tax-2" }.amount_cents).to eq total_tax_2
       end
     end
   end
