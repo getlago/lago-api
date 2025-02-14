@@ -365,6 +365,14 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                     "taxamount" => 0,
                     "taxbasis" => 1,
                     "taxcode" => "some_code",
+                    "taxdetailsreference" => "credit_item_progressive_billing",
+                    "taxrate" => 0.0,
+                    "taxtype" => "some_type"
+                  },
+                  {
+                    "taxamount" => 0,
+                    "taxbasis" => 1,
+                    "taxcode" => "some_code",
                     "taxdetailsreference" => "credit_note_item",
                     "taxrate" => 0.0,
                     "taxtype" => "some_type"
