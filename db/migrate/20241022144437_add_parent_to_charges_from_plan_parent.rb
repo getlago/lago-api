@@ -13,7 +13,7 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
     belongs_to :plan
     belongs_to :parent, class_name: "Charge", optional: true
 
-    attribute :regroup_paid_fees, :integer, default: nil
+    attribute :regroup_paid_fees, :integer
   end
 
   def up
