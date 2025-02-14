@@ -37,7 +37,7 @@ module Subscriptions
       else
         subscription.save!
 
-        after_commit { SendWebhookJob.perform_later('subscription.updated', subscription) }
+        after_commit { SendWebhookJob.perform_later("subscription.updated", subscription) }
 
         if subscription.should_sync_hubspot_subscription?
           Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
