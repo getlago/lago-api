@@ -57,17 +57,17 @@ module Resolvers
         filters: {
           amount_from:,
           amount_to:,
-          partially_paid:,
-          payment_dispute_lost:,
-          positive_due_amount:,
           currency:,
           customer_external_id:,
           customer_id:,
           invoice_type:,
           issuing_date_from:,
           issuing_date_to:,
+          partially_paid:,
+          payment_dispute_lost:,
           payment_overdue:,
           payment_status:,
+          positive_due_amount:,
           self_billed:,
           status:
         }

@@ -4,25 +4,7 @@ require "rails_helper"
 
 RSpec.describe Resolvers::PaymentsResolver, type: :graphql do
   let(:required_permission) { "payments:view" }
-  let(:query) do
-    <<~GQL
-      query($invoiceId: ID!) {
-        payments(invoiceId: $invoiceId, limit: 5) {
-          collection {
-            id
-            amountCents
-            customer { id }
-            paymentProviderType
-            payable {
-              ... on Invoice { id }
-              ... on PaymentRequest { id }
-            }
-          }
-          metadata { currentPage, totalCount }
-        }
-      }
-    GQL
-  end
+  let(:query) {}
 
   let!(:payment) { create(:payment, payable: invoice1) }
   let(:membership) { create(:membership) }
@@ -78,6 +60,7 @@ RSpec.describe Resolvers::PaymentsResolver, type: :graphql do
       expect(payments_response["collection"].first["amountCents"]).to eq(payment.amount_cents.to_s)
       expect(payments_response["collection"].first["paymentProviderType"]).to eq("stripe")
       expect(payments_response["collection"].first["payable"]["id"]).to eq(invoice1.id)
+      expect(payments_response["collection"].first["payable"]["payableType"]).to eq("Invoice")
       expect(payments_response["collection"].first["customer"]["id"]).to eq(customer.id)
     end
   end
