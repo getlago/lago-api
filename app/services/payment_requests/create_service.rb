@@ -18,7 +18,7 @@ module PaymentRequests
         customer.payment_requests.create!(
           organization:,
           dunning_campaign:,
-          amount_cents: invoices.sum('total_amount_cents - total_paid_amount_cents'),
+          amount_cents: invoices.sum("total_amount_cents - total_paid_amount_cents"),
           amount_currency: currency,
           email:,
           invoices:

@@ -73,7 +73,7 @@ module Types
       field :tax_provider_voidable, GraphQL::Types::Boolean, null: false
 
       def payable_type
-        'Invoice'
+        "Invoice"
       end
 
       def applied_taxes

@@ -34,7 +34,7 @@ module PaymentProviders
     secrets_accessors :secret_key
 
     def payment_type
-      'stripe'
+      "stripe"
     end
   end
 end

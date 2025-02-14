@@ -40,7 +40,7 @@ RSpec.describe Mutations::Payments::Create, type: :graphql do
     GQL
   end
 
-  context 'with premium organization' do
+  context "with premium organization" do
     around { |test| lago_premium!(&test) }
 
     it "creates a manual payment" do
@@ -54,9 +54,9 @@ RSpec.describe Mutations::Payments::Create, type: :graphql do
     end
   end
 
-  context 'with free organization' do
-    it 'returns an error' do
-      expect_graphql_error(result:, message: 'feature_unavailable')
+  context "with free organization" do
+    it "returns an error" do
+      expect_graphql_error(result:, message: "feature_unavailable")
     end
   end
 end

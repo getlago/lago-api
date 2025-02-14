@@ -30,7 +30,7 @@ module PaymentProviders
     end
 
     def payment_type
-      'gocardless'
+      "gocardless"
     end
   end
 end

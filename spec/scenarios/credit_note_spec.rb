@@ -104,7 +104,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
     travel_to(DateTime.new(2023, 10, 23)) do
       Payments::ManualCreateService.call(
         organization:,
-        params: {invoice_id: invoice.id, amount_cents: 1_200, reference: 'ref1'}
+        params: {invoice_id: invoice.id, amount_cents: 1_200, reference: "ref1"}
       )
 
       # Estimate the credit notes amount on full fees
@@ -301,7 +301,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       travel_to(DateTime.new(2023, 10, 23)) do
         Payments::ManualCreateService.call(
           organization:,
-          params: {invoice_id: invoice.id, amount_cents: 40, reference: 'ref2'}
+          params: {invoice_id: invoice.id, amount_cents: 40, reference: "ref2"}
         )
 
         estimate_credit_note(
@@ -359,7 +359,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
           Payments::ManualCreateService.call(
             organization:,
-            params: {invoice_id: invoice.id, amount_cents: 500, reference: 'ref3'}
+            params: {invoice_id: invoice.id, amount_cents: 500, reference: "ref3"}
           )
 
           # estimate and create credit notes for first item - full refund; the taxes are rounded to higher number
@@ -410,7 +410,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
           Payments::ManualCreateService.call(
             organization:,
-            params: {invoice_id: invoice.id, amount_cents: 8_000, reference: 'ref3'}
+            params: {invoice_id: invoice.id, amount_cents: 8_000, reference: "ref3"}
           )
 
           # when issuing second credit note, it should be rounded to lower number
@@ -476,7 +476,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
           Payments::ManualCreateService.call(
             organization:,
-            params: {invoice_id: invoice.id, amount_cents: 300_00, reference: 'ref3'}
+            params: {invoice_id: invoice.id, amount_cents: 300_00, reference: "ref3"}
           )
           invoice.reload
 
@@ -962,7 +962,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
       Payments::ManualCreateService.call(
         organization:,
-        params: {invoice_id: invoice.id, amount_cents: 1500, reference: 'ref3'}
+        params: {invoice_id: invoice.id, amount_cents: 1500, reference: "ref3"}
       )
 
       invoice.reload

@@ -47,7 +47,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     ]
   end
 
-  let(:params) { {invoice_id: invoice&.id, amount_cents: 9, reference: 'ref1'} }
+  let(:params) { {invoice_id: invoice&.id, amount_cents: 9, reference: "ref1"} }
 
   around { |test| lago_premium!(&test) }
 
@@ -201,7 +201,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     let(:wallet) { create(:wallet, customer:, balance_cents: 10) }
     let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
     let(:credit_fee) { create(:fee, fee_type: :credit, invoice:, invoiceable: wallet_transaction) }
-    let(:params) { {invoice_id: invoice.id, amount_cents: 12, reference: 'ref2'} }
+    let(:params) { {invoice_id: invoice.id, amount_cents: 12, reference: "ref2"} }
 
     let(:items) do
       [

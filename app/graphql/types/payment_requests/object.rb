@@ -19,7 +19,7 @@ module Types
       field :payable_type, GraphQL::Types::String, null: false
 
       def payable_type
-        'PaymentRequest'
+        "PaymentRequest"
       end
     end
   end

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Payments::ManualCreateJob, type: :job do
   let(:organization) { invoice.customer.organization }
   let(:invoice) { create(:invoice) }
-  let(:params) { {invoice_id: invoice.id, amount_cents: invoice.total_amount_cents, reference: 'ref1'} }
+  let(:params) { {invoice_id: invoice.id, amount_cents: invoice.total_amount_cents, reference: "ref1"} }
 
   it "calls the create service" do
     allow(Payments::ManualCreateService)

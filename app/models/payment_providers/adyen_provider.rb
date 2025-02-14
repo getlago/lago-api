@@ -23,7 +23,7 @@ module PaymentProviders
     end
 
     def payment_type
-      'adyen'
+      "adyen"
     end
   end
 end

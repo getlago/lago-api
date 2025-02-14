@@ -19,7 +19,7 @@ module PaymentProviders
     secrets_accessors :client_id, :client_secret
 
     def payment_type
-      'cashfree'
+      "cashfree"
     end
   end
 end

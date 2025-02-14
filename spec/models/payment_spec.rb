@@ -316,7 +316,7 @@ RSpec.describe Payment, type: :model do
       let(:payment_provider) { create(:adyen_provider) }
 
       it "returns adyen" do
-        expect(payment_provider_type).to eq('adyen')
+        expect(payment_provider_type).to eq("adyen")
       end
     end
 
