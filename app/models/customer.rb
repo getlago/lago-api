@@ -79,8 +79,8 @@ class Customer < ApplicationRecord
   PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen].freeze
 
   default_scope -> { kept }
-  sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
-    lock_key: ->(customer) { customer.organization_id }
+  sequenced scope: ->(customer) { customer.billing_entity.customers.with_discarded },
+    lock_key: ->(customer) { customer.billing_entity_id }
 
   scope :falling_back_to_default_dunning_campaign, -> {
     where(applied_dunning_campaign_id: nil, exclude_from_dunning_campaign: false)
@@ -125,19 +125,19 @@ class Customer < ApplicationRecord
   def applicable_timezone
     return timezone if timezone.present?
 
-    organization.timezone || 'UTC'
+    billing_entity.timezone || 'UTC'
   end
 
   def applicable_invoice_grace_period
     return invoice_grace_period if invoice_grace_period.present?
 
-    organization.invoice_grace_period
+    billing_entity.invoice_grace_period
   end
 
   def applicable_net_payment_term
     return net_payment_term if net_payment_term.present?
 
-    organization.net_payment_term
+    billing_entity.net_payment_term
   end
 
   def applicable_invoice_custom_sections

@@ -212,7 +212,6 @@ end
 #  legal_name                   :string
 #  legal_number                 :string
 #  logo                         :string
-#  max_billing_entities         :integer          default(1)
 #  name                         :string           not null
 #  net_payment_term             :integer          default(0), not null
 #  premium_integrations         :string           default([]), not null, is an Array

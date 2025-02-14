@@ -16,7 +16,7 @@ module Api
       end
 
       def update
-        billing_entity = current_organization.billing_entitys.find_by(code: params[:code])
+        billing_entity = current_organization.billing_entities.find_by(code: params[:code])
 
         result = BillingEntities::UpdateService.call(
           billing_entity:,
@@ -55,6 +55,8 @@ module Api
 
       def input_params
         params.require(:billing_entity).permit(
+          :name,
+          :code,
           :country,
           :default_currency,
           :address_line1,

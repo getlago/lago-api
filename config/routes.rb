@@ -82,7 +82,7 @@ Rails.application.routes.draw do
       put '/organizations', to: 'organizations#update'
       get '/organizations/grpc_token', to: 'organizations#grpc_token'
 
-      resources :billing_entities, param: :code, code: /.*/
+      resources :billing_entities, param: :code, code: /.*/, only: %i[create update show index]
 
       resources :webhook_endpoints, only: %i[create index show destroy update]
       resources :webhooks, only: %i[] do

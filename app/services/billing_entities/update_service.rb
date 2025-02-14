@@ -43,7 +43,7 @@ module BillingEntities
       end
 
       if params.key?(:net_payment_term)
-        Organizations::UpdateInvoicePaymentDueDateService.call(
+        BillingEntities::UpdateInvoicePaymentDueDateService.call(
           billing_entity:,
           net_payment_term: params[:net_payment_term]
         )

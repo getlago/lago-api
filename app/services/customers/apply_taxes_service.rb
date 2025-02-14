@@ -33,7 +33,7 @@ module Customers
     attr_reader :customer, :tax_codes
 
     def taxes
-      @taxes ||= customer.organization.taxes.where(code: tax_codes)
+      @taxes ||= customer.billing_entity.taxes.where(code: tax_codes)
     end
   end
 end

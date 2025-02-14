@@ -32,7 +32,8 @@ class BillingEntity < ApplicationRecord
 
   DOCUMENT_NUMBERINGS = [
     :per_customer,
-    :per_organization
+    :per_organization,
+    :per_entity
   ].freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS

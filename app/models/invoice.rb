@@ -13,7 +13,7 @@ class Invoice < ApplicationRecord
   TAX_INVOICE_LABEL_COUNTRIES = %w[AU AE NZ ID SG].freeze
 
   # before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
-  before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity.per_organization? && !self_billed }
+  before_save :ensure_billing_entity_sequential_id, if: -> { !billing_entity.per_customer? && !self_billed }
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
@@ -513,6 +513,7 @@ end
 #  created_at                              :datetime         not null
 #  updated_at                              :datetime         not null
 #  billing_entity_id                       :uuid
+#  billing_entity_sequential_id            :integer          default(0)
 #  customer_id                             :uuid
 #  organization_id                         :uuid             not null
 #  organization_sequential_id              :integer          default(0), not null

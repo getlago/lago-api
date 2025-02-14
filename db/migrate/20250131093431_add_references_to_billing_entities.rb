@@ -19,6 +19,6 @@ class AddReferencesToBillingEntities < ActiveRecord::Migration[7.1]
     add_reference :error_details, :billing_entity, index: {algorithm: :concurrently}, type: :uuid
     add_reference :fees, :billing_entity, index: {algorithm: :concurrently}, type: :uuid
 
-    add_column :organizations, :max_billing_entities, :integer, default: 1
+    add_column :invoices, :billing_entity_sequential_id, :integer, default: 0
   end
 end

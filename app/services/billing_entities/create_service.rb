@@ -14,7 +14,7 @@ module BillingEntities
       return result.not_allowed_error(code: 'billing_entities_max_limit_reached') unless allowed_to_create_billing_entity?
 
       billing_entity = organization.billing_entities.new(
-        params.slice(:name, :document_numbering)
+        params.slice(:name, :code, :document_numbering)
       )
 
       ActiveRecord::Base.transaction do
@@ -29,12 +29,11 @@ module BillingEntities
 
     private
 
-    attr_reader :params
+    attr_reader :params, :organization
 
     def allowed_to_create_billing_entity?
-      return true if  organization.max_billing_entities.nil?
-
-      organization.billing_entities.count < organization.max_billing_entities
+      # TODO: check license here!
+      return true
     end
   end
 end

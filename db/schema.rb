@@ -993,6 +993,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.bigint "total_paid_amount_cents", default: 0, null: false
     t.boolean "self_billed", default: false, null: false
     t.uuid "billing_entity_id"
+    t.integer "billing_entity_sequential_id", default: 0
     t.index ["billing_entity_id"], name: "index_invoices_on_billing_entity_id"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
@@ -1102,7 +1103,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_05_184611) do
     t.boolean "finalize_zero_amount_invoice", default: true, null: false
     t.boolean "clickhouse_events_store", default: false, null: false
     t.string "hmac_key", null: false
-    t.integer "max_billing_entities", default: 1
     t.index ["api_key"], name: "index_organizations_on_api_key", unique: true
     t.index ["hmac_key"], name: "index_organizations_on_hmac_key", unique: true
     t.check_constraint "invoice_grace_period >= 0", name: "check_organizations_on_invoice_grace_period"
