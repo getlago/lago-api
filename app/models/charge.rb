@@ -179,6 +179,7 @@ end
 #  index_charges_on_deleted_at          (deleted_at)
 #  index_charges_on_parent_id           (parent_id)
 #  index_charges_on_plan_id             (plan_id)
+#  index_charges_pay_in_advance         (billable_metric_id) WHERE ((deleted_at IS NULL) AND (pay_in_advance = true))
 #
 # Foreign Keys
 #
