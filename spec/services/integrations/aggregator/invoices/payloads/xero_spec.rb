@@ -88,6 +88,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
         organization:,
         coupons_amount_cents: 2000,
         prepaid_credit_amount_cents: 4000,
+        progressive_billing_credit_amount_cents: 100,
         credit_notes_amount_cents: 6000,
         taxes_amount_cents: 200,
         issuing_date: DateTime.new(2024, 7, 8)
@@ -171,6 +172,14 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
               "description" => "Prepaid credit",
               "units" => 1,
               "precise_unit_amount" => -40.0,
+              "taxes_amount_cents" => 0,
+              "account_code" => "66"
+            },
+            {
+              "external_id" => "6",
+              "description" => "Usage already billed",
+              "units" => 1,
+              "precise_unit_amount" => -1.0,
               "taxes_amount_cents" => 0,
               "account_code" => "66"
             },
