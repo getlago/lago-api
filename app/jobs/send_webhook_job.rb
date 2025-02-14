@@ -54,6 +54,7 @@ class SendWebhookJob < ApplicationJob
     "subscription.started" => Webhooks::Subscriptions::StartedService,
     "subscription.termination_alert" => Webhooks::Subscriptions::TerminationAlertService,
     "subscription.trial_ended" => Webhooks::Subscriptions::TrialEndedService,
+    "subscription.updated" => Webhooks::Subscriptions::UpdatedService,
     "subscription.usage_threshold_reached" => Webhooks::Subscriptions::UsageThresholdsReachedService,
     "wallet.created" => Webhooks::Wallets::CreatedService,
     "wallet.updated" => Webhooks::Wallets::UpdatedService,
