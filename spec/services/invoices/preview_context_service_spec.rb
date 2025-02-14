@@ -238,6 +238,28 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
         expect(subject).to be_nil
       end
     end
+
+    context 'when subscriptions are fetched from the database' do
+      let(:subscription1) { create(:subscription, customer:) }
+      let(:subscription2) { create(:subscription, customer:) }
+      let(:params) do
+        {
+          customer: {external_id: customer.external_id},
+          subscriptions: {
+            external_ids: [subscription1.external_id, subscription2.external_id]
+          }
+        }
+      end
+
+      before do
+        subscription1
+        subscription2
+      end
+
+      it "returns subscriptions that are persisted" do
+        expect(subject.pluck(:external_id)).to eq([subscription1.external_id, subscription2.external_id])
+      end
+    end
   end
 
   describe "#applied_coupons" do
