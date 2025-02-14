@@ -28,10 +28,11 @@ class EventsConsumer < ApplicationConsumer
 
       # fill in value with the extracted value
       value = event.properties[bm.field_name]
-      event_payload["value"] = value
+      event_payload["value"] = value.to_s
 
       producer.produce_async(
         topic: ENV["LAGO_KAFKA_ENRICHED_EVENTS_TOPIC"],
+        key: "#{event.organization_id}-#{event.external_subscription_id}-#{event.code}",
         payload: event_payload.to_json
       )
       mark_as_consumed(message)
