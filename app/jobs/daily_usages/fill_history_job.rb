@@ -2,7 +2,7 @@
 
 module DailyUsages
   class FillHistoryJob < ApplicationJob
-    queue_as "low_priority"
+    queue_as "long_running"
 
     def perform(subscription:, from_datetime:)
       DailyUsages::FillHistoryService.call!(subscription:, from_datetime:)
