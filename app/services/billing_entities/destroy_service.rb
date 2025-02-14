@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 module BillingEntity
+  # TODO: think about renaming it to archive_service?
+  # TODO: think about discard vs archive - should it be different things?
   class DestroyService < BaseService
     Result = BaseResult[:billing_entity]
 

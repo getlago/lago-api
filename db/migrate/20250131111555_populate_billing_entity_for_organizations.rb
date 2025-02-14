@@ -34,7 +34,7 @@ class PopulateBillingEntityForOrganizations < ActiveRecord::Migration[7.1]
 
         # invoice settings
         document_number_prefix: organization.document_number_prefix,
-        document_numbering: organization.document_numbering,
+        document_numbering: organization.per_organization? ? 'per_entity' : 'per_customer',
         finalize_zero_amount_invoice: organization.finalize_zero_amount_invoice,
         invoice_footer: organization.invoice_footer,
         invoice_grace_period: organization.invoice_grace_period,
@@ -58,6 +58,7 @@ class PopulateBillingEntityForOrganizations < ActiveRecord::Migration[7.1]
       # rubocop:disable Rails/SkipsModelValidations
       organization.customers.update_all(billing_entity_id: billing_entity.id)
       organization.invoices.update_all(billing_entity_id: billing_entity.id)
+      organization.invoices.update_all("billing_entity_sequential_id=organization_sequential_id")
       organization.invoice_custom_section_selections.update_all(billing_entity_id: billing_entity.id)
       Fee.where(organization_id: organization.id).update_all(billing_entity_id: billing_entity.id)
       ErrorDetail.where(organization_id: organization.id).update_all(billing_entity_id: billing_entity.id)
