@@ -37,7 +37,6 @@ RSpec.describe DataApi::RevenueStreamsService, type: :service do
             "coupons_amount_cents" => 0,
             "end_of_period_dt" => "2024-01-31",
             "gross_revenue_amount_cents" => 46256357,
-            "in_advance_fee_amount_cents" => 0,
             "net_revenue_amount_cents" => 46256357,
             "one_off_fee_amount_cents" => 0,
             "organization_id" => "2537afc4-0e7c-4abb-89b7-d9b28c35780b",

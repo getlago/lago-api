@@ -13,7 +13,6 @@ module Types
         field :net_revenue_amount_cents, GraphQL::Types::BigInt, null: false
 
         field :commitment_fee_amount_cents, GraphQL::Types::BigInt, null: false
-        field :in_advance_fee_amount_cents, GraphQL::Types::BigInt, null: false
         field :one_off_fee_amount_cents, GraphQL::Types::BigInt, null: false
         field :subscription_fee_amount_cents, GraphQL::Types::BigInt, null: false
         field :usage_based_fee_amount_cents, GraphQL::Types::BigInt, null: false

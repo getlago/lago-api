@@ -7207,7 +7207,6 @@ type RevenueStreams {
   couponsAmountCents: BigInt!
   endOfPeriodDt: ISO8601Date!
   grossRevenueAmountCents: BigInt!
-  inAdvanceFeeAmountCents: BigInt!
   netRevenueAmountCents: BigInt!
   oneOffFeeAmountCents: BigInt!
   startOfPeriodDt: ISO8601Date!
