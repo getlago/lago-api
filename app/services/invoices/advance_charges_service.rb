@@ -79,7 +79,11 @@ module Invoices
           raise ActiveRecord::Rollback
         end
 
-        Invoices::ComputeAmountsFromFees.call(invoice:)
+        # NOTE: We don't want to use Invoices::ComputeAmountsFromFees here
+        #       because it would recompute taxes from pre-tax values. All Fees are already paid
+        #       this invoice should show how much taxes were paid in total.
+        Invoices::AggregateAmountsAndTaxesFromFees.call!(invoice:)
+
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         invoice.payment_status = :succeeded
