@@ -274,6 +274,9 @@ module Api
           :plan_code,
           :billing_time,
           :subscription_at,
+          subscriptions: [
+            external_ids: []
+          ],
           coupons: [
             :code,
             :name,
