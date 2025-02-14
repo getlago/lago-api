@@ -1,9 +1,5 @@
 # frozen_string_literal: true
 
-class Charge
-  attribute :regroup_paid_fees, :integer, default: nil
-end
-
 class AddExpressionIndexToBillableMetrics < ActiveRecord::Migration[7.1]
   disable_ddl_transaction!
   def change
