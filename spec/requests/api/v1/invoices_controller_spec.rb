@@ -1025,6 +1025,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       }
     end
 
+    before { organization.update!(premium_integrations: ['preview']) }
+
     around { |test| lago_premium!(&test) }
 
     it 'creates a preview invoice' do

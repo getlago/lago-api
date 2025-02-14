@@ -8,6 +8,8 @@ module Invoices
       @customer = customer
       @subscriptions = subscriptions
       @applied_coupons = applied_coupons
+      @first_subscription = subscriptions.first
+      @persisted_subscriptions = subscriptions.size > 1 || first_subscription&.persisted?
 
       super
     end
@@ -16,14 +18,15 @@ module Invoices
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: 'customer') unless customer
       return result.not_found_failure!(resource: 'subscription') if subscriptions.empty?
+      return result.not_allowed_failure!(code: 'premium_integration_missing') if persisted_subscriptions && !organization.preview_enabled?
       return result unless currencies_aligned?
       return result unless billing_times_aligned?
 
       @invoice = Invoice.new(
-        organization: customer.organization,
+        organization:,
         customer:,
         invoice_type: :subscription,
-        currency: subscriptions.first.plan.amount_currency,
+        currency: first_subscription.plan.amount_currency,
         timezone: customer.applicable_timezone,
         issuing_date:,
         payment_due_date:,
@@ -44,7 +47,8 @@ module Invoices
 
     private
 
-    attr_accessor :customer, :subscriptions, :invoice, :applied_coupons
+    attr_accessor :customer, :subscriptions, :invoice, :applied_coupons, :first_subscription, :persisted_subscriptions
+    delegate :organization, to: :customer
 
     def currencies_aligned?
       subscription_currencies = subscriptions.filter_map { |s| s.plan&.amount_currency }
@@ -100,14 +104,12 @@ module Invoices
     def billing_time
       return @billing_time if defined? @billing_time
 
-      subscription = subscriptions.first
-
-      @billing_time = if subscriptions.size > 1 || subscription.persisted?
+      @billing_time = if persisted_subscriptions
         end_of_periods.first + 1.day
-      elsif subscription.plan.pay_in_advance?
-        subscription.subscription_at
+      elsif first_subscription.plan.pay_in_advance?
+        first_subscription.subscription_at
       else
-        ds = Subscriptions::DatesService.new_instance(subscription, subscription.subscription_at, current_usage: true)
+        ds = Subscriptions::DatesService.new_instance(first_subscription, first_subscription.subscription_at, current_usage: true)
         ds.end_of_period + 1.day
       end
     end
