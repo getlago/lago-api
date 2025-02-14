@@ -2,18 +2,21 @@
 
 module Invoices
   class AggregateAmountsAndTaxesFromFees < BaseService
-    Result = BaseResult
+    Result = BaseResult[:invoice]
 
     def initialize(invoice:)
       @invoice = invoice
 
-      raise ArgumentError.new("invoice type must be `advance_charges`") unless invoice.advance_charges?
-
       super
     end
 
-    # NOTE: progressing billing, coupons and credit notes are not supported here
+    # NOTE: progressive billing, coupons and credit notes are not supported here
     def call
+      unless invoice.advance_charges?
+        return result.service_failure!(code: "invalid_invoice", message: "type of invoice must be `advance_charges`")
+      end
+
+      result.invoice = invoice
       return result if invoice.fees.empty?
 
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
