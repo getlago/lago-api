@@ -77,6 +77,7 @@ class Organization < ApplicationRecord
     zero_amount_fees
     remove_branding_watermark
     manual_payments
+    preview
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 

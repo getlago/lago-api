@@ -4466,6 +4466,7 @@ enum IntegrationTypeEnum {
   manual_payments
   netsuite
   okta
+  preview
   progressive_billing
   remove_branding_watermark
   revenue_analytics
@@ -6513,6 +6514,7 @@ enum PremiumIntegrationTypeEnum {
   manual_payments
   netsuite
   okta
+  preview
   progressive_billing
   remove_branding_watermark
   revenue_analytics
