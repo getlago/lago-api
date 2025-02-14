@@ -16,6 +16,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       organization:,
       coupons_amount_cents: 2000,
       prepaid_credit_amount_cents: 4000,
+      progressive_billing_credit_amount_cents: 100,
       credit_notes_amount_cents: 6000,
       taxes_amount_cents: 200,
       issuing_date: DateTime.new(2024, 7, 8)
@@ -211,6 +212,13 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 "quantity" => 1,
                 "rate" => -40.0,
                 "taxdetailsreference" => "credit_item"
+              },
+              {
+                "item" => "6",
+                "account" => "66",
+                "quantity" => 1,
+                "rate" => -1.0,
+                "taxdetailsreference" => "credit_item_progressive_billing"
               },
               {
                 "item" => "1", # Fallback item instead of credit note
