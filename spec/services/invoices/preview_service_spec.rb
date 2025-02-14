@@ -86,6 +86,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           create(:subscription, plan: plan2, customer:, subscription_at: Time.current.beginning_of_month - 9.days, billing_time: "anniversary")
         end
 
+        before { organization.update!(premium_integrations: ["preview"]) }
+
         it "returns an error" do
           result = preview_service.call
 
@@ -128,6 +130,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             )
           end
 
+          before { organization.update!(premium_integrations: ["preview"]) }
+
           it "creates preview invoice for 2 days" do
             # Two days should be billed, Mar 30 and Mar 31
 
@@ -144,6 +148,19 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               expect(result.invoice.taxes_amount_cents).to eq(3)
               expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(9)
               expect(result.invoice.total_amount_cents).to eq(9)
+            end
+          end
+
+          context 'when preview premium integration does not exist' do
+            before { organization.update!(premium_integrations: ['netsuite']) }
+
+            it 'returns an error' do
+              result = preview_service.call
+
+              aggregate_failures do
+                expect(result).not_to be_success
+                expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+              end
             end
           end
         end
@@ -195,6 +212,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             )
           end
 
+          before { organization.update!(premium_integrations: ['preview']) }
+
           it "creates preview invoice for next invoice" do
             travel_to(timestamp) do
               result = preview_service.call
@@ -209,6 +228,19 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               expect(result.invoice.taxes_amount_cents).to eq(50)
               expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(150)
               expect(result.invoice.total_amount_cents).to eq(150)
+            end
+          end
+
+          context 'when preview premium integration does not exist' do
+            before { organization.update!(premium_integrations: ['netsuite']) }
+
+            it 'returns an error' do
+              result = preview_service.call
+
+              aggregate_failures do
+                expect(result).not_to be_success
+                expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+              end
             end
           end
         end
@@ -434,6 +466,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             )
           end
 
+          before { organization.update!(premium_integrations: ['preview']) }
+
           it 'creates preview invoice for full month' do
             travel_to(timestamp) do
               result = preview_service.call
@@ -479,6 +513,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               created_at: timestamp
             )
           end
+
+          before { organization.update!(premium_integrations: ['preview']) }
 
           it 'creates preview invoice for full month' do
             travel_to(timestamp + 5.days) do
