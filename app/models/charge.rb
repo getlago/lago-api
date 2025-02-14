@@ -33,7 +33,7 @@ class Charge < ApplicationRecord
 
   enum :charge_model, CHARGE_MODELS
 
-  attribute :regroup_paid_fees, :integer
+  # attribute :regroup_paid_fees, :integer
   enum :regroup_paid_fees, REGROUPING_PAID_FEES_OPTIONS
 
   validate :validate_amount, if: -> { standard? }
