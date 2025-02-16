@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
-class Charge; end
+class Charge < ApplicationRecord
+  attribute :regroup_paid_fees, :integer, default: 0
+end
 
 class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
   disable_ddl_transaction!
