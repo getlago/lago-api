@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+class Charge; end
+
 class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
   disable_ddl_transaction!
 
@@ -12,8 +14,6 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
   class Charge < ApplicationRecord
     belongs_to :plan
     belongs_to :parent, class_name: "Charge", optional: true
-
-    attribute :regroup_paid_fees, :integer
   end
 
   def up
