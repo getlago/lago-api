@@ -172,20 +172,18 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       it "generates expected invoice totals" do
         result = pull_taxes_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.fees.charge.count).to eq(1)
-          expect(result.invoice.fees.subscription.count).to eq(1)
+        expect(result).to be_success
+        expect(result.invoice.fees.charge.count).to eq(1)
+        expect(result.invoice.fees.subscription.count).to eq(1)
 
-          expect(result.invoice.currency).to eq("EUR")
-          expect(result.invoice.fees_amount_cents).to eq(3_000)
+        expect(result.invoice.currency).to eq("EUR")
+        expect(result.invoice.fees_amount_cents).to eq(3_000)
 
-          expect(result.invoice.taxes_amount_cents).to eq(350)
-          expect(result.invoice.taxes_rate.round(2)).to eq(11.67) # (0.667 * 10) + (0.333 * 15)
-          expect(result.invoice.applied_taxes.count).to eq(2)
+        expect(result.invoice.taxes_amount_cents).to eq(350)
+        expect(result.invoice.taxes_rate.round(2)).to eq(11.67) # (0.667 * 10) + (0.333 * 15)
+        expect(result.invoice.applied_taxes.count).to eq(2)
 
-          expect(result.invoice.total_amount_cents).to eq(3_350)
-        end
+        expect(result.invoice.total_amount_cents).to eq(3_350)
       end
 
       it_behaves_like "syncs invoice" do
@@ -264,17 +262,15 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         it "updates the invoice accordingly" do
           result = pull_taxes_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice.fees_amount_cents).to eq(3_000)
-            expect(result.invoice.taxes_amount_cents).to eq(350)
-            expect(result.invoice.total_amount_cents).to eq(3_340)
-            expect(result.invoice.credits.count).to eq(1)
+          expect(result).to be_success
+          expect(result.invoice.fees_amount_cents).to eq(3_000)
+          expect(result.invoice.taxes_amount_cents).to eq(350)
+          expect(result.invoice.total_amount_cents).to eq(3_340)
+          expect(result.invoice.credits.count).to eq(1)
 
-            credit = result.invoice.credits.first
-            expect(credit.credit_note).to eq(credit_note)
-            expect(credit.amount_cents).to eq(10)
-          end
+          credit = result.invoice.credits.first
+          expect(credit.credit_note).to eq(credit_note)
+          expect(credit.amount_cents).to eq(10)
         end
 
         context "when invoice type is one_off" do
@@ -285,13 +281,11 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
           it "does not apply credit note" do
             result = pull_taxes_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.invoice.fees_amount_cents).to eq(3_000)
-              expect(result.invoice.taxes_amount_cents).to eq(350)
-              expect(result.invoice.total_amount_cents).to eq(3_350)
-              expect(result.invoice.credits.count).to eq(0)
-            end
+            expect(result).to be_success
+            expect(result.invoice.fees_amount_cents).to eq(3_000)
+            expect(result.invoice.taxes_amount_cents).to eq(350)
+            expect(result.invoice.total_amount_cents).to eq(3_350)
+            expect(result.invoice.credits.count).to eq(0)
           end
         end
       end
@@ -320,20 +314,18 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         it "generates expected invoice totals" do
           result = pull_taxes_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice.fees.charge.count).to eq(1)
-            expect(result.invoice.fees.subscription.count).to eq(1)
+          expect(result).to be_success
+          expect(result.invoice.fees.charge.count).to eq(1)
+          expect(result.invoice.fees.subscription.count).to eq(1)
 
-            expect(result.invoice.currency).to eq("EUR")
-            expect(result.invoice.fees_amount_cents).to eq(3_000)
+          expect(result.invoice.currency).to eq("EUR")
+          expect(result.invoice.fees_amount_cents).to eq(3_000)
 
-            expect(result.invoice.taxes_amount_cents).to eq(350)
-            expect(result.invoice.taxes_rate.round(2)).to eq(11.67) # (0.667 * 10) + (0.333 * 15)
-            expect(result.invoice.applied_taxes.count).to eq(2)
+          expect(result.invoice.taxes_amount_cents).to eq(350)
+          expect(result.invoice.taxes_rate.round(2)).to eq(11.67) # (0.667 * 10) + (0.333 * 15)
+          expect(result.invoice.applied_taxes.count).to eq(2)
 
-            expect(result.invoice.total_amount_cents).to eq(3_350)
-          end
+          expect(result.invoice.total_amount_cents).to eq(3_350)
         end
 
         it "does not enqueue a SendWebhookJob" do
@@ -368,13 +360,11 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
           it "does not apply credit note" do
             result = pull_taxes_service.call
 
-            aggregate_failures do
-              expect(result).to be_success
-              expect(result.invoice.fees_amount_cents).to eq(3_000)
-              expect(result.invoice.taxes_amount_cents).to eq(350)
-              expect(result.invoice.total_amount_cents).to eq(3_350)
-              expect(result.invoice.credits.count).to eq(0)
-            end
+            expect(result).to be_success
+            expect(result.invoice.fees_amount_cents).to eq(3_000)
+            expect(result.invoice.taxes_amount_cents).to eq(350)
+            expect(result.invoice.total_amount_cents).to eq(3_350)
+            expect(result.invoice.credits.count).to eq(0)
           end
         end
       end
@@ -396,11 +386,9 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       it "resolves old tax error and creates new one" do
         old_error_id = invoice.reload.error_details.last.id
         pull_taxes_service.call
-        aggregate_failures do
-          expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
-          expect(invoice.error_details.tax_error.count).to be(1)
-          expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
-        end
+        expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
+        expect(invoice.error_details.tax_error.count).to be(1)
+        expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
       end
 
       context "with api limit error" do
@@ -421,15 +409,13 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
 
           pull_taxes_service.call
 
-          aggregate_failures do
-            expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
-            expect(invoice.error_details.tax_error.count).to be(1)
-            expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
-            expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error"])
-              .to eq("validationError")
-            expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error_message"])
-              .to eq("You've exceeded your API limit of 10 per second")
-          end
+          expect(invoice.error_details.tax_error.last.id).not_to eql(old_error_id)
+          expect(invoice.error_details.tax_error.count).to be(1)
+          expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
+          expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error"])
+            .to eq("validationError")
+          expect(invoice.error_details.tax_error.order(created_at: :asc).last.details["tax_error_message"])
+            .to eq("You've exceeded your API limit of 10 per second")
         end
       end
     end
