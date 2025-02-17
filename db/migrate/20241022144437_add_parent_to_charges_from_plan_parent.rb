@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
-class Plan < ApplicationRecord
-  has_many :charges, dependent: :destroy
-  belongs_to :parent, class_name: "Plan", optional: true
-  has_many :children, class_name: "Plan", foreign_key: :parent_id, dependent: :destroy
-end
-
 class Charge < ApplicationRecord
   belongs_to :plan
   belongs_to :parent, class_name: "Charge", optional: true
 
   attribute :regroup_paid_fees, :integer, default: 0
+end
+
+class Plan < ApplicationRecord
+  has_many :charges, dependent: :destroy
+  belongs_to :parent, class_name: "Plan", optional: true
+  has_many :children, class_name: "Plan", foreign_key: :parent_id, dependent: :destroy
 end
 
 class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
