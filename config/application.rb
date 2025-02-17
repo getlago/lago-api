@@ -16,11 +16,6 @@ module LagoApi
     # Disable YJIT as we are not ready yet
     config.yjit = false
 
-    # Please, add to the `ignore` list any other `lib` subdirectories that do
-    # not contain `.rb` files, or that should not be reloaded or eager loaded.
-    # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[tasks])
-
     # TODO: Should be turned to false
     config.add_autoload_paths_to_load_path = true
     # config.autoload_lib(ignore: %w[task])
@@ -32,8 +27,6 @@ module LagoApi
       #{config.root}/app/views/helpers
       #{config.root}/app/support
     ]
-
-    config.license_url = "http://license:3000"
 
     # Configuration for the application, engines, and railties goes here.
     #
