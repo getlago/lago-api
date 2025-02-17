@@ -13,7 +13,7 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
     has_many :children, class_name: "Plan", foreign_key: :parent_id, dependent: :destroy
   end
 
-  class Charge < ApplicationRecord
+  class Charge < ::Charge
     belongs_to :plan
     belongs_to :parent, class_name: "Charge", optional: true
   end
