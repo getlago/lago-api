@@ -81,7 +81,7 @@ module Invoices
     end
 
     def clear_invoice_errors(invoice)
-      invoice_error = InvoiceError.where(id: invoice.id)
+      invoice_error = ErrorDetail.where(owner: invoice, error_code: 'invoice_generation_error').last
       return if invoice_error.blank?
 
       delete_generating_sequence_number_error(invoice_error)

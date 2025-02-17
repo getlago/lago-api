@@ -25,7 +25,7 @@ class BillSubscriptionJob < ApplicationJob
 
     # If the invoice was passed as an argument, it means the job was already retried (see end of function)
     if invoice || !result.invoice&.generating?
-      InvoiceError.create_for(invoice: result.invoice, error: result.error)
+      ErrorDetails.create_generation_error_for(invoice: result.invoice, error: result.error)
       return result.raise_if_error!
     end
 
