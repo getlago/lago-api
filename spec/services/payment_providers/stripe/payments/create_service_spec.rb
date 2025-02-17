@@ -44,8 +44,6 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
   end
 
   describe ".call" do
-    let(:provider_customer_service) { instance_double(PaymentProviderCustomers::StripeService) }
-
     let(:provider_customer_service_result) do
       BaseService::Result.new.tap do |result|
         result.payment_method = Stripe::PaymentMethod.new(id: "pm_123456")
@@ -78,9 +76,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
 
-      allow(PaymentProviderCustomers::StripeService).to receive(:new)
-        .and_return(provider_customer_service)
-      allow(provider_customer_service).to receive(:check_payment_method)
+      allow(PaymentProviderCustomers::Stripe::CheckPaymentMethodService).to receive(:call)
         .and_return(provider_customer_service_result)
 
       stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_customer.provider_customer_id}")

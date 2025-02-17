@@ -60,19 +60,6 @@ module PaymentProviderCustomers
       result.record_validation_failure!(record: e.record)
     end
 
-    def check_payment_method(payment_method_id)
-      payment_method = ::Stripe::Customer.new(id: stripe_customer.provider_customer_id)
-        .retrieve_payment_method(payment_method_id, {}, {api_key:})
-
-      result.payment_method = payment_method
-      result
-    rescue ::Stripe::InvalidRequestError
-      # NOTE: The payment method is no longer valid
-      stripe_customer.update!(payment_method_id: nil)
-
-      result.single_validation_failure!(field: :payment_method_id, error_code: "value_is_invalid")
-    end
-
     def generate_checkout_url(send_webhook: true)
       return result unless customer # NOTE: Customer is nil when deleted.
       return result if customer.organization.webhook_endpoints.none? && send_webhook && payment_provider(customer)
