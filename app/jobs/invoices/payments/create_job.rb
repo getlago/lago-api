@@ -3,7 +3,7 @@
 module Invoices
   module Payments
     class CreateJob < ApplicationJob
-      queue_as "low_priority"
+      queue_as "default"
 
       unique :until_executed, on_conflict: :log
 
