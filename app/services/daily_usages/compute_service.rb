@@ -19,24 +19,27 @@ module DailyUsages
         return result
       end
 
-      current_usage.fees = current_usage.fees.select { |f| f.units.positive? }
+      if current_usage.total_amount_cents.positive?
+        current_usage.fees = current_usage.fees.select { |f| f.units.positive? }
 
-      daily_usage = DailyUsage.new(
-        organization: subscription.organization,
-        customer: subscription.customer,
-        subscription:,
-        external_subscription_id: subscription.external_id,
-        usage: ::V1::Customers::UsageSerializer.new(current_usage, includes: %i[charges_usage]).serialize,
-        from_datetime: current_usage.from_datetime,
-        to_datetime: current_usage.to_datetime,
-        refreshed_at: timestamp,
-        usage_date:
-      )
+        daily_usage = DailyUsage.new(
+          organization: subscription.organization,
+          customer: subscription.customer,
+          subscription:,
+          external_subscription_id: subscription.external_id,
+          usage: ::V1::Customers::UsageSerializer.new(current_usage, includes: %i[charges_usage]).serialize,
+          from_datetime: current_usage.from_datetime,
+          to_datetime: current_usage.to_datetime,
+          refreshed_at: timestamp,
+          usage_date:
+        )
 
-      daily_usage.usage_diff = diff_usage(daily_usage)
-      daily_usage.save!
+        daily_usage.usage_diff = diff_usage(daily_usage)
+        daily_usage.save!
 
-      result.daily_usage = daily_usage
+        result.daily_usage = daily_usage
+      end
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
