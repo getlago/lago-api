@@ -5,7 +5,10 @@ module PaymentProviders
     module Webhooks
       class CustomerUpdatedService < BaseService
         def call
-          return handle_missing_customer unless stripe_customer
+          unless stripe_customer
+            return result if deleted_stripe_customer.present?
+            return handle_missing_customer
+          end
 
           PaymentProviderCustomers::Stripe::UpdatePaymentMethodService.call(
             stripe_customer:,
@@ -21,10 +24,17 @@ module PaymentProviders
           event.data.object.id
         end
 
-        def stripe_customer
-          @stripe_customer ||= PaymentProviderCustomers::StripeCustomer
+        def stripe_customer_scope
+          PaymentProviderCustomers::StripeCustomer
             .by_provider_id_from_organization(organization.id, stripe_customer_id)
-            .first
+        end
+
+        def stripe_customer
+          @stripe_customer ||= stripe_customer_scope.first
+        end
+
+        def deleted_stripe_customer
+          stripe_customer_scope.with_discarded.discarded.first
         end
 
         def payment_method_id

@@ -38,6 +38,19 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::CustomerUpdatedService, type:
         expect(result.stripe_customer).to be_nil
       end
 
+      context "when stripe customer is deleted" do
+        let(:stripe_customer) do
+          create(:stripe_customer, :deleted, payment_provider: stripe_provider, customer:, provider_customer_id:)
+        end
+
+        it "returns an empty result" do
+          result = webhook_service.call
+
+          expect(result).to be_success
+          expect(result.stripe_customer).to be_nil
+        end
+      end
+
       context "when customer in metadata is not found" do
         let(:event_json) { File.read("spec/fixtures/stripe/customer_updated_event_with_metadata.json") }
 
