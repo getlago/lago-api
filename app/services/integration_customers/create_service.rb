@@ -19,6 +19,9 @@ module IntegrationCustomers
       return res if res&.error
 
       result
+    rescue ActiveRecord::RecordNotUnique
+      # NOTE: Avoid raising an error if the record already exists
+      result
     end
 
     private
