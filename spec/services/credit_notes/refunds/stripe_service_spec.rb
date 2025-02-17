@@ -86,14 +86,19 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
     end
 
     context "with an error on stripe" do
+      let(:error_message) { "error" }
+
       before do
         allow(Stripe::Refund).to receive(:create)
-          .and_raise(::Stripe::InvalidRequestError.new("error", {}))
+          .and_raise(::Stripe::InvalidRequestError.new(error_message, {}))
       end
 
       it "delivers an error webhook" do
-        expect { stripe_service.create }
-          .to raise_error(::Stripe::InvalidRequestError)
+        result = stripe_service.create
+
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("stripe_error")
 
         expect(SendWebhookJob).to have_been_enqueued
           .with(
@@ -105,6 +110,30 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
               error_code: nil
             }
           )
+      end
+
+      context "when error is about non refundable payment method" do
+        let(:error_message) { described_class::INVALID_PAYMENT_METHOD_ERROR }
+
+        it "returns a success result" do
+          result = stripe_service.create
+
+          expect(result).to be_success
+
+          expect(result.credit_note).to eq(credit_note)
+          expect(result.refund).to be_nil
+
+          expect(SendWebhookJob).to have_been_enqueued
+            .with(
+              "credit_note.provider_refund_failure",
+              credit_note,
+              provider_customer_id: stripe_customer.provider_customer_id,
+              provider_error: {
+                message: error_message,
+                error_code: nil
+              }
+            )
+        end
       end
     end
 

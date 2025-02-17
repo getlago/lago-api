@@ -39,6 +39,9 @@ module PaymentProviders
         end
 
         result
+      rescue BaseService::NotFoundFailure => e
+        Rails.logger.warn("GoCardless resource not found: #{e.message}. JSON: #{event_json}")
+        BaseService::Result.new # NOTE: Prevents error from being re-raised
       end
 
       private
