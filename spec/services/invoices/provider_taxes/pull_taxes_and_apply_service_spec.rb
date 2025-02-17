@@ -127,11 +127,12 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         invoice.update(status: %i[finalized voided generating].sample)
       end
 
-      it "returns an error" do
-        result = pull_taxes_service.call
+      it "does not change the invoice object" do
+        expect { pull_taxes_service.call }.not_to change { invoice.reload.attributes }
+      end
 
-        expect(result).not_to be_success
-        expect(result.error.code).to eq("invalid_status")
+      it "returns result" do
+        expect(pull_taxes_service.call).to be_success
       end
     end
 
