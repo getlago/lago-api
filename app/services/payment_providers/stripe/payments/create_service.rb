@@ -70,9 +70,11 @@ module PaymentProviders
 
           if payment_method_id
             # NOTE: Check if payment method still exists
-            customer_service = PaymentProviderCustomers::StripeService.new(provider_customer)
-            customer_service_result = customer_service.check_payment_method(payment_method_id)
-            return customer_service_result.payment_method.id if customer_service_result.success?
+            check_result = PaymentProviderCustomers::Stripe::CheckPaymentMethodService.call(
+              stripe_customer: provider_customer,
+              payment_method_id:
+            )
+            return check_result.payment_method.id if check_result.success?
           end
 
           # NOTE: Retrieve list of existing payment_methods
