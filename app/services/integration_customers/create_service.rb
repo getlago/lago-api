@@ -19,6 +19,12 @@ module IntegrationCustomers
       return res if res&.error
 
       result
+    rescue ActiveRecord::RecordNotUnique
+      # Avoid raising on race conditions when multiple requests are made at the same time
+      result.integration_customer = IntegrationCustomers::BaseCustomer.find_by(
+        customer:, integration:, type: customer_type
+      )
+      result
     end
 
     private
