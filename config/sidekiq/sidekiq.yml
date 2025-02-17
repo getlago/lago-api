@@ -12,6 +12,7 @@ queues:
   - wallets # Remove as all wallet jobs have moved to other queues
   - integrations
   - low_priority
+  - long_running
 
 production:
   concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
