@@ -34,7 +34,7 @@ module PaymentProviders
         end
 
         def deleted_stripe_customer
-          stripe_customer_scope.with_discarded.first
+          stripe_customer_scope.with_discarded.discarded.first
         end
 
         def payment_method_id
