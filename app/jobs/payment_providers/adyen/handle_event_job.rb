@@ -6,8 +6,7 @@ module PaymentProviders
       queue_as "providers"
 
       def perform(organization:, event_json:)
-        result = PaymentProviders::AdyenService.new.handle_event(organization:, event_json:)
-        result.raise_if_error!
+        PaymentProviders::Adyen::HandleEventService.call!(organization:, event_json:)
       end
     end
   end

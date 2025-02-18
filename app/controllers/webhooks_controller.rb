@@ -17,7 +17,7 @@ class WebhooksController < ApplicationController
   end
 
   def cashfree
-    result = PaymentProviders::CashfreeService.new.handle_incoming_webhook(
+    result = PaymentProviders::Cashfree::HandleIncomingWebhookService.call(
       organization_id: params[:organization_id],
       code: params[:code].presence,
       body: request.body.read,
