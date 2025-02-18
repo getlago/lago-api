@@ -90,7 +90,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
 
       before do
         allow(Stripe::Refund).to receive(:create)
-          .and_raise(::Stripe::InvalidRequestError.new(error_message, {}))
+          .and_raise(::Stripe::InvalidRequestError.new(error_message, {}, code: error_message))
       end
 
       it "delivers an error webhook" do
@@ -107,7 +107,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
             provider_customer_id: stripe_customer.provider_customer_id,
             provider_error: {
               message: "error",
-              error_code: nil
+              error_code: "error"
             }
           )
       end
@@ -130,7 +130,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
               provider_customer_id: stripe_customer.provider_customer_id,
               provider_error: {
                 message: error_message,
-                error_code: nil
+                error_code: error_message
               }
             )
         end
