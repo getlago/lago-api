@@ -192,6 +192,31 @@ RSpec.describe Customers::CreateService, type: :service do
           expect(customer.customer_type).to eq(create_args[:customer_type])
         end
       end
+
+      context "with invalid customer_type" do
+        let(:create_args) do
+          {
+            external_id:,
+            name: "Foo Bar",
+            currency: "EUR",
+            customer_type: "default_type"
+          }
+        end
+
+        it "fails to create customer" do
+          result = customers_service.create_from_api(
+            organization:,
+            params: create_args
+          )
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+            expect(result.error.messages.keys).to include(:customer_type)
+            expect(result.error.messages[:customer_type]).to include("value_is_invalid")
+          end
+        end
+      end
     end
 
     context "with metadata" do

@@ -127,6 +127,8 @@ RSpec.describe Customer, type: :model do
         end
       end
     end
+
+    it { is_expected.to validate_inclusion_of(:customer_type).in_array(described_class::CUSTOMER_TYPES.keys) }
   end
 
   describe "#display_name" do
