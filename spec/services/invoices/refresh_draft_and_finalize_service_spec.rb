@@ -287,21 +287,23 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       end
     end
 
-    context "when invoice has invoice_errors" do
+    context "when invoice has invoice_generation_errors" do
       before do
-        InvoiceError.create(
-          id: invoice.id,
-          backtrace: "[\"/app/app/models/invoice.rb:432:in 'generate_organization_sequential_id'\", \"/app/app/models/invoice.rb:395:in...",
-          error: "\"#\\u003cSequenced::SequenceError: Unable to acquire lock on the database\\u003e\"",
-          invoice: invoice.to_json(except: :file),
-          subscriptions: invoice.subscriptions.to_json
+        ErrorDetails.create(
+          owner: invoice,
+          organization: invoice.organization,
+          details: {
+            backtrace: "[\"/app/app/models/invoice.rb:432:in 'generate_organization_sequential_id'\", \"/app/app/models/invoice.rb:395:in...",
+            error: "\"#\\u003cSequenced::SequenceError: Unable to acquire lock on the database\\u003e\"",
+            invoice: invoice.to_json(except: :file),
+            subscriptions: invoice.subscriptions.to_json
+          }
         )
       end
 
       context "when successfully generated the invoice" do
-        it "deletes the invoice_errors" do
-          expect { finalize_service.call }.to change(InvoiceError, :count).by(-1)
-          expect(InvoiceError.find_by(id: invoice.id)).to be_nil
+        it "deletes the invoice_generation_errors" do
+          expect { finalize_service.call }.to change(invoice.error_details.invoice_generation_error, :count).by(-1)
         end
       end
 
@@ -310,9 +312,9 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
           allow(Invoices::RefreshDraftService).to receive(:call).and_return(BaseService::Result.new.service_failure!(code: "code", message: "message"))
         end
 
-        it "does not delete the invoice_errors" do
+        it "does not delete the invoice_generation_errors" do
           expect { finalize_service.call }.to raise_error(BaseService::ServiceFailure)
-          expect(InvoiceError.find_by(id: invoice.id)).to be_present
+          expect(invoice.error_details.invoice_generation_error).to be_present
         end
       end
     end

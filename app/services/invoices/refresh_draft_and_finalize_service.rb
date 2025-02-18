@@ -30,7 +30,7 @@ module Invoices
 
       result.invoice = invoice.reload
       after_commit do
-        clear_invoice_errors(invoice)
+        clear_invoice_generation_errors(invoice)
         unless invoice.closed?
           SendWebhookJob.perform_later("invoice.created", invoice)
           GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
@@ -80,15 +80,15 @@ module Invoices
         invoice.organization.email_settings.include?("invoice.finalized")
     end
 
-    def clear_invoice_errors(invoice)
-      invoice_error = ErrorDetail.where(owner: invoice, error_code: 'invoice_generation_error').last
+    def clear_invoice_generation_errors(invoice)
+      invoice_error = invoice.error_details.invoice_generation_error.last
       return if invoice_error.blank?
 
       delete_generating_sequence_number_error(invoice_error)
     end
 
     def delete_generating_sequence_number_error(invoice_error)
-      error = invoice_error.where("backtrace LIKE ?", "%generate_organization_sequential_id%").first
+      return unless invoice_error.details["backtrace"].includes("generate_organization_sequential_id%")
       error&.delete
     end
   end
