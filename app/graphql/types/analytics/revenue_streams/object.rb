@@ -6,7 +6,7 @@ module Types
       class Object < Types::BaseObject
         graphql_name "RevenueStreams"
 
-        field :amount_currency, Types::CurrencyEnum, null: true
+        field :amount_currency, Types::CurrencyEnum, null: false
 
         field :coupons_amount_cents, GraphQL::Types::BigInt, null: false
         field :gross_revenue_amount_cents, GraphQL::Types::BigInt, null: false

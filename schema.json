@@ -35665,9 +35665,13 @@
               "name": "amountCurrency",
               "description": null,
               "type": {
-                "kind": "ENUM",
-                "name": "CurrencyEnum",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
