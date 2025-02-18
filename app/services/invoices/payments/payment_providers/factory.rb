@@ -18,6 +18,8 @@ module Invoices
             Invoices::Payments::GocardlessService
           when "cashfree"
             Invoices::Payments::CashfreeService
+          when "moneyhash"
+            Invoices::Payments::MoneyhashService
           else
             raise(NotImplementedError)
           end
