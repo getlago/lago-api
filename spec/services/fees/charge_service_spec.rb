@@ -91,6 +91,18 @@ RSpec.describe Fees::ChargeService do
             payment_status: "pending"
           )
         end
+
+        it "persists fee" do
+          expect { charge_subscription_service.call }.to change(Fee, :count)
+        end
+
+        context "with preview context" do
+          let(:context) { :invoice_preview }
+
+          it "does not persist fee" do
+            expect { charge_subscription_service.call }.not_to change(Fee, :count)
+          end
+        end
       end
 
       context "with grouped standard charge" do

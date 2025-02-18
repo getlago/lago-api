@@ -35,7 +35,7 @@ module Fees
           precise_amount_cents: result.fees.sum(&:precise_amount_cents)
         )
       end
-      return result unless result.success?
+      return result if !result.success? || context == :invoice_preview
 
       ActiveRecord::Base.transaction do
         result.fees.reject! { |f| !should_persit_fee?(f, result.fees) }

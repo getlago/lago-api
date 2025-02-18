@@ -151,6 +151,70 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
+          context 'with charge fees' do
+            let(:billable_metric) do
+              create(:billable_metric, aggregation_type: "count_agg")
+            end
+            let(:charge) do
+              create(
+                :standard_charge,
+                plan:,
+                billable_metric:,
+                properties: {amount: "12.66"}
+              )
+            end
+            let(:events) do
+              create_list(
+                :event,
+                2,
+                organization:,
+                subscription:,
+                customer:,
+                code: billable_metric.code,
+                timestamp: timestamp + 10.hours
+              )
+            end
+
+            before do
+              events if subscription
+              charge
+              Rails.cache.clear
+            end
+
+            it "creates preview invoice for 2 days" do
+              # Two days should be billed, Mar 30 and Mar 31
+
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.subscriptions.first).to eq(subscription)
+                expect(result.invoice.fees.length).to eq(2)
+                expect(result.invoice.invoice_type).to eq("subscription")
+                expect(result.invoice.issuing_date.to_s).to eq("2024-04-01")
+                expect(result.invoice.fees_amount_cents).to eq(2538) # 6.45 + 1266 x 2 = 2538
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(2538)
+                expect(result.invoice.taxes_amount_cents).to eq(1269) # 1269
+                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(3807) # 3807
+                expect(result.invoice.total_amount_cents).to eq(3807) # 3807
+              end
+            end
+
+            it "uses the Rails cache" do
+              key = [
+                "charge-usage",
+                Subscriptions::ChargeCacheService::CACHE_KEY_VERSION,
+                charge.id,
+                subscription.id,
+                charge.updated_at.iso8601
+              ].join("/")
+
+              expect do
+                preview_service.call
+              end.to change { Rails.cache.exist?(key) }.from(false).to(true)
+            end
+          end
+
           context 'when preview premium integration does not exist' do
             before { organization.update!(premium_integrations: ['netsuite']) }
 
@@ -484,6 +548,54 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               expect(result.invoice.total_amount_cents).to eq(150)
             end
           end
+
+          context 'with charge fees' do
+            let(:billable_metric) do
+              create(:billable_metric, aggregation_type: "count_agg")
+            end
+            let(:charge) do
+              create(
+                :standard_charge,
+                plan:,
+                billable_metric:,
+                properties: {amount: "12.66"}
+              )
+            end
+            let(:events) do
+              create_list(
+                :event,
+                2,
+                organization:,
+                subscription:,
+                customer:,
+                code: billable_metric.code,
+                timestamp: timestamp + 10.hours
+              )
+            end
+
+            before do
+              events if subscription
+              charge
+              Rails.cache.clear
+            end
+
+            it "creates preview invoice for full month" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.subscriptions.first).to eq(subscription)
+                expect(result.invoice.fees.length).to eq(2)
+                expect(result.invoice.invoice_type).to eq('subscription')
+                expect(result.invoice.issuing_date.to_s).to eq('2024-04-30')
+                expect(result.invoice.fees_amount_cents).to eq(2632)
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(2632)
+                expect(result.invoice.taxes_amount_cents).to eq(1316)
+                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(3948)
+                expect(result.invoice.total_amount_cents).to eq(3948)
+              end
+            end
+          end
         end
 
         context 'with multiple persisted subscriptions' do
@@ -521,7 +633,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               result = preview_service.call
 
               expect(result).to be_success
-              expect(result.invoice.subscriptions.pluck(:id)).to match_array([subscription1.id, subscription2.id])
+              expect(result.invoice.subscriptions.map { |s| s.id }).to match_array([subscription1.id, subscription2.id])
               expect(result.invoice.fees.length).to eq(2)
               expect(result.invoice.invoice_type).to eq('subscription')
               expect(result.invoice.issuing_date.to_s).to eq('2024-04-30')
