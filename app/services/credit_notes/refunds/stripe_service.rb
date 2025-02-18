@@ -5,6 +5,8 @@ module CreditNotes
     class StripeService < BaseService
       include Customers::PaymentProviderFinder
 
+      INVALID_PAYMENT_METHOD_ERROR = "Refunds are not supported on this payment method."
+
       def initialize(credit_note = nil)
         @credit_note = credit_note
 
@@ -34,6 +36,12 @@ module CreditNotes
 
         result.refund = refund
         result
+      rescue ::Stripe::InvalidRequestError => e
+        deliver_error_webhook(message: e.message, code: e.code)
+        update_credit_note_status(:failed)
+        return result if e.message == INVALID_PAYMENT_METHOD_ERROR
+
+        result.service_failure!(code: "stripe_error", message: e.message)
       end
 
       def update_status(provider_refund_id:, status:, metadata: {})
@@ -86,11 +94,6 @@ module CreditNotes
             idempotency_key: credit_note.id
           }
         )
-      rescue ::Stripe::InvalidRequestError => e
-        deliver_error_webhook(message: e.message, code: e.code)
-        update_credit_note_status(:failed)
-
-        raise
       end
 
       def stripe_refund_payload
