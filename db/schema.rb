@@ -918,15 +918,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_03_03_104151) do
     t.index ["organization_id"], name: "index_invoice_custom_sections_on_organization_id"
   end
 
-  create_table "invoice_errors", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.text "backtrace"
-    t.json "invoice"
-    t.json "subscriptions"
-    t.json "error"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-  end
-
   create_table "invoice_metadata", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "invoice_id", null: false
     t.string "key", null: false
