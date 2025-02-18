@@ -7,11 +7,11 @@ RSpec.describe RoundingHelper do
 
   describe '.round_decimal_part' do
     it 'rounds the decimal part to the specified significant figures' do
-      expect(helper.round_decimal_part(123.456789123, 6)).to eq('123.456789')
+      expect(helper.round_decimal_part(123.456789123, 4)).to eq('123.4568')
     end
 
     it 'rounds the decimal part to the default significant figures when not specified' do
-      expect(helper.round_decimal_part(123.456789123)).to eq('123.4568')
+      expect(helper.round_decimal_part(123.456789123)).to eq('123.456789')
     end
 
     it 'returns the integer part as a string when there is no decimal part' do
@@ -19,7 +19,7 @@ RSpec.describe RoundingHelper do
     end
 
     it 'handles numbers with leading zeros in the decimal part' do
-      expect(helper.round_decimal_part(123.0000456789)).to eq('123.0')
+      expect(helper.round_decimal_part(123.0000456789)).to eq('123.000046')
     end
 
     it 'handles very small decimal parts correctly' do
@@ -31,7 +31,7 @@ RSpec.describe RoundingHelper do
     end
 
     it 'handles negative numbers correctly' do
-      expect(helper.round_decimal_part(-123.456789123)).to eq('-123.4568')
+      expect(helper.round_decimal_part(-123.456789123)).to eq('-123.456789')
     end
   end
 end

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class RoundingHelper
-  def self.round_decimal_part(num, decimal_sig_figs = 4)
+  def self.round_decimal_part(num, decimal_sig_figs = 6)
     bd = BigDecimal(num.to_s)
 
     int_part = bd.floor  # Extract integer part
