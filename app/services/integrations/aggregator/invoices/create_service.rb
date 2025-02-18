@@ -4,6 +4,8 @@ module Integrations
   module Aggregator
     module Invoices
       class CreateService < BaseService
+        INVALID_LOGIN_ATTEMPT = "INVALID_LOGIN_ATTEMPT"
+
         def action_path
           "v1/#{provider}/invoices"
         end
@@ -52,6 +54,7 @@ module Integrations
           deliver_error_webhook(customer:, code:, message:)
 
           return result unless [500, 424].include?(e.error_code.to_i)
+          return result if invalid_login_attempt_error?(e)
 
           raise e
         rescue Integrations::Aggregator::BasePayload::Failure => e
@@ -85,6 +88,10 @@ module Integrations
 
         def process_string_result(body)
           result.external_id = body
+        end
+
+        def invalid_login_attempt_error?(http_error)
+          http_error.error_body.include?(INVALID_LOGIN_ATTEMPT)
         end
       end
     end
