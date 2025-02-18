@@ -445,6 +445,14 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     let(:organization) { create(:organization) }
     let(:stripe_provider) { create(:stripe_provider, organization:) }
     let(:customer) { create(:customer, organization:) }
+    let(:stripe_api_response) do
+      {
+        id: "cs_test_c1oxrHXtPSAZmMoKqRqrGej2s4tbkBiONQOhmu52URzM78tpLmhIID5MIr",
+        object: "checkout.session",
+        url: "https://checkout.stripe.com/c/pay/cs_test_c1oxrH"
+      }
+    end
+    let(:stripe_api_status) { 200 }
 
     before do
       create(
@@ -455,8 +463,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
       customer.update!(payment_provider: "stripe", payment_provider_code: stripe_provider.code)
 
-      allow(::Stripe::Checkout::Session).to receive(:create)
-        .and_return({"url" => "https://example.com"})
+      stub_request(:post, %r{/v1/checkout/sessions}).to_return(status: stripe_api_status, body: stripe_api_response.to_json)
     end
 
     include_examples "requires API permission", "customer", "write"
@@ -467,7 +474,29 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       aggregate_failures do
         expect(response).to have_http_status(:success)
 
-        expect(json[:customer][:checkout_url]).to eq("https://example.com")
+        expect(json[:customer][:checkout_url]).to eq("https://checkout.stripe.com/c/pay/cs_test_c1oxrH")
+      end
+    end
+
+    context "when Stripe returns an error" do
+      let(:stripe_api_status) { 400 }
+      let(:stripe_api_response) do
+        {
+          error: {
+            message: "The payment method `crypto` cannot be used in `setup` mode.",
+            request_log_url: "https://dashboard.stripe.com/test/logs/req_uOkDI6eikj7r51?t=1739911184",
+            type: "invalid_request_error"
+          }
+        }
+      end
+
+      it "returns a payment_provider error" do
+        subject
+        expect(response).to have_http_status(:bad_request)
+        body = JSON.parse(response.body)
+        expect(body.keys).to eq(%w[status error payment_provider payment_provider_code details])
+        expect(body["details"].keys.sort).to eq(%w[code error request_id].sort)
+        expect(body["details"]["error"]["message"]).to eq "The payment method `crypto` cannot be used in `setup` mode."
       end
     end
   end

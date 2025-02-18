@@ -57,7 +57,20 @@ module ApiErrors
     )
   end
 
-  def thirdpary_error(error:)
+  def payment_provider_error(error_result)
+    render(
+      json: {
+        status: error_result.status,
+        error: error_result.message,
+        payment_provider: error_result.payment_provider,
+        payment_provider_code: error_result.payment_provider_code,
+        details: error_result.details
+      },
+      status: error_result.status
+    )
+  end
+
+  def thirdparty_error(error:)
     render(
       json: {
         status: 422,
@@ -83,8 +96,10 @@ module ApiErrors
       forbidden_error(code: error_result.error.code)
     when BaseService::UnauthorizedFailure
       unauthorized_error(message: error_result.error.message)
+    when BaseService::PaymentProviderFailure
+      payment_provider_error(error_result.error)
     when BaseService::ThirdPartyFailure
-      thirdpary_error(error: error_result.error)
+      thirdparty_error(error: error_result.error)
     else
       raise(error_result.error)
     end

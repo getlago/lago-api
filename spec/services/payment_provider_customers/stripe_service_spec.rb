@@ -6,7 +6,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
   subject(:stripe_service) { described_class.new(stripe_customer) }
 
   let(:customer) { create(:customer, name: customer_name, organization:) }
-  let(:stripe_provider) { create(:stripe_provider) }
+  let(:stripe_provider) { create(:stripe_provider, code: "stripe_us") }
   let(:organization) { stripe_provider.organization }
   let(:customer_name) { nil }
 
@@ -478,17 +478,13 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
 
       before { allow(::Stripe::Checkout::Session).to receive(:create).and_raise(stripe_error) }
 
-      it "returns an error result" do
+      it do
         result = described_class.new(stripe_customer).generate_checkout_url
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::UnauthorizedFailure)
-          expect(result.error.message).to eq("Stripe authentication failed. Expired API Key provided")
-        end
-      end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::UnauthorizedFailure)
+        expect(result.error.message).to eq("Stripe authentication failed. Expired API Key provided")
 
-      it "delivers an error webhook" do
         expect { described_class.new(stripe_customer).generate_checkout_url }.to enqueue_job(SendWebhookJob)
           .with(
             "customer.payment_provider_error",
@@ -498,6 +494,25 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
               error_code: nil
             }
           ).on_queue(webhook_queue)
+      end
+    end
+
+    context "when stripe raises an invalid request error" do
+      before do
+        stub_request(:post, %r{/v1/checkout/sessions}).to_return(status: 400, body: {
+          error: {
+            message: "The payment method `crypto` cannot be used in `setup` mode.",
+            request_log_url: "https://dashboard.stripe.com/test/logs/req_uOkDI6eikj7r51?t=1739911184",
+            type: "invalid_request_error"
+          }
+        }.to_json)
+      end
+
+      it "returns an error result" do
+        result = stripe_service.generate_checkout_url
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::PaymentProviderFailure)
+        expect(result.error.message).to eq("Stripe Account 1 (stripe_us): The payment method `crypto` cannot be used in `setup` mode.")
       end
     end
   end

@@ -93,6 +93,20 @@ class BaseService
     end
   end
 
+  class PaymentProviderFailure < FailedResult
+    attr_reader :status, :details, :payment_provider, :payment_provider_code
+
+    def initialize(result, message:, status:, details:,
+      payment_provider:, payment_provider_code:)
+      @status = status
+      @details = details
+      @payment_provider = payment_provider
+      @payment_provider_code = payment_provider_code
+
+      super(result, "#{@payment_provider} (#{@payment_provider_code}): #{message}")
+    end
+  end
+
   class ThirdPartyFailure < FailedResult
     attr_reader :third_party, :error_message
 
