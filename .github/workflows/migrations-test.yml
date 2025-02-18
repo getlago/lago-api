@@ -36,6 +36,8 @@ jobs:
       LAGO_CLICKHOUSE_USERNAME: ""
       LAGO_CLICKHOUSE_PASSWORD: "password"
       LAGO_DISABLE_SCHEMA_DUMP: true
+      LAGO_KAFKA_RAW_EVENTS_TOPIC: "events-raw"
+      LAGO_KAFKA_ENRICHED_EVENTS_TOPIC: "events_enriched"
       ANNOTATE_SKIP_ON_DB_MIGRATE: 1
     steps:
       - name: Checkout code
