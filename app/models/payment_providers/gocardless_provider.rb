@@ -28,6 +28,10 @@ module PaymentProviders
         :sandbox
       end
     end
+
+    def payment_type
+      "gocardless"
+    end
   end
 end
 

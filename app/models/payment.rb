@@ -18,6 +18,7 @@ class Payment < ApplicationRecord
   validates :payment_type, presence: true
   validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
   validates :reference, absence: true, if: -> { payment_type_provider? }
+  validate :manual_payment_credit_invoice_amount_cents
   validate :max_invoice_paid_amount_cents, on: :create
   validate :payment_request_succeeded, on: :create
 
@@ -50,7 +51,18 @@ class Payment < ApplicationRecord
     payable.finalized? && customer.integration_customers.accounting_kind.any? { |c| c.integration.sync_payments }
   end
 
+  def payment_provider_type
+    payment_provider&.payment_type
+  end
+
   private
+
+  def manual_payment_credit_invoice_amount_cents
+    return if !payable.is_a?(Invoice) || payment_type_provider? || !payable.credit?
+    return if amount_cents == payable.total_amount_cents
+
+    errors.add(:amount_cents, :invalid_amount)
+  end
 
   def max_invoice_paid_amount_cents
     return if !payable.is_a?(Invoice) || payment_type_provider?
@@ -92,7 +104,7 @@ end
 # Indexes
 #
 #  index_payments_on_invoice_id                    (invoice_id)
-#  index_payments_on_payable_id_and_payable_type   (payable_id,payable_type) UNIQUE WHERE (payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status]))
+#  index_payments_on_payable_id_and_payable_type   (payable_id,payable_type) UNIQUE WHERE ((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))
 #  index_payments_on_payable_type_and_payable_id   (payable_type,payable_id)
 #  index_payments_on_payment_provider_customer_id  (payment_provider_customer_id)
 #  index_payments_on_payment_provider_id           (payment_provider_id)

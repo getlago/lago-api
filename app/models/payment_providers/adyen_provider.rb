@@ -21,6 +21,10 @@ module PaymentProviders
         :test
       end
     end
+
+    def payment_type
+      "adyen"
+    end
   end
 end
 

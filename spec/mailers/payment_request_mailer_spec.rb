@@ -6,8 +6,8 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
   subject(:payment_request_mailer) { described_class }
 
   let(:organization) { create(:organization, document_number_prefix: "ORG-123B") }
-  let(:first_invoice) { create(:invoice, total_amount_cents: 1000, organization:) }
-  let(:second_invoice) { create(:invoice, total_amount_cents: 2000, organization:) }
+  let(:first_invoice) { create(:invoice, total_amount_cents: 1000, total_paid_amount_cents: 1, organization:) }
+  let(:second_invoice) { create(:invoice, total_amount_cents: 2000, total_paid_amount_cents: 2, organization:) }
   let(:payment_request) { create(:payment_request, organization:, invoices: [first_invoice, second_invoice]) }
 
   before do
@@ -44,6 +44,8 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
       expect(mailer.reply_to).to eq([payment_request.organization.email])
       expect(mailer.body.encoded).to include(CGI.escapeHTML(first_invoice.number))
       expect(mailer.body.encoded).to include(CGI.escapeHTML(second_invoice.number))
+      expect(mailer.body.encoded).to include(CGI.escapeHTML(MoneyHelper.format(first_invoice.total_due_amount)))
+      expect(mailer.body.encoded).to include(CGI.escapeHTML(MoneyHelper.format(second_invoice.total_due_amount)))
     end
 
     it "calls the generate payment url service" do

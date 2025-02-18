@@ -31,6 +31,8 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
 
     let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
 
+    let(:reference) { "Charges paid in advance" }
+
     def fee_boundaries
       prev_month = billing_at - 1.month
       charges_from_datetime = prev_month.beginning_of_month
@@ -107,9 +109,20 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
 
         expect(SendWebhookJob).to have_been_enqueued.with("invoice.created", result.invoice)
         expect(Invoices::GeneratePdfAndNotifyJob).to have_been_enqueued.with(invoice: result.invoice, email: false)
-        expect(SendWebhookJob).to have_been_enqueued.with("invoice.created", result.invoice)
         expect(SegmentTrackJob).to have_been_enqueued.once
         expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
+
+        expect(Payments::ManualCreateJob)
+          .to have_been_enqueued.once
+          .with(
+            organization:,
+            params: {
+              invoice_id: result.invoice.id,
+              amount_cents: result.invoice.total_amount_cents,
+              reference:,
+              created_at: result.invoice.created_at
+            }
+          )
       end
     end
 

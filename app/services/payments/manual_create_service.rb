@@ -1,11 +1,10 @@
 # frozen_string_literal: true
 
-module ManualPayments
-  class CreateService < BaseService
+module Payments
+  class ManualCreateService < BaseService
     def initialize(organization:, params:)
       @organization = organization
       @params = params
-
       super
     end
 
@@ -25,14 +24,13 @@ module ManualPayments
           payment_type: :manual,
           created_at: parsed_paid_at
         )
-
-        invoice.update!(total_paid_amount_cents: invoice.total_paid_amount_cents + amount_cents)
-
         result.payment = payment
 
-        if invoice.payments.where(payable_payment_status: "succeeded").sum(:amount_cents) == invoice.total_amount_cents
-          payment.payable.update!(payment_status: "succeeded")
-        end
+        total_paid_amount_cents = invoice.payments.where(payable_payment_status: :succeeded).sum(:amount_cents)
+
+        params = {total_paid_amount_cents:}
+        params[:payment_status] = "succeeded" if total_paid_amount_cents == invoice.total_amount_cents
+        Invoices::UpdateService.call!(invoice:, params:)
 
         Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment&.should_sync_payment?
       end
@@ -57,9 +55,9 @@ module ManualPayments
     end
 
     def check_preconditions
-      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "invoice") unless invoice
-      return result.forbidden_failure! unless invoice.organization.premium_integrations.include?("manual_payments")
+      return result if invoice.invoice_type == "advance_charges"
+      return result.forbidden_failure! if !License.premium?
       result.single_validation_failure!(error_code: "invalid_date", field: "paid_at") unless valid_paid_at?
     end
 

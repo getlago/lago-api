@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe CreditNotes::EstimateService, type: :service do
-  subject(:estimate_service) { described_class.new(invoice:, items:) }
+  subject(:estimate_service) { described_class.new(invoice: invoice&.reload, items:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -47,12 +47,15 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     ]
   end
 
+  let(:params) { {invoice_id: invoice&.id, amount_cents: 9, reference: "ref1"} }
+
   around { |test| lago_premium!(&test) }
 
   before do
     create(:fee_applied_tax, tax:, fee: fee1)
     create(:fee_applied_tax, tax:, fee: fee2)
     create(:invoice_applied_tax, tax:, invoice:) if invoice
+    Payments::ManualCreateService.call(organization:, params:)
   end
 
   it "estimates the credit and refund amount" do
@@ -198,6 +201,8 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     let(:wallet) { create(:wallet, customer:, balance_cents: 10) }
     let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
     let(:credit_fee) { create(:fee, fee_type: :credit, invoice:, invoiceable: wallet_transaction) }
+    let(:params) { {invoice_id: invoice.id, amount_cents: 12, reference: "ref2"} }
+
     let(:items) do
       [
         {
@@ -207,7 +212,10 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
       ]
     end
 
-    before { credit_fee }
+    before do
+      credit_fee
+      Payments::ManualCreateService.call(organization:, params:)
+    end
 
     context "when wallet for the credits is active" do
       it "estimates the credit and refund amount not higher than wallet.balance_cents" do

@@ -4,7 +4,7 @@ module Api
   module V1
     class PaymentsController < Api::BaseController
       def create
-        result = ManualPayments::CreateService.call(
+        result = Payments::ManualCreateService.call(
           organization: current_organization,
           params: create_params.to_h.deep_symbolize_keys
         )

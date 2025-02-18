@@ -1019,7 +1019,7 @@ RSpec.describe Invoice, type: :model do
       let(:payment_dispute_lost_at) { nil }
 
       context "when invoice has a voided credit note" do
-        let(:invoice) { create(:invoice, status:, payment_status:, payment_dispute_lost_at:) }
+        let(:invoice) { create(:invoice, status:, payment_status:, payment_dispute_lost_at:, total_paid_amount_cents:) }
 
         before { create(:credit_note, credit_status: :voided, invoice:) }
 
@@ -1029,24 +1029,60 @@ RSpec.describe Invoice, type: :model do
           context "when invoice is payment_pending" do
             let(:payment_status) { :pending }
 
-            it "returns false" do
-              expect(voidable).to be false
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
 
           context "when invoice is payment_failed" do
             let(:payment_status) { :failed }
 
-            it "returns false" do
-              expect(voidable).to be false
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
 
           context "when invoice is payment_succeeded" do
             let(:payment_status) { :succeeded }
 
-            it "returns false" do
-              expect(voidable).to be false
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
         end
@@ -1057,24 +1093,60 @@ RSpec.describe Invoice, type: :model do
           context "when invoice is payment_pending" do
             let(:payment_status) { :pending }
 
-            it "returns true" do
-              expect(voidable).to be true
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns true" do
+                expect(voidable).to be true
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
 
           context "when invoice is payment_failed" do
             let(:payment_status) { :failed }
 
-            it "returns true" do
-              expect(voidable).to be true
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns true" do
+                expect(voidable).to be true
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
 
           context "when invoice is payment_succeeded" do
             let(:payment_status) { :succeeded }
 
-            it "returns false" do
-              expect(voidable).to be false
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
         end
@@ -1091,24 +1163,60 @@ RSpec.describe Invoice, type: :model do
           context "when invoice is payment_pending" do
             let(:payment_status) { :pending }
 
-            it "returns false" do
-              expect(voidable).to be false
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
 
           context "when invoice is payment_failed" do
             let(:payment_status) { :failed }
 
-            it "returns false" do
-              expect(voidable).to be false
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
 
           context "when invoice is payment_succeeded" do
             let(:payment_status) { :succeeded }
 
-            it "returns false" do
-              expect(voidable).to be false
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
         end
@@ -1119,24 +1227,60 @@ RSpec.describe Invoice, type: :model do
           context "when invoice is payment_pending" do
             let(:payment_status) { :pending }
 
-            it "returns false" do
-              expect(voidable).to be false
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
 
           context "when invoice is payment_failed" do
             let(:payment_status) { :failed }
 
-            it "returns false" do
-              expect(voidable).to be false
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
 
           context "when invoice is payment_succeeded" do
             let(:payment_status) { :succeeded }
 
-            it "returns false" do
-              expect(voidable).to be false
+            context "when total paid amount is zero" do
+              let(:total_paid_amount_cents) { 0 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
+            end
+
+            context "when total paid amount is not zero" do
+              let(:total_paid_amount_cents) { 1 }
+
+              it "returns false" do
+                expect(voidable).to be false
+              end
             end
           end
         end
@@ -1422,12 +1566,25 @@ RSpec.describe Invoice, type: :model do
   end
 
   describe "#refundable_amount_cents" do
-    let(:invoice) { create(:invoice, version_number:, status:, payment_status:, prepaid_credit_amount_cents:) }
+    let(:invoice) do
+      create(
+        :invoice,
+        version_number:,
+        status:,
+        payment_status:,
+        prepaid_credit_amount_cents:,
+        total_paid_amount_cents:,
+        total_amount_cents: 1000
+      )
+    end
+
     let(:available_to_credit_amount_cents) { 1000 }
     let(:prepaid_credit_amount_cents) { 200 }
+    let(:total_paid_amount_cents) { 900 }
 
     before do
       allow(invoice).to receive(:available_to_credit_amount_cents).and_return(available_to_credit_amount_cents)
+      create(:payment, payable: invoice, amount_cents: 900, status: :succeeded, payable_payment_status: :succeeded)
     end
 
     context "when version_number is less than CREDIT_NOTES_MIN_VERSION" do
@@ -1455,8 +1612,18 @@ RSpec.describe Invoice, type: :model do
       let(:status) { :finalized }
       let(:payment_status) { :pending }
 
-      it "returns 0" do
-        expect(invoice.refundable_amount_cents).to eq(0)
+      context "when total amount is equal to paid amount" do
+        let(:total_paid_amount_cents) { 1000 }
+
+        it "returns the correct refundable amount" do
+          expect(invoice.refundable_amount_cents).to eq(0)
+        end
+      end
+
+      context "when total amount is not equal to paid amount" do
+        it "returns the correct refundable amount" do
+          expect(invoice.refundable_amount_cents).to eq(700)
+        end
       end
     end
 
@@ -1466,12 +1633,22 @@ RSpec.describe Invoice, type: :model do
       let(:payment_status) { :succeeded }
 
       it "returns the correct refundable amount" do
-        expect(invoice.refundable_amount_cents).to eq(800)
+        expect(invoice.refundable_amount_cents).to eq(700)
       end
     end
 
     context "when invoice is a credit" do
-      let(:invoice) { create(:invoice, :credit, version_number: 2, status: :finalized, payment_status: :succeeded, prepaid_credit_amount_cents: 200) }
+      let(:invoice) do
+        create(
+          :invoice,
+          :credit,
+          version_number: 2,
+          status: :finalized,
+          payment_status: :succeeded,
+          prepaid_credit_amount_cents: 200,
+          total_paid_amount_cents: 900
+        )
+      end
       let(:associated_active_wallet) { create(:wallet, balance_cents: 500) }
 
       before do
@@ -1486,7 +1663,7 @@ RSpec.describe Invoice, type: :model do
       context "when payment is pending" do
         let(:invoice) { create(:invoice, :credit, version_number: 2, status: :finalized, payment_status: :pending, prepaid_credit_amount_cents: 200) }
 
-        it "returns the0" do
+        it "returns zero" do
           expect(invoice.refundable_amount_cents).to eq(0)
         end
       end

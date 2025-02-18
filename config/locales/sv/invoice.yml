@@ -88,7 +88,9 @@ sv:
     total: Total
     total_credits_with_value: 'Totalt antal krediter med värde: %{credit_amount} krediter'
     total_due: Att betala
-    total_event: Totala händelser
+    total_due_amount: Förfallobelopp
+    total_events: 'Totala händelser: %{count}'
+    total_paid_amount: Betalt belopp
     total_unit: 'Totalt antal enheter: %{units}'
     total_unit_interval: 'Totalt antal enheter: %{events_count} händelse(r) för %{units}'
     true_up_details: Minsta utgift på %{min_amount} fördelat på användningsdagar
