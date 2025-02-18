@@ -18,6 +18,7 @@ RSpec.describe CreditNoteMailer, type: :mailer do
       expect(mailer.to).to eq([credit_note.customer.email])
       expect(mailer.reply_to).to eq([credit_note.organization.email])
       expect(mailer.attachments).not_to be_empty
+      expect(mailer.attachments.first.filename).to eq("credit_note-#{credit_note.number}.pdf")
     end
 
     context "with no pdf file" do

@@ -18,6 +18,7 @@ RSpec.describe InvoiceMailer, type: :mailer do
       expect(mailer.to).to eq([invoice.customer.email])
       expect(mailer.reply_to).to eq([invoice.organization.email])
       expect(mailer.attachments).not_to be_empty
+      expect(mailer.attachments.first.filename).to eq("invoice-#{invoice.number}.pdf")
     end
 
     context "with no pdf file" do
