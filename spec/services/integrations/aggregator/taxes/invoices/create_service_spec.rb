@@ -114,7 +114,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
       let(:response) { instance_double(Net::HTTPOK) }
 
       before do
-        allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+        allow(lago_client).to receive(:post_with_response).with(array_including(params), headers).and_return(response)
         allow(response).to receive(:body).and_return(body)
       end
 
