@@ -5,7 +5,7 @@ class MigrateInvoiceErrorToErrorDetail < ActiveRecord::Migration[7.1]
     InvoiceError.find_each do |ie|
       invoice = Invoice.find(ie.id)
       ErrorDetail.create(
-        error_code: 'invoice_generation_error',
+        error_code: "invoice_generation_error",
         owner: invoice,
         organization_id: invoice.organization_id,
         details: {
