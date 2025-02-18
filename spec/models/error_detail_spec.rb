@@ -6,7 +6,6 @@ RSpec.describe ErrorDetail, type: :model do
   it { is_expected.to belong_to(:owner) }
   it { is_expected.to belong_to(:organization) }
 
-
   context "when creating an invoice generation error for an invoice" do
     let(:invoice) { create(:invoice, :generating) }
     let(:result) { BaseService::Result.new }
@@ -31,17 +30,17 @@ RSpec.describe ErrorDetail, type: :model do
 
       it "stores the error in the details: :error field" do
         invoice_error = described_class.create_generation_error_for(invoice:, error:)
-        expect(invoice_error.details['error']).to eq(error.inspect.to_json)
+        expect(invoice_error.details["error"]).to eq(error.inspect.to_json)
       end
 
       it "stores the backtrace in the details: :backtrace field" do
         invoice_error = described_class.create_generation_error_for(invoice:, error: error_with_backtrace)
-        expect(invoice_error.details['backtrace']).to eq("backtrace")
+        expect(invoice_error.details["backtrace"]).to eq("backtrace")
       end
 
       it "stores the subscriptions in the details: :subscriptions field" do
         invoice_error = described_class.create_generation_error_for(invoice:, error:)
-        expect(invoice_error.details['subscriptions']).to eq("[]")
+        expect(invoice_error.details["subscriptions"]).to eq("[]")
       end
 
       it "updates when create_for is called with the same invoice" do
@@ -53,5 +52,4 @@ RSpec.describe ErrorDetail, type: :model do
       end
     end
   end
-
 end

@@ -52,7 +52,7 @@ RSpec.describe BillSubscriptionJob, type: :job do
         expect do
           described_class.perform_now(subscriptions, timestamp, invoicing_reason:, invoice:)
         end.to raise_error(BaseService::FailedResult).and change(invoice.error_details.invoice_generation_error.count)
-        .from(0).to(0)
+          .from(0).to(0)
       end
     end
 
