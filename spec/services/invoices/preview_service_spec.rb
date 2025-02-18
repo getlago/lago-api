@@ -151,7 +151,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context 'with charge fees' do
+          context "with charge fees" do
             let(:billable_metric) do
               create(:billable_metric, aggregation_type: "count_agg")
             end
@@ -215,10 +215,10 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context 'when preview premium integration does not exist' do
-            before { organization.update!(premium_integrations: ['netsuite']) }
+          context "when preview premium integration does not exist" do
+            before { organization.update!(premium_integrations: ["netsuite"]) }
 
-            it 'returns an error' do
+            it "returns an error" do
               result = preview_service.call
 
               aggregate_failures do
@@ -276,7 +276,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             )
           end
 
-          before { organization.update!(premium_integrations: ['preview']) }
+          before { organization.update!(premium_integrations: ["preview"]) }
 
           it "creates preview invoice for next invoice" do
             travel_to(timestamp) do
@@ -295,10 +295,10 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context 'when preview premium integration does not exist' do
-            before { organization.update!(premium_integrations: ['netsuite']) }
+          context "when preview premium integration does not exist" do
+            before { organization.update!(premium_integrations: ["netsuite"]) }
 
-            it 'returns an error' do
+            it "returns an error" do
               result = preview_service.call
 
               aggregate_failures do
@@ -516,7 +516,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
         end
 
-        context 'with one persisted subscriptions' do
+        context "with one persisted subscriptions" do
           let(:customer) { create(:customer, organization:) }
           let(:subscription) do
             create(
@@ -530,17 +530,17 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             )
           end
 
-          before { organization.update!(premium_integrations: ['preview']) }
+          before { organization.update!(premium_integrations: ["preview"]) }
 
-          it 'creates preview invoice for full month' do
+          it "creates preview invoice for full month" do
             travel_to(timestamp) do
               result = preview_service.call
 
               expect(result).to be_success
               expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.fees.length).to eq(1)
-              expect(result.invoice.invoice_type).to eq('subscription')
-              expect(result.invoice.issuing_date.to_s).to eq('2024-04-30')
+              expect(result.invoice.invoice_type).to eq("subscription")
+              expect(result.invoice.issuing_date.to_s).to eq("2024-04-30")
               expect(result.invoice.fees_amount_cents).to eq(100)
               expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(100)
               expect(result.invoice.taxes_amount_cents).to eq(50)
@@ -549,7 +549,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context 'with charge fees' do
+          context "with charge fees" do
             let(:billable_metric) do
               create(:billable_metric, aggregation_type: "count_agg")
             end
@@ -586,8 +586,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 expect(result).to be_success
                 expect(result.invoice.subscriptions.first).to eq(subscription)
                 expect(result.invoice.fees.length).to eq(2)
-                expect(result.invoice.invoice_type).to eq('subscription')
-                expect(result.invoice.issuing_date.to_s).to eq('2024-04-30')
+                expect(result.invoice.invoice_type).to eq("subscription")
+                expect(result.invoice.issuing_date.to_s).to eq("2024-04-30")
                 expect(result.invoice.fees_amount_cents).to eq(2632)
                 expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(2632)
                 expect(result.invoice.taxes_amount_cents).to eq(1316)
@@ -598,10 +598,10 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
         end
 
-        context 'with multiple persisted subscriptions' do
+        context "with multiple persisted subscriptions" do
           let(:customer) { create(:customer, organization:) }
-          let(:plan1) { create(:plan, organization:, interval: 'monthly') }
-          let(:plan2) { create(:plan, organization:, interval: 'monthly') }
+          let(:plan1) { create(:plan, organization:, interval: "monthly") }
+          let(:plan2) { create(:plan, organization:, interval: "monthly") }
           let(:subscriptions) { [subscription1, subscription2] }
           let(:subscription1) do
             create(
@@ -626,17 +626,17 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             )
           end
 
-          before { organization.update!(premium_integrations: ['preview']) }
+          before { organization.update!(premium_integrations: ["preview"]) }
 
-          it 'creates preview invoice for full month' do
+          it "creates preview invoice for full month" do
             travel_to(timestamp + 5.days) do
               result = preview_service.call
 
               expect(result).to be_success
               expect(result.invoice.subscriptions.map { |s| s.id }).to match_array([subscription1.id, subscription2.id])
               expect(result.invoice.fees.length).to eq(2)
-              expect(result.invoice.invoice_type).to eq('subscription')
-              expect(result.invoice.issuing_date.to_s).to eq('2024-04-30')
+              expect(result.invoice.invoice_type).to eq("subscription")
+              expect(result.invoice.issuing_date.to_s).to eq("2024-04-30")
               expect(result.invoice.fees_amount_cents).to eq(200)
               expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(200)
               expect(result.invoice.taxes_amount_cents).to eq(100)
