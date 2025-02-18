@@ -31762,6 +31762,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "crypto",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },

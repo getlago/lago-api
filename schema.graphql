@@ -6573,6 +6573,7 @@ enum ProviderPaymentMethodsEnum {
   bacs_debit
   boleto
   card
+  crypto
   link
   sepa_debit
   us_bank_account
