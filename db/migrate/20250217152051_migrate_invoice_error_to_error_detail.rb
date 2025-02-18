@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 class MigrateInvoiceErrorToErrorDetail < ActiveRecord::Migration[7.1]
+  class InvoiceError < ApplicationRecord; end
+
+  class ErrorDetail < ApplicationRecord
+    belongs_to :owner, polymorphic: true
+  end
+
   def change
     InvoiceError.find_each do |ie|
       invoice = Invoice.find(ie.id)
