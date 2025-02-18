@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class BackfillInvoicesAndPayments < ActiveRecord::Migration[6.0]
+class BackfillInvoicesAndPayments < ActiveRecord::Migration[7.1]
   disable_ddl_transaction!
 
   def up
