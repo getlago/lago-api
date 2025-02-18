@@ -7202,7 +7202,7 @@ input RetryWebhookInput {
 }
 
 type RevenueStreams {
-  amountCurrency: CurrencyEnum
+  amountCurrency: CurrencyEnum!
   commitmentFeeAmountCents: BigInt!
   couponsAmountCents: BigInt!
   endOfPeriodDt: ISO8601Date!
