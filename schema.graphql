@@ -6576,6 +6576,7 @@ enum ProviderPaymentMethodsEnum {
   boleto
   card
   crypto
+  customer_balance
   link
   sepa_debit
   us_bank_account
