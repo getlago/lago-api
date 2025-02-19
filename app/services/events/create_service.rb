@@ -53,7 +53,6 @@ module Events
         key: "#{organization.id}-#{event.external_subscription_id}",
         payload: {
           organization_id: organization.id,
-          external_customer_id: event.external_customer_id,
           external_subscription_id: event.external_subscription_id,
           transaction_id: event.transaction_id,
           # NOTE: Removes trailing 'Z' to allow clickhouse parsing
