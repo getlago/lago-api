@@ -18,7 +18,7 @@ class ErrorDetail < ApplicationRecord
 
   def self.create_generation_error_for(invoice:, error:)
     return unless invoice
-    instance = find_or_create_by(owner: invoice, error_code: 'invoice_generation_error')
+    instance = find_or_create_by(owner: invoice, error_code: "invoice_generation_error")
     instance.update(
       details: {
         backtrace: error.backtrace,
