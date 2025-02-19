@@ -114,7 +114,7 @@ module PaymentProviderCustomers
       {
         success_url: success_redirect_url,
         mode: "setup",
-        payment_method_types: stripe_customer.provider_payment_methods,
+        payment_method_types: stripe_customer.provider_payment_methods - %w[crypto], # NOTE: crypto doesn't work with setup mode
         customer: stripe_customer.provider_customer_id
       }
     end
