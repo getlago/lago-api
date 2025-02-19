@@ -15,7 +15,7 @@ module Clock
     THRESHOLD = -> { 1.day.ago }
 
     def perform
-      ids = ErrorDetail.invoice_generation_error.where(owner_type: 'Invoice').pluck(:owner_id)
+      ids = ErrorDetail.invoice_generation_error.where(owner_type: "Invoice").pluck(:owner_id)
       Invoice.subscription.generating.where.not(id: ids).where("created_at < ?", THRESHOLD.call).find_each do |invoice|
         next unless invoice.invoice_subscriptions.any?
         invoicing_reasons = invoice.invoice_subscriptions.pluck(:invoicing_reason).uniq.compact
