@@ -4151,6 +4151,7 @@ enum EmailSettingsEnum {
 }
 
 enum ErrorCodesEnum {
+  invoice_generation_error
   not_provided
   tax_error
   tax_voiding_error

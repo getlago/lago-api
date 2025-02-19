@@ -18,7 +18,7 @@ class ErrorDetail < ApplicationRecord
 
   def self.create_generation_error_for(invoice:, error:)
     return unless invoice
-    instance = find_or_create_by(owner: invoice, error_code: "invoice_generation_error")
+    instance = find_or_create_by(owner: invoice, error_code: "invoice_generation_error", organization: invoice.organization)
     instance.update(
       details: {
         backtrace: error.backtrace,
@@ -35,20 +35,18 @@ end
 #
 # Table name: error_details
 #
-#  id                :uuid             not null, primary key
+#  id                :uuid           not null, primary key
 #  deleted_at        :datetime
-#  details           :jsonb            not null
-#  error_code        :integer          default("not_provided"), not null
-#  owner_type        :string           not null
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  billing_entity_id :uuid
-#  organization_id   :uuid             not null
-#  owner_id          :uuid             not null
+#  details           :jsonb          not null
+#  error_code        :integer        default("not_provided"), not null
+#  owner_type        :string         not null
+#  created_at        :datetime       not null
+#  updated_at        :datetime       not null
+#  organization_id   :uuid           not null
+#  owner_id          :uuid           not null
 #
 # Indexes
 #
-#  index_error_details_on_billing_entity_id  (billing_entity_id)
 #  index_error_details_on_deleted_at         (deleted_at)
 #  index_error_details_on_error_code         (error_code)
 #  index_error_details_on_organization_id    (organization_id)
