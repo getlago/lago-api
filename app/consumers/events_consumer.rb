@@ -13,14 +13,14 @@ class EventsConsumer < ApplicationConsumer
           # make sure Billable metric exists
           bm = BillableMetric.find_by(code: event.code, organization_id: event.organization_id)
           if !bm
-            dispatch_to_dlq(message)
+            # dispatch_to_dlq(message)
             next
           end
 
           # Evaluate expression
           expression_result = Events::CalculateExpressionService.call(organization: event.organization, event:)
           if expression_result.failure?
-            dispatch_to_dlq(message)
+            # dispatch_to_dlq(message)
             next
           end
 

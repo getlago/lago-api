@@ -49,7 +49,7 @@ class KarafkaApp < Karafka::App
         consumer EventsConsumer
         max_messages 10_000
 
-        dead_letter_queue(topic: "unprocessed_events", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+        # dead_letter_queue(topic: "unprocessed_events", max_retries: 1, dispatch_method: :produce_sync)
       end
     end
   end
