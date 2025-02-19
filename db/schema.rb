@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_02_14_091021) do
+ActiveRecord::Schema[7.1].define(version: 2025_02_19_124948) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -22,6 +22,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_14_091021) do
   create_enum "billable_metric_weighted_interval", ["seconds"]
   create_enum "customer_account_type", ["customer", "partner"]
   create_enum "customer_type", ["company", "individual"]
+  create_enum "entity_document_numbering", ["per_customer", "per_billing_entity"]
   create_enum "inbound_webhook_status", ["pending", "processing", "succeeded", "failed"]
   create_enum "payment_payable_payment_status", ["pending", "processing", "succeeded", "failed"]
   create_enum "payment_type", ["provider", "manual"]
@@ -205,6 +206,42 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_14_091021) do
     t.index ["organization_id", "code", "expression"], name: "index_billable_metrics_on_org_id_and_code_and_expr", where: "((expression IS NOT NULL) AND ((expression)::text <> ''::text))"
     t.index ["organization_id", "code"], name: "index_billable_metrics_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_billable_metrics_on_organization_id"
+  end
+
+  create_table "billing_entities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "organization_id", null: false
+    t.string "address_line1"
+    t.string "address_line2"
+    t.string "city"
+    t.string "country"
+    t.string "zipcode"
+    t.string "state"
+    t.string "timezone", default: "UTC", null: false
+    t.string "default_currency", default: "USD", null: false
+    t.string "document_locale", default: "en", null: false
+    t.string "document_number_prefix"
+    t.enum "document_numbering", default: "per_customer", null: false, enum_type: "entity_document_numbering"
+    t.boolean "finalize_zero_amount_invoice", default: true, null: false
+    t.text "invoice_footer"
+    t.integer "invoice_grace_period", default: 0, null: false
+    t.integer "net_payment_term", default: 0, null: false
+    t.string "email"
+    t.string "email_settings", default: [], null: false, array: true
+    t.boolean "eu_tax_management", default: false
+    t.string "legal_name"
+    t.string "legal_number"
+    t.string "logo"
+    t.string "name", null: false
+    t.string "code", null: false
+    t.string "tax_identification_number"
+    t.float "vat_rate", default: 0.0, null: false
+    t.boolean "is_default", default: false, null: false
+    t.datetime "archived_at"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_billing_entities_on_organization_id"
+    t.index ["organization_id"], name: "unique_default_billing_entity_per_organization", unique: true, where: "((is_default = true) AND (archived_at IS NULL) AND (deleted_at IS NULL))"
   end
 
   create_table "cached_aggregations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1393,6 +1430,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_14_091021) do
   add_foreign_key "applied_usage_thresholds", "usage_thresholds"
   add_foreign_key "billable_metric_filters", "billable_metrics"
   add_foreign_key "billable_metrics", "organizations"
+  add_foreign_key "billing_entities", "organizations"
   add_foreign_key "cached_aggregations", "groups"
   add_foreign_key "charge_filter_values", "billable_metric_filters"
   add_foreign_key "charge_filter_values", "charge_filters"
