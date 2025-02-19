@@ -20691,6 +20691,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "from_email",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -31164,6 +31170,12 @@
             },
             {
               "name": "manual_payments",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "from_email",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

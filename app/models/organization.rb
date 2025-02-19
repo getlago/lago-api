@@ -77,6 +77,7 @@ class Organization < ApplicationRecord
     zero_amount_fees
     remove_branding_watermark
     manual_payments
+    from_email
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 
@@ -160,6 +161,12 @@ class Organization < ApplicationRecord
         last_dunning_campaign_attempt: 0,
         last_dunning_campaign_attempt_at: nil
       )
+  end
+
+  def from_email_address
+    return email if from_email_enabled?
+
+    ENV["LAGO_FROM_EMAIL"]
   end
 
   private

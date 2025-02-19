@@ -19,7 +19,7 @@ class CreditNoteMailer < ApplicationMailer
     I18n.with_locale(@customer.preferred_document_locale) do
       mail(
         to: @customer.email,
-        from: email_address_with_name(ENV["LAGO_FROM_EMAIL"], @organization.name),
+        from: email_address_with_name(@organization.from_email_address, @organization.name),
         reply_to: email_address_with_name(@organization.email, @organization.name),
         subject: I18n.t(
           "email.credit_note.created.subject",
