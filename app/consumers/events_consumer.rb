@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "async/barrier"
+require "async/semaphore"
+
 class EventsConsumer < ApplicationConsumer
   def consume
     Rails.logger.info "Polled #{messages.size} messages from kafka"
