@@ -51,8 +51,8 @@ RSpec.describe BillSubscriptionJob, type: :job do
       it "creates an ErrorDetail" do
         expect do
           described_class.perform_now(subscriptions, timestamp, invoicing_reason:, invoice:)
-        end.to raise_error(BaseService::FailedResult).and change(invoice.error_details.invoice_generation_error.count)
-          .from(0).to(0)
+        end.to raise_error(BaseService::FailedResult).and change(invoice.error_details.invoice_generation_error, :count)
+          .from(0).to(1)
       end
     end
 
@@ -84,13 +84,13 @@ RSpec.describe BillSubscriptionJob, type: :job do
         expect(Invoices::SubscriptionService).to have_received(:call)
       end
 
-      it "creates an InvoiceError" do
+      it "creates an invoice generation error_detail" do
         expect do
           described_class.perform_now(subscriptions, timestamp, invoicing_reason:)
         end.to raise_error(BaseService::FailedResult)
 
-        expect(InvoiceError.all.size).to eq(1)
-        expect(InvoiceError.first.id).to eq(result_invoice.id)
+        expect(ErrorDetail.invoice_generation_error.size).to eq(1)
+        expect(result_invoice.error_details.invoice_generation_error.count).to eq(1)
       end
     end
   end
