@@ -88,6 +88,9 @@ gem "slim-rails"
 gem "karafka", "~> 2.4.17"
 gem "karafka-web", "~> 0.10.4"
 
+# Async
+gem "async"
+
 # Taxes
 gem "valvat", require: false
 
