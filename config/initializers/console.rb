@@ -1,6 +1,22 @@
 # frozen_string_literal: true
 
 module Rails::ConsoleMethods
+  if Rails.env.development?
+    def gavin
+      @gavin ||= hooli.users.find_by email: "gavin@hooli.com"
+    end
+
+    def hooli
+      @hooli ||= Organization.find_by name: "Hooli"
+    end
+
+    def delete_hooli_webhooks
+      hooli.webhook_endpoints.map do |endpoint|
+        endpoint.webhooks.delete_all
+      end.sum
+    end
+  end
+
   def find(id)
     if /^gid/.match?(id)
       GlobalID::Locator.locate(id)
