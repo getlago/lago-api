@@ -7,6 +7,8 @@ RSpec.describe InvoiceMailer, type: :mailer do
 
   let(:invoice) { create(:invoice, fees_amount_cents: 100) }
 
+  around { |test| lago_premium!(&test) }
+
   before do
     invoice.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "blank.pdf")
   end
@@ -73,6 +75,16 @@ RSpec.describe InvoiceMailer, type: :mailer do
         mailer = invoice_mailer.with(invoice:).finalized
 
         expect(mailer.to).to be_nil
+      end
+    end
+
+    context "when organization from_email integration is enabled" do
+      before { invoice.organization.update(premium_integrations: ["from_email"]) }
+
+      it "returns a mailer with organization email from" do
+        mailer = invoice_mailer.with(invoice:).finalized
+
+        expect(mailer.from).to eq([invoice.organization.email])
       end
     end
   end

@@ -74,7 +74,7 @@ RSpec.describe CreditNoteMailer, type: :mailer do
       it "returns a mailer with organization email from" do
         mailer = credit_note_mailer.with(credit_note:).created
 
-        expect(mailer.from).to eq([credit_note.customer.organization.email])
+        expect(mailer.from).to eq([credit_note.organization.email])
       end
     end
   end

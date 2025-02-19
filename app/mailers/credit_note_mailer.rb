@@ -16,7 +16,6 @@ class CreditNoteMailer < ApplicationMailer
       attachments["credit_note-#{@credit_note.number}.pdf"] = file.read
     end
 
-    byebug
     from_email = if @organization.from_email_enabled?
       @organization.email
     else
