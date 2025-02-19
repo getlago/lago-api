@@ -8,30 +8,51 @@ class ErrorDetail < ApplicationRecord
   belongs_to :owner, polymorphic: true
   belongs_to :organization
 
-  ERROR_CODES = %w[not_provided tax_error tax_voiding_error]
+  ERROR_CODES = {
+    not_provided: 0,
+    tax_error: 1,
+    tax_voiding_error: 2,
+    invoice_generation_error: 3
+  }.freeze
   enum :error_code, ERROR_CODES
+
+  def self.create_generation_error_for(invoice:, error:)
+    return unless invoice
+    instance = find_or_create_by(owner: invoice, error_code: 'invoice_generation_error')
+    instance.update(
+      details: {
+        backtrace: error.backtrace,
+        error: error.inspect.to_json,
+        invoice: invoice.to_json(except: :file),
+        subscriptions: invoice.subscriptions.to_json
+      }
+    )
+    instance
+  end
 end
 
 # == Schema Information
 #
 # Table name: error_details
 #
-#  id              :uuid             not null, primary key
-#  deleted_at      :datetime
-#  details         :jsonb            not null
-#  error_code      :integer          default("not_provided"), not null
-#  owner_type      :string           not null
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  organization_id :uuid             not null
-#  owner_id        :uuid             not null
+#  id                :uuid             not null, primary key
+#  deleted_at        :datetime
+#  details           :jsonb            not null
+#  error_code        :integer          default("not_provided"), not null
+#  owner_type        :string           not null
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  billing_entity_id :uuid
+#  organization_id   :uuid             not null
+#  owner_id          :uuid             not null
 #
 # Indexes
 #
-#  index_error_details_on_deleted_at       (deleted_at)
-#  index_error_details_on_error_code       (error_code)
-#  index_error_details_on_organization_id  (organization_id)
-#  index_error_details_on_owner            (owner_type,owner_id)
+#  index_error_details_on_billing_entity_id  (billing_entity_id)
+#  index_error_details_on_deleted_at         (deleted_at)
+#  index_error_details_on_error_code         (error_code)
+#  index_error_details_on_organization_id    (organization_id)
+#  index_error_details_on_owner              (owner_type,owner_id)
 #
 # Foreign Keys
 #
