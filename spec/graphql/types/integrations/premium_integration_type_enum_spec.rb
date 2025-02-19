@@ -18,6 +18,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       zero_amount_fees
       remove_branding_watermark
       manual_payments
+      from_email
     ]
   end
 
