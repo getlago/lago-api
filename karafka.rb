@@ -4,8 +4,8 @@ class KarafkaApp < Karafka::App
   setup do |config|
     config.kafka = {
       "bootstrap.servers": ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"],
-      "fetch.message.max.bytes": 50_000_000,
-      "partition.assignment.strategy": "cooperative-sticky"
+      "partition.assignment.strategy": "cooperative-sticky",
+      "linger.ms": "0"
     }
 
     if ENV["LAGO_KAFKA_SECURITY_PROTOCOL"].present?
@@ -47,7 +47,7 @@ class KarafkaApp < Karafka::App
     consumer_group :lago_events_consumer do
       topic ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] do
         consumer EventsConsumer
-        max_messages 1000
+        max_messages 10_000
 
         dead_letter_queue(topic: "unprocessed_events", max_retries: 1, independent: true, dispatch_method: :produce_sync)
       end
