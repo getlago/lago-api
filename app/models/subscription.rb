@@ -8,6 +8,7 @@ class Subscription < ApplicationRecord
   belongs_to :previous_subscription, class_name: "Subscription", optional: true
 
   has_one :organization, through: :customer
+  has_one :billing_entity, through: :customer
   has_many :next_subscriptions, class_name: "Subscription", foreign_key: :previous_subscription_id
   has_many :events
   has_many :invoice_subscriptions

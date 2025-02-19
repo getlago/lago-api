@@ -10,6 +10,7 @@ FactoryBot.define do
 
     after(:create) do |fee, context|
       fee.organization = fee.invoice&.organization || fee.subscription&.organization
+      fee.billing_entity = fee.invoice&.billing_entity || fee.subscription&.billing_entity
     end
 
     amount_cents { 200 }

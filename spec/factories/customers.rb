@@ -22,6 +22,10 @@ FactoryBot.define do
     legal_number { Faker::Company.duns_number }
     currency { "EUR" }
 
+    after :build do |customer, values|
+      customer.billing_entity = values.organization.default_billing_entity if customer.billing_entity.nil?
+    end
+
     trait :with_shipping_address do
       shipping_address_line1 { Faker::Address.street_address }
       shipping_address_line2 { Faker::Address.secondary_address }
