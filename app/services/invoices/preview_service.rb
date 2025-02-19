@@ -38,6 +38,7 @@ module Invoices
       invoice.subscriptions = subscriptions
 
       add_subscription_fees
+      add_charge_fees
       compute_tax_and_totals
 
       result.invoice = invoice
@@ -124,16 +125,45 @@ module Invoices
 
     def add_subscription_fees
       invoice.fees = subscriptions.map do |subscription|
-        fee = Fees::SubscriptionService.call(
+        Fees::SubscriptionService.call!(
           invoice:,
           subscription:,
           boundaries: boundaries(subscription),
           context: :preview
-        ).raise_if_error!.fee
+        ).fee
+      end
+    end
 
-        subscription.fees = [fee]
+    def add_charge_fees
+      return unless persisted_subscriptions
 
-        fee
+      subscriptions.map do |subscription|
+        boundaries = boundaries(subscription)
+
+        query = subscription.plan.charges.joins(:billable_metric)
+          .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+          .where(invoiceable: true)
+          .where
+          .not(pay_in_advance: true, billable_metric: {recurring: false})
+
+        context = OpenTelemetry::Context.current
+
+        invoice.fees << Parallel.flat_map(query.all, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
+          OpenTelemetry::Context.with_current(context) do
+            ActiveRecord::Base.connection_pool.with_connection do
+              cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
+                subscription:,
+                charge:,
+                to_datetime: boundaries[:charges_to_datetime],
+                cache: !organization.clickhouse_events_store?
+              )
+
+              Fees::ChargeService
+                .call!(invoice:, charge:, subscription:, boundaries:, context: :invoice_preview, cache_middleware:)
+                .fees
+            end
+          end
+        end
       end
     end
 
