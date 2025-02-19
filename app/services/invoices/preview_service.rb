@@ -125,12 +125,12 @@ module Invoices
 
     def add_subscription_fees
       invoice.fees = subscriptions.map do |subscription|
-        Fees::SubscriptionService.call(
+        Fees::SubscriptionService.call!(
           invoice:,
           subscription:,
           boundaries: boundaries(subscription),
           context: :preview
-        ).raise_if_error!.fee
+        ).fee
       end
     end
 

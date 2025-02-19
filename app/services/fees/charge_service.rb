@@ -35,10 +35,12 @@ module Fees
           precise_amount_cents: result.fees.sum(&:precise_amount_cents)
         )
       end
-      return result if !result.success? || context == :invoice_preview
+      return result unless result.success?
 
       ActiveRecord::Base.transaction do
         result.fees.reject! { |f| !should_persit_fee?(f, result.fees) }
+
+        return result if context == :invoice_preview
 
         result.fees.each do |fee|
           fee.save!
@@ -178,7 +180,7 @@ module Fees
 
     def should_persit_fee?(fee, fees)
       return true if context == :recurring
-      return true if fee.organization.zero_amount_fees_enabled?
+      return true if organization.zero_amount_fees_enabled?
       return true if fee.units != 0 || fee.amount_cents != 0 || fee.events_count != 0
       return true if adjusted_fee(charge_filter: fee.charge_filter, grouped_by: fee.grouped_by).present?
       return true if fee.true_up_parent_fee.present?
