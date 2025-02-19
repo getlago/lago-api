@@ -2,6 +2,8 @@
 
 class EventsConsumer < ApplicationConsumer
   def consume
+    Rails.logger.info "Polled #{messages.size} messages from kafka"
+
     messages.each do |message|
       Async do
         event_payload = message.payload
@@ -39,5 +41,7 @@ class EventsConsumer < ApplicationConsumer
         mark_as_consumed(message)
       end
     end
+
+    Rails.logger.info "Done processing"
   end
 end
