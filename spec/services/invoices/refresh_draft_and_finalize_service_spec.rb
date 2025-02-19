@@ -289,9 +289,10 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
 
     context "when invoice has invoice_generation_errors" do
       before do
-        ErrorDetails.create(
+        ErrorDetail.create(
           owner: invoice,
           organization: invoice.organization,
+          error_code: :invoice_generation_error,
           details: {
             backtrace: "[\"/app/app/models/invoice.rb:432:in 'generate_organization_sequential_id'\", \"/app/app/models/invoice.rb:395:in...",
             error: "\"#\\u003cSequenced::SequenceError: Unable to acquire lock on the database\\u003e\"",
