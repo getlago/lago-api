@@ -14,6 +14,12 @@ class PopulateBillingEntityForOrganizations < ActiveRecord::Migration[7.1]
     has_many :cached_aggregations
     has_many :data_exports
     has_many :taxes
+
+    DOCUMENT_NUMBERINGS = [
+      :per_customer,
+      :per_organization
+    ].freeze
+    enum :document_numbering, DOCUMENT_NUMBERINGS
   end
 
   def change
