@@ -17,6 +17,7 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:adyen_payment_providers) }
 
   it { is_expected.to have_many(:api_keys) }
+  it { is_expected.to have_many(:billing_entities) }
   it { is_expected.to have_many(:webhook_endpoints) }
   it { is_expected.to have_many(:webhooks).through(:webhook_endpoints) }
   it { is_expected.to have_many(:hubspot_integrations) }

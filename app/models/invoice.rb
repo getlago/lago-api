@@ -17,6 +17,7 @@ class Invoice < ApplicationRecord
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
+  belongs_to :billing_entity, optional: true
 
   has_many :fees
   has_many :credits
@@ -520,6 +521,8 @@ end
 #  voided_at                               :datetime
 #  created_at                              :datetime         not null
 #  updated_at                              :datetime         not null
+#  billing_entity_id                       :uuid
+#  billing_entity_sequential_id            :integer          default(0)
 #  customer_id                             :uuid
 #  organization_id                         :uuid             not null
 #  organization_sequential_id              :integer          default(0), not null
@@ -527,17 +530,19 @@ end
 #
 # Indexes
 #
-#  idx_on_organization_id_organization_sequential_id_2387146f54  (organization_id,organization_sequential_id DESC)
-#  index_invoices_on_customer_id                                 (customer_id)
-#  index_invoices_on_customer_id_and_sequential_id               (customer_id,sequential_id) UNIQUE
-#  index_invoices_on_issuing_date                                (issuing_date)
-#  index_invoices_on_number                                      (number)
-#  index_invoices_on_organization_id                             (organization_id)
-#  index_invoices_on_payment_overdue                             (payment_overdue)
-#  index_invoices_on_ready_to_be_refreshed                       (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)
-#  index_invoices_on_self_billed                                 (self_billed)
-#  index_invoices_on_sequential_id                               (sequential_id)
-#  index_invoices_on_status                                      (status)
+#  idx_on_organization_id_billing_entity_sequential_id_20bfd08c5a  (organization_id,billing_entity_sequential_id DESC)
+#  idx_on_organization_id_organization_sequential_id_2387146f54    (organization_id,organization_sequential_id DESC)
+#  index_invoices_on_billing_entity_id                             (billing_entity_id)
+#  index_invoices_on_customer_id                                   (customer_id)
+#  index_invoices_on_customer_id_and_sequential_id                 (customer_id,sequential_id) UNIQUE
+#  index_invoices_on_issuing_date                                  (issuing_date)
+#  index_invoices_on_number                                        (number)
+#  index_invoices_on_organization_id                               (organization_id)
+#  index_invoices_on_payment_overdue                               (payment_overdue)
+#  index_invoices_on_ready_to_be_refreshed                         (ready_to_be_refreshed) WHERE (ready_to_be_refreshed = true)
+#  index_invoices_on_self_billed                                   (self_billed)
+#  index_invoices_on_sequential_id                                 (sequential_id)
+#  index_invoices_on_status                                        (status)
 #
 # Foreign Keys
 #
