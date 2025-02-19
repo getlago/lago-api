@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class DeleteSequenceGenerationInvoiceErrorForGeneratedInvoices < ActiveRecord::Migration[7.1]
+  class InvoiceError < ApplicationRecord; end
+
   GENERATED_INVOICE_STATUSES = [1, 6].freeze
 
   def change

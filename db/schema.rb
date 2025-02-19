@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_02_14_091021) do
+ActiveRecord::Schema[7.1].define(version: 2025_02_18_165958) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -861,15 +861,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_14_091021) do
     t.index ["organization_id", "code"], name: "index_invoice_custom_sections_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id", "deleted_at"], name: "idx_on_organization_id_deleted_at_225e3f789d"
     t.index ["organization_id"], name: "index_invoice_custom_sections_on_organization_id"
-  end
-
-  create_table "invoice_errors", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.text "backtrace"
-    t.json "invoice"
-    t.json "subscriptions"
-    t.json "error"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
   end
 
   create_table "invoice_metadata", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
