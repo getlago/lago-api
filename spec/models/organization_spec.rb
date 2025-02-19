@@ -257,4 +257,19 @@ RSpec.describe Organization, type: :model do
       expect(subject).to contain_exactly scoped
     end
   end
+
+  describe "#from_email_address" do
+    it "returns the env var email" do
+      expect(organization.from_email_address).to eq("noreply@getlago.com")
+    end
+
+    context "when organization from_email integration is enabled" do
+      around { |test| lago_premium!(&test) }
+
+      it "returns the organization email" do
+        organization.update!(premium_integrations: ["from_email"])
+        expect(organization.from_email_address).to eq(organization.email)
+      end
+    end
+  end
 end

@@ -10,8 +10,6 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
   let(:second_invoice) { create(:invoice, total_amount_cents: 2000, total_paid_amount_cents: 2, organization:) }
   let(:payment_request) { create(:payment_request, organization:, invoices: [first_invoice, second_invoice]) }
 
-  around { |test| lago_premium!(&test) }
-
   before do
     first_invoice.file.attach(
       io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
@@ -92,16 +90,6 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
 
         expect(parsed_body.css("a#payment_link")).not_to be_present
         expect(mailer.body.encoded).not_to include("Pay balance")
-      end
-    end
-
-    context "when organization from_email integration is enabled" do
-      before { organization.update(premium_integrations: ["from_email"]) }
-
-      it "returns a mailer with organization email from" do
-        mailer = payment_request_mailer.with(payment_request:).requested
-
-        expect(mailer.from).to eq([organization.email])
       end
     end
   end

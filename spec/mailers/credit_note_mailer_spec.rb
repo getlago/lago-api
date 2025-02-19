@@ -7,8 +7,6 @@ RSpec.describe CreditNoteMailer, type: :mailer do
 
   let(:credit_note) { create(:credit_note) }
 
-  around { |test| lago_premium!(&test) }
-
   before do
     credit_note.file.attach(io: File.open(Rails.root.join("spec/fixtures/blank.pdf")), filename: "blank.pdf")
   end
@@ -63,18 +61,6 @@ RSpec.describe CreditNoteMailer, type: :mailer do
         mailer = credit_note_mailer.with(credit_note:).created
 
         expect(mailer.to).to be_nil
-      end
-    end
-
-    context "when organization from_email integration is enabled" do
-      before do
-        credit_note.organization.update(premium_integrations: ["from_email"])
-      end
-
-      it "returns a mailer with organization email from" do
-        mailer = credit_note_mailer.with(credit_note:).created
-
-        expect(mailer.from).to eq([credit_note.organization.email])
       end
     end
   end

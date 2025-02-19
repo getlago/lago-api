@@ -19,16 +19,10 @@ class InvoiceMailer < ApplicationMailer
       attachments["invoice-#{@invoice.number}.pdf"] = file.read
     end
 
-    from_email = if @organization.from_email_enabled?
-      @organization.email
-    else
-      ENV["LAGO_FROM_EMAIL"]
-    end
-
     I18n.with_locale(@customer.preferred_document_locale) do
       mail(
         to: @customer.email,
-        from: email_address_with_name(from_email, @organization.name),
+        from: email_address_with_name(@organization.from_email_address, @organization.name),
         reply_to: email_address_with_name(@organization.email, @organization.name),
         subject: I18n.t(
           "email.invoice.finalized.subject",
