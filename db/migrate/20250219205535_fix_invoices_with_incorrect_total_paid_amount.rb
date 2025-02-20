@@ -9,7 +9,7 @@ class FixInvoicesWithIncorrectTotalPaidAmount < ActiveRecord::Migration[7.1]
         WHERE id IN (
             SELECT invoices.id
             FROM invoices
-            LEFT JOIN payments ON invoices.id = payments.invoice_id
+            LEFT JOIN payments ON invoices.id = payments.payable_id
             LEFT JOIN invoices_payment_requests ON invoices.id = invoices_payment_requests.invoice_id
             WHERE payments.id IS NULL 
             AND invoices_payment_requests.id IS NULL
