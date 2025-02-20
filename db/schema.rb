@@ -539,6 +539,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_03_25_162648) do
     t.enum "account_type", default: "customer", null: false, enum_type: "customer_account_type"
     t.bigint "payment_receipt_counter", default: 0, null: false
     t.uuid "billing_entity_id"
+    t.bigint "payment_receipt_counter", default: 0, null: false
     t.index ["account_type"], name: "index_customers_on_account_type"
     t.index ["applied_dunning_campaign_id"], name: "index_customers_on_applied_dunning_campaign_id"
     t.index ["billing_entity_id"], name: "index_customers_on_billing_entity_id"
