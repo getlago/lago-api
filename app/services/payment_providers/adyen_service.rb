@@ -2,13 +2,6 @@
 
 module PaymentProviders
   class AdyenService < BaseService
-    WEBHOOKS_EVENTS = %w[AUTHORISATION REFUND REFUND_FAILED CHARGEBACK].freeze
-
-    PAYMENT_SERVICE_CLASS_MAP = {
-      "Invoice" => Invoices::Payments::AdyenService,
-      "PaymentRequest" => PaymentRequests::Payments::AdyenService
-    }.freeze
-
     def create_or_update(**args)
       payment_provider_result = PaymentProviders::FindService.call(
         organization_id: args[:organization].id,
@@ -46,80 +39,6 @@ module PaymentProviders
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    end
-
-    def handle_event(organization:, event_json:)
-      event = JSON.parse(event_json)
-      unless WEBHOOKS_EVENTS.include?(event["eventCode"])
-        return result.service_failure!(
-          code: "webhook_error",
-          message: "Invalid adyen event code: #{event["eventCode"]}"
-        )
-      end
-
-      case event["eventCode"]
-      when "AUTHORISATION"
-        amount = event.dig("amount", "value")
-        payment_type = event.dig("additionalData", "metadata.payment_type")
-
-        if payment_type == "one-time"
-          update_result = update_payment_status(event, payment_type)
-          return update_result.raise_if_error!
-        end
-
-        return result if amount != 0
-
-        service = PaymentProviderCustomers::AdyenService.new
-
-        result = service.preauthorise(organization, event)
-        result.raise_if_error!
-      when "REFUND"
-        service = CreditNotes::Refunds::AdyenService.new
-
-        provider_refund_id = event["pspReference"]
-        status = (event["success"] == "true") ? :succeeded : :failed
-
-        result = service.update_status(provider_refund_id:, status:)
-        result.raise_if_error!
-      when "CHARGEBACK"
-        PaymentProviders::Adyen::Webhooks::ChargebackService.call(
-          organization_id: organization.id,
-          event_json:
-        )
-      when "REFUND_FAILED"
-        return result if event["success"] != "true"
-
-        service = CreditNotes::Refunds::AdyenService.new
-
-        provider_refund_id = event["pspReference"]
-
-        result = service.update_status(provider_refund_id:, status: :failed)
-        result.raise_if_error!
-      end
-    end
-
-    private
-
-    def update_payment_status(event, payment_type)
-      provider_payment_id = event["pspReference"]
-      status = (event["success"] == "true") ? "succeeded" : "failed"
-      metadata = {
-        payment_type:,
-        lago_invoice_id: event.dig("additionalData", "metadata.lago_invoice_id"),
-        lago_payable_id: event.dig("additionalData", "metadata.lago_payable_id"),
-        lago_payable_type: event.dig("additionalData", "metadata.lago_payable_type")
-      }
-
-      payment_service_klass(metadata)
-        .new.update_payment_status(provider_payment_id:, status:, metadata:)
-    end
-
-    def payment_service_klass(metadata)
-      payable_type = metadata[:lago_payable_type] || "Invoice"
-
-      PAYMENT_SERVICE_CLASS_MAP.fetch(payable_type) do
-        raise NameError, "Invalid lago_payable_type: #{payable_type}"
-      end
     end
   end
 end

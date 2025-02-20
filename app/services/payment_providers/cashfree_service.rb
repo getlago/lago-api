@@ -41,30 +41,5 @@ module PaymentProviders
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
-
-    def handle_incoming_webhook(organization_id:, body:, timestamp:, signature:, code: nil)
-      organization = Organization.find_by(id: organization_id)
-
-      payment_provider_result = PaymentProviders::FindService.call(
-        organization_id:,
-        code:,
-        payment_provider_type: "cashfree"
-      )
-
-      return payment_provider_result unless payment_provider_result.success?
-
-      secret_key = payment_provider_result.payment_provider.client_secret
-      data = "#{timestamp}#{body}"
-      gen_signature = Base64.strict_encode64(OpenSSL::HMAC.digest("sha256", secret_key, data))
-
-      unless gen_signature == signature
-        return result.service_failure!(code: "webhook_error", message: "Invalid signature")
-      end
-
-      PaymentProviders::Cashfree::HandleEventJob.perform_later(organization:, event: body)
-
-      result.event = body
-      result
-    end
   end
 end

@@ -206,8 +206,6 @@ RSpec.describe WebhooksController, type: :request do
       create(:cashfree_provider, organization:)
     end
 
-    let(:cashfree_service) { instance_double(PaymentProviders::CashfreeService) }
-
     let(:body) do
       path = Rails.root.join("spec/fixtures/cashfree/payment_link_event_payment.json")
       JSON.parse(File.read(path))
@@ -220,9 +218,7 @@ RSpec.describe WebhooksController, type: :request do
     end
 
     before do
-      allow(PaymentProviders::CashfreeService).to receive(:new)
-        .and_return(cashfree_service)
-      allow(cashfree_service).to receive(:handle_incoming_webhook)
+      allow(PaymentProviders::Cashfree::HandleIncomingWebhookService).to receive(:call)
         .with(
           organization_id: organization.id,
           code: nil,
@@ -246,8 +242,7 @@ RSpec.describe WebhooksController, type: :request do
 
       expect(response).to have_http_status(:success)
 
-      expect(PaymentProviders::CashfreeService).to have_received(:new)
-      expect(cashfree_service).to have_received(:handle_incoming_webhook)
+      expect(PaymentProviders::Cashfree::HandleIncomingWebhookService).to have_received(:call)
     end
 
     context "when failing to handle cashfree event" do
@@ -268,8 +263,7 @@ RSpec.describe WebhooksController, type: :request do
 
         expect(response).to have_http_status(:bad_request)
 
-        expect(PaymentProviders::CashfreeService).to have_received(:new)
-        expect(cashfree_service).to have_received(:handle_incoming_webhook)
+        expect(PaymentProviders::Cashfree::HandleIncomingWebhookService).to have_received(:call)
       end
     end
   end
