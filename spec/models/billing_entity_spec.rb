@@ -19,8 +19,6 @@ RSpec.describe BillingEntity, type: :model do
   it { is_expected.to have_many(:wallet_transactions).through(:wallets) }
   it { is_expected.to have_many(:credit_notes).through(:invoices) }
 
-  it { is_expected.to have_one(:applied_dunning_campaign).class_name("DunningCampaign") }
-
   describe "is_default validation" do
     let(:organization) { create :organization }
 
