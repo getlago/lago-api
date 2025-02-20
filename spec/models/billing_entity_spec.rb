@@ -18,8 +18,7 @@ RSpec.describe BillingEntity, type: :model do
   it { is_expected.to have_many(:wallets).through(:customers) }
   it { is_expected.to have_many(:wallet_transactions).through(:wallets) }
   it { is_expected.to have_many(:credit_notes).through(:invoices) }
-
-  it { is_expected.to have_one(:applied_dunning_campaign).class_name("DunningCampaign") }
+  it { is_expected.to belong_to(:applied_dunning_campaign).class_name("DunningCampaign").optional }
 
   it { is_expected.to have_many(:applied_taxes).dependent(:destroy) }
   it { is_expected.to have_many(:taxes).through(:applied_taxes) }
