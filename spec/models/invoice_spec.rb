@@ -21,6 +21,8 @@ RSpec.describe Invoice, type: :model do
   it { is_expected.to have_many(:applied_usage_thresholds) }
   it { is_expected.to have_many(:usage_thresholds).through(:applied_usage_thresholds) }
 
+  it { is_expected.to belong_to(:billing_entity).optional }
+
   it "has fixed status mapping" do
     expect(described_class::VISIBLE_STATUS).to match(draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7)
     expect(described_class::INVISIBLE_STATUS).to match(generating: 3, open: 5, closed: 6)
