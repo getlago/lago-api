@@ -5,16 +5,32 @@ class AddUniqueIndexToProviderPaymentId < ActiveRecord::Migration[7.1]
 
   def up
     safety_assured do
+      duplicates = Payment
+        .select(:payment_provider_id, :provider_payment_id)
+        .where.not(provider_payment_id: nil)
+        .group(:payment_provider_id, :provider_payment_id)
+        .having("COUNT(*) > 1")
+        .pluck(:payment_provider_id, :provider_payment_id)
+
+      duplicates.each do |duplicate|
+        payments = Payment.where(
+          payment_provider_id: duplicate.first,
+          provider_payment_id: duplicate.last
+        )
+        payments_with_refund = payments.where.associated(:refunds).pluck(:id)
+
+        if payments_with_refund.count > 0
+          payments.where.not(id: payments_with_refund).delete_all
+        else
+          id = payments.order(created_at: :asc).first.id
+          payments.where.not(id:).delete_all
+        end
+      end
+
       execute <<-SQL
         UPDATE invoices i
         SET total_paid_amount_cents = total_amount_cents
         WHERE total_paid_amount_cents > total_amount_cents;
-
-        DELETE FROM payments p1
-        USING payments p2
-        WHERE p1.payment_provider_id = p2.payment_provider_id
-        AND p1.provider_payment_id = p2.provider_payment_id
-        AND p1.created_at > p2.created_at;
       SQL
 
       add_index :payments,
