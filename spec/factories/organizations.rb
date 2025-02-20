@@ -19,7 +19,7 @@ FactoryBot.define do
         organization.webhook_endpoints.create!(webhook_url: evaluator.webhook_url)
       end
       if organization.billing_entities.where(is_default: true).blank?
-        create(:billing_entity, :default, organization: )
+        create(:billing_entity, :default, organization:)
       end
     end
 

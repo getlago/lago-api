@@ -31,6 +31,7 @@ class BillingEntity < ApplicationRecord
   has_many :wallet_transactions, through: :wallets
   has_many :credit_notes, through: :invoices
 
+  has_one :applied_dunning_campaign, class_name: "DunningCampaign"
   has_many :applied_taxes, class_name: "BillingEntity::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
