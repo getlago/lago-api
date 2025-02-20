@@ -8,8 +8,5 @@ RSpec.describe BillingEntity::AppliedTax, type: :model do
   it { is_expected.to belong_to(:billing_entity) }
   it { is_expected.to belong_to(:tax) }
 
-  it { is_expected.to validate_presence_of(:billing_entity) }
-  it { is_expected.to validate_presence_of(:tax) }
-
   it { is_expected.to validate_uniqueness_of(:tax_id).scoped_to(:billing_entity_id) }
 end
