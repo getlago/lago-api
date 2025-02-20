@@ -7,7 +7,7 @@ module Types
 
       field :account_id, String, null: true
       field :client_id, String, null: true
-      field :client_secret, String, null: true
+      field :client_secret, ObfuscatedStringType, null: true
       field :code, String, null: false
       field :connection_id, ID, null: false
       field :has_mappings_configured, Boolean
@@ -18,19 +18,7 @@ module Types
       field :sync_invoices, Boolean
       field :sync_payments, Boolean
       field :token_id, String, null: true
-      field :token_secret, String, null: true
-
-      # NOTE: Client secret is a sensitive information. It should not be sent back to the
-      #       front end application. Instead we send an obfuscated value
-      def client_secret
-        "#{"•" * 8}…#{object.client_secret[-3..]}"
-      end
-
-      def token_secret
-        return nil unless object.token_secret
-
-        "#{"•" * 8}…#{object.token_secret[-3..]}"
-      end
+      field :token_secret, ObfuscatedStringType, null: true
 
       def has_mappings_configured
         object.integration_collection_mappings
