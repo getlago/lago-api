@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class FixInvoicesWithIncorrectTotalPaidAmount < ActiveRecord::Migration[7.1]
+  disable_ddl_transaction!
   def up
     safety_assured do
       execute <<~SQL
