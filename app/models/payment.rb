@@ -11,6 +11,7 @@ class Payment < ApplicationRecord
 
   has_many :refunds
   has_many :integration_resources, as: :syncable
+  has_one :payment_receipt, dependent: :destroy
 
   PAYMENT_TYPES = {provider: "provider", manual: "manual"}.freeze
   attribute :payment_type, :string
