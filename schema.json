@@ -802,7 +802,7 @@
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "String",
+                "name": "ObfuscatedString",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -830,7 +830,7 @@
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "String",
+                "name": "ObfuscatedString",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -1277,7 +1277,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "SCALAR",
-                  "name": "String",
+                  "name": "ObfuscatedString",
                   "ofType": null
                 }
               },
@@ -27702,7 +27702,7 @@
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "String",
+                "name": "ObfuscatedString",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -27854,7 +27854,7 @@
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "String",
+                "name": "ObfuscatedString",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -27862,6 +27862,16 @@
               "args": []
             }
           ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "SCALAR",
+          "name": "ObfuscatedString",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
           "inputFields": null,
           "enumValues": null
         },
@@ -28011,7 +28021,7 @@
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "String",
+                "name": "ObfuscatedString",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -37116,7 +37126,7 @@
               "description": null,
               "type": {
                 "kind": "SCALAR",
-                "name": "String",
+                "name": "ObfuscatedString",
                 "ofType": null
               },
               "isDeprecated": false,

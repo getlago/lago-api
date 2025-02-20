@@ -121,9 +121,9 @@ enum AdjustedFeeTypeEnum {
 }
 
 type AdyenProvider {
-  apiKey: String
+  apiKey: ObfuscatedString
   code: String!
-  hmacKey: String
+  hmacKey: ObfuscatedString
   id: ID!
   livePrefix: String
   merchantAccount: String
@@ -183,7 +183,7 @@ type AnrokFeeObjectCollection {
 }
 
 type AnrokIntegration {
-  apiKey: String!
+  apiKey: ObfuscatedString!
   code: String!
   externalAccountId: String
   failedInvoicesCount: Int
@@ -6142,7 +6142,7 @@ type NetsuiteCustomer {
 type NetsuiteIntegration {
   accountId: String
   clientId: String
-  clientSecret: String
+  clientSecret: ObfuscatedString
   code: String!
   connectionId: ID!
   hasMappingsConfigured: Boolean
@@ -6153,8 +6153,10 @@ type NetsuiteIntegration {
   syncInvoices: Boolean
   syncPayments: Boolean
   tokenId: String
-  tokenSecret: String
+  tokenSecret: ObfuscatedString
 }
+
+scalar ObfuscatedString
 
 """
 Accept Invite with Okta Oauth input arguments
@@ -6183,7 +6185,7 @@ input OktaAuthorizeInput {
 
 type OktaIntegration {
   clientId: String
-  clientSecret: String
+  clientSecret: ObfuscatedString
   code: String!
   domain: String!
   id: ID!
@@ -7417,7 +7419,7 @@ type StripeProvider {
   code: String!
   id: ID!
   name: String!
-  secretKey: String
+  secretKey: ObfuscatedString
   successRedirectUrl: String
 }
 

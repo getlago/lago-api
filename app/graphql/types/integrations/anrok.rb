@@ -5,19 +5,13 @@ module Types
     class Anrok < Types::BaseObject
       graphql_name "AnrokIntegration"
 
-      field :api_key, String, null: false
+      field :api_key, ObfuscatedStringType, null: false
       field :code, String, null: false
       field :external_account_id, String, null: true
       field :failed_invoices_count, Integer, null: true
       field :has_mappings_configured, Boolean
       field :id, ID, null: false
       field :name, String, null: false
-
-      # NOTE: Client secret is a sensitive information. It should not be sent back to the
-      #       front end application. Instead we send an obfuscated value
-      def api_key
-        "#{"•" * 8}…#{object.api_key[-3..]}"
-      end
 
       def has_mappings_configured
         object.integration_collection_mappings.where(type: "IntegrationCollectionMappings::AnrokCollectionMapping").any?
