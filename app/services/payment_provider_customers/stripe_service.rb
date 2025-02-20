@@ -84,7 +84,7 @@ module PaymentProviderCustomers
       result
     rescue ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
       deliver_error_webhook(e)
-      result
+      fail! e
     rescue ::Stripe::AuthenticationError => e
       deliver_error_webhook(e)
 
@@ -201,6 +201,21 @@ module PaymentProviderCustomers
           error_code: stripe_error.code
         }
       )
+    end
+
+    def fail!(stripe_error)
+      result.fail_with_error!(PaymentProviderFailure.new(
+        result,
+        message: stripe_error.message,
+        status: stripe_error.http_status,
+        payment_provider: stripe_payment_provider.name,
+        payment_provider_code: stripe_payment_provider.code,
+        details: {
+          request_id: stripe_error.request_id,
+          code: stripe_error.code,
+          error: stripe_error.error
+        }
+      ))
     end
 
     def handle_missing_customer(organization_id, metadata)
