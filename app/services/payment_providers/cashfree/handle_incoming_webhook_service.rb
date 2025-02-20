@@ -3,6 +3,7 @@
 module PaymentProviders
   module Cashfree
     class HandleIncomingWebhookService < BaseService
+      Result = BaseResult[:event]
       def initialize(organization_id:, body:, timestamp:, signature:, code: nil)
         @organization_id = organization_id
         @body = body
