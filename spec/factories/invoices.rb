@@ -12,6 +12,10 @@ FactoryBot.define do
 
     organization_sequential_id { rand(1_000_000) }
 
+    after :build do |invoice, values|
+      invoice.billing_entity = values.organization.default_billing_entity unless invoice.billing_entity
+    end
+
     trait :draft do
       status { :draft }
     end

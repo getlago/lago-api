@@ -9,13 +9,23 @@ RSpec.describe BillingEntity, type: :model do
 
   it { is_expected.to belong_to(:organization) }
 
+  it { is_expected.to have_many(:customers) }
+  it { is_expected.to have_many(:invoices) }
+  it { is_expected.to have_many(:invoice_custom_section_selections) }
+  it { is_expected.to have_many(:selected_invoice_custom_sections).through(:invoice_custom_section_selections) }
+  it { is_expected.to have_many(:fees) }
+  it { is_expected.to have_many(:subscriptions).through(:customers) }
+  it { is_expected.to have_many(:wallets).through(:customers) }
+  it { is_expected.to have_many(:wallet_transactions).through(:wallets) }
+  it { is_expected.to have_many(:credit_notes).through(:invoices) }
+
   describe "is_default validation" do
     let(:organization) { create :organization }
 
     it "validates uniqueness of organization_id for is_default excluding deleted and archived records" do
-      deleted_record = create(:billing_entity, :default, :deleted, organization:)
+      # by default an organization is built with a default billing entity
+      expect(organization.default_billing_entity.discard!).to be true
       archived_record = create(:billing_entity, :default, :archived, organization:)
-      expect(deleted_record).to be_valid
       expect(archived_record).to be_valid
 
       record_1 = create(:billing_entity, :default, organization:)
