@@ -9,6 +9,9 @@ RSpec.describe BillingEntity, type: :model do
 
   it { is_expected.to belong_to(:organization) }
 
+  it { is_expected.to have_many(:applied_taxes).dependent(:destroy) }
+  it { is_expected.to have_many(:taxes).through(:applied_taxes) }
+
   describe "is_default validation" do
     let(:organization) { create :organization }
 

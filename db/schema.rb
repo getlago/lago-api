@@ -244,6 +244,16 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_20_085848) do
     t.index ["organization_id"], name: "unique_default_billing_entity_per_organization", unique: true, where: "((is_default = true) AND (archived_at IS NULL) AND (deleted_at IS NULL))"
   end
 
+  create_table "billing_entities_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "billing_entity_id", null: false
+    t.uuid "tax_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["billing_entity_id", "tax_id"], name: "index_billing_entities_taxes_on_billing_entity_id_and_tax_id", unique: true
+    t.index ["billing_entity_id"], name: "index_billing_entities_taxes_on_billing_entity_id"
+    t.index ["tax_id"], name: "index_billing_entities_taxes_on_tax_id"
+  end
+
   create_table "cached_aggregations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "organization_id", null: false
     t.uuid "event_id"
@@ -1432,6 +1442,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_20_085848) do
   add_foreign_key "billable_metric_filters", "billable_metrics"
   add_foreign_key "billable_metrics", "organizations"
   add_foreign_key "billing_entities", "organizations"
+  add_foreign_key "billing_entities_taxes", "billing_entities"
+  add_foreign_key "billing_entities_taxes", "taxes"
   add_foreign_key "cached_aggregations", "groups"
   add_foreign_key "charge_filter_values", "billable_metric_filters"
   add_foreign_key "charge_filter_values", "charge_filters"

@@ -20,6 +20,9 @@ class BillingEntity < ApplicationRecord
 
   belongs_to :organization
 
+  has_many :applied_taxes, class_name: "BillingEntity::AppliedTax", dependent: :destroy
+  has_many :taxes, through: :applied_taxes
+
   enum :document_numbering, DOCUMENT_NUMBERINGS
 
   default_scope -> { kept }

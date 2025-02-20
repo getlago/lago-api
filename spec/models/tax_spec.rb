@@ -7,6 +7,11 @@ RSpec.describe Tax, type: :model do
 
   let(:applied_to_organization) { false }
 
+  it { is_expected.to belong_to(:organization) }
+
+  it { is_expected.to have_many(:billing_entities_taxes).dependent(:destroy) }
+  it { is_expected.to have_many(:billing_entities).through(:billing_entities_taxes) }
+
   it_behaves_like "paper_trail traceable"
 
   describe "customers_count" do

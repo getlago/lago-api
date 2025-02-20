@@ -8,6 +8,8 @@ class Tax < ApplicationRecord
   has_many :applied_taxes, class_name: "Customer::AppliedTax", dependent: :destroy
   has_many :customers, through: :applied_taxes
 
+  has_many :billing_entities_taxes, class_name: "BillingEntity::AppliedTax", dependent: :destroy
+  has_many :billing_entities, through: :billing_entities_taxes
   has_many :fees_taxes, class_name: "Fee::AppliedTax", dependent: :destroy
   has_many :fees, through: :fees_taxes
   has_many :invoices_taxes, class_name: "Invoice::AppliedTax", dependent: :destroy
