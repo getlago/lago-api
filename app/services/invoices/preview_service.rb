@@ -9,7 +9,7 @@ module Invoices
       @subscriptions = subscriptions
       @applied_coupons = applied_coupons
       @first_subscription = subscriptions.first
-      @persisted_subscriptions = subscriptions.size > 1 || first_subscription&.persisted?
+      @persisted_subscriptions = subscriptions.any?(&:persisted?)
 
       super
     end
@@ -79,15 +79,11 @@ module Invoices
     end
 
     def end_of_periods
-      return @end_of_periods if defined? @end_of_periods
-
-      end_of_periods = []
-      subscriptions.each do |s|
-        date_service = Subscriptions::DatesService.new_instance(s, Time.current, current_usage: true)
-        end_of_periods << date_service.end_of_period
+      @end_of_periods ||= subscriptions.map do |subscription|
+        Subscriptions::DatesService
+          .new_instance(subscription, Time.current, current_usage: true)
+          .end_of_period
       end
-
-      @end_of_periods = end_of_periods
     end
 
     def boundaries(subscription)
