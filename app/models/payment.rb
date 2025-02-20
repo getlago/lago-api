@@ -103,12 +103,13 @@ end
 #
 # Indexes
 #
-#  index_payments_on_invoice_id                    (invoice_id)
-#  index_payments_on_payable_id_and_payable_type   (payable_id,payable_type) UNIQUE WHERE ((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))
-#  index_payments_on_payable_type_and_payable_id   (payable_type,payable_id)
-#  index_payments_on_payment_provider_customer_id  (payment_provider_customer_id)
-#  index_payments_on_payment_provider_id           (payment_provider_id)
-#  index_payments_on_payment_type                  (payment_type)
+#  index_payments_on_invoice_id                                   (invoice_id)
+#  index_payments_on_payable_id_and_payable_type                  (payable_id,payable_type) UNIQUE WHERE ((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))
+#  index_payments_on_payable_type_and_payable_id                  (payable_type,payable_id)
+#  index_payments_on_payment_provider_customer_id                 (payment_provider_customer_id)
+#  index_payments_on_payment_provider_id                          (payment_provider_id)
+#  index_payments_on_payment_type                                 (payment_type)
+#  index_payments_on_provider_payment_id_and_payment_provider_id  (provider_payment_id,payment_provider_id) UNIQUE WHERE (provider_payment_id IS NOT NULL)
 #
 # Foreign Keys
 #

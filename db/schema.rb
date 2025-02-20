@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_02_19_124948) do
+ActiveRecord::Schema[7.1].define(version: 2025_02_20_085848) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1171,6 +1171,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_19_124948) do
     t.index ["payment_provider_customer_id"], name: "index_payments_on_payment_provider_customer_id"
     t.index ["payment_provider_id"], name: "index_payments_on_payment_provider_id"
     t.index ["payment_type"], name: "index_payments_on_payment_type"
+    t.index ["provider_payment_id", "payment_provider_id"], name: "index_payments_on_provider_payment_id_and_payment_provider_id", unique: true, where: "(provider_payment_id IS NOT NULL)"
   end
 
   create_table "plans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
