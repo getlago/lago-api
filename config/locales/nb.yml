@@ -52,6 +52,7 @@ nb:
     - :month
     - :day
   money:
+    custom_format: "%{iso_code} %n"
     decimal_mark: ","
     format: "%u%n"
     thousands_separator: " "

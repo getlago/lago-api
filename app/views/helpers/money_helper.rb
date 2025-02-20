@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 class MoneyHelper
+  SYMBOLS_CURRENCIES = %w[$ € £ ¥].freeze
+
   def self.format(money)
     money&.format(
-      format: I18n.t("money.format"),
+      format: currency_format(money&.currency),
       decimal_mark: I18n.t("money.decimal_mark"),
       thousands_separator: I18n.t("money.thousands_separator")
     )
@@ -16,10 +18,19 @@ class MoneyHelper
       amount_cents.round(6)
     end
 
-    Utils::MoneyWithPrecision.from_amount(amount_cents, currency).format(
-      format: I18n.t("money.format"),
+    money = Utils::MoneyWithPrecision.from_amount(amount_cents, currency)
+    money.format(
+      format: currency_format(money.currency),
       decimal_mark: I18n.t("money.decimal_mark"),
       thousands_separator: I18n.t("money.thousands_separator")
     )
+  end
+
+  def self.currency_format(money_currency)
+    if SYMBOLS_CURRENCIES.include?(money_currency&.symbol)
+      I18n.t("money.format")
+    else
+      I18n.t("money.custom_format", iso_code: money_currency&.iso_code)
+    end
   end
 end
