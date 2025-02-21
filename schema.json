@@ -20697,6 +20697,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "preview",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -31186,6 +31192,12 @@
             },
             {
               "name": "from_email",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "preview",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

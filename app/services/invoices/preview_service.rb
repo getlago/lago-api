@@ -2,10 +2,14 @@
 
 module Invoices
   class PreviewService < BaseService
-    def initialize(customer:, subscription:, applied_coupons: [])
+    Result = BaseResult[:subscriptions, :invoice, :fees_taxes]
+
+    def initialize(customer:, subscriptions:, applied_coupons: [])
       @customer = customer
-      @subscription = subscription
+      @subscriptions = subscriptions
       @applied_coupons = applied_coupons
+      @first_subscription = subscriptions.first
+      @persisted_subscriptions = subscriptions.any?(&:persisted?)
 
       super
     end
@@ -13,13 +17,16 @@ module Invoices
     def call
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "customer") unless customer
-      return result.not_found_failure!(resource: "subscription") unless subscription
+      return result.not_found_failure!(resource: "subscription") if subscriptions.empty?
+      return result.not_allowed_failure!(code: "premium_integration_missing") if persisted_subscriptions && !organization.preview_enabled?
+      return result unless currencies_aligned?
+      return result unless billing_times_aligned?
 
       @invoice = Invoice.new(
-        organization: customer.organization,
+        organization:,
         customer:,
         invoice_type: :subscription,
-        currency: subscription.plan&.amount_currency,
+        currency: first_subscription.plan.amount_currency,
         timezone: customer.applicable_timezone,
         issuing_date:,
         payment_due_date:,
@@ -28,21 +35,60 @@ module Invoices
         updated_at: Time.current
       )
       invoice.credits = []
-      invoice.subscriptions = [subscription]
+      invoice.subscriptions = subscriptions
 
-      add_subscription_fee
+      add_subscription_fees
+      add_charge_fees
       compute_tax_and_totals
 
       result.invoice = invoice
-      result.subscription = subscription
+      result.subscriptions = subscriptions
       result
     end
 
     private
 
-    attr_accessor :customer, :subscription, :invoice, :applied_coupons
+    attr_accessor :customer, :subscriptions, :invoice, :applied_coupons, :first_subscription, :persisted_subscriptions
+    delegate :organization, to: :customer
 
-    def boundaries
+    def currencies_aligned?
+      subscription_currencies = subscriptions.filter_map { |s| s.plan&.amount_currency }
+
+      if subscription_currencies.uniq.count > 1
+        result.single_validation_failure!(error_code: "subscription_currencies_does_not_match")
+        return false
+      end
+
+      if customer.currency && customer.currency != subscription_currencies.first
+        result.single_validation_failure!(error_code: "customer_currency_does_not_match")
+        return false
+      end
+
+      true
+    end
+
+    def billing_times_aligned?
+      return true if subscriptions.size == 1
+
+      if end_of_periods.map { |e| e.to_date.to_s }.uniq.count > 1
+        result.single_validation_failure!(error_code: "billing_periods_does_not_match")
+        return false
+      end
+
+      true
+    end
+
+    def end_of_periods
+      @end_of_periods ||= subscriptions.map do |subscription|
+        Subscriptions::DatesService
+          .new_instance(subscription, Time.current, current_usage: true)
+          .end_of_period
+      end
+    end
+
+    def boundaries(subscription)
+      date_service = Subscriptions::DatesService.new_instance(subscription, billing_time)
+
       {
         from_datetime: date_service.from_datetime,
         to_datetime: date_service.to_datetime,
@@ -52,17 +98,17 @@ module Invoices
       }
     end
 
-    def date_service
-      Subscriptions::DatesService.new_instance(subscription, billing_time)
-    end
-
     def billing_time
       return @billing_time if defined? @billing_time
-      return subscription.subscription_at if subscription.plan.pay_in_advance?
 
-      ds = Subscriptions::DatesService.new_instance(subscription, subscription.subscription_at, current_usage: true)
-
-      @billing_time = ds.end_of_period + 1.day
+      @billing_time = if persisted_subscriptions
+        end_of_periods.first + 1.day
+      elsif first_subscription.plan.pay_in_advance?
+        first_subscription.subscription_at
+      else
+        ds = Subscriptions::DatesService.new_instance(first_subscription, first_subscription.subscription_at, current_usage: true)
+        ds.end_of_period + 1.day
+      end
     end
 
     def issuing_date
@@ -73,16 +119,48 @@ module Invoices
       (issuing_date + customer.applicable_net_payment_term.days).to_date
     end
 
-    def add_subscription_fee
-      invoice.fees =
-        [
-          Fees::SubscriptionService.call(
-            invoice:,
-            subscription:,
-            boundaries:,
-            context: :preview
-          ).raise_if_error!.fee
-        ]
+    def add_subscription_fees
+      invoice.fees = subscriptions.map do |subscription|
+        Fees::SubscriptionService.call!(
+          invoice:,
+          subscription:,
+          boundaries: boundaries(subscription),
+          context: :preview
+        ).fee
+      end
+    end
+
+    def add_charge_fees
+      return unless persisted_subscriptions
+
+      subscriptions.map do |subscription|
+        boundaries = boundaries(subscription)
+
+        query = subscription.plan.charges.joins(:billable_metric)
+          .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
+          .where(invoiceable: true)
+          .where
+          .not(pay_in_advance: true, billable_metric: {recurring: false})
+
+        context = OpenTelemetry::Context.current
+
+        invoice.fees << Parallel.flat_map(query.all, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
+          OpenTelemetry::Context.with_current(context) do
+            ActiveRecord::Base.connection_pool.with_connection do
+              cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
+                subscription:,
+                charge:,
+                to_datetime: boundaries[:charges_to_datetime],
+                cache: !organization.clickhouse_events_store?
+              )
+
+              Fees::ChargeService
+                .call!(invoice:, charge:, subscription:, boundaries:, context: :invoice_preview, cache_middleware:)
+                .fees
+            end
+          end
+        end
+      end
     end
 
     def compute_tax_and_totals
@@ -178,7 +256,7 @@ module Invoices
     end
 
     def provider_taxation?
-      customer.integration_customers&.find { |ic| ic.type == "IntegrationCustomers::AnrokCustomer" }
+      customer.integration_customers.find { |ic| ic.type == "IntegrationCustomers::AnrokCustomer" }
     end
   end
 end

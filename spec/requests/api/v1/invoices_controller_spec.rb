@@ -1025,6 +1025,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       }
     end
 
+    before { organization.update!(premium_integrations: ["preview"]) }
+
     around { |test| lago_premium!(&test) }
 
     it "creates a preview invoice" do
@@ -1038,6 +1040,85 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         total_amount_cents: 120,
         currency: "EUR"
       )
+    end
+
+    context "when subscriptions are persisted" do
+      let(:customer) { create(:customer, organization:, external_id: "123456789") }
+      let(:subscription1) { create(:subscription, customer:, billing_time: "anniversary", subscription_at: Time.current) }
+      let(:subscription2) { create(:subscription, customer:, billing_time: "anniversary", subscription_at: Time.current) }
+      let(:preview_params) do
+        {
+          customer: {
+            external_id: "123456789"
+          },
+          subscriptions: {
+            external_ids: [subscription1.external_id, subscription2.external_id]
+          }
+        }
+      end
+
+      it "creates a preview invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice]).to include(
+          invoice_type: "subscription",
+          fees_amount_cents: 200,
+          taxes_amount_cents: 40,
+          total_amount_cents: 240,
+          currency: "EUR"
+        )
+      end
+    end
+
+    context "when subscriptions are persisted but only one belongs to the customer" do
+      let(:customer) { create(:customer, organization:, external_id: "123456789") }
+      let(:subscription1) { create(:subscription, billing_time: "anniversary", subscription_at: Time.current) }
+      let(:subscription2) { create(:subscription, customer:, billing_time: "anniversary", subscription_at: Time.current) }
+      let(:preview_params) do
+        {
+          customer: {
+            external_id: "123456789"
+          },
+          subscriptions: {
+            external_ids: [subscription1.external_id, subscription2.external_id]
+          }
+        }
+      end
+
+      it "creates a preview invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice]).to include(
+          invoice_type: "subscription",
+          fees_amount_cents: 100,
+          taxes_amount_cents: 20,
+          total_amount_cents: 120,
+          currency: "EUR"
+        )
+      end
+    end
+
+    context "when subscriptions do not belong to the customer" do
+      let(:customer) { create(:customer, organization:, external_id: "123456789") }
+      let(:subscription1) { create(:subscription, billing_time: "anniversary", subscription_at: Time.current) }
+      let(:subscription2) { create(:subscription, billing_time: "anniversary", subscription_at: Time.current) }
+      let(:preview_params) do
+        {
+          customer: {
+            external_id: "123456789"
+          },
+          subscriptions: {
+            external_ids: [subscription1.external_id, subscription2.external_id]
+          }
+        }
+      end
+
+      it "returns a not found error" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
     end
 
     context "when customer does not exist" do
