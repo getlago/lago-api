@@ -139,10 +139,25 @@ module PaymentProviders
             payment_method_options: {
               customer_balance: {
                 funding_type: "bank_transfer",
-                bank_transfer: {type: "us_bank_transfer"}
+                bank_transfer: {type: bank_transfer_type}
               }
             }
           }
+        end
+
+        def bank_transfer_type
+          case payment.amount_currency.downcase
+          when "usd" then "us_bank_transfer"
+          when "gbp" then "gb_bank_transfer"
+          when "eur" then "eu_bank_transfer"
+          when "jpy" then "jp_bank_transfer"
+          when "mxn" then "mx_bank_transfer"
+          else
+            result.service_failure!(
+              code: "stripe_error",
+              message: "customer_balance is not supported for currency: #{payment.amount_currency}"
+            )
+          end
         end
 
         def success_redirect_url
