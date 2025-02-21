@@ -239,7 +239,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
       end
     end
 
-    context 'when subscriptions are fetched from the database' do
+    context "when subscriptions are fetched from the database" do
       let(:subscription1) { create(:subscription, customer:) }
       let(:subscription2) { create(:subscription, customer:) }
       let(:params) do

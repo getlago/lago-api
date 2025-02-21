@@ -1025,7 +1025,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       }
     end
 
-    before { organization.update!(premium_integrations: ['preview']) }
+    before { organization.update!(premium_integrations: ["preview"]) }
 
     around { |test| lago_premium!(&test) }
 
@@ -1072,7 +1072,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context "when subscriptions are persisted but only one belongs to the customer" do
-      let(:customer) { create(:customer, organization:, external_id: '123456789') }
+      let(:customer) { create(:customer, organization:, external_id: "123456789") }
       let(:subscription1) { create(:subscription, billing_time: "anniversary", subscription_at: Time.current) }
       let(:subscription2) { create(:subscription, customer:, billing_time: "anniversary", subscription_at: Time.current) }
       let(:preview_params) do
@@ -1095,13 +1095,13 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           fees_amount_cents: 100,
           taxes_amount_cents: 20,
           total_amount_cents: 120,
-          currency: 'EUR'
+          currency: "EUR"
         )
       end
     end
 
     context "when subscriptions do not belong to the customer" do
-      let(:customer) { create(:customer, organization:, external_id: '123456789') }
+      let(:customer) { create(:customer, organization:, external_id: "123456789") }
       let(:subscription1) { create(:subscription, billing_time: "anniversary", subscription_at: Time.current) }
       let(:subscription2) { create(:subscription, billing_time: "anniversary", subscription_at: Time.current) }
       let(:preview_params) do
