@@ -116,6 +116,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
       before do
         allow(lago_client).to receive(:post_with_response).with(array_including(params), headers).and_return(response)
         allow(response).to receive(:body).and_return(body)
+        allow(lago_client).to receive(:uri).and_return(endpoint)
       end
 
       context "when taxes are successfully fetched for finalized invoice" do
@@ -179,6 +180,17 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
           service_call
 
           expect(integration_customer.reload.external_customer_id).to eq(nil)
+        end
+
+        context "when the body contains a bad gateway error" do
+          let(:body) do
+            path = Rails.root.join("spec/fixtures/integration_aggregator/bad_gateway_error.html")
+            File.read(path)
+          end
+
+          it "raises an HTTP error" do
+            expect { service_call }.to raise_error(LagoHttpClient::HttpError)
+          end
         end
       end
     end

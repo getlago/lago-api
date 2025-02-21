@@ -6,6 +6,8 @@ module LagoHttpClient
   class Client
     RESPONSE_SUCCESS_CODES = [200, 201, 202, 204].freeze
 
+    attr_reader :uri
+
     def initialize(url, read_timeout: nil)
       @uri = URI(url)
       @http_client = Net::HTTP.new(uri.host, uri.port)
@@ -109,7 +111,7 @@ module LagoHttpClient
 
     private
 
-    attr_reader :uri, :http_client
+    attr_reader :http_client
 
     def raise_error(response)
       raise(::LagoHttpClient::HttpError.new(response.code, response.body, uri))
