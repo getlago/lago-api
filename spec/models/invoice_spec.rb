@@ -17,6 +17,7 @@ RSpec.describe Invoice, type: :model do
   it { is_expected.to have_many(:applied_payment_requests).class_name("PaymentRequest::AppliedInvoice") }
   it { is_expected.to have_many(:payment_requests).through(:applied_payment_requests) }
   it { is_expected.to have_many(:payments) }
+  it { is_expected.to have_many(:payment_receipts).through(:payments) }
 
   it { is_expected.to have_many(:applied_usage_thresholds) }
   it { is_expected.to have_many(:usage_thresholds).through(:applied_usage_thresholds) }

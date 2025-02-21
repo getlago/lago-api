@@ -3999,6 +3999,11 @@ enum EmailSettingsEnum {
   invoice.finalized
   """
   invoice_finalized
+
+  """
+  payment_receipt.created
+  """
+  payment_receipt_created
 }
 
 enum ErrorCodesEnum {
@@ -4464,6 +4469,7 @@ enum IntegrationTypeEnum {
   auto_dunning
   from_email
   hubspot
+  issue_receipts
   manual_payments
   multi_entities_enterprise
   multi_entities_pro
@@ -6523,6 +6529,7 @@ enum PremiumIntegrationTypeEnum {
   auto_dunning
   from_email
   hubspot
+  issue_receipts
   manual_payments
   multi_entities_enterprise
   multi_entities_pro
