@@ -2,11 +2,12 @@
 
 module PaymentProviderCustomers
   class StripeCustomer < BaseCustomer
-    PAYMENT_METHODS = %w[card sepa_debit us_bank_account bacs_debit link boleto crypto].freeze
+    PAYMENT_METHODS = %w[card sepa_debit us_bank_account bacs_debit link boleto crypto customer_balance].freeze
 
     validates :provider_payment_methods, presence: true
     validate :allowed_provider_payment_methods
     validate :link_payment_method_can_exist_only_with_card
+    validate :customer_balance_must_be_exclusive
 
     settings_accessors :payment_method_id
 
@@ -30,6 +31,13 @@ module PaymentProviderCustomers
       return if provider_payment_methods.exclude?("link") || provider_payment_methods.include?("card")
 
       errors.add(:provider_payment_methods, :invalid)
+    end
+
+    def customer_balance_must_be_exclusive
+      return unless provider_payment_methods.include?("customer_balance")
+      return if provider_payment_methods == ["customer_balance"]
+
+      errors.add(:provider_payment_methods, "customer_balance cannot be combined with other payment methods")
     end
   end
 end
