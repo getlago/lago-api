@@ -13,11 +13,6 @@ class BillingEntity < ApplicationRecord
     "credit_note.created"
   ]
 
-  DOCUMENT_NUMBERINGS = {
-    per_customer: "per_customer",
-    per_billing_entity: "per_billing_entity"
-  }
-
   belongs_to :organization
 
   has_many :applied_taxes, class_name: "BillingEntity::AppliedTax", dependent: :destroy
@@ -35,6 +30,13 @@ class BillingEntity < ApplicationRecord
 
   belongs_to :applied_dunning_campaign, class_name: "DunningCampaign", optional: true
 
+  has_one_attached :logo
+
+  DOCUMENT_NUMBERINGS = {
+    per_customer: "per_customer",
+    per_billing_entity: "per_billing_entity"
+  }.freeze
+
   enum :document_numbering, DOCUMENT_NUMBERINGS
 
   default_scope -> { kept }
@@ -44,6 +46,37 @@ class BillingEntity < ApplicationRecord
       conditions: -> { where(is_default: true, archived_at: nil, deleted_at: nil) },
       scope: :organization_id
     }
+  validates :country, country_code: true, unless: -> { country.nil? }
+  validates :default_currency, inclusion: {in: currency_list}
+  validates :document_locale, language_code: true
+  validates :email, email: true, if: :email?
+  validates :invoice_footer, length: {maximum: 600}
+  validates :document_number_prefix, length: {minimum: 1, maximum: 10}, on: :update
+  validates :document_number_prefix, uniqueness: {scope: :organization_id}, allow_nil: true, on: :update
+  validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
+  validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
+  validates :logo,
+            image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},
+            if: :logo?
+  validates :name, presence: true
+  validates :timezone, timezone: true
+  validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
+
+  validate :validate_email_settings
+
+  after_create :generate_document_number_prefix
+
+  private
+
+  def generate_document_number_prefix
+    update!(document_number_prefix: "#{name.first(3).upcase}-#{id.last(4).upcase}") if document_number_prefix.nil?
+  end
+
+  def validate_email_settings
+    return if email_settings.all? { |v| EMAIL_SETTINGS.include?(v) }
+
+    errors.add(:email_settings, :unsupported_value)
+  end
 end
 
 # == Schema Information
