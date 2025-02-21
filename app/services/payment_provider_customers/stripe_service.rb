@@ -84,7 +84,7 @@ module PaymentProviderCustomers
       result
     rescue ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
       deliver_error_webhook(e)
-      result
+      result.third_party_failure!(third_party: "Stripe", error_message: e.message)
     rescue ::Stripe::AuthenticationError => e
       deliver_error_webhook(e)
 
