@@ -106,6 +106,24 @@ RSpec.describe PaymentProviderCustomers::StripeCustomer, type: :model do
             expect(errors.where(:provider_payment_methods, :invalid)).not_to be_present
           end
         end
+
+        context "when provider_payment_methods contains 'customer_balance'" do
+          context "with other payment methods" do
+            let(:provider_payment_methods) { %w[customer_balance card] }
+
+            it "adds an error" do
+              expect(errors[:provider_payment_methods]).to include("customer_balance cannot be combined with other payment methods")
+            end
+          end
+
+          context "without other methods" do
+            let(:provider_payment_methods) { %w[customer_balance] }
+
+            it "does not add an error" do
+              expect(errors[:provider_payment_methods]).to be_empty
+            end
+          end
+        end
       end
     end
   end
