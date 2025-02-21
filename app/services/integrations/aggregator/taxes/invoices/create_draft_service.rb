@@ -16,13 +16,14 @@ module Integrations
             throttle!(:anrok)
 
             response = http_client.post_with_response(payload, headers)
-            body = JSON.parse(response.body)
+            body = parse_response(response)
 
             process_response(body)
 
             result
           rescue LagoHttpClient::HttpError => e
             raise RequestLimitError(e) if request_limit_error?(e)
+            raise e if bad_gateway_error?(e)
 
             code = code(e)
             message = message(e)
