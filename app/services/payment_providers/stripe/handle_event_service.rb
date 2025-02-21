@@ -5,13 +5,10 @@ module PaymentProviders
     class HandleEventService < BaseService
       EVENT_MAPPING = {
         "setup_intent.succeeded" => PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService,
+        "payment_intent.succeeded" => PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService,
+        "payment_intent.payment_failed" => PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedService,
         "customer.updated" => PaymentProviders::Stripe::Webhooks::CustomerUpdatedService,
         "charge.dispute.closed" => PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService
-      }.freeze
-
-      PAYMENT_SERVICE_CLASS_MAP = {
-        "Invoice" => Invoices::Payments::StripeService,
-        "PaymentRequest" => PaymentRequests::Payments::StripeService
       }.freeze
 
       def initialize(organization:, event_json:)
@@ -37,18 +34,6 @@ module PaymentProviders
         end
 
         case event.type
-        when "payment_intent.payment_failed", "payment_intent.succeeded"
-          status = (event.type == "payment_intent.succeeded") ? "succeeded" : "failed"
-          payment_service_klass(event)
-            .new.update_payment_status(
-              organization_id: organization.id,
-              status:,
-              stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
-                id: event.data.object.id,
-                status: event.data.object.status,
-                metadata: event.data.object.metadata.to_h.symbolize_keys
-              )
-            ).raise_if_error!
         when "payment_method.detached"
           PaymentProviderCustomers::StripeService
             .new
@@ -80,14 +65,6 @@ module PaymentProviders
 
       def event
         @event ||= ::Stripe::Event.construct_from(JSON.parse(event_json))
-      end
-
-      def payment_service_klass(event)
-        payable_type = event.data.object.metadata.to_h[:lago_payable_type] || "Invoice"
-
-        PAYMENT_SERVICE_CLASS_MAP.fetch(payable_type) do
-          raise NameError, "Invalid lago_payable_type: #{payable_type}"
-        end
       end
     end
   end
