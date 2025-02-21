@@ -5,6 +5,8 @@ module Integrations
     module Contacts
       module Payloads
         class Netsuite < BasePayload
+          STATE_LIMIT = 30
+
           def create_body
             {
               "type" => "customer", # Fixed value
@@ -75,7 +77,7 @@ module Integrations
                         "addr2" => customer.address_line2,
                         "city" => customer.city,
                         "zip" => customer.zipcode,
-                        "state" => customer.state,
+                        "state" => customer.state.first(STATE_LIMIT),
                         "country" => customer.country
                       }
                     }
@@ -96,7 +98,7 @@ module Integrations
                         "addr2" => customer.address_line2,
                         "city" => customer.city,
                         "zip" => customer.zipcode,
-                        "state" => customer.state,
+                        "state" => customer.state.first(STATE_LIMIT),
                         "country" => customer.country
                       }
                     },
