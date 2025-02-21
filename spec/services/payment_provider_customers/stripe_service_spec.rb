@@ -473,6 +473,20 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       end
     end
 
+    context "when stripe raises an invalid request error" do
+      let(:stripe_error) { ::Stripe::InvalidRequestError.new("What is horrible request?!", {}) }
+
+      before { allow(::Stripe::Checkout::Session).to receive(:create).and_raise(stripe_error) }
+
+      it "returns an error result" do
+        result = described_class.new(stripe_customer).generate_checkout_url
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error.message).to eq("Stripe: What is horrible request?!")
+      end
+    end
+
     context "when stripe raises an authentication error" do
       let(:stripe_error) { ::Stripe::AuthenticationError.new("Expired API Key provided") }
 
