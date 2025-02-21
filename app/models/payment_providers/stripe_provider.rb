@@ -14,7 +14,6 @@ module PaymentProviders
       payment_method.detached
       charge.refund.updated
       customer.updated
-      charge.succeeded
       charge.dispute.closed
     ].freeze
 
