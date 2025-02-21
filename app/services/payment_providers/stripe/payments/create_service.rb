@@ -149,30 +149,17 @@ module PaymentProviders
           currency = payment.amount_currency.downcase
           return handle_eu_bank_transfer if currency == "eur"
 
-          case currency
-          when "usd" then {type: "us_bank_transfer"}
-          when "gbp" then {type: "gb_bank_transfer"}
-          when "jpy" then {type: "jp_bank_transfer"}
-          when "mxn" then {type: "mx_bank_transfer"}
-          else
-            result.service_failure!(
-              code: "stripe_error",
-              message: "customer_balance is not supported for currency: #{currency}"
-            )
-          end
+          transfer_types = {
+            "usd" => {type: "us_bank_transfer"},
+            "gbp" => {type: "gb_bank_transfer"},
+            "jpy" => {type: "jp_bank_transfer"},
+            "mxn" => {type: "mx_bank_transfer"}
+          }
+          transfer_types[currency]
         end
 
         def handle_eu_bank_transfer
-          allowed_countries = %w[BE DE ES FR IE NL]
           customer_country = payment.customer.country.upcase
-
-          unless allowed_countries.include?(customer_country)
-            return result.service_failure!(
-              code: "stripe_error",
-              message: "EU bank transfer is not supported for country: #{customer_country}"
-            )
-          end
-
           {type: "eu_bank_transfer", eu_bank_transfer: {country: customer_country}}
         end
 
