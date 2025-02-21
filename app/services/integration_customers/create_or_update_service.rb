@@ -12,7 +12,6 @@ module IntegrationCustomers
     end
 
     def call
-      pp integration_customers
       return if integration_customers.nil? || customer.nil?
       return if customer.partner_account?
 
