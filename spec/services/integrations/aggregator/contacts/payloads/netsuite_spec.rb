@@ -141,7 +141,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Netsuite do
         end
 
         context "when billing address is present" do
-          let(:customer) { create(:customer, email:, phone:) }
+          let(:customer) { create(:customer, email:, phone:, state: nil) }
 
           it "returns the payload body" do
             expect(subject).to eq payload_body

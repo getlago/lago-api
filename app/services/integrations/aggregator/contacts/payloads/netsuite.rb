@@ -77,7 +77,7 @@ module Integrations
                         "addr2" => customer.address_line2,
                         "city" => customer.city,
                         "zip" => customer.zipcode,
-                        "state" => customer.state.first(STATE_LIMIT),
+                        "state" => customer.state&.first(STATE_LIMIT),
                         "country" => customer.country
                       }
                     }
@@ -98,7 +98,7 @@ module Integrations
                         "addr2" => customer.address_line2,
                         "city" => customer.city,
                         "zip" => customer.zipcode,
-                        "state" => customer.state.first(STATE_LIMIT),
+                        "state" => customer.state&.first(STATE_LIMIT),
                         "country" => customer.country
                       }
                     },
