@@ -3,6 +3,8 @@
 module Invoices
   module Payments
     class GeneratePaymentUrlService < BaseService
+      include Customers::PaymentProviderFinder
+
       def initialize(invoice:)
         @invoice = invoice
         @provider = invoice&.customer&.payment_provider&.to_s
@@ -19,21 +21,55 @@ module Invoices
           return result.single_validation_failure!(error_code: "invalid_invoice_status_or_payment_status")
         end
 
-        payment_url_result = Invoices::Payments::PaymentProviders::Factory.new_instance(invoice:).generate_payment_url
+        if current_payment_provider.blank?
+          return result.single_validation_failure!(error_code: "missing_payment_provider")
+        end
 
-        return payment_url_result unless payment_url_result.success?
-        return payment_url_result if payment_url_result.error.is_a?(BaseService::ThirdPartyFailure)
+        if !current_payment_provider_customer ||
+            current_payment_provider_customer.provider_customer_id.blank? && current_payment_provider_customer&.require_provider_payment_id?
+          return result.single_validation_failure!(error_code: "missing_payment_provider_customer")
+        end
+
+        payment_url_result = Invoices::Payments::PaymentProviders::Factory.new_instance(invoice:).generate_payment_url
+        payment_url_result.raise_if_error!
 
         if payment_url_result.payment_url.blank?
           return result.single_validation_failure!(error_code: "payment_provider_error")
         end
 
         payment_url_result
+      rescue BaseService::ThirdPartyFailure => e
+        deliver_error_webhook(e)
+
+        e.result
+      rescue BaseService::FailedResult => e
+        e.result
       end
 
       private
 
       attr_reader :invoice, :provider
+
+      delegate :customer, to: :invoice
+
+      def current_payment_provider_customer
+        @current_payment_provider_customer ||= customer.payment_provider_customers
+          .find_by(payment_provider_id: current_payment_provider.id)
+      end
+
+      def current_payment_provider
+        @current_payment_provider ||= payment_provider(customer)
+      end
+
+      def deliver_error_webhook(payment_url_failure)
+        DeliverErrorWebhookService.call_async(invoice, {
+          provider_customer_id: current_payment_provider_customer.provider_customer_id,
+          provider_error: {
+            message: payment_url_failure.error_message,
+            error_code: payment_url_failure.error_code
+          }
+        })
+      end
     end
   end
 end

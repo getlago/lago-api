@@ -5,6 +5,8 @@ module Invoices
     class CashfreeService < BaseService
       include Customers::PaymentProviderFinder
 
+      PROVIDER_NAME = "Cashfree"
+
       def initialize(invoice = nil)
         @invoice = invoice
 
@@ -39,16 +41,12 @@ module Invoices
       end
 
       def generate_payment_url
-        return result unless should_process_payment?
-
         payment_link_response = create_payment_link(payment_url_params)
         result.payment_url = JSON.parse(payment_link_response.body)["link_url"]
 
         result
       rescue LagoHttpClient::HttpError => e
-        deliver_error_webhook(e)
-
-        result.third_party_failure!(third_party: "Cashfree", error_message: e.error_body)
+        result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.error_code, error_message: e.error_body)
       end
 
       private
@@ -70,13 +68,6 @@ module Invoices
           amount_currency: @invoice.currency,
           provider_payment_id: cashfree_payment.id
         )
-      end
-
-      def should_process_payment?
-        return false if invoice.payment_succeeded? || invoice.voided?
-        return false if cashfree_payment_provider.blank?
-
-        !!customer&.cashfree_customer&.id
       end
 
       def increment_payment_attempts

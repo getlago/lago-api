@@ -10,6 +10,8 @@ module PaymentRequests
       SUCCESS_STATUSES = %w[PAID].freeze
       FAILED_STATUSES = %w[EXPIRED CANCELLED].freeze
 
+      PROVIDER_NAME = "Cashfree"
+
       def initialize(payable = nil)
         @payable = payable
 
@@ -17,15 +19,12 @@ module PaymentRequests
       end
 
       def generate_payment_url
-        return result unless should_process_payment?
-
         payment_link_response = create_payment_link(payment_url_params)
         result.payment_url = JSON.parse(payment_link_response.body)["link_url"]
 
         result
       rescue LagoHttpClient::HttpError => e
-        deliver_error_webhook(e)
-        result.service_failure!(code: e.error_code, message: e.error_body)
+        result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.error_code, error_message: e.error_body)
       end
 
       def update_payment_status(organization_id:, status:, cashfree_payment:)
@@ -65,13 +64,6 @@ module PaymentRequests
       attr_accessor :payable
 
       delegate :organization, :customer, to: :payable
-
-      def should_process_payment?
-        return false if payable.payment_succeeded?
-        return false if cashfree_payment_provider.blank?
-
-        customer&.cashfree_customer&.id
-      end
 
       def cashfree_payment_provider
         @cashfree_payment_provider ||= payment_provider(customer)

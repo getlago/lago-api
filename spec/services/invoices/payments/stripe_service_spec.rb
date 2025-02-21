@@ -37,26 +37,6 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       expect(::Stripe::Checkout::Session).to have_received(:create)
     end
 
-    context "when invoice is payment_succeeded" do
-      before { invoice.payment_succeeded! }
-
-      it "does not generate payment url" do
-        stripe_service.generate_payment_url
-
-        expect(::Stripe::Checkout::Session).not_to have_received(:create)
-      end
-    end
-
-    context "when invoice is voided" do
-      before { invoice.voided! }
-
-      it "does not generate payment url" do
-        stripe_service.generate_payment_url
-
-        expect(::Stripe::Checkout::Session).not_to have_received(:create)
-      end
-    end
-
     context "with #payment_url_payload" do
       let(:payment_url_payload) { stripe_service.__send__(:payment_url_payload) }
       let(:payload) do
@@ -93,6 +73,23 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
       it "returns the payload" do
         expect(payment_url_payload).to eq(payload)
+      end
+    end
+
+    context "with an error on Stripe" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:create)
+          .and_raise(::Stripe::InvalidRequestError.new("error", {}))
+      end
+
+      it "returns a failed result" do
+        result = stripe_service.generate_payment_url
+
+        expect(result).not_to be_success
+
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error.third_party).to eq("Stripe")
+        expect(result.error.error_message).to eq("error")
       end
     end
   end

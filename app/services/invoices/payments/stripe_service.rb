@@ -5,6 +5,8 @@ module Invoices
     class StripeService < BaseService
       include Customers::PaymentProviderFinder
 
+      PROVIDER_NAME = "Stripe"
+
       def initialize(invoice = nil)
         @invoice = invoice
 
@@ -50,8 +52,6 @@ module Invoices
       end
 
       def generate_payment_url
-        return result unless should_process_payment?
-
         res = ::Stripe::Checkout::Session.create(
           payment_url_payload,
           {
@@ -63,9 +63,7 @@ module Invoices
 
         result
       rescue ::Stripe::CardError, ::Stripe::InvalidRequestError, ::Stripe::AuthenticationError, Stripe::PermissionError => e
-        deliver_error_webhook(e)
-
-        result.single_validation_failure!(error_code: "payment_provider_error")
+        result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.message)
       end
 
       private
@@ -105,13 +103,6 @@ module Invoices
       def success_redirect_url
         stripe_payment_provider.success_redirect_url.presence ||
           ::PaymentProviders::StripeProvider::SUCCESS_REDIRECT_URL
-      end
-
-      def should_process_payment?
-        return false if invoice.payment_succeeded? || invoice.voided?
-        return false if stripe_payment_provider.blank?
-
-        customer&.stripe_customer&.provider_customer_id
       end
 
       def stripe_api_key

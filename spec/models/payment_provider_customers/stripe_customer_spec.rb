@@ -109,4 +109,8 @@ RSpec.describe PaymentProviderCustomers::StripeCustomer, type: :model do
       end
     end
   end
+
+  describe "#require_provider_payment_id?" do
+    it { expect(stripe_customer).to be_require_provider_payment_id }
+  end
 end
