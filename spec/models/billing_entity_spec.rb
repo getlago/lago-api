@@ -163,6 +163,15 @@ RSpec.describe BillingEntity, type: :model do
         expect(billing_entity.document_number_prefix)
           .to eq "#{billing_entity.name.first(3).upcase}-#{billing_entity.id.last(4).upcase}"
       end
+
+      context "when document number prefix is already set" do
+        it "does not change existing document number prefix of billing_entity" do
+          billing_entity.document_number_prefix = "ABC-1234"
+          subject
+
+          expect(billing_entity.document_number_prefix).to eq "ABC-1234"
+        end
+      end
     end
 
     context "with a persisted record" do
