@@ -56,8 +56,8 @@ class BillingEntity < ApplicationRecord
   validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
   validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
   validates :logo,
-            image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},
-            if: :logo?
+    image: {authorized_content_type: %w[image/png image/jpg image/jpeg], max_size: 800.kilobytes},
+    if: :logo?
   validates :name, presence: true
   validates :timezone, timezone: true
   validates :finalize_zero_amount_invoice, inclusion: {in: [true, false]}
@@ -119,9 +119,10 @@ end
 #
 # Indexes
 #
-#  index_billing_entities_on_applied_dunning_campaign_id  (applied_dunning_campaign_id)
-#  index_billing_entities_on_organization_id              (organization_id)
-#  unique_default_billing_entity_per_organization         (organization_id) UNIQUE WHERE ((is_default = true) AND (archived_at IS NULL) AND (deleted_at IS NULL))
+#  idx_on_organization_id_document_number_prefix_34598a0416  (organization_id,document_number_prefix) UNIQUE
+#  index_billing_entities_on_applied_dunning_campaign_id     (applied_dunning_campaign_id)
+#  index_billing_entities_on_organization_id                 (organization_id)
+#  unique_default_billing_entity_per_organization            (organization_id) UNIQUE WHERE ((is_default = true) AND (archived_at IS NULL) AND (deleted_at IS NULL))
 #
 # Foreign Keys
 #
