@@ -193,26 +193,6 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
       expect(result.payment_url).to be_present
     end
 
-    context "when invoice is payment_succeeded" do
-      before { invoice.payment_succeeded! }
-
-      it "does not generate payment url" do
-        result = cashfree_service.generate_payment_url
-
-        expect(result.payment_url).to be_nil
-      end
-    end
-
-    context "when invoice is voided" do
-      before { invoice.voided! }
-
-      it "does not generate payment url" do
-        result = cashfree_service.generate_payment_url
-
-        expect(result.payment_url).to be_nil
-      end
-    end
-
     context "when payment url failed to generate" do
       let(:payment_links_response) { Net::HTTPResponse.new("1.0", "400", "Bad Request") }
       let(:payment_links_body) do

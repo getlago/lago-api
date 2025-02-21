@@ -2,6 +2,9 @@
 
 module PaymentProviderCustomers
   class CashfreeCustomer < BaseCustomer
+    def require_provider_payment_id?
+      false
+    end
   end
 end
 

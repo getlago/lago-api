@@ -3,6 +3,10 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviderCustomers::AdyenCustomer, type: :model do
+  subject(:adyen_customer) { described_class.new(attributes) }
+
+  let(:attributes) {}
+
   describe "#payment_method_id" do
     subject(:customer_payment_method_id) { adyen_customer.payment_method_id }
 
@@ -14,5 +18,9 @@ RSpec.describe PaymentProviderCustomers::AdyenCustomer, type: :model do
     it "returns the payment method id" do
       expect(customer_payment_method_id).to eq payment_method_id
     end
+  end
+
+  describe "#require_provider_payment_id?" do
+    it { expect(adyen_customer).to be_require_provider_payment_id }
   end
 end
