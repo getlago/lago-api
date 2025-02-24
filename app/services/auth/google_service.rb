@@ -31,7 +31,9 @@ module Auth
         return result.single_validation_failure!(error_code: "user_does_not_exist")
       end
 
-      UsersService.new.new_token(user)
+      result = UsersService.new.new_token(user)
+      user.touch_last_login!(:google)
+      result
     rescue Google::Auth::IDTokens::SignatureError
       result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
@@ -44,7 +46,7 @@ module Auth
 
       google_oidc = oidc_verifier(code:)
 
-      UsersService.new.register(google_oidc["email"], SecureRandom.hex, organization_name)
+      UsersService.new.register(google_oidc["email"], SecureRandom.hex, organization_name, method: :google)
     rescue Google::Auth::IDTokens::SignatureError
       result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
@@ -68,7 +70,8 @@ module Auth
         invite:,
         email: google_oidc["email"],
         token: invite_token,
-        password: SecureRandom.hex
+        password: SecureRandom.hex,
+        method: :google
       )
     rescue Google::Auth::IDTokens::SignatureError
       result.single_validation_failure!(error_code: "invalid_google_token")

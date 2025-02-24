@@ -14,6 +14,9 @@ module Types
     field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+    field :last_login_at, GraphQL::Types::ISO8601DateTime, null: true
+    field :last_login_method, Types::Users::LoginMethodEnum, null: true
+
     def memberships
       object.memberships.active.includes(:organization)
     end

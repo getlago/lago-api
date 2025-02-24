@@ -20,7 +20,9 @@ module Auth
         find_or_create_user
         find_or_create_membership
 
-        UsersService.new.new_token(result.user)
+        result.token = UsersService.new.new_token(result.user)
+        result.user.touch_last_login!(:okta)
+        result.token
       rescue ValidationError => e
         result.single_validation_failure!(error_code: e.message)
         result

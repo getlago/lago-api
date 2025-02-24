@@ -1,14 +1,17 @@
 # frozen_string_literal: true
 
 class UsersService < BaseService
-  def login(email, password)
+  def login(email, password, method: :email)
     result.user = User.find_by(email:)&.authenticate(password)
 
     unless result.user.present? && result.user.memberships&.active&.any?
       return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
-    result.token = generate_token if result.user
+    if result.user
+      result.token = generate_token if result.user
+      result.user.touch_last_login!(method) if result.user
+    end
 
     # NOTE: We're tracking the first membership linked to the user.
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.user.memberships.first.id}")
@@ -16,7 +19,7 @@ class UsersService < BaseService
     result
   end
 
-  def register(email, password, organization_name)
+  def register(email, password, organization_name, method: :email)
     if ENV.fetch("LAGO_DISABLE_SIGNUP", "false") == "true"
       return result.not_allowed_failure!(code: "signup_disabled")
     end
@@ -42,6 +45,7 @@ class UsersService < BaseService
       )
 
       result.token = generate_token
+      result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
@@ -49,10 +53,11 @@ class UsersService < BaseService
     SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.membership.id}")
     track_organization_registered(result.organization, result.membership)
 
+    result.user.touch_last_login!(method)
     result
   end
 
-  def register_from_invite(invite, password)
+  def register_from_invite(invite, password, method: :email)
     ActiveRecord::Base.transaction do
       result.user = User.find_or_create_by!(email: invite.email) { |u| u.password = password }
       result.organization = invite.organization
@@ -66,8 +71,10 @@ class UsersService < BaseService
       result.token = generate_token
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+      return result
     end
 
+    result.user.touch_last_login!(method)
     result
   end
 

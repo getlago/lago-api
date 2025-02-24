@@ -35,6 +35,7 @@ db/clickhouse_schema.rb
 
 .rsa_private.pem
 .rsa_public.pem
+config/keys
 LAGO_VERSION
 
 **/.DS_Store
