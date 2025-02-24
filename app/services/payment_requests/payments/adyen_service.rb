@@ -14,8 +14,6 @@ module PaymentRequests
       end
 
       def generate_payment_url
-        return result unless should_process_payment?
-
         result_url = client.checkout.payment_links_api.payment_links(
           Lago::Adyen::Params.new(payment_url_params).to_h
         )
@@ -27,9 +25,7 @@ module PaymentRequests
 
         result
       rescue Adyen::AdyenError => e
-        deliver_error_webhook(e)
-
-        result.service_failure!(code: e.code, message: e.msg)
+        result.third_party_failure!(third_party: "Adyen", error_code: e.code, error_message: e.msg)
       end
 
       def update_payment_status(provider_payment_id:, status:, metadata: {})
@@ -69,13 +65,6 @@ module PaymentRequests
       attr_accessor :payable
 
       delegate :organization, :customer, to: :payable
-
-      def should_process_payment?
-        return false if payable.payment_succeeded?
-        return false if adyen_payment_provider.blank?
-
-        !!customer&.adyen_customer&.provider_customer_id
-      end
 
       def client
         @client ||= Adyen::Client.new(

@@ -177,23 +177,20 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       expect(payment_links_api).to have_received(:payment_links)
     end
 
-    context "when invoice is payment_succeeded" do
-      before { invoice.payment_succeeded! }
-
-      it "does not generate payment url" do
-        adyen_service.generate_payment_url
-
-        expect(payment_links_api).not_to have_received(:payment_links)
+    context "with an error on Adyen" do
+      before do
+        allow(payment_links_api).to receive(:payment_links)
+          .and_raise(Adyen::AdyenError.new(nil, nil, "error"))
       end
-    end
 
-    context "when invoice is voided" do
-      before { invoice.voided! }
+      it "returns a failed result" do
+        result = adyen_service.generate_payment_url
 
-      it "does not generate payment url" do
-        adyen_service.generate_payment_url
+        expect(result).not_to be_success
 
-        expect(payment_links_api).not_to have_received(:payment_links)
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error.third_party).to eq("Adyen")
+        expect(result.error.error_message).to eq("error")
       end
     end
   end

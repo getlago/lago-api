@@ -93,13 +93,20 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
         )
     end
 
-    context "when payment_request is payment_succeeded" do
-      before { payment_request.payment_succeeded! }
+    context "with an error on Stripe" do
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:create)
+          .and_raise(::Stripe::InvalidRequestError.new("error", {}))
+      end
 
-      it "does not generate payment url" do
-        stripe_service.generate_payment_url
+      it "returns a failed result" do
+        result = stripe_service.generate_payment_url
 
-        expect(::Stripe::Checkout::Session).not_to have_received(:create)
+        expect(result).not_to be_success
+
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error.third_party).to eq("Stripe")
+        expect(result.error.error_message).to eq("error")
       end
     end
   end

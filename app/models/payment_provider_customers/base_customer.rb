@@ -29,6 +29,10 @@ module PaymentProviderCustomers
     def provider_payment_methods
       nil
     end
+
+    def require_provider_payment_id?
+      true
+    end
   end
 end
 
