@@ -473,6 +473,17 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       end
     end
 
+    context "when customer has no payment method to be setup" do
+      let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id: nil, provider_payment_methods: ::PaymentProviderCustomers::StripeCustomer::PAYMENT_METHODS_WITHOUT_SETUP) }
+
+      it "does not deliver a webhook" do
+        described_class.new(stripe_customer.reload).generate_checkout_url
+
+        expect(SendWebhookJob).not_to have_been_enqueued
+          .with("customer.checkout_url_generated", customer, checkout_url: "https://example.com")
+      end
+    end
+
     context "when stripe raises an invalid request error" do
       let(:stripe_error) { ::Stripe::InvalidRequestError.new("What is horrible request?!", {}) }
 
