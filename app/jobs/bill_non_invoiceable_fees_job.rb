@@ -11,6 +11,8 @@ class BillNonInvoiceableFeesJob < ApplicationJob
 
   retry_on Sequenced::SequenceError, ActiveJob::DeserializationError
 
+  unique :until_executed, on_conflict: :log, lock_ttl: 4.hours
+
   def perform(subscriptions, billing_at)
     result = Invoices::AdvanceChargesService.call(initial_subscriptions: subscriptions, billing_at:)
     result.raise_if_error!
