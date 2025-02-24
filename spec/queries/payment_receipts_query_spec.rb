@@ -19,9 +19,9 @@ RSpec.describe PaymentReceiptsQuery, type: :query do
   let(:payment_two) { create(:payment, payable: invoice2) }
   let(:payment_three) { create(:payment, payable: payment_request) }
 
-  let!(:payment_receipt_one) { create(:payment_receipt, payment: payment_one) }
-  let!(:payment_receipt_two) { create(:payment_receipt, payment: payment_two) }
-  let!(:payment_receipt_three) { create(:payment_receipt, payment: payment_three) }
+  let!(:payment_receipt_one) { create(:payment_receipt, payment: payment_one, organization:) }
+  let!(:payment_receipt_two) { create(:payment_receipt, payment: payment_two, organization:) }
+  let!(:payment_receipt_three) { create(:payment_receipt, payment: payment_three, organization:) }
 
   before do
     create(:payment_receipt)
