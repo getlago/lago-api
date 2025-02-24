@@ -14,6 +14,8 @@ class MigrateInvoiceErrorToErrorDetail < ActiveRecord::Migration[7.1]
         error_code: "invoice_generation_error",
         owner: invoice,
         organization_id: invoice.organization_id,
+        created_at: ie.created_at,
+        updated_at: ie.updated_at,
         details: {
           error: ie.error,
           backtrace: ie.backtrace,
