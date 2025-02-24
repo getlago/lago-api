@@ -13,6 +13,8 @@ class Payment < ApplicationRecord
   has_many :integration_resources, as: :syncable
   has_one :payment_receipt, dependent: :destroy
 
+  monetize :amount_cents
+
   PAYMENT_TYPES = {provider: "provider", manual: "manual"}.freeze
   attribute :payment_type, :string
   enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type

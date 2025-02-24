@@ -1,0 +1,10 @@
+---
+de:
+  payment_receipt:
+    document_name: Receipt
+    number: Receipt number
+    paid_on: Paid on %{date}
+    payment_date: Payment date
+    powered_by: Powered by
+    self_billed:
+      footer: This credit note on a self-billing invoice was issued by the client on behalf of the partner, with their consent. The partner has agreed not to issue their own credit note for this transaction.
