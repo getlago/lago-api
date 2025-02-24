@@ -88,6 +88,12 @@ Rails.application.routes.draw do
         get :json_public_key, on: :collection
       end
     end
+
+    namespace :v2 do
+      resources :events, only: %i[create] do
+        post :batch, on: :collection
+      end
+    end
   end
 
   resources :webhooks, only: [] do
