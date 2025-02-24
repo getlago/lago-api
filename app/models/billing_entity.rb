@@ -20,21 +20,20 @@ class BillingEntity < ApplicationRecord
 
   belongs_to :organization
 
+  has_many :applied_taxes, class_name: "BillingEntity::AppliedTax", dependent: :destroy
   has_many :customers
-  has_many :invoices
-  has_many :invoice_custom_section_selections
-  has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section
   has_many :fees
+  has_many :invoices
+  has_many :invoice_custom_section_selections, dependent: :destroy
 
+  has_many :credit_notes, through: :invoices
+  has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section
   has_many :subscriptions, through: :customers
+  has_many :taxes, through: :applied_taxes
   has_many :wallets, through: :customers
   has_many :wallet_transactions, through: :wallets
-  has_many :credit_notes, through: :invoices
 
   belongs_to :applied_dunning_campaign, class_name: "DunningCampaign", optional: true
-
-  has_many :applied_taxes, class_name: "BillingEntity::AppliedTax", dependent: :destroy
-  has_many :taxes, through: :applied_taxes
 
   enum :document_numbering, DOCUMENT_NUMBERINGS
 
