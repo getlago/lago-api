@@ -52,7 +52,6 @@ class BillingEntity < ApplicationRecord
   validates :email, email: true, if: :email?
   validates :invoice_footer, length: {maximum: 600}
   validates :document_number_prefix, length: {minimum: 1, maximum: 10}, on: :update
-  validates :document_number_prefix, uniqueness: {scope: :organization_id}, allow_nil: true, on: :update
   validates :invoice_grace_period, numericality: {greater_than_or_equal_to: 0}
   validates :net_payment_term, numericality: {greater_than_or_equal_to: 0}
   validates :logo,
@@ -119,10 +118,9 @@ end
 #
 # Indexes
 #
-#  idx_on_organization_id_document_number_prefix_34598a0416  (organization_id,document_number_prefix) UNIQUE
-#  index_billing_entities_on_applied_dunning_campaign_id     (applied_dunning_campaign_id)
-#  index_billing_entities_on_organization_id                 (organization_id)
-#  unique_default_billing_entity_per_organization            (organization_id) UNIQUE WHERE ((is_default = true) AND (archived_at IS NULL) AND (deleted_at IS NULL))
+#  index_billing_entities_on_applied_dunning_campaign_id  (applied_dunning_campaign_id)
+#  index_billing_entities_on_organization_id              (organization_id)
+#  unique_default_billing_entity_per_organization         (organization_id) UNIQUE WHERE ((is_default = true) AND (archived_at IS NULL) AND (deleted_at IS NULL))
 #
 # Foreign Keys
 #

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_02_21_150451) do
+ActiveRecord::Schema[7.1].define(version: 2025_02_20_085848) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -242,7 +242,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_21_150451) do
     t.datetime "updated_at", null: false
     t.uuid "applied_dunning_campaign_id"
     t.index ["applied_dunning_campaign_id"], name: "index_billing_entities_on_applied_dunning_campaign_id"
-    t.index ["organization_id", "document_number_prefix"], name: "idx_on_organization_id_document_number_prefix_34598a0416", unique: true
     t.index ["organization_id"], name: "index_billing_entities_on_organization_id"
     t.index ["organization_id"], name: "unique_default_billing_entity_per_organization", unique: true, where: "((is_default = true) AND (archived_at IS NULL) AND (deleted_at IS NULL))"
   end
