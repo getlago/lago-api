@@ -8,8 +8,27 @@ class ErrorDetail < ApplicationRecord
   belongs_to :owner, polymorphic: true
   belongs_to :organization
 
-  ERROR_CODES = %w[not_provided tax_error tax_voiding_error]
+  ERROR_CODES = {
+    not_provided: 0,
+    tax_error: 1,
+    tax_voiding_error: 2,
+    invoice_generation_error: 3
+  }.freeze
   enum :error_code, ERROR_CODES
+
+  def self.create_generation_error_for(invoice:, error:)
+    return unless invoice
+    instance = find_or_create_by(owner: invoice, error_code: "invoice_generation_error", organization: invoice.organization)
+    instance.update(
+      details: {
+        backtrace: error.backtrace,
+        error: error.inspect.to_json,
+        invoice: invoice.to_json(except: :file),
+        subscriptions: invoice.subscriptions.to_json
+      }
+    )
+    instance
+  end
 end
 
 # == Schema Information
