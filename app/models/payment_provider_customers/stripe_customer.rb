@@ -2,7 +2,9 @@
 
 module PaymentProviderCustomers
   class StripeCustomer < BaseCustomer
-    PAYMENT_METHODS = %w[card sepa_debit us_bank_account bacs_debit link boleto crypto].freeze
+    PAYMENT_METHODS_WITH_SETUP = %w[card sepa_debit us_bank_account bacs_debit link boleto].freeze
+    PAYMENT_METHODS_WITHOUT_SETUP = %w[crypto].freeze
+    PAYMENT_METHODS = (PAYMENT_METHODS_WITH_SETUP + PAYMENT_METHODS_WITHOUT_SETUP).freeze
 
     validates :provider_payment_methods, presence: true
     validate :allowed_provider_payment_methods
@@ -12,6 +14,10 @@ module PaymentProviderCustomers
 
     def provider_payment_methods
       get_from_settings("provider_payment_methods")
+    end
+
+    def provider_payment_methods_with_setup
+      provider_payment_methods & PAYMENT_METHODS_WITH_SETUP
     end
 
     def provider_payment_methods=(provider_payment_methods)
