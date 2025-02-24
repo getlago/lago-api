@@ -18,6 +18,11 @@ FactoryBot.define do
       if evaluator.webhook_url
         organization.webhook_endpoints.create!(webhook_url: evaluator.webhook_url)
       end
+      # default billing entity on organization will be used in services as intermediate step
+      # before we start accepting billing_entity_id in the request. After that we can drop the column and this method
+      if organization.billing_entities.where(is_default: true).blank?
+        create(:billing_entity, :default, organization:)
+      end
     end
 
     trait :with_invoice_custom_sections do

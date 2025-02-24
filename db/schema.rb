@@ -240,6 +240,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_20_085848) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "applied_dunning_campaign_id"
+    t.index ["applied_dunning_campaign_id"], name: "index_billing_entities_on_applied_dunning_campaign_id"
     t.index ["organization_id"], name: "index_billing_entities_on_organization_id"
     t.index ["organization_id"], name: "unique_default_billing_entity_per_organization", unique: true, where: "((is_default = true) AND (archived_at IS NULL) AND (deleted_at IS NULL))"
   end
@@ -536,8 +538,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_20_085848) do
     t.datetime "last_dunning_campaign_attempt_at", precision: nil
     t.boolean "skip_invoice_custom_sections", default: false, null: false
     t.enum "account_type", default: "customer", null: false, enum_type: "customer_account_type"
+    t.uuid "billing_entity_id"
     t.index ["account_type"], name: "index_customers_on_account_type"
     t.index ["applied_dunning_campaign_id"], name: "index_customers_on_applied_dunning_campaign_id"
+    t.index ["billing_entity_id"], name: "index_customers_on_billing_entity_id"
     t.index ["deleted_at"], name: "index_customers_on_deleted_at"
     t.index ["external_id", "organization_id"], name: "index_customers_on_external_id_and_organization_id", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_customers_on_organization_id"
@@ -717,8 +721,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_20_085848) do
     t.decimal "taxes_precise_amount_cents", precision: 40, scale: 15, default: "0.0", null: false
     t.float "taxes_base_rate", default: 1.0, null: false
     t.uuid "organization_id"
+    t.uuid "billing_entity_id"
     t.index ["add_on_id"], name: "index_fees_on_add_on_id"
     t.index ["applied_add_on_id"], name: "index_fees_on_applied_add_on_id"
+    t.index ["billing_entity_id"], name: "index_fees_on_billing_entity_id"
     t.index ["charge_filter_id"], name: "index_fees_on_charge_filter_id"
     t.index ["charge_id", "invoice_id"], name: "index_fees_on_charge_id_and_invoice_id", where: "(deleted_at IS NULL)"
     t.index ["charge_id"], name: "index_fees_on_charge_id"
@@ -890,6 +896,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_20_085848) do
     t.uuid "customer_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "billing_entity_id"
+    t.index ["billing_entity_id"], name: "index_invoice_custom_section_selections_on_billing_entity_id"
     t.index ["customer_id"], name: "index_invoice_custom_section_selections_on_customer_id"
     t.index ["invoice_custom_section_id"], name: "idx_on_invoice_custom_section_id_7edbcef7b5"
     t.index ["organization_id"], name: "index_invoice_custom_section_selections_on_organization_id"
@@ -990,10 +998,14 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_20_085848) do
     t.bigint "total_paid_amount_cents", default: 0, null: false
     t.boolean "self_billed", default: false, null: false
     t.integer "applied_grace_period"
+    t.uuid "billing_entity_id"
+    t.integer "billing_entity_sequential_id", default: 0
+    t.index ["billing_entity_id"], name: "index_invoices_on_billing_entity_id"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["issuing_date"], name: "index_invoices_on_issuing_date"
     t.index ["number"], name: "index_invoices_on_number"
+    t.index ["organization_id", "billing_entity_sequential_id"], name: "idx_on_organization_id_billing_entity_sequential_id_20bfd08c5a", order: { billing_entity_sequential_id: :desc }, include: ["self_billed"]
     t.index ["organization_id", "organization_sequential_id"], name: "idx_on_organization_id_organization_sequential_id_2387146f54", order: { organization_sequential_id: :desc }, include: ["self_billed"]
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"

@@ -17,6 +17,7 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:adyen_payment_providers) }
 
   it { is_expected.to have_many(:api_keys) }
+  it { is_expected.to have_many(:billing_entities) }
   it { is_expected.to have_many(:webhook_endpoints) }
   it { is_expected.to have_many(:webhooks).through(:webhook_endpoints) }
   it { is_expected.to have_many(:hubspot_integrations) }
@@ -31,6 +32,7 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:selected_invoice_custom_sections) }
 
   it { is_expected.to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true) }
+  it { is_expected.to have_one(:default_billing_entity).conditions(is_default: true) }
 
   it { is_expected.to validate_inclusion_of(:default_currency).in_array(described_class.currency_list) }
 
