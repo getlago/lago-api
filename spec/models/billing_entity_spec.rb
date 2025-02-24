@@ -53,23 +53,19 @@ RSpec.describe BillingEntity, type: :model do
 
     it "is not valid without name" do
       billing_entity.name = nil
-
       expect(billing_entity).not_to be_valid
     end
 
     it "is invalid with invalid email" do
       billing_entity.email = "foo.bar"
-
       expect(billing_entity).not_to be_valid
     end
 
     it "is invalid with invalid country" do
       billing_entity.country = "ZWX"
-
       expect(billing_entity).not_to be_valid
 
       billing_entity.country = ""
-
       expect(billing_entity).not_to be_valid
     end
 
@@ -89,7 +85,6 @@ RSpec.describe BillingEntity, type: :model do
 
     it "is invalid with invalid invoice footer" do
       billing_entity.invoice_footer = SecureRandom.alphanumeric(601)
-
       expect(billing_entity).not_to be_valid
     end
 
@@ -99,7 +94,6 @@ RSpec.describe BillingEntity, type: :model do
         content_type: "image/png",
         filename: "logo"
       )
-
       expect(billing_entity).to be_valid
     end
 
@@ -109,7 +103,6 @@ RSpec.describe BillingEntity, type: :model do
         content_type: "image/jpeg",
         filename: "logo"
       )
-
       expect(billing_entity).not_to be_valid
     end
 
@@ -119,19 +112,16 @@ RSpec.describe BillingEntity, type: :model do
         content_type: "image/gif",
         filename: "logo"
       )
-
       expect(billing_entity).not_to be_valid
     end
 
     it "is invalid with invalid timezone" do
       billing_entity.timezone = "foo"
-
       expect(billing_entity).not_to be_valid
     end
 
     it "is valid with email_settings" do
       billing_entity.email_settings = ["invoice.finalized", "credit_note.created"]
-
       expect(billing_entity).to be_valid
     end
 

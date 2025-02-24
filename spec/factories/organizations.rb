@@ -9,7 +9,6 @@ FactoryBot.define do
     email_settings { ["invoice.finalized", "credit_note.created"] }
 
     api_keys { [association(:api_key, organization: instance)] }
-    billing_entities { [association(:billing_entity, organization: instance, is_default: true)] }
 
     transient do
       webhook_url { Faker::Internet.url }
