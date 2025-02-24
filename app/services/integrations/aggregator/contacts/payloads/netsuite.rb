@@ -6,6 +6,7 @@ module Integrations
       module Payloads
         class Netsuite < BasePayload
           STATE_LIMIT = 30
+          ADDR1_LIMIT = 150
 
           def create_body
             {
@@ -73,7 +74,7 @@ module Integrations
                       "defaultbilling" => true,
                       "subObjectId" => "addressbookaddress",
                       "subObject" => {
-                        "addr1" => customer.address_line1,
+                        "addr1" => customer.address_line1&.first(ADDR1_LIMIT),
                         "addr2" => customer.address_line2,
                         "city" => customer.city,
                         "zip" => customer.zipcode,
@@ -94,7 +95,7 @@ module Integrations
                       "defaultbilling" => true,
                       "subObjectId" => "addressbookaddress",
                       "subObject" => {
-                        "addr1" => customer.address_line1,
+                        "addr1" => customer.address_line1&.first(ADDR1_LIMIT),
                         "addr2" => customer.address_line2,
                         "city" => customer.city,
                         "zip" => customer.zipcode,
@@ -107,11 +108,11 @@ module Integrations
                       "defaultbilling" => false,
                       "subObjectId" => "addressbookaddress",
                       "subObject" => {
-                        "addr1" => customer.shipping_address_line1,
+                        "addr1" => customer.shipping_address_line1&.first(ADDR1_LIMIT),
                         "addr2" => customer.shipping_address_line2,
                         "city" => customer.shipping_city,
                         "zip" => customer.shipping_zipcode,
-                        "state" => customer.shipping_state,
+                        "state" => customer.shipping_state&.first(STATE_LIMIT),
                         "country" => customer.shipping_country
                       }
                     }
