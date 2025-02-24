@@ -9,8 +9,8 @@ class UsersService < BaseService
     end
 
     if result.user
-      result.token = generate_token if result.user
-      result.user.touch_last_login!(method) if result.user
+      result.token = generate_token
+      result.user.touch_last_login!(method)
     end
 
     # NOTE: We're tracking the first membership linked to the user.
