@@ -8,10 +8,7 @@ Bundler.require(*Rails.groups)
 
 module LagoApi
   class Application < Rails::Application
-    config.load_defaults 7.2
-
-    # Disable YJIT as we are not ready yet
-    config.yjit = false
+    config.load_defaults(7.1)
 
     # TODO: Should be turned to false
     config.add_autoload_paths_to_load_path = true

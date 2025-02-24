@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "active_support/core_ext/integer/time"
-require "opentelemetry/sdk"
 
 Rails.application.configure do
   # Used for GraphiQL
@@ -37,9 +36,9 @@ Rails.application.configure do
   config.log_formatter = ::Logger::Formatter.new
 
   if ENV["RAILS_LOG_TO_STDOUT"].present?
-    config.logger = ActiveSupport::Logger.new($stdout)
-      .tap { |logger| logger.formatter = ::Logger::Formatter.new }
-      .then { |logger| ActiveSupport::TaggedLogging.new(logger) }
+    logger = ActiveSupport::Logger.new($stdout)
+    logger.formatter = config.log_formatter
+    config.logger = ActiveSupport::TaggedLogging.new(logger)
   end
 
   config.active_record.dump_schema_after_migration = false
