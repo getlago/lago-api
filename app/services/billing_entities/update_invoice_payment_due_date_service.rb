@@ -12,7 +12,7 @@ module BillingEntities
 
     def call
       ActiveRecord::Base.transaction do
-        # NOTE: Set payment_due_date if net_payment_term changed
+      # NOTE: Set payment_due_date if net_payment_term changed
         if billing_entity.net_payment_term != net_payment_term
           billing_entity.net_payment_term = net_payment_term
 
