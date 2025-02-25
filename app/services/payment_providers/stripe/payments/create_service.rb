@@ -116,7 +116,7 @@ module PaymentProviders
         end
 
         def payment_intent_payload
-          {
+          payload = {
             amount: payment.amount_cents,
             currency: payment.amount_currency.downcase,
             customer: provider_customer.provider_customer_id,
@@ -129,6 +129,38 @@ module PaymentProviders
             description: reference,
             metadata: metadata
           }
+          payload.merge!(customer_balance_fields) if provider_customer.provider_payment_methods == ["customer_balance"]
+          payload
+        end
+
+        def customer_balance_fields
+          {
+            payment_method_data: {type: "customer_balance"},
+            payment_method_options: {
+              customer_balance: {
+                funding_type: "bank_transfer",
+                bank_transfer: bank_transfer_type
+              }
+            }
+          }
+        end
+
+        def bank_transfer_type
+          currency = payment.amount_currency.downcase
+          return handle_eu_bank_transfer if currency == "eur"
+
+          transfer_types = {
+            "usd" => {type: "us_bank_transfer"},
+            "gbp" => {type: "gb_bank_transfer"},
+            "jpy" => {type: "jp_bank_transfer"},
+            "mxn" => {type: "mx_bank_transfer"}
+          }
+          transfer_types[currency]
+        end
+
+        def handle_eu_bank_transfer
+          customer_country = payment.customer.country.upcase
+          {type: "eu_bank_transfer", eu_bank_transfer: {country: customer_country}}
         end
 
         def success_redirect_url
@@ -139,7 +171,10 @@ module PaymentProviders
         # to permit 3D secure authentication
         # https://docs.stripe.com/india-recurring-payments
         def off_session?
-          invoice.customer.country != "IN"
+          return false if invoice.customer.country == "IN"
+          return false if provider_customer.provider_payment_methods == ["customer_balance"]
+
+          true
         end
 
         # NOTE: Same as off_session?
