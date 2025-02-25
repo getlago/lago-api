@@ -443,7 +443,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
         context "when currency is GBP" do
           let(:currency) { "GBP" }
 
-          it "includes US bank transfer details" do
+          it "includes GBP bank transfer details" do
             expected_payload = base_payload.deep_merge(
               payment_method_options: {
                 customer_balance: {
