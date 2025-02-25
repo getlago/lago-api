@@ -37,6 +37,7 @@ module BillingEntities
       handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
 
       if License.premium? && billing.key?(:invoice_grace_period)
+        # for now we won't update related invoices to the billing_entity from this service
         BillingEntities::UpdateInvoiceGracePeriodService.call(
           billing_entity:,
           grace_period: billing[:invoice_grace_period]
@@ -44,6 +45,7 @@ module BillingEntities
       end
 
       if params.key?(:net_payment_term)
+        # note: this service only assigns new net_payment_term to the billing_entity but doesn't save it
         BillingEntities::UpdateInvoicePaymentDueDateService.call(
           billing_entity:,
           net_payment_term: params[:net_payment_term]
@@ -54,9 +56,6 @@ module BillingEntities
       handle_base64_logo if params.key?(:logo)
 
       billing_entity.save!
-
-      # I guess we dont need this...
-      # ApiKeys::CacheService.expire_all_cache(billing_entity)
 
       result.billing_entity = billing_entity
       result
@@ -98,12 +97,12 @@ module BillingEntities
       trying_to_enable_eu_tax_management = params[:eu_tax_management] && !billing_entity.eu_tax_management
       if !billing_entity.eu_vat_eligible? && trying_to_enable_eu_tax_management
         result.single_validation_failure!(error_code: "org_must_be_in_eu", field: :eu_tax_management)
-              .raise_if_error!
+          .raise_if_error!
       end
 
       # NOTE: autogenerate service generates taxes.Taxes still belong to organization, but are applied on the billing_entities,
       # so we need to generate taxes for the organization
-      Taxes::AutoGenerateService.new(billing_entity.organization).call if eu_tax_management
+      Taxes::AutoGenerateService.new(organization: billing_entity.organization).call if eu_tax_management
 
       billing_entity.eu_tax_management = eu_tax_management
     end

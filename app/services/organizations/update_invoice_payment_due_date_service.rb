@@ -10,7 +10,7 @@ module Organizations
 
     def call
       ActiveRecord::Base.transaction do
-        # NOTE: Update payment_due_date if net_payment_term changed
+        # NOTE: Set payment_due_date if net_payment_term changed
 
         if organization.net_payment_term != net_payment_term
           organization.net_payment_term = net_payment_term

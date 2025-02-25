@@ -11,7 +11,7 @@ module Invoices
     end
 
     def perform(billing_entity, old_grace_period)
-      Invoices::UpdateAllInvoiceGracePeriodFromBilingEntityService.call!(billing_entity:, old_grace_period:)
+      Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityService.call!(billing_entity:, old_grace_period:)
     end
   end
 end
