@@ -25,11 +25,13 @@ Rails.application.configure do
   config.cache_store = :redis_cache_store, {url: ENV["LAGO_REDIS_CACHE_URL"], db: 3}
 
   if Rails.root.join("tmp/caching-dev.txt").exist?
+    config.cache_store = :memory_store
     config.public_file_server.headers = {
       "Cache-Control" => "public, max-age=#{2.days.to_i}"
     }
   else
     config.action_controller.perform_caching = false
+    config.cache_store = :null_store
   end
 
   config.active_storage.service = if ENV["LAGO_USE_AWS_S3"].present? && ENV["LAGO_USE_AWS_S3"] == "true"
@@ -47,11 +49,13 @@ Rails.application.configure do
   config.active_support.disallowed_deprecation_warnings = []
   config.active_record.migration_error = :page_load
   config.active_record.verbose_query_logs = true
+  config.active_job.verbose_enqueue_logs = true
 
-  logger = ActiveSupport::Logger.new($stdout)
-  logger.formatter = config.log_formatter
-  config.logger = ActiveSupport::TaggedLogging.new(logger)
+  config.logger = ActiveSupport::Logger.new($stdout)
+    .tap { |logger| logger.formatter = ::Logger::Formatter.new }
+    .then { |logger| ActiveSupport::TaggedLogging.new(logger) }
 
+  config.action_view.annotate_rendered_view_with_filenames = true
   config.action_controller.raise_on_missing_callback_actions = true
 
   config.hosts << "api.lago.dev"
@@ -59,6 +63,7 @@ Rails.application.configure do
 
   config.license_url = "http://license:3000"
 
+  config.action_mailer.perform_caching = false
   config.action_mailer.perform_deliveries = true
   config.action_mailer.raise_delivery_errors = true
   config.action_mailer.delivery_method = :smtp
