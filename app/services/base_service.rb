@@ -94,13 +94,14 @@ class BaseService
   end
 
   class ThirdPartyFailure < FailedResult
-    attr_reader :third_party, :error_message
+    attr_reader :third_party, :error_code, :error_message
 
-    def initialize(result, third_party:, error_message:)
+    def initialize(result, third_party:, error_code:, error_message:)
       @third_party = third_party
       @error_message = error_message
+      @error_code = error_code
 
-      super(result, "#{third_party}: #{error_message}")
+      super(result, "#{third_party}: #{error_code} - #{error_message}")
     end
   end
 
@@ -167,8 +168,8 @@ class BaseService
       fail_with_error!(UnauthorizedFailure.new(self, message:))
     end
 
-    def third_party_failure!(third_party:, error_message:)
-      fail_with_error!(ThirdPartyFailure.new(self, third_party:, error_message:))
+    def third_party_failure!(third_party:, error_code:, error_message:)
+      fail_with_error!(ThirdPartyFailure.new(self, third_party:, error_code:, error_message:))
     end
 
     def raise_if_error!

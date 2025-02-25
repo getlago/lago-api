@@ -150,13 +150,13 @@ RSpec.describe BaseResult do
   end
 
   describe ".third_party_failure!" do
-    before { result.third_party_failure!(third_party: "stripe", error_message: "custom_message") }
+    before { result.third_party_failure!(third_party: "stripe", error_code: "code", error_message: "custom_message") }
 
     it { expect(result).not_to be_success }
     it { expect(result).to be_failure }
     it { expect(result.error).to be_a(BaseService::ThirdPartyFailure) }
     it { expect(result.error.third_party).to eq("stripe") }
-    it { expect(result.error.message).to eq("stripe: custom_message") }
+    it { expect(result.error.message).to eq("stripe: code - custom_message") }
 
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ThirdPartyFailure) }
   end

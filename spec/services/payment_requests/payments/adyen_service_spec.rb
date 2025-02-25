@@ -102,13 +102,20 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       end
     end
 
-    context "when payment request is payment_succeeded" do
-      before { payment_request.payment_succeeded! }
+    context "with an error on Adyen" do
+      before do
+        allow(payment_links_api).to receive(:payment_links)
+          .and_raise(Adyen::AdyenError.new(nil, nil, "error"))
+      end
 
-      it "does not generate payment url" do
-        adyen_service.generate_payment_url
+      it "returns a failed result" do
+        result = adyen_service.generate_payment_url
 
-        expect(payment_links_api).not_to have_received(:payment_links)
+        expect(result).not_to be_success
+
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error.third_party).to eq("Adyen")
+        expect(result.error.error_message).to eq("error")
       end
     end
   end

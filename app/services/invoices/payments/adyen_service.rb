@@ -6,6 +6,8 @@ module Invoices
       include Lago::Adyen::ErrorHandlable
       include Customers::PaymentProviderFinder
 
+      PROVIDER_NAME = "Adyen"
+
       def initialize(invoice = nil)
         @invoice = invoice
 
@@ -40,8 +42,6 @@ module Invoices
       end
 
       def generate_payment_url
-        return result unless should_process_payment?
-
         res = client.checkout.payment_links_api.payment_links(Lago::Adyen::Params.new(payment_url_params).to_h)
         adyen_success, adyen_error = handle_adyen_response(res)
         result.service_failure!(code: adyen_error.code, message: adyen_error.msg) unless adyen_success
@@ -52,9 +52,7 @@ module Invoices
 
         result
       rescue Adyen::AdyenError => e
-        deliver_error_webhook(e)
-
-        result.service_failure!(code: e.code, message: e.msg)
+        result.third_party_failure!(third_party: PROVIDER_NAME, error_code: e.code, error_message: e.msg)
       end
 
       private
@@ -76,13 +74,6 @@ module Invoices
           amount_currency: invoice.currency.upcase,
           provider_payment_id:
         )
-      end
-
-      def should_process_payment?
-        return false if invoice.payment_succeeded? || invoice.voided?
-        return false if adyen_payment_provider.blank?
-
-        customer&.adyen_customer&.provider_customer_id
       end
 
       def client

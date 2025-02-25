@@ -63,8 +63,8 @@ class BaseResult
     fail_with_error!(BaseService::UnauthorizedFailure.new(self, message:))
   end
 
-  def third_party_failure!(third_party:, error_message:)
-    fail_with_error!(BaseService::ThirdPartyFailure.new(self, third_party:, error_message:))
+  def third_party_failure!(third_party:, error_code:, error_message:)
+    fail_with_error!(BaseService::ThirdPartyFailure.new(self, third_party:, error_code:, error_message:))
   end
 
   def raise_if_error!
