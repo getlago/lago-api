@@ -171,8 +171,8 @@ module PaymentProviders
         # to permit 3D secure authentication
         # https://docs.stripe.com/india-recurring-payments
         def off_session?
-          return false if customer.country == "IN"
-          return false if customer.stripe_customer.provider_payment_methods.include?("customer_balance")
+          return false if invoice.customer.country == "IN"
+          return false if provider_customer.provider_payment_methods == ["customer_balance"]
 
           true
         end

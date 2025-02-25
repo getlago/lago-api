@@ -11,6 +11,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
   let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: "pm_123456", payment_provider: stripe_payment_provider) }
   let(:code) { "stripe_1" }
   let(:reference) { "organization.name - Invoice #{invoice.number}" }
+  let(:currency) { "EUR" }
   let(:metadata) do
     {
       lago_customer_id: customer.id,
@@ -26,7 +27,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       organization:,
       customer:,
       total_amount_cents: 200,
-      currency: "EUR",
+      currency:,
       ready_for_payment_processing: true
     )
   end
@@ -386,6 +387,72 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
 
         it "returns the payload" do
           expect(payment_intent_payload).to eq(payload)
+        end
+      end
+
+      context "when using customer balance as a payment method" do
+        let(:off_session) { false }
+        let(:stripe_customer) {
+          create(:stripe_customer, customer:, payment_method_id: "pm_123456", payment_provider: stripe_payment_provider, provider_payment_methods: ["customer_balance"])
+        }
+
+        let(:base_payload) do
+          payload.merge(
+            payment_method_data: {type: "customer_balance"},
+            payment_method_options: {
+              customer_balance: {
+                funding_type: "bank_transfer"
+              }
+            }
+          )
+        end
+
+        context "when currency is EUR" do
+          let(:currency) { "EUR" }
+
+          it "includes EU bank transfer details" do
+            expected_payload = base_payload.deep_merge(
+              payment_method_options: {
+                customer_balance: {
+                  bank_transfer: {
+                    eu_bank_transfer: {country: "CA"},
+                    type: "eu_bank_transfer"
+                  }
+                }
+              }
+            )
+            expect(payment_intent_payload).to eq(expected_payload)
+          end
+        end
+
+        context "when currency is USD" do
+          let(:currency) { "USD" }
+
+          it "includes US bank transfer details" do
+            expected_payload = base_payload.deep_merge(
+              payment_method_options: {
+                customer_balance: {
+                  bank_transfer: {type: "us_bank_transfer"}
+                }
+              }
+            )
+            expect(payment_intent_payload).to eq(expected_payload)
+          end
+        end
+
+        context "when currency is GBP" do
+          let(:currency) { "GBP" }
+
+          it "includes US bank transfer details" do
+            expected_payload = base_payload.deep_merge(
+              payment_method_options: {
+                customer_balance: {
+                  bank_transfer: {type: "gb_bank_transfer"}
+                }
+              }
+            )
+            expect(payment_intent_payload).to eq(expected_payload)
+          end
         end
       end
     end
