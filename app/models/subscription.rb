@@ -57,7 +57,7 @@ class Subscription < ApplicationRecord
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
     self.lifetime_usage ||= previous_subscription&.lifetime_usage || build_lifetime_usage(organization:)
-    self.lifetime_usage.update(recalculate_invoiced_usage: true)
+    self.lifetime_usage.recalculate_invoiced_usage = true
     active!
   end
 
