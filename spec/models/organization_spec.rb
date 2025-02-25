@@ -244,6 +244,48 @@ RSpec.describe Organization, type: :model do
     end
   end
 
+  describe "#can_create_more_billing_entities?" do
+    subject { organization.can_create_billing_entities? }
+
+    around { |test| lago_premium!(&test) }
+
+    context "when no premium multi entities integration is enabled" do
+      it { is_expected.to eq(false) }
+    end
+
+    context "when the premium multi_entities_pro integration is enabled" do
+      before do
+        organization.update!(premium_integrations: ["multi_entities_pro"])
+      end
+
+      it { is_expected.to eq(true) }
+
+      context "when the organization has reached the limit" do
+        before do
+          create_list(:billing_entity, 2, organization:)
+        end
+
+        it { is_expected.to eq(false) }
+      end
+    end
+
+    context "when the premium multi_entities_enterprise integration is enabled" do
+      before do
+        organization.update!(premium_integrations: ["multi_entities_enterprise"])
+      end
+
+      it { is_expected.to eq(true) }
+
+      context "when the organization has some billing entities" do
+        before do
+          create_list(:billing_entity, 2, organization:)
+        end
+
+        it { is_expected.to eq(true) }
+      end
+    end
+  end
+
   describe "#admins" do
     subject { organization.admins }
 
