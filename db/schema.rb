@@ -1158,8 +1158,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_27_155522) do
   create_table "payment_receipts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "number", null: false
     t.uuid "payment_id", null: false
+    t.uuid "organization_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_payment_receipts_on_organization_id"
     t.index ["payment_id"], name: "index_payment_receipts_on_payment_id", unique: true
   end
 
@@ -1550,6 +1552,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_27_155522) do
   add_foreign_key "payment_provider_customers", "customers"
   add_foreign_key "payment_provider_customers", "payment_providers"
   add_foreign_key "payment_providers", "organizations"
+  add_foreign_key "payment_receipts", "organizations"
   add_foreign_key "payment_receipts", "payments"
   add_foreign_key "payment_requests", "customers"
   add_foreign_key "payment_requests", "dunning_campaigns"
