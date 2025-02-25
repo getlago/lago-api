@@ -3,6 +3,7 @@
 module BillingEntities
   class UpdateInvoiceGracePeriodService < BaseService
     Result = BaseResult[:billing_entity]
+
     def initialize(billing_entity:, grace_period:)
       @billing_entity = billing_entity
       @grace_period = grace_period.to_i
@@ -16,7 +17,8 @@ module BillingEntities
         billing_entity.invoice_grace_period = grace_period
         billing_entity.save!
 
-        Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityJob.perform_later(billing_entity, old_grace_period)
+        # TODO: uncomment when billing_entity is the source of truth
+        # Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityJob.perform_later(billing_entity, old_grace_period)
       end
 
       result.billing_entity = billing_entity

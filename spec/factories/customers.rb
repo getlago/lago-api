@@ -23,6 +23,8 @@ FactoryBot.define do
     currency { "EUR" }
 
     after :build do |customer, values|
+      # TODO: change building invoices from billing_entity by default (and assigning organization from billing_entity)
+      customer.organization = values.billing_entity.organization if values.billing_entity&.organization
       customer.billing_entity = values.organization.default_billing_entity unless customer.billing_entity
     end
 

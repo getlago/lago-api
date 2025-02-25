@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :invoice do
     customer
+    # TODO: change building invoices from billing_entity by default
     organization
 
     issuing_date { Time.zone.now - 1.day }
@@ -13,6 +14,8 @@ FactoryBot.define do
     organization_sequential_id { rand(1_000_000) }
 
     after :build do |invoice, values|
+      # TODO: change building invoices from billing_entity by default (and assigning organization from billing_entity)
+      invoice.organization = values.billing_entity.organization if values.billing_entity&.organization
       invoice.billing_entity = values.organization.default_billing_entity unless invoice.billing_entity
     end
 
