@@ -47,6 +47,8 @@ class SendWebhookJob < ApplicationJob
     "integration.provider_error" => Webhooks::Integrations::ProviderErrorService,
     "payment.requires_action" => Webhooks::Payments::RequiresActionService,
     "payment_provider.error" => Webhooks::PaymentProviders::ErrorService,
+    "payment_receipt.created" => Webhooks::PaymentReceipts::CreatedService,
+    "payment_receipt.generated" => Webhooks::PaymentReceipts::GeneratedService,
     "payment_request.created" => Webhooks::PaymentRequests::CreatedService,
     "payment_request.payment_failure" => Webhooks::PaymentProviders::PaymentRequestPaymentFailureService,
     "payment_request.payment_status_updated" => Webhooks::PaymentRequests::PaymentStatusUpdatedService,

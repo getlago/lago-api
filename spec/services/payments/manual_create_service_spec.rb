@@ -115,6 +115,14 @@ RSpec.describe Payments::ManualCreateService, type: :service do
           expect(result.payment.payable.total_paid_amount_cents).to eq(amount_cents)
         end
 
+        context "when issue_receipts_enabled is true" do
+          before { organization.update!(premium_integrations: %w[issue_receipts]) }
+
+          it "enqueues a payment receipt job" do
+            expect { service.call }.to have_enqueued_job(PaymentReceipts::CreateJob)
+          end
+        end
+
         context "when there is an integration customer" do
           let(:integration) do
             create(
@@ -157,6 +165,14 @@ RSpec.describe Payments::ManualCreateService, type: :service do
           result = service.call
 
           expect(result.payment.payable.payment_status).to eq("succeeded")
+        end
+
+        context "when issue_receipts_enabled is true" do
+          before { organization.update!(premium_integrations: %w[issue_receipts]) }
+
+          it "enqueues a payment receipt job" do
+            expect { service.call }.to have_enqueued_job(PaymentReceipts::CreateJob)
+          end
         end
       end
     end
