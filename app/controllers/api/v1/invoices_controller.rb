@@ -275,6 +275,7 @@ module Api
           :billing_time,
           :subscription_at,
           subscriptions: [
+            :terminated_at,
             external_ids: []
           ],
           coupons: [
