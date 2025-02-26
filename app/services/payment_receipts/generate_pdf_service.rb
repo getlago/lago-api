@@ -29,7 +29,7 @@ module PaymentReceipts
     attr_reader :payment_receipt, :context
 
     def generate_pdf
-      I18n.with_locale(payment_receipt.customer.preferred_document_locale) do
+      I18n.with_locale(payment_receipt.payment.customer.preferred_document_locale) do
         pdf_service = Utils::PdfGenerator.new(template:, context: payment_receipt)
         pdf_result = pdf_service.call
 
