@@ -38,6 +38,10 @@ class WalletTransaction < ApplicationRecord
   enum :source, SOURCES
 
   scope :pending, -> { where(status: :pending) }
+
+  def amount_cents
+    amount * wallet.currency_for_balance.subunit_to_unit
+  end
 end
 
 # == Schema Information

@@ -15,7 +15,7 @@ module WalletTransactions
 
       return result.not_allowed_failure!(code: "wallet_not_active") unless wallet.active?
 
-      transaction_result = WalletTransactions::CreateService.call(
+      transaction_result = WalletTransactions::CreateFromParamsService.call(
         organization: customer.organization,
         params: {
           wallet_id: wallet.id,

@@ -13,7 +13,7 @@ module Wallets
 
       def call
         currency = wallet.balance.currency
-        amount_cents = wallet.rate_amount * credits_amount * currency.subunit_to_unit
+        amount_cents = (wallet.rate_amount * credits_amount).round(currency.exponent) * currency.subunit_to_unit
 
         update_params = {
           balance_cents: wallet.balance_cents + amount_cents,
