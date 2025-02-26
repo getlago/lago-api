@@ -66,6 +66,15 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         expect(result.billing_entity).to be_persisted
         expect(result.billing_entity.name).to eq("Billing Entity")
       end
+
+      context "when record is invalid" do
+        let(:params) { {name: nil, code: nil} }
+
+        it "returns an error" do
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+        end
+      end
     end
   end
 end
