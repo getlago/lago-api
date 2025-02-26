@@ -11,144 +11,74 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
   let(:subscription) { create(:subscription, organization:, customer:) }
   let(:invoice) { create(:invoice, customer:, status: :finalized, organization:) }
   let(:payment) { create(:payment, payable: invoice) }
-  let(:payment_receipt) { create(:payment_receipt, payment:) }
-  let(:invoice_subscription) { create(:invoice_subscription, :boundaries, invoice:, subscription:) }
+  let(:payment_receipt) { create(:payment_receipt, payment:, organization:) }
 
-  before do
-    invoice_subscription
-    stub_pdf_generation
-  end
+  before { stub_pdf_generation }
 
   describe "#call" do
-    it "generates the invoice synchronously" do
+    it "generates the payment receipt synchronously" do
       result = payment_receipt_generate_service.call
 
-      expect(result.invoice.file).to be_present
+      expect(result.payment_receipt.file).to be_present
     end
 
     it "calls the SendWebhook job" do
       expect { payment_receipt_generate_service.call }.to have_enqueued_job(SendWebhookJob)
     end
 
-    # context "with not found invoice" do
-    #   let(:invoice_subscription) { nil }
-    #   let(:invoice) { nil }
+    context "with not found payment receipt" do
+      let(:payment_receipt) { nil }
 
-    #   it "returns a result with error" do
-    #     result = payment_receipt_generate_service.call
+      it "returns a result with error" do
+        result = payment_receipt_generate_service.call
 
-    #     expect(result.success).to be_falsey
-    #     expect(result.error.error_code).to eq("invoice_not_found")
-    #   end
-    # end
+        expect(result.success).to be_falsey
+        expect(result.error.error_code).to eq("payment_receipt_not_found")
+      end
+    end
 
-    # context "when invoice is draft" do
-    #   let(:invoice) { create(:invoice, customer:, status: :draft, organization:) }
+    context "with already generated file" do
+      before do
+        payment_receipt.file.attach(
+          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+          filename: "receipt.pdf",
+          content_type: "application/pdf"
+        )
+      end
 
-    #   it "returns a result with error" do
-    #     result = payment_receipt_generate_service.call
+      it "does not generate the pdf" do
+        allow(LagoHttpClient::Client).to receive(:new)
 
-    #     expect(result.success).to be_falsey
-    #     expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-    #     expect(result.error.code).to eq("is_draft")
-    #   end
-    # end
+        payment_receipt_generate_service.call
 
-    # context "with already generated file" do
-    #   before do
-    #     invoice.file.attach(
-    #       io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
-    #       filename: "invoice.pdf",
-    #       content_type: "application/pdf"
-    #     )
-    #   end
+        expect(LagoHttpClient::Client).not_to have_received(:new)
+      end
+    end
 
-    #   it "does not generate the pdf" do
-    #     allow(LagoHttpClient::Client).to receive(:new)
+    context "when in API context" do
+      let(:context) { "api" }
 
-    #     payment_receipt_generate_service.call
+      it "calls the SendWebhook job" do
+        expect { payment_receipt_generate_service.call }.to have_enqueued_job(SendWebhookJob)
+      end
+    end
 
-    #     expect(LagoHttpClient::Client).not_to have_received(:new)
-    #   end
-    # end
+    context "when in Admin context" do
+      let(:context) { "admin" }
 
-    # context "when a billable metric is deleted" do
-    #   let(:billable_metric) { create(:billable_metric, :deleted) }
-    #   let(:fees) { [create(:charge_fee, subscription:, invoice:, charge_filter:, charge:, amount_cents: 10)] }
-    #   let(:charge) { create(:standard_charge, :deleted, billable_metric:) }
-    #   let(:billable_metric_filter) { create(:billable_metric_filter, :deleted, billable_metric:) }
-    #   let(:charge_filter) do
-    #     create(:charge_filter, :deleted, charge_id: charge.id, properties: {amount: "10"})
-    #   end
-    #   let(:charge_filter_value) do
-    #     create(
-    #       :charge_filter_value,
-    #       :deleted,
-    #       charge_filter:,
-    #       billable_metric_filter:,
-    #       values: [billable_metric_filter.values.first]
-    #     )
-    #   end
+      before do
+        invoice.file.attach(
+          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+          filename: "receipt.pdf",
+          content_type: "application/pdf"
+        )
+      end
 
-    #   before do
-    #     charge_filter_value
-    #   end
+      it "generates the invoice synchronously" do
+        result = payment_receipt_generate_service.call
 
-    #   it "generates the invoice synchronously" do
-    #     result = payment_receipt_generate_service.call
-
-    #     expect(result.invoice.file).to be_present
-    #   end
-    # end
-
-    # context "when invoice is self billed" do
-    #   let(:invoice) do
-    #     create(:invoice, :self_billed, customer:, status: :finalized, organization:)
-    #   end
-
-    #   let(:pdf_generator) { instance_double(Utils::PdfGenerator, call: pdf_response) }
-
-    #   let(:pdf_response) do
-    #     BaseService::Result.new.tap { |r| r.io = StringIO.new(pdf_content) }
-    #   end
-
-    #   let(:pdf_content) { File.read(Rails.root.join("spec/fixtures/blank.pdf")) }
-
-    #   before do
-    #     allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
-    #   end
-
-    #   it "calls the self billed template" do
-    #     payment_receipt_generate_service.call
-
-    #     expect(Utils::PdfGenerator).to have_received(:new).with(template: "invoices/v4/self_billed", context: invoice)
-    #   end
-    # end
-
-    # context "when in API context" do
-    #   let(:context) { "api" }
-
-    #   it "calls the SendWebhook job" do
-    #     expect { payment_receipt_generate_service.call }.to have_enqueued_job(SendWebhookJob)
-    #   end
-    # end
-
-    # context "when in Admin context" do
-    #   let(:context) { "admin" }
-
-    #   before do
-    #     invoice.file.attach(
-    #       io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
-    #       filename: "invoice.pdf",
-    #       content_type: "application/pdf"
-    #     )
-    #   end
-
-    #   it "generates the invoice synchronously" do
-    #     result = payment_receipt_generate_service.call
-
-    #     expect(result.invoice.file.filename.to_s).not_to eq("invoice.pdf")
-    #   end
-    # end
+        expect(result.payment_receipt.file.filename.to_s).not_to eq("receipt.pdf")
+      end
+    end
   end
 end
