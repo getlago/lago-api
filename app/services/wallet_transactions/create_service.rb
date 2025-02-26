@@ -23,10 +23,12 @@ module WalletTransactions
         result.current_wallet.invoice_requires_successful_payment
       end
 
+      round_digits = result.current_wallet.currency_for_balance.exponent
+
       if params[:paid_credits]
         transaction = handle_paid_credits(
           wallet: result.current_wallet,
-          credits_amount: BigDecimal(params[:paid_credits]).floor(5),
+          credits_amount: BigDecimal(params[:paid_credits]).round(round_digits),
           invoice_requires_successful_payment:
         )
         wallet_transactions << transaction
@@ -35,7 +37,7 @@ module WalletTransactions
       if params[:granted_credits]
         transaction = handle_granted_credits(
           wallet: result.current_wallet,
-          credits_amount: BigDecimal(params[:granted_credits]).floor(5),
+          credits_amount: BigDecimal(params[:granted_credits]).round(round_digits),
           reset_consumed_credits: ActiveModel::Type::Boolean.new.cast(params[:reset_consumed_credits]),
           invoice_requires_successful_payment:
         )
@@ -45,7 +47,7 @@ module WalletTransactions
       if params[:voided_credits]
         void_result = WalletTransactions::VoidService.call(
           wallet: result.current_wallet,
-          credits_amount: BigDecimal(params[:voided_credits]).floor(5),
+          credits_amount: BigDecimal(params[:voided_credits]).round(round_digits),
           from_source: source, metadata:
         )
         wallet_transactions << void_result.wallet_transaction
