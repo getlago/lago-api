@@ -27,6 +27,19 @@ module Rails::ConsoleMethods
     end
   end
 
+  def enable_premium_integration!(org_id, integration_name)
+    org = Organization.find(org_id)
+    org.premium_integrations << integration_name
+    org.save!
+    org.reload.premium_integrations
+  end
+
+  def enable_all_premium_integrations!(org_id)
+    org = Organization.find(org_id)
+    org.update! premium_integrations: Organization::PREMIUM_INTEGRATIONS
+    org.reload.premium_integrations
+  end
+
   def hard_delete_invoice(id)
     invoice = Invoice.find(id)
     puts "Going to hard delete invoice from org `#{invoice.organization.name}` (id: #{invoice.id})" # rubocop:disable Rails/Output
