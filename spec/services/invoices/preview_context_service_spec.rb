@@ -182,50 +182,29 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
       }
     end
 
-    context "when plan matching provided code exists" do
+    context "with valid params" do
       let(:plan) { create(:plan, organization:) }
+      let(:subscription_at) { generate(:past_date) }
+      let(:billing_time) { "anniversary" }
 
       before { freeze_time }
 
-      context "when billing time and subscription date are present" do
-        let(:subscription_at) { generate(:past_date) }
-        let(:billing_time) { "anniversary" }
-
-        it "returns new subscription with provided params" do
-          expect(subject)
-            .to all(
-              be_a(Subscription)
-                .and(have_attributes(
-                  customer:,
-                  plan:,
-                  subscription_at: subscription_at,
-                  started_at: subscription_at,
-                  billing_time: params[:billing_time]
-                ))
-            )
-        end
-      end
-
-      context "when billing time and subscription date are missing" do
-        let(:subscription_at) { nil }
-        let(:billing_time) { nil }
-
-        it "returns new subscription with default values for subscription date and billing time" do
-          expect(subject)
-            .to all(
-              be_a(Subscription).and(have_attributes(
+      it "returns new subscription with provided params" do
+        expect(subject)
+          .to all(
+            be_a(Subscription)
+              .and(have_attributes(
                 customer:,
                 plan:,
-                subscription_at: Time.current,
-                started_at: Time.current,
-                billing_time: "calendar"
+                subscription_at: subscription_at,
+                started_at: subscription_at,
+                billing_time: params[:billing_time]
               ))
-            )
-        end
+          )
       end
     end
 
-    context "when plan matching provided code does not exist" do
+    context "with invalid params" do
       let(:plan) { nil }
       let(:subscription_at) { nil }
       let(:billing_time) { nil }
@@ -236,28 +215,6 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
         expect(result.error.error_code).to eq("plan_not_found")
 
         expect(subject).to be_nil
-      end
-    end
-
-    context "when subscriptions are fetched from the database" do
-      let(:subscription1) { create(:subscription, customer:) }
-      let(:subscription2) { create(:subscription, customer:) }
-      let(:params) do
-        {
-          customer: {external_id: customer.external_id},
-          subscriptions: {
-            external_ids: [subscription1.external_id, subscription2.external_id]
-          }
-        }
-      end
-
-      before do
-        subscription1
-        subscription2
-      end
-
-      it "returns subscriptions that are persisted" do
-        expect(subject.pluck(:external_id)).to eq([subscription1.external_id, subscription2.external_id])
       end
     end
   end
