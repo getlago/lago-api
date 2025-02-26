@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe Resolvers::Analytics::RevenueStreamsResolver, type: :graphql do
-  let(:required_permission) { "analytics:view" }
+RSpec.describe Resolvers::DataApi::RevenueStreamsResolver, type: :graphql do
+  let(:required_permission) { "data_api:revenue_streams:view" }
   let(:query) do
     <<~GQL
       query($customerCurrency: CurrencyEnum, $externalCustomerId: String) {
@@ -30,7 +30,7 @@ RSpec.describe Resolvers::Analytics::RevenueStreamsResolver, type: :graphql do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "analytics:view"
+  it_behaves_like "requires permission", "data_api:revenue_streams:view"
 
   context "without premium feature" do
     it "returns an error" do

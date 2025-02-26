@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 module Resolvers
-  module Analytics
+  module DataApi
     class RevenueStreamsResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "analytics:view"
+      REQUIRED_PERMISSION = "data_api:revenue_streams:view"
 
       description "Query revenue streams of an organization"
 
@@ -17,14 +17,14 @@ module Resolvers
       argument :from_date, GraphQL::Types::ISO8601Date, required: false
       argument :to_date, GraphQL::Types::ISO8601Date, required: false
 
-      argument :time_granularity, Types::Analytics::TimeGranularityEnum, required: false
+      argument :time_granularity, Types::DataApi::TimeGranularityEnum, required: false
 
       argument :external_customer_id, String, required: false
       argument :external_subscription_id, String, required: false
 
       argument :plan_code, String, required: false
 
-      type Types::Analytics::RevenueStreams::Object.collection_type, null: false
+      type Types::DataApi::RevenueStreams::Object.collection_type, null: false
 
       def resolve(**args)
         raise unauthorized_error unless License.premium?
