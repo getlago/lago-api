@@ -474,7 +474,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
     end
 
     context "when customer has no payment method to be setup" do
-      let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id: nil, provider_payment_methods: ::PaymentProviderCustomers::StripeCustomer::PAYMENT_METHODS_WITHOUT_SETUP) }
+      let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id: nil, provider_payment_methods: %w[crypto]) }
 
       it "does not deliver a webhook" do
         described_class.new(stripe_customer.reload).generate_checkout_url
@@ -485,7 +485,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
     end
 
     context "when stripe raises an invalid request error" do
-      let(:stripe_error) { ::Stripe::InvalidRequestError.new("What is horrible request?!", {}) }
+      let(:stripe_error) { ::Stripe::InvalidRequestError.new("wrong request!", {}) }
 
       before { allow(::Stripe::Checkout::Session).to receive(:create).and_raise(stripe_error) }
 
@@ -494,7 +494,7 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ThirdPartyFailure)
-        expect(result.error.message).to eq("Stripe: What is horrible request?!")
+        expect(result.error.message).to eq("Stripe:  - wrong request!")
       end
     end
 
