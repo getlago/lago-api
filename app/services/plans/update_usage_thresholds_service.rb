@@ -18,6 +18,7 @@ module Plans
         plan.usage_thresholds.discard_all
       else
         process_usage_thresholds
+        LifetimeUsages::FlagRefreshFromPlanUpdateJob.perform_later(plan)
       end
 
       result
