@@ -23,8 +23,9 @@ module Wallets
           last_consumed_credit_at: Time.current
         )
 
-        SendWebhookJob.perform_later("wallet.updated", wallet)
         Wallets::Balance::RefreshOngoingService.call(wallet:)
+
+        after_commit { SendWebhookJob.perform_later("wallet.updated", wallet) }
 
         result.wallet = wallet
         result
