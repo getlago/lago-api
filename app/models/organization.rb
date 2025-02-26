@@ -174,7 +174,7 @@ class Organization < ApplicationRecord
     ENV["LAGO_FROM_EMAIL"]
   end
 
-  def can_create_billing_entities?
+  def can_create_billing_entity?
     remaining_billing_entities > 0
   end
 
