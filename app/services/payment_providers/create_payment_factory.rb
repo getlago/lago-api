@@ -7,8 +7,6 @@ module PaymentProviders
     end
 
     def self.service_class(provider:)
-      # TODO(payment): refactor Invoices::Payments::*Service#call
-      #                into PaymentProviders::*::Payments::CreateService#call
       case provider.to_sym
       when :adyen
         PaymentProviders::Adyen::Payments::CreateService

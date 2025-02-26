@@ -19,7 +19,7 @@ module Subscriptions
         return result
       end
 
-      new_subscription = new_subcription_with_overrides
+      new_subscription = new_subscription_with_overrides
 
       ActiveRecord::Base.transaction do
         cancel_pending_subscription if pending_subscription?
@@ -53,7 +53,7 @@ module Subscriptions
 
     attr_reader :current_subscription, :plan, :params, :name
 
-    def new_subcription_with_overrides
+    def new_subscription_with_overrides
       Subscription.new(
         customer: current_subscription.customer,
         plan: params.key?(:plan_overrides) ? override_plan : plan,
