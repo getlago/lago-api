@@ -23,6 +23,7 @@ module WalletTransactions
         result.current_wallet.invoice_requires_successful_payment
       end
 
+      # we're not working with cents here. We need to round to the right value after the comma.
       round_digits = result.current_wallet.currency_for_balance.exponent
 
       if params[:paid_credits]
