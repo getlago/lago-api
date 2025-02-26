@@ -4465,6 +4465,8 @@ enum IntegrationTypeEnum {
   from_email
   hubspot
   manual_payments
+  multi_entities_enterprise
+  multi_entities_pro
   netsuite
   okta
   preview
@@ -6516,6 +6518,8 @@ enum PremiumIntegrationTypeEnum {
   from_email
   hubspot
   manual_payments
+  multi_entities_enterprise
+  multi_entities_pro
   netsuite
   okta
   preview

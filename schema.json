@@ -20703,6 +20703,18 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "multi_entities_pro",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "multi_entities_enterprise",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -31198,6 +31210,18 @@
             },
             {
               "name": "preview",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "multi_entities_pro",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "multi_entities_enterprise",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

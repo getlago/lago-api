@@ -81,6 +81,8 @@ class Organization < ApplicationRecord
     manual_payments
     from_email
     preview
+    multi_entities_pro
+    multi_entities_enterprise
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 
@@ -172,6 +174,10 @@ class Organization < ApplicationRecord
     ENV["LAGO_FROM_EMAIL"]
   end
 
+  def can_create_billing_entities?
+    remaining_billing_entities > 0
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
@@ -191,6 +197,13 @@ class Organization < ApplicationRecord
       self.hmac_key = SecureRandom.uuid
       break unless self.class.exists?(hmac_key:)
     end
+  end
+
+  def remaining_billing_entities
+    return Float::INFINITY if multi_entities_enterprise_enabled?
+    return 2 - billing_entities.count if multi_entities_pro_enabled?
+
+    0
   end
 end
 
