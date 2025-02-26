@@ -7,12 +7,14 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create(:customer, organization:, currency:) }
+  let(:currency) { "EUR" }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) do
     create(
       :wallet,
       customer:,
+      currency:,
       balance_cents: 1000,
       credits_balance: 10.0,
       ongoing_balance_cents: 1000,
@@ -119,6 +121,16 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
       it "creates wallet transaction with rounded value" do
         result = create_service
         expect(result.wallet_transactions.first.credit_amount).to eq(4.40)
+      end
+    end
+
+    context "with decimal value and currency without digits" do
+      let(:paid_credits) { "4.399999" }
+      let(:currency) { "JPY" }
+
+      it "creates wallet transaction with rounded value" do
+        result = create_service
+        expect(result.wallet_transactions.first.credit_amount).to eq(4)
       end
     end
   end
