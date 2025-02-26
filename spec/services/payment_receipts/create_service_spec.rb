@@ -93,13 +93,11 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
 
               it "enqueues the generate pdf job" do
                 expect do
+                  organization.email_settings << "payment_receipt.created"
+                  organization.save!
                   service.call
-                end.to have_enqueued_job(PaymentReceipts::GeneratePdfJob).with(payment_receipt)
+                end.to have_enqueued_job(PaymentReceipts::GeneratePdfAndNotifyJob).with(payment_receipt:, email: true)
               end
-
-              # it "enqueues the email job" do
-              #   pending
-              # end
             end
           end
         end
