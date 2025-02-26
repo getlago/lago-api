@@ -19,6 +19,8 @@ module Plans
       else
         process_usage_thresholds
       end
+
+      result
     end
 
     private

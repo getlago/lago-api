@@ -12,7 +12,7 @@ module LifetimeUsages
 
     def call
       LifetimeUsages::CalculateService.call(lifetime_usage:).raise_if_error!
-      check_result = LifetimeUsages::UsageThresholds::CheckService.call(lifetime_usage:, progressive_billed_amount:).raise_if_error!
+      check_result = LifetimeUsages::UsageThresholds::CheckService.call!(lifetime_usage:, progressive_billed_amount:)
       usage_thresholds = check_result.passed_thresholds
       if usage_thresholds.any?
         usage_thresholds.each do |usage_threshold|
