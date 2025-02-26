@@ -244,8 +244,8 @@ RSpec.describe Organization, type: :model do
     end
   end
 
-  describe "#can_create_more_billing_entities?" do
-    subject { organization.can_create_billing_entities? }
+  describe "#can_create_more_billing_entity?" do
+    subject { organization.can_create_billing_entity? }
 
     around { |test| lago_premium!(&test) }
 
