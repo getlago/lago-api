@@ -537,8 +537,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_03_03_104151) do
     t.datetime "last_dunning_campaign_attempt_at", precision: nil
     t.boolean "skip_invoice_custom_sections", default: false, null: false
     t.enum "account_type", default: "customer", null: false, enum_type: "customer_account_type"
-    t.bigint "payment_receipt_counter", default: 0, null: false
     t.uuid "billing_entity_id"
+    t.bigint "payment_receipt_counter", default: 0, null: false
     t.index ["account_type"], name: "index_customers_on_account_type"
     t.index ["applied_dunning_campaign_id"], name: "index_customers_on_applied_dunning_campaign_id"
     t.index ["billing_entity_id"], name: "index_customers_on_billing_entity_id"
