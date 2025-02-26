@@ -20,6 +20,8 @@ module Plans
         process_usage_thresholds
       end
 
+      LifetimeUsages::FlagRefreshFromPlanUpdateJob.perform_later(plan)
+
       result
     end
 
