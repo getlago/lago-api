@@ -34843,11 +34843,11 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "customerCountry",
+                  "name": "currency",
                   "description": null,
                   "type": {
                     "kind": "ENUM",
-                    "name": "CountryCode",
+                    "name": "CurrencyEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -34855,11 +34855,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "customerCurrency",
+                  "name": "customerCountry",
                   "description": null,
                   "type": {
                     "kind": "ENUM",
-                    "name": "CurrencyEnum",
+                    "name": "CountryCode",
                     "ofType": null
                   },
                   "defaultValue": null,
