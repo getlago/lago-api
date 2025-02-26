@@ -116,9 +116,9 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
     context "with decimal value" do
       let(:paid_credits) { "4.399999" }
 
-      it "creates wallet transaction with floored value" do
+      it "creates wallet transaction with rounded value" do
         result = create_service
-        expect(result.wallet_transactions.first.credit_amount).to eq(4.39999)
+        expect(result.wallet_transactions.first.credit_amount).to eq(4.40)
       end
     end
   end
