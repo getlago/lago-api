@@ -7047,7 +7047,7 @@ type Query {
   """
   Query revenue streams of an organization
   """
-  revenueStreams(customerCountry: CountryCode, customerCurrency: CurrencyEnum, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): RevenueStreamsCollection!
+  revenueStreams(currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): RevenueStreamsCollection!
 
   """
   Query a single subscription of an organization
