@@ -20,6 +20,8 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       manual_payments
       from_email
       preview
+      multi_entities_pro
+      multi_entities_enterprise
     ]
   end
 
