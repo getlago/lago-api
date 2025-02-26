@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "pry"
-
 RSpec.describe Invoices::Preview::SubscriptionsService, type: :service do
   let(:result) { described_class.call(organization:, customer:, params:) }
 
