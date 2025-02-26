@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Types
-  module Analytics
+  module DataApi
     module RevenueStreams
       class Object < Types::BaseObject
         graphql_name "RevenueStreams"

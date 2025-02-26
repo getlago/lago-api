@@ -6389,6 +6389,7 @@ type Permissions {
   customersDelete: Boolean!
   customersUpdate: Boolean!
   customersView: Boolean!
+  dataApiRevenueStreamsView: Boolean!
   developersKeysManage: Boolean!
   developersManage: Boolean!
   draftInvoicesUpdate: Boolean!
