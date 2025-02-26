@@ -23,6 +23,7 @@ module DataExports
           customer_lago_id
           customer_external_id
           customer_name
+          customer_email
           customer_country
           customer_tax_identification_number
           invoice_number
@@ -60,6 +61,7 @@ module DataExports
           serialized_invoice.dig(:customer, :lago_id),
           serialized_invoice.dig(:customer, :external_id),
           serialized_invoice.dig(:customer, :name),
+          serialized_invoice.dig(:customer, :email),
           serialized_invoice.dig(:customer, :country),
           serialized_invoice.dig(:customer, :tax_identification_number),
           serialized_invoice[:number],

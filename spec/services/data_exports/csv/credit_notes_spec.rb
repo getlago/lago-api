@@ -23,6 +23,7 @@ RSpec.describe DataExports::Csv::CreditNotes do
           credit_note.customer.id,
           credit_note.customer.external_id,
           credit_note.customer.name,
+          credit_note.customer.email,
           credit_note.customer.country,
           credit_note.customer.tax_identification_number,
           credit_note.number,
