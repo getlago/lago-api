@@ -1187,6 +1187,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_27_155522) do
     t.enum "payable_payment_status", enum_type: "payment_payable_payment_status"
     t.enum "payment_type", default: "provider", null: false, enum_type: "payment_type"
     t.string "reference"
+    t.jsonb "provider_payment_method_data", default: {}, null: false
     t.index ["invoice_id"], name: "index_payments_on_invoice_id"
     t.index ["payable_id", "payable_type"], name: "index_payments_on_payable_id_and_payable_type", unique: true, where: "((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))"
     t.index ["payable_type", "payable_id"], name: "index_payments_on_payable_type_and_payable_id"
