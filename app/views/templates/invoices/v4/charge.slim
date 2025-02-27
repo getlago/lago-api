@@ -555,7 +555,7 @@ html
               td.body-2 = '-' + MoneyHelper.format(prepaid_credit_amount)
           tr
             td.body-2
-            td.body-1 = advance_charges? ? I18n.t('invoice.already_paid') : I18n.t('invoice.total_due')
+            td.body-1 = advance_charges? ? I18n.t('invoice.already_paid') : I18n.t('invoice.total')
             td.body-1 = MoneyHelper.format(total_amount)
 
       == SlimHelper.render('templates/invoices/v4/_eu_tax_management', self)
