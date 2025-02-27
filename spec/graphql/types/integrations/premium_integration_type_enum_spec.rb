@@ -19,6 +19,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       remove_branding_watermark
       manual_payments
       from_email
+      issue_receipts
       preview
       multi_entities_pro
       multi_entities_enterprise

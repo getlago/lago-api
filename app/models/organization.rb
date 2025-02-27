@@ -7,7 +7,8 @@ class Organization < ApplicationRecord
 
   EMAIL_SETTINGS = [
     "invoice.finalized",
-    "credit_note.created"
+    "credit_note.created",
+    "payment_receipt.created"
   ].freeze
 
   has_many :api_keys
@@ -80,6 +81,7 @@ class Organization < ApplicationRecord
     remove_branding_watermark
     manual_payments
     from_email
+    issue_receipts
     preview
     multi_entities_pro
     multi_entities_enterprise

@@ -126,7 +126,7 @@ RSpec.describe Organization, type: :model do
     end
 
     it "is valid with email_settings" do
-      organization.email_settings = ["invoice.finalized", "credit_note.created"]
+      organization.email_settings = ["invoice.finalized", "credit_note.created", "payment_receipt.created"]
 
       expect(organization).to be_valid
     end
