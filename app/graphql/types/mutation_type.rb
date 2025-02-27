@@ -100,6 +100,8 @@ module Types
     field :update_invoice, mutation: Mutations::Invoices::Update
     field :void_invoice, mutation: Mutations::Invoices::Void
 
+    field :download_payment_receipt, mutation: Mutations::PaymentReceipts::Download
+
     field :create_customer_wallet, mutation: Mutations::Wallets::Create
     field :terminate_customer_wallet, mutation: Mutations::Wallets::Terminate
     field :update_customer_wallet, mutation: Mutations::Wallets::Update
