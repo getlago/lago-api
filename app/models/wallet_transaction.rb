@@ -45,7 +45,8 @@ class WalletTransaction < ApplicationRecord
     super
 
     currency = wallet.currency_for_balance
-    self.amount = (wallet.rate_amount * credit_amount).round(currency.exponent)
+    # subtle, but it's important to use `self.credit_amount`, this means AR has already parsed the amount into a usable bigdecimal
+    self.amount = (wallet.rate_amount * self.credit_amount).round(currency.exponent)
   end
 end
 
