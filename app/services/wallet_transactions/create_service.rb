@@ -12,6 +12,8 @@ module WalletTransactions
     end
 
     def call
+      # Normalize metadata
+      params[:metadata] = [] if params[:metadata] == {}
       return result unless valid? # NOTE: validator sets result.current_wallet
 
       wallet_transactions = []
