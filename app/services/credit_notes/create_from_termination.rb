@@ -2,10 +2,11 @@
 
 module CreditNotes
   class CreateFromTermination < BaseService
-    def initialize(subscription:, reason: "order_change", upgrade: false)
+    def initialize(subscription:, reason: "order_change", upgrade: false, context: nil)
       @subscription = subscription
       @reason = reason
       @upgrade = upgrade
+      @context = context
 
       super
     end
@@ -26,7 +27,7 @@ module CreditNotes
       amount -= last_subscription_fee.credit_note_items.sum(:amount_cents)
       return result unless amount.positive?
 
-      CreditNotes::CreateService.new(
+      CreditNotes::CreateService.call(
         invoice: last_subscription_fee.invoice,
         credit_amount_cents: creditable_amount_cents(amount),
         refund_amount_cents: 0,
@@ -37,13 +38,14 @@ module CreditNotes
           }
         ],
         reason: reason.to_sym,
-        automatic: true
-      ).call
+        automatic: true,
+        context:
+      )
     end
 
     private
 
-    attr_accessor :subscription, :reason, :upgrade
+    attr_accessor :subscription, :reason, :upgrade, :context
 
     delegate :plan, :terminated_at, :customer, to: :subscription
 
