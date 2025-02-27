@@ -120,7 +120,8 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
 
       it "creates wallet transaction with rounded value" do
         result = create_service
-        expect(result.wallet_transactions.first.credit_amount).to eq(4.40)
+        expect(result.wallet_transactions.first.credit_amount).to eq(4.39999)
+        expect(result.wallet_transactions.first.amount).to eq(4.40)
       end
     end
 
@@ -130,7 +131,8 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
 
       it "creates wallet transaction with rounded value" do
         result = create_service
-        expect(result.wallet_transactions.first.credit_amount).to eq(4)
+        expect(result.wallet_transactions.first.credit_amount).to eq(4.39999)
+        expect(result.wallet_transactions.first.amount).to eq(4)
       end
     end
   end
