@@ -30,7 +30,9 @@ module PaymentProviders
 
           if payment_type == "one-time"
             update_result = update_payment_status(payment_type)
-            return update_result.raise_if_error!
+            update_result.raise_if_error!
+            update_payment_method_data(update_result.payment)
+            return update_result
           end
 
           return result if amount != 0
@@ -70,6 +72,21 @@ module PaymentProviders
 
       def event
         @event ||= JSON.parse(event_json)
+      end
+
+      def update_payment_method_data(payment)
+        last4 = event.dig("additionalData", "cardSummary")
+        type = event.dig("paymentMethod")
+        data = {
+          id: nil,
+          type: last4 ? "card" : type
+        }
+        if data[:type] == "card"
+          data[:brand] = type
+          data[:last4] = last4
+        end
+
+        payment.update(provider_payment_method_data: data)
       end
 
       def update_payment_status(payment_type)
