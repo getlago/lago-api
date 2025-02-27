@@ -83,7 +83,10 @@ RSpec.describe Invoices::Preview::SubscriptionsService, type: :service do
           it "returns result with subscriptions marked as terminated" do
             expect(subject).to all(
               be_a(Subscription)
-                .and(have_attributes(terminated_at: terminated_at.change(usec: 0)))
+                .and(have_attributes(
+                  terminated_at: terminated_at.change(usec: 0),
+                  status: "terminated"
+                ))
             )
           end
         end

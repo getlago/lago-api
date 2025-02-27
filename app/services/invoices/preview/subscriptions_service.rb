@@ -41,6 +41,7 @@ module Invoices
 
         customer_subscriptions.map do |subscription|
           subscription.terminated_at = terminated_at
+          subscription.status = :terminated
           subscription
         end
       end
