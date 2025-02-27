@@ -19,6 +19,7 @@ fr:
         invoice_from: Facture de %{organization_name}
         invoice_number: Nº de facture
         issue_date: Date d'émission
+        issued_on: émise le %{date}
         subject: Votre facture nº %{invoice_number} de %{organization_name}
     payment_request:
       requested:
