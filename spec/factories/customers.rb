@@ -23,7 +23,7 @@ FactoryBot.define do
     currency { "EUR" }
 
     after :build do |customer, values|
-      customer.billing_entity = values.organization.default_billing_entity unless customer.billing_entity
+      customer.billing_entity = values.organization&.default_billing_entity unless customer.billing_entity
     end
 
     trait :with_shipping_address do

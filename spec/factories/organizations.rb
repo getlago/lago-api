@@ -9,6 +9,7 @@ FactoryBot.define do
     email_settings { ["invoice.finalized", "credit_note.created"] }
 
     api_keys { [association(:api_key, organization: instance)] }
+    billing_entities { [association(:billing_entity, organization: instance)] }
 
     transient do
       webhook_url { Faker::Internet.url }
@@ -17,11 +18,6 @@ FactoryBot.define do
     after(:create) do |organization, evaluator|
       if evaluator.webhook_url
         organization.webhook_endpoints.create!(webhook_url: evaluator.webhook_url)
-      end
-      # default billing entity on organization will be used in services as intermediate step
-      # before we start accepting billing_entity_id in the request. After that we can drop the column and this method
-      if organization.billing_entities.where(is_default: true).blank?
-        create(:billing_entity, :default, organization:)
       end
     end
 
