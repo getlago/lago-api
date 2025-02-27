@@ -38,6 +38,15 @@ class WalletTransaction < ApplicationRecord
   enum :source, SOURCES
 
   scope :pending, -> { where(status: :pending) }
+
+  attr_readonly :amount
+
+  def credit_amount=(credit_amount)
+    super
+
+    currency = wallet.currency_for_balance
+    self.amount = (wallet.rate_amount * credit_amount).round(currency.exponent)
+  end
 end
 
 # == Schema Information
