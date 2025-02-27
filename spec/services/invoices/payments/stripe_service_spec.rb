@@ -17,10 +17,13 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       organization:,
       customer:,
       total_amount_cents: 200,
+      total_paid_amount_cents:,
       currency: "EUR",
       ready_for_payment_processing: true
     )
   end
+
+  let(:total_paid_amount_cents) { 0 }
 
   describe "#generate_payment_url" do
     before do
@@ -46,7 +49,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
               quantity: 1,
               price_data: {
                 currency: invoice.currency.downcase,
-                unit_amount: invoice.total_amount_cents,
+                unit_amount: invoice.total_due_amount_cents,
                 product_data: {
                   name: invoice.number
                 }
@@ -71,8 +74,18 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         }
       end
 
-      it "returns the payload" do
-        expect(payment_url_payload).to eq(payload)
+      context "when paid amout is not zero" do
+        let(:total_paid_amount_cents) { 1 }
+
+        it "return the payload" do
+          expect(payment_url_payload).to eq(payload)
+        end
+      end
+
+      context "when paid amout is zero" do
+        it "returns the payload" do
+          expect(payment_url_payload).to eq(payload)
+        end
       end
     end
 

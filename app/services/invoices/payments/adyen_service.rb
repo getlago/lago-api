@@ -126,7 +126,7 @@ module Invoices
         prms = {
           amount: {
             currency: invoice.currency.upcase,
-            value: invoice.total_amount_cents
+            value: invoice.total_due_amount_cents
           },
           reference: invoice.number,
           paymentMethod: {
@@ -146,7 +146,7 @@ module Invoices
         prms = {
           reference: invoice.number,
           amount: {
-            value: invoice.total_amount_cents,
+            value: invoice.total_due_amount_cents,
             currency: invoice.currency.upcase
           },
           merchantAccount: adyen_payment_provider.merchant_account,

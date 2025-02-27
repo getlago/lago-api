@@ -116,7 +116,7 @@ module Invoices
               quantity: 1,
               price_data: {
                 currency: invoice.currency.downcase,
-                unit_amount: invoice.total_amount_cents,
+                unit_amount: invoice.total_due_amount_cents,
                 product_data: {
                   name: invoice.number
                 }

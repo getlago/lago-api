@@ -118,7 +118,7 @@ module Invoices
             payment_type: "one-time"
           },
           link_id: "#{SecureRandom.uuid}.#{invoice.payment_attempts}",
-          link_amount: invoice.total_amount_cents / 100.to_f,
+          link_amount: invoice.total_due_amount_cents / 100.to_f,
           link_currency: invoice.currency.upcase,
           link_purpose: invoice.id,
           link_expiry_time: (Time.current + 10.minutes).iso8601,
