@@ -12,18 +12,33 @@ module Invoices
 
     def call
       result.customer = find_or_build_customer
-      result.subscriptions = find_or_build_subscriptions
       result.applied_coupons = find_or_build_applied_coupons
+
+      subscriptions_service = ::Invoices::Preview::SubscriptionsService.call(
+        organization: organization,
+        customer: result.customer,
+        params: subscription_params
+      )
+
+      if subscriptions_service.success?
+        result.subscriptions = subscriptions_service.subscriptions
+      else
+        result.fail_with_error!(subscriptions_service.error)
+      end
+
       result
     rescue ActiveRecord::RecordNotFound => exception
       result.not_found_failure!(resource: exception.model.demodulize.underscore)
-    ensure
       result
     end
 
     private
 
     attr_reader :params, :organization
+
+    def subscription_params
+      params.slice(:billing_time, :plan_code, :subscription_at, :subscriptions)
+    end
 
     def find_or_build_customer
       customer_params = params[:customer] || {}
@@ -68,40 +83,6 @@ module Invoices
       type = IntegrationCustomers::BaseCustomer.customer_type(attrs[:integration_type]).constantize
 
       customer.integration_customers.build(integration:, type:)
-    end
-
-    def build_subscription
-      billing_time = if Subscription::BILLING_TIME.include?(params[:billing_time]&.to_sym)
-        params[:billing_time]
-      else
-        "calendar"
-      end
-
-      Subscription.new(
-        customer: result.customer,
-        plan:,
-        subscription_at: params[:subscription_at].presence || Time.current,
-        started_at: params[:subscription_at].presence || Time.current,
-        billing_time:,
-        created_at: params[:subscription_at].presence || Time.current,
-        updated_at: Time.current
-      )
-    end
-
-    def find_or_build_subscriptions
-      subscriptions_params = params[:subscriptions] || {}
-
-      if subscriptions_params[:external_ids].present?
-        result.customer.subscriptions.active.where(external_id: subscriptions_params[:external_ids])
-      else
-        return [] if !plan || !result.customer
-
-        [build_subscription]
-      end
-    end
-
-    def plan
-      organization.plans.find_by!(code: params[:plan_code])
     end
 
     def find_or_build_applied_coupons
