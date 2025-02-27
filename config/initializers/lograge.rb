@@ -3,7 +3,7 @@
 Rails.application.configure do
   config.lograge.enabled = true
   config.lograge.formatter = Lograge::Formatters::Json.new
-  config.colorize_logging = false
+  config.colorize_logging = Rails.env.development?
 
   config.lograge.custom_options = lambda do |event|
     # If ENV[OTEL_EXPORTER] is not set, the span context will have all zero values.
