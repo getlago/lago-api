@@ -92,10 +92,12 @@ module Invoices
       end
 
       def parsed_terminated_at
-        Time.zone.parse(terminated_at)
-      rescue ArgumentError
-        result.single_validation_failure!(error_code: "invalid_timestamp", field: :terminated_at)
-        nil
+        if Utils::Datetime.valid_format?(terminated_at)
+          Time.zone.parse(terminated_at)
+        else
+          result.single_validation_failure!(error_code: "invalid_timestamp", field: :terminated_at)
+          nil
+        end
       end
 
       def terminated_at
