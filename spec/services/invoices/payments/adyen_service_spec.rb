@@ -24,10 +24,13 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       organization:,
       customer:,
       total_amount_cents: 1000,
+      total_paid_amount_cents:,
       currency: "USD",
       ready_for_payment_processing: true
     )
   end
+
+  let(:total_paid_amount_cents) { 0 }
 
   describe "#payment_method_params" do
     subject(:payment_method_params) { adyen_service.__send__(:payment_method_params) }
@@ -152,6 +155,73 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
             ready_for_payment_processing: false
           )
         end
+      end
+    end
+  end
+
+  describe "#payment_url_params" do
+    subject(:payment_url_params) { adyen_service.__send__(:payment_url_params) }
+
+    let(:expected_params) do
+      {
+        reference: invoice.number,
+        amount: {
+          value: invoice.total_due_amount_cents,
+          currency: invoice.currency.upcase
+        },
+        merchantAccount: adyen_payment_provider.merchant_account,
+        returnUrl: adyen_service.__send__(:success_redirect_url),
+        shopperReference: customer.external_id,
+        storePaymentMethodMode: "enabled",
+        recurringProcessingModel: "UnscheduledCardOnFile",
+        expiresAt: (Time.current + 1.day),
+        metadata: {
+          lago_customer_id: customer.id,
+          lago_invoice_id: invoice.id,
+          invoice_issuing_date: invoice.issuing_date.iso8601,
+          invoice_type: invoice.invoice_type,
+          payment_type: "one-time"
+        },
+        shopperEmail: customer.email
+      }
+    end
+
+    before do
+      adyen_payment_provider
+      adyen_customer
+    end
+
+    context "when paid amout is not zero" do
+      let(:total_paid_amount_cents) { 1 }
+
+      it "return the payload" do
+        freeze_time do
+          expect(payment_url_params).to eq(expected_params)
+        end
+      end
+    end
+
+    context "when paid amout is zero" do
+      it "returns the payload" do
+        freeze_time do
+          expect(payment_url_params).to eq(expected_params)
+        end
+      end
+    end
+
+    context "when customer has an email" do
+      let(:customer) { create(:customer, payment_provider_code: code, email: "test@example.com") }
+
+      it "includes the shopperEmail in the params" do
+        expect(payment_url_params[:shopperEmail]).to eq("test@example.com")
+      end
+    end
+
+    context "when customer does not have an email" do
+      let(:customer) { create(:customer, payment_provider_code: code, email: nil) }
+
+      it "does not include the shopperEmail in the params" do
+        expect(payment_url_params).not_to have_key(:shopperEmail)
       end
     end
   end

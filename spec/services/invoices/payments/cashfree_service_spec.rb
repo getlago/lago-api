@@ -19,10 +19,13 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
       organization:,
       customer:,
       total_amount_cents: 1000,
+      total_paid_amount_cents:,
       currency: "USD",
       ready_for_payment_processing: true
     )
   end
+
+  let(:total_paid_amount_cents) { 0 }
 
   describe ".update_payment_status" do
     let(:payment) do
@@ -167,6 +170,58 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
           payment_status: "succeeded",
           ready_for_payment_processing: false
         )
+      end
+    end
+  end
+
+  describe "#payment_url_params" do
+    let(:expected_params) do
+      {
+        customer_details: {
+          customer_phone: customer.phone || "9999999999",
+          customer_email: customer.email,
+          customer_name: customer.name
+        },
+        link_notify: {
+          send_sms: false,
+          send_email: false
+        },
+        link_meta: {
+          upi_intent: true,
+          return_url: cashfree_service.send(:success_redirect_url)
+        },
+        link_notes: {
+          lago_customer_id: customer.id,
+          lago_invoice_id: invoice.id,
+          invoice_issuing_date: invoice.issuing_date.iso8601,
+          payment_type: "one-time"
+        },
+        link_id: "#{SecureRandom.uuid}.#{invoice.payment_attempts}",
+        link_amount: invoice.total_due_amount_cents / 100.to_f,
+        link_currency: invoice.currency.upcase,
+        link_purpose: invoice.id,
+        link_expiry_time: (Time.current + 10.minutes).iso8601,
+        link_partial_payments: false,
+        link_auto_reminders: false
+      }
+    end
+
+    before do
+      allow(SecureRandom).to receive(:uuid).and_return("test-uuid")
+      allow(Time).to receive(:current).and_return(Time.parse("2023-01-01 12:00:00 UTC"))
+    end
+
+    context "when paid amout is not zero" do
+      let(:total_paid_amount_cents) { 1 }
+
+      it "return the payload" do
+        expect(cashfree_service.send(:payment_url_params)).to eq(expected_params)
+      end
+    end
+
+    context "when paid amout is zero" do
+      it "returns the payload" do
+        expect(cashfree_service.send(:payment_url_params)).to eq(expected_params)
       end
     end
   end
