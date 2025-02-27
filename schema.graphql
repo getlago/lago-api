@@ -6428,6 +6428,7 @@ type Permissions {
   organizationTaxesView: Boolean!
   organizationUpdate: Boolean!
   organizationView: Boolean!
+  paymentReceiptsView: Boolean!
   paymentRequestsCreate: Boolean!
   paymentRequestsView: Boolean!
   paymentsCreate: Boolean!
