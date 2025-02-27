@@ -3,7 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::CancelPaymentAuthorizationJob, type: :job do
-
   it "calls the Stripe API" do
     payment_provider = create(:stripe_provider)
     stub_request(:post, %r{stripe}).and_return(status: 200, body: "{}")

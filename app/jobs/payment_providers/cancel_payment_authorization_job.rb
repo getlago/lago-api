@@ -6,7 +6,7 @@ module PaymentProviders
 
     def perform(payment_provider:, id:)
       provider_name = payment_provider.payment_type.to_s
-      
+
       case provider_name
       when "stripe"
         ::Stripe::PaymentIntent.cancel(id, {}, api_key: payment_provider.secret_key)
