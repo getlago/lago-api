@@ -7,6 +7,7 @@ class BillingEntity < ApplicationRecord
   include Discard::Model
 
   self.discard_column = :deleted_at
+  self.ignored_columns += ["is_default"]
 
   EMAIL_SETTINGS = [
     "invoice.finalized",
