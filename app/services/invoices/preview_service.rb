@@ -114,7 +114,7 @@ module Invoices
         timestamp: billing_time
       }
 
-      subscription_context == :terminated ? subscription.termination_boundaries(billing_time, boundaries) : boundaries
+      (subscription_context == :terminated) ? subscription.termination_boundaries(billing_time, boundaries) : boundaries
     end
 
     def billing_time
@@ -163,7 +163,6 @@ module Invoices
           .where(invoiceable: true)
           .where
           .not(pay_in_advance: true, billable_metric: {recurring: false}).find_each do |c|
-
           next if should_not_create_charge_fee?(c, subscription)
           charges << c
         end

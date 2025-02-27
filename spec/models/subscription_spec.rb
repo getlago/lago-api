@@ -560,18 +560,18 @@ RSpec.describe Subscription, type: :model do
     let(:billing_date) { Time.zone.parse("15 May 2024") }
     let(:date_service) { Subscriptions::DatesService.new_instance(subscription, billing_date) }
     let(:plan) { create(:plan, amount_cents: 100) }
-    let(:status) { 'active' }
+    let(:status) { "active" }
     let(:terminated_at) { nil }
     let(:subscription) do
       create(
         :subscription,
-        billing_time: 'calendar',
+        billing_time: "calendar",
         started_at: timestamp,
         created_at: timestamp,
         status:,
         terminated_at:,
         subscription_at: timestamp,
-        plan:,
+        plan:
       )
     end
     let(:default_boundaries) do
@@ -593,7 +593,7 @@ RSpec.describe Subscription, type: :model do
     end
 
     context "with termination on non billing day" do
-      let(:status) { 'terminated' }
+      let(:status) { "terminated" }
       let(:terminated_at) { billing_date }
 
       it "returns default boundaries" do
@@ -602,7 +602,7 @@ RSpec.describe Subscription, type: :model do
     end
 
     context "with termination on billing day without invoice for previous period" do
-      let(:status) { 'terminated' }
+      let(:status) { "terminated" }
       let(:billing_date) { Time.zone.parse("01 Jun 2024") }
       let(:terminated_at) { billing_date }
 

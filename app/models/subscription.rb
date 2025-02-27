@@ -198,7 +198,7 @@ class Subscription < ApplicationRecord
 
     # Date service has various checks for terminated subscriptions. We want to avoid it and fetch boundaries
     # for current usage (current period) but when subscription was active (one day ago)
-    duplicate = self.dup.tap { |s| s.status = :active }
+    duplicate = dup.tap { |s| s.status = :active }
 
     dates_service = Subscriptions::DatesService.new_instance(duplicate, datetime - 1.day, current_usage: true)
     return boundaries if datetime < dates_service.charges_to_datetime
