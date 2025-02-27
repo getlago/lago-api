@@ -96,7 +96,6 @@ end
 #  finalize_zero_amount_invoice :boolean          default(TRUE), not null
 #  invoice_footer               :text
 #  invoice_grace_period         :integer          default(0), not null
-#  is_default                   :boolean          default(FALSE), not null
 #  legal_name                   :string
 #  legal_number                 :string
 #  logo                         :string

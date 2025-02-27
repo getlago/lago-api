@@ -316,31 +316,31 @@ RSpec.describe Organization, type: :model do
     end
   end
 
-  describe '#default_billing_entity' do
+  describe "#default_billing_entity" do
     let(:organization) { create(:organization, billing_entities: []) }
 
-    context 'when the organization has no billing entities' do
-      it 'returns the default billing entity' do
+    context "when the organization has no billing entities" do
+      it "returns the default billing entity" do
         expect(organization.default_billing_entity).to eq(nil)
       end
     end
 
-    context 'when the organization has one billing entity' do
+    context "when the organization has one billing entity" do
       let(:billing_entity) { create(:billing_entity, organization:) }
 
       before { billing_entity }
 
-      it 'returns the default billing entity' do
+      it "returns the default billing entity" do
         expect(organization.reload.default_billing_entity).to eq(billing_entity)
       end
     end
 
-    context 'when the organization has multiple billing entities' do
+    context "when the organization has multiple billing entities" do
       let(:billing_entities) { create_list(:billing_entity, 2, organization:) }
 
       before { billing_entities }
 
-      it 'returns the default billing entity' do
+      it "returns the default billing entity" do
         expect(organization.default_billing_entity).to eq(nil)
       end
     end
