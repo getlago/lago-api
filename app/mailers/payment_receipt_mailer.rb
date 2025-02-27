@@ -23,7 +23,7 @@ class PaymentReceiptMailer < ApplicationMailer
     @payment_receipt.file.open { |file| attachments["receipt-#{@payment_receipt.number}.pdf"] = file.read }
 
     @invoices.each do |invoice|
-      invoice.file.open { |file| attachments["invoice-#{invoice.number}.pdf"] = file.read § }
+      invoice.file.open { |file| attachments["invoice-#{invoice.number}.pdf"] = file.read }
     end
 
     I18n.with_locale(@customer.preferred_document_locale) do

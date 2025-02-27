@@ -11,7 +11,7 @@ it:
         invoice_number: Numero Fattura
         issue_date: Data Emissione
         refunded_notice: Rimborsato il %{date}
-        subject: 'La tua nota di credito da %{organization_name} #%{credit_note_number}'
+        subject: "La tua nota di credito da %{organization_name} #%{credit_note_number}"
     invoice:
       finalized:
         download: Scarica la fattura per ulteriori dettagli
@@ -19,8 +19,14 @@ it:
         invoice_from: Fattura da %{organization_name}
         invoice_number: Numero Fattura
         issue_date: Data Emissione
-        issued_on: emessa il %{date}
-        subject: 'La tua fattura da %{organization_name} #%{invoice_number}'
+        subject: "La tua fattura da %{organization_name} #%{invoice_number}"
+    payment_receipt:
+      created:
+        hello: Hello %{customer_name},
+        invoice_number: Invoice number
+        payment_receipt_number: Payment receipt number
+        subject: "Your payment receipt from %{organization_name} #%{payment_receipt_number}"
+        thank_you: Thank you.
     payment_request:
       requested:
         already_paid: Se hai già effettuato il pagamento, ti preghiamo di ignorare questa email.
