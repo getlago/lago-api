@@ -11,6 +11,12 @@ class Organization < ApplicationRecord
     "payment_receipt.created"
   ].freeze
 
+  MULTI_ENTITIES_MAX = {
+    default: 1,
+    pro: 2,
+    enterprise: Float::INFINITY
+  }.freeze
+
   has_many :api_keys
   has_many :billing_entities
   has_many :memberships
@@ -210,10 +216,10 @@ class Organization < ApplicationRecord
   end
 
   def remaining_billing_entities
-    return Float::INFINITY if multi_entities_enterprise_enabled?
-    return 2 - billing_entities.count if multi_entities_pro_enabled?
+    return MULTI_ENTITIES_MAX[:enterprise] if multi_entities_enterprise_enabled?
+    return MULTI_ENTITIES_MAX[:pro] - billing_entities.active.count if multi_entities_pro_enabled?
 
-    0
+    MULTI_ENTITIES_MAX[:default] - billing_entities.active.count
   end
 end
 
