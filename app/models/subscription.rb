@@ -182,6 +182,42 @@ class Subscription < ApplicationRecord
 
     terminated_at.round <= timestamp.round
   end
+
+  # TODO: Apply this method in CreateInvoiceSubscriptionService
+  # This method calculates boundaries for terminated subscription. If termination is happening on billing date
+  # new boundaries will be calculated only if there is no invoice subscription object for previous period.
+  # Basically, we will bill regular subscription amount for previous period.
+  # If subscription is happening on any other day, method is returning boundaries only for the used dates in
+  # current period
+  def adjusted_boundaries(datetime, boundaries)
+    return boundaries unless terminated? && next_subscription.nil?
+
+    # First we need to ensure that termination date is not started_at date. In that case boundaries are correct
+    # and we should bill only one day. If this is not the case we should proceed.
+    return boundaries if (datetime - 1.day) < started_at
+
+    # Date service has various checks for terminated subscriptions. We want to avoid it and fetch boundaries
+    # for current usage (current period) but when subscription was active (one day ago)
+    duplicate = dup.tap { |s| s.status = :active }
+
+    dates_service = Subscriptions::DatesService.new_instance(duplicate, datetime - 1.day, current_usage: true)
+    return boundaries if datetime < dates_service.charges_to_datetime
+    return boundaries unless (datetime - dates_service.charges_to_datetime) < 1.day
+
+    # We should calculate boundaries as if subscription was not terminated
+    dates_service = Subscriptions::DatesService.new_instance(duplicate, datetime, current_usage: false)
+
+    previous_period_boundaries = {
+      from_datetime: dates_service.from_datetime,
+      to_datetime: dates_service.to_datetime,
+      charges_from_datetime: dates_service.charges_from_datetime,
+      charges_to_datetime: dates_service.charges_to_datetime,
+      timestamp: datetime,
+      charges_duration: dates_service.charges_duration_in_days
+    }
+
+    InvoiceSubscription.matching?(self, previous_period_boundaries) ? boundaries : previous_period_boundaries
+  end
 end
 
 # == Schema Information
