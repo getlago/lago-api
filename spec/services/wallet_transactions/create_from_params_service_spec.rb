@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe WalletTransactions::CreateService, type: :service do
+RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
   subject(:create_service) { described_class.call(organization:, params:) }
 
   let(:membership) { create(:membership) }

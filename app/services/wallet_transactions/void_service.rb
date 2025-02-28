@@ -18,7 +18,6 @@ module WalletTransactions
       ActiveRecord::Base.transaction do
         wallet_transaction = wallet.wallet_transactions.create!(
           transaction_type: :outbound,
-          amount: wallet.rate_amount * credits_amount,
           credit_amount: credits_amount,
           status: :settled,
           settled_at: Time.current,
@@ -27,7 +26,7 @@ module WalletTransactions
           metadata:,
           credit_note_id:
         )
-        Wallets::Balance::DecreaseService.new(wallet:, credits_amount:).call
+        Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
         result.wallet_transaction = wallet_transaction
       end
 
