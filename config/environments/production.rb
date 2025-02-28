@@ -33,16 +33,13 @@ Rails.application.configure do
   config.assume_ssl = true
   config.force_ssl = false
 
-  config.log_tags = [:request_id]
   config.action_mailer.perform_caching = false
   config.i18n.fallbacks = true
   config.active_support.report_deprecations = false
-  config.log_formatter = ::Logger::Formatter.new
 
   if ENV["RAILS_LOG_TO_STDOUT"].present? && ENV["RAILS_LOG_TO_STDOUT"] == "true"
     logger = ActiveSupport::Logger.new($stdout)
-    logger.formatter = config.log_formatter
-    config.logger = ActiveSupport::TaggedLogging.new(logger)
+    config.logger = logger
   end
 
   # Do not dump schema after migrations.
