@@ -22,7 +22,8 @@ RSpec.describe Events::CommonFactory do
         expect(new_instance.organization_id).to eq(source["organization_id"])
         expect(new_instance.transaction_id).to eq(source["transaction_id"])
         expect(new_instance.external_subscription_id).to eq(source["external_subscription_id"])
-        expect(new_instance.timestamp).to eq(Time.zone.at(source["timestamp"].to_i))
+        # Keep in mind that we need the milliseconds precision!
+        expect(new_instance.timestamp).to eq(Time.zone.at(source["timestamp"].to_f))
         expect(new_instance.code).to eq(source["code"])
         expect(new_instance.properties).to eq(source["properties"])
       end
