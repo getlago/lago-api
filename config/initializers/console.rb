@@ -60,6 +60,7 @@ module Rails::ConsoleMethods
       invoice.fees.destroy_all
       invoice.taxes.destroy_all
       invoice.credits.destroy_all
+      invoice.applied_invoice_custom_sections.destroy_all
       invoice.destroy!
     end
 
