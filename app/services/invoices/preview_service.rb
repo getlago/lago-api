@@ -138,12 +138,12 @@ module Invoices
       invoice.fees = subscriptions
         .filter { |subscription| should_create_subscription_fee?(subscription) }
         .map do |subscription|
-          Fees::SubscriptionService.call!(
-            invoice:,
-            subscription:,
-            boundaries: boundaries(subscription),
-            context: :preview
-          ).fee
+        Fees::SubscriptionService.call!(
+          invoice:,
+          subscription:,
+          boundaries: boundaries(subscription),
+          context: :preview
+        ).fee
       end
     end
 
