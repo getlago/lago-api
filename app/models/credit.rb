@@ -47,6 +47,13 @@ class Credit < ApplicationRecord
     credit_note.invoice.number
   end
 
+  def item_description
+    return coupon&.description if applied_coupon_id?
+    return credit_note.description if credit_note_id?
+
+    nil
+  end
+
   def invoice_coupon_display_name
     return nil if applied_coupon.blank?
 

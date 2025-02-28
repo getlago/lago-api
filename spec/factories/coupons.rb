@@ -11,5 +11,6 @@ FactoryBot.define do
     amount_cents { 200 }
     amount_currency { "EUR" }
     frequency { "once" }
+    description { "Coupon Description" }
   end
 end
