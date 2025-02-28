@@ -20,7 +20,7 @@ module ActiveJob
             queue: job.queue_name,
             exception: {
               class: ex.class.name,
-              message: ex.message,
+              message: ex.message
             }
           }
         end
@@ -30,7 +30,7 @@ module ActiveJob
             event: "enqueue",
             status: "aborted",
             job: job.class.name,
-            queue: job.queue_name,
+            queue: job.queue_name
           }
         end
       else
@@ -61,7 +61,7 @@ module ActiveJob
             queue: job.queue_name,
             exception: {
               class: ex.class.name,
-              message: ex.message,
+              message: ex.message
             }
           }
         end
@@ -71,7 +71,7 @@ module ActiveJob
             event: "enqueue",
             status: "aborted",
             job: job.class.name,
-            queue: job.queue_name,
+            queue: job.queue_name
           }
         end
       else
@@ -104,7 +104,7 @@ module ActiveJob
           job: job.class.name,
           job_id: job.job_id,
           arguments: args_info(job),
-          queue: job.queue_name,
+          queue: job.queue_name
         }
 
         job.enqueued_at ? message.merge(enqueued_at: job.enqueued_at.utc) : message
@@ -204,7 +204,7 @@ module ActiveJob
           retries: job.executions,
           exception: {
             class: ex.class.name,
-            message: ex.message,
+            message: ex.message
           }
         }
       end

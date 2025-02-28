@@ -8,8 +8,10 @@ module ActiveJob
     extend ActiveSupport::Concern
 
     included do
-      cattr_accessor :logger, default: ActiveSupport::Logger.new(STDOUT)
+      # rubocop:disable ThreadSafety/ClassAndModuleAttributes
+      cattr_accessor :logger, default: ActiveSupport::Logger.new($stdout)
       class_attribute :log_arguments, instance_accessor: false, default: true
+      # rubocop:enable ThreadSafety/ClassAndModuleAttributes
     end
   end
 end
