@@ -39,14 +39,8 @@ class WalletTransaction < ApplicationRecord
 
   scope :pending, -> { where(status: :pending) }
 
-  attr_readonly :amount
-
-  def credit_amount=(credit_amount)
-    super
-
-    currency = wallet.currency_for_balance
-    # subtle, but it's important to use `self.credit_amount`, this means AR has already parsed the amount into a usable bigdecimal
-    self.amount = (wallet.rate_amount * self.credit_amount).round(currency.exponent)
+  def amount_cents
+    amount * wallet.currency_for_balance.subunit_to_unit
   end
 end
 
