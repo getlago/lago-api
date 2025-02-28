@@ -25,8 +25,7 @@ end
 
 Sidekiq.configure_server do |config|
   config.redis = redis_config
-  config.logger = Sidekiq::Logger.new($stdout)
-  config.logger.formatter = Sidekiq::Logger::Formatters::JSON.new
+  config.logger = nil
   config[:max_retries] = 0
   config[:dead_max_jobs] = ENV.fetch("LAGO_SIDEKIQ_MAX_DEAD_JOBS", 100_000).to_i
   config.on(:startup) do
