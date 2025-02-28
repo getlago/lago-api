@@ -68,10 +68,13 @@ module WalletTransactions
     def handle_paid_credits(wallet:, credits_amount:, invoice_requires_successful_payment:)
       return if credits_amount.zero?
 
+      # we're not working with cents here. We need to round to the right value after the comma.
+      round_digits = wallet.currency_for_balance.exponent
+
       wallet_transaction = WalletTransaction.create!(
         wallet:,
         transaction_type: :inbound,
-        amount: wallet.rate_amount * credits_amount,
+        amount: (wallet.rate_amount * credits_amount).round(round_digits),
         credit_amount: credits_amount,
         status: :pending,
         source:,
@@ -88,11 +91,14 @@ module WalletTransactions
     def handle_granted_credits(wallet:, credits_amount:, invoice_requires_successful_payment:, reset_consumed_credits: false)
       return if credits_amount.zero?
 
+      # we're not working with cents here. We need to round to the right value after the comma.
+      round_digits = wallet.currency_for_balance.exponent
+
       ActiveRecord::Base.transaction do
         wallet_transaction = WalletTransaction.create!(
           wallet:,
           transaction_type: :inbound,
-          amount: wallet.rate_amount * credits_amount,
+          amount: (wallet.rate_amount * credits_amount).round(round_digits),
           credit_amount: credits_amount,
           status: :settled,
           settled_at: Time.current,
