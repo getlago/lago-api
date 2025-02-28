@@ -27,7 +27,7 @@ class User < ApplicationRecord
   has_many :subscriptions, through: :customers
 
   validates :email, presence: true
-  validates :password, presence: true, on: :create
+  validates :password, presence: true, if: lambda { new_record? || !password.nil? }
 
   def can?(permission, organization:)
     memberships.find { |m| m.organization_id == organization.id }&.can?(permission)
