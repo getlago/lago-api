@@ -1,11 +1,13 @@
-# frozen_string_literal
+# frozen_string_literal: true
 
 require "active_support/subscriber"
 require "active_job/log_subscriber"
 
 module ActiveJob
   class JsonLogSubscriber < ActiveSupport::LogSubscriber # :nodoc:
+    # rubocop:disable ThreadSafety/ClassAndModuleAttributes
     class_attribute :backtrace_cleaner, default: ActiveSupport::BacktraceCleaner.new
+    # rubocop:enable ThreadSafety/ClassAndModuleAttributes
 
     def enqueue(event)
       job = event.payload[:job]
@@ -247,7 +249,9 @@ module ActiveJob
       when Array
         arg.map { |value| format(value) }
       when GlobalID::Identification
+        # rubocop:disable Style/RescueModifier
         arg.to_global_id rescue arg
+        # rubocop:enable Style/RescueModifier
       else
         arg
       end
