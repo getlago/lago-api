@@ -135,19 +135,7 @@ module Invoices
       charge.billable_metric.recurring? &&
         subscription.terminated? &&
         subscription.upgraded? &&
-        charge_included_in_next_subscription?(charge, subscription)
-    end
-
-    # NOTE: If same charge is NOT included in upgraded plan we still want to bill it. However if new plan is using
-    # the same charge it should not be billed since it is recurring and will be billed at the end of period
-    def charge_included_in_next_subscription?(charge, subscription)
-      return false if subscription.next_subscription.nil?
-
-      next_subscription_charges = subscription.next_subscription.plan.charges
-
-      return false if next_subscription_charges.blank?
-
-      next_subscription_charges.pluck(:billable_metric_id).include?(charge.billable_metric_id)
+        charge.charge_included_in_next_subscription?(subscription)
     end
 
     def should_create_recurring_non_invoiceable_fees?(subscription)
