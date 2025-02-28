@@ -10,6 +10,7 @@ module Invoices
       @applied_coupons = applied_coupons
       @first_subscription = subscriptions.first
       @persisted_subscriptions = subscriptions.any?(&:persisted?)
+      @subscription_context = fetch_context
 
       super
     end
@@ -19,6 +20,7 @@ module Invoices
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "subscription") if subscriptions.empty?
       return result.not_allowed_failure!(code: "premium_integration_missing") if persisted_subscriptions && !organization.preview_enabled?
+      return result unless terminate_allowed?
       return result unless currencies_aligned?
       return result unless billing_times_aligned?
 
@@ -48,8 +50,14 @@ module Invoices
 
     private
 
-    attr_accessor :customer, :subscriptions, :invoice, :applied_coupons, :first_subscription, :persisted_subscriptions
+    attr_accessor :customer, :subscriptions, :invoice, :applied_coupons, :first_subscription, :persisted_subscriptions, :subscription_context
     delegate :organization, to: :customer
+
+    def fetch_context
+      return :terminated if subscriptions.any?(&:terminated?)
+
+      :default
+    end
 
     def currencies_aligned?
       subscription_currencies = subscriptions.filter_map { |s| s.plan&.amount_currency }
@@ -78,6 +86,15 @@ module Invoices
       true
     end
 
+    def terminate_allowed?
+      return true unless subscription_context == :terminated
+      return true if subscriptions.size == 1 && persisted_subscriptions
+
+      result.single_validation_failure!(error_code: "terminate_unavailable")
+
+      false
+    end
+
     def end_of_periods
       @end_of_periods ||= subscriptions.map do |subscription|
         Subscriptions::DatesService
@@ -89,7 +106,7 @@ module Invoices
     def boundaries(subscription)
       date_service = Subscriptions::DatesService.new_instance(subscription, billing_time)
 
-      {
+      boundaries = {
         from_datetime: date_service.from_datetime,
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
@@ -97,12 +114,16 @@ module Invoices
         timestamp: billing_time,
         charges_duration: date_service.charges_duration_in_days
       }
+
+      subscription.adjusted_boundaries(billing_time, boundaries)
     end
 
     def billing_time
       return @billing_time if defined? @billing_time
 
-      @billing_time = if persisted_subscriptions
+      @billing_time = if subscription_context == :terminated
+        first_subscription.terminated_at
+      elsif persisted_subscriptions
         end_of_periods.first + 1.day
       elsif first_subscription.plan.pay_in_advance?
         first_subscription.subscription_at
@@ -121,6 +142,11 @@ module Invoices
     end
 
     def add_subscription_fees
+      unless should_create_subscription_fee?
+        invoice.fees = []
+        return
+      end
+
       invoice.fees = subscriptions.map do |subscription|
         Fees::SubscriptionService.call!(
           invoice:,
@@ -137,15 +163,19 @@ module Invoices
       subscriptions.map do |subscription|
         boundaries = boundaries(subscription)
 
-        query = subscription.plan.charges.joins(:billable_metric)
+        charges = []
+        subscription.plan.charges.joins(:billable_metric)
           .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
           .where(invoiceable: true)
           .where
-          .not(pay_in_advance: true, billable_metric: {recurring: false})
+          .not(pay_in_advance: true, billable_metric: {recurring: false}).find_each do |c|
+          next if should_not_create_charge_fee?(c, subscription)
+          charges << c
+        end
 
         context = OpenTelemetry::Context.current
 
-        invoice.fees << Parallel.flat_map(query.all, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
+        invoice.fees << Parallel.flat_map(charges, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
           OpenTelemetry::Context.with_current(context) do
             ActiveRecord::Base.connection_pool.with_connection do
               cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
@@ -174,9 +204,9 @@ module Invoices
 
       invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents - invoice.coupons_amount_cents
 
-      if provider_taxation?
+      if provider_taxation? && invoice.fees.any?
         apply_provider_taxes
-      else
+      elsif invoice.fees.any?
         apply_taxes
       end
 
@@ -258,6 +288,26 @@ module Invoices
 
     def provider_taxation?
       customer.integration_customers.find { |ic| ic.type == "IntegrationCustomers::AnrokCustomer" }
+    end
+
+    def should_create_subscription_fee?
+      return true if subscription_context == :default
+
+      subscription_context == :terminated && first_subscription.plan.pay_in_arrear?
+    end
+
+    def should_not_create_charge_fee?(charge, subscription)
+      return false if subscription_context == :default
+
+      if charge.pay_in_advance?
+        condition = charge.billable_metric.recurring? &&
+          subscription.terminated? &&
+          (subscription.upgraded? || subscription.next_subscription.nil?)
+
+        return condition
+      end
+
+      false
     end
   end
 end
