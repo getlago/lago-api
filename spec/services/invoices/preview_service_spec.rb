@@ -74,6 +74,29 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
       end
 
+      context "when terminate action not applicable" do
+        let(:subscription) do
+          build(
+            :subscription,
+            customer:,
+            plan:,
+            billing_time:,
+            status: "terminated",
+            subscription_at: timestamp,
+            terminated_at: timestamp,
+            started_at: timestamp,
+            created_at: timestamp
+          )
+        end
+
+        it "returns an error if subscription is not persisted" do
+          result = preview_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:base]).to include("terminate_unavailable")
+        end
+      end
+
       context "when billing periods do not match" do
         let(:customer) { create(:customer, organization:) }
         let(:plan1) { create(:plan, organization:, interval: "monthly") }
