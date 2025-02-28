@@ -243,13 +243,21 @@ RSpec.describe Organization, type: :model do
     end
   end
 
-  describe "#can_create_more_billing_entity?" do
+  describe "#can_create_billing_entity?" do
     subject { organization.can_create_billing_entity? }
 
     around { |test| lago_premium!(&test) }
 
     context "when no premium multi entities integration is enabled" do
-      it { is_expected.to eq(false) }
+      it { is_expected.to eq(true) }
+
+      context "when organization has one active billing entity" do
+        before do
+          create(:billing_entity, organization:)
+        end
+
+        it { is_expected.to eq(false) }
+      end
     end
 
     context "when the premium multi_entities_pro integration is enabled" do
@@ -265,6 +273,14 @@ RSpec.describe Organization, type: :model do
         end
 
         it { is_expected.to eq(false) }
+      end
+
+      context "when organization has archived billing entities" do
+        before do
+          create_list(:billing_entity, 2, :archived, organization:)
+        end
+
+        it { is_expected.to eq true }
       end
     end
 

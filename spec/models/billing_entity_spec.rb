@@ -48,6 +48,20 @@ RSpec.describe BillingEntity, type: :model do
     end
   end
 
+  describe "Scopes" do
+    let(:active_billing_entity) { create(:billing_entity) }
+    let(:archived_billing_entity) { create(:billing_entity, :archived) }
+
+    before do
+      active_billing_entity
+      archived_billing_entity
+    end
+
+    it "returns active billing entities" do
+      expect(described_class.active).to eq [active_billing_entity]
+    end
+  end
+
   describe "Validations" do
     let(:billing_entity) { build(:billing_entity) }
 
