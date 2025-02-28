@@ -189,7 +189,7 @@ class Subscription < ApplicationRecord
   # Basically, we will bill regular subscription amount for previous period.
   # If subscription is happening on any other day, method is returning boundaries only for the used dates in
   # current period
-  def termination_boundaries(datetime, boundaries)
+  def adjusted_boundaries(datetime, boundaries)
     return boundaries unless terminated? && next_subscription.nil?
 
     # First we need to ensure that termination date is not started_at date. In that case boundaries are correct

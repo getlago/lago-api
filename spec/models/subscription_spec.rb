@@ -555,7 +555,7 @@ RSpec.describe Subscription, type: :model do
     end
   end
 
-  describe "#termination_boundaries" do
+  describe "#adjusted_boundaries" do
     let(:timestamp) { Time.zone.parse("30 Mar 2024") }
     let(:billing_date) { Time.zone.parse("15 May 2024") }
     let(:date_service) { Subscriptions::DatesService.new_instance(subscription, billing_date) }
@@ -588,7 +588,7 @@ RSpec.describe Subscription, type: :model do
       let(:billing_date) { Time.zone.parse("01 Jun 2024") }
 
       it "returns default boundaries" do
-        expect(subscription.termination_boundaries(billing_date, default_boundaries)).to eq(default_boundaries)
+        expect(subscription.adjusted_boundaries(billing_date, default_boundaries)).to eq(default_boundaries)
       end
     end
 
@@ -597,7 +597,7 @@ RSpec.describe Subscription, type: :model do
       let(:terminated_at) { billing_date }
 
       it "returns default boundaries" do
-        expect(subscription.termination_boundaries(billing_date, default_boundaries)).to eq(default_boundaries)
+        expect(subscription.adjusted_boundaries(billing_date, default_boundaries)).to eq(default_boundaries)
       end
     end
 
@@ -607,10 +607,9 @@ RSpec.describe Subscription, type: :model do
       let(:terminated_at) { billing_date }
 
       it "returns new boundaries based on previous billing period" do
-        new_boundaries = subscription.termination_boundaries(billing_date, default_boundaries)
+        new_boundaries = subscription.adjusted_boundaries(billing_date, default_boundaries)
 
-        expect(subscription.termination_boundaries(billing_date, default_boundaries)).not_to eq(default_boundaries)
-
+        expect(new_boundaries).not_to eq(default_boundaries)
         expect(new_boundaries[:from_datetime].iso8601).to eq("2024-05-01T00:00:00Z")
         expect(new_boundaries[:to_datetime].iso8601).to eq("2024-05-31T23:59:59Z")
         expect(new_boundaries[:charges_from_datetime].iso8601).to eq("2024-05-01T00:00:00Z")

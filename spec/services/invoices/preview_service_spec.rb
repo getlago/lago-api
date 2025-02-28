@@ -277,9 +277,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               )
             end
             let(:events) do
-              create_list(
+              create_pair(
                 :event,
-                2,
                 organization:,
                 subscription:,
                 customer:,

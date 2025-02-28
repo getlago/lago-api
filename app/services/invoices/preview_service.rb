@@ -39,7 +39,7 @@ module Invoices
       invoice.credits = []
       invoice.subscriptions = subscriptions
 
-      add_subscription_fees if should_create_subscription_fee?
+      add_subscription_fees
       add_charge_fees
       compute_tax_and_totals
 
@@ -114,7 +114,7 @@ module Invoices
         timestamp: billing_time
       }
 
-      (subscription_context == :terminated) ? subscription.termination_boundaries(billing_time, boundaries) : boundaries
+      subscription.adjusted_boundaries(billing_time, boundaries)
     end
 
     def billing_time
@@ -141,6 +141,11 @@ module Invoices
     end
 
     def add_subscription_fees
+      unless should_create_subscription_fee?
+        invoice.fees = []
+        return
+      end
+
       invoice.fees = subscriptions.map do |subscription|
         Fees::SubscriptionService.call!(
           invoice:,
