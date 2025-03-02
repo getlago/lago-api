@@ -12,7 +12,8 @@ module V1
           lago_item_id: model.item_id,
           type: model.item_type,
           code: model.item_code,
-          name: model.item_name
+          name: model.item_name,
+          description: model.item_description
         },
         invoice: {
           lago_id: model.invoice_id,
