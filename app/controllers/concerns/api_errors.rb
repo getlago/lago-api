@@ -67,7 +67,8 @@ module ApiErrors
           third_party: error.third_party,
           thirdparty_error: error.error_message
         }
-      }
+      },
+      status: :unprocessable_entity
     )
   end
 

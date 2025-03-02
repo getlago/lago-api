@@ -4,10 +4,54 @@ module Api
   module V1
     class SubscriptionsController < Api::BaseController
       def create
+        response = {}
+
         customer = Customer.find_or_initialize_by(
           external_id: create_params[:external_customer_id].to_s.strip,
           organization_id: current_organization.id
         )
+
+        if params[:authorization] && !current_organization.beta_payment_authorization_enabled?
+          return render(
+            json: {
+              status: 403,
+              error: "Forbidden",
+              code: "feature_not_available",
+              message: "Payment authorization (beta_payment_authorization) is not available for this organization"
+            },
+            status: :forbidden
+          )
+        end
+
+        if params[:authorization]
+          unless customer.payment_provider&.to_sym == :stripe
+            return render(
+              json: {
+                status: 422,
+                error: "Unprocessable Entity",
+                code: "stripe_required",
+                message: "Only Stripe is supported for authorization"
+              },
+              status: :unprocessable_entity
+            )
+          end
+
+          result = PaymentProviders::Stripe::Payments::AuthorizeService.call(
+            amount: params[:authorization][:amount],
+            currency: params[:authorization][:currency],
+            provider_customer: customer.provider_customer,
+            metadata: {plan_code: create_params[:plan_code]},
+            unique_id: request.request_id
+          )
+
+          if result.success?
+            response[:authorization] = result.stripe_payment_intent.to_hash.slice(
+              :id, :object, :amount, :amount_capturable, :status
+            )
+          else
+            return render_error_response(result)
+          end
+        end
 
         plan = Plan.parents.find_by(
           code: create_params[:plan_code],
@@ -21,7 +65,11 @@ module Api
         )
 
         if result.success?
-          render_subscription(result.subscription)
+          response[:subscription] = ::V1::SubscriptionSerializer.new(
+            result.subscription, includes: %i[plan]
+          ).serialize
+
+          render(json: response)
         else
           render_error_response(result)
         end
