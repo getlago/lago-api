@@ -30,6 +30,14 @@ RSpec.describe PaymentProviderCustomers::StripeCustomer, type: :model do
     end
   end
 
+  describe "#provider_payment_methods_with_setup" do
+    it "returns only payment methods that require setup" do
+      expect(build(:stripe_customer, provider_payment_methods: %w[card]).provider_payment_methods_with_setup).to eq %w[card]
+      expect(build(:stripe_customer, provider_payment_methods: %w[card crypto]).provider_payment_methods_with_setup).to eq %w[card]
+      expect(build(:stripe_customer, provider_payment_methods: %w[crypto]).provider_payment_methods_with_setup).to eq []
+    end
+  end
+
   describe "validation" do
     describe "of provider payment methods" do
       subject(:valid) { stripe_customer.valid? }

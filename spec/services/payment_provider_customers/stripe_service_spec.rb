@@ -473,6 +473,31 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       end
     end
 
+    context "when customer has no payment method to be setup" do
+      let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id: nil, provider_payment_methods: %w[crypto]) }
+
+      it "does not deliver a webhook" do
+        described_class.new(stripe_customer.reload).generate_checkout_url
+
+        expect(SendWebhookJob).not_to have_been_enqueued
+          .with("customer.checkout_url_generated", customer, checkout_url: "https://example.com")
+      end
+    end
+
+    context "when stripe raises an invalid request error" do
+      let(:stripe_error) { ::Stripe::InvalidRequestError.new("wrong request!", {}) }
+
+      before { allow(::Stripe::Checkout::Session).to receive(:create).and_raise(stripe_error) }
+
+      it "returns an error result" do
+        result = described_class.new(stripe_customer).generate_checkout_url
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ThirdPartyFailure)
+        expect(result.error.message).to eq("Stripe:  - wrong request!")
+      end
+    end
+
     context "when stripe raises an authentication error" do
       let(:stripe_error) { ::Stripe::AuthenticationError.new("Expired API Key provided") }
 
