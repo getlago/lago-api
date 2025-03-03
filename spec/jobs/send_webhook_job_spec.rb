@@ -578,6 +578,47 @@ RSpec.describe SendWebhookJob, type: :job do
     end
   end
 
+  context "when webhook_type is payment_receipt.created" do
+    let(:webhook_service) { instance_double(Webhooks::PaymentReceipts::CreatedService) }
+    let(:payment_receipt) { create(:payment_receipt) }
+
+    before do
+      allow(Webhooks::PaymentReceipts::CreatedService).to receive(:new)
+        .with(object: payment_receipt, options: {})
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it "calls the webhook payment_receipt service" do
+      send_webhook_job.perform_now("payment_receipt.created", payment_receipt)
+
+      expect(Webhooks::PaymentReceipts::CreatedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
+  context "when webhook_type is payment_receipt.generated" do
+    let(:webhook_service) { instance_double(Webhooks::PaymentReceipts::GeneratedService) }
+    let(:payment_receipt) { create(:payment_receipt) }
+
+    before do
+      allow(Webhooks::PaymentReceipts::GeneratedService).to receive(:new)
+        .with(object: payment_receipt, options: {})
+        .and_return(webhook_service)
+      allow(webhook_service).to receive(:call)
+    end
+
+    it "calls the webhook service" do
+      send_webhook_job.perform_now(
+        "payment_receipt.generated",
+        payment_receipt
+      )
+
+      expect(Webhooks::PaymentReceipts::GeneratedService).to have_received(:new)
+      expect(webhook_service).to have_received(:call)
+    end
+  end
+
   context "when webhook_type is payment_request.payment_failure" do
     let(:webhook_service) { instance_double(Webhooks::PaymentProviders::PaymentRequestPaymentFailureService) }
     let(:payment_request) { create(:payment_request) }
