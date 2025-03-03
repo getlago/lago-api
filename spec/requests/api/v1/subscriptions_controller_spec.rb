@@ -268,7 +268,29 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           end
         end
 
-        context "when payment intent status is 'failed'" do
+        context "when the authorization failed (card declined)" do
+          it do
+            stripe_card_declined = File.read(Rails.root.join("spec/fixtures/stripe/payment_intent_authorization_failed.json"))
+            stub_request(:post, %r{/v1/payment_intents}).and_return(
+              status: 402,
+              body: stripe_card_declined,
+              headers: {"request-id" => "req_R6dwJQCrHDQkZr"}
+            )
+            subject
+
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(json[:code]).to eq "provider_error"
+            expect(json[:provider][:code]).to start_with "stripe_account_"
+            expect(json[:error_details]).to include({
+              code: "card_declined",
+              message: "Your card was declined.",
+              request_id: "req_R6dwJQCrHDQkZr",
+              http_status: 402
+            })
+          end
+        end
+
+        context "when the authorization failed inexplicably" do
           let(:stripe_pi) do
             {
               id: "pi_12345",

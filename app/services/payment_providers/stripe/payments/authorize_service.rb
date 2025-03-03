@@ -31,7 +31,7 @@ module PaymentProviders
 
           result
         rescue ::Stripe::StripeError => e
-          result.third_party_failure!(third_party: "Stripe", error_message: e.message, error_code: e.code)
+          result.provider_failure!(provider: payment_provider, error: e)
         ensure
           if pi
             PaymentProviders::CancelPaymentAuthorizationJob.perform_later(

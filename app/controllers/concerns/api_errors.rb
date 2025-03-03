@@ -57,6 +57,20 @@ module ApiErrors
     )
   end
 
+  def provider_error(provider, error_details)
+    response = {
+      status: 422,
+      error: "Unprocessable Entity",
+      code: "provider_error",
+      provider: {
+        code: provider.code
+      },
+      error_details:
+    }
+
+    render json: response, status: :unprocessable_entity
+  end
+
   def thirdpary_error(error:)
     render(
       json: {
@@ -84,6 +98,8 @@ module ApiErrors
       forbidden_error(code: error_result.error.code)
     when BaseService::UnauthorizedFailure
       unauthorized_error(message: error_result.error.message)
+    when BaseService::ProviderFailure
+      provider_error(error_result.error.provider, error_result.error.error_details)
     when BaseService::ThirdPartyFailure
       thirdpary_error(error: error_result.error)
     else
