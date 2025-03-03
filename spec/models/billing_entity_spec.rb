@@ -23,6 +23,31 @@ RSpec.describe BillingEntity, type: :model do
   it { is_expected.to have_many(:applied_taxes).dependent(:destroy) }
   it { is_expected.to have_many(:taxes).through(:applied_taxes) }
 
+  describe "code validation" do
+    let(:organization) { create :organization }
+
+    it "validates uniqueness of organization_id for code excluding deleted and archived records" do
+      record_1 = create(:billing_entity, organization: organization)
+      expect(record_1).to be_valid
+
+      record_2 = build(:billing_entity, organization: organization, code: record_1.code)
+      expect(record_2).not_to be_valid
+      expect(record_2.errors[:code]).to include("value_already_exist")
+
+      record_3 = create(:billing_entity, code: record_1.code)
+      expect(record_3).to be_valid
+
+      record_1.discard!
+      record_4 = build(:billing_entity, organization: organization, code: record_1.code)
+      expect(record_4).to be_valid
+
+      record_1.undiscard!
+      record_1.update(archived_at: Time.current)
+      record_5 = build(:billing_entity, organization: organization, code: record_1.code)
+      expect(record_5).to be_valid
+    end
+  end
+
   describe "Validations" do
     let(:billing_entity) { build(:billing_entity) }
 
