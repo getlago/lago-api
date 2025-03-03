@@ -1,0 +1,96 @@
+doctype html
+html
+  head
+    meta charset='UTF-8'
+    meta http-equiv='X-UA-Compatible' content='IE=edge'
+    meta name='viewport' content='width=device-width, initial-scale=1.0'
+    title =I18n.t('payment_receipt.document_name')
+  body
+    == SlimHelper.render('templates/payment_receipts/v1/_styles', self)
+
+    - @organization = payment.payable.organization
+    - @customer = payment.payable.customer
+
+    .wrapper
+      .mb-24
+        h1.payment-receipt-title = I18n.t('payment_receipt.document_name')
+        - if @organization.logo.present?
+          img.header-logo src="data:#{organization.logo.content_type};base64,#{organization.base64_logo}"
+
+      .mb-24.overflow-auto
+        .payment-receipt-information-column
+          table.payment-receipt-information-table
+            tr
+              td.body-1 = I18n.t('payment_receipt.number')
+              td.body-2 = number
+            tr
+              td.body-1 = I18n.t('payment_receipt.payment_date')
+              td.body-2 = I18n.l(payment.created_at.to_date, format: :default)
+        .payment-receipt-information-column
+          table.payment-receipt-information-table
+            - if @customer.metadata.displayable.any?
+              - @customer.metadata.displayable.order(created_at: :asc).each do |metadata|
+                tr
+                  td.body-1 = metadata.key
+                  td.body-2 = metadata.value
+
+      .mb-24.overflow-auto
+        .billing-information-column
+          .body-1 = I18n.t('invoice.bill_from')
+          .body-2
+            - if @organization.legal_name.present?
+              | #{@organization.legal_name}
+            - else
+              | #{@organization.name}
+          - if @organization.legal_number.present?
+            .body-2 #{@organization.legal_number}
+          .body-2 = @organization.address_line1
+          .body-2 = @organization.address_line2
+          .body-2
+            span
+              = @organization.zipcode
+            - if @organization.zipcode.present? && @organization.city.present?
+              span
+                | , &nbsp;
+            span
+              = @organization.city
+          - if @organization.state.present?
+            .body-2 = @organization.state
+          .body-2 = ISO3166::Country.new(@organization.country)&.common_name
+          .body-2 = @organization.email
+          - if @organization.tax_identification_number.present?
+            .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: @organization.tax_identification_number)
+        .billing-information-column
+          .body-1 = I18n.t('invoice.bill_to')
+          .body-2 = @customer.display_name
+          - if @customer.legal_number.present?
+            .body-2 #{@customer.legal_number}
+          .body-2 = @customer.address_line1
+          .body-2 = @customer.address_line2
+          .body-2
+            span
+              = @customer.zipcode
+            - if @customer.zipcode.present? && @customer.city.present?
+              span
+                | , &nbsp;
+            span
+              = @customer.city
+          .body-2 = @customer.state
+          .body-2 = ISO3166::Country.new(@customer.country)&.common_name
+          .body-2 = @customer.email&.gsub(/,\s*/, ', ')
+          - if @customer.tax_identification_number.present?
+            .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: @customer.tax_identification_number)
+
+      .mb-24
+        h2.title-2.mb-4 = MoneyHelper.format(payment.amount)
+        .body-1 = I18n.t('payment_receipt.paid_on', date: I18n.l(payment.created_at, format: :default))
+
+
+      - if payment.payable.is_a?(Invoice)
+        == SlimHelper.render('templates/payment_receipts/v1/_invoice', self)
+      - else
+        == SlimHelper.render('templates/payment_receipts/v1/_payment_request', self)
+
+      p.body-3.mb-24 = LineBreakHelper.break_lines(@organization.invoice_footer)
+
+      == SlimHelper.render('templates/payment_receipts/v1/_powered_by_logo', self)
