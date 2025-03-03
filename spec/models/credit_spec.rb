@@ -21,7 +21,8 @@ RSpec.describe Credit, type: :model do
         create(
           :coupon,
           code: "coupon_code",
-          name: "Coupon name"
+          name: "Coupon name",
+          description: "Coupon desc"
         )
       end
 
@@ -31,6 +32,7 @@ RSpec.describe Credit, type: :model do
           expect(credit.item_type).to eq("coupon")
           expect(credit.item_code).to eq("coupon_code")
           expect(credit.item_name).to eq("Coupon name")
+          expect(credit.item_description).to eq("Coupon desc")
         end
       end
 
@@ -41,6 +43,7 @@ RSpec.describe Credit, type: :model do
             :deleted,
             code: "coupon_code",
             name: "Coupon name",
+            description: "Coupon desc",
             amount_cents: 200,
             amount_currency: "EUR"
           )
@@ -52,6 +55,7 @@ RSpec.describe Credit, type: :model do
             expect(credit.item_type).to eq("coupon")
             expect(credit.item_code).to eq("coupon_code")
             expect(credit.item_name).to eq("Coupon name")
+            expect(credit.item_description).to eq("Coupon desc")
             expect(credit.invoice_coupon_display_name).to eq("Coupon name (€2.00)")
           end
         end
@@ -61,7 +65,11 @@ RSpec.describe Credit, type: :model do
     context "when credit is a credit note" do
       subject(:credit) { create(:credit_note_credit) }
 
-      let(:credit_note) { credit.credit_note }
+      let(:credit_note) do
+        c = credit.credit_note
+        c.update! description: "Credit note description"
+        c
+      end
 
       it "returns credit note details" do
         aggregate_failures do
@@ -69,6 +77,7 @@ RSpec.describe Credit, type: :model do
           expect(credit.item_type).to eq("credit_note")
           expect(credit.item_code).to eq(credit_note.number)
           expect(credit.item_name).to eq(credit_note.invoice.number)
+          expect(credit.item_description).to eq("Credit note description")
         end
       end
     end
@@ -84,6 +93,7 @@ RSpec.describe Credit, type: :model do
           expect(credit.item_type).to eq("invoice")
           expect(credit.item_code).to eq(progressive_billing_invoice.number)
           expect(credit.item_name).to eq(progressive_billing_invoice.number)
+          expect(credit.item_description).to be_nil
         end
       end
     end
