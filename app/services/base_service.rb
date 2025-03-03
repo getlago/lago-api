@@ -93,6 +93,34 @@ class BaseService
     end
   end
 
+  class ProviderFailure < FailedResult
+    attr_reader :provider, :error
+
+    def initialize(result, provider:, error:)
+      @provider = provider
+      @error = error
+      super(result, nil)
+    end
+
+    def error_details
+      if error.is_a?(::Stripe::StripeError)
+        stripe_error_details
+      end
+    end
+
+    private
+
+    def stripe_error_details
+      {
+        code: error.code,
+        message: error.message,
+        request_id: error.request_id,
+        http_status: error.http_status,
+        http_body: JSON.parse(error.http_body)
+      }
+    end
+  end
+
   class ThirdPartyFailure < FailedResult
     attr_reader :third_party, :error_code, :error_message
 
@@ -166,6 +194,10 @@ class BaseService
 
     def unauthorized_failure!(message: "unauthorized")
       fail_with_error!(UnauthorizedFailure.new(self, message:))
+    end
+
+    def provider_failure!(provider:, error:)
+      fail_with_error!(ProviderFailure.new(self, provider:, error:))
     end
 
     def third_party_failure!(third_party:, error_code:, error_message:)

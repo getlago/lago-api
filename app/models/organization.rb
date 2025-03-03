@@ -66,6 +66,7 @@ class Organization < ApplicationRecord
   ].freeze
 
   INTEGRATIONS = %w[
+    beta_payment_authorization
     netsuite
     okta
     anrok

@@ -4467,6 +4467,7 @@ enum IntegrationTypeEnum {
   anrok
   api_permissions
   auto_dunning
+  beta_payment_authorization
   from_email
   hubspot
   issue_receipts
@@ -6527,6 +6528,7 @@ input PlanOverridesInput {
 enum PremiumIntegrationTypeEnum {
   api_permissions
   auto_dunning
+  beta_payment_authorization
   from_email
   hubspot
   issue_receipts

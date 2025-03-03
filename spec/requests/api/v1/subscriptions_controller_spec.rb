@@ -12,8 +12,9 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   around { |test| lago_premium!(&test) }
 
   describe "POST /api/v1/subscriptions" do
-    subject { post_with_token(organization, "/api/v1/subscriptions", {subscription: params}) }
+    subject { post_with_token(organization, "/api/v1/subscriptions", body) }
 
+    let(:body) { {subscription: params} }
     let(:subscription_at) { Time.current.iso8601 }
     let(:ending_at) { (Time.current + 1.year).iso8601 }
     let(:plan_code) { plan.code }
@@ -189,6 +190,123 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         expect(json[:subscription][:previous_plan_code]).to be_nil
         expect(json[:subscription][:next_plan_code]).to be_nil
         expect(json[:subscription][:downgrade_plan_date]).to be_nil
+      end
+    end
+
+    context "with payment pre-authorization" do
+      context "when the feature isn't enabled" do
+        let(:body) { {authorization: {}, subscription: params} }
+
+        it "returns a forbidden error" do
+          subject
+
+          expect(response).to have_http_status(:forbidden)
+          expect(json[:message]).to match(/beta_payment_authorization/)
+        end
+      end
+
+      context "when the feature is enabled" do
+        let(:organization) { create(:organization, premium_integrations: ["beta_payment_authorization"]) }
+        let(:body) do
+          {
+            authorization: {amount_cents: "100", amount_currency: "USD"},
+            subscription: params
+          }
+        end
+        let(:customer) { create(:customer, organization:, payment_provider: :stripe, external_id: "cust_12345") }
+        let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: create(:stripe_provider, organization:), payment_method_id: "pm_12345") }
+        let(:stripe_pi) do
+          {
+            id: "pi_12345",
+            amount: "100",
+            amount_capturable: "100",
+            status: "requires_capture"
+          }
+        end
+
+        before do
+          stripe_customer
+          stub_request(:post, "https://api.stripe.com/v1/payment_intents").and_return(status: 200, body: stripe_pi.to_json)
+        end
+
+        it "returns a success" do
+          allow(PaymentProviders::CancelPaymentAuthorizationJob).to receive(:perform_later)
+
+          subject
+          expect(json[:authorization]).to include(stripe_pi)
+          expect(json[:subscription]).to include(status: "active")
+
+          expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_received(:perform_later).with(
+            payment_provider: stripe_customer.payment_provider, id: stripe_pi[:id]
+          )
+        end
+
+        context "when parameters are incorrect" do
+          let(:body) do
+            {
+              authorization: {amount_cents: "100"},
+              subscription: params
+            }
+          end
+
+          it "returns an error" do
+            subject
+
+            expect(response).to have_http_status(:bad_request)
+            expect(json[:error]).to eq "BadRequest: param is missing or the value is empty: amount_currency"
+          end
+        end
+
+        context "when customer has no payment method" do
+          let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: create(:stripe_provider, organization:), payment_method_id: nil) }
+
+          it "returns an error" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(json[:error_details][:payment_method_id]).to include "customer_has_no_payment_method"
+          end
+        end
+
+        context "when the authorization failed (card declined)" do
+          it do
+            stripe_card_declined = File.read(Rails.root.join("spec/fixtures/stripe/payment_intent_authorization_failed.json"))
+            stub_request(:post, %r{/v1/payment_intents}).and_return(
+              status: 402,
+              body: stripe_card_declined,
+              headers: {"request-id" => "req_R6dwJQCrHDQkZr"}
+            )
+            subject
+
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(json[:code]).to eq "provider_error"
+            expect(json[:provider][:code]).to start_with "stripe_account_"
+            expect(json[:error_details]).to include({
+              code: "card_declined",
+              message: "Your card was declined.",
+              request_id: "req_R6dwJQCrHDQkZr",
+              http_status: 402
+            })
+          end
+        end
+
+        context "when the authorization failed inexplicably" do
+          let(:stripe_pi) do
+            {
+              id: "pi_12345",
+              amount: "100",
+              amount_capturable: "0",
+              status: "something when wrong on stripe's side"
+            }
+          end
+
+          it "returns an error" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(json[:error_details][:thirdparty_error]).to eq "The total amount was not captured."
+          end
+        end
       end
     end
   end
