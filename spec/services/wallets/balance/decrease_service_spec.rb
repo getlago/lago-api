@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Wallets::Balance::DecreaseService, type: :service do
-  subject(:create_service) { described_class.new(wallet:, credits_amount:) }
+  subject(:create_service) { described_class.new(wallet:, wallet_transaction:) }
 
   let(:wallet) do
     create(
@@ -14,9 +14,16 @@ RSpec.describe Wallets::Balance::DecreaseService, type: :service do
       credits_ongoing_balance: 8.0
     )
   end
+  let(:wallet_transaction) do
+    create(:wallet_transaction, wallet:, amount: "4.5", credit_amount: credits_amount)
+  end
+
   let(:credits_amount) { BigDecimal("4.5") }
 
-  before { wallet }
+  before do
+    wallet
+    wallet_transaction
+  end
 
   describe ".call" do
     it "updates wallet balance" do
