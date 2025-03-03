@@ -69,6 +69,7 @@ module Types
     field :plan, resolver: Resolvers::PlanResolver
     field :plans, resolver: Resolvers::PlansResolver
     field :revenue_streams, resolver: Resolvers::DataApi::RevenueStreamsResolver
+    field :revenue_streams_plans, resolver: Resolvers::DataApi::RevenueStreams::PlansResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
