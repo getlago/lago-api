@@ -89,7 +89,7 @@ module Invoices
       end
 
       def success_redirect_url
-        cashfree_payment_provider&.success_redirect_url.presence || ::PaymentProviders::CashfreeProvider::SUCCESS_REDIRECT_URL
+        cashfree_payment_provider.success_redirect_url.presence || ::PaymentProviders::CashfreeProvider::SUCCESS_REDIRECT_URL
       end
 
       def cashfree_payment_provider

@@ -74,7 +74,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         }
       end
 
-      context "when paid amout is not zero" do
+      context "when paid amount is not zero" do
         let(:total_paid_amount_cents) { 1 }
 
         it "return the payload" do
@@ -82,7 +82,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         end
       end
 
-      context "when paid amout is zero" do
+      context "when paid amount is zero" do
         it "returns the payload" do
           expect(payment_url_payload).to eq(payload)
         end

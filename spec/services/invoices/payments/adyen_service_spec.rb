@@ -191,7 +191,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       adyen_customer
     end
 
-    context "when paid amout is not zero" do
+    context "when paid amount is not zero" do
       let(:total_paid_amount_cents) { 1 }
 
       it "return the payload" do
@@ -201,7 +201,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       end
     end
 
-    context "when paid amout is zero" do
+    context "when paid amount is zero" do
       it "returns the payload" do
         freeze_time do
           expect(payment_url_params).to eq(expected_params)

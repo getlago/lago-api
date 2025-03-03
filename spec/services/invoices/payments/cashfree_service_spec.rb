@@ -209,9 +209,10 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
     before do
       allow(SecureRandom).to receive(:uuid).and_return("test-uuid")
       allow(Time).to receive(:current).and_return(Time.parse("2023-01-01 12:00:00 UTC"))
+      cashfree_payment_provider
     end
 
-    context "when paid amout is not zero" do
+    context "when paid amount is not zero" do
       let(:total_paid_amount_cents) { 1 }
 
       it "return the payload" do
@@ -219,7 +220,7 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
       end
     end
 
-    context "when paid amout is zero" do
+    context "when paid amount is zero" do
       it "returns the payload" do
         expect(cashfree_service.send(:payment_url_params)).to eq(expected_params)
       end
