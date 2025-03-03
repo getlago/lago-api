@@ -64,6 +64,13 @@ module PaymentProviderCustomers
       return result unless customer # NOTE: Customer is nil when deleted.
       return result if customer.organization.webhook_endpoints.none? && send_webhook && payment_provider(customer)
 
+      if stripe_customer.provider_payment_methods_with_setup.blank?
+        return result.single_validation_failure!(
+          field: :provider_payment_methods,
+          error_code: "no_payment_methods_to_setup_available"
+        )
+      end
+
       res = ::Stripe::Checkout::Session.create(
         checkout_link_params,
         {
@@ -84,7 +91,7 @@ module PaymentProviderCustomers
       result
     rescue ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
       deliver_error_webhook(e)
-      result
+      result.third_party_failure!(third_party: "Stripe", error_code: e.code, error_message: e.message)
     rescue ::Stripe::AuthenticationError => e
       deliver_error_webhook(e)
 
@@ -114,7 +121,7 @@ module PaymentProviderCustomers
       {
         success_url: success_redirect_url,
         mode: "setup",
-        payment_method_types: stripe_customer.provider_payment_methods - %w[crypto], # NOTE: crypto doesn't work with setup mode
+        payment_method_types: stripe_customer.provider_payment_methods_with_setup,
         customer: stripe_customer.provider_customer_id
       }
     end
