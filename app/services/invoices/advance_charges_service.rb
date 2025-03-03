@@ -46,7 +46,7 @@ module Invoices
       # NOTE: filter all active/terminated subscriptions having non-invoiceable fees not yet attached to an invoice
       @subscriptions ||= organization.subscriptions
         .where(
-          id: Fee.where(organization_id: organization.id)
+          id: Fee.from_organization(organization)
             .where(invoice_id: nil, payment_status: :succeeded)
             .where("succeeded_at <= ?", billing_at)
             .joins(:subscription)
