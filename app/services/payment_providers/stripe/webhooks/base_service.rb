@@ -15,6 +15,11 @@ module PaymentProviders
 
         attr_reader :organization, :event
 
+        PAYMENT_SERVICE_CLASS_MAP = {
+          "Invoice" => Invoices::Payments::StripeService,
+          "PaymentRequest" => PaymentRequests::Payments::StripeService
+        }.freeze
+
         def metadata
           @metadata ||= event.data.object.metadata.to_h.symbolize_keys
         end
@@ -29,6 +34,27 @@ module PaymentProviders
           return result if Customer.find_by(id: metadata[:lago_customer_id], organization_id: organization.id).nil?
 
           result.not_found_failure!(resource: "stripe_customer")
+        end
+
+        # TODO: Move this to a proper factory
+        def payment_service_klass
+          payable_type = metadata[:lago_payable_type] || "Invoice"
+
+          PAYMENT_SERVICE_CLASS_MAP.fetch(payable_type) do
+            raise NameError, "Invalid lago_payable_type: #{payable_type}"
+          end
+        end
+
+        def update_payment_status!(status)
+          payment_service_klass.new.update_payment_status(
+            organization_id: organization.id,
+            status:,
+            stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
+              id: event.data.object.id,
+              status: event.data.object.status,
+              metadata:
+            )
+          ).raise_if_error!
         end
       end
     end

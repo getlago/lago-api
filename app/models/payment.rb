@@ -91,6 +91,7 @@ end
 #  payable_type                 :string           default("Invoice"), not null
 #  payment_type                 :enum             default("provider"), not null
 #  provider_payment_data        :jsonb
+#  provider_payment_method_data :jsonb            not null
 #  reference                    :string
 #  status                       :string           not null
 #  created_at                   :datetime         not null
