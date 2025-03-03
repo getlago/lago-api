@@ -52,7 +52,6 @@ class Organization < ApplicationRecord
   has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
-  has_one :default_billing_entity, -> { where(is_default: true) }, class_name: "BillingEntity"
 
   has_many :invoice_custom_sections
   has_many :invoice_custom_section_selections
@@ -178,6 +177,14 @@ class Organization < ApplicationRecord
 
   def can_create_billing_entity?
     remaining_billing_entities > 0
+  end
+
+  # By default all organizations have only one billing_entity. If an organization has more than one billing_entity,
+  # the billing_entity_id should be provided instead of relying on default
+  def default_billing_entity
+    return nil if billing_entities.count > 1
+
+    billing_entities.first
   end
 
   private
