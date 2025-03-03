@@ -45,17 +45,47 @@ module Invoices
 
       # NOTE: filter all active/terminated subscriptions having non-invoiceable fees not yet attached to an invoice
       @subscriptions ||= organization.subscriptions
-        .where(
-          id: Fee.from_organization(organization)
-            .where(invoice_id: nil, payment_status: :succeeded)
-            .where("succeeded_at <= ?", billing_at)
-            .joins(:subscription)
-            .where(subscriptions: {
-              external_id: initial_subscriptions.pluck(:external_id).uniq,
-              status: [:active, :terminated]
-            })
-            .select("DISTINCT(subscriptions.id)")
-        )
+        .where(id: fees_scope.select("DISTINCT(subscriptions.id)"))
+    end
+
+    def fees_scope
+      Fee.from_organization(organization)
+        .where(invoice_id: nil, payment_status: :succeeded)
+        .where("succeeded_at <= ?", billing_at)
+        .joins(:subscription)
+        .where(subscriptions: {
+          external_id: initial_subscriptions.pluck(:external_id).uniq,
+          status: [:active, :terminated]
+        })
+    end
+
+    # NOTE: Fetch the list of distinct billing periods present from the fees
+    def billing_periods
+      fields = {
+        subscription_id: "subscriptions.id",
+        charges_from_datetime: "fees.properties->'charges_from_datetime'",
+        charges_to_datetime: "fees.properties->'charges_to_datetime'",
+        from_datetime: "fees.properties->'from_datetime'",
+        to_datetime: "fees.properties->'to_datetime'"
+      }
+
+      groups = fees_scope
+        .select(fields.map { |k, v| "#{v} AS #{k}" }.join(", "))
+        .group(fields.values.join(", "))
+
+      groups
+        .group_by(&:subscription_id)
+        .map do |subscription_id, groups|
+          group = groups.max_by(&:charges_to_datetime)
+
+          {
+            subscription_id: group.subscription_id,
+            charges_from_datetime: group.charges_from_datetime,
+            charges_to_datetime: group.charges_to_datetime,
+            from_datetime: group.from_datetime,
+            to_datetime: group.to_datetime
+          }
+        end
     end
 
     def has_charges_with_statement?
@@ -114,9 +144,7 @@ module Invoices
         datetime: billing_at, # this is an int we need to convert it
         skip_charges: true
       ) do |invoice|
-        Invoices::CreateInvoiceSubscriptionService
-          .call(invoice:, subscriptions:, timestamp: billing_at.to_i, invoicing_reason: :in_advance_charge_periodic)
-          .raise_if_error!
+        Invoices::CreateAdvanceChargesInvoiceSubscriptionService.call!(invoice:, timestamp: billing_at, billing_periods:)
       end
 
       invoice_result.raise_if_error!
