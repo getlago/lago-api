@@ -222,6 +222,20 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         expect(sub.charges_from_datetime).to match_datetime fee_boundaries[:charges_from_datetime]
         expect(sub.invoicing_reason).to eq "in_advance_charge_periodic"
       end
+
+      context "when the fee does not have organization_id set (regression)" do
+        before do
+          paid_in_advance_fee.update!(organization_id: nil)
+        end
+
+        it "does not fail" do
+          result = invoice_service.call
+
+          expect(result).to be_success
+          expect(result.invoice).to be_a Invoice
+          expect(result.invoice.fees.count).to eq 1
+        end
+      end
     end
 
     context "with integration requiring sync" do
