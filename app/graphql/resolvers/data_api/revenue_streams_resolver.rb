@@ -28,8 +28,6 @@ module Resolvers
       type Types::DataApi::RevenueStreams::Object.collection_type, null: false
 
       def resolve(**args)
-        raise unauthorized_error unless License.premium?
-
         result = ::DataApi::RevenueStreamsService.call(current_organization, **args)
         result.revenue_streams
       end

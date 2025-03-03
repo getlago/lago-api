@@ -27,49 +27,33 @@ RSpec.describe Resolvers::DataApi::RevenueStreamsResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:body_response) { File.read("spec/fixtures/lago_data_api/revenue_streams.json") }
+
+  before do
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/")
+      .to_return(status: 200, body: body_response, headers: {})
+  end
+
+  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "data_api:revenue_streams:view"
 
-  context "without premium feature" do
-    it "returns an error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query:
-      )
+  it "returns a list of revenue streams" do
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query:
+    )
 
-      expect_graphql_error(result:, message: "unauthorized")
-    end
-  end
-
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
-    let(:body_response) { File.read("spec/fixtures/lago_data_api/revenue_streams.json") }
-
-    before do
-      stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/")
-        .to_return(status: 200, body: body_response, headers: {})
-    end
-
-    it "returns a list of revenue streams" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query:
-      )
-
-      revenue_streams_response = result["data"]["revenueStreams"]
-      expect(revenue_streams_response["collection"].first).to include(
-        {
-          "startOfPeriodDt" => "2024-01-01",
-          "endOfPeriodDt" => "2024-01-31"
-        }
-      )
-    end
+    revenue_streams_response = result["data"]["revenueStreams"]
+    expect(revenue_streams_response["collection"].first).to include(
+      {
+        "startOfPeriodDt" => "2024-01-01",
+        "endOfPeriodDt" => "2024-01-31"
+      }
+    )
   end
 end
