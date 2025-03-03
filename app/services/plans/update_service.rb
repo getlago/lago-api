@@ -46,15 +46,8 @@ module Plans
 
         process_charges(plan, params[:charges]) if params[:charges]
 
-        if params.key?(:usage_thresholds) &&
-            License.premium? &&
-            plan.organization.progressive_billing_enabled?
-
-          if params[:usage_thresholds].empty?
-            plan.usage_thresholds.discard_all
-          else
-            process_usage_thresholds(plan, params[:usage_thresholds])
-          end
+        if params.key?(:usage_thresholds) && License.premium?
+          Plans::UpdateUsageThresholdsService.call(plan:, usage_thresholds_params: params[:usage_thresholds])
         end
 
         process_minimum_commitment(plan, params[:minimum_commitment]) if params[:minimum_commitment] && License.premium?
@@ -144,25 +137,6 @@ module Plans
       ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
     end
 
-    def create_usage_threshold(plan, params)
-      usage_threshold = plan.usage_thresholds.find_or_initialize_by(
-        recurring: params[:recurring] || false,
-        amount_cents: params[:amount_cents]
-      )
-
-      existing_recurring_threshold = plan.usage_thresholds.recurring.first
-
-      if params[:recurring] && existing_recurring_threshold
-        usage_threshold = existing_recurring_threshold
-      end
-
-      usage_threshold.threshold_display_name = params[:threshold_display_name]
-      usage_threshold.amount_cents = params[:amount_cents]
-
-      usage_threshold.save!
-      usage_threshold
-    end
-
     def process_minimum_commitment(plan, params)
       if params.present?
         minimum_commitment = plan.minimum_commitment || Commitment.new(plan:, commitment_type: "minimum_commitment")
@@ -182,47 +156,6 @@ module Plans
       end
 
       minimum_commitment
-    end
-
-    def process_usage_thresholds(plan, params_thresholds)
-      created_thresholds_ids = []
-
-      hash_thresholds = params_thresholds.map { |c| c.to_h.deep_symbolize_keys }
-      hash_thresholds.each do |payload_threshold|
-        usage_threshold = plan.usage_thresholds.find_by(id: payload_threshold[:id])
-
-        if usage_threshold
-          if payload_threshold.key?(:threshold_display_name)
-            usage_threshold.threshold_display_name = payload_threshold[:threshold_display_name]
-          end
-
-          if payload_threshold.key?(:amount_cents)
-            usage_threshold.amount_cents = payload_threshold[:amount_cents]
-          end
-
-          if payload_threshold.key?(:recurring)
-            usage_threshold.recurring = payload_threshold[:recurring]
-          end
-
-          # This means that in the UI we just removed an existing threshold
-          # and then just re-added a threshold (which no longer has an id) with the same amount
-          # so we discard the existing one and we're inserting a new one instead
-          if !usage_threshold.valid? && usage_threshold.errors.where(:amount_cents, :taken).present?
-            usage_threshold.discard!
-          else
-            usage_threshold.save!
-            next
-          end
-        end
-
-        plan = plan.reload
-
-        created_threshold = create_usage_threshold(plan, payload_threshold)
-        created_thresholds_ids.push(created_threshold.id)
-      end
-
-      # NOTE: Delete thresholds that are no more linked to the plan
-      sanitize_thresholds(plan, hash_thresholds, created_thresholds_ids)
     end
 
     def process_charges(plan, params_charges)
@@ -257,12 +190,6 @@ module Plans
         cascade_charge_removal(charge)
         Charges::DestroyService.call(charge:)
       end
-    end
-
-    def sanitize_thresholds(plan, args_thresholds, created_thresholds_ids)
-      args_thresholds_ids = args_thresholds.map { |c| c[:id] }.compact
-      thresholds_ids = plan.usage_thresholds.pluck(:id) - args_thresholds_ids - created_thresholds_ids
-      plan.usage_thresholds.where(id: thresholds_ids).discard_all
     end
 
     # NOTE: We should remove pending subscriptions
