@@ -539,6 +539,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_27_155522) do
     t.boolean "skip_invoice_custom_sections", default: false, null: false
     t.enum "account_type", default: "customer", null: false, enum_type: "customer_account_type"
     t.uuid "billing_entity_id"
+    t.bigint "payment_receipt_counter", default: 0, null: false
     t.index ["account_type"], name: "index_customers_on_account_type"
     t.index ["applied_dunning_campaign_id"], name: "index_customers_on_applied_dunning_campaign_id"
     t.index ["billing_entity_id"], name: "index_customers_on_billing_entity_id"
@@ -1154,6 +1155,16 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_27_155522) do
     t.index ["organization_id"], name: "index_payment_providers_on_organization_id"
   end
 
+  create_table "payment_receipts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "number", null: false
+    t.uuid "payment_id", null: false
+    t.uuid "organization_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["organization_id"], name: "index_payment_receipts_on_organization_id"
+    t.index ["payment_id"], name: "index_payment_receipts_on_payment_id", unique: true
+  end
+
   create_table "payment_requests", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "customer_id", null: false
     t.bigint "amount_cents", default: 0, null: false
@@ -1541,6 +1552,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_27_155522) do
   add_foreign_key "payment_provider_customers", "customers"
   add_foreign_key "payment_provider_customers", "payment_providers"
   add_foreign_key "payment_providers", "organizations"
+  add_foreign_key "payment_receipts", "organizations"
+  add_foreign_key "payment_receipts", "payments"
   add_foreign_key "payment_requests", "customers"
   add_foreign_key "payment_requests", "dunning_campaigns"
   add_foreign_key "payment_requests", "organizations"

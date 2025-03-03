@@ -17173,6 +17173,12 @@
               "description": "credit_note.created",
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "payment_receipt_created",
+              "description": "payment_receipt.created",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -20694,6 +20700,12 @@
             },
             {
               "name": "from_email",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "issue_receipts",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
@@ -31243,6 +31255,12 @@
             },
             {
               "name": "from_email",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "issue_receipts",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
