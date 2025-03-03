@@ -16,7 +16,8 @@ module WalletTransactions
       return result if credits_amount.zero?
 
       ActiveRecord::Base.transaction do
-        wallet_transaction = wallet.wallet_transactions.create!(
+        wallet_transaction = CreateService.call!(
+          wallet:,
           transaction_type: :outbound,
           credit_amount: credits_amount,
           status: :settled,
