@@ -7062,6 +7062,11 @@ type Query {
   revenueStreams(currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): RevenueStreamCollection!
 
   """
+  Query revenue streams customers of an organization
+  """
+  revenueStreamsCustomers(currency: CurrencyEnum, limit: Int, offset: Int, orderBy: OrderByEnum): RevenueStreamCustomerCollection!
+
+  """
   Query revenue streams plans of an organization
   """
   revenueStreamsPlans(currency: CurrencyEnum, orderBy: OrderByEnum): RevenueStreamPlanCollection!
@@ -7344,6 +7349,32 @@ type RevenueStreamCollection {
   A collection of paginated RevenueStreamCollection
   """
   collection: [RevenueStream!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+type RevenueStreamCustomer {
+  amountCurrency: CurrencyEnum!
+  customerId: ID!
+  customerName: String!
+  externalCustomerId: String!
+  grossRevenueAmountCents: BigInt!
+  grossRevenueShare: Float!
+  netRevenueAmountCents: BigInt!
+  netRevenueShare: Float!
+}
+
+"""
+RevenueStreamCustomerCollection type
+"""
+type RevenueStreamCustomerCollection {
+  """
+  A collection of paginated RevenueStreamCustomerCollection
+  """
+  collection: [RevenueStreamCustomer!]!
 
   """
   Pagination Metadata for navigating the Pagination
