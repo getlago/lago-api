@@ -31,7 +31,7 @@ module Credits
         )
 
         result.wallet_transaction = wallet_transaction
-        Wallets::Balance::DecreaseService.new(wallet:, credits_amount: credit_amount).call
+        Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction: wallet_transaction).call
 
         result.prepaid_credit_amount_cents = amount_cents
         invoice.prepaid_credit_amount_cents += amount_cents
