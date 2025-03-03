@@ -3,11 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql do
-  let(:required_permission) { "data_api:revenue_streams:view" }
+  let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL
       query($currency: CurrencyEnum, $orderBy: OrderByEnum) {
-        revenueStreamsPlans(currency: $currency, orderBy: $orderBy) {
+        dataApiRevenueStreamsPlans(currency: $currency, orderBy: $orderBy) {
           collection {
             planCode
             planId
@@ -39,7 +39,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "data_api:revenue_streams:view"
+  it_behaves_like "requires permission", "data_api:view"
 
   it "returns a list of revenue streams plans" do
     result = execute_graphql(
@@ -49,7 +49,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
       query:
     )
 
-    revenue_streams_response = result["data"]["revenueStreamsPlans"]
+    revenue_streams_response = result["data"]["dataApiRevenueStreamsPlans"]
     expect(revenue_streams_response["collection"].first).to include(
       {
         "planId" => "8d39f27f-8371-43ea-a327-c9579e70eeb3",
