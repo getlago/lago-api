@@ -80,3 +80,5 @@ payment_requests:
 payments:
   view: true
   create: true
+payment_receipts:
+  view: true
