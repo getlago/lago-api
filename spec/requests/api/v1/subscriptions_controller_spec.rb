@@ -209,7 +209,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         let(:organization) { create(:organization, premium_integrations: ["beta_payment_authorization"]) }
         let(:body) do
           {
-            authorization: {amount: "100", currency: "USD"},
+            authorization: {amount_cents: "100", amount_currency: "USD"},
             subscription: params
           }
         end
@@ -239,6 +239,22 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           expect(PaymentProviders::CancelPaymentAuthorizationJob).to have_received(:perform_later).with(
             payment_provider: stripe_customer.payment_provider, id: stripe_pi[:id]
           )
+        end
+
+        context "when parameters are incorrect" do
+          let(:body) do
+            {
+              authorization: {amount_cents: "100"},
+              subscription: params
+            }
+          end
+
+          it "returns an error" do
+            subject
+
+            expect(response).to have_http_status(:bad_request)
+            expect(json[:error]).to eq "BadRequest: param is missing or the value is empty: amount_currency"
+          end
         end
 
         context "when customer has no payment method" do

@@ -37,8 +37,8 @@ module Api
           end
 
           result = PaymentProviders::Stripe::Payments::AuthorizeService.call(
-            amount: params[:authorization][:amount],
-            currency: params[:authorization][:currency],
+            amount: params[:authorization].fetch(:amount_cents),
+            currency: params[:authorization].fetch(:amount_currency),
             provider_customer: customer.provider_customer,
             metadata: {plan_code: create_params[:plan_code]},
             unique_id: request.request_id
