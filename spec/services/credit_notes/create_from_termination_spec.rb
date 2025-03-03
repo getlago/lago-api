@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe CreditNotes::CreateFromTermination, type: :service do
-  subject(:create_service) { described_class.new(subscription:) }
+  subject(:create_service) { described_class.new(subscription:, context:) }
 
   let(:started_at) { Time.zone.parse("2022-09-01 10:00") }
   let(:subscription_at) { Time.zone.parse("2022-09-01 10:00") }
@@ -11,6 +11,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
+  let(:context) { nil }
 
   let(:subscription) do
     create(
@@ -487,6 +488,40 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
             expect(credit_note.items.count).to eq(1)
           end
         end
+      end
+    end
+
+    context "when 'preview' context provided" do
+      let(:context) { :preview }
+
+      it "builds a credit note" do
+        result = create_service.call
+        expect(result).to be_success
+
+        credit_note = result.credit_note
+        expect(credit_note).to be_a(CreditNote).and be_new_record
+        expect(credit_note).to be_available
+        expect(credit_note).to be_order_change
+        expect(credit_note.total_amount_cents).to eq(19)
+        expect(credit_note.total_amount_currency).to eq("EUR")
+        expect(credit_note.credit_amount_cents).to eq(19)
+        expect(credit_note.credit_amount_currency).to eq("EUR")
+        expect(credit_note.balance_amount_cents).to eq(19)
+        expect(credit_note.balance_amount_currency).to eq("EUR")
+        expect(credit_note.reason).to eq("order_change")
+        expect(credit_note.applied_taxes.length).to eq(1)
+        expect(credit_note.applied_taxes.first.tax_code).to eq(invoice_applied_tax.tax_code)
+
+        expect(credit_note.items.size).to eq(1)
+        expect(credit_note.items).to all be_new_record
+      end
+
+      it "does not persist any credit note" do
+        expect { create_service.call }.not_to change(CreditNote, :count)
+      end
+
+      it "does not persist any credit note item" do
+        expect { create_service.call }.not_to change(CreditNoteItem, :count)
       end
     end
   end
