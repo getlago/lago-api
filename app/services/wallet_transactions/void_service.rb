@@ -22,11 +22,11 @@ module WalletTransactions
           credit_amount: credits_amount,
           status: :settled,
           settled_at: Time.current,
-          source: from_source,
+          from_source:,
           transaction_status: :voided,
           metadata:,
           credit_note_id:
-        )
+        ).wallet_transaction
         Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
         result.wallet_transaction = wallet_transaction
       end
