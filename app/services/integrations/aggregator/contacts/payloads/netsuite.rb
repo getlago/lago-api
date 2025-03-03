@@ -19,7 +19,9 @@ module Integrations
                 "custentity_lago_sf_id" => customer.external_salesforce_id,
                 "custentity_lago_customer_link" => customer_url,
                 "email" => email,
-                "phone" => phone
+                "phone" => phone,
+                "entityid" => customer.external_customer_id,
+                "autoname" => false # fixed value
               }.merge(names),
               "options" => {
                 "ignoreMandatoryFields" => false # Fixed value
@@ -37,7 +39,8 @@ module Integrations
                 "custentity_lago_sf_id" => customer.external_salesforce_id,
                 "custentity_lago_customer_link" => customer_url,
                 "email" => email,
-                "phone" => phone
+                "phone" => phone,
+                "entityid" => customer.external_customer_id,
               }.merge(names),
               "options" => {
                 "isDynamic" => false
