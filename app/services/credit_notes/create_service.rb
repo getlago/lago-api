@@ -2,6 +2,8 @@
 
 module CreditNotes
   class CreateService < BaseService
+    Result = BaseResult[:credit_note]
+
     def initialize(invoice:, **args)
       @invoice = invoice
       args = args.with_indifferent_access
@@ -12,6 +14,7 @@ module CreditNotes
       @refund_amount_cents = args[:refund_amount_cents] || 0
 
       @automatic = args.key?(:automatic) ? args[:automatic] : false
+      @context = args[:context]
 
       super
     end
@@ -22,7 +25,7 @@ module CreditNotes
       return result.not_allowed_failure!(code: "invalid_type_or_status") unless valid_type_or_status?
 
       ActiveRecord::Base.transaction do
-        result.credit_note = CreditNote.create!(
+        result.credit_note = CreditNote.new(
           customer: invoice.customer,
           invoice:,
           issuing_date:,
@@ -38,6 +41,8 @@ module CreditNotes
           status: invoice.status
         )
 
+        credit_note.save! if context != :preview
+
         create_items
         result.raise_if_error!
 
@@ -49,10 +54,15 @@ module CreditNotes
         credit_note.credit_status = "available" if credit_note.credited?
         credit_note.refund_status = "pending" if credit_note.refunded?
 
-        credit_note.update!(
+        credit_note.assign_attributes(
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
           balance_amount_cents: credit_note.credit_amount_cents
         )
+
+        return result if context == :preview
+
+        credit_note.save!
+
         if invoice.credit?
           WalletTransactions::VoidService.call(wallet: associated_wallet,
             credits_amount: voiding_credits, credit_note_id: credit_note.id)
@@ -91,7 +101,8 @@ module CreditNotes
       :description,
       :credit_amount_cents,
       :refund_amount_cents,
-      :automatic
+      :automatic,
+      :context
 
     delegate :credit_note, to: :result
     delegate :customer, to: :invoice
@@ -130,7 +141,7 @@ module CreditNotes
         )
         break unless valid_item?(item)
 
-        item.save!
+        item.save! unless context == :preview
       end
     end
 
