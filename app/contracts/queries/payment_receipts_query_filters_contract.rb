@@ -1,11 +1,10 @@
 # frozen_string_literal: true
 
 module Queries
-  class PaymentsQueryFiltersContract < Dry::Validation::Contract
+  class PaymentReceiptsQueryFiltersContract < Dry::Validation::Contract
     params do
       required(:filters).hash do
         optional(:invoice_id).maybe(:string, format?: Regex::UUID)
-        optional(:external_customer_id).maybe(:string)
       end
     end
   end
