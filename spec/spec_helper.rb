@@ -15,6 +15,7 @@ require "webmock/rspec"
 require "simplecov"
 require "money-rails/test_helpers"
 require "active_storage_validations/matchers"
+require "karafka/testing/rspec/helpers"
 
 DatabaseCleaner.allow_remote_database_url = true
 
@@ -62,6 +63,7 @@ RSpec.configure do |config|
   config.include QueuesHelper
   config.include ActiveSupport::Testing::TimeHelpers
   config.include ActiveStorageValidations::Matchers
+  config.include Karafka::Testing::RSpec::Helpers
 
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [Rails.root.join("spec/fixtures").to_s]
