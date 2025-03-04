@@ -5,7 +5,7 @@ module Types
     module RevenueStreams
       module Customers
         class Object < Types::BaseObject
-          graphql_name "RevenueStreamCustomer"
+          graphql_name "DataApiRevenueStreamCustomer"
 
           field :customer_id, ID, null: false
           field :customer_name, String, null: false

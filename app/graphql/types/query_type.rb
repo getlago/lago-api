@@ -68,9 +68,6 @@ module Types
     field :payments, resolver: Resolvers::PaymentsResolver
     field :plan, resolver: Resolvers::PlanResolver
     field :plans, resolver: Resolvers::PlansResolver
-    field :revenue_streams, resolver: Resolvers::DataApi::RevenueStreamsResolver
-    field :revenue_streams_customers, resolver: Resolvers::DataApi::RevenueStreams::CustomersResolver
-    field :revenue_streams_plans, resolver: Resolvers::DataApi::RevenueStreams::PlansResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
@@ -81,5 +78,10 @@ module Types
     field :webhook_endpoint, resolver: Resolvers::WebhookEndpointResolver
     field :webhook_endpoints, resolver: Resolvers::WebhookEndpointsResolver
     field :webhooks, resolver: Resolvers::WebhooksResolver
+
+    field :data_api_mrrs, resolver: Resolvers::DataApi::MrrsResolver
+    field :data_api_revenue_streams, resolver: Resolvers::DataApi::RevenueStreamsResolver
+    field :data_api_revenue_streams_customers, resolver: Resolvers::DataApi::RevenueStreams::CustomersResolver
+    field :data_api_revenue_streams_plans, resolver: Resolvers::DataApi::RevenueStreams::PlansResolver
   end
 end

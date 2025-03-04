@@ -3,11 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::DataApi::RevenueStreams::CustomersResolver, type: :graphql do
-  let(:required_permission) { "data_api:revenue_streams:view" }
+  let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL
       query($currency: CurrencyEnum, $orderBy: OrderByEnum, $limit: Int, $offset: Int) {
-        revenueStreamsCustomers(currency: $currency, orderBy: $orderBy, limit: $limit, offset: $offset) {
+        dataApiRevenueStreamsCustomers(currency: $currency, orderBy: $orderBy, limit: $limit, offset: $offset) {
           collection {
             customerId
             externalCustomerId
@@ -36,7 +36,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::CustomersResolver, type: :gra
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "data_api:revenue_streams:view"
+  it_behaves_like "requires permission", "data_api:view"
 
   it "returns a list of revenue streams customers" do
     result = execute_graphql(
@@ -46,7 +46,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::CustomersResolver, type: :gra
       query:
     )
 
-    revenue_streams_response = result["data"]["revenueStreamsCustomers"]
+    revenue_streams_response = result["data"]["dataApiRevenueStreamsCustomers"]
     expect(revenue_streams_response["collection"].first).to include(
       {
         "amountCurrency" => "EUR",

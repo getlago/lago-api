@@ -9,8 +9,7 @@ billable_metrics:
   update: false
   delete: false
 data_api:
-  revenue_streams:
-    view: false
+  view: false
 plans:
   create: false
   update: false

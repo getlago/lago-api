@@ -7,11 +7,14 @@ module Resolvers
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = "data_api:revenue_streams:view"
+        REQUIRED_PERMISSION = "data_api:view"
 
+        graphql_name "DataApiRevenueStreamsPlans"
         description "Query revenue streams plans of an organization"
 
         argument :currency, Types::CurrencyEnum, required: false
+        argument :limit, Integer, required: false
+        argument :offset, Integer, required: false
         argument :order_by, Types::DataApi::RevenueStreams::OrderByEnum, required: false
 
         type Types::DataApi::RevenueStreams::Plans::Object.collection_type, null: false

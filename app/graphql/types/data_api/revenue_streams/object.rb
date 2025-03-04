@@ -4,7 +4,7 @@ module Types
   module DataApi
     module RevenueStreams
       class Object < Types::BaseObject
-        graphql_name "RevenueStream"
+        graphql_name "DataApiRevenueStream"
 
         field :amount_currency, Types::CurrencyEnum, null: false
 

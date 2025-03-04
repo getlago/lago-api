@@ -2,14 +2,14 @@
 
 module Resolvers
   module DataApi
-    class RevenueStreamsResolver < Resolvers::BaseResolver
+    class MrrsResolver < Resolvers::BaseResolver
       include AuthenticableApiUser
       include RequiredOrganization
 
       REQUIRED_PERMISSION = "data_api:view"
 
-      graphql_name "DataApiRevenueStreams"
-      description "Query revenue streams of an organization"
+      graphql_name "DataApiMrrs"
+      description "Query monthly recurring revenues of an organization"
 
       argument :currency, Types::CurrencyEnum, required: false
 
@@ -26,11 +26,11 @@ module Resolvers
 
       argument :plan_code, String, required: false
 
-      type Types::DataApi::RevenueStreams::Object.collection_type, null: false
+      type Types::DataApi::Mrrs::Object.collection_type, null: false
 
       def resolve(**args)
-        result = ::DataApi::RevenueStreamsService.call(current_organization, **args)
-        result.revenue_streams
+        result = ::DataApi::MrrsService.call(current_organization, **args)
+        result.mrrs
       end
     end
   end
