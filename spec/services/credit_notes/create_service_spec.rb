@@ -10,7 +10,8 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       description: nil,
       credit_amount_cents:,
       refund_amount_cents:,
-      automatic:
+      automatic:,
+      context:
     )
   end
 
@@ -33,6 +34,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
   let(:tax) { create(:tax, organization:, rate: 20) }
 
   let(:automatic) { true }
+  let(:context) { nil }
   let(:fee1) { create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20) }
   let(:fee2) { create(:fee, invoice:, amount_cents: 10, taxes_amount_cents: 1, taxes_rate: 20) }
   let(:credit_amount_cents) { 12 }
@@ -562,6 +564,82 @@ RSpec.describe CreditNotes::CreateService, type: :service do
             expect(result.error.messages.keys).to include(:credit_amount_cents)
           end
         end
+      end
+    end
+
+    context "when 'preview' context provided" do
+      subject(:result) { create_service.call }
+
+      let(:context) { :preview }
+
+      it "builds a credit note" do
+        expect(result).to be_success
+
+        credit_note = result.credit_note
+        expect(credit_note).to be_a(CreditNote).and be_new_record
+        expect(credit_note.invoice).to eq(invoice)
+        expect(credit_note.customer).to eq(invoice.customer)
+        expect(credit_note.issuing_date.to_s).to eq(Time.zone.today.to_s)
+
+        expect(credit_note.coupons_adjustment_amount_cents).to eq(0)
+        expect(credit_note.taxes_amount_cents).to eq(3)
+        expect(credit_note.taxes_rate).to eq(20)
+        expect(credit_note.applied_taxes.size).to eq(1)
+
+        expect(credit_note.total_amount_currency).to eq(invoice.currency)
+        expect(credit_note.total_amount_cents).to eq(18)
+
+        expect(credit_note.credit_amount_currency).to eq(invoice.currency)
+        expect(credit_note.credit_amount_cents).to eq(12)
+        expect(credit_note.balance_amount_currency).to eq(invoice.currency)
+        expect(credit_note.balance_amount_cents).to eq(12)
+        expect(credit_note.credit_status).to eq("available")
+
+        expect(credit_note.refund_amount_currency).to eq(invoice.currency)
+        expect(credit_note.refund_amount_cents).to eq(6)
+        expect(credit_note.refund_status).to eq("pending")
+
+        expect(credit_note).to be_other
+
+        expect(credit_note.items.size).to eq(2)
+        expect(credit_note.items).to all be_new_record
+
+        item1 = credit_note.items.first
+        expect(item1.fee).to eq(fee1)
+        expect(item1.amount_cents).to eq(10)
+        expect(item1.amount_currency).to eq(invoice.currency)
+
+        item2 = credit_note.items.second
+        expect(item2.fee).to eq(fee2)
+        expect(item2.amount_cents).to eq(5)
+        expect(item2.amount_currency).to eq(invoice.currency)
+      end
+
+      it "does not persist any credit note" do
+        expect { subject }.not_to change(CreditNote, :count)
+      end
+
+      it "does not persist any credit note item" do
+        expect { subject }.not_to change(CreditNoteItem, :count)
+      end
+
+      it "does not call SegmentTrackJob" do
+        allow(SegmentTrackJob).to receive(:perform_later)
+
+        subject
+
+        expect(SegmentTrackJob).not_to have_received(:perform_later)
+      end
+
+      it "does not deliver a webhook" do
+        subject
+
+        expect(SendWebhookJob).not_to have_been_enqueued.with("credit_note.created", CreditNote)
+        expect(CreditNotes::GeneratePdfJob).not_to have_been_enqueued
+      end
+
+      it "does not send an email" do
+        expect { subject }.not_to have_enqueued_job(SendEmailJob)
       end
     end
   end
