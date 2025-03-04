@@ -115,7 +115,6 @@ end
 #
 #  index_billing_entities_on_applied_dunning_campaign_id  (applied_dunning_campaign_id)
 #  index_billing_entities_on_organization_id              (organization_id)
-#  unique_default_billing_entity_per_organization         (organization_id) UNIQUE WHERE ((is_default = true) AND (archived_at IS NULL) AND (deleted_at IS NULL))
 #
 # Foreign Keys
 #

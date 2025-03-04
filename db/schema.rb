@@ -235,7 +235,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_27_155522) do
     t.string "code", null: false
     t.string "tax_identification_number"
     t.float "vat_rate", default: 0.0, null: false
-    t.boolean "is_default", default: false, null: false
     t.datetime "archived_at"
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
@@ -243,7 +242,6 @@ ActiveRecord::Schema[7.1].define(version: 2025_02_27_155522) do
     t.uuid "applied_dunning_campaign_id"
     t.index ["applied_dunning_campaign_id"], name: "index_billing_entities_on_applied_dunning_campaign_id"
     t.index ["organization_id"], name: "index_billing_entities_on_organization_id"
-    t.index ["organization_id"], name: "unique_default_billing_entity_per_organization", unique: true, where: "((is_default = true) AND (archived_at IS NULL) AND (deleted_at IS NULL))"
   end
 
   create_table "billing_entities_taxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
