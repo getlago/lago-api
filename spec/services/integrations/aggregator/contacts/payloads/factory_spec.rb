@@ -89,7 +89,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Factory do
         aggregate_failures do
           expect(subject["recordId"]).to eq(integration_customer.external_customer_id)
           expect(subject["columns"]["companyname"]).to eq(customer.name)
-          expect(subject["columns"]["entityid"]).to eq(customer.external_customer_id)
+          expect(subject["columns"]["entityid"]).to eq(customer.external_id)
         end
       end
     end

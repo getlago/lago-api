@@ -20,7 +20,7 @@ module Integrations
                 "custentity_lago_customer_link" => customer_url,
                 "email" => email,
                 "phone" => phone,
-                "entityid" => customer.external_customer_id,
+                "entityid" => customer.external_id,
                 "autoname" => false # fixed value
               }.merge(names),
               "options" => {
@@ -40,7 +40,8 @@ module Integrations
                 "custentity_lago_customer_link" => customer_url,
                 "email" => email,
                 "phone" => phone,
-                "entityid" => customer.external_customer_id,
+                "entityid" => customer.external_id,
+                "autoname" => false # fixed value
               }.merge(names),
               "options" => {
                 "isDynamic" => false

@@ -52,7 +52,7 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
               "custentity_lago_customer_link" => customer_link,
               "email" => customer.email,
               "phone" => customer.phone,
-              "entityid" => customer.external_customer_id,
+              "entityid" => customer.external_id,
               "autoname" => false
             },
             "options" => {
@@ -146,7 +146,9 @@ RSpec.describe Integrations::Aggregator::Contacts::UpdateService do
             "custentity_lago_sf_id" => customer.external_salesforce_id,
             "custentity_lago_customer_link" => customer_link,
             "email" => customer.email,
-            "phone" => customer.phone
+            "phone" => customer.phone,
+            "entityid" => customer.external_id,
+            "autoname" => false
           },
           "options" => {
             "isDynamic" => false
