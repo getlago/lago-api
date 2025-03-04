@@ -223,10 +223,10 @@ module Invoices
     end
 
     def create_credit_note_credits
-      credit_result = Credits::CreditNoteService.call(invoice:, context: :preview)
-      credit_result.raise_if_error!
+      terminated_subscription = subscriptions.find(&:terminated?)
+      credits = Preview::CreditsService.call!(invoice:, terminated_subscription:).credits
 
-      invoice.total_amount_cents -= credit_result.credits.sum(&:amount_cents)
+      invoice.total_amount_cents -= credits.sum(&:amount_cents)
     end
 
     def create_applied_prepaid_credits
