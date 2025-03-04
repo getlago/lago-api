@@ -13,6 +13,8 @@ module Resolvers
         description "Query revenue streams plans of an organization"
 
         argument :currency, Types::CurrencyEnum, required: false
+        argument :limit, Integer, required: false
+        argument :offset, Integer, required: false
         argument :order_by, Types::DataApi::RevenueStreams::OrderByEnum, required: false
 
         type Types::DataApi::RevenueStreams::Plans::Object.collection_type, null: false

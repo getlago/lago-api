@@ -6896,7 +6896,7 @@ type Query {
   """
   Query revenue streams plans of an organization
   """
-  dataApiRevenueStreamsPlans(currency: CurrencyEnum, orderBy: OrderByEnum): RevenueStreamPlanCollection!
+  dataApiRevenueStreamsPlans(currency: CurrencyEnum, limit: Int, offset: Int, orderBy: OrderByEnum): RevenueStreamPlanCollection!
 
   """
   Query a single dunning campaign of an organization

@@ -6,8 +6,8 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL
-      query($currency: CurrencyEnum, $orderBy: OrderByEnum) {
-        dataApiRevenueStreamsPlans(currency: $currency, orderBy: $orderBy) {
+      query($currency: CurrencyEnum, $orderBy: OrderByEnum, $limit: Int, $offset: Int) {
+        dataApiRevenueStreamsPlans(currency: $currency, orderBy: $orderBy, limit: $limit, offset: $offset) {
           collection {
             planCode
             planId
