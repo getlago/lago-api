@@ -2,15 +2,15 @@
 
 require "rails_helper"
 
-RSpec.describe DataApi::RevenueStreams::PlansService, type: :service do
+RSpec.describe DataApi::Mrrs::PlansService, type: :service do
   let(:service) { described_class.new(organization, **params) }
   let(:customer) { create(:customer, organization:) }
   let(:organization) { create(:organization) }
-  let(:body_response) { File.read("spec/fixtures/lago_data_api/revenue_streams_plans.json") }
+  let(:body_response) { File.read("spec/fixtures/lago_data_api/mrrs_plans.json") }
   let(:params) { {} }
 
   before do
-    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/plans")
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/mrrs/#{organization.id}/plans")
       .to_return(status: 200, body: body_response, headers: {})
   end
 
@@ -27,23 +27,22 @@ RSpec.describe DataApi::RevenueStreams::PlansService, type: :service do
     context "when licence is premium" do
       around { |test| lago_premium!(&test) }
 
-      it "returns expected revenue streams plans" do
+      it "returns expected mrrs plans" do
         expect(service_call).to be_success
-        expect(service_call.revenue_streams_plans.count).to eq(4)
-        expect(service_call.revenue_streams_plans.first).to eq(
+        expect(service_call.mrrs_plans.count).to eq(4)
+        expect(service_call.mrrs_plans.first).to eq(
           {
-            "plan_id" => "8d39f27f-8371-43ea-a327-c9579e70eeb3",
+            "dt" => "2025-02-25",
             "amount_currency" => "EUR",
-            "plan_code" => "custom_plan_penny",
-            "customers_count" => 1,
-            "gross_revenue_amount_cents" => 120735293,
-            "net_revenue_amount_cents" => 120735293,
+            "plan_id" => "8f550d3e-1234-4f4d-a752-61b0f98a9ef7",
+            "active_customers_count" => 1,
+            "mrr" => 1000000.0,
+            "mrr_share" => 0.0279,
+            "plan_name" => "Tondr",
             "organization_id" => "2537afc4-0e7c-4abb-89b7-d9b28c35780b",
-            "plan_name" => "Penny",
+            "plan_code" => "custom_plan_tondr",
             "plan_interval" => "monthly",
-            "customers_share" => 0.0055,
-            "gross_revenue_share" => 0.1148,
-            "net_revenue_share" => 0.1148
+            "active_customers_share" => 0.009
           }
         )
       end
