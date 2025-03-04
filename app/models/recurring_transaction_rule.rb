@@ -25,6 +25,8 @@ class RecurringTransactionRule < ApplicationRecord
   enum :interval, INTERVALS
   enum :method, METHODS
   enum :trigger, TRIGGERS
+
+  scope :expired, -> { where("recurring_transaction_rules.expiration_at::timestamp(0) <= ?", Time.current) }
 end
 
 # == Schema Information
