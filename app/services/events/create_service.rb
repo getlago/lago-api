@@ -57,7 +57,7 @@ module Events
           external_subscription_id: event.external_subscription_id,
           transaction_id: event.transaction_id,
           # NOTE: Removes trailing 'Z' to allow clickhouse parsing
-          timestamp: event.timestamp.to_i,
+          timestamp: event.timestamp.to_f.to_s,
           code: event.code,
           # NOTE: Default value to 0.0 is required for clickhouse parsing
           precise_total_amount_cents: event.precise_total_amount_cents.present? ? event.precise_total_amount_cents.to_s : "0.0",
