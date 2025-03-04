@@ -32,6 +32,7 @@ end
 # Table name: recurring_transaction_rules
 #
 #  id                                  :uuid             not null, primary key
+#  expiration_at                       :datetime
 #  granted_credits                     :decimal(30, 5)   default(0.0), not null
 #  interval                            :integer          default("weekly")
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
@@ -39,6 +40,7 @@ end
 #  paid_credits                        :decimal(30, 5)   default(0.0), not null
 #  started_at                          :datetime
 #  target_ongoing_balance              :decimal(30, 5)
+#  terminated_at                       :datetime
 #  threshold_credits                   :decimal(30, 5)   default(0.0)
 #  transaction_metadata                :jsonb
 #  trigger                             :integer          default("interval"), not null
