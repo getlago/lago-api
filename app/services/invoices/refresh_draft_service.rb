@@ -123,7 +123,7 @@ module Invoices
       invoice.applied_taxes.destroy_all
       invoice.error_details.discard_all
       invoice.applied_invoice_custom_sections.destroy_all
-      invoice.progressive_billing_credits.destroy_all
+      invoice.credits.progressive_billing_invoice_kind.destroy_all
 
       invoice.taxes_amount_cents = 0
       invoice.total_amount_cents = 0
