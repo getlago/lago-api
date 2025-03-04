@@ -13,6 +13,7 @@ module Wallets
         return false unless valid_method?
         return false unless valid_credits?
         return false unless valid_metadata?
+        return false unless valid_expiration_at?
 
         true
       end
@@ -56,6 +57,14 @@ module Wallets
 
       def valid_decimal?(value)
         ::Validators::DecimalAmountService.new(value).valid_decimal?
+      end
+
+      def valid_expiration_at?
+        return true if params[:expiration_at].blank?
+
+        return false unless Utils::Datetime.valid_format?(params[:expiration_at])
+
+        params[:expiration_at].to_date > Time.current.to_date
       end
 
       def valid_metadata?

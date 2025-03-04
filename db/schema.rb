@@ -1280,6 +1280,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_03_04_131235) do
     t.jsonb "transaction_metadata", default: []
     t.datetime "expiration_at"
     t.datetime "terminated_at"
+    t.integer "status", default: 0
     t.index ["started_at"], name: "index_recurring_transaction_rules_on_started_at"
     t.index ["wallet_id"], name: "index_recurring_transaction_rules_on_wallet_id"
   end

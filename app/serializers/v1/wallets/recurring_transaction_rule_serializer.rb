@@ -11,6 +11,7 @@ module V1
           interval: model.interval,
           method: model.method,
           started_at: model.started_at&.iso8601,
+          expiration_at: model.expiration_at&.iso8601,
           target_ongoing_balance: model.target_ongoing_balance,
           threshold_credits: model.threshold_credits,
           trigger: model.trigger,

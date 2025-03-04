@@ -3,20 +3,19 @@
 module Wallets
   module RecurringTransactionRules
     class TerminateService < BaseService
-      def initialize(wallet:)
-        @wallet = wallet
+      def initialize(recurring_transaction_rule:)
+        @recurring_transaction_rule = recurring_transaction_rule
         super
       end
 
       def call
-        return result.not_found_failure!(resource: "wallet") unless wallet
+        return result.not_found_failure!(resource: "recurring_transaction_rule") unless recurring_transaction_rule
 
-        unless wallet.terminated?
-          wallet.mark_as_terminated!
-          SendWebhookJob.perform_later("wallet.terminated", wallet)
+        unless recurring_transaction_rule.terminated?
+          recurring_transaction_rule.mark_as_terminated!
         end
 
-        result.wallet = wallet
+        result.recurring_transaction_rule = recurring_transaction_rule
         result
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
@@ -24,7 +23,7 @@ module Wallets
 
       private
 
-      attr_reader :wallet
+      attr_reader :recurring_transaction_rule
     end
   end
 end

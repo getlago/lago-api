@@ -5,6 +5,11 @@ class RecurringTransactionRule < ApplicationRecord
 
   belongs_to :wallet
 
+  STATUSES = [
+    :active,
+    :terminated
+  ].freeze
+
   INTERVALS = [
     :weekly,
     :monthly,
@@ -25,6 +30,12 @@ class RecurringTransactionRule < ApplicationRecord
   enum :interval, INTERVALS
   enum :method, METHODS
   enum :trigger, TRIGGERS
+  enum :status, STATUSES
+
+  def mark_as_terminated!(timestamp = Time.zone.now)
+    self.terminated_at ||= timestamp
+    terminated!
+  end
 
   scope :expired, -> { where("recurring_transaction_rules.expiration_at::timestamp(0) <= ?", Time.current) }
 end
@@ -41,6 +52,7 @@ end
 #  method                              :integer          default("fixed"), not null
 #  paid_credits                        :decimal(30, 5)   default(0.0), not null
 #  started_at                          :datetime
+#  status                              :integer          default("active")
 #  target_ongoing_balance              :decimal(30, 5)
 #  terminated_at                       :datetime
 #  threshold_credits                   :decimal(30, 5)   default(0.0)

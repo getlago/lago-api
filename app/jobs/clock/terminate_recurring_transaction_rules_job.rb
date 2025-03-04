@@ -13,8 +13,8 @@ module Clock
     end
 
     def perform
-      RecurringTransactionRule.expired.find_each do |recurring_transaction_rule|
-        puts recurring_transaction_rule.inspect
+      RecurringTransactionRule.active.expired.find_each do |recurring_transaction_rule|
+        Wallets::RecurringTransactionRules::TerminateService.call(recurring_transaction_rule:)
       end
     end
   end
