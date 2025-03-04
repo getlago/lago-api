@@ -32,7 +32,6 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:selected_invoice_custom_sections) }
 
   it { is_expected.to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true) }
-  it { is_expected.to have_one(:default_billing_entity).conditions(is_default: true) }
 
   it { is_expected.to validate_inclusion_of(:default_currency).in_array(described_class.currency_list) }
 
@@ -313,6 +312,36 @@ RSpec.describe Organization, type: :model do
       it "returns the organization email" do
         organization.update!(premium_integrations: ["from_email"])
         expect(organization.from_email_address).to eq(organization.email)
+      end
+    end
+  end
+
+  describe "#default_billing_entity" do
+    let(:organization) { create(:organization, billing_entities: []) }
+
+    context "when the organization has no billing entities" do
+      it "returns the default billing entity" do
+        expect(organization.default_billing_entity).to eq(nil)
+      end
+    end
+
+    context "when the organization has one billing entity" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+
+      before { billing_entity }
+
+      it "returns the default billing entity" do
+        expect(organization.reload.default_billing_entity).to eq(billing_entity)
+      end
+    end
+
+    context "when the organization has multiple billing entities" do
+      let(:billing_entities) { create_list(:billing_entity, 2, organization:) }
+
+      before { billing_entities }
+
+      it "returns the default billing entity" do
+        expect(organization.default_billing_entity).to eq(nil)
       end
     end
   end

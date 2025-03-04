@@ -7,6 +7,7 @@ class BillingEntity < ApplicationRecord
   include Discard::Model
 
   self.discard_column = :deleted_at
+  self.ignored_columns += ["is_default"]
 
   EMAIL_SETTINGS = [
     "invoice.finalized",
@@ -41,11 +42,6 @@ class BillingEntity < ApplicationRecord
 
   default_scope -> { kept }
 
-  validates :is_default,
-    uniqueness: {
-      conditions: -> { where(is_default: true, archived_at: nil, deleted_at: nil) },
-      scope: :organization_id
-    }
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}
   validates :document_locale, language_code: true
@@ -100,7 +96,6 @@ end
 #  finalize_zero_amount_invoice :boolean          default(TRUE), not null
 #  invoice_footer               :text
 #  invoice_grace_period         :integer          default(0), not null
-#  is_default                   :boolean          default(FALSE), not null
 #  legal_name                   :string
 #  legal_number                 :string
 #  logo                         :string
