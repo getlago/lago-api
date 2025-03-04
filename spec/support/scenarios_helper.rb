@@ -59,14 +59,17 @@ module ScenariosHelper
 
   def refresh_invoice(invoice)
     put_with_token(organization, "/api/v1/invoices/#{invoice.id}/refresh", {})
+    invoice.reload
   end
 
   def finalize_invoice(invoice)
     put_with_token(organization, "/api/v1/invoices/#{invoice.id}/finalize", {})
+    invoice.reload
   end
 
   def update_invoice(invoice, params)
     put_with_token(organization, "/api/v1/invoices/#{invoice.id}", {invoice: params})
+    invoice.reload
   end
 
   def create_one_off_invoice(customer, addons)
