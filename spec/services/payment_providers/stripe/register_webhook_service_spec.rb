@@ -6,20 +6,39 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
   subject(:provider_service) { described_class.new(payment_provider) }
 
   let(:organization) { create(:organization) }
-  let(:payment_provider) { create(:stripe_provider, organization:) }
+  let(:payment_provider) { create(:stripe_provider, organization:, code: "stripe_sandbox") }
 
   describe ".call" do
-    let(:stripe_webhook) do
-      ::Stripe::WebhookEndpoint.construct_from(
+    let(:url) { "#{ENV["LAGO_API_URL"]}/webhooks/stripe/#{organization.id}?code=stripe_sandbox" }
+    let(:expected_request_body) do
+      {
+        api_version: "2020-08-27",
+        enabled_events: PaymentProviders::StripeProvider::WEBHOOKS_EVENTS,
+        url: url
+      }
+    end
+    let(:stripe_api_response) do
+      {
         id: "we_123456",
-        secret: "whsec_123456"
-      )
+        object: "webhook_endpoint",
+        api_version: "2020-08-27",
+        application: nil,
+        created: 1741181072,
+        description: nil,
+        enabled_events: PaymentProviders::StripeProvider::WEBHOOKS_EVENTS,
+        livemode: false,
+        metadata: {},
+        secret: "whsec_123456",
+        status: "enabled",
+        url: url
+      }
     end
 
     before do
-      allow(::Stripe::WebhookEndpoint)
-        .to receive(:create)
-        .and_return(stripe_webhook)
+      stub_const("ENV", ENV.to_h.merge("LAGO_API_URL" => "https://billing.lagoon.sh"))
+      stub_request(:post, "https://api.stripe.com/v1/webhook_endpoints")
+        .with(body: expected_request_body)
+        .and_return(status: 200, body: stripe_api_response.to_json)
     end
 
     it "registers a webhook on stripe" do

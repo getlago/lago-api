@@ -6,6 +6,7 @@ module PaymentProviders
       def call
         stripe_webhook = ::Stripe::WebhookEndpoint.create(
           {
+            api_key: STRIPE_API_VERSION,
             url: webhook_end_point,
             enabled_events: PaymentProviders::StripeProvider::WEBHOOKS_EVENTS
           },
