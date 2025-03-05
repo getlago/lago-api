@@ -41,6 +41,11 @@ class BillingEntity < ApplicationRecord
 
   default_scope -> { kept }
 
+  validates :code,
+    uniqueness: {
+      conditions: -> { where(archived_at: nil, deleted_at: nil) },
+      scope: :organization_id
+    }
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}
   validates :document_locale, language_code: true
@@ -113,6 +118,7 @@ end
 # Indexes
 #
 #  index_billing_entities_on_applied_dunning_campaign_id  (applied_dunning_campaign_id)
+#  index_billing_entities_on_code_and_organization_id     (code,organization_id) UNIQUE WHERE ((deleted_at IS NULL) AND (archived_at IS NULL))
 #  index_billing_entities_on_organization_id              (organization_id)
 #
 # Foreign Keys
