@@ -33,38 +33,45 @@ module Organizations
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
       organization.document_locale = billing[:document_locale] if billing.key?(:document_locale)
 
-      # NOTE: handle eu tax management for organization
-      handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
+      ActiveRecord::Base.transaction do
+        # NOTE: handle eu tax management for organization
+        handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
 
-      if params.key?(:webhook_url)
-        webhook_endpoint = organization.webhook_endpoints.first_or_initialize
-        webhook_endpoint.update!(webhook_url: params[:webhook_url])
+        if params.key?(:webhook_url)
+          webhook_endpoint = organization.webhook_endpoints.first_or_initialize
+          webhook_endpoint.update!(webhook_url: params[:webhook_url])
+        end
+
+        if License.premium? && billing.key?(:invoice_grace_period)
+          Organizations::UpdateInvoiceGracePeriodService.call(
+            organization:,
+            grace_period: billing[:invoice_grace_period]
+          )
+        end
+
+        if params.key?(:net_payment_term)
+          # note: this service only assigns new net_payment_term to the organization but doesn't save it
+          Organizations::UpdateInvoicePaymentDueDateService.call(
+            organization:,
+            net_payment_term: params[:net_payment_term]
+          )
+        end
+
+        assign_premium_attributes
+        handle_base64_logo if params.key?(:logo)
+
+        organization.save!
+        update_billing_entity_result =
+          BillingEntities::UpdateService.call(billing_entity: organization.default_billing_entity, params: params)
+        update_billing_entity_result.raise_if_error!
       end
-
-      if License.premium? && billing.key?(:invoice_grace_period)
-        Organizations::UpdateInvoiceGracePeriodService.call(
-          organization:,
-          grace_period: billing[:invoice_grace_period]
-        )
-      end
-
-      if params.key?(:net_payment_term)
-        # note: this service only assigns new net_payment_term to the organization but doesn't save it
-        Organizations::UpdateInvoicePaymentDueDateService.call(
-          organization:,
-          net_payment_term: params[:net_payment_term]
-        )
-      end
-
-      assign_premium_attributes
-      handle_base64_logo if params.key?(:logo)
-
-      organization.save!
 
       ApiKeys::CacheService.expire_all_cache(organization)
 
       result.organization = organization
       result
+    rescue BaseService::NotFoundFailure => _
+      result.not_found_failure!(resource: "default_billing_entity")
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e

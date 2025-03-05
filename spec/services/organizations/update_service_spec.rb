@@ -41,23 +41,42 @@ RSpec.describe Organizations::UpdateService do
     it "updates the organization" do
       result = update_service.call
 
-      aggregate_failures do
-        expect(result.organization.legal_name).to eq("Foobar")
-        expect(result.organization.legal_number).to eq("1234")
-        expect(result.organization.tax_identification_number).to eq("2246")
-        expect(result.organization.email).to eq("foo@bar.com")
-        expect(result.organization.address_line1).to eq("Line 1")
-        expect(result.organization.address_line2).to eq("Line 2")
-        expect(result.organization.state).to eq("Foobar")
-        expect(result.organization.zipcode).to eq("FOO1234")
-        expect(result.organization.city).to eq("Foobar")
-        expect(result.organization.country).to eq("FR")
-        expect(result.organization.default_currency).to eq("EUR")
-        expect(result.organization.timezone).to eq("UTC")
+      expect(result.organization.legal_name).to eq("Foobar")
+      expect(result.organization.legal_number).to eq("1234")
+      expect(result.organization.tax_identification_number).to eq("2246")
+      expect(result.organization.email).to eq("foo@bar.com")
+      expect(result.organization.address_line1).to eq("Line 1")
+      expect(result.organization.address_line2).to eq("Line 2")
+      expect(result.organization.state).to eq("Foobar")
+      expect(result.organization.zipcode).to eq("FOO1234")
+      expect(result.organization.city).to eq("Foobar")
+      expect(result.organization.country).to eq("FR")
+      expect(result.organization.default_currency).to eq("EUR")
+      expect(result.organization.timezone).to eq("UTC")
 
-        expect(result.organization.invoice_footer).to eq("invoice footer")
-        expect(result.organization.document_locale).to eq("fr")
-      end
+      expect(result.organization.invoice_footer).to eq("invoice footer")
+      expect(result.organization.document_locale).to eq("fr")
+    end
+
+    it "updates default billing_entity" do
+      result = update_service.call
+
+      default_billing_entity = result.organization.default_billing_entity
+      expect(default_billing_entity.legal_name).to eq("Foobar")
+      expect(default_billing_entity.legal_number).to eq("1234")
+      expect(default_billing_entity.tax_identification_number).to eq("2246")
+      expect(default_billing_entity.email).to eq("foo@bar.com")
+      expect(default_billing_entity.address_line1).to eq("Line 1")
+      expect(default_billing_entity.address_line2).to eq("Line 2")
+      expect(default_billing_entity.state).to eq("Foobar")
+      expect(default_billing_entity.zipcode).to eq("FOO1234")
+      expect(default_billing_entity.city).to eq("Foobar")
+      expect(default_billing_entity.country).to eq("FR")
+      expect(default_billing_entity.default_currency).to eq("EUR")
+      expect(default_billing_entity.timezone).to eq("UTC")
+
+      expect(default_billing_entity.invoice_footer).to eq("invoice footer")
+      expect(default_billing_entity.document_locale).to eq("fr")
     end
 
     context "when document_number_prefix is sent" do
@@ -263,6 +282,20 @@ RSpec.describe Organizations::UpdateService do
             expect(tax_auto_generate_service).not_to have_received(:call)
           end
         end
+      end
+    end
+
+    context "when organization does not have active billing_entities" do
+      it "returns an error and does not update the organization" do
+        organization.default_billing_entity.discard!
+        organization.reload
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("default_billing_entity_not_found")
+        expect(organization.reload.legal_name).not_to eq("Foobar")
+        expect(organization.reload.legal_number).not_to eq("1234")
       end
     end
   end

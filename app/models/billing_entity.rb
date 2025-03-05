@@ -40,7 +40,7 @@ class BillingEntity < ApplicationRecord
   enum :document_numbering, DOCUMENT_NUMBERINGS
 
   default_scope -> { kept }
-  scope :active, -> { kept.where(archived_at: nil) }
+  scope :active, -> { kept.order(created_at: :asc).where(archived_at: nil) }
 
   validates :code,
     uniqueness: {
