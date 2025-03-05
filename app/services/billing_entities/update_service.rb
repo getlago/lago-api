@@ -12,6 +12,8 @@ module BillingEntities
     end
 
     def call
+      return result.not_found_failure!(resource: "billing_entity") unless billing_entity
+
       billing_entity.email = params[:email] if params.key?(:email)
       billing_entity.legal_name = params[:legal_name] if params.key?(:legal_name)
       billing_entity.legal_number = params[:legal_number] if params.key?(:legal_number)
@@ -33,8 +35,9 @@ module BillingEntities
       billing_entity.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
       billing_entity.document_locale = billing[:document_locale] if billing.key?(:document_locale)
 
-      # NOTE: handle eu tax management for billing_entity
-      handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
+      # NOTE: handle eu tax management for billing_entity should be turned on when we're switching taxes from
+      # organization to billing_entity
+      # handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
 
       if License.premium? && billing.key?(:invoice_grace_period)
         # for now we won't update related invoices to the billing_entity from this service
