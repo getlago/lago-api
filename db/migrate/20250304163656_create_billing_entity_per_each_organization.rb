@@ -1,12 +1,15 @@
-class CreateBillingEntityPerEachOrganization < ActiveRecord::Migration[7.1]
+# frozen_string_literal: true
+
+class CreateBillingEntityPerEachOrganization < ActiveRecord::Migration[7.2]
   class Organization < ApplicationRecord
     has_many :billing_entities
     has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
 
-    DOCUMENT_NUMBERINGS = [
-      :per_customer,
-      :per_organization
-    ].freeze
+    DOCUMENT_NUMBERINGS = {
+      per_customer: 0,
+      per_organization: 1
+    }.freeze
+    attribute :document_numbering, :integer, default: 0
     enum :document_numbering, DOCUMENT_NUMBERINGS
   end
 
@@ -17,7 +20,6 @@ class CreateBillingEntityPerEachOrganization < ActiveRecord::Migration[7.1]
       per_customer: "per_customer",
       per_billing_entity: "per_billing_entity"
     }.freeze
-
     enum :document_numbering, DOCUMENT_NUMBERINGS
   end
 
@@ -27,7 +29,7 @@ class CreateBillingEntityPerEachOrganization < ActiveRecord::Migration[7.1]
         id: organization.id,
         organization_id: organization.id,
         name: organization.name,
-        code: organization.name.parameterize(separator: '_'),
+        code: organization.name.parameterize(separator: "_"),
         address_line1: organization.address_line1,
         address_line2: organization.address_line2,
         city: organization.city,
@@ -42,7 +44,7 @@ class CreateBillingEntityPerEachOrganization < ActiveRecord::Migration[7.1]
 
         # invoice settings
         document_number_prefix: organization.document_number_prefix,
-        document_numbering: organization.per_organization? ? 'per_billing_entity' : 'per_customer',
+        document_numbering: organization.per_organization? ? "per_billing_entity" : "per_customer",
         finalize_zero_amount_invoice: organization.finalize_zero_amount_invoice,
         invoice_footer: organization.invoice_footer,
         invoice_grace_period: organization.invoice_grace_period,

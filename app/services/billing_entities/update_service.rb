@@ -27,7 +27,11 @@ module BillingEntities
       billing_entity.state = params[:state] if params.key?(:state)
       billing_entity.country = params[:country]&.upcase if params.key?(:country)
       billing_entity.default_currency = params[:default_currency]&.upcase if params.key?(:default_currency)
-      billing_entity.document_numbering = params[:document_numbering] if params.key?(:document_numbering)
+      if params.key?(:document_numbering)
+        # TODO: remove when we do not support document_numbering per organization
+        document_numbering = (params[:document_numbering] == "per_customer") ? "per_customer" : "per_billing_entity"
+        billing_entity.document_numbering = document_numbering
+      end
       billing_entity.document_number_prefix = params[:document_number_prefix] if params.key?(:document_number_prefix)
       billing_entity.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)
 
@@ -35,9 +39,8 @@ module BillingEntities
       billing_entity.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
       billing_entity.document_locale = billing[:document_locale] if billing.key?(:document_locale)
 
-      # NOTE: handle eu tax management for billing_entity should be turned on when we're switching taxes from
-      # organization to billing_entity
-      # handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
+      # NOTE: handle eu tax management for billing_entity
+      handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
 
       if License.premium? && billing.key?(:invoice_grace_period)
         # for now we won't update related invoices to the billing_entity from this service
@@ -64,6 +67,8 @@ module BillingEntities
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ArgumentError => e
+      result.single_validation_failure!(error_code: e.message)
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
     end

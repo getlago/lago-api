@@ -188,7 +188,7 @@ class Organization < ApplicationRecord
 
   # default billing_entity will be chronologically first active billing_entity
   def default_billing_entity
-    billing_entities.first
+    billing_entities.active.first
   end
 
   private

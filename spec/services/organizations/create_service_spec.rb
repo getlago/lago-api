@@ -10,7 +10,7 @@ RSpec.describe Organizations::CreateService, type: :service do
       let(:params) do
         {
           name: Faker::Company.name,
-          document_numbering: Organization::DOCUMENT_NUMBERINGS.sample.to_s
+          document_numbering: "per_customer"
         }
       end
 
@@ -19,7 +19,7 @@ RSpec.describe Organizations::CreateService, type: :service do
 
         expect(service_result.organization)
           .to be_persisted
-          .and have_attributes(params)
+          .and have_attributes(name: params[:name], document_numbering: params[:document_numbering])
       end
 
       it "creates an API key for created organization" do
@@ -28,6 +28,45 @@ RSpec.describe Organizations::CreateService, type: :service do
         expect(service_result.organization.api_keys).to all(
           be_persisted.and(have_attributes(organization: service_result.organization))
         )
+      end
+
+      context "when document_numbering is per_customer" do
+        let(:params) do
+          {
+            name: Faker::Company.name,
+            document_numbering: "per_customer"
+          }
+        end
+
+        it "creates a billing entity for created organization" do
+          expect { service_result }.to change(BillingEntity, :count).by(1)
+
+          billing_entity = service_result.organization.billing_entities.first
+          expect(billing_entity).to have_attributes(organization: service_result.organization,
+            name: service_result.organization.name,
+            code: service_result.organization.name.parameterize(separator: "_"),
+            document_numbering: "per_customer")
+        end
+      end
+
+      context "when document_numbering is per_organization" do
+        let(:params) do
+          {
+            name: Faker::Company.name,
+            document_numbering: "per_organization",
+            code: "this_code_will_be_used_for_billing_entity"
+          }
+        end
+
+        it "creates billing_entity with number per_billing_entity" do
+          expect { service_result }.to change(BillingEntity, :count).by(1)
+
+          billing_entity = service_result.organization.billing_entities.first
+          expect(billing_entity).to have_attributes(organization: service_result.organization,
+            name: service_result.organization.name,
+            code: "this_code_will_be_used_for_billing_entity",
+            document_numbering: "per_billing_entity")
+        end
       end
     end
 

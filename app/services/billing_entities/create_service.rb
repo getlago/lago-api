@@ -14,7 +14,6 @@ module BillingEntities
       return result.forbidden_failure! unless organization.can_create_billing_entity?
 
       billing_entity = organization.billing_entities.new(create_attributes)
-
       ActiveRecord::Base.transaction do
         billing_entity.invoice_footer = billing_config[:invoice_footer]
         billing_entity.document_locale = billing_config[:document_locale] if billing_config[:document_locale]

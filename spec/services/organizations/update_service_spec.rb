@@ -237,7 +237,7 @@ RSpec.describe Organizations::UpdateService do
 
           aggregate_failures do
             expect(result).to be_success
-            expect(tax_auto_generate_service).to have_received(:call)
+            expect(tax_auto_generate_service).to have_received(:call).twice
           end
         end
       end
@@ -293,9 +293,34 @@ RSpec.describe Organizations::UpdateService do
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(result.error.message).to eq("default_billing_entity_not_found")
+        expect(result.error.message).to eq("billing_entity_not_found")
         expect(organization.reload.legal_name).not_to eq("Foobar")
         expect(organization.reload.legal_number).not_to eq("1234")
+      end
+    end
+
+    context "when updating organization's document_numbering" do
+      context "when updating to per_organization" do
+        let(:params) { {document_numbering: "per_organization"} }
+
+        it "updates the organization numbering to per_organization and default billing_entity to per_entity" do
+          result = update_service.call
+
+          expect(result.organization.document_numbering).to eq("per_organization")
+          expect(result.organization.default_billing_entity.document_numbering).to eq("per_billing_entity")
+        end
+      end
+
+      context "when updating to not existing value" do
+        let(:params) { {document_numbering: "not_existing_document_numbering"} }
+
+        it "returns an error" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:base].first).to include("not a valid document_numbering")
+        end
       end
     end
   end

@@ -70,10 +70,10 @@ module Organizations
 
       result.organization = organization
       result
-    rescue BaseService::NotFoundFailure => _
-      result.not_found_failure!(resource: "default_billing_entity")
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ArgumentError => e
+      result.single_validation_failure!(error_code: e.message)
     rescue BaseService::FailedResult => e
       result.fail_with_error!(e)
     end
