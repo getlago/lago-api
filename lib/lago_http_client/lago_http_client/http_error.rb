@@ -16,6 +16,8 @@ module LagoHttpClient
 
     def json_message
       JSON.parse(error_body)
+    rescue JSON::ParserError
+      {}
     end
   end
 end
