@@ -80,6 +80,7 @@ module Types
     field :webhooks, resolver: Resolvers::WebhooksResolver
 
     field :data_api_mrrs, resolver: Resolvers::DataApi::MrrsResolver
+    field :data_api_mrrs_plans, resolver: Resolvers::DataApi::Mrrs::PlansResolver
     field :data_api_revenue_streams, resolver: Resolvers::DataApi::RevenueStreamsResolver
     field :data_api_revenue_streams_customers, resolver: Resolvers::DataApi::RevenueStreams::CustomersResolver
     field :data_api_revenue_streams_plans, resolver: Resolvers::DataApi::RevenueStreams::PlansResolver

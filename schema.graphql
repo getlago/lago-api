@@ -3555,6 +3555,34 @@ type DataApiMrrCollection {
   metadata: CollectionMetadata!
 }
 
+type DataApiMrrPlan {
+  activeCustomersCount: BigInt!
+  activeCustomersShare: Float!
+  amountCurrency: CurrencyEnum!
+  dt: ISO8601Date!
+  mrr: Float!
+  mrrShare: Float!
+  planCode: String!
+  planId: ID!
+  planInterval: PlanInterval!
+  planName: String!
+}
+
+"""
+DataApiMrrPlanCollection type
+"""
+type DataApiMrrPlanCollection {
+  """
+  A collection of paginated DataApiMrrPlanCollection
+  """
+  collection: [DataApiMrrPlan!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 type DataApiRevenueStream {
   amountCurrency: CurrencyEnum!
   commitmentFeeAmountCents: BigInt!
@@ -6885,6 +6913,11 @@ type Query {
   Query monthly recurring revenues of an organization
   """
   dataApiMrrs(currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiMrrCollection!
+
+  """
+  Query monthly recurring revenues plans of an organization
+  """
+  dataApiMrrsPlans(currency: CurrencyEnum): DataApiMrrPlanCollection!
 
   """
   Query revenue streams of an organization
