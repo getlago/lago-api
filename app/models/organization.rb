@@ -209,7 +209,7 @@ class Organization < ApplicationRecord
     return Float::INFINITY if multi_entities_enterprise_enabled?
     return 2 - billing_entities.count if multi_entities_pro_enabled?
 
-    0
+    1 - billing_entities.count
   end
 end
 

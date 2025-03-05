@@ -35,11 +35,13 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         create(:organization, premium_integrations: ["multi_entities_pro"])
       end
 
-      it "creates a billing entity" do
+      it "creates a billing entity with default document_numbering" do
         expect(organization.billing_entities.count).to eq(1)
         expect(result).to be_success
         expect(result.billing_entity).to be_persisted
         expect(result.billing_entity.name).to eq("Billing Entity")
+        expect(result.billing_entity.code).to eq("billing-entity")
+        expect(result.billing_entity.document_numbering).to eq("per_customer")
       end
 
       context "when max billing entities limit is reached" do
@@ -75,6 +77,17 @@ RSpec.describe BillingEntities::CreateService, type: :service do
           expect(result.error).to be_a(BaseService::ValidationFailure)
         end
       end
+    end
+  end
+
+  # Is it responsibility of organization builder or billing entity builder to set the code?
+  context "when passing params without code" do
+    let(:params) { {name: "Billing Entity"} }
+
+    it "creates a billing entity with a code" do
+      organization.billing_entities.last.discard!
+      expect(result).to be_success
+      expect(result.billing_entity.code).to eq("billing_entity")
     end
   end
 end
