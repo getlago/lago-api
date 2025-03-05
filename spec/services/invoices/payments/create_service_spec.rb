@@ -97,6 +97,15 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       end
     end
 
+    context "when issue_receipts_enabled is true" do
+      around { |test| lago_premium!(&test) }
+      before { organization.update!(premium_integrations: %w[issue_receipts]) }
+
+      it "enqueues a payment receipt job" do
+        expect { create_service.call }.to have_enqueued_job(PaymentReceipts::CreateJob)
+      end
+    end
+
     context "when invoice is self_billed" do
       let(:invoice) do
         create(:invoice, :self_billed, customer:, organization:, total_amount_cents: 100)
@@ -294,7 +303,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
       end
     end
 
-    context "when a payment exits" do
+    context "when a payment exists" do
       let(:payment) do
         create(
           :payment,

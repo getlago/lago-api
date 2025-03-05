@@ -27,7 +27,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
     )
   end
 
-  describe ".update_payment_status" do
+  describe "#update_payment_status" do
     let(:payment) do
       create(
         :payment,
@@ -57,6 +57,20 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
         ready_for_payment_processing: false,
         total_paid_amount_cents: 200
       )
+    end
+
+    context "when issue_receipts_enabled is true" do
+      around { |test| lago_premium!(&test) }
+      before { organization.update!(premium_integrations: %w[issue_receipts]) }
+
+      it "enqueues a payment receipt job" do
+        expect do
+          gocardless_service.update_payment_status(
+            provider_payment_id: "ch_123456",
+            status: "paid_out"
+          )
+        end.to have_enqueued_job(PaymentReceipts::CreateJob)
+      end
     end
 
     context "when status is failed" do

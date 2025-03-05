@@ -84,6 +84,20 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       )
     end
 
+    context "when issue_receipts_enabled is true" do
+      around { |test| lago_premium!(&test) }
+      before { organization.update!(premium_integrations: %w[issue_receipts]) }
+
+      it "enqueues a payment receipt job" do
+        expect do
+          adyen_service.update_payment_status(
+            provider_payment_id: "ch_123456",
+            status: "Authorised"
+          )
+        end.to have_enqueued_job(PaymentReceipts::CreateJob)
+      end
+    end
+
     context "when status is failed" do
       it "updates the payment and invoice status" do
         result = adyen_service.update_payment_status(
