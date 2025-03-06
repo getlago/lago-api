@@ -17,7 +17,7 @@ module Wallets
         hash_recurring_rules.each do |payload_rule|
           lago_id = payload_rule[:lago_id]
           rule = payload_rule.except(:lago_id)
-          recurring_rule = wallet.recurring_transaction_rules.find_by(id: lago_id)
+          recurring_rule = wallet.recurring_transaction_rules.active.find_by(id: lago_id)
 
           if recurring_rule
             recurring_rule.update!(rule)

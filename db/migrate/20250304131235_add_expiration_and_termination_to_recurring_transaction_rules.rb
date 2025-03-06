@@ -17,9 +17,15 @@ class AddExpirationAndTerminationToRecurringTransactionRules < ActiveRecord::Mig
     end
 
     change_column_default :recurring_transaction_rules, :status, 0
+
+    add_index :recurring_transaction_rules, :expiration_at, algorithm: :concurrently
   end
 
   def down
+    safety_assured do
+      remove_index :recurring_transaction_rules, column: :expiration_at
+    end
+
     safety_assured do
       change_table :recurring_transaction_rules, bulk: true do |t|
         t.remove :expiration_at, :terminated_at, :status
