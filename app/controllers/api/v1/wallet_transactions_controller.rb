@@ -4,7 +4,7 @@ module Api
   module V1
     class WalletTransactionsController < Api::BaseController
       def create
-        result = WalletTransactions::CreateFromParamsService.call(
+        result = WalletTransactions::Create::FromParamsService.call(
           organization: current_organization,
           params: input_params
         )

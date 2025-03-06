@@ -7,7 +7,7 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
 
   let(:organization) { create(:organization) }
   let(:wallet) { create(:wallet) }
-  let(:wallet_transaction_create_service) { instance_double(WalletTransactions::CreateFromParamsService) }
+  let(:wallet_transaction_create_service) { instance_double(WalletTransactions::Create::FromParamsService) }
   let(:params) do
     {
       wallet_id: wallet.id,
@@ -17,11 +17,11 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
     }
   end
 
-  it "calls the WalletTransactions::CreateFromParamsService" do
-    allow(WalletTransactions::CreateFromParamsService).to receive(:call!)
+  it "calls the WalletTransactions::Create::FromParamsService" do
+    allow(WalletTransactions::Create::FromParamsService).to receive(:call!)
 
     described_class.perform_now(organization_id: organization.id, params:)
 
-    expect(WalletTransactions::CreateFromParamsService).to have_received(:call!).with(organization:, params:)
+    expect(WalletTransactions::Create::FromParamsService).to have_received(:call!).with(organization:, params:)
   end
 end

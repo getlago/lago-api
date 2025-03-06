@@ -19,11 +19,10 @@ module Credits
       credit_amount = amount.fdiv(wallet.rate_amount)
 
       ActiveRecord::Base.transaction do
-        wallet_transaction = WalletTransactions::CreateService.call!(
+        wallet_transaction = WalletTransactions::Create::FromAmountService.call!(
           invoice_id: invoice.id,
           wallet:,
           transaction_type: :outbound,
-          amount:,
           credit_amount:,
           status: :settled,
           settled_at: Time.current,
@@ -55,15 +54,7 @@ module Credits
     end
 
     def compute_amount
-      return balance_cents if balance_cents <= invoice.total_amount_cents
-
-      invoice.total_amount_cents
-    end
-
-    def compute_amount_from_cents(amount)
-      currency = invoice.total_amount.currency
-
-      amount.round.fdiv(currency.subunit_to_unit)
+      [balance_cents, invoice.total_amount_cents].min
     end
   end
 end
