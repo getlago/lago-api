@@ -7,8 +7,8 @@ module PaymentProviders
 
       def call
         ::Stripe::WebhookEndpoint.update(
-          payment_provider.id,
-          webhook_endpoint_params,
+          payment_provider.webhook_id,
+          webhook_endpoint_shared_params,
           {api_key:}
         )
 

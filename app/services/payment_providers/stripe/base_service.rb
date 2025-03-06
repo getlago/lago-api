@@ -32,9 +32,8 @@ module PaymentProviders
         )
       end
 
-      def webhook_endpoint_params
+      def webhook_endpoint_shared_params
         {
-          api_version: STRIPE_API_VERSION,
           url: webhook_endpoint_destination,
           enabled_events: PaymentProviders::StripeProvider::WEBHOOKS_EVENTS
         }

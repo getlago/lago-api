@@ -5,7 +5,10 @@ module PaymentProviders
     class RegisterWebhookService < BaseService
       def call
         stripe_webhook = ::Stripe::WebhookEndpoint.create(
-          webhook_endpoint_params,
+          {
+            api_version: STRIPE_API_VERSION,
+            **webhook_endpoint_shared_params
+          },
           {api_key:}
         )
 
