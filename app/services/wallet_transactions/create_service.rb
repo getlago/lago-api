@@ -4,7 +4,7 @@ module WalletTransactions
   class CreateService < BaseService
     Result = BaseResult[:wallet_transaction]
 
-    def initialize(wallet:, credit_amount:, status:, transaction_type:, from_source: :manual, metadata: [], transaction_status: :purchased, invoice_requires_successful_payment: false, settled_at: nil, credit_note_id: nil)
+    def initialize(wallet:, credit_amount:, status:, transaction_type:, from_source: :manual, metadata: [], transaction_status: :purchased, invoice_requires_successful_payment: false, settled_at: nil, credit_note_id: nil, invoice_id: nil)
       @wallet = wallet
       @credit_amount = credit_amount
       @status = status
@@ -15,6 +15,7 @@ module WalletTransactions
       @metadata = metadata
       @settled_at = settled_at
       @credit_note_id = credit_note_id
+      @invoice_id = invoice_id
       super
     end
 
@@ -30,13 +31,14 @@ module WalletTransactions
         invoice_requires_successful_payment:,
         metadata:,
         settled_at:,
-        credit_note_id:
+        credit_note_id:,
+        invoice_id:
       )
       result
     end
 
     private
 
-    attr_reader :wallet, :credit_amount, :status, :transaction_type, :from_source, :transaction_status, :invoice_requires_successful_payment, :metadata, :settled_at, :credit_note_id
+    attr_reader :wallet, :credit_amount, :status, :transaction_type, :from_source, :transaction_status, :invoice_requires_successful_payment, :metadata, :settled_at, :credit_note_id, :invoice_id
   end
 end

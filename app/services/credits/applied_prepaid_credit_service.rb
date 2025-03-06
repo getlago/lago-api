@@ -19,8 +19,8 @@ module Credits
       credit_amount = amount.fdiv(wallet.rate_amount)
 
       ActiveRecord::Base.transaction do
-        wallet_transaction = WalletTransaction.create!(
-          invoice:,
+        wallet_transaction = WalletTransactions::CreateService.call!(
+          invoice_id: invoice.id,
           wallet:,
           transaction_type: :outbound,
           amount:,
@@ -28,7 +28,7 @@ module Credits
           status: :settled,
           settled_at: Time.current,
           transaction_status: :invoiced
-        )
+        ).wallet_transaction
 
         result.wallet_transaction = wallet_transaction
         Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction: wallet_transaction).call
