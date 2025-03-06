@@ -77,15 +77,12 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
       before do
         stripe_provider
-
-        allow(::Stripe::WebhookEndpoint).to receive(:delete)
-          .with("we_123456", {}, {api_key: "secret"})
       end
 
       it "updates the existing provider" do
         result = stripe_service.create_or_update(
           organization_id: organization.id,
-          secret_key:,
+          secret_key: "new_key",
           code:,
           name:,
           success_redirect_url:
@@ -95,14 +92,12 @@ RSpec.describe PaymentProviders::StripeService, type: :service do
 
         aggregate_failures do
           expect(result.stripe_provider.id).to eq(stripe_provider.id)
-          expect(result.stripe_provider.secret_key).to eq(secret_key)
+          expect(result.stripe_provider.secret_key).to eq("secret")
           expect(result.stripe_provider.code).to eq(code)
           expect(result.stripe_provider.name).to eq(name)
           expect(result.stripe_provider.success_redirect_url).to eq(success_redirect_url)
 
-          expect(PaymentProviders::Stripe::RegisterWebhookJob).to have_been_enqueued
-            .with(stripe_provider)
-          expect(::Stripe::WebhookEndpoint).to have_received(:delete)
+          expect(PaymentProviders::Stripe::RegisterWebhookJob).not_to have_been_enqueued
         end
       end
     end
