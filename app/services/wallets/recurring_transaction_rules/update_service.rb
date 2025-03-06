@@ -49,7 +49,7 @@ module Wallets
         not_needed_ids =
           wallet.recurring_transaction_rules.pluck(:id) - updated_recurring_rules_ids - created_recurring_rules_ids
 
-        wallet.recurring_transaction_rules.where(id: not_needed_ids).each do |recurring_transaction_rule|
+        wallet.recurring_transaction_rules.where(id: not_needed_ids).find_each do |recurring_transaction_rule|
           Wallets::RecurringTransactionRules::TerminateService.call(recurring_transaction_rule:)
         end
       end

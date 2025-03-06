@@ -65,8 +65,9 @@ end
 #
 # Indexes
 #
-#  index_recurring_transaction_rules_on_started_at  (started_at)
-#  index_recurring_transaction_rules_on_wallet_id   (wallet_id)
+#  index_recurring_transaction_rules_on_expiration_at  (expiration_at)
+#  index_recurring_transaction_rules_on_started_at     (started_at)
+#  index_recurring_transaction_rules_on_wallet_id      (wallet_id)
 #
 # Foreign Keys
 #
