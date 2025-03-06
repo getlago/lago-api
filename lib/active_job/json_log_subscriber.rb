@@ -24,7 +24,7 @@ module ActiveJob
               class: ex.class.name,
               message: ex.message
             }
-          }
+            }.to_json
         end
       elsif event.payload[:aborted]
         info do
@@ -33,7 +33,7 @@ module ActiveJob
             status: "aborted",
             job: job.class.name,
             queue: job.queue_name
-          }
+          }.to_json
         end
       else
         info do
@@ -44,7 +44,7 @@ module ActiveJob
             job_id: job.job_id,
             queue: job.queue_name,
             arguments: args_info(job)
-          }
+          }.to_json
         end
       end
     end
@@ -65,7 +65,7 @@ module ActiveJob
               class: ex.class.name,
               message: ex.message
             }
-          }
+            }.to_json
         end
       elsif event.payload[:aborted]
         info do
@@ -74,7 +74,7 @@ module ActiveJob
             status: "aborted",
             job: job.class.name,
             queue: job.queue_name
-          }
+          }.to_json
         end
       else
         info do
@@ -86,7 +86,7 @@ module ActiveJob
             job_id: job.job_id,
             queue: job.queue_name,
             arguments: args_info(job)
-          }
+          }.to_json
         end
       end
     end
@@ -107,9 +107,9 @@ module ActiveJob
           job_id: job.job_id,
           arguments: args_info(job),
           queue: job.queue_name
-        }
+          }
 
-        job.enqueued_at ? message.merge(enqueued_at: job.enqueued_at.utc) : message
+        job.enqueued_at ? message.merge(enqueued_at: job.enqueued_at.utc).to_json : message.to_json
       end
     end
     subscribe_log_level :perform_start, :info
@@ -131,7 +131,7 @@ module ActiveJob
               class: ex.class.name,
               message: ex.message
             }
-          }
+          }.to_json
         end
       elsif event.payload[:aborted]
         info do
@@ -142,7 +142,7 @@ module ActiveJob
             duration: event.duration.round(2),
             job_id: job.job_id,
             queue: job.queue_name
-          }
+          }.to_json
         end
       else
         info do
@@ -153,7 +153,7 @@ module ActiveJob
             duration: event.duration.round(2),
             job_id: job.job_id,
             queue: job.queue_name
-          }
+          }.to_json
         end
       end
     end
@@ -177,7 +177,7 @@ module ActiveJob
               class: ex.class.name,
               message: ex.message
             }
-          }
+            }.to_json
         else
           {
             event: "retry",
@@ -186,7 +186,7 @@ module ActiveJob
             job_id: job.job_id,
             execution: job.executions,
             wait: wait.to_i
-          }
+          }.to_json
         end
       end
     end
@@ -208,7 +208,7 @@ module ActiveJob
             class: ex.class.name,
             message: ex.message
           }
-        }
+        }.to_json
       end
     end
     subscribe_log_level :retry_stopped, :error
@@ -227,7 +227,7 @@ module ActiveJob
             class: ex.class.name,
             message: ex.message
           }
-        }
+        }.to_json
       end
     end
     subscribe_log_level :discard, :error
