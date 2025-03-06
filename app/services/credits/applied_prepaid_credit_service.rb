@@ -15,15 +15,13 @@ module Credits
       end
 
       amount_cents = compute_amount
-      amount = compute_amount_from_cents(amount_cents)
-      credit_amount = amount.fdiv(wallet.rate_amount)
 
       ActiveRecord::Base.transaction do
         wallet_transaction = WalletTransactions::Create::FromAmountService.call!(
           invoice_id: invoice.id,
+          amount_cents:,
           wallet:,
           transaction_type: :outbound,
-          credit_amount:,
           status: :settled,
           settled_at: Time.current,
           transaction_status: :invoiced

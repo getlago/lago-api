@@ -19,9 +19,26 @@ module WalletTransactions
         super
       end
 
+      def call
+        result.wallet_transaction = wallet.wallet_transactions.create!(
+          amount:,
+          status:,
+          credit_amount:,
+          transaction_type:,
+          source: from_source,
+          transaction_status:,
+          invoice_requires_successful_payment:,
+          metadata:,
+          settled_at:,
+          credit_note_id:,
+          invoice_id:
+        )
+        result
+      end
+
       private
 
-      attr_reader :wallet, :credit_amount, :status, :transaction_type, :from_source, :transaction_status, :invoice_requires_successful_payment, :metadata, :settled_at, :credit_note_id, :invoice_id
+      attr_reader :wallet, :credit_amount, :status, :transaction_type, :from_source, :transaction_status, :invoice_requires_successful_payment, :metadata, :settled_at, :credit_note_id, :invoice_id, :amount
     end
   end
 end

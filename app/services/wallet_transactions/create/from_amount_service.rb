@@ -5,32 +5,12 @@ module WalletTransactions
     class FromAmountService < BaseService
       Result = BaseResult[:wallet_transaction]
 
-      def initialize(amount:, **args)
+      def initialize(amount_cents:, **args)
         super(**args)
-        @amount = amount
-      end
-
-      def call
         currency = wallet.currency_for_balance
-        result.wallet_transaction = wallet.wallet_transactions.create!(
-          amount: (wallet.rate_amount * credit_amount).round(currency.exponent),
-          credit_amount:,
-          status:,
-          transaction_type:,
-          source: from_source,
-          transaction_status:,
-          invoice_requires_successful_payment:,
-          metadata:,
-          settled_at:,
-          credit_note_id:,
-          invoice_id:
-        )
-        result
+        @amount = amount_cents.round.fdiv(currency.subunit_to_unit)
+        @credit_amount = amount.fdiv(wallet.rate_amount)
       end
-
-      private
-
-      attr_reader :wallet, :credit_amount, :status, :transaction_type, :from_source, :transaction_status, :invoice_requires_successful_payment, :metadata, :settled_at, :credit_note_id, :invoice_id
     end
   end
 end
