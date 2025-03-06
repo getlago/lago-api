@@ -302,7 +302,7 @@ module Invoices
       charge.billable_metric.recurring? &&
         subscription.terminated? &&
         subscription.upgraded? &&
-        charge.charge_included_in_next_subscription?(subscription)
+        charge.included_in_next_subscription?(subscription)
     end
   end
 end
