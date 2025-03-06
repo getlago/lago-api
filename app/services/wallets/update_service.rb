@@ -47,19 +47,13 @@ module Wallets
 
     def valid_expiration_at?(expiration_at:)
       return true if expiration_at.blank?
+      return false unless Utils::Datetime.valid_format?(expiration_at)
 
-      if Utils::Datetime.valid_format?(expiration_at)
-        parsed_expiration_at = if expiration_at.is_a?(String)
-          DateTime.strptime(expiration_at)
-        else
-          expiration_at
-        end
+      parsed_expiration_at = Time.zone.parse(expiration_at.to_s)
 
-        return true if parsed_expiration_at.to_date > Time.current.to_date
-      end
+      return true if parsed_expiration_at.to_date > Time.current.to_date
 
       result.single_validation_failure!(field: :expiration_at, error_code: "invalid_date")
-
       false
     end
   end
