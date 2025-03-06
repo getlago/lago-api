@@ -60,11 +60,17 @@ module PaymentProviders
               customer: provider_customer.provider_customer_id,
               payment_method: provider_customer.payment_method_id,
               description: "Pre-authorization for subscription",
-              metadata:
+              metadata:,
+              return_url: payment_provider.success_redirect_url,
+              automatic_payment_methods: {
+                enabled: true,
+                allow_redirects: "never"
+              }
             },
             {
               api_key:,
-              idempotency_key: "auth-#{provider_customer.id}-#{unique_id}"
+              idempotency_key: "auth-#{provider_customer.id}-#{unique_id}",
+              stripe_version: "2024-09-30.acacia"
             }
           )
         end
