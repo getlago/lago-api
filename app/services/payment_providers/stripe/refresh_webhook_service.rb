@@ -2,19 +2,16 @@
 
 module PaymentProviders
   module Stripe
-    class RegisterWebhookService < BaseService
+    class RefreshWebhookService < BaseService
+      Result = BaseResult
+
       def call
-        stripe_webhook = ::Stripe::WebhookEndpoint.create(
+        ::Stripe::WebhookEndpoint.update(
+          payment_provider.id,
           webhook_endpoint_params,
           {api_key:}
         )
 
-        payment_provider.update!(
-          webhook_id: stripe_webhook.id,
-          webhook_secret: stripe_webhook.secret
-        )
-
-        result.payment_provider = payment_provider
         result
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
@@ -22,6 +19,7 @@ module PaymentProviders
         deliver_error_webhook(action: "payment_provider.register_webhook", error: e)
         result
       rescue ::Stripe::InvalidRequestError => e
+        # Note: Since we're updating an existing endpoint, it shouldn't happen
         raise if e.message != "You have reached the maximum of 16 test webhook endpoints."
 
         deliver_error_webhook(action: "payment_provider.register_webhook", error: e)

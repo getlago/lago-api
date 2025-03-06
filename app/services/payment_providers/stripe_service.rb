@@ -44,11 +44,6 @@ module PaymentProviders
       result.record_validation_failure!(record: e.record)
     end
 
-    def refresh_webhook(stripe_provider:)
-      unregister_webhook(stripe_provider, stripe_provider.secret_key)
-      PaymentProviders::Stripe::RegisterWebhookService.call(stripe_provider)
-    end
-
     private
 
     def unregister_webhook(stripe_provider, api_key)
