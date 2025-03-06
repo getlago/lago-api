@@ -38,6 +38,10 @@ class RecurringTransactionRule < ApplicationRecord
   end
 
   scope :active, -> { where(status: statuses[:active]).where("expiration_at IS NULL OR expiration_at > ?", Time.current) }
+  scope :eligible_for_termination, -> {
+    where(status: statuses[:active])
+      .where("expiration_at IS NOT NULL AND expiration_at <= ?", Time.current)
+  }
   scope :expired, -> { where("recurring_transaction_rules.expiration_at::timestamp(0) <= ?", Time.current) }
 end
 
