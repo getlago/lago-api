@@ -354,6 +354,14 @@ RSpec.describe Payment, type: :model do
     end
   end
 
+  describe "#payment_method" do
+    subject(:payment_method) { payment.payment_method }
+
+    it "returns nil" do
+      expect(payment_method).to be_nil
+    end
+  end
+
   describe "#should_sync_payment?" do
     subject(:method_call) { payment.should_sync_payment? }
 

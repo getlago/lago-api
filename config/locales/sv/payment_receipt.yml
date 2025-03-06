@@ -1,10 +1,10 @@
 ---
 sv:
   payment_receipt:
-    document_name: Receipt
-    number: Receipt number
-    paid_on: Paid on %{date}
-    payment_date: Payment date
-    powered_by: Powered by
-    self_billed:
-      footer: This credit note on a self-billing invoice was issued by the client on behalf of the partner, with their consent. The partner has agreed not to issue their own credit note for this transaction.
+    document_name: Kvitto
+    download_invoice: Ladda ner faktura
+    download_receipt: Ladda ner kvitto
+    number: Kvittonummer
+    paid_on: 'Betald den %{date} (Kvar att betala: %{total_due_amount})'
+    payment_date: Betald den
+    payment_method: Betalningsmetod

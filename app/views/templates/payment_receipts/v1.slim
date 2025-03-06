@@ -13,21 +13,31 @@ html
 
     .wrapper
       .mb-24
-        h1.payment-receipt-title = I18n.t('payment_receipt.document_name')
+        h1.invoice-title = I18n.t('payment_receipt.document_name')
         - if @organization.logo.present?
           img.header-logo src="data:#{organization.logo.content_type};base64,#{organization.base64_logo}"
 
       .mb-24.overflow-auto
-        .payment-receipt-information-column
-          table.payment-receipt-information-table
+        .invoice-information-column
+          table.invoice-information-table
             tr
               td.body-1 = I18n.t('payment_receipt.number')
               td.body-2 = number
+            - if payment.payable.is_a?(Invoice)
+              tr
+                td.body-1 = I18n.t('invoice.invoice_number')
+                td.body-2
+                  a style="text-decoration: none" href=payment.payable.file_url
+                    = payment.payable.number
+            -if payment.payment_method.present?
+              tr
+                td.body-1 = I18n.t('payment_receipt.payment_method')
+                td.body-2 = payment.payment_method
             tr
               td.body-1 = I18n.t('payment_receipt.payment_date')
               td.body-2 = I18n.l(payment.created_at.to_date, format: :default)
-        .payment-receipt-information-column
-          table.payment-receipt-information-table
+        .invoice-information-column
+          table.invoice-information-table
             - if @customer.metadata.displayable.any?
               - @customer.metadata.displayable.order(created_at: :asc).each do |metadata|
                 tr
@@ -83,14 +93,44 @@ html
 
       .mb-24
         h2.title-2.mb-4 = MoneyHelper.format(payment.amount)
-        .body-1 = I18n.t('payment_receipt.paid_on', date: I18n.l(payment.created_at, format: :default))
 
+        - @total_due_amount = payment.payable.is_a?(Invoice) ? payment.payable.total_due_amount : payment.payable.amount - payment.amount
+
+        .body-1 = I18n.t('payment_receipt.paid_on',
+          date: I18n.l(payment.created_at.to_date, format: :default),
+          total_due_amount: MoneyHelper.format(@total_due_amount))
 
       - if payment.payable.is_a?(Invoice)
-        == SlimHelper.render('templates/payment_receipts/v1/_invoice', self)
+        .invoice-resume.mb-24.overflow-auto
+          - if payment.payable.credit?
+            == SlimHelper.render('templates/invoices/v4/_credit', payment.payable, render_total_due_and_paid: true)
+          - elsif payment.payable.progressive_billing?
+            == SlimHelper.render('templates/invoices/v4/_progressive_billing_details', payment.payable, render_total_due_and_paid: true)
+          - elsif payment.payable.subscriptions.count == 1
+            == SlimHelper.render('templates/invoices/v4/_subscription_details', payment.payable, render_total_due_and_paid: true)
+          - else
+            == SlimHelper.render('templates/invoices/v4/_subscriptions_summary', payment.payable, render_total_due_and_paid: true)
+
+        == SlimHelper.render('templates/invoices/v4/_eu_tax_management', payment.payable)
+
+        - if payment.payable.progressive_billing?
+          p.body-3.mb-24
+            - applied_usage_threshold = payment.payable.applied_usage_thresholds.order(created_at: :asc).last
+            = I18n.t('invoice.reached_usage_threshold', usage_amount: MoneyHelper.format(payment.payable.applied_usage_threshold.lifetime_usage_amount), threshold_amount: MoneyHelper.format(applied_usage_threshold.passed_threshold_amount))
+
+        - if payment.payable.applied_invoice_custom_sections.present?
+          == SlimHelper.render('templates/invoices/v4/_custom_sections', payment.payable)
+
+        p.body-3.mb-24 = LineBreakHelper.break_lines(@organization.invoice_footer)
+
+        == SlimHelper.render('templates/invoices/v4/_powered_by_logo', payment.payable)
+
+        - if payment.payable.subscriptions.count > 1
+          == SlimHelper.render('templates/invoices/v4/_subscription_details', payment.payable)
+
       - else
         == SlimHelper.render('templates/payment_receipts/v1/_payment_request', self)
 
-      p.body-3.mb-24 = LineBreakHelper.break_lines(@organization.invoice_footer)
+        p.body-3.mb-24 = LineBreakHelper.break_lines(@organization.invoice_footer)
 
-      == SlimHelper.render('templates/payment_receipts/v1/_powered_by_logo', self)
+        == SlimHelper.render('templates/payment_receipts/v1/_powered_by_logo', self)

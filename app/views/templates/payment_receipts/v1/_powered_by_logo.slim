@@ -1,5 +1,5 @@
-- unless @organization.remove_branding_watermark_enabled?
+- unless organization.remove_branding_watermark_enabled?
   .powered-by
     span.body-2
-      | #{I18n.t('payment_receipt.powered_by')} &nbsp;
+      | #{I18n.t('invoice.powered_by')} &nbsp;
     img src="#{::SlimHelper::PDF_LOGO_FILENAME}" alt="Lago Logo"

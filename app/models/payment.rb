@@ -58,6 +58,10 @@ class Payment < ApplicationRecord
     payment_provider&.payment_type
   end
 
+  # TODO: a placeholder for the future implementation of the payment method
+  def payment_method
+  end
+
   private
 
   def manual_payment_credit_invoice_amount_cents

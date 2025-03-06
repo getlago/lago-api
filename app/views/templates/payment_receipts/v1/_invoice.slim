@@ -1,5 +1,5 @@
-.payment-receipt-resume.mb-24.overflow-auto
-  table.payment-receipt-resume-table width="100%"
+.invoice-resume.mb-24.overflow-auto
+  table.invoice-resume-table width="100%"
     tr
       td.body-2 = I18n.t('invoice.invoice_number')
       td.body-2 = I18n.t('invoice.amount')
@@ -7,7 +7,7 @@
       td.body-1 = payment.payable.number
       td.body-2 = MoneyHelper.format(payment.payable.total_amount)
 
-.payment-receipt-resume.overflow-auto
+.invoice-resume.overflow-auto
   table.total-table width="100%"
     tr
       td.body-2

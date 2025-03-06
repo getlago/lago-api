@@ -22,6 +22,7 @@ class PaymentRequest < ApplicationRecord
   alias_attribute :currency, :amount_currency
 
   monetize :amount_cents
+  monetize :total_due_amount_cents, with_model_currency: :currency, allow_nil: true
 
   def invoice_ids
     applied_invoices.pluck(:invoice_id)
@@ -34,6 +35,10 @@ class PaymentRequest < ApplicationRecord
 
   def total_amount_cents=(total_amount_cents)
     self.amount_cents = total_amount_cents
+  end
+
+  def total_due_amount_cents
+    (payment_status.to_sym == :succeeded) ? 0 : total_amount_cents
   end
 end
 

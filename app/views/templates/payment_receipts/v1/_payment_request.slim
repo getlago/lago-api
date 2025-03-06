@@ -1,21 +1,21 @@
-.payment-receipt-resume.mb-24.overflow-auto
-  table.payment-receipt-resume-table width="100%"
+.invoice-resume.mb-24.overflow-auto
+  table.invoice-resume-table width="100%"
     tr
       td.body-2 = I18n.t('invoice.invoice_number')
       td.body-2 = I18n.t('invoice.amount')
     - payment.payable.invoices.each do |invoice|
       tr
-        td.body-1 = invoice.number
+        td.body-1
+          a style="text-decoration: none" href=invoice.file_url
+            = invoice.number
         td.body-2 = MoneyHelper.format(invoice.total_amount)
 
-- @total_due_amount = payment.payable.invoices.sum('total_amount_cents - total_paid_amount_cents')
-
-.payment-receipt-resume.overflow-auto
+.invoice-resume.overflow-auto
   table.total-table width="100%"
     tr
       td.body-2
       td.body-2 = I18n.t('invoice.total_due_amount')
-      td.body-2 = Money.from_cents(@total_due_amount, payment.amount_currency).format
+      td.body-2 = MoneyHelper.format(payment.payable.amount - payment.amount)
     tr
       td.body-2
       td.body-1 = I18n.t('invoice.total_paid_amount')

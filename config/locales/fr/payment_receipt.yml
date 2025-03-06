@@ -1,10 +1,10 @@
 ---
 fr:
   payment_receipt:
-    document_name: Receipt
-    number: Receipt number
-    paid_on: Paid on %{date}
-    payment_date: Payment date
-    powered_by: Powered by
-    self_billed:
-      footer: This credit note on a self-billing invoice was issued by the client on behalf of the partner, with their consent. The partner has agreed not to issue their own credit note for this transaction.
+    document_name: Reçu de paiement
+    download_invoice: Télécharger la facture
+    download_receipt: Télécharger le reçu de paiement
+    number: Numéro de reçu
+    paid_on: 'Payé le %{date} (Reste à payer: %{total_due_amount})'
+    payment_date: Payé le
+    payment_method: Mode de paiement
