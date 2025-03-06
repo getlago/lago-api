@@ -36,6 +36,8 @@ module PaymentProviders
 
       if payment_provider_code_changed?(stripe_provider, old_code, args)
         stripe_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
+        # Until this job is processed, the webhook endpoint will return 400 error
+        PaymentProviders::Stripe::RefreshWebhookJob.perform_later(stripe_provider)
       end
 
       result.stripe_provider = stripe_provider
