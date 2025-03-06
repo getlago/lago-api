@@ -13,9 +13,11 @@ module BillingEntities
     def call
       return result.forbidden_failure! unless organization.can_create_billing_entity?
 
+      params[:code] = params[:name]&.parameterize(separator: "_") if params[:code].blank?
       billing_entity = organization.billing_entities.create!(
         name: params[:name],
-        code: params[:code]
+        code: params[:code],
+        document_numbering: params[:document_numbering] || "per_customer"
       )
 
       result.billing_entity = billing_entity

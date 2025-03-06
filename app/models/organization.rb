@@ -179,11 +179,8 @@ class Organization < ApplicationRecord
     remaining_billing_entities > 0
   end
 
-  # By default all organizations have only one billing_entity. If an organization has more than one billing_entity,
-  # the billing_entity_id should be provided instead of relying on default
+  # default billing_entity will be chronologically first active billing_entity
   def default_billing_entity
-    return nil if billing_entities.count > 1
-
     billing_entities.first
   end
 
@@ -212,7 +209,7 @@ class Organization < ApplicationRecord
     return Float::INFINITY if multi_entities_enterprise_enabled?
     return 2 - billing_entities.count if multi_entities_pro_enabled?
 
-    0
+    1 - billing_entities.count
   end
 end
 

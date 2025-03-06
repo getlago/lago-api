@@ -13,8 +13,13 @@ module Organizations
       )
 
       ActiveRecord::Base.transaction do
+        # TODO: remove when we do not support document_numbering per organization
         organization.save!
         organization.api_keys.create!
+        if params[:document_numbering]
+          params[:document_numbering] = "per_billing_entity" if params[:document_numbering] == "per_organization"
+        end
+        BillingEntities::CreateService.call(organization: organization, params: params)
       end
 
       result.organization = organization
