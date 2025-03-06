@@ -293,8 +293,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           context "when subscription is upgraded" do
             let(:timestamp) { Time.zone.parse("29 Mar 2024") }
             let(:plan_new) { create(:plan, organization:, interval: "monthly", amount_cents: 200) }
-            let(:subscriptions) { [subscription1, subscription2] }
-            let(:subscription1) do
+            let(:subscriptions) { [terminated_subscription, upgrade_subscription] }
+            let(:terminated_subscription) do
               create(
                 :subscription,
                 customer:,
@@ -307,7 +307,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 created_at: timestamp
               )
             end
-            let(:subscription2) do
+            let(:upgrade_subscription) do
               build(
                 :subscription,
                 customer:,
@@ -336,7 +336,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               create_pair(
                 :event,
                 organization:,
-                subscription: subscription1,
+                subscription: terminated_subscription,
                 customer:,
                 code: billable_metric.code,
                 timestamp: timestamp + 5.hours,
@@ -345,7 +345,18 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
 
             before do
-              events if subscription1
+              BillSubscriptionJob.perform_now(
+                [terminated_subscription],
+                timestamp.to_i,
+                invoicing_reason: :subscription_starting
+              )
+
+              terminated_subscription.assign_attributes(
+                status: "terminated",
+                terminated_at: timestamp  + 15.hours
+              )
+
+              events if terminated_subscription
               charge
               Rails.cache.clear
             end
@@ -353,7 +364,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             it "creates preview invoice for 1 day" do
               # One days should be billed, Mar 30 only
 
-              travel_to(subscription1.terminated_at) do
+              travel_to(terminated_subscription.terminated_at) do
                 result = preview_service.call
 
                 expect(result).to be_success
@@ -473,21 +484,19 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           context "with upgraded subscription" do
             let(:timestamp) { Time.zone.parse("29 Mar 2024") }
             let(:plan_new) { create(:plan, organization:, interval: "monthly", amount_cents: 200, pay_in_advance: true) }
-            let(:subscriptions) { [subscription1, subscription2] }
-            let(:subscription1) do
+            let(:subscriptions) { [terminated_subscription, upgrade_subscription] }
+            let(:terminated_subscription) do
               create(
                 :subscription,
                 customer:,
                 plan:,
                 billing_time:,
-                status: "terminated",
-                terminated_at: timestamp,
                 subscription_at: timestamp - 1.day,
                 started_at: timestamp - 1.day,
                 created_at: timestamp - 1.day
               )
             end
-            let(:subscription2) do
+            let(:upgrade_subscription) do
               build(
                 :subscription,
                 customer:,
@@ -500,8 +509,21 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               )
             end
 
+            before do
+              BillSubscriptionJob.perform_now(
+                [terminated_subscription],
+                timestamp.to_i,
+                invoicing_reason: :subscription_starting
+              )
+
+              terminated_subscription.assign_attributes(
+                status: "terminated",
+                terminated_at: timestamp
+              )
+            end
+
             it "creates preview invoice for upgrade case" do
-              travel_to(subscription1.terminated_at) do
+              travel_to(terminated_subscription.terminated_at) do
                 result = preview_service.call
 
                 expect(result).to be_success
@@ -513,7 +535,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(19)
                 expect(result.invoice.taxes_amount_cents).to eq(10)
                 expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(29)
-                expect(result.invoice.total_amount_cents).to eq(29)
+                expect(result.invoice.total_amount_cents).to eq(20)
               end
             end
           end
