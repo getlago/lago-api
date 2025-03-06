@@ -367,6 +367,8 @@ GEM
       karafka-core (>= 2.4.0, < 2.5.0)
       roda (~> 3.68, >= 3.69)
       tilt (~> 2.0)
+    knapsack_pro (8.0.1)
+      rake
     language_server-protocol (3.17.0.4)
     lint_roller (1.1.0)
     listen (3.9.0)
@@ -976,6 +978,7 @@ DEPENDENCIES
   kaminari-activerecord
   karafka (~> 2.4.0)
   karafka-web (~> 0.9.0)
+  knapsack_pro
   lago-expression!
   lograge
   logstash-event

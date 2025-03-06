@@ -16,6 +16,10 @@ require "simplecov"
 require "money-rails/test_helpers"
 require "active_storage_validations/matchers"
 
+require 'knapsack_pro'
+
+KnapsackPro::Adapters::RSpecAdapter.bind
+
 DatabaseCleaner.allow_remote_database_url = true
 
 SimpleCov.start do
