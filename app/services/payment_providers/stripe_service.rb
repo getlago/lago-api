@@ -19,7 +19,6 @@ module PaymentProviders
         )
       end
 
-      secret_key = stripe_provider.secret_key
       old_code = stripe_provider.code
 
       stripe_provider.secret_key = args[:secret_key] if args.key?(:secret_key)
@@ -27,12 +26,6 @@ module PaymentProviders
       stripe_provider.name = args[:name] if args.key?(:name)
       stripe_provider.success_redirect_url = args[:success_redirect_url] if args.key?(:success_redirect_url)
       stripe_provider.save!
-
-      if secret_key != stripe_provider.secret_key
-        unregister_webhook(stripe_provider.webhook_id, secret_key)
-
-        PaymentProviders::Stripe::RegisterWebhookJob.perform_later(stripe_provider)
-      end
 
       if payment_provider_code_changed?(stripe_provider, old_code, args)
         stripe_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
@@ -44,25 +37,6 @@ module PaymentProviders
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    end
-
-    private
-
-    # TODO: This could be a service but notice how the key is different
-    #       if made into a job, the key might have to be passed in the job args
-    def unregister_webhook(webhook_id, api_key)
-      return if webhook_id.blank?
-
-      ::Stripe::WebhookEndpoint.delete(
-        webhook_id, {}, {api_key:}
-      )
-    rescue => e
-      # NOTE: Since removing the webhook endpoint is not critical
-      #       we don't want any error with it to break the update of the payment provider
-      Rails.logger.error(e.message)
-      Rails.logger.error(e.backtrace.join("\n"))
-
-      Sentry.capture_exception(e)
     end
   end
 end
