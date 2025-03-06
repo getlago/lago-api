@@ -24,7 +24,7 @@ module ActiveJob
               class: ex.class.name,
               message: ex.message
             }
-            }.to_json
+          }.to_json
         end
       elsif event.payload[:aborted]
         info do
@@ -65,7 +65,7 @@ module ActiveJob
               class: ex.class.name,
               message: ex.message
             }
-            }.to_json
+          }.to_json
         end
       elsif event.payload[:aborted]
         info do
@@ -107,7 +107,7 @@ module ActiveJob
           job_id: job.job_id,
           arguments: args_info(job),
           queue: job.queue_name
-          }
+        }
 
         job.enqueued_at ? message.merge(enqueued_at: job.enqueued_at.utc).to_json : message.to_json
       end
@@ -177,7 +177,7 @@ module ActiveJob
               class: ex.class.name,
               message: ex.message
             }
-            }.to_json
+          }.to_json
         else
           {
             event: "retry",
