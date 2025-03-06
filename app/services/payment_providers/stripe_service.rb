@@ -29,7 +29,7 @@ module PaymentProviders
       stripe_provider.save!
 
       if secret_key != stripe_provider.secret_key
-        unregister_webhook(stripe_provider, secret_key)
+        unregister_webhook(stripe_provider.webhook_id, secret_key)
 
         PaymentProviders::Stripe::RegisterWebhookJob.perform_later(stripe_provider)
       end
@@ -46,16 +46,17 @@ module PaymentProviders
 
     private
 
-    def unregister_webhook(stripe_provider, api_key)
-      return if stripe_provider.webhook_id.blank?
+    # TODO: This could be a service but notice how the key is different
+    #       if made into a job, the key might have to be passed in the job args
+    def unregister_webhook(webhook_id, api_key)
+      return if webhook_id.blank?
 
       ::Stripe::WebhookEndpoint.delete(
-        stripe_provider.webhook_id, {}, {api_key:}
+        webhook_id, {}, {api_key:}
       )
     rescue => e
-      # NOTE: Since removing the webbook end-point is not critical
-      #       we don't want any error with it to break the update of the
-      #       payment provider
+      # NOTE: Since removing the webhook endpoint is not critical
+      #       we don't want any error with it to break the update of the payment provider
       Rails.logger.error(e.message)
       Rails.logger.error(e.backtrace.join("\n"))
 
