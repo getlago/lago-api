@@ -36,6 +36,15 @@ class ApplicationController < ActionController::API
 
   def append_info_to_payload(payload)
     super
+    payload[:level] =
+      case payload[:status].to_i
+      when 200..299
+        "info"
+      when 400..499
+        "warn"
+      else
+        "error"
+      end
     payload[:organization_id] = current_organization&.id if defined? current_organization
   rescue
     # NOTE: Rescue potential errors on JWT token, it should break later to avoid bad responses on GraphQL

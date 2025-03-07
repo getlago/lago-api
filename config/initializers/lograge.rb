@@ -10,6 +10,7 @@ Rails.application.configure do
     span = OpenTelemetry::Trace.current_span
 
     {
+      level: event.payload[:level],
       ddsource: "ruby",
       params: event.payload[:params].reject { |k| %w[controller action].include?(k) },
       organization_id: event.payload[:organization_id],
