@@ -17,6 +17,7 @@ module Types
         field :started_at, GraphQL::Types::ISO8601DateTime, null: true
         field :target_ongoing_balance, String, null: true
         field :threshold_credits, String, null: true
+        field :transaction_metadata, [Types::Wallets::RecurringTransactionRules::TransactionMetadataObject], null: true
         field :trigger, Types::Wallets::RecurringTransactionRules::TriggerEnum, null: false
 
         def resolver_method

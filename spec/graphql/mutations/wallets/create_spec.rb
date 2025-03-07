@@ -29,6 +29,11 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
             grantedCredits
             targetOngoingBalance
             invoiceRequiresSuccessfulPayment
+            expirationAt
+            transactionMetadata {
+              key
+              value
+            }
           }
         }
       }
@@ -66,13 +71,25 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
               trigger: "interval",
               interval: "monthly",
               targetOngoingBalance: "0.0",
-              invoiceRequiresSuccessfulPayment: true
+              invoiceRequiresSuccessfulPayment: true,
+              expirationAt: expiration_at.iso8601,
+              transactionMetadata: [
+                {
+                  key: "example_key",
+                  value: "example_value"
+                },
+                {
+                  key: "another_key",
+                  value: "another_value"
+                }
+              ]
             }
           ]
         }
       }
     )
 
+    pp result
     result_data = result["data"]["createCustomerWallet"]
 
     aggregate_failures do
