@@ -2287,6 +2287,7 @@ input CreateRecurringTransactionRuleInput {
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
+  transactionMetadata: [CreateTransactionMetadataInput!]
   trigger: RecurringTransactionTriggerEnum!
 }
 
@@ -2321,6 +2322,11 @@ input CreateSubscriptionInput {
   planOverrides: PlanOverridesInput
   subscriptionAt: ISO8601DateTime
   subscriptionId: ID
+}
+
+input CreateTransactionMetadataInput {
+  key: String!
+  value: String!
 }
 
 """
@@ -7280,6 +7286,7 @@ type RecurringTransactionRule {
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
+  transactionMetadata: [TransactionMetadata!]
   trigger: RecurringTransactionTriggerEnum!
 }
 
@@ -8512,6 +8519,11 @@ enum TimezoneEnum {
   UTC
   """
   TZ_UTC
+}
+
+type TransactionMetadata {
+  key: String!
+  value: String
 }
 
 """
