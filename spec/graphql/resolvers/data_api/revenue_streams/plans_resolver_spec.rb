@@ -33,7 +33,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
   around { |test| lago_premium!(&test) }
 
   before do
-    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/plans")
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/plans/")
       .to_return(status: 200, body: body_response, headers: {})
   end
 

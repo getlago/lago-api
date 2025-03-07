@@ -10,7 +10,7 @@ RSpec.describe DataApi::Usages::InvoicedService, type: :service do
   let(:params) { {} }
 
   before do
-    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/invoiced")
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/invoiced/")
       .to_return(status: 200, body: body_response, headers: {})
   end
 

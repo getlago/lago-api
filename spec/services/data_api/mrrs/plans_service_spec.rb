@@ -10,7 +10,7 @@ RSpec.describe DataApi::Mrrs::PlansService, type: :service do
   let(:params) { {} }
 
   before do
-    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/mrrs/#{organization.id}/plans")
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/mrrs/#{organization.id}/plans/")
       .to_return(status: 200, body: body_response, headers: {})
   end
 
