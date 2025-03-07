@@ -16,6 +16,7 @@ module ActiveJob
       if ex
         error do
           {
+            level: "error",
             event: "enqueue",
             status: "error",
             job: job.class.name,
@@ -29,6 +30,7 @@ module ActiveJob
       elsif event.payload[:aborted]
         info do
           {
+            level: "info",
             event: "enqueue",
             status: "aborted",
             job: job.class.name,
@@ -38,6 +40,7 @@ module ActiveJob
       else
         info do
           {
+            level: "info",
             event: "enqueue",
             status: "success",
             job: job.class.name,
@@ -57,6 +60,7 @@ module ActiveJob
       if ex
         error do
           {
+            level: "error",
             event: "enqueue",
             status: "error",
             job: job.class.name,
@@ -70,6 +74,7 @@ module ActiveJob
       elsif event.payload[:aborted]
         info do
           {
+            level: "info",
             event: "enqueue",
             status: "aborted",
             job: job.class.name,
@@ -79,6 +84,7 @@ module ActiveJob
       else
         info do
           {
+            level: "info",
             event: "enqueue",
             enqueued_at: scheduled_at(event),
             status: "success",
@@ -101,6 +107,7 @@ module ActiveJob
         job = event.payload[:job]
 
         message = {
+          level: "info",
           event: "perform",
           status: "start",
           job: job.class.name,
@@ -121,6 +128,7 @@ module ActiveJob
       if ex
         error do
           {
+            level: "error",
             event: "perform",
             status: "error",
             job: job.class.name,
@@ -136,6 +144,7 @@ module ActiveJob
       elsif event.payload[:aborted]
         info do
           {
+            level: "info",
             event: "perform",
             status: "aborted",
             job: job.class.name,
@@ -147,6 +156,7 @@ module ActiveJob
       else
         info do
           {
+            level: "info",
             event: "perform",
             status: "success",
             job: job.class.name,
@@ -167,6 +177,7 @@ module ActiveJob
       info do
         if ex
           {
+            level: "error",
             event: "retry",
             status: "error",
             job: job.class.name,
@@ -180,6 +191,7 @@ module ActiveJob
           }.to_json
         else
           {
+            level: "info",
             event: "retry",
             status: "success",
             job: job.class.name,
@@ -198,6 +210,7 @@ module ActiveJob
 
       error do
         {
+          level: "error",
           event: "retry",
           status: "stopped",
           job: job.class.name,
@@ -219,6 +232,7 @@ module ActiveJob
 
       error do
         {
+          level: "error",
           event: "discard",
           status: "error",
           job: job.class.name,
