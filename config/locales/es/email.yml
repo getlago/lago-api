@@ -19,8 +19,14 @@ es:
         invoice_from: Factura de %{organization_name}
         invoice_number: Número de factura
         issue_date: Fecha de emisión
-        issued_on: emitida el %{date}
         subject: 'Tu factura de %{organization_name} #%{invoice_number}'
+    payment_receipt:
+      created:
+        hello: Hello %{customer_name},
+        invoice_number: Invoice number
+        payment_receipt_number: Payment receipt number
+        subject: 'Your payment receipt from %{organization_name} #%{payment_receipt_number}'
+        thank_you: Thank you.
     payment_request:
       requested:
         already_paid: Si ya ha realizado el pago, por favor ignore este correo electrónico.
