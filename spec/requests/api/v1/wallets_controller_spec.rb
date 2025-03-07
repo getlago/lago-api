@@ -389,6 +389,39 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
+      context "when transaction expiration_at is set" do
+        let(:update_params) do
+          {
+            name: "wallet1",
+            invoice_requires_successful_payment: true,
+            recurring_transaction_rules: [
+              {
+                method: "target",
+                trigger: "interval",
+                interval: "weekly",
+                paid_credits: "105",
+                granted_credits: "105",
+                target_ongoing_balance: "300",
+                expiration_at:
+              }
+            ]
+          }
+        end
+
+        it "updates the rule" do
+          subject
+
+          recurring_rules = json[:wallet][:recurring_transaction_rules]
+          aggregate_failures do
+            expect(response).to have_http_status(:success)
+            expect(recurring_rules).to be_present
+            expect(recurring_rules.first[:expiration_at]).to eq(expiration_at)
+
+            expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+          end
+        end
+      end
+
       context "when transaction metadata is set" do
         let(:update_params) do
           {
@@ -437,7 +470,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
                 interval: "weekly",
                 paid_credits: "105",
                 granted_credits: "105",
-                target_ongoing_balance: "300"
+                target_ongoing_balance: "300",
+                expiration_at:
               }
             ]
           }
@@ -458,6 +492,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
               expect(recurring_rules).to be_present
               expect(recurring_rules.first[:lago_id]).to eq(recurring_transaction_rule.id)
               expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(false)
+              expect(recurring_rules.first[:expiration_at]).to eq(expiration_at)
 
               expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
             end
