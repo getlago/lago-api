@@ -216,6 +216,37 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
+      context "with expiration_at transaction" do
+        let(:create_params) do
+          {
+            external_customer_id: customer.external_id,
+            rate_amount: "1",
+            name: "Wallet1",
+            currency: "EUR",
+            recurring_transaction_rules: [
+              {
+                trigger: "interval",
+                interval: "monthly",
+                expiration_at:,
+                invoice_requires_successful_payment: true
+              }
+            ]
+          }
+        end
+
+        it "create the rule with correct expiration_at" do
+          subject
+
+          recurring_rules = json[:wallet][:recurring_transaction_rules]
+
+          aggregate_failures do
+            expect(response).to have_http_status(:success)
+            expect(recurring_rules).to be_present
+            expect(recurring_rules.first[:expiration_at]).to eq(expiration_at)
+          end
+        end
+      end
+
       context "with transaction metadata" do
         let(:create_params) do
           {
