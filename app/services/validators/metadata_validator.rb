@@ -11,7 +11,7 @@ module Validators
     attr_reader :metadata, :errors, :config
 
     def initialize(metadata, config = {})
-      @metadata = metadata.map { |m| m.to_h.deep_symbolize_keys } || []
+      @metadata = metadata.nil? ? [] : metadata.map { |m| m.to_h.deep_symbolize_keys }
       @errors = {}
       @config = DEFAULT_CONFIG.merge(config)
     end
