@@ -109,7 +109,7 @@ module Clockwork
 
   every(1.hour, "schedule:terminate_expired_wallet_transaction_rules", at: "*:50") do
     Clock::TerminateRecurringTransactionRulesJob
-      .set(sentry: {"slug" => "lago_top_up_wallet_interval_credits", "cron" => "50 */1 * * *"})
+      .set(sentry: {"slug" => "lago_terminate_expired_wallet_transaction_rules", "cron" => "50 */1 * * *"})
       .perform_later
   end
 
