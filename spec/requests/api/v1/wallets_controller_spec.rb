@@ -216,7 +216,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
-      context "with expiration_at transaction" do
+      context "with expiration_at transaction rule" do
         let(:create_params) do
           {
             external_customer_id: customer.external_id,
