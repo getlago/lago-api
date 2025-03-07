@@ -9,6 +9,7 @@ RSpec.describe Types::Wallets::RecurringTransactionRules::UpdateInput do
     expect(subject).to accept_argument(:expiration_at).of_type("ISO8601DateTime")
     expect(subject).to accept_argument(:granted_credits).of_type("String")
     expect(subject).to accept_argument(:interval).of_type("RecurringTransactionIntervalEnum")
+    expect(subject).to accept_argument(:invoice_requires_successful_payment).of_type("Boolean")
     expect(subject).to accept_argument(:method).of_type("RecurringTransactionMethodEnum")
     expect(subject).to accept_argument(:paid_credits).of_type("String")
     expect(subject).to accept_argument(:started_at).of_type("ISO8601DateTime")
