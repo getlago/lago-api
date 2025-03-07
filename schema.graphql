@@ -7270,6 +7270,7 @@ enum RecurringTransactionMethodEnum {
 
 type RecurringTransactionRule {
   createdAt: ISO8601DateTime!
+  expirationAt: ISO8601DateTime
   grantedCredits: String!
   interval: RecurringTransactionIntervalEnum
   invoiceRequiresSuccessfulPayment: Boolean!
@@ -8990,6 +8991,7 @@ input UpdatePlanInput {
 }
 
 input UpdateRecurringTransactionRuleInput {
+  expirationAt: ISO8601DateTime
   grantedCredits: String
   interval: RecurringTransactionIntervalEnum
   invoiceRequiresSuccessfulPayment: Boolean
