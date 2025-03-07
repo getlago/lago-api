@@ -18,6 +18,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
       payment_provider_customer: stripe_customer,
       amount_cents: 200,
       amount_currency: "CHF",
+      status: 'succeeded',
       payable: credit_note.invoice
     )
   end
@@ -83,6 +84,46 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
           refund_status: "succeeded"
         }
       )
+    end
+
+    context 'with a payment request for an invoice' do
+      let(:payment_request) { create(:payment_request, payment_status: 1, customer: credit_note.customer) }
+      let(:applied_payment_request) { create(:payment_request_applied_invoice, payment_request:, invoice: credit_note.invoice) }
+      let(:payment) do
+        create(
+          :payment,
+          payment_provider: stripe_payment_provider,
+          payment_provider_customer: stripe_customer,
+          amount_cents: 200,
+          amount_currency: "CHF",
+          status: 'succeeded',
+          payable: payment_request
+        )
+      end
+
+      before { applied_payment_request }
+
+      it "creates a stripe refund and a refund" do
+        result = stripe_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.refund.id).to be_present
+
+          expect(result.refund.credit_note).to eq(credit_note)
+          expect(result.refund.payment).to eq(payment)
+          expect(result.refund.payment_provider).to eq(stripe_payment_provider)
+          expect(result.refund.payment_provider_customer).to eq(stripe_customer)
+          expect(result.refund.amount_cents).to eq(134)
+          expect(result.refund.amount_currency).to eq("CHF")
+          expect(result.refund.status).to eq("succeeded")
+          expect(result.refund.provider_refund_id).to eq("re_123456")
+
+          expect(result.credit_note).to be_succeeded
+          expect(result.credit_note.refunded_at).to be_present
+        end
+      end
     end
 
     context "with an error on stripe" do
