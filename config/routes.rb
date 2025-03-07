@@ -109,6 +109,7 @@ Rails.application.routes.draw do
   if Rails.env.development?
     namespace :dev_tools do
       get "/invoices/:id", to: "invoices#show"
+      get "/payment_receipts/:id", to: "payment_receipts#show"
     end
   end
 

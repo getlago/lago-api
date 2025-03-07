@@ -3,6 +3,14 @@
 class PaymentReceipt < ApplicationRecord
   belongs_to :payment
   belongs_to :organization
+
+  has_one_attached :file
+
+  def file_url
+    return if file.blank?
+
+    Rails.application.routes.url_helpers.rails_blob_url(file, host: ENV["LAGO_API_URL"])
+  end
 end
 
 # == Schema Information
