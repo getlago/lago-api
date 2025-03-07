@@ -2278,6 +2278,7 @@ input CreatePlanInput {
 }
 
 input CreateRecurringTransactionRuleInput {
+  expirationAt: ISO8601DateTime
   grantedCredits: String
   interval: RecurringTransactionIntervalEnum
   invoiceRequiresSuccessfulPayment: Boolean
