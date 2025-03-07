@@ -5,9 +5,11 @@ require "rails_helper"
 RSpec.describe PaymentReceipt, type: :model do
   subject(:payment_receipt) { build(:payment_receipt) }
 
-  it { is_expected.to belong_to(:payment) }
-  it { is_expected.to belong_to(:organization) }
-  it { is_expected.to have_one_attached(:file) }
+  it do
+    expect(subject).to belong_to(:payment)
+    expect(subject).to belong_to(:organization)
+    expect(subject).to have_one_attached(:file)
+  end
 
   describe "#file_url" do
     before do

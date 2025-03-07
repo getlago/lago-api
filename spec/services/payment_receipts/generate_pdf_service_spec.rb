@@ -53,6 +53,10 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
 
         expect(LagoHttpClient::Client).not_to have_received(:new)
       end
+
+      it "does not call the SendWebhook job" do
+        expect { payment_receipt_generate_service.call }.not_to have_enqueued_job(SendWebhookJob)
+      end
     end
 
     context "when in API context" do

@@ -12,9 +12,10 @@ module PaymentReceipts
     def call
       return result.not_found_failure!(resource: "payment_receipt") if payment_receipt.blank?
 
-      generate_pdf if should_generate_pdf?
-
-      SendWebhookJob.perform_later("payment_receipt.generated", payment_receipt)
+      if should_generate_pdf?
+        generate_pdf
+        SendWebhookJob.perform_later("payment_receipt.generated", payment_receipt)
+      end
 
       result.payment_receipt = payment_receipt
       result
