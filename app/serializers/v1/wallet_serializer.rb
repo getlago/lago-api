@@ -35,7 +35,7 @@ module V1
 
     def recurring_transaction_rules
       ::CollectionSerializer.new(
-        model.recurring_transaction_rules,
+        model.recurring_transaction_rules.active,
         ::V1::Wallets::RecurringTransactionRuleSerializer,
         collection_name: "recurring_transaction_rules"
       ).serialize

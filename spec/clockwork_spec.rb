@@ -7,6 +7,27 @@ describe Clockwork do
 
   let(:clock_file) { Rails.root.join("clock.rb") }
 
+  describe "schedule:terminate_expired_wallet_transaction_rules" do
+    let(:job) { "schedule:terminate_expired_wallet_transaction_rules" }
+    let(:start_time) { Time.zone.parse("1 Apr 2022 00:50:00") }
+    let(:end_time) { Time.zone.parse("1 Apr 2022 01:50:00") }
+
+    it "enqueues a terminate expired wallet transaction rules job" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.second
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::TerminateRecurringTransactionRulesJob).to have_been_enqueued
+    end
+  end
+
   describe "schedule:bill_customers" do
     let(:job) { "schedule:bill_customers" }
     let(:start_time) { Time.zone.parse("1 Apr 2022 00:01:00") }

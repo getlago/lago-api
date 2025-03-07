@@ -12,6 +12,9 @@ module Wallets
 
       unless wallet.terminated?
         wallet.mark_as_terminated!
+        wallet.recurring_transaction_rules.find_each do |recurring_transaction_rule|
+          Wallets::RecurringTransactionRules::TerminateService.call(recurring_transaction_rule:)
+        end
         SendWebhookJob.perform_later("wallet.terminated", wallet)
       end
 

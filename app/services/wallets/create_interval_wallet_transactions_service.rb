@@ -80,9 +80,12 @@ module Wallets
           INNER JOIN wallets ON wallets.id = recurring_transaction_rules.wallet_id
           INNER JOIN customers ON customers.id = wallets.customer_id
           INNER JOIN organizations ON organizations.id = customers.organization_id
-        WHERE wallets.status = #{Wallet.statuses[:active]}
+        WHERE wallets.status = #{Wallet.statuses[:active]} 
+          AND recurring_transaction_rules.status = #{RecurringTransactionRule.statuses[:active]}
           AND recurring_transaction_rules.trigger = #{RecurringTransactionRule.triggers[:interval]}
           AND recurring_transaction_rules.interval = #{RecurringTransactionRule.intervals[interval]}
+          AND (recurring_transaction_rules.expiration_at IS NULL 
+           OR recurring_transaction_rules.expiration_at > '#{Time.current.utc.strftime("%Y-%m-%d %H:%M:%S")}')
           AND #{conditions.join(" AND ")}
         GROUP BY recurring_transaction_rules.id
       SQL

@@ -25,6 +25,7 @@ module Wallets
           interval: rule_params[:interval],
           method:,
           started_at: rule_params[:started_at],
+          expiration_at: rule_params[:expiration_at],
           target_ongoing_balance: rule_params[:target_ongoing_balance],
           trigger: rule_params[:trigger].to_s,
           transaction_metadata: rule_params[:transaction_metadata] || []
