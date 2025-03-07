@@ -64,7 +64,7 @@ module Wallets
 
         return false unless Utils::Datetime.valid_format?(params[:expiration_at])
 
-        Time.parse(params[:expiration_at]) > Time.current
+        Time.zone.parse(params[:expiration_at]) > Time.current
       end
 
       def valid_metadata?
