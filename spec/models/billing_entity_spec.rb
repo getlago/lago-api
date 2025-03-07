@@ -176,4 +176,60 @@ RSpec.describe BillingEntity, type: :model do
       end
     end
   end
+
+  describe "#document_number_prefix=" do
+    it "upcases the value" do
+      billing_entity.document_number_prefix = "abc-1234"
+      expect(billing_entity.document_number_prefix).to eq "ABC-1234"
+    end
+  end
+
+  describe "#logo_url" do
+    it "returns the url of the logo saved locally" do
+      logo_file = File.read(Rails.root.join("spec/factories/images/logo.png"))
+      billing_entity.logo.attach(
+        io: StringIO.new(logo_file),
+        filename: "logo",
+        content_type: "image/png"
+      )
+      billing_entity.save!
+      expect(billing_entity.logo_url).to include("rails/active_storage/blobs")
+    end
+  end
+
+  describe "#base64_logo" do
+    it "returns the base64 encoded logo" do
+      logo_file = File.read(Rails.root.join("spec/factories/images/logo.png"))
+      billing_entity.logo.attach(
+        io: StringIO.new(logo_file),
+        filename: "logo",
+        content_type: "image/png"
+      )
+      billing_entity.save!
+      expect(billing_entity.base64_logo).to eq Base64.encode64(logo_file)
+    end
+  end
+
+  describe "#eu_vat_eligible?" do
+    context "when country is nil" do
+      it "returns false" do
+        billing_entity.country = nil
+        expect(billing_entity).not_to be_eu_vat_eligible
+      end
+    end
+
+    context "when country is not in the EU" do
+      it "returns false" do
+        billing_entity.country = "US"
+        expect(billing_entity).not_to be_eu_vat_eligible
+      end
+    end
+
+    context "when country is in the EU" do
+      it "returns true" do
+        billing_entity.country = "FR"
+        expect(billing_entity).to be_eu_vat_eligible
+      end
+    end
+  end
 end

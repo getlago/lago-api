@@ -8,7 +8,7 @@ FactoryBot.define do
 
     email { Faker::Internet.email }
     email_settings { ["invoice.finalized", "credit_note.created"] }
-    organization
+    organization { create(:organization, billing_entities: [instance]) }
 
     trait :deleted do
       deleted_at { Time.current }

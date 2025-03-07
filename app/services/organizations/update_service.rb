@@ -49,6 +49,7 @@ module Organizations
       end
 
       if params.key?(:net_payment_term)
+        # note: this service only assigns new net_payment_term to the organization but doesn't save it
         Organizations::UpdateInvoicePaymentDueDateService.call(
           organization:,
           net_payment_term: params[:net_payment_term]
