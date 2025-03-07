@@ -3,7 +3,7 @@
 module Types
   module ErrorDetails
     class ErrorCodesEnum < Types::BaseEnum
-      ErrorDetail::ERROR_CODES.each do |code|
+      ErrorDetail::ERROR_CODES.keys.each do |code|
         value code
       end
     end
