@@ -9013,6 +9013,7 @@ input UpdateRecurringTransactionRuleInput {
   startedAt: ISO8601DateTime
   targetOngoingBalance: String
   thresholdCredits: String
+  transactionMetadata: [CreateTransactionMetadataInput!]
   trigger: RecurringTransactionTriggerEnum
 }
 
