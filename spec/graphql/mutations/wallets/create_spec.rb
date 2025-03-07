@@ -74,14 +74,8 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
               invoiceRequiresSuccessfulPayment: true,
               expirationAt: expiration_at.iso8601,
               transactionMetadata: [
-                {
-                  key: "example_key",
-                  value: "example_value"
-                },
-                {
-                  key: "another_key",
-                  value: "another_value"
-                }
+                {key: "example_key", value: "example_value"},
+                {key: "another_key", value: "another_value"}
               ]
             }
           ]
@@ -89,7 +83,6 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       }
     )
 
-    pp result
     result_data = result["data"]["createCustomerWallet"]
 
     aggregate_failures do
@@ -105,6 +98,10 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
       expect(result_data["recurringTransactionRules"][0]["paidCredits"]).to eq("0.0")
       expect(result_data["recurringTransactionRules"][0]["grantedCredits"]).to eq("0.0")
       expect(result_data["recurringTransactionRules"][0]["invoiceRequiresSuccessfulPayment"]).to eq(true)
+      expect(result_data["recurringTransactionRules"][0]["transactionMetadata"]).to contain_exactly(
+        {"key" => "example_key", "value" => "example_value"},
+        {"key" => "another_key", "value" => "another_value"}
+      )
     end
 
     expect(WalletTransactions::CreateJob).to have_received(:perform_later).with(
