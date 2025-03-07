@@ -6,7 +6,7 @@ module WalletTransactions
 
     def perform(organization_id:, params:)
       organization = Organization.find(organization_id)
-      WalletTransactions::CreateService.call!(organization:, params:)
+      WalletTransactions::Create::FromParamsService.call!(organization:, params:)
     end
   end
 end

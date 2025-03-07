@@ -16,18 +16,18 @@ module WalletTransactions
       return result if credits_amount.zero?
 
       ActiveRecord::Base.transaction do
-        wallet_transaction = wallet.wallet_transactions.create!(
+        wallet_transaction = Create::FromCreditAmountService.call!(
+          wallet:,
           transaction_type: :outbound,
-          amount: wallet.rate_amount * credits_amount,
           credit_amount: credits_amount,
           status: :settled,
           settled_at: Time.current,
-          source: from_source,
+          from_source:,
           transaction_status: :voided,
           metadata:,
           credit_note_id:
-        )
-        Wallets::Balance::DecreaseService.new(wallet:, credits_amount:).call
+        ).wallet_transaction
+        Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
         result.wallet_transaction = wallet_transaction
       end
 
