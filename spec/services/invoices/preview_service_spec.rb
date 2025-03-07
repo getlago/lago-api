@@ -550,8 +550,9 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
 
           context "with charge fees" do
-            let(:billable_metric) { create(:unique_count_billable_metric) }
-
+            let(:billable_metric) do
+              create(:billable_metric, aggregation_type: "count_agg")
+            end
             let(:charge) do
               create(
                 :standard_charge,
@@ -560,10 +561,10 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 properties: {amount: "12.66"}
               )
             end
-
             let(:events) do
-              create_pair(
+              create_list(
                 :event,
+                2,
                 organization:,
                 subscription:,
                 customer:,
@@ -573,7 +574,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
 
             before do
-              events
+              events if subscription
               charge
               Rails.cache.clear
             end
@@ -587,11 +588,11 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 expect(result.invoice.fees.length).to eq(2)
                 expect(result.invoice.invoice_type).to eq("subscription")
                 expect(result.invoice.issuing_date.to_s).to eq("2024-04-30")
-                expect(result.invoice.fees_amount_cents).to eq(1366)
-                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(1366)
-                expect(result.invoice.taxes_amount_cents).to eq(683)
-                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(2049)
-                expect(result.invoice.total_amount_cents).to eq(2049)
+                expect(result.invoice.fees_amount_cents).to eq(2632)
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(2632)
+                expect(result.invoice.taxes_amount_cents).to eq(1316)
+                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(3948)
+                expect(result.invoice.total_amount_cents).to eq(3948)
               end
             end
           end
