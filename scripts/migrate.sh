@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 if [ "$RAILS_ENV" == "staging" ]
 then
