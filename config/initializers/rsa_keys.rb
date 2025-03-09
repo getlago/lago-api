@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-KEY_DIR = Rails.root.join("config", "keys")
+KEY_DIR = Rails.root.join("config/keys")
 PRIVATE_KEY_PATH = KEY_DIR.join("private.pem")
 
 private_key_string =
