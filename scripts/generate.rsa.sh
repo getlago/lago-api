@@ -2,7 +2,8 @@
 set -e
 
 # Path where RSA keys will be stored inside the container
-KEY_DIR="../config/keys"
+
+KEY_DIR="./config/keys"
 PRIVATE_KEY="$KEY_DIR/private.pem"
 PUBLIC_KEY="$KEY_DIR/public.pem"
 
