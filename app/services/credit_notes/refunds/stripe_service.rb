@@ -79,7 +79,21 @@ module CreditNotes
       end
 
       def payment
-        @payment ||= credit_note.invoice.payments.order(created_at: :desc).first
+        return @payment if defined?(@payment)
+
+        @payment = if credit_note.invoice.payments.succeeded.present?
+          credit_note.invoice.payments.succeeded.order(created_at: :desc).first
+        else
+          Payment.where(payable_type: "PaymentRequest")
+            .joins("INNER JOIN invoices_payment_requests ON invoices_payment_requests.payment_request_id = payments.payable_id")
+            .joins("INNER JOIN payment_requests ON payment_requests.id = invoices_payment_requests.payment_request_id")
+            .where("invoices_payment_requests.invoice_id = ?", credit_note.invoice_id)
+            .where(payments: {payable_payment_status: "succeeded"})
+            .where(payment_requests: {customer_id: credit_note.customer_id})
+            .where(payment_requests: {payment_status: 1}) # 1 is succeeded
+            .order("payments.created_at DESC")
+            .first
+        end
       end
 
       def stripe_api_key
