@@ -573,4 +573,52 @@ RSpec.describe Charge, type: :model do
       end
     end
   end
+
+  describe "#included_in_next_subscription?" do
+    subject { charge.included_in_next_subscription?(subscription) }
+
+    let(:charge) { create(:standard_charge) }
+    let(:subscription) { create(:subscription, next_subscriptions:) }
+
+    context "when subscription has next subscription" do
+      let(:next_subscriptions) { [create(:subscription, plan: next_plan)] }
+      let(:next_plan) { build(:plan, charges:) }
+
+      context "when next subscription's plan has charges" do
+        let(:charges) { [create(:standard_charge, billable_metric:)] }
+
+        context "when next plan charges includes charge billable metric" do
+          let(:billable_metric) { charge.billable_metric }
+
+          it "returns true" do
+            expect(subject).to be true
+          end
+        end
+
+        context "when next plan charges does not include charge billable metric" do
+          let(:billable_metric) { create(:billable_metric) }
+
+          it "returns false" do
+            expect(subject).to be false
+          end
+        end
+      end
+
+      context "when next subscription's plan has no charges" do
+        let(:charges) { [] }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+    end
+
+    context "when subscription has no next subscription" do
+      let(:next_subscriptions) { [] }
+
+      it "returns false" do
+        expect(subject).to be false
+      end
+    end
+  end
 end
