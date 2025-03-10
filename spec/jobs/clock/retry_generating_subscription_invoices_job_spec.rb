@@ -31,8 +31,12 @@ describe Clock::RetryGeneratingSubscriptionInvoicesJob, job: true do
         end.to have_enqueued_job(BillSubscriptionJob)
       end
 
-      context "with an existing invoice error" do
-        let(:invoice_error) { InvoiceError.create(id: old_generating_invoice.id) }
+      context "with an existing invoice generation error detail" do
+        let(:invoice_error) do
+          ErrorDetail.create(owner: old_generating_invoice,
+            organization: old_generating_invoice.organization,
+            error_code: :invoice_generation_error)
+        end
 
         before do
           invoice_error
