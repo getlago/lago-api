@@ -31,6 +31,11 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
             grantedCredits
             targetOngoingBalance
             invoiceRequiresSuccessfulPayment
+            expirationAt
+            transactionMetadata {
+              key
+              value
+            }
           }
         }
       }
@@ -69,7 +74,12 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
               paidCredits: "22.2",
               grantedCredits: "22.2",
               targetOngoingBalance: "300",
-              invoiceRequiresSuccessfulPayment: true
+              invoiceRequiresSuccessfulPayment: true,
+              expirationAt: expiration_at.iso8601,
+              transactionMetadata: [
+                {key: "example_key", value: "example_value"},
+                {key: "another_key", value: "another_value"}
+              ]
             }
           ]
         }
@@ -87,6 +97,10 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
     )
 
     expect(result_data["recurringTransactionRules"].count).to eq(1)
+    expect(result_data["recurringTransactionRules"][0]["transactionMetadata"]).to contain_exactly(
+      {"key" => "example_key", "value" => "example_value"},
+      {"key" => "another_key", "value" => "another_value"}
+    )
     expect(result_data["recurringTransactionRules"][0]).to include(
       "lagoId" => recurring_transaction_rule.id,
       "method" => "target",
