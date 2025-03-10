@@ -48,22 +48,10 @@ module Wallets
     end
 
     def valid_expiration_at?
-      return true if args[:expiration_at].blank?
-
-      future = Utils::Datetime.valid_format?(args[:expiration_at]) && expiration_at.to_date > Time.current.to_date
-      return true if future
+      return true if Validators::ExpirationDateValidator.valid?(args[:expiration_at])
 
       add_error(field: :expiration_at, error_code: "invalid_date")
-
       false
-    end
-
-    def expiration_at
-      @expiration_at ||= if args[:expiration_at].is_a?(String)
-        DateTime.strptime(args[:expiration_at])
-      else
-        args[:expiration_at]
-      end
     end
 
     def valid_recurring_transaction_rules?

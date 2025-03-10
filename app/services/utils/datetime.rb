@@ -8,6 +8,14 @@ module Utils
       false
     end
 
+    def self.future_date?(datetime)
+      return true if datetime.is_a?(ActiveSupport::TimeWithZone) && datetime.future?
+      return false unless valid_format?(datetime)
+
+      parsed_date = Time.zone.parse(datetime.to_s)
+      parsed_date&.future? || false
+    end
+
     def self.date_diff_with_timezone(from_datetime, to_datetime, timezone)
       from = from_datetime
       from = Time.zone.parse(from.to_s) unless from.is_a?(ActiveSupport::TimeWithZone)

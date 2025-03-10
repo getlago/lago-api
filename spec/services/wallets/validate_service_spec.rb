@@ -84,7 +84,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
         end
       end
 
-      context "when expiration_at is integer" do
+      context "when expiration_at is an integer" do
         let(:expiration_at) { 123 }
 
         it "returns false and result has errors" do
@@ -93,8 +93,8 @@ RSpec.describe Wallets::ValidateService, type: :service do
         end
       end
 
-      context "when expiration_at is less than current time" do
-        let(:expiration_at) { (Time.current - 1.year).iso8601 }
+      context "when expiration_at is in the past" do
+        let(:expiration_at) { (Time.current - 1.hour).iso8601 }
 
         it "returns false and result has errors" do
           expect(validate_service).not_to be_valid
@@ -102,22 +102,30 @@ RSpec.describe Wallets::ValidateService, type: :service do
         end
       end
 
-      context "with invalid transaction metadata" do
-        let(:args) do
-          {
-            customer:,
-            organization_id: organization.id,
-            paid_credits:,
-            granted_credits:,
-            expiration_at:,
-            transaction_metadata: [{key: "valid key", value1: "invalid value"}]
-          }
-        end
+      context "when expiration_at is a valid datetime string but in the future" do
+        let(:expiration_at) { (Time.current + 1.hour).iso8601 }
 
-        it "returns false and result has errors" do
-          expect(validate_service).not_to be_valid
-          expect(result.error.messages[:metadata]).to eq(["invalid_key_value_pair"])
+        it "returns true and has no errors" do
+          expect(validate_service).to be_valid
         end
+      end
+    end
+
+    context "with invalid transaction metadata" do
+      let(:args) do
+        {
+          customer:,
+          organization_id: organization.id,
+          paid_credits:,
+          granted_credits:,
+          expiration_at:,
+          transaction_metadata: [{key: "valid key", value1: "invalid value"}]
+        }
+      end
+
+      it "returns false and result has errors" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:metadata]).to eq(["invalid_key_value_pair"])
       end
     end
 
