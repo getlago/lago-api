@@ -74,29 +74,6 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
       end
 
-      context "when terminate action not applicable" do
-        let(:subscription) do
-          build(
-            :subscription,
-            customer:,
-            plan:,
-            billing_time:,
-            status: "terminated",
-            subscription_at: timestamp,
-            terminated_at: timestamp,
-            started_at: timestamp,
-            created_at: timestamp
-          )
-        end
-
-        it "returns an error if subscription is not persisted" do
-          result = preview_service.call
-
-          expect(result).not_to be_success
-          expect(result.error.messages[:base]).to include("terminate_unavailable")
-        end
-      end
-
       context "when billing periods do not match" do
         let(:customer) { create(:customer, organization:) }
         let(:plan1) { create(:plan, organization:, interval: "monthly") }
@@ -312,6 +289,97 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               end
             end
           end
+
+          context "when subscription is upgraded" do
+            let(:timestamp) { Time.zone.parse("29 Mar 2024") }
+            let(:plan_new) { create(:plan, organization:, interval: "monthly", amount_cents: 200) }
+            let(:subscriptions) { [terminated_subscription, upgrade_subscription] }
+            let(:terminated_subscription) do
+              create(
+                :subscription,
+                customer:,
+                plan:,
+                billing_time:,
+                status: "terminated",
+                terminated_at: timestamp + 15.hours,
+                subscription_at: timestamp,
+                started_at: timestamp,
+                created_at: timestamp
+              )
+            end
+            let(:upgrade_subscription) do
+              build(
+                :subscription,
+                customer:,
+                plan: plan_new,
+                billing_time:,
+                status: "active",
+                subscription_at: timestamp + 15.hours,
+                started_at: timestamp + 15.hours,
+                created_at: timestamp + 15.hours
+              )
+            end
+            let(:billable_metric) do
+              create(:billable_metric, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
+            end
+            let(:charge) do
+              create(
+                :standard_charge,
+                plan:,
+                billable_metric:,
+                pay_in_advance: false,
+                prorated: true,
+                properties: {amount: "1"}
+              )
+            end
+            let(:events) do
+              create_pair(
+                :event,
+                organization:,
+                subscription: terminated_subscription,
+                customer:,
+                code: billable_metric.code,
+                timestamp: timestamp + 5.hours,
+                properties: {amount: "5"}
+              )
+            end
+
+            before do
+              BillSubscriptionJob.perform_now(
+                [terminated_subscription],
+                timestamp.to_i,
+                invoicing_reason: :subscription_starting
+              )
+
+              terminated_subscription.assign_attributes(
+                status: "terminated",
+                terminated_at: timestamp + 15.hours
+              )
+
+              events if terminated_subscription
+              charge
+              Rails.cache.clear
+            end
+
+            it "creates preview invoice for 1 day" do
+              # One days should be billed, Mar 30 only
+
+              travel_to(terminated_subscription.terminated_at) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.subscriptions.size).to eq(2)
+                expect(result.invoice.fees.length).to eq(2)
+                expect(result.invoice.invoice_type).to eq("subscription")
+                expect(result.invoice.issuing_date.to_s).to eq("2024-03-29")
+                expect(result.invoice.fees_amount_cents).to eq(35) # 3.23 + 32.26 (charge) = 35
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(35)
+                expect(result.invoice.taxes_amount_cents).to eq(18)
+                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(53)
+                expect(result.invoice.total_amount_cents).to eq(53)
+              end
+            end
+          end
         end
 
         context "with in advance billing in the future" do
@@ -409,6 +477,65 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 expect(result.invoice.taxes_amount_cents).to eq(0)
                 expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(0)
                 expect(result.invoice.total_amount_cents).to eq(0)
+              end
+            end
+          end
+
+          context "with upgraded subscription" do
+            let(:timestamp) { Time.zone.parse("29 Mar 2024") }
+            let(:plan_new) { create(:plan, organization:, interval: "monthly", amount_cents: 200, pay_in_advance: true) }
+            let(:subscriptions) { [terminated_subscription, upgrade_subscription] }
+            let(:terminated_subscription) do
+              create(
+                :subscription,
+                customer:,
+                plan:,
+                billing_time:,
+                subscription_at: timestamp - 1.day,
+                started_at: timestamp - 1.day,
+                created_at: timestamp - 1.day
+              )
+            end
+            let(:upgrade_subscription) do
+              build(
+                :subscription,
+                customer:,
+                plan: plan_new,
+                billing_time:,
+                status: "active",
+                subscription_at: timestamp,
+                started_at: timestamp,
+                created_at: timestamp
+              )
+            end
+
+            before do
+              BillSubscriptionJob.perform_now(
+                [terminated_subscription],
+                timestamp.to_i,
+                invoicing_reason: :subscription_starting
+              )
+
+              terminated_subscription.assign_attributes(
+                status: "terminated",
+                terminated_at: timestamp
+              )
+            end
+
+            it "creates preview invoice for upgrade case" do
+              travel_to(terminated_subscription.terminated_at) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.subscriptions.size).to eq(2)
+                expect(result.invoice.fees.length).to eq(1)
+                expect(result.invoice.invoice_type).to eq("subscription")
+                expect(result.invoice.issuing_date.to_s).to eq("2024-03-29")
+                expect(result.invoice.fees_amount_cents).to eq(19) # 3 x 200 / 31
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(19)
+                expect(result.invoice.taxes_amount_cents).to eq(10)
+                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(29)
+                expect(result.invoice.total_amount_cents).to eq(20)
               end
             end
           end

@@ -67,6 +67,18 @@ class Charge < ApplicationRecord
     charge_model == charge.charge_model && properties == charge.properties
   end
 
+  # NOTE: If same charge is NOT included in upgraded plan we still want to bill it. However if new plan is using
+  # the same charge it should not be billed since it is recurring and will be billed at the end of period
+  def included_in_next_subscription?(subscription)
+    return false if subscription.next_subscription.nil?
+
+    next_subscription_charges = subscription.next_subscription.plan.charges
+
+    return false if next_subscription_charges.blank?
+
+    next_subscription_charges.pluck(:billable_metric_id).include?(billable_metric_id)
+  end
+
   private
 
   def validate_amount
