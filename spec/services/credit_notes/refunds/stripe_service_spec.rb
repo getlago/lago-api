@@ -18,7 +18,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
       payment_provider_customer: stripe_customer,
       amount_cents: 200,
       amount_currency: "CHF",
-      status: "succeeded",
+      payable_payment_status: "succeeded",
       payable: credit_note.invoice
     )
   end
@@ -96,7 +96,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
           payment_provider_customer: stripe_customer,
           amount_cents: 200,
           amount_currency: "CHF",
-          status: "succeeded",
+          payable_payment_status: "succeeded",
           payable: payment_request
         )
       end
