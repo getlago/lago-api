@@ -28,6 +28,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
 
   context "when subscription is renewed" do
     it "generates an invoice with the correct charges" do
+      # creates subscription on 5th June
       travel_to(DateTime.new(2024, 6, 5, 10)) do
         create_subscription(
           {
@@ -42,6 +43,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
 
       subscription = customer.subscriptions.sole
 
+      # during the month of June, 5 card events are sent
       (1..5).each do |i|
         travel_to(DateTime.new(2024, 6, 10 + i, 10)) do
           send_card_event! "card_#{i}"

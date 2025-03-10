@@ -34,7 +34,7 @@ module Charges
           result[key] = (all_charges_details[key].to_f - charges_details_without_last_event[key].to_f).round(2).to_s
         end
         # TODO: remove this when Charges::ChargeModels::PercentageService#free_units_value respects :exclude_event flag
-        details[:free_units] = (details[:units].to_f - details[:paid_units].to_f).round(2).to_s
+        details[:free_units] = (details[:units].to_f - details[:paid_units].to_f).to_s
         details
       end
 
