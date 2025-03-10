@@ -19,10 +19,7 @@ module PaymentReceipts
       result.payment_receipt = PaymentReceipt.create!(payment:, organization:)
 
       SendWebhookJob.perform_later("payment_receipt.created", result.payment_receipt)
-
-      PaymentReceipts::GeneratePdfJob.perform_later(result.payment_receipt)
-
-      # TODO: enqueue email send
+      GeneratePdfAndNotifyJob.perform_later(payment_receipt: result.payment_receipt, email: should_deliver_email?)
 
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -32,5 +29,9 @@ module PaymentReceipts
     private
 
     attr_reader :payment, :organization
+
+    def should_deliver_email?
+      License.premium? && organization.email_settings.include?("payment_receipt.created")
+    end
   end
 end
