@@ -353,7 +353,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
 
               terminated_subscription.assign_attributes(
                 status: "terminated",
-                terminated_at: timestamp  + 15.hours
+                terminated_at: timestamp + 15.hours
               )
 
               events if terminated_subscription
