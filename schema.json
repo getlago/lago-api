@@ -29920,6 +29920,18 @@
               "args": []
             },
             {
+              "name": "paymentReceipt",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "PaymentReceipt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "paymentType",
               "description": null,
               "type": {
