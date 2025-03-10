@@ -28,6 +28,24 @@ RSpec.describe Wallets::TerminateService, type: :service do
       expect { terminate_service.call }.to have_enqueued_job(SendWebhookJob).with("wallet.terminated", Wallet)
     end
 
+    context "when wallet has recurring transaction rules" do
+      let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
+      let(:another_rule) { create(:recurring_transaction_rule, wallet:) }
+
+      before do
+        recurring_transaction_rule
+        another_rule
+      end
+
+      it "terminates all associated recurring transaction rules" do
+        result = terminate_service.call
+        expect(result).to be_success
+        expect(result.wallet.recurring_transaction_rules.count).to be(2)
+        expect(result.wallet.recurring_transaction_rules.terminated.count).to be(2)
+        expect(result.wallet.recurring_transaction_rules.active.count).to be(0)
+      end
+    end
+
     context "when wallet is already terminated" do
       before { wallet.mark_as_terminated! }
 

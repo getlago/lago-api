@@ -110,6 +110,24 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
       end
     end
 
+    context "when recurring_transaction_rule is expired" do
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          wallet:,
+          trigger: "threshold",
+          threshold_credits: "6.0",
+          method: "target",
+          target_ongoing_balance: "200",
+          expiration_at: 1.day.ago
+        )
+      end
+
+      it "does not call wallet transaction create job" do
+        expect { top_up_service.call }.not_to have_enqueued_job(WalletTransactions::CreateJob)
+      end
+    end
+
     context "when method is target" do
       let(:recurring_transaction_rule) do
         create(

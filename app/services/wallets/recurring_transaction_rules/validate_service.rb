@@ -13,6 +13,7 @@ module Wallets
         return false unless valid_method?
         return false unless valid_credits?
         return false unless valid_metadata?
+        return false unless valid_expiration_at?
 
         true
       end
@@ -60,6 +61,12 @@ module Wallets
 
       def valid_metadata?
         ::Validators::MetadataValidator.new(params[:transaction_metadata]).valid?
+      end
+
+      def valid_expiration_at?
+        return true if Validators::ExpirationDateValidator.valid?(params[:expiration_at])
+
+        false
       end
     end
   end
