@@ -11,52 +11,46 @@ module Validators
     attr_reader :metadata, :errors, :config
 
     def initialize(metadata, config = {})
-      @metadata = metadata.nil? ? [] : metadata.map { |m| m.to_h.deep_symbolize_keys }
-      @errors = {}
+      @metadata = normalize_metadata(metadata)
       @config = DEFAULT_CONFIG.merge(config)
+      @errors = {}
     end
 
     def valid?
-      validate_type
-      return true if metadata.empty? && errors.empty?
-
-      validate_size
-      metadata.each { |item| validate_item(item) }
-
-      errors.empty?
+      validate_type && validate_size && @metadata.all? { |item| validate_item(item) }
     end
 
     private
 
+    def normalize_metadata(metadata)
+      return [] if metadata.nil? || metadata == {}
+      metadata.is_a?(Array) ? metadata.map { |m| m.to_h.deep_symbolize_keys } : metadata
+    end
+
+
     def validate_type
-      errors[:metadata] = "invalid_type" unless metadata.is_a?(Array)
+      return true if @metadata.is_a?(Array)
+      @errors[:metadata] = "invalid_type"
+      false
     end
 
     def validate_size
-      errors[:metadata] = "too_many_keys" if metadata.size > config[:max_keys]
+      return true if @metadata.size <= @config[:max_keys]
+      @errors[:metadata] = "too_many_keys"
+      false
     end
 
     def validate_item(item)
-      unless item.is_a?(Hash) && item.keys.sort == [:key, :value] && item[:key] && item[:value]
-        errors[:metadata] = "invalid_key_value_pair"
-        return
-      end
+      return @errors[:metadata] = "invalid_key_value_pair" unless valid_key_value_pair?(item)
+      return @errors[:metadata] = "key_too_long" if item[:key].length > @config[:max_key_length]
+      return @errors[:metadata] = "value_too_long" if item[:value].is_a?(String) && item[:value].length > @config[:max_value_length]
+      return @errors[:metadata] = "nested_structure_not_allowed" if item[:value].is_a?(Hash) || item[:value].is_a?(Array)
 
-      validate_key_length(item[:key])
-      validate_value_length(item[:value])
-      validate_structure(item[:value])
+      true
     end
 
-    def validate_key_length(key)
-      errors[:metadata] = "key_too_long" if key.length > config[:max_key_length]
-    end
-
-    def validate_value_length(value)
-      errors[:metadata] = "value_too_long" if value.is_a?(String) && value.length > config[:max_value_length]
-    end
-
-    def validate_structure(value)
-      errors[:metadata] = "nested_structure_not_allowed" if value.is_a?(Hash) || value.is_a?(Array)
+    def valid_key_value_pair?(item)
+      item.is_a?(Hash) && item.keys.sort == [:key, :value] && item[:key] && item[:value]
     end
   end
 end

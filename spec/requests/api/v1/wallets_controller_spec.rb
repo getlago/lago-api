@@ -99,7 +99,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
             granted_credits: "10",
             expiration_at:,
             invoice_requires_successful_payment: true,
-            transaction_metadata: {}
+            transaction_metadata: {key: "valid_value", value: "also_valid"}
           }
         end
 
