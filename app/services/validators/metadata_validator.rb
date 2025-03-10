@@ -41,12 +41,17 @@ module Validators
     end
 
     def validate_item(item)
-      return @errors[:metadata] = "invalid_key_value_pair" unless valid_key_value_pair?(item)
-      return @errors[:metadata] = "key_too_long" if item[:key].length > @config[:max_key_length]
-      return @errors[:metadata] = "value_too_long" if item[:value].is_a?(String) && item[:value].length > @config[:max_value_length]
-      return @errors[:metadata] = "nested_structure_not_allowed" if item[:value].is_a?(Hash) || item[:value].is_a?(Array)
+      return error!("invalid_key_value_pair") unless valid_key_value_pair?(item)
+      return error!("key_too_long") if item[:key].length > @config[:max_key_length]
+      return error!("value_too_long") if item[:value].is_a?(String) && item[:value].length > @config[:max_value_length]
+      return error!("nested_structure_not_allowed") if item[:value].is_a?(Hash) || item[:value].is_a?(Array)
 
       true
+    end
+
+    def error!(message)
+      @errors[:metadata] = message
+      false
     end
 
     def valid_key_value_pair?(item)
