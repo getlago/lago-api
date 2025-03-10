@@ -27,7 +27,6 @@ module Validators
       metadata.is_a?(Array) ? metadata.map { |m| m.to_h.deep_symbolize_keys } : metadata
     end
 
-
     def validate_type
       return true if @metadata.is_a?(Array)
       @errors[:metadata] = "invalid_type"
