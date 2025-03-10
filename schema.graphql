@@ -8523,7 +8523,7 @@ enum TimezoneEnum {
 
 type TransactionMetadata {
   key: String!
-  value: String
+  value: String!
 }
 
 """
