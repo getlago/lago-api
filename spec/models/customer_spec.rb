@@ -702,8 +702,8 @@ RSpec.describe Customer, type: :model do
 
   describe "#flag_wallets_for_refresh" do
     context "without any wallets" do
-      it "returns nil" do
-        expect(customer.flag_wallets_for_refresh).to be_nil
+      it "returns 0" do
+        expect(customer.flag_wallets_for_refresh).to be_zero
       end
     end
 

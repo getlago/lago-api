@@ -217,8 +217,6 @@ class Customer < ApplicationRecord
   end
 
   def flag_wallets_for_refresh
-    return unless wallets.active.any?
-
     wallets.active.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
   end
 
