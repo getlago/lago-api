@@ -20,7 +20,6 @@ module Invoices
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "subscription") if subscriptions.empty?
       return result.not_allowed_failure!(code: "premium_integration_missing") if persisted_subscriptions && !organization.preview_enabled?
-      return result unless terminate_allowed?
       return result unless currencies_aligned?
       return result unless billing_times_aligned?
 
@@ -86,15 +85,6 @@ module Invoices
       true
     end
 
-    def terminate_allowed?
-      return true unless subscription_context == :terminated
-      return true if subscriptions.size == 1 && persisted_subscriptions
-
-      result.single_validation_failure!(error_code: "terminate_unavailable")
-
-      false
-    end
-
     def end_of_periods
       @end_of_periods ||= subscriptions.map do |subscription|
         Subscriptions::DatesService
@@ -104,7 +94,11 @@ module Invoices
     end
 
     def boundaries(subscription)
-      date_service = Subscriptions::DatesService.new_instance(subscription, billing_time)
+      date_service = Subscriptions::DatesService.new_instance(
+        subscription,
+        billing_time,
+        current_usage: subscription.persisted? && subscription.terminated? && subscription.upgraded?
+      )
 
       boundaries = {
         from_datetime: date_service.from_datetime,
@@ -142,12 +136,9 @@ module Invoices
     end
 
     def add_subscription_fees
-      unless should_create_subscription_fee?
-        invoice.fees = []
-        return
-      end
-
-      invoice.fees = subscriptions.map do |subscription|
+      invoice.fees = subscriptions
+        .filter { |subscription| should_create_subscription_fee?(subscription) }
+        .map do |subscription|
         Fees::SubscriptionService.call!(
           invoice:,
           subscription:,
@@ -290,10 +281,10 @@ module Invoices
       customer.integration_customers.find { |ic| ic.type == "IntegrationCustomers::AnrokCustomer" }
     end
 
-    def should_create_subscription_fee?
+    def should_create_subscription_fee?(subscription)
       return true if subscription_context == :default
 
-      subscription_context == :terminated && first_subscription.plan.pay_in_arrear?
+      subscription.terminated? == subscription.plan.pay_in_arrear?
     end
 
     def should_not_create_charge_fee?(charge, subscription)
@@ -307,7 +298,12 @@ module Invoices
         return condition
       end
 
-      false
+      return false if charge.prorated?
+
+      charge.billable_metric.recurring? &&
+        subscription.terminated? &&
+        subscription.upgraded? &&
+        charge.included_in_next_subscription?(subscription)
     end
   end
 end
