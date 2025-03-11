@@ -31,9 +31,14 @@ module Payments
         params = {total_paid_amount_cents:}
         params[:payment_status] = "succeeded" if total_paid_amount_cents == invoice.total_amount_cents
         Invoices::UpdateService.call!(invoice:, params:)
+      end
 
-        PaymentReceipts::CreateJob.perform_later(payment) if organization.issue_receipts_enabled?
-        Integrations::Aggregator::Payments::CreateJob.perform_later(payment:) if result.payment&.should_sync_payment?
+      after_commit do
+        PaymentReceipts::CreateJob.perform_later(result.payment) if organization.issue_receipts_enabled?
+
+        if result.payment&.should_sync_payment?
+          Integrations::Aggregator::Payments::CreateJob.perform_later(payment: result.payment)
+        end
       end
 
       result

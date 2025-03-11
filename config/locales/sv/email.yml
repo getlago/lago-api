@@ -23,8 +23,8 @@ sv:
         subject: 'Din faktura från %{organization_name} #%{invoice_number}'
     payment_receipt:
       created:
-        payment_receipt_from: Payment receipt from %{organization_name}
-        subject: 'Your payment receipt from %{organization_name} #%{payment_receipt_number}'
+        payment_receipt_from: Betalningskvitto från %{organization_name}
+        subject: 'Ditt betalningskvitto från %{organization_name} #%{payment_receipt_number}'
     payment_request:
       requested:
         already_paid: Om du redan har gjort betalningen, vänligen bortse från detta mejl.
