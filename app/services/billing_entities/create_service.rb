@@ -23,7 +23,6 @@ module BillingEntities
         handle_base64_logo(billing_entity)
 
         if License.premium?
-          # NOTE: multi entities is already a premium feature... so this is always true
           billing_entity.invoice_grace_period = billing_config[:invoice_grace_period] if billing_config[:invoice_grace_period]
           billing_entity.timezone = params[:timezone] if params[:timezone]
           billing_entity.email_settings = params[:email_settings] if params[:email_settings]
