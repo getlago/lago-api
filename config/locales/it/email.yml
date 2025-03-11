@@ -23,8 +23,8 @@ it:
         subject: 'La tua fattura da %{organization_name} #%{invoice_number}'
     payment_receipt:
       created:
-        payment_receipt_from: Payment receipt from %{organization_name}
-        subject: 'Your payment receipt from %{organization_name} #%{payment_receipt_number}'
+        payment_receipt_from: Ricevuta di pagamento da %{organization_name}
+        subject: 'La tua ricevuta di pagamento da %{organization_name} #%{payment_receipt_number}'
     payment_request:
       requested:
         already_paid: Se hai già effettuato il pagamento, ti preghiamo di ignorare questa email.
