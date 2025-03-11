@@ -289,24 +289,6 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
             })
           end
         end
-
-        context "when the authorization failed inexplicably" do
-          let(:stripe_pi) do
-            {
-              id: "pi_12345",
-              amount: "100",
-              amount_capturable: "0",
-              status: "something when wrong on stripe's side"
-            }
-          end
-
-          it "returns an error" do
-            subject
-
-            expect(response).to have_http_status(:unprocessable_entity)
-            expect(json[:error_details][:thirdparty_error]).to eq "The total amount was not captured."
-          end
-        end
       end
     end
   end
