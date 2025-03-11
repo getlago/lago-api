@@ -21,7 +21,11 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
     end
 
     context "when current subscription is present" do
-      let(:current_subscription) { create(:subscription) }
+      let!(:current_subscription) do
+        create(:subscription, next_subscriptions: [next_subscription])
+      end
+
+      let(:next_subscription) { create(:subscription) }
 
       context "when termination at is a valid timestamp" do
         context "when timestamp is in the past" do
@@ -32,8 +36,12 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
             expect(result.error.messages).to match(terminated_at: ["cannot_be_in_past"])
           end
 
-          it "does not change persist any changes to the current subscription" do
+          it "does not persist any changes to the current subscription" do
             expect { subject }.not_to change { current_subscription.reload.attributes }
+          end
+
+          it "does not persist any changes to the next subscription" do
+            expect { subject }.not_to change { next_subscription.reload.attributes }
           end
         end
 
@@ -50,13 +58,19 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
             )
           end
 
-          it "does not change persist any changes to the current subscription" do
+          it "does not persist any changes to the current subscription" do
             expect { subject }.not_to change { current_subscription.reload.attributes }
+          end
+
+          it "does not persist any changes to the next subscription" do
+            expect { subject }.not_to change { next_subscription.reload.attributes }
           end
         end
 
         context "when timestamp is in future" do
           let(:terminated_at) { generate(:future_date) }
+
+          before { freeze_time }
 
           it "returns result with subscriptions marked as terminated" do
             expect(result).to be_success
@@ -66,10 +80,19 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
               terminated_at: terminated_at.change(usec: 0),
               status: "terminated"
             )
+
+            expect(next_subscription).to have_attributes(
+              canceled_at: Time.current,
+              status: "canceled"
+            )
           end
 
-          it "does not change persist any changes to the current subscription" do
+          it "does not persist any changes to the current subscription" do
             expect { subject }.not_to change { current_subscription.reload.attributes }
+          end
+
+          it "does not persist any changes to the next subscription" do
+            expect { subject }.not_to change { next_subscription.reload.attributes }
           end
         end
       end
@@ -82,8 +105,12 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
           expect(result.error.messages).to match(terminated_at: ["invalid_timestamp"])
         end
 
-        it "does not change persist any changes to the current subscription" do
+        it "does not persist any changes to the current subscription" do
           expect { subject }.not_to change { current_subscription.reload.attributes }
+        end
+
+        it "does not persist any changes to the next subscription" do
+          expect { subject }.not_to change { next_subscription.reload.attributes }
         end
       end
     end

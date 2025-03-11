@@ -29,7 +29,16 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
     end
 
     context "when current subscription and matching plan are present" do
-      let!(:current_subscription) { create(:subscription, plan: current_plan, organization:) }
+      let!(:current_subscription) do
+        create(
+          :subscription,
+          plan: current_plan,
+          organization:,
+          next_subscriptions: [next_subscription]
+        )
+      end
+
+      let(:next_subscription) { create(:subscription, organization:) }
       let(:current_plan) { create(:plan, organization:) }
       let(:organization) { create(:organization) }
       let(:target_plan_code) { target_plan.code }
@@ -44,8 +53,12 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
             .to match(base: ["new_plan_should_be_different_from_existing_plan"])
         end
 
-        it "does not change persist any changes to the current subscription" do
+        it "does not persist any changes to the current subscription" do
           expect { subject }.not_to change { current_subscription.reload.attributes }
+        end
+
+        it "does not persist any changes to the next subscription" do
+          expect { subject }.not_to change { next_subscription.reload.attributes }
         end
 
         it "does not create any subscription" do
@@ -74,10 +87,19 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
               expect(subscriptions.second)
                 .to be_new_record
                 .and have_attributes(status: "active", started_at: Time.current, name: target_plan.name)
+
+              expect(next_subscription).to have_attributes(
+                canceled_at: Time.current,
+                status: "canceled"
+              )
             end
 
-            it "does not change persist any changes to the current subscription" do
+            it "does not persist any changes to the current subscription" do
               expect { subject }.not_to change { current_subscription.reload.attributes }
+            end
+
+            it "does not persist any changes to the next subscription" do
+              expect { subject }.not_to change { next_subscription.reload.attributes }
             end
 
             it "does not create any subscription" do
@@ -99,10 +121,19 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
               expect(subscriptions.second)
                 .to be_new_record
                 .and have_attributes(status: "active", started_at: start_of_next_billing_period, name: target_plan.name)
+
+              expect(next_subscription).to have_attributes(
+                canceled_at: Time.current,
+                status: "canceled"
+              )
             end
 
-            it "does not change persist any changes to the current subscription" do
+            it "does not persist any changes to the current subscription" do
               expect { subject }.not_to change { current_subscription.reload.attributes }
+            end
+
+            it "does not persist any changes to the next subscription" do
+              expect { subject }.not_to change { next_subscription.reload.attributes }
             end
 
             it "does not create any subscription" do
@@ -123,10 +154,19 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
 
               expect(subscriptions.first)
                 .to have_attributes(status: "terminated", terminated_at: Time.current)
+
+              expect(next_subscription).to have_attributes(
+                canceled_at: Time.current,
+                status: "canceled"
+              )
             end
 
-            it "does not change persist any changes to the current subscription" do
+            it "does not persist any changes to the current subscription" do
               expect { subject }.not_to change { current_subscription.reload.attributes }
+            end
+
+            it "does not persist any changes to the next subscription" do
+              expect { subject }.not_to change { next_subscription.reload.attributes }
             end
 
             it "does not create any subscription" do
@@ -144,10 +184,19 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
 
               expect(subscriptions.first)
                 .to have_attributes(status: "terminated", terminated_at: start_of_next_billing_period)
+
+              expect(next_subscription).to have_attributes(
+                canceled_at: Time.current,
+                status: "canceled"
+              )
             end
 
-            it "does not change persist any changes to the current subscription" do
+            it "does not persist any changes to the current subscription" do
               expect { subject }.not_to change { current_subscription.reload.attributes }
+            end
+
+            it "does not persist any changes to the next subscription" do
+              expect { subject }.not_to change { next_subscription.reload.attributes }
             end
 
             it "does not create any subscription" do

@@ -20,7 +20,6 @@ module Invoices
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "subscription") if subscriptions.empty?
       return result.not_allowed_failure!(code: "premium_integration_missing") if persisted_subscriptions && !organization.preview_enabled?
-      return result unless terminate_allowed?
       return result unless currencies_aligned?
       return result unless billing_times_aligned?
 
@@ -84,15 +83,6 @@ module Invoices
       end
 
       true
-    end
-
-    def terminate_allowed?
-      return true unless subscription_context == :terminated
-      return true if subscriptions.size == 1 && persisted_subscriptions
-
-      result.single_validation_failure!(error_code: "terminate_unavailable")
-
-      false
     end
 
     def end_of_periods
@@ -227,6 +217,7 @@ module Invoices
       terminated_subscription = subscriptions.find(&:terminated?)
       credits = Preview::CreditsService.call!(invoice:, terminated_subscription:).credits
 
+      invoice.credits << credits
       invoice.total_amount_cents -= credits.sum(&:amount_cents)
     end
 
