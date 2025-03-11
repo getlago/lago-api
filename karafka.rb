@@ -26,9 +26,9 @@ class KarafkaApp < Karafka::App
     # Recreate consumers with each batch. This will allow Rails code reload to work in the
     # development mode. Otherwise Karafka process would not be aware of code changes
     config.consumer_persistence = !Rails.env.development?
-  end
 
-  # Karafka.monitor.subscribe(Karafka::Instrumentation::ProctitleListener.new)
+    config.monitor = Karafka::LagoMonitor.new
+  end
 
   Karafka.monitor.subscribe(
     WaterDrop::Instrumentation::LoggerListener.new(
@@ -36,6 +36,10 @@ class KarafkaApp < Karafka::App
       log_messages: true
     )
   )
+
+  Karafka.monitor.subscribe "error.occurred" do |event|
+    Sentry.capture_exception(event[:error])
+  end
 
   routes.draw do
     consumer_group :lago_events_charged_in_advance_consumer do
