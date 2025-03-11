@@ -25,10 +25,6 @@ module PaymentProviders
 
           result.stripe_payment_intent = pi
 
-          unless is_valid(pi)
-            return result.third_party_failure!(third_party: "Stripe", error_code: "cannot_capture_amount", error_message: "The total amount was not captured.")
-          end
-
           result
         rescue ::Stripe::StripeError => e
           result.provider_failure!(provider: payment_provider, error: e)
@@ -41,10 +37,6 @@ module PaymentProviders
         end
 
         private
-
-        def is_valid(pi)
-          pi.status == "requires_capture" && pi.amount == pi.amount_capturable
-        end
 
         def create_payment_intent
           ::Stripe::PaymentIntent.create(
