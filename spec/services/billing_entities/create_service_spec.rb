@@ -18,6 +18,35 @@ RSpec.describe BillingEntities::CreateService, type: :service do
       expect(result).to be_failure
       expect(result.error).to be_a(BaseService::ForbiddenFailure)
     end
+
+    context "when the organization does not have active billing entities" do
+      before do
+        organization.billing_entities.each(&:discard)
+      end
+
+      it "creates a billing entity" do
+        expect(result).to be_success
+        expect(result.billing_entity).to be_persisted
+        expect(result.billing_entity.name).to eq("Billing Entity")
+        expect(result.billing_entity.code).to eq("billing-entity")
+      end
+
+      it "does not set premium attributes" do
+        params.merge!(
+          {
+            timezone: "Europe/Paris",
+            email_settings: ["invoice.finalized"],
+            billing_configuration: {invoice_grace_period: 15}
+          }
+        )
+
+        expect(result).to be_success
+        expect(result.billing_entity).to be_persisted
+        expect(result.billing_entity.invoice_grace_period).to eq(0)
+        expect(result.billing_entity.timezone).to eq("UTC")
+        expect(result.billing_entity.email_settings).to be_empty
+      end
+    end
   end
 
   context "when lago premium" do
