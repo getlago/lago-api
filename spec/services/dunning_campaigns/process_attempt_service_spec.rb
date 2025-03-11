@@ -171,6 +171,23 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
           .and raise_error(BaseService::ServiceFailure)
       end
     end
+
+    context "when a customer has invoices that are not ready for payment processing" do
+      let(:invoice_5) { create :invoice, organization:, customer:, currency:, payment_overdue: true, ready_for_payment_processing: false, total_amount_cents: 99_00 }
+
+      before { invoice_5 }
+
+      it "creates payment only for ready_for_processing invoice" do
+        expect(result.payment_request).to eq payment_request
+        expect(PaymentRequests::CreateService).to have_received(:call)
+          .with(organization:,
+            params: {
+              external_customer_id: customer.external_id,
+              lago_invoice_ids: [invoice_2.id]
+            },
+            dunning_campaign:)
+      end
+    end
   end
 
   it "does nothing" do
