@@ -6,8 +6,9 @@ module Customers
 
     Result = BaseResult[:customer]
 
-    def initialize(organization:, params:)
-      @organization = organization
+    def initialize(billing_entity:, params:)
+      @billing_entity = billing_entity
+      @organization = billing_entity.organization
       @params = params
       super
     end
@@ -41,6 +42,7 @@ module Customers
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
 
+        customer.billing_entity_id = billing_entity.id if customer.editable?
         customer.name = params[:name] if params.key?(:name)
         customer.country = params[:country]&.upcase if params.key?(:country)
         customer.address_line1 = params[:address_line1] if params.key?(:address_line1)
@@ -145,7 +147,7 @@ module Customers
 
     private
 
-    attr_reader :organization, :params
+    attr_reader :billing_entity, :organization, :params
 
     def valid_finalize_zero_amount_invoice?(value)
       return true if value.nil?
