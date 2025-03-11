@@ -7,10 +7,20 @@ RSpec.describe Customers::UpdateService, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:billing_entity) { create(:billing_entity, organization:) }
   let(:payment_provider_code) { "stripe_1" }
 
   describe "update" do
-    let(:customer) { create(:customer, organization:, payment_provider: "stripe", payment_provider_code:) }
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        billing_entity:,
+        payment_provider: "stripe",
+        payment_provider_code:
+      )
+    end
+
     let(:external_id) { SecureRandom.uuid }
 
     let(:update_args) do
@@ -47,6 +57,34 @@ RSpec.describe Customers::UpdateService, type: :service do
         shipping_address = update_args[:shipping_address]
         expect(updated_customer.shipping_city).to eq(shipping_address[:city])
         expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", updated_customer)
+      end
+    end
+
+    context "when updating the billing entity reference" do
+      let(:billing_entity_2) { create(:billing_entity, organization:) }
+
+      let(:update_args) do
+        {
+          id: customer.id,
+          name: "Updated customer name",
+          billing_entity_id: billing_entity_2.id
+        }
+      end
+
+      it "updates the billing entity" do
+        result = customers_service.call
+        expect(result.customer.billing_entity).to eq(billing_entity_2)
+      end
+
+      context "when customer is attached to a subscription" do
+        before do
+          create(:subscription, customer:)
+        end
+
+        it "does not update the billing entity" do
+          result = customers_service.call
+          expect(result.customer.billing_entity).to eq(billing_entity)
+        end
       end
     end
 
