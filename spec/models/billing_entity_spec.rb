@@ -69,6 +69,11 @@ RSpec.describe BillingEntity, type: :model do
       expect(billing_entity).to be_valid
     end
 
+    it { is_expected.to validate_length_of(:document_number_prefix).is_at_least(1).is_at_most(10).on(:update) }
+
+    it { is_expected.to allow_value(nil).for(:document_number_prefix).on(:create) }
+    it { is_expected.to validate_length_of(:document_number_prefix).is_at_least(1).is_at_most(10).on(:create) }
+
     it "is not valid without name" do
       billing_entity.name = nil
       expect(billing_entity).not_to be_valid
