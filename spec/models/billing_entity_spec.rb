@@ -57,8 +57,10 @@ RSpec.describe BillingEntity, type: :model do
       archived_billing_entity
     end
 
-    it "returns active billing entities" do
-      expect(described_class.active).to eq [active_billing_entity]
+    describe ".active" do
+      it "returns active billing entities" do
+        expect(described_class.active).to eq [active_billing_entity]
+      end
     end
   end
 
