@@ -87,7 +87,7 @@ describe "Recurring fee invoice inclusion after upgrade", :scenarios, type: :req
       )
 
       # Step 5: Mark the original fee as succeeded
-      update_fee(fee, {fee: {payment_status: "succeeded"}})
+      update_fee(fee, {payment_status: "succeeded"})
       expect(fee.reload.payment_status).to eq("succeeded")
 
       # Step 6: Verify the fee is included in the end-of-period invoice

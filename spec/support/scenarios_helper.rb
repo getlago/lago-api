@@ -162,7 +162,7 @@ module ScenariosHelper
   ### Fees
 
   def update_fee(fee, params)
-    put_with_token(organization, "/api/v1/fees/#{fee.id}", params)
+    put_with_token(organization, "/api/v1/fees/#{fee.id}", {fee: params})
   end
 
   def perform_billing
