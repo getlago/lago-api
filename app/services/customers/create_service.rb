@@ -6,7 +6,9 @@ module Customers
 
     Result = BaseResult[:customer]
 
-    def initialize(**args)
+    def initialize(billing_entity:, **args)
+      @billing_entity = billing_entity
+      @organization = billing_entity.organization
       @args = args
       super
     end
@@ -22,8 +24,8 @@ module Customers
         )
       end
 
-      customer = Customer.new(
-        organization_id: args[:organization_id],
+      customer = billing_entity.customers.new(
+        organization_id: organization.id,
         external_id: args[:external_id],
         name: args[:name],
         country: args[:country]&.upcase,
@@ -108,7 +110,7 @@ module Customers
 
     private
 
-    attr_reader :args
+    attr_reader :args, :billing_entity, :organization
 
     def valid_metadata_count?(metadata:)
       return true if metadata.blank?

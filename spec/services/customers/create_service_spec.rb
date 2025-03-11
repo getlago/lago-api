@@ -3,17 +3,17 @@
 require "rails_helper"
 
 RSpec.describe Customers::CreateService, type: :service do
-  subject(:result) { described_class.call(**create_args) }
+  subject(:result) { described_class.call(billing_entity:, **create_args) }
 
-  let(:membership) { create(:membership, organization:) }
   let(:organization) { create(:organization) }
+  let(:membership) { create(:membership, organization:) }
+  let(:billing_entity) { create(:billing_entity, organization:) }
   let(:external_id) { SecureRandom.uuid }
 
   let(:create_args) do
     {
       external_id:,
       name: "Foo Bar",
-      organization_id: organization.id,
       currency: "EUR",
       timezone: "Europe/Paris",
       invoice_grace_period: 2,
@@ -39,6 +39,7 @@ RSpec.describe Customers::CreateService, type: :service do
     customer = result.customer
     expect(customer.id).to be_present
     expect(customer.organization_id).to eq(organization.id)
+    expect(customer.billing_entity_id).to eq(billing_entity.id)
     expect(customer.external_id).to eq(create_args[:external_id])
     expect(customer.name).to eq(create_args[:name])
     expect(customer.currency).to eq("EUR")
