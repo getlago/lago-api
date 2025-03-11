@@ -260,7 +260,7 @@ RSpec.describe Customers::CreateFromApiService, type: :service do
 
     let(:create_args) do
       {
-        external_id: SecureRandom.uuid,
+        external_id:,
         name: "Foo Bar",
         timezone: "Europe/Paris",
         billing_configuration: {
@@ -294,12 +294,7 @@ RSpec.describe Customers::CreateFromApiService, type: :service do
 
       context "when updating a customer that already have an invoice" do
         let(:customer) do
-          create(
-            :customer,
-            organization:,
-            account_type: "customer",
-            external_id: create_args[:external_id]
-          )
+          create(:customer, organization:, account_type: "customer", external_id:)
         end
 
         let(:invoice) { create(:invoice, customer: customer) }
