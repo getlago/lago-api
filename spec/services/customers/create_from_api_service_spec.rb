@@ -527,7 +527,7 @@ RSpec.describe Customers::CreateFromApiService, type: :service do
         it "creates customer with integration customers" do
           expect(result).to be_success
           expect(result.customer).to be_persisted
-          #FIXME: should we test the integration customers?
+          # FIXME: should we test the integration customers?
         end
       end
 
