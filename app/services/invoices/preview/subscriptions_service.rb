@@ -16,7 +16,7 @@ module Invoices
         return result.not_found_failure!(resource: "organization") unless organization
         return result.not_found_failure!(resource: "customer") unless customer
 
-        if [:termination].include?(context)
+        if [:termination, :plan_change].include?(context)
           if customer_subscriptions.size > 1
             return result.single_validation_failure!(
               error_code: "only_one_subscription_allowed_for_#{context}",
@@ -30,6 +30,11 @@ module Invoices
           SubscriptionTerminationService.call(
             current_subscription:,
             terminated_at:
+          )
+        when :plan_change
+          SubscriptionPlanChangeService.call(
+            current_subscription:,
+            target_plan_code:
           )
         when :proposal
           BuildSubscriptionService.call(
@@ -54,6 +59,8 @@ module Invoices
           :proposal # Preview for non-existing subscription
         elsif terminated_at
           :termination
+        elsif target_plan_code
+          :plan_change
         else
           :projection # Preview for existing subscriptions without any modifications
         end
@@ -76,6 +83,10 @@ module Invoices
 
       def external_ids
         Array(params.dig(:subscriptions, :external_ids))
+      end
+
+      def target_plan_code
+        params.dig(:subscriptions, :plan_code)
       end
     end
   end
