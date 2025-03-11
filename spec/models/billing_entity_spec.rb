@@ -191,6 +191,14 @@ RSpec.describe BillingEntity, type: :model do
     end
   end
 
+  describe "#country=" do
+    it "upcases country" do
+      billing_entity.country = "us"
+
+      expect(billing_entity.country).to eq "US"
+    end
+  end
+
   describe "#document_number_prefix=" do
     it "upcases the value" do
       billing_entity.document_number_prefix = "abc-1234"
