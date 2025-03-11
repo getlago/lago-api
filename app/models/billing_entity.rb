@@ -65,6 +65,29 @@ class BillingEntity < ApplicationRecord
 
   after_create :generate_document_number_prefix
 
+  def document_number_prefix=(value)
+    super(value&.upcase)
+  end
+
+  def logo_url
+    return if logo.blank?
+
+    Rails.application.routes.url_helpers.rails_blob_url(logo, host: ENV["LAGO_API_URL"])
+  end
+
+  def base64_logo
+    return if logo.blank?
+
+    logo.blob.open do |tempfile|
+      data = tempfile.read
+      Base64.encode64(data)
+    end
+  end
+
+  def eu_vat_eligible?
+    country && LagoEuVat::Rate.new.countries_code.include?(country)
+  end
+
   private
 
   def generate_document_number_prefix
