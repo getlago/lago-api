@@ -72,6 +72,7 @@ module DunningCampaigns
       customer
         .invoices
         .payment_overdue
+        .where(ready_for_payment_processing: true)
         .where(currency: dunning_campaign_threshold.currency)
     end
   end
