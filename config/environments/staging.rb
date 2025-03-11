@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "active_support/core_ext/integer/time"
+require "opentelemetry/sdk"
 
 Rails.application.configure do
   # Used for GraphiQL

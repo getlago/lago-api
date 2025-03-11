@@ -44,6 +44,7 @@ Rails.application.configure do
 
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
+  config.active_record.attributes_for_inspect = [:id]
 
   if ENV["LAGO_MEMCACHE_SERVERS"].present?
     config.cache_store = :mem_cache_store, ENV["LAGO_MEMCACHE_SERVERS"].split(",")
