@@ -26,37 +26,38 @@ class KarafkaApp < Karafka::App
     # Recreate consumers with each batch. This will allow Rails code reload to work in the
     # development mode. Otherwise Karafka process would not be aware of code changes
     config.consumer_persistence = !Rails.env.development?
+
+    config.monitor = Karafka::LagoMonitor.new
   end
 
-  # Comment out this part if you are not using instrumentation and/or you are not
-  # interested in logging events for certain environments. Since instrumentation
-  # notifications add extra boilerplate, if you want to achieve max performance,
-  # listen to only what you really need for given environment.
-  Karafka.monitor.subscribe(Karafka::Instrumentation::LoggerListener.new)
-  # Karafka.monitor.subscribe(Karafka::Instrumentation::ProctitleListener.new)
-
-  # This logger prints the producer development info using the Karafka logger.
-  # It is similar to the consumer logger listener but producer oriented.
-  Karafka.producer.monitor.subscribe(
+  Karafka.monitor.subscribe(
     WaterDrop::Instrumentation::LoggerListener.new(
-      # Log producer operations using the Karafka logger
       Karafka.logger,
-      # If you set this to true, logs will contain each message details
-      # Please note, that this can be extensive
-      log_messages: false
+      log_messages: true
     )
   )
+
+  Karafka.monitor.subscribe "error.occurred" do |event|
+    Sentry.capture_exception(event[:error])
+  end
+
+  routes.draw do
+    consumer_group :lago_events_charged_in_advance_consumer do
+      topic ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"] do
+        consumer EventsChargedInAdvanceConsumer
+
+        dead_letter_queue(topic: "unprocessed_events", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+      end
+    end
+  end
 end
+
+Karafka::Process.tags.add(:application_name, "lago-api")
 
 Karafka::Web.setup do |config|
   # Set this to false in all apps except one
-  config.processing.active = false
-
-  if ENV["LAGO_KARAFKA_WEB_SECRET"].present?
-    config.ui.sessions.secret = ENV["LAGO_KARAFKA_WEB_SECRET"]
-  end
+  config.processing.active = true
+  config.ui.sessions.secret = ENV["LAGO_KARAFKA_WEB_SECRET"] if Rails.env.development?
 end
 
-Karafka::Web.enable! if ENV["LAGO_KARAFKA_WEB"]
-
-Karafka::Process.tags.add(:application_name, "lago-api")
+Karafka::Web.enable!
