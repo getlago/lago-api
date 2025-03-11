@@ -151,12 +151,11 @@ module Subscriptions
 
       # NOTE: When downgrading a subscription, we keep the current one active
       #       until the next billing day. The new subscription will become active at this date
-      Subscription.create!(
+      current_subscription.next_subscriptions.create!(
         customer:,
         plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
         name:,
         external_id: current_subscription.external_id,
-        previous_subscription_id: current_subscription.id,
         subscription_at: current_subscription.subscription_at,
         status: :pending,
         billing_time: current_subscription.billing_time,
