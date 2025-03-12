@@ -18,7 +18,7 @@ module Api
             json: ::CollectionSerializer.new(
               result.payment_receipts,
               ::V1::PaymentReceiptSerializer,
-              collection_name: resource_name.pluralize,
+              collection_name: serialized_resource_name.pluralize,
               meta: pagination_metadata(result.payment_receipts)
             )
           )
@@ -44,12 +44,16 @@ module Api
         render(
           json: ::V1::PaymentReceiptSerializer.new(
             payment_receipt,
-            root_name: resource_name
+            root_name: serialized_resource_name
           )
         )
       end
 
       def resource_name
+        "invoice"
+      end
+
+      def serialized_resource_name
         "payment_receipt"
       end
     end

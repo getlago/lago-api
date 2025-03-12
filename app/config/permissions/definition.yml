@@ -105,5 +105,3 @@ payment_requests:
 payments:
   view: true
   create:
-payment_receipts:
-  view: true

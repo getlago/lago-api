@@ -6,7 +6,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "payment_receipts:view"
+      REQUIRED_PERMISSION = "invoices:view"
 
       graphql_name "DownloadPaymentReceipt"
       description "Download an PaymentReceipt PDF"
