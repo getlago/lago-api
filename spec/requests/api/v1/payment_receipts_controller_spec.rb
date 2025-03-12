@@ -10,7 +10,7 @@ RSpec.describe Api::V1::PaymentReceiptsController, type: :request do
 
     let(:params) { {} }
 
-    include_examples "requires API permission", "payment_receipt", "read"
+    include_examples "requires API permission", "invoice", "read"
 
     it "returns organization's payments", :aggregate_failures do
       invoice = create(:invoice, organization:)
@@ -87,7 +87,7 @@ RSpec.describe Api::V1::PaymentReceiptsController, type: :request do
     context "when payment receipt exists" do
       let(:id) { payment_receipt.id }
 
-      include_examples "requires API permission", "payment_receipt", "read"
+      include_examples "requires API permission", "invoice", "read"
 
       it "returns the payment receipt" do
         subject
@@ -107,7 +107,7 @@ RSpec.describe Api::V1::PaymentReceiptsController, type: :request do
         create(:payment_request_applied_invoice, invoice:, payment_request:)
       end
 
-      include_examples "requires API permission", "payment_receipt", "read"
+      include_examples "requires API permission", "invoice", "read"
 
       it "returns the payment receipt" do
         subject
