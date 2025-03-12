@@ -205,14 +205,10 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           subject
 
           recurring_rules = json[:wallet][:recurring_transaction_rules]
-
-          aggregate_failures do
-            expect(response).to have_http_status(:success)
-
-            expect(json[:wallet][:invoice_requires_successful_payment]).to eq(false)
-            expect(recurring_rules).to be_present
-            expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
-          end
+          expect(response).to have_http_status(:success)
+          expect(json[:wallet][:invoice_requires_successful_payment]).to eq(false)
+          expect(recurring_rules).to be_present
+          expect(recurring_rules.first[:invoice_requires_successful_payment]).to eq(true)
         end
       end
 
