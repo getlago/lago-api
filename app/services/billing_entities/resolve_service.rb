@@ -15,7 +15,7 @@ module BillingEntities
       return find_by_code if billing_entity_code.present?
       return find_unique_active_entity if active_billing_entities.one?
 
-      result.not_found_failure!(resource: 'billing_entity')
+      result.not_found_failure!(resource: "billing_entity")
     end
 
     private
@@ -24,8 +24,8 @@ module BillingEntities
 
     def find_by_code
       billing_entity = active_billing_entities.find_by(code: billing_entity_code)
-  
-      return result.not_found_failure!(resource: 'billing_entity') unless billing_entity
+
+      return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
       result.billing_entity = billing_entity
       result
