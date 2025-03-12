@@ -617,4 +617,22 @@ RSpec.describe Subscription, type: :model do
       end
     end
   end
+
+  describe "#next_subscription" do
+    subject { subscription.next_subscription }
+
+    let(:subscription) { build_stubbed(:subscription, next_subscriptions:) }
+
+    let(:next_subscriptions) do
+      [
+        build_stubbed(:subscription, :canceled),
+        build_stubbed(:subscription, created_at: 1.day.ago),
+        build_stubbed(:subscription, created_at: 2.days.ago)
+      ]
+    end
+
+    it "returns most recently non-canceled next subscription" do
+      expect(subject).to eq next_subscriptions.second
+    end
+  end
 end

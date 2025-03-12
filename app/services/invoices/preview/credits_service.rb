@@ -34,6 +34,7 @@ module Invoices
 
         credit_amount = [credit_note.balance_amount_cents, invoice.total_amount_cents].min
         return [] unless credit_amount.positive?
+
         credit = Credit.new(
           invoice:,
           credit_note:,

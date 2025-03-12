@@ -44,7 +44,7 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
             .to match(base: ["new_plan_should_be_different_from_existing_plan"])
         end
 
-        it "does not change persist any changes to the current subscription" do
+        it "does not persist any changes to the current subscription" do
           expect { subject }.not_to change { current_subscription.reload.attributes }
         end
 
@@ -76,7 +76,7 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
                 .and have_attributes(status: "active", started_at: Time.current, name: target_plan.name)
             end
 
-            it "does not change persist any changes to the current subscription" do
+            it "does not persist any changes to the current subscription" do
               expect { subject }.not_to change { current_subscription.reload.attributes }
             end
 
@@ -101,7 +101,7 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
                 .and have_attributes(status: "active", started_at: start_of_next_billing_period, name: target_plan.name)
             end
 
-            it "does not change persist any changes to the current subscription" do
+            it "does not persist any changes to the current subscription" do
               expect { subject }.not_to change { current_subscription.reload.attributes }
             end
 
@@ -125,7 +125,7 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
                 .to have_attributes(status: "terminated", terminated_at: Time.current)
             end
 
-            it "does not change persist any changes to the current subscription" do
+            it "does not persist any changes to the current subscription" do
               expect { subject }.not_to change { current_subscription.reload.attributes }
             end
 
@@ -146,7 +146,7 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
                 .to have_attributes(status: "terminated", terminated_at: start_of_next_billing_period)
             end
 
-            it "does not change persist any changes to the current subscription" do
+            it "does not persist any changes to the current subscription" do
               expect { subject }.not_to change { current_subscription.reload.attributes }
             end
 

@@ -12,6 +12,11 @@ FactoryBot.define do
       status { :pending }
     end
 
+    trait :canceled do
+      status { :canceled }
+      canceled_at { Time.current }
+    end
+
     trait :terminated do
       status { :terminated }
       started_at { 1.month.ago }
