@@ -117,7 +117,7 @@ class Subscription < ApplicationRecord
   end
 
   def next_subscription
-    next_subscriptions.not_canceled.order(created_at: :desc).first
+    next_subscriptions.reject(&:canceled?).max_by(&:created_at)
   end
 
   def already_billed?
