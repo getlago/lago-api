@@ -98,7 +98,7 @@ module Customers
       #       billing_entity_id
       if customer.editable?
         customer.external_id = args[:external_id] if args.key?(:external_id)
-        customer.billing_entity = billing_entity if billing_entity
+        customer.billing_entity = billing_entity if args.key?(:billing_entity_code)
 
         if organization.revenue_share_enabled?
           customer.account_type = args[:account_type] if args.key?(:account_type)
@@ -195,9 +195,7 @@ module Customers
     def_delegators :customer, :organization
 
     def billing_entity
-      return unless args[:billing_entity_id]
-
-      @billing_entity ||= organization.billing_entities.find(args[:billing_entity_id])
+      @billing_entity ||= organization.billing_entities.active.find_by!(code: args[:billing_entity_code])
     end
 
     def valid_metadata_count?(metadata:)
