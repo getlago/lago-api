@@ -6,14 +6,17 @@ module Customers
 
     Result = BaseResult[:customer]
 
-    def initialize(billing_entity:, params:)
-      @billing_entity = billing_entity
-      @organization = billing_entity.organization
+    def initialize(organization:, params:)
+      @organization = organization
       @params = params
       super
     end
 
     def call
+      billing_entity = BillingEntities::ResolveService.call(
+        organization:, billing_entity_code: params[:billing_entity_code]
+      ).raise_if_error!.billing_entity
+
       customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
       new_customer = customer.new_record?
       shipping_address = params[:shipping_address] ||= {}

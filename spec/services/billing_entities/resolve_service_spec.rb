@@ -11,6 +11,7 @@ RSpec.describe BillingEntities::ResolveService do
     context "when billing entity is not found" do
       it "returns not found failure" do
         expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.error_code).to eq("billing_entity_not_found")
       end
     end
@@ -41,6 +42,7 @@ RSpec.describe BillingEntities::ResolveService do
 
       it "returns not found failure" do
         expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.error_code).to eq("billing_entity_not_found")
       end
     end
@@ -66,6 +68,7 @@ RSpec.describe BillingEntities::ResolveService do
 
       it "returns not found failure" do
         expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.error_code).to eq("billing_entity_not_found")
       end
     end
