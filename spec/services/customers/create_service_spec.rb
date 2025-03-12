@@ -3,15 +3,15 @@
 require "rails_helper"
 
 RSpec.describe Customers::CreateService, type: :service do
-  subject(:result) { described_class.call(billing_entity:, **create_args) }
+  subject(:result) { described_class.call(**create_args) }
 
-  let(:organization) { create(:organization) }
-  let(:membership) { create(:membership, organization:) }
-  let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:billing_entity) { create(:billing_entity) }
+  let(:organization) { billing_entity.organization }
   let(:external_id) { SecureRandom.uuid }
 
   let(:create_args) do
     {
+      organization_id: organization.id,
       external_id:,
       name: "Foo Bar",
       currency: "EUR",
@@ -61,6 +61,29 @@ RSpec.describe Customers::CreateService, type: :service do
     result
 
     expect(SendWebhookJob).to have_received(:perform_later).with("customer.created", result.customer)
+  end
+
+  context "when organization has multiple billing entities" do
+    let(:billing_entity_2) { create(:billing_entity, organization:) }
+
+    before { billing_entity_2 }
+
+    it "fails" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::NotFoundFailure)
+      expect(result.error.error_code).to eq("billing_entity_not_found")
+    end
+
+    context "with billing_entity_code" do
+      before do
+        create_args.merge!(billing_entity_code: billing_entity_2.code)
+      end
+
+      it "creates a new customer" do
+        expect(result).to be_success
+        expect(result.customer.billing_entity).to eq(billing_entity_2)
+      end
+    end
   end
 
   context "with premium features" do

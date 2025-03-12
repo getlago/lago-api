@@ -106,23 +106,21 @@ RSpec.describe Customers::CreateFromApiService, type: :service do
       expect(result.error).to be_a(BaseService::NotFoundFailure)
       expect(result.error.error_code).to eq("billing_entity_not_found")
     end
-  end
 
-  context "with billing_entity_code" do
-    let(:billing_entity_2) { create(:billing_entity, organization:) }
+    context "with billing_entity_code" do
+      let(:create_args) do
+        {
+          external_id:,
+          name: "Foo Bar",
+          currency: "EUR",
+          billing_entity_code: billing_entity_2.code
+        }
+      end
 
-    let(:create_args) do
-      {
-        external_id:,
-        name: "Foo Bar",
-        currency: "EUR",
-        billing_entity_code: billing_entity_2.code
-      }
-    end
-
-    it "creates a new customer" do
-      expect(result).to be_success
-      expect(result.customer.billing_entity).to eq(billing_entity_2)
+      it "creates a new customer" do
+        expect(result).to be_success
+        expect(result.customer.billing_entity).to eq(billing_entity_2)
+      end
     end
   end
 
