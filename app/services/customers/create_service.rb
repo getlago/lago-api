@@ -6,14 +6,19 @@ module Customers
 
     Result = BaseResult[:customer]
 
-    def initialize(billing_entity:, **args)
-      @billing_entity = billing_entity
-      @organization = billing_entity.organization
+    def initialize(**args)
+      @organization = Organization.find_by(id: args[:organization_id])
       @args = args
       super
     end
 
     def call
+      return result.not_found_failure!(resource: "organization") unless organization
+
+      billing_entity = BillingEntities::ResolveService.call(
+        organization:, billing_entity_code: args[:billing_entity_code]
+      ).raise_if_error!.billing_entity
+
       billing_configuration = args[:billing_configuration]&.to_h || {}
       shipping_address = args[:shipping_address]&.to_h || {}
 
@@ -104,13 +109,15 @@ module Customers
 
       SendWebhookJob.perform_later("customer.created", customer)
       result
+    rescue BaseService::FailedResult => e
+      result.fail_with_error!(e)
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
     end
 
     private
 
-    attr_reader :args, :billing_entity, :organization
+    attr_reader :args, :organization
 
     def valid_metadata_count?(metadata:)
       return true if metadata.blank?
