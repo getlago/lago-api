@@ -33,11 +33,6 @@ module Invoices
           terminated_at:
         )
 
-        current_subscription.next_subscription&.assign_attributes(
-          status: :canceled,
-          canceled_at: Time.current
-        )
-
         result.subscriptions = [current_subscription]
         result
       end
