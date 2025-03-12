@@ -128,15 +128,16 @@ RSpec.describe Wallets::UpdateService, type: :service do
 
       before { recurring_transaction_rule }
 
-      it "creates a new rule and removes the old one" do
+      it "creates a new rule and terminates the old one" do
         result = update_service.call
 
         aggregate_failures do
           expect(result).to be_success
 
-          rule = result.wallet.reload.recurring_transaction_rules.first
+          rule = result.wallet.reload.recurring_transaction_rules.active.first
 
-          expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+          expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(1)
+          expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(1)
           expect(rule.id).not_to eq(recurring_transaction_rule.id)
           expect(rule.trigger).to eq("interval")
           expect(rule.interval).to eq("weekly")
@@ -167,9 +168,11 @@ RSpec.describe Wallets::UpdateService, type: :service do
           aggregate_failures do
             expect(result).to be_success
 
-            rule = result.wallet.reload.recurring_transaction_rules.first
+            rule = result.wallet.reload.recurring_transaction_rules.active.first
 
             expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+            expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(1)
+            expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(0)
             expect(rule.id).to eq(recurring_transaction_rule.id)
             expect(rule.trigger).to eq("interval")
             expect(rule.interval).to eq("weekly")
@@ -200,10 +203,12 @@ RSpec.describe Wallets::UpdateService, type: :service do
 
           expect(result).to be_success
 
-          rule = result.wallet.reload.recurring_transaction_rules.first
+          rule = result.wallet.reload.recurring_transaction_rules.active.first
 
           aggregate_failures do
             expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+            expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(1)
+            expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(0)
             expect(rule.id).to eq(recurring_transaction_rule.id)
             expect(rule.trigger).to eq("threshold")
             expect(rule.threshold_credits).to eq(205.0)
@@ -215,17 +220,17 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context "when removing the rule" do
-        let(:rules) do
-          []
-        end
+      context "when an empty array is sent as argument" do
+        let(:rules) { [] }
 
-        it "sanitizes rules successfully" do
+        it "terminates all existing recurring transaction rules" do
           result = update_service.call
 
           aggregate_failures do
             expect(result).to be_success
-            expect(result.wallet.reload.recurring_transaction_rules.count).to eq(0)
+            expect(result.wallet.reload.recurring_transaction_rules.count).to eq(1)
+            expect(result.wallet.reload.recurring_transaction_rules.active.count).to eq(0)
+            expect(result.wallet.reload.recurring_transaction_rules.terminated.count).to eq(1)
 
             expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
           end

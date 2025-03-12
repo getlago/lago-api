@@ -133,6 +133,26 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
           )
         end
       end
+
+      context "when expiration_at is set in the rule" do
+        let(:expiration_at) { (Time.current + 1.year).iso8601 }
+        let(:wallet_params) do
+          {
+            paid_credits: "100.0",
+            granted_credits: "50.0",
+            recurring_transaction_rules: [{
+              trigger: "threshold",
+              threshold_credits: "1.0",
+              expiration_at:
+            }]
+          }
+        end
+
+        it "creates a rule with the correct expiration_at" do
+          expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
+          expect(wallet.recurring_transaction_rules.first.expiration_at).to eq(expiration_at)
+        end
+      end
     end
   end
 end

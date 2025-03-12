@@ -99,5 +99,63 @@ RSpec.describe Wallets::RecurringTransactionRules::ValidateService do
         expect(validate_service.call).to be_falsey
       end
     end
+
+    describe "#valid_expiration_at?" do
+      context "when expiration_at is blank" do
+        let(:params) do
+          {
+            trigger: "interval",
+            interval: "weekly",
+            expiration_at: nil
+          }
+        end
+
+        it "returns true" do
+          expect(validate_service.call).to eq true
+        end
+      end
+
+      context "when expiration_at is an invalid format" do
+        let(:params) do
+          {
+            trigger: "interval",
+            interval: "weekly",
+            expiration_at: "invalid-date"
+          }
+        end
+
+        it "returns false" do
+          expect(validate_service.call).to be_falsey
+        end
+      end
+
+      context "when expiration_at is a past date" do
+        let(:params) do
+          {
+            trigger: "interval",
+            interval: "weekly",
+            expiration_at: (Time.current - 1.hour).iso8601
+          }
+        end
+
+        it "returns false" do
+          expect(validate_service.call).to be_falsey
+        end
+      end
+
+      context "when expiration_at is a valid future date" do
+        let(:params) do
+          {
+            trigger: "interval",
+            interval: "weekly",
+            expiration_at: (Time.current + 1.hour).iso8601
+          }
+        end
+
+        it "returns true" do
+          expect(validate_service.call).to eq true
+        end
+      end
+    end
   end
 end

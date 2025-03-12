@@ -472,5 +472,31 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
         end
       end
     end
+
+    context "when recurring transaction rule has expired" do
+      let(:created_at) { DateTime.parse("20 Feb 2021") }
+      let(:recurring_transaction_rule) do
+        create(
+          :recurring_transaction_rule,
+          trigger: :interval,
+          wallet:,
+          interval:,
+          created_at: created_at + 1.second,
+          expiration_at: created_at + 2.hours,
+          started_at:
+        )
+      end
+      let(:interval) { :weekly }
+
+      let(:current_date) do
+        created_at + 2.weeks
+      end
+
+      it "does not enqueue a job for expired rules" do
+        travel_to(current_date) do
+          expect { create_interval_transactions_service.call }.not_to have_enqueued_job
+        end
+      end
+    end
   end
 end

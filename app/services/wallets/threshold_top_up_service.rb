@@ -30,7 +30,7 @@ module Wallets
     attr_reader :wallet
 
     def threshold_rule
-      @threshold_rule ||= wallet.recurring_transaction_rules.where(trigger: :threshold).first
+      @threshold_rule ||= wallet.recurring_transaction_rules.active.where(trigger: :threshold).first
     end
 
     def pending_transactions_amount

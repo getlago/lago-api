@@ -37,6 +37,9 @@ module Types
       field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
       field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+      def recurring_transaction_rules
+        object.recurring_transaction_rules.active
+      end
     end
   end
 end
