@@ -413,13 +413,10 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           subject
 
           recurring_rules = json[:wallet][:recurring_transaction_rules]
-          aggregate_failures do
-            expect(response).to have_http_status(:success)
-            expect(recurring_rules).to be_present
-            expect(recurring_rules.first[:expiration_at]).to eq(expiration_at)
-
-            expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-          end
+          expect(response).to have_http_status(:success)
+          expect(recurring_rules).to be_present
+          expect(recurring_rules.first[:expiration_at]).to eq(expiration_at)
+          expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
         end
       end
 
