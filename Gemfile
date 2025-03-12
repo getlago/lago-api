@@ -85,8 +85,8 @@ gem "slim"
 gem "slim-rails"
 
 # Kafka
-gem "karafka", "~> 2.4.17"
-gem "karafka-web", "~> 0.10.4"
+gem "karafka", "~> 2.4.0"
+gem "karafka-web", "~> 0.9.0"
 
 # Taxes
 gem "valvat", require: false
@@ -124,7 +124,6 @@ group :test do
   gem "guard-rspec", require: false
   gem "rspec-graphql_matchers"
   gem "shoulda-matchers"
-  gem "karafka-testing"
 end
 
 group :development do
