@@ -217,6 +217,7 @@ module Invoices
       terminated_subscription = subscriptions.find(&:terminated?)
       credits = Preview::CreditsService.call!(invoice:, terminated_subscription:).credits
 
+      invoice.credits << credits
       invoice.total_amount_cents -= credits.sum(&:amount_cents)
     end
 

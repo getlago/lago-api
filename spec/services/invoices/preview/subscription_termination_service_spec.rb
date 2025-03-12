@@ -32,7 +32,7 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
             expect(result.error.messages).to match(terminated_at: ["cannot_be_in_past"])
           end
 
-          it "does not change persist any changes to the current subscription" do
+          it "does not persist any changes to the current subscription" do
             expect { subject }.not_to change { current_subscription.reload.attributes }
           end
         end
@@ -50,7 +50,7 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
             )
           end
 
-          it "does not change persist any changes to the current subscription" do
+          it "does not persist any changes to the current subscription" do
             expect { subject }.not_to change { current_subscription.reload.attributes }
           end
         end
@@ -68,7 +68,7 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
             )
           end
 
-          it "does not change persist any changes to the current subscription" do
+          it "does not persist any changes to the current subscription" do
             expect { subject }.not_to change { current_subscription.reload.attributes }
           end
         end
@@ -82,7 +82,7 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
           expect(result.error.messages).to match(terminated_at: ["invalid_timestamp"])
         end
 
-        it "does not change persist any changes to the current subscription" do
+        it "does not persist any changes to the current subscription" do
           expect { subject }.not_to change { current_subscription.reload.attributes }
         end
       end
