@@ -5,9 +5,8 @@ require "rails_helper"
 RSpec.describe Customers::UpdateService, type: :service do
   subject(:customers_service) { described_class.new(customer:, args: update_args) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:billing_entity) { create(:billing_entity) }
+  let(:organization) { billing_entity.organization }
   let(:payment_provider_code) { "stripe_1" }
 
   describe "update" do
@@ -67,12 +66,13 @@ RSpec.describe Customers::UpdateService, type: :service do
         {
           id: customer.id,
           name: "Updated customer name",
-          billing_entity_id: billing_entity_2.id
+          billing_entity_code: billing_entity_2.code
         }
       end
 
       it "updates the billing entity" do
         result = customers_service.call
+        expect(result).to be_success
         expect(result.customer.billing_entity).to eq(billing_entity_2)
       end
 
@@ -83,6 +83,7 @@ RSpec.describe Customers::UpdateService, type: :service do
 
         it "does not update the billing entity" do
           result = customers_service.call
+          expect(result).to be_success
           expect(result.customer.billing_entity).to eq(billing_entity)
         end
       end
@@ -597,8 +598,6 @@ RSpec.describe Customers::UpdateService, type: :service do
         let(:organization) do
           create(:organization, premium_integrations: ["auto_dunning"])
         end
-
-        let(:membership) { create(:membership, organization: organization) }
 
         let(:update_args) do
           {applied_dunning_campaign_id: dunning_campaign.id}
