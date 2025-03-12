@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::PaymentReceipts::Download, type: :graphql do
-  let(:required_permission) { "payment_receipts:view" }
+  let(:required_permission) { "invoices:view" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
@@ -25,7 +25,7 @@ RSpec.describe Mutations::PaymentReceipts::Download, type: :graphql do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "payment_receipts:view"
+  it_behaves_like "requires permission", "invoices:view"
 
   it "generates the PDF for the given payment receipt" do
     freeze_time do
