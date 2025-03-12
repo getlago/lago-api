@@ -13,13 +13,21 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
   let(:bm_amount) { 30.12 }
 
   def send_card_event!(item_id = SecureRandom.uuid)
-    create_event({
+    api_response = create_event({
       code: billable_metric.code,
       transaction_id: "tr_#{SecureRandom.hex(10)}",
       external_customer_id: customer.external_id,
       external_subscription_id:,
       properties: {item_id:}
     })
+    Fee.where(pay_in_advance_event_id: api_response.dig("event", "lago_id")).sole.id
+  end
+
+  def billing_periods_hash(invoice)
+    ::V1::InvoiceSerializer.new(
+      invoice,
+      root_name: "invoice", includes: [:billing_periods]
+    ).serialize[:billing_periods]
   end
 
   before do
@@ -43,10 +51,11 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
       end
 
       initial_subscription = customer.subscriptions.sole
+      fees = []
 
       # Create an event but keep it unpaid
       travel_to(DateTime.new(2024, 6, 12, 10)) do
-        send_card_event! "card_1"
+        fees << send_card_event!("card_1")
         expect(initial_subscription.fees.charge.where(invoice_id: nil).count).to eq(1)
       end
 
@@ -62,10 +71,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
         )
 
         upgraded_subscription = customer.subscriptions.where.not(id: initial_subscription.id).sole
-        pp({
-          upgraded_subscription: upgraded_subscription.id,
-          initial_subscription: initial_subscription.id
-        })
+
         expect(initial_subscription.reload).to be_terminated
         expect(customer.invoices.count).to eq(2) # initial sub invoice + upgraded sub invoice
         expect(upgraded_subscription.fees.charge.count).to eq 0
@@ -73,7 +79,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
 
       # Create an event but keep it unpaid
       travel_to(DateTime.new(2024, 7, 22, 10)) do
-        send_card_event! "card_2"
+        fees << send_card_event!("card_2")
         # one fee for each subscription
         expect(initial_subscription.fees.charge.where(invoice_id: nil).count).to eq(1)
         expect(upgraded_subscription.fees.charge.where(invoice_id: nil).count).to eq(1)
@@ -81,10 +87,8 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
 
       # In october, both fees are finally marked as paid
       travel_to(DateTime.new(2024, 10, 2, 10)) do
-        [initial_subscription, upgraded_subscription].each do |subscription|
-          subscription.fees.charge.where(invoice_id: nil).each do |fee|
-            update_fee(fee, payment_status: :succeeded)
-          end
+        fees.each do |fee_id|
+          update_fee(fee_id, payment_status: :succeeded)
         end
       end
 
@@ -92,12 +96,79 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
       travel_to(DateTime.new(2024, 11, 1, 10)) do
         perform_billing
         invoice = customer.invoices.where(invoice_type: :advance_charges).sole
-        expect(invoice.fees.count).to eq(2)
-        pp(::V1::InvoiceSerializer.new(
-          invoice,
-          root_name: "invoice", includes: [:billing_periods]
-        ).serialize[:billing_periods])
+        invoice_fees = invoice.fees.order(:created_at)
+        expect(invoice_fees.count).to eq(2)
+
+        # Notice that the periods in the fees relate to the CREATION of the fees
+        expect(invoice_fees.first.properties).to eq({
+          "timestamp" => "2024-06-12T10:00:00.000Z",
+          "to_datetime" => "2024-06-30T23:59:59.999Z",
+          "from_datetime" => "2024-06-05T00:00:00.000Z",
+          "charges_duration" => 30,
+          "charges_to_datetime" => "2024-06-30T23:59:59.999Z",
+          "charges_from_datetime" => "2024-06-05T10:00:00.000Z"
+        })
+        expect(invoice_fees.second.properties).to eq({
+          "timestamp" => "2024-07-22T10:00:00.000Z",
+          "to_datetime" => "2024-07-31T23:59:59.999Z",
+          "from_datetime" => "2024-07-07T00:00:00.000Z",
+          "charges_duration" => 31,
+          "charges_to_datetime" => "2024-07-31T23:59:59.999Z",
+          "charges_from_datetime" => "2024-07-07T10:00:00.000Z"
+        })
+
+        invoice_periods = billing_periods_hash(invoice)
+        expect(invoice_periods.count).to eq(2)
+        expect(invoice_periods).to all include({
+          subscription_from_datetime: "2024-10-01T00:00:00Z",
+          subscription_to_datetime: "2024-10-31T23:59:59Z",
+          charges_from_datetime: "2024-10-01T00:00:00Z",
+          charges_to_datetime: "2024-10-31T23:59:59Z",
+          invoicing_reason: "in_advance_charge_periodic"
+        })
       end
+
+      # Some more events
+      fees = []
+      travel_to(DateTime.new(2024, 11, 18, 10)) do
+        fees << send_card_event!("card_3")
+        fees << send_card_event!("card_4")
+      end
+      travel_to(DateTime.new(2024, 12, 12, 10)) do
+        fees << send_card_event!("card_5")
+      end
+
+      travel_to(DateTime.new(2025, 1, 1, 10)) do
+        expect(customer.invoices.where(invoice_type: :advance_charges).count).to eq 1
+        perform_billing # No new advance_charges invoice should be created
+        expect(customer.invoices.where(invoice_type: :advance_charges).count).to eq 1
+      end
+
+      # Next year, the card_3 and card_5 fees are marked as paid
+      travel_to(DateTime.new(2025, 1, 7, 10)) do
+        update_fee(fees.first, payment_status: :succeeded)
+        update_fee(fees.last, payment_status: :succeeded)
+      end
+
+      # The subscription is terminated. Customer have no other subscriptions
+      travel_to(DateTime.new(2025, 1, 22, 10)) do
+        terminate_subscription(upgraded_subscription)
+        invoice = customer.invoices.where(invoice_type: :advance_charges).max_by(&:created_at)
+        expect(invoice.fees.count).to eq(2)
+
+        invoice_periods = billing_periods_hash(invoice)
+        expect(invoice_periods.count).to eq(1)
+        expect(invoice_periods.first).to include({
+          subscription_from_datetime: "2025-01-01T00:00:00Z",
+          subscription_to_datetime: "2025-01-22T10:00:00Z",
+          charges_from_datetime: "2025-01-01T00:00:00Z",
+          charges_to_datetime: "2025-01-22T10:00:00Z",
+          invoicing_reason: "in_advance_charge_periodic"
+        })
+      end
+
+      # Note: if a fee is marked as paid after the last subscription with THIS external_id was terminated
+      #     it will never be attached to an invoice
     end
   end
 end

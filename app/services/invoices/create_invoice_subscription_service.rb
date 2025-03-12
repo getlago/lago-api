@@ -54,8 +54,10 @@ module Invoices
     def impacted_subscriptions
       @impacted_subscriptions ||= if refresh
         subscriptions
+      elsif recurring
+        subscriptions.select(&:active?).uniq(&:id)
       else
-        (recurring ? subscriptions.select(&:active?) : subscriptions).uniq(&:id)
+        subscriptions.uniq(&:id)
       end
     end
 
