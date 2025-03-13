@@ -213,6 +213,16 @@ module Api
           )
         end
 
+        if preview_params[:subscriptions] && !preview_params.to_h[:subscriptions].is_a?(Hash)
+          return render(
+            json: {
+              status: 400,
+              error: "subscriptions_must_be_an_object"
+            },
+            status: :bad_request
+          )
+        end
+
         result = Invoices::PreviewContextService.call(
           organization: current_organization,
           params: preview_params.to_h.deep_symbolize_keys

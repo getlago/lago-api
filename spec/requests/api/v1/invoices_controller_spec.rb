@@ -1137,7 +1137,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when params have invalid structure" do
+    context "when coupons have invalid type" do
       let(:preview_params) do
         {
           coupons: {
@@ -1150,6 +1150,20 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         subject
         expect(response).to have_http_status(:bad_request)
         expect(json[:error]).to eq "coupons_must_be_an_array"
+      end
+    end
+
+    context "when subscriptions have invalid type" do
+      let(:preview_params) do
+        {
+          subscriptions: []
+        }
+      end
+
+      it "returns a bad request error" do
+        subject
+        expect(response).to have_http_status(:bad_request)
+        expect(json[:error]).to eq "subscriptions_must_be_an_object"
       end
     end
   end
