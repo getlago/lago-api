@@ -21,7 +21,11 @@ module Invoices
           )
         end
 
-        result.subscriptions = [terminated_current_subscription, new_subscription].compact
+        result.subscriptions = [
+          terminated_current_subscription,
+          (new_subscription if target_plan.pay_in_advance?)
+        ].compact
+
         result
       end
 
@@ -35,13 +39,15 @@ module Invoices
         current_subscription.terminated_at = termination_date
         current_subscription.status = :terminated
 
+        current_subscription.next_subscriptions.build(
+          **new_subscription.attributes
+        )
+
         current_subscription
       end
 
       def new_subscription
-        return unless target_plan.pay_in_advance?
-
-        Subscription.new(
+        @new_subscription ||= Subscription.new(
           customer:,
           plan: target_plan,
           name: target_plan.name,
@@ -51,7 +57,8 @@ module Invoices
           billing_time: current_subscription.billing_time,
           ending_at: current_subscription.ending_at,
           status: :active,
-          started_at: upgrade? ? Time.current : termination_date
+          started_at: upgrade? ? Time.current : termination_date,
+          created_at: Time.current
         )
       end
 

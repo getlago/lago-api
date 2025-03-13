@@ -30,7 +30,7 @@ module Invoices
 
         current_subscription.assign_attributes(
           status: :terminated,
-          terminated_at:
+          terminated_at: parsed_terminated_at.end_of_day
         )
 
         result.subscriptions = [current_subscription]

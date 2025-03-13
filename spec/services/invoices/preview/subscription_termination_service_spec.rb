@@ -45,7 +45,7 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
             expect(subscriptions).to contain_exactly current_subscription
 
             expect(subscriptions.first).to have_attributes(
-              terminated_at: terminated_at.change(usec: 0),
+              terminated_at: terminated_at.end_of_day,
               status: "terminated"
             )
           end
@@ -63,7 +63,7 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
             expect(subscriptions).to contain_exactly current_subscription
 
             expect(subscriptions.first).to have_attributes(
-              terminated_at: terminated_at.change(usec: 0),
+              terminated_at: terminated_at.end_of_day,
               status: "terminated"
             )
           end
