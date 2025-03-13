@@ -21,7 +21,7 @@ module Invoices
           )
         end
 
-        if parsed_terminated_at.to_date.past?
+        if parsed_terminated_at.past?
           return result.single_validation_failure!(
             error_code: "cannot_be_in_past",
             field: :terminated_at
