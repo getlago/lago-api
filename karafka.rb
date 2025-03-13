@@ -41,9 +41,9 @@ class KarafkaApp < Karafka::App
     Sentry.capture_exception(event[:error])
   end
 
-  routes.draw do
-    consumer_group :lago_events_charged_in_advance_consumer do
-      if ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"].present?
+  if ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"].present?
+    routes.draw do
+      consumer_group :lago_events_charged_in_advance_consumer do
         topic ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"] do
           consumer EventsChargedInAdvanceConsumer
 
