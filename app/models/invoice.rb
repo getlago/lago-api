@@ -302,9 +302,7 @@ class Invoice < ApplicationRecord
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
     return 0 if !payment_succeeded? && total_paid_amount_cents == total_amount_cents
 
-    amount = total_paid_amount_cents - credit_notes.sum("refund_amount_cents + credit_amount_cents") -
-      credits.where(before_taxes: false).sum(:amount_cents) -
-      prepaid_credit_amount_cents
+    amount = total_paid_amount_cents - credit_notes.sum("refund_amount_cents + credit_amount_cents")
     amount = amount.negative? ? 0 : amount
 
     return [amount, associated_active_wallet&.balance_cents || 0].min if credit?
