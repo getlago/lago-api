@@ -3,12 +3,12 @@
 module Wallets
   module Balance
     class UpdateOngoingService < BaseService
-      def initialize(wallet:, total_usage_amount_cents:, pay_in_advance_usage_amount_cents:)
+      def initialize(wallet:, total_usage_amount_cents:, billed_usage_amount_cents:)
         super
 
         @wallet = wallet
         @total_usage_amount_cents = total_usage_amount_cents
-        @pay_in_advance_usage_amount_cents = pay_in_advance_usage_amount_cents
+        @billed_usage_amount_cents = billed_usage_amount_cents
       end
 
       def call
@@ -29,7 +29,7 @@ module Wallets
 
       private
 
-      attr_reader :wallet, :total_usage_amount_cents, :pay_in_advance_usage_amount_cents
+      attr_reader :wallet, :total_usage_amount_cents, :billed_usage_amount_cents
 
       def compute_update_params
         params = {
@@ -54,7 +54,9 @@ module Wallets
       end
 
       def ongoing_usage_balance_cents
-        @ongoing_usage_balance_cents ||= total_usage_amount_cents + wallet.customer.invoices.draft.sum(:total_amount_cents)
+        @ongoing_usage_balance_cents ||= total_usage_amount_cents +
+          wallet.customer.invoices.draft.sum(:total_amount_cents) -
+          billed_usage_amount_cents
       end
 
       def credits_ongoing_usage_balance
@@ -62,7 +64,7 @@ module Wallets
       end
 
       def ongoing_balance_cents
-        @ongoing_balance_cents ||= wallet.balance_cents - ongoing_usage_balance_cents + pay_in_advance_usage_amount_cents
+        @ongoing_balance_cents ||= wallet.balance_cents - ongoing_usage_balance_cents
       end
 
       def credits_ongoing_balance
