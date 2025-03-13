@@ -28,6 +28,12 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    strategy:
+      fail-fast: false
+      matrix:
+        ci_node_total: [ 2 ]
+        ci_node_index: [ 0, 1 ]
+
     env:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
@@ -66,4 +72,9 @@ jobs:
       - name: Dump Clickhouse database schema
         run: bin/rails db:schema:dump:clickhouse
       - name: Run tests
-        run: bundle exec rspec
+        env:
+          KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC: ${{ secrets.KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC }}
+          KNAPSACK_PRO_CI_NODE_TOTAL: ${{ matrix.ci_node_total }}
+          KNAPSACK_PRO_CI_NODE_INDEX: ${{ matrix.ci_node_index }}
+          KNAPSACK_PRO_LOG_LEVEL: info
+        run: bundle exec rake knapsack_pro:queue:rspec
