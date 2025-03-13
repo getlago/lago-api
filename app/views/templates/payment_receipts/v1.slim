@@ -27,7 +27,7 @@ html
               tr
                 td.body-1 = I18n.t('invoice.invoice_number')
                 td.body-2
-                  a style="text-decoration: none" href=payment.payable.file_url
+                  a style="text-decoration: none" target="_blank" href=payment.payable.file_url
                     = payment.payable.number
             -if payment.payment_method.present?
               tr
@@ -103,13 +103,15 @@ html
       - if payment.payable.is_a?(Invoice)
         .invoice-resume.mb-24.overflow-auto
           - if payment.payable.credit?
-            == SlimHelper.render('templates/invoices/v4/_credit', payment.payable, render_total_due_and_paid: true)
+            == SlimHelper.render('templates/invoices/v4/_credit', payment.payable)
+          - elsif payment.payable.one_off?
+            == SlimHelper.render('templates/invoices/v4/_one_off', payment.payable)
           - elsif payment.payable.progressive_billing?
-            == SlimHelper.render('templates/invoices/v4/_progressive_billing_details', payment.payable, render_total_due_and_paid: true)
+            == SlimHelper.render('templates/invoices/v4/_progressive_billing_details', payment.payable)
           - elsif payment.payable.subscriptions.count == 1
-            == SlimHelper.render('templates/invoices/v4/_subscription_details', payment.payable, render_total_due_and_paid: true)
+            == SlimHelper.render('templates/invoices/v4/_subscription_details', payment.payable)
           - else
-            == SlimHelper.render('templates/invoices/v4/_subscriptions_summary', payment.payable, render_total_due_and_paid: true)
+            == SlimHelper.render('templates/invoices/v4/_subscriptions_summary', payment.payable)
 
         == SlimHelper.render('templates/invoices/v4/_eu_tax_management', payment.payable)
 
