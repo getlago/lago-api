@@ -383,6 +383,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
 
         context "with in advance billing in the future" do
+          let(:organization) { create(:organization, invoice_grace_period: 2) }
           let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
           let(:subscription) do
             build(
@@ -404,7 +405,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.fees.length).to eq(1)
               expect(result.invoice.invoice_type).to eq("subscription")
-              expect(result.invoice.issuing_date.to_s).to eq("2024-03-31")
+              expect(result.invoice.issuing_date.to_s).to eq("2024-04-02")
               expect(result.invoice.fees_amount_cents).to eq(3)
               expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(3)
               expect(result.invoice.taxes_amount_cents).to eq(2)
@@ -846,7 +847,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
 
         context "with multiple persisted subscriptions" do
-          let(:customer) { create(:customer, organization:) }
+          let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
           let(:plan1) { create(:plan, organization:, interval: "monthly") }
           let(:plan2) { create(:plan, organization:, interval: "monthly") }
           let(:subscriptions) { [subscription1, subscription2] }
@@ -883,7 +884,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               expect(result.invoice.subscriptions.map { |s| s.id }).to match_array([subscription1.id, subscription2.id])
               expect(result.invoice.fees.length).to eq(2)
               expect(result.invoice.invoice_type).to eq("subscription")
-              expect(result.invoice.issuing_date.to_s).to eq("2024-04-30")
+              expect(result.invoice.issuing_date.to_s).to eq("2024-05-03")
               expect(result.invoice.fees_amount_cents).to eq(200)
               expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(200)
               expect(result.invoice.taxes_amount_cents).to eq(100)
