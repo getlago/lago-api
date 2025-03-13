@@ -9183,10 +9183,18 @@ type User {
   createdAt: ISO8601DateTime!
   email: String
   id: ID!
+  lastLoginAt: ISO8601DateTime
+  lastLoginMethod: UserLoginMethod
   memberships: [Membership!]!
   organizations: [Organization!]!
   premium: Boolean!
   updatedAt: ISO8601DateTime!
+}
+
+enum UserLoginMethod {
+  email
+  google
+  okta
 }
 
 """
