@@ -16,7 +16,7 @@ module Wallets
 
           {
             total_usage_amount_cents: invoice.total_amount.to_f * wallet.ongoing_balance.currency.subunit_to_unit,
-            pay_in_advance_usage_amount_cents: pay_in_advance_usage_amount_cents(invoice)
+            pay_in_advance_usage_amount_cents: billed_usage_amount_cents(invoice)
           }
         end
 
@@ -35,8 +35,10 @@ module Wallets
 
       delegate :customer, to: :wallet
 
-      def pay_in_advance_usage_amount_cents(invoice)
-        invoice.fees.select { |f| f.charge.pay_in_advance? && f.charge.invoiceable? }.sum(&:amount_cents)
+      def billed_usage_amount_cents(invoice)
+        invoice.prepaid_credit_amount_cents +
+          invoice.total_paid_amount_cents +
+          invoice.fees.select { |f| f.charge.pay_in_advance? && f.charge.invoiceable? }.sum(&:amount_cents)
       end
     end
   end
