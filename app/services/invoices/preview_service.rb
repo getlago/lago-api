@@ -128,7 +128,10 @@ module Invoices
     end
 
     def issuing_date
-      billing_time.in_time_zone(customer.applicable_timezone).to_date
+      return @issuing_date if defined?(@issuing_date)
+
+      date = billing_time.in_time_zone(customer.applicable_timezone).to_date
+      @issuing_date = date + customer.applicable_invoice_grace_period.days
     end
 
     def payment_due_date
