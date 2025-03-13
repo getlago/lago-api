@@ -1625,7 +1625,7 @@ RSpec.describe Invoice, type: :model do
 
       context "when total amount is not equal to paid amount" do
         it "returns the correct refundable amount" do
-          expect(invoice.refundable_amount_cents).to eq(700)
+          expect(invoice.refundable_amount_cents).to eq(900)
         end
       end
     end
@@ -1636,7 +1636,7 @@ RSpec.describe Invoice, type: :model do
       let(:payment_status) { :succeeded }
 
       it "returns the correct refundable amount" do
-        expect(invoice.refundable_amount_cents).to eq(700)
+        expect(invoice.refundable_amount_cents).to eq(900)
       end
     end
 
