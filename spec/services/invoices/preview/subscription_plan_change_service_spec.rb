@@ -68,8 +68,11 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
               expect(result).to be_success
               expect(subscriptions).to match_array [current_subscription, Subscription]
 
-              expect(subscriptions.first)
-                .to have_attributes(status: "terminated", terminated_at: Time.current)
+              expect(subscriptions.first).to have_attributes(
+                status: "terminated",
+                next_subscription: Subscription,
+                terminated_at: Time.current
+              )
 
               expect(subscriptions.second)
                 .to be_new_record
@@ -93,8 +96,11 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
               expect(result).to be_success
               expect(subscriptions).to match_array [current_subscription, Subscription]
 
-              expect(subscriptions.first)
-                .to have_attributes(status: "terminated", terminated_at: start_of_next_billing_period)
+              expect(subscriptions.first).to have_attributes(
+                status: "terminated",
+                next_subscription: Subscription,
+                terminated_at: start_of_next_billing_period
+              )
 
               expect(subscriptions.second)
                 .to be_new_record
@@ -121,8 +127,11 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
               expect(result).to be_success
               expect(subscriptions).to contain_exactly current_subscription
 
-              expect(subscriptions.first)
-                .to have_attributes(status: "terminated", terminated_at: Time.current)
+              expect(subscriptions.first).to have_attributes(
+                status: "terminated",
+                next_subscription: Subscription,
+                terminated_at: Time.current
+              )
             end
 
             it "does not persist any changes to the current subscription" do
@@ -142,8 +151,11 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
               expect(result).to be_success
               expect(subscriptions).to contain_exactly current_subscription
 
-              expect(subscriptions.first)
-                .to have_attributes(status: "terminated", terminated_at: start_of_next_billing_period)
+              expect(subscriptions.first).to have_attributes(
+                status: "terminated",
+                next_subscription: Subscription,
+                terminated_at: start_of_next_billing_period
+              )
             end
 
             it "does not persist any changes to the current subscription" do

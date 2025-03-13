@@ -152,9 +152,7 @@ module Invoices
     end
 
     def add_charge_fees
-      return unless persisted_subscriptions
-
-      subscriptions.map do |subscription|
+      subscriptions.select(&:persisted?).map do |subscription|
         boundaries = boundaries(subscription)
 
         charges = []

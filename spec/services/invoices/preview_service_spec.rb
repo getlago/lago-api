@@ -484,7 +484,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
 
           context "with upgraded subscription" do
             let(:timestamp) { Time.zone.parse("29 Mar 2024") }
-            let(:plan_new) { create(:plan, organization:, interval: "monthly", amount_cents: 200, pay_in_advance: true) }
+            let(:plan_new) { create(:plan, charges:, organization:, interval: "monthly", amount_cents: 200, pay_in_advance: true) }
             let(:subscriptions) { [terminated_subscription, upgrade_subscription] }
             let(:terminated_subscription) do
               create(
@@ -509,6 +509,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 created_at: timestamp
               )
             end
+
+            let(:charges) { [build(:standard_charge)] }
 
             before do
               BillSubscriptionJob.perform_now(
