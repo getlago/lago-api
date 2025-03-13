@@ -43,10 +43,12 @@ class KarafkaApp < Karafka::App
 
   routes.draw do
     consumer_group :lago_events_charged_in_advance_consumer do
-      topic ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"] do
-        consumer EventsChargedInAdvanceConsumer
+      if ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"].present?
+        topic ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"] do
+          consumer EventsChargedInAdvanceConsumer
 
-        dead_letter_queue(topic: "unprocessed_events", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+          dead_letter_queue(topic: "unprocessed_events", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+        end
       end
     end
   end
