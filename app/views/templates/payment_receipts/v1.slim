@@ -106,6 +106,8 @@ html
             == SlimHelper.render('templates/invoices/v4/_credit', payment.payable)
           - elsif payment.payable.one_off?
             == SlimHelper.render('templates/invoices/v4/_one_off', payment.payable)
+          - elsif payment.payable.advance_charges?
+            == SlimHelper.render('templates/invoices/v4/_charge', payment.payable)
           - elsif payment.payable.progressive_billing?
             == SlimHelper.render('templates/invoices/v4/_progressive_billing_details', payment.payable)
           - elsif payment.payable.subscriptions.count == 1
