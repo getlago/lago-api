@@ -33,6 +33,7 @@ db/clickhouse_schema.rb
 # Ignore Simplecov coverage status
 /coverage/*
 
+config/keys/*
 .rsa_private.pem
 .rsa_public.pem
 LAGO_VERSION
