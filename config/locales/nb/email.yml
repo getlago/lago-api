@@ -19,6 +19,7 @@ nb:
         invoice_from: Faktura fra %{organization_name}
         invoice_number: Fakturanummer
         issue_date: Dato
+        issued_on: utstedt den %{date}
         subject: 'Faktura fra %{organization_name} #%{invoice_number}'
     payment_receipt:
       created:

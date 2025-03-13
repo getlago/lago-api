@@ -19,6 +19,7 @@ sv:
         invoice_from: Faktura från %{organization_name}
         invoice_number: Fakturanummer
         issue_date: Fakturadatum
+        issued_on: utfärdad den %{date}
         subject: 'Din faktura från %{organization_name} #%{invoice_number}'
     payment_receipt:
       created:

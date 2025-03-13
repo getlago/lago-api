@@ -19,6 +19,7 @@ it:
         invoice_from: Fattura da %{organization_name}
         invoice_number: Numero Fattura
         issue_date: Data Emissione
+        issued_on: emessa il %{date}
         subject: 'La tua fattura da %{organization_name} #%{invoice_number}'
     payment_receipt:
       created:
