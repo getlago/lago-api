@@ -25,7 +25,7 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
 
       context "when termination at is a valid timestamp" do
         context "when timestamp is in the past" do
-          let(:terminated_at) { generate(:past_date) }
+          let(:terminated_at) { Time.current - 1.second }
 
           it "fails with past timestamp error" do
             expect(result).to be_failure
@@ -37,17 +37,12 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
           end
         end
 
-        context "when timestamp is today" do
+        context "when timestamp is current time" do
           let(:terminated_at) { Time.current }
 
-          it "returns result with subscriptions marked as terminated" do
-            expect(result).to be_success
-            expect(subscriptions).to contain_exactly current_subscription
-
-            expect(subscriptions.first).to have_attributes(
-              terminated_at: terminated_at.end_of_day,
-              status: "terminated"
-            )
+          it "fails with past timestamp error" do
+            expect(result).to be_failure
+            expect(result.error.messages).to match(terminated_at: ["cannot_be_in_past"])
           end
 
           it "does not persist any changes to the current subscription" do
@@ -56,14 +51,14 @@ RSpec.describe Invoices::Preview::SubscriptionTerminationService, type: :service
         end
 
         context "when timestamp is in future" do
-          let(:terminated_at) { generate(:future_date) }
+          let(:terminated_at) { Time.current + 1.second }
 
           it "returns result with subscriptions marked as terminated" do
             expect(result).to be_success
             expect(subscriptions).to contain_exactly current_subscription
 
             expect(subscriptions.first).to have_attributes(
-              terminated_at: terminated_at.end_of_day,
+              terminated_at: terminated_at.change(usec: 0),
               status: "terminated"
             )
           end

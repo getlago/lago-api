@@ -21,7 +21,7 @@ module Invoices
           )
         end
 
-        if parsed_terminated_at.to_date.past?
+        if parsed_terminated_at.past?
           return result.single_validation_failure!(
             error_code: "cannot_be_in_past",
             field: :terminated_at
@@ -30,7 +30,7 @@ module Invoices
 
         current_subscription.assign_attributes(
           status: :terminated,
-          terminated_at: parsed_terminated_at.end_of_day
+          terminated_at:
         )
 
         result.subscriptions = [current_subscription]
