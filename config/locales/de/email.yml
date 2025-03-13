@@ -19,6 +19,7 @@ de:
         invoice_from: Rechnung von %{organization_name}
         invoice_number: Rechnungsnummer
         issue_date: Ausstellungsdatum
+        issued_on: ausgestellt am %{date}
         subject: 'Deine Rechnung von %{organization_name} #%{invoice_number}'
     payment_receipt:
       created:
