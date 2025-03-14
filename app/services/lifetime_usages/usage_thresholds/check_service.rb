@@ -3,6 +3,8 @@
 module LifetimeUsages
   module UsageThresholds
     class CheckService < BaseService
+      Result = BaseResult[:passed_thresholds]
+
       def initialize(lifetime_usage:, progressive_billed_amount: 0)
         @lifetime_usage = lifetime_usage
         @progressive_billed_amount = progressive_billed_amount
@@ -12,6 +14,7 @@ module LifetimeUsages
 
       def call
         result.passed_thresholds = []
+        return result unless thresholds.any?
 
         fixed_thresholds = thresholds.not_recurring.order(:amount_cents)
         # There is only 1 recurring threshold, `first` will return it or nil
