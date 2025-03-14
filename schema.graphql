@@ -7305,6 +7305,16 @@ type Query {
   ): Wallet
 
   """
+  Query a single wallet transaction
+  """
+  walletTransaction(
+    """
+    Unique ID of the wallet transaction
+    """
+    id: ID!
+  ): WalletTransaction
+
+  """
   Query wallet transactions
   """
   walletTransactions(
@@ -9295,6 +9305,7 @@ type WalletTransaction {
   createdAt: ISO8601DateTime!
   creditAmount: String!
   id: ID!
+  invoice: Invoice
   invoiceRequiresSuccessfulPayment: Boolean!
   metadata: [WalletTransactionMetadataObject!]
   settledAt: ISO8601DateTime
@@ -9331,6 +9342,7 @@ type WalletTransactionMetadataObject {
 }
 
 enum WalletTransactionStatusEnum {
+  failed
   pending
   settled
 }

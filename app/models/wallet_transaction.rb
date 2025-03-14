@@ -11,7 +11,8 @@ class WalletTransaction < ApplicationRecord
 
   STATUSES = [
     :pending,
-    :settled
+    :settled,
+    :failed
   ].freeze
 
   TRANSACTION_STATUSES = [
