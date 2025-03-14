@@ -249,7 +249,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
       subscription2 = customer.subscriptions.where(plan_id: plan2.id).first
       subscription3 = customer.subscriptions.where(plan_id: plan3.id).first
 
-      # ingest first events that would affect all subscriptions
+      # ingest first events that would affect all subscriptions:
       # units = 10
       # sub1 total = 10 * 1 = 10 + 10% tax = 11
       # sub2 total = 10 * 2 = 20 + 10% tax = 22 - will be billed immediately
@@ -258,7 +258,6 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         ingest_event(subscription1, 10)
         ingest_event(subscription2, 10)
         ingest_event(subscription3, 10)
-        byebug
         expect(customer.invoices.count).to eq(1)
         expect(subscription2.invoices.count).to eq(1)
         expect(subscription2.invoices.first.total_amount_cents).to eq(0)
@@ -275,20 +274,57 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(wallet.credits_ongoing_usage_balance).to eq 12.1
       end
 
-      # when the subscription invoice is generated it is not paid straight ahead with the wallet
-      # travel_to time_0 + 1.month do
-      #   perform_billing
-      #   expect(subscription.invoices.count).to eq(2)
-      #   recalculate_wallet_balances
-      #   wallet.reload
-      #   expect(wallet.credits_balance).to eq 45
-      #   expect(wallet.balance_cents).to eq 4500
-      #   expect(wallet.ongoing_balance_cents).to eq 4390
-      #   expect(wallet.credits_ongoing_balance).to eq 43.9
-      #   expect(wallet.ongoing_usage_balance_cents).to eq 110
-      #   expect(wallet.credits_ongoing_usage_balance).to eq 1.1
-      # end
+      # ingest second events that would affect all subscriptions
+      # units = 10
+      # sub1 total = 10 * 1 = 10 + 10% tax = 11
+      # sub2 total = 10 * 2 = 20 + 10% tax = 22 - will be billed immediately
+      # sub3 total = 10 * 10 = 100 + 10% tax = 110 - this time the progressive billing threshold is reached
+      travel_to time_0 + 10.days do
+        ingest_event(subscription1, 10)
+        ingest_event(subscription2, 10)
+        ingest_event(subscription3, 10)
+        perform_usage_update
+        expect(customer.invoices.count).to eq(3)
+        expect(subscription2.invoices.count).to eq(2)
+        expect(subscription2.invoices.order(created_at: :asc).last.sub_total_including_taxes_amount_cents).to eq(22_00)
+        expect(subscription3.invoices.count).to eq(1)
+        expect(subscription3.invoices.first.sub_total_including_taxes_amount_cents).to eq(220_00)
+        # we need to force refreshing wallets, because the threshold usage is not recalculated
+        customer.flag_wallets_for_refresh
+        recalculate_wallet_balances
+        wallet.reload
+        # wallet balance in cents = 978 - 22 - 220 = 736
+        # ongoing balance in cents = 736 - 22 = 714
+        expect(wallet.credits_balance).to eq 73.6
+        expect(wallet.balance_cents).to eq 736_00
+        expect(wallet.ongoing_balance_cents).to eq 714_00
+        expect(wallet.credits_ongoing_balance).to eq 71.4
+        expect(wallet.ongoing_usage_balance_cents).to eq 22_00
+        expect(wallet.credits_ongoing_usage_balance).to eq 2.2
+      end
 
+      # ingest third event only affecting third subscription
+      # units = 20
+      # sub3 total = 10 * 20 = 200 + 10% tax = 220 - recurring threshold will be reached again
+      travel_to time_0 + 15.days do
+        ingest_event(subscription3, 20)
+        perform_usage_update
+        expect(customer.invoices.count).to eq(4)
+        expect(subscription3.invoices.count).to eq(2)
+        expect(subscription3.invoices.order(created_at: :asc).last.sub_total_including_taxes_amount_cents).to eq(220_00)
+        # we need to force refreshing wallets, because the threshold usage is not recalculated
+        customer.flag_wallets_for_refresh
+        recalculate_wallet_balances
+        wallet.reload
+        # wallet balance in cents = 736 - 220 = 516
+        # ongoing balance in cents = 516 - 22 = 494
+        expect(wallet.credits_balance).to eq 51.6
+        expect(wallet.balance_cents).to eq 516_00
+        expect(wallet.ongoing_balance_cents).to eq 494_00
+        expect(wallet.credits_ongoing_balance).to eq 49.4
+        expect(wallet.ongoing_usage_balance_cents).to eq 22_00
+        expect(wallet.credits_ongoing_usage_balance).to eq 2.2
+      end
     end
 
   end

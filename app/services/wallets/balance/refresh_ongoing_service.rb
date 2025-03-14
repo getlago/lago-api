@@ -39,7 +39,7 @@ module Wallets
         paid_in_advance_fees = invoice.fees.select { |f| f.charge.pay_in_advance? && f.charge.invoiceable? }
         invoice.prepaid_credit_amount_cents +
           invoice.total_paid_amount_cents +
-          # In invoice total that is returned from CustomerUsageService in total_usage the taxes are included
+          # Invoice that is returned from CustomerUsageService includes the taxes in total_usage
           # so if the fees ae already paid, we should exclude fees AND their taxes
           paid_in_advance_fees.sum(&:amount_cents) +
           paid_in_advance_fees.sum(&:taxes_amount_cents)
