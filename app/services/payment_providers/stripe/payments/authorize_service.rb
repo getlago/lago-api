@@ -72,7 +72,7 @@ module PaymentProviders
             {
               api_key:,
               idempotency_key: "auth-#{provider_customer.id}-#{unique_id}",
-              stripe_version: "2024-09-30.acacia"
+              stripe_version: "2024-09-30.acacia" # temporarily hardcoded until Lago fixes version
             }
           )
         end

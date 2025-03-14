@@ -12,6 +12,7 @@ module PaymentProviderCustomers
 
       def call
         # First, we try to get the customer default payment method
+        # We swallow all errors to run the second solution
         payment_method_id = begin
           customer = ::Stripe::Customer.retrieve(provider_customer.provider_customer_id, request_options)
           customer["invoice_settings"]["default_payment_method"]
@@ -20,6 +21,7 @@ module PaymentProviderCustomers
         end
 
         # If no default, we'll try to get the latest card
+        # We also swallow all errors because this is "best effort". If no payment method is found, the caller service will handle it
         if payment_method_id.blank?
           payment_method_id = begin
             # We use limit: 10 just in case for some (wrong) reason the customer has a very high number of payment method
@@ -41,7 +43,7 @@ module PaymentProviderCustomers
       def request_options
         {
           api_key:,
-          stripe_version: "2024-09-30.acacia"
+          stripe_version: "2024-09-30.acacia" # temporarily hardcoded until Lago fixes version
         }
       end
 
