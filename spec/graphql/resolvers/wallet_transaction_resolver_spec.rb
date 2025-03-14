@@ -11,6 +11,10 @@ RSpec.describe Resolvers::WalletTransactionResolver, type: :graphql do
           status
           amount
           transactionType
+          invoice {
+            id
+            totalAmountCents
+          }
         }
       }
     GQL
@@ -22,7 +26,9 @@ RSpec.describe Resolvers::WalletTransactionResolver, type: :graphql do
   let(:wallet) { create(:wallet, customer:) }
   let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
 
-  before { wallet_transaction }
+  before do
+    wallet_transaction
+  end
 
   it "returns a single wallet transaction" do
     result = execute_graphql(
@@ -48,10 +54,17 @@ RSpec.describe Resolvers::WalletTransactionResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         query:,
-        variables: {id: wallet_transaction.id}
+        variables: {
+          id: wallet_transaction.id
+        }
       )
 
-      expect_graphql_error(result:, message: "Missing organization id")
+      pp result
+
+      expect_graphql_error(
+        result:,
+        message: "Missing organization id"
+      )
     end
   end
 
@@ -74,10 +87,15 @@ RSpec.describe Resolvers::WalletTransactionResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         query:,
-        variables: {id: "123456"}
+        variables: {
+          id: "123456"
+        }
       )
 
-      expect_graphql_error(result:, message: "Resource not found")
+      expect_graphql_error(
+        result:,
+        message: "Resource not found"
+      )
     end
   end
 end

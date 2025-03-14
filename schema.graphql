@@ -9305,6 +9305,7 @@ type WalletTransaction {
   createdAt: ISO8601DateTime!
   creditAmount: String!
   id: ID!
+  invoice: Invoice
   invoiceRequiresSuccessfulPayment: Boolean!
   metadata: [WalletTransactionMetadataObject!]
   settledAt: ISO8601DateTime

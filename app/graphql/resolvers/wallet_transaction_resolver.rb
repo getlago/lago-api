@@ -12,7 +12,7 @@ module Resolvers
     type Types::WalletTransactions::Object, null: true
 
     def resolve(id:)
-      current_organization.wallet_transactions.find(id)
+      current_organization.wallet_transactions.includes(:invoice).find(id)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "wallet_transaction")
     end
