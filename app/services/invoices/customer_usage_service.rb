@@ -174,21 +174,23 @@ module Invoices
     end
 
     # Progressively billed invoices ae created in the subscription boundaries, but because they
-    # do not have paid_in_advance charges, we can not substitute them in the usage (as billed).
+    # do not have paid_in_advance charges, we can not substitute them in the usage (as paid_in_advance_fees).
     # We need to add the credits that were progressively billed within the same boundaries
     def add_progressively_billed_usage
       progressively_billed_within_boundaries = subscription.invoice_subscriptions.where(
         from_datetime: boundaries[:from_datetime],
         to_datetime: boundaries[:to_datetime],
         invoicing_reason: "progressive_billing"
-      ).first
-      return unless progressively_billed_within_boundaries
+      )
+      return unless progressively_billed_within_boundaries.present?
 
-      already_billed_invoice = progressively_billed_within_boundaries.invoice
+      progressively_billed_within_boundaries.each do |progressively_billed_invoice_subscription|
+        already_billed_invoice = progressively_billed_invoice_subscription.invoice
 
-      # total_paid_amount_cents is used to store the total billed amount
-      invoice.total_paid_amount_cents += already_billed_invoice.total_amount_cents
-      invoice.prepaid_credit_amount_cents += already_billed_invoice.prepaid_credit_amount_cents
+        # total_paid_amount_cents is used to store the total billed amount
+        invoice.total_paid_amount_cents += already_billed_invoice.total_amount_cents
+        invoice.prepaid_credit_amount_cents += already_billed_invoice.prepaid_credit_amount_cents
+      end
     end
 
     def format_usage
