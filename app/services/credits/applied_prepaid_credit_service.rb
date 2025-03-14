@@ -15,23 +15,21 @@ module Credits
       end
 
       amount_cents = compute_amount
-      amount = compute_amount_from_cents(amount_cents)
-      credit_amount = amount.fdiv(wallet.rate_amount)
+      wallet_credit = WalletCredit.from_amount_cents(wallet:, amount_cents:)
 
       ActiveRecord::Base.transaction do
-        wallet_transaction = WalletTransaction.create!(
-          invoice:,
+        wallet_transaction = WalletTransactions::CreateService.call!(
           wallet:,
+          wallet_credit:,
+          invoice_id: invoice.id,
           transaction_type: :outbound,
-          amount:,
-          credit_amount:,
           status: :settled,
           settled_at: Time.current,
           transaction_status: :invoiced
-        )
+        ).wallet_transaction
 
         result.wallet_transaction = wallet_transaction
-        Wallets::Balance::DecreaseService.new(wallet:, credits_amount: credit_amount).call
+        Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction: wallet_transaction).call
 
         result.prepaid_credit_amount_cents = amount_cents
         invoice.prepaid_credit_amount_cents += amount_cents
@@ -55,15 +53,7 @@ module Credits
     end
 
     def compute_amount
-      return balance_cents if balance_cents <= invoice.total_amount_cents
-
-      invoice.total_amount_cents
-    end
-
-    def compute_amount_from_cents(amount)
-      currency = invoice.total_amount.currency
-
-      amount.round.fdiv(currency.subunit_to_unit)
+      [balance_cents, invoice.total_amount_cents].min
     end
   end
 end

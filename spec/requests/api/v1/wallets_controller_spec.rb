@@ -31,7 +31,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     include_examples "requires API permission", "wallet", "write"
 
     it "creates a wallet" do
-      allow(WalletTransactions::CreateService).to receive(:call!).and_call_original
+      allow(WalletTransactions::CreateFromParamsService).to receive(:call!).and_call_original
       allow(SendWebhookJob).to receive(:perform_later).and_call_original
       stub_pdf_generation
 
@@ -48,7 +48,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
 
       expect(SendWebhookJob).to have_received(:perform_later).with("wallet.created", Wallet)
 
-      expect(WalletTransactions::CreateService).to have_received(:call!).with(
+      expect(WalletTransactions::CreateFromParamsService).to have_received(:call!).with(
         organization: organization,
         params: hash_including(
           wallet_id: json[:wallet][:lago_id],

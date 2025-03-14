@@ -14,7 +14,7 @@ module Wallets
       ActiveRecord::Base.transaction do
         WalletTransactions::SettleService.new(wallet_transaction:).call
         Wallets::Balance::IncreaseService
-          .new(wallet: wallet_transaction.wallet, credits_amount: wallet_transaction.credit_amount).call
+          .new(wallet: wallet_transaction.wallet, wallet_transaction: wallet_transaction).call
       end
 
       result.wallet_transaction = wallet_transaction
