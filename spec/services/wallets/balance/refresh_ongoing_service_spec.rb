@@ -88,6 +88,28 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
       expect(refresh_service.call.wallet).to eq(wallet)
     end
 
+    context "when there are paid in advance fees" do
+      let(:third_charge) { create(:standard_charge, :pay_in_advance, plan: first_subscription.plan, billable_metric:, properties: {amount: "7"}) }
+      let(:pay_in_advance_invoice) { create(:invoice, :subscription, subscriptions: [first_subscription], organization: organization, customer: customer) }
+      let(:fee) do
+        create(:charge_fee, charge: third_charge, subscription: first_subscription,
+          organization: wallet.organization, invoice: pay_in_advance_invoice, amount_cents: 700)
+      end
+
+      before do
+        fee
+      end
+
+      it "updates wallet ongoing balance" do
+        # we've added one more fee to the first subscription, but the total usage is not changed
+        expect { refresh_service.call }
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1100)
+          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(11.0)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(-100)
+          .and change(wallet, :credits_ongoing_balance).from(8.0).to(-1.0)
+      end
+    end
+
     context "when failed to fetch taxes to calculate current usage" do
       let(:anrok_customer) { create(:anrok_customer, customer:) }
 
