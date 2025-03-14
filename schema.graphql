@@ -7311,7 +7311,7 @@ type Query {
     """
     Unique ID of the wallet transaction
     """
-    transactionId: ID!
+    id: ID!
   ): WalletTransaction
 
   """

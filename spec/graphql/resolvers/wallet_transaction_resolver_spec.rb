@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Resolvers::WalletTransactionResolver, type: :graphql do
   let(:query) do
     <<~GQL
-      query($transactionId: ID!) {
-        walletTransaction(transactionId: $transactionId) {
+      query($id: ID!) {
+        walletTransaction(id: $id) {
           id
           status
           amount
@@ -22,18 +22,14 @@ RSpec.describe Resolvers::WalletTransactionResolver, type: :graphql do
   let(:wallet) { create(:wallet, customer:) }
   let(:wallet_transaction) { create(:wallet_transaction, wallet:) }
 
-  before do
-    wallet_transaction
-  end
+  before { wallet_transaction }
 
   it "returns a single wallet transaction" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
       query:,
-      variables: {
-        transactionId: wallet_transaction.id
-      }
+      variables: {id: wallet_transaction.id}
     )
     pp result
 
@@ -52,15 +48,10 @@ RSpec.describe Resolvers::WalletTransactionResolver, type: :graphql do
       result = execute_graphql(
         current_user: membership.user,
         query:,
-        variables: {
-          transactionId: wallet_transaction.id
-        }
+        variables: {id: wallet_transaction.id}
       )
 
-      expect_graphql_error(
-        result:,
-        message: "Missing organization id"
-      )
+      expect_graphql_error(result:, message: "Missing organization id")
     end
   end
 
@@ -70,15 +61,10 @@ RSpec.describe Resolvers::WalletTransactionResolver, type: :graphql do
         current_user: membership.user,
         current_organization: create(:organization),
         query:,
-        variables: {
-          transactionId: wallet_transaction.id
-        }
+        variables: {id: wallet_transaction.id}
       )
 
-      expect_graphql_error(
-        result:,
-        message: "Not in organization"
-      )
+      expect_graphql_error(result:, message: "Not in organization")
     end
   end
 
@@ -88,15 +74,10 @@ RSpec.describe Resolvers::WalletTransactionResolver, type: :graphql do
         current_user: membership.user,
         current_organization: organization,
         query:,
-        variables: {
-          transactionId: "123456"
-        }
+        variables: {id: "123456"}
       )
 
-      expect_graphql_error(
-        result:,
-        message: "Resource not found"
-      )
+      expect_graphql_error(result:, message: "Resource not found")
     end
   end
 end

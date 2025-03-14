@@ -36997,7 +36997,7 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "transactionId",
+                  "name": "id",
                   "description": "Unique ID of the wallet transaction",
                   "type": {
                     "kind": "NON_NULL",
