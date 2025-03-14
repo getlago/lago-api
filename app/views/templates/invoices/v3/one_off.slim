@@ -426,7 +426,7 @@ html
                 td
                   .body-1 = fee.invoice_name
                   .body-3 = fee.description
-                td.body-2 = RoundingHelper.round_decimal_part(fee.units)
+                td.body-2 = fee.units
                 td.body-2 = MoneyHelper.format(fee.unit_amount)
                 td.body-2 == TaxHelper.applied_taxes(fee)
                 td.body-2 = MoneyHelper.format(fee.amount)
