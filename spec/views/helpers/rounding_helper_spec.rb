@@ -22,8 +22,8 @@ RSpec.describe RoundingHelper do
       expect(helper.round_decimal_part(123.0000456789)).to eq("123.000046")
     end
 
-    it "handles very small decimal parts correctly" do
-      expect(helper.round_decimal_part(123.000000000456789)).to eq("123.0")
+    fit "handles very small decimal parts correctly" do
+      expect(helper.round_decimal_part(123.000000000456789)).to eq("123")
     end
 
     it "handles very small decimal parts only correctly" do

@@ -17,6 +17,7 @@ class RoundingHelper
 
     # Round the decimal part
     rounded_decimal = decimal_part.round(precision)
+    return int_part.to_s if rounded_decimal == 0.0
 
     # Combine integer and rounded decimal part
     result = int_part + rounded_decimal
