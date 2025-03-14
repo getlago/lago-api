@@ -119,14 +119,17 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(wallet.ongoing_usage_balance_cents).to eq 300
         expect(wallet.credits_ongoing_usage_balance).to eq 3
       end
-
     end
   end
 
   context "with pay in advance charges and taxes" do
     let(:charge) { create(:charge, :pay_in_advance, plan: plan, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "1"}) }
     let(:tax) { create(:tax, organization: organization, rate: 10) }
-    before { charge; tax }
+
+    before do
+      charge
+      tax
+    end
 
     it "recalculates wallet's balance" do
       # Create a wallet with 100$
@@ -201,6 +204,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
     let(:usage_threshold) { create(:usage_threshold, plan: plan3, amount_cents: 200_00, recurring: true) }
 
     let(:tax) { create(:tax, organization: organization, rate: 10) }
+
     before { [charge1, charge2, charge3, usage_threshold, tax] }
 
     it "recalculates wallet's balance" do
@@ -326,6 +330,5 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(wallet.credits_ongoing_usage_balance).to eq 2.2
       end
     end
-
   end
 end

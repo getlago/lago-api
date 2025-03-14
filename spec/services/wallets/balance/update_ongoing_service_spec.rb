@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
-  subject(:update_service) { described_class.new(wallet:, total_usage_amount_cents:, pay_in_advance_usage_amount_cents:) }
+  subject(:update_service) { described_class.new(wallet:, total_usage_amount_cents:, billed_usage_amount_cents:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -21,7 +21,7 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
     )
   end
   let(:total_usage_amount_cents) { 450 }
-  let(:pay_in_advance_usage_amount_cents) { 0 }
+  let(:billed_usage_amount_cents) { 50 }
 
   before { wallet }
 
@@ -30,10 +30,10 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
       create(:invoice, :draft, customer:, organization:, total_amount_cents: 150)
 
       expect { update_service.call }
-        .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(600)
-        .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(6.0)
-        .and change(wallet, :ongoing_balance_cents).from(800).to(400)
-        .and change(wallet, :credits_ongoing_balance).from(8.0).to(4.0)
+        .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(550) # all usage + draft invoices - billed usage
+        .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(5.5)
+        .and change(wallet, :ongoing_balance_cents).from(800).to(450)
+        .and change(wallet, :credits_ongoing_balance).from(8.0).to(4.5) # balance - ongoing usage balance
         .and change(wallet, :ready_to_be_refreshed).from(true).to(false)
 
       expect(wallet).not_to be_depleted_ongoing_balance
@@ -44,10 +44,10 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
 
       it "updates wallet ongoing balance to a negative value" do
         expect { update_service.call }
-          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1500)
-          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(15)
-          .and change(wallet, :ongoing_balance_cents).from(800).to(-500)
-          .and change(wallet, :credits_ongoing_balance).from(8.0).to(-5.0)
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1450)
+          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(14.50)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(-450)
+          .and change(wallet, :credits_ongoing_balance).from(8.0).to(-4.5)
       end
 
       it "sets depleted_ongoing_balance to true" do

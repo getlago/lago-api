@@ -182,7 +182,7 @@ module Invoices
         to_datetime: boundaries[:to_datetime],
         invoicing_reason: "progressive_billing"
       )
-      return unless progressively_billed_within_boundaries.present?
+      return if progressively_billed_within_boundaries.blank?
 
       progressively_billed_within_boundaries.each do |progressively_billed_invoice_subscription|
         already_billed_invoice = progressively_billed_invoice_subscription.invoice
