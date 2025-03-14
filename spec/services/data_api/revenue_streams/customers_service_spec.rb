@@ -10,7 +10,7 @@ RSpec.describe DataApi::RevenueStreams::CustomersService, type: :service do
   let(:params) { {} }
 
   before do
-    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/customers")
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/customers/")
       .to_return(status: 200, body: body_response, headers: {})
   end
 
