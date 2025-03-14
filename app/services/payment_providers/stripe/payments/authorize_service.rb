@@ -10,6 +10,7 @@ module PaymentProviders
           @amount = amount
           @currency = currency
           @provider_customer = provider_customer
+          @payment_method_id = provider_customer.payment_method_id
           @unique_id = unique_id
           @metadata = metadata
 
@@ -17,8 +18,17 @@ module PaymentProviders
         end
 
         def call
-          unless provider_customer.payment_method_id
-            return result.single_validation_failure!(field: :payment_method_id, error_code: "customer_has_no_payment_method")
+          if payment_method_id.blank?
+            # If the customer doesn't have a payment_method_id on Lago, we check on Stripe before returning the error,
+            # because it could be that it was just added and the webhook wasn't processed yet
+            # The preauth api call requires a payment_method_id
+            latest_id = PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodService.call!(provider_customer:).payment_method_id
+
+            if latest_id
+              @payment_method_id = latest_id
+            else
+              return result.single_validation_failure!(field: :payment_method_id, error_code: "customer_has_no_payment_method")
+            end
           end
 
           pi = create_payment_intent
@@ -50,7 +60,7 @@ module PaymentProviders
                 }
               },
               customer: provider_customer.provider_customer_id,
-              payment_method: provider_customer.payment_method_id,
+              payment_method: payment_method_id,
               description: "Pre-authorization for subscription",
               metadata:,
               return_url: payment_provider.success_redirect_url,
@@ -62,12 +72,12 @@ module PaymentProviders
             {
               api_key:,
               idempotency_key: "auth-#{provider_customer.id}-#{unique_id}",
-              stripe_version: "2024-09-30.acacia"
+              stripe_version: "2024-09-30.acacia" # temporarily hardcoded until Lago fixes version
             }
           )
         end
 
-        attr_reader :amount, :currency, :provider_customer, :unique_id, :metadata
+        attr_reader :amount, :currency, :provider_customer, :payment_method_id, :unique_id, :metadata
       end
     end
   end

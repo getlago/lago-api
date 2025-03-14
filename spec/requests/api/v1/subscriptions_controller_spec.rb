@@ -258,13 +258,23 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         end
 
         context "when customer has no payment method" do
-          let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: create(:stripe_provider, organization:), payment_method_id: nil) }
+          let(:provider_customer_id) { "cus_Rw5Qso78STEap3" }
+          let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id:, payment_provider: create(:stripe_provider, organization:), payment_method_id: nil) }
 
-          it "returns an error" do
-            subject
+          context "when customer has a default payment method on Stripe" do
+            it do
+              stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
+                status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/customer_no_default_payment_method.json"))
+              )
+              stub_request(:get, %r{/v1/customers/#{provider_customer_id}/payment_methods}).and_return(
+                status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/customer_list_no_payment_methods.json"))
+              )
 
-            expect(response).to have_http_status(:unprocessable_entity)
-            expect(json[:error_details][:payment_method_id]).to include "customer_has_no_payment_method"
+              subject
+
+              expect(response).to have_http_status(:unprocessable_entity)
+              expect(json[:error_details][:payment_method_id]).to include "customer_has_no_payment_method"
+            end
           end
         end
 

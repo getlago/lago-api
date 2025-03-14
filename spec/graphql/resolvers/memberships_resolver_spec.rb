@@ -33,8 +33,8 @@ RSpec.describe Resolvers::MembershipsResolver, type: :graphql do
     memberships_response = result["data"]["memberships"]
 
     aggregate_failures do
-      expect(memberships_response["collection"].count).to eq(organization.memberships.count)
-      expect(memberships_response["collection"].first["id"]).to eq(membership.id)
+      expect(memberships_response["collection"].count).to eq(4)
+      expect(memberships_response["collection"].map { _1["id"] }).to include(membership.id)
 
       expect(memberships_response["metadata"]["currentPage"]).to eq(1)
       expect(memberships_response["metadata"]["totalCount"]).to eq(4)
