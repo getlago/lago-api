@@ -172,6 +172,110 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
+  context "when subscription is downgraded, renewed and terminated" do
+    it do
+      travel_to(DateTime.new(2024, 6, 5, 10)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: external_subscription_id,
+            plan_code: plan_upgrade.code
+          }
+        )
+        perform_billing
+        expect(customer.invoices.count).to eq(1)
+      end
+
+      initial_subscription = customer.subscriptions.sole
+      fees = []
+
+      # Create an event but keep it unpaid
+      travel_to(DateTime.new(2024, 6, 12, 10)) do
+        fees << send_card_event!("card_1")
+        expect(initial_subscription.fees.charge.where(invoice_id: nil).count).to eq(1)
+      end
+
+      downgraded_subscription = nil
+      # Upgrade the subscription (so previous one is terminated)
+      travel_to(DateTime.new(2024, 7, 7, 10)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: external_subscription_id,
+            plan_code: plan.code
+          }
+        )
+
+        downgraded_subscription = customer.subscriptions.where.not(id: initial_subscription.id).sole
+
+        expect(initial_subscription.reload).to be_active
+        expect(downgraded_subscription.reload).to be_pending
+        expect(customer.invoices.count).to eq(1) # initial sub invoice, nothing happens on downgrade
+        expect(downgraded_subscription.fees.charge.count).to eq 0
+      end
+
+      # Create an event but keep it unpaid
+      travel_to(DateTime.new(2024, 7, 22, 10)) do
+        fees << send_card_event!("card_2")
+        # one fee for each subscription
+        expect(initial_subscription.fees.charge.where(invoice_id: nil).count).to eq(2)
+        expect(downgraded_subscription.fees.charge.where(invoice_id: nil).count).to eq(0)
+      end
+
+      # It's billing day
+      travel_to(DateTime.new(2024, 8, 1, 10)) do
+        perform_billing
+
+        expect(customer.invoices.count).to eq(2) # initial + renew
+        expect(initial_subscription.reload).to be_terminated
+        expect(downgraded_subscription.reload).to be_active
+      end
+
+      # In october, both fees are finally marked as paid
+      travel_to(DateTime.new(2024, 10, 2, 10)) do
+        fees.each do |fee_id|
+          update_fee(fee_id, payment_status: :succeeded)
+        end
+      end
+
+      # In november, these fees should be added to the advance_charge invoice
+      travel_to(DateTime.new(2024, 11, 1, 10)) do
+        perform_billing
+        invoice = customer.invoices.where(invoice_type: :advance_charges).sole
+        invoice_fees = invoice.fees.order(:created_at)
+        expect(invoice_fees.count).to eq(2)
+
+        # Notice that the periods in the fees relate to the CREATION of the fees
+        expect(invoice_fees.first.properties).to eq({
+          "timestamp" => "2024-06-12T10:00:00.000Z",
+          "to_datetime" => "2024-06-30T23:59:59.999Z",
+          "from_datetime" => "2024-06-05T00:00:00.000Z",
+          "charges_duration" => 30,
+          "charges_to_datetime" => "2024-06-30T23:59:59.999Z",
+          "charges_from_datetime" => "2024-06-05T10:00:00.000Z"
+        })
+        expect(invoice_fees.second.properties).to eq({
+          "timestamp" => "2024-07-22T10:00:00.000Z",
+          "to_datetime" => "2024-07-31T23:59:59.999Z",
+          "from_datetime" => "2024-07-01T00:00:00.000Z",
+          "charges_duration" => 31,
+          "charges_to_datetime" => "2024-07-31T23:59:59.999Z",
+          "charges_from_datetime" => "2024-07-01T00:00:00.000Z"
+        })
+
+        invoice_periods = billing_periods_hash(invoice)
+        expect(invoice_periods.count).to eq(1) # only initial subscription had fees, so only on InvoiceSubscription
+        expect(invoice_periods).to all include({
+          subscription_from_datetime: "2024-10-01T00:00:00Z",
+          subscription_to_datetime: "2024-10-31T23:59:59Z",
+          charges_from_datetime: "2024-10-01T00:00:00Z",
+          charges_to_datetime: "2024-10-31T23:59:59Z",
+          invoicing_reason: "in_advance_charge_periodic"
+        })
+      end
+    end
+  end
+
   context "when subscription is upgraded but new sub has no events" do
     it do
       travel_to(DateTime.new(2024, 6, 5, 10)) do
