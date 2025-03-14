@@ -9341,6 +9341,7 @@ type WalletTransactionMetadataObject {
 }
 
 enum WalletTransactionStatusEnum {
+  failed
   pending
   settled
 }
