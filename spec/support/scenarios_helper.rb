@@ -123,6 +123,12 @@ module ScenariosHelper
     perform_all_enqueued_jobs
   end
 
+  def recalculate_wallet_balances
+    Clock::RefreshLifetimeUsagesJob.perform_later
+    Clock::RefreshWalletsOngoingBalanceJob.perform_later
+    perform_all_enqueued_jobs
+  end
+
   ### Events
 
   def create_event(params)
