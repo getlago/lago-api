@@ -19,14 +19,3 @@ table.total-table width="100%"
     td.body-2
     td.body-1 = I18n.t('invoice.total')
     td.body-1 = MoneyHelper.format(total_amount)
-  - if defined?(render_total_due_and_paid) && render_total_due_and_paid
-    tr
-      td.body-2
-      td.body-1 = I18n.t('invoice.total_due_amount')
-      td.body-1
-        = MoneyHelper.format(total_due_amount)
-    tr
-      td.body-2
-      td.body-1 = I18n.t('invoice.total_paid_amount')
-      td.body-1
-        = MoneyHelper.format(total_paid_amount)

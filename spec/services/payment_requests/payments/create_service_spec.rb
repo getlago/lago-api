@@ -87,7 +87,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
         end
       end
 
-      it "creates a payment and  calls the adyen service" do
+      it "creates a payment and calls the adyen service" do
         result = create_service.call
 
         expect(result).to be_success
@@ -119,6 +119,15 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       it "does not send a payment requested email" do
         expect { create_service.call }
           .not_to have_enqueued_mail(PaymentRequestMailer, :requested)
+      end
+
+      context "when issue_receipts_enabled is true" do
+        around { |test| lago_premium!(&test) }
+        before { organization.update!(premium_integrations: %w[issue_receipts]) }
+
+        it "enqueues a payment receipt job" do
+          expect { create_service.call }.to have_enqueued_job(PaymentReceipts::CreateJob)
+        end
       end
 
       context "when the payment fails" do
