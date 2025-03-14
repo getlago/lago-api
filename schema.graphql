@@ -4711,6 +4711,7 @@ type Invoice {
   paymentDueDate: ISO8601Date!
   paymentOverdue: Boolean!
   paymentStatus: InvoicePaymentStatusTypeEnum!
+  payments: [Payment!]
   prepaidCreditAmountCents: BigInt!
   progressiveBillingCreditAmountCents: BigInt!
   refundableAmountCents: BigInt!
@@ -7307,6 +7308,16 @@ type Query {
   ): Wallet
 
   """
+  Query a single wallet transaction
+  """
+  walletTransaction(
+    """
+    Unique ID of the wallet transaction
+    """
+    id: ID!
+  ): WalletTransaction
+
+  """
   Query wallet transactions
   """
   walletTransactions(
@@ -9296,7 +9307,9 @@ type WalletTransaction {
   amount: String!
   createdAt: ISO8601DateTime!
   creditAmount: String!
+  failedAt: ISO8601DateTime
   id: ID!
+  invoice: Invoice
   invoiceRequiresSuccessfulPayment: Boolean!
   metadata: [WalletTransactionMetadataObject!]
   settledAt: ISO8601DateTime
@@ -9333,6 +9346,7 @@ type WalletTransactionMetadataObject {
 }
 
 enum WalletTransactionStatusEnum {
+  failed
   pending
   settled
 }

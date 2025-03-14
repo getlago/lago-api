@@ -80,9 +80,9 @@ module Invoices
 
     def handle_prepaid_credits(payment_status)
       return unless invoice.invoice_type&.to_sym == :credit
-      return unless payment_status&.to_sym == :succeeded
+      return unless %i[succeeded failed].include?(payment_status.to_sym)
 
-      Invoices::PrepaidCreditJob.perform_later(invoice)
+      Invoices::PrepaidCreditJob.perform_later(invoice, payment_status)
     end
 
     def valid_metadata_count?(metadata:)

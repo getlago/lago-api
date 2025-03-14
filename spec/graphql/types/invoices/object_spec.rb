@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Types::Invoices::Object do
   subject { described_class }
 
-  it do
+  it "has the expected fields with correct types" do
     expect(subject).to have_field(:customer).of_type("Customer!")
 
     expect(subject).to have_field(:id).of_type("ID!")
@@ -64,5 +64,6 @@ RSpec.describe Types::Invoices::Object do
     expect(subject).to have_field(:integration_hubspot_syncable).of_type("Boolean!")
     expect(subject).to have_field(:integration_salesforce_syncable).of_type("Boolean!")
     expect(subject).to have_field(:integration_syncable).of_type("Boolean!")
+    expect(subject).to have_field(:payments).of_type("[Payment!]")
   end
 end

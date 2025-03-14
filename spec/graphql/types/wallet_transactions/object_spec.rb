@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Types::WalletTransactions::Object do
   subject { described_class }
 
-  it do
+  it "has the expected fields with correct types" do
     expect(subject).to have_field(:wallet).of_type("Wallet")
 
     expect(subject).to have_field(:amount).of_type("String!")
@@ -16,8 +16,11 @@ RSpec.describe Types::WalletTransactions::Object do
     expect(subject).to have_field(:transaction_type).of_type("WalletTransactionTransactionTypeEnum!")
 
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
+    expect(subject).to have_field(:failed_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:settled_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
+
     expect(subject).to have_field(:metadata).of_type("[WalletTransactionMetadataObject!]")
+    expect(subject).to have_field(:invoice).of_type("Invoice")
   end
 end
