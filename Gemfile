@@ -117,6 +117,7 @@ group :development, :test do
   gem "rubocop-rspec", require: false
   gem "rubocop-thread_safety", require: false
   gem "awesome_print"
+  gem "pry"
 end
 
 group :test do
