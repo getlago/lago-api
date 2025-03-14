@@ -4,10 +4,11 @@ module Invoices
   class CreateAdvanceChargesInvoiceSubscriptionService < BaseService
     Result = BaseResult
 
-    def initialize(invoice:, timestamp:, subscriptions:)
+    def initialize(invoice:, timestamp:, subscriptions_with_fees:, all_subscriptions:)
       @invoice = invoice
       @timestamp = timestamp
-      @subscriptions = subscriptions
+      @subscriptions_with_fees = subscriptions_with_fees
+      @all_subscriptions = all_subscriptions
 
       super
     end
@@ -16,10 +17,10 @@ module Invoices
     # we apply the `charges_(from|to)_date for both charges and subscriptions period
     # See https://github.com/getlago/lago-api/pull/3327 for details
     def call
-      latest_subscription = subscriptions.max_by(&:started_at)
+      latest_subscription = all_subscriptions.max_by(&:started_at)
       boundaries = calculate_boundaries(latest_subscription)
 
-      subscriptions.each do |subscription|
+      subscriptions_with_fees.each do |subscription|
         invoice.invoice_subscriptions << InvoiceSubscription.create!(
           invoice:,
           subscription:,
@@ -38,7 +39,7 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :timestamp, :subscriptions
+    attr_reader :invoice, :timestamp, :subscriptions_with_fees, :all_subscriptions
 
     def calculate_boundaries(subscription)
       date_service = Subscriptions::DatesService.new_instance(subscription, timestamp, current_usage: false)

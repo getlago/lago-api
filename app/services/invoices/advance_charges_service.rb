@@ -114,7 +114,12 @@ module Invoices
         datetime: billing_at, # this is an int we need to convert it
         skip_charges: true
       ) do |invoice|
-        Invoices::CreateAdvanceChargesInvoiceSubscriptionService.call!(invoice:, subscriptions:, timestamp: billing_at)
+        Invoices::CreateAdvanceChargesInvoiceSubscriptionService.call!(
+          invoice:,
+          subscriptions_with_fees: subscriptions,
+          all_subscriptions: subscriptions + initial_subscriptions,
+          timestamp: billing_at
+        )
       end
 
       invoice_result.raise_if_error!
