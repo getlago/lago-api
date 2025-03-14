@@ -30,7 +30,8 @@ RSpec.describe WalletCredit do
 
     describe "#credit_amount" do
       it "returns the credit_amount" do
-        expect(subject.credit_amount).to eq(credit_amount)
+        # The 1034 is rounded down as we cannot represent it in this currency
+        expect(subject.credit_amount).to eq(1030)
       end
     end
 

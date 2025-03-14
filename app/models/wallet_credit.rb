@@ -13,13 +13,12 @@ class WalletCredit
   # we'll assume you construct this normally for a wallet and a credit amount
   def initialize(wallet:, credit_amount:)
     @wallet = wallet
-    @credit_amount = credit_amount
-  end
 
-  def amount
+    # Here we convert to amount, round to the currency and then convert back to credits
     currency = wallet.currency_for_balance
-    (credit_amount * wallet.rate_amount).round(currency.exponent)
+    @amount = (credit_amount * wallet.rate_amount).round(currency.exponent)
+    @credit_amount = amount.fdiv(wallet.rate_amount)
   end
 
-  attr_reader :wallet, :credit_amount
+  attr_reader :wallet, :credit_amount, :amount
 end
