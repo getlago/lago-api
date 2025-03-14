@@ -331,4 +331,131 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
       end
     end
   end
+
+  context "with multiple threshold usages set on plan" do
+    let(:plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
+    let(:charge) { create(:charge, plan: plan, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "10"}) }
+    let(:usage_threshold) { create(:usage_threshold, plan: plan, amount_cents: 200_00, recurring: false) }
+    let(:usage_threshold2) { create(:usage_threshold, plan: plan, amount_cents: 500_00, recurring: false) }
+    let(:usage_threshold3) { create(:usage_threshold, plan: plan, amount_cents: 200_00, recurring: true) }
+
+    let(:tax) { create(:tax, organization: organization, rate: 10) }
+
+    before { [charge, usage_threshold, usage_threshold2, usage_threshold3, tax] }
+
+    it "recalculates wallet's balance" do
+      # Create a wallet with 1000$
+      create_wallet({
+        external_customer_id: customer.external_id,
+        rate_amount: "10",
+        name: "Wallet1",
+        currency: "EUR",
+        granted_credits: "100",
+        invoice_requires_successful_payment: false # default
+      })
+      wallet = customer.reload.wallets.sole
+      expect(wallet.credits_balance).to eq 100
+      expect(wallet.balance_cents).to eq 1000_00
+      expect(wallet.ongoing_balance_cents).to eq 1000_00
+      expect(wallet.ongoing_usage_balance_cents).to eq 0
+      expect(wallet.credits_ongoing_usage_balance).to eq 0
+
+      # create all subscriptions
+      time_0 = DateTime.new(2022, 12, 1)
+      travel_to time_0 do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: customer.external_id + "1",
+            plan_code: plan.code
+          }
+        )
+      end
+      subscription = customer.subscriptions.where(plan_id: plan.id).first
+
+      # ingest first events - no thresholds triggered
+      # units = 10
+      # total = 10 * 10 = 100 + 10% tax = 110
+      travel_to time_0 + 5.days do
+        ingest_event(subscription, 10)
+        expect(customer.invoices.count).to eq(0)
+        recalculate_wallet_balances
+        wallet.reload
+        # wallet balance in cents = 1000
+        # ongoing balance in cents = 1000 - 110 = 890
+        expect(wallet.credits_balance).to eq 100
+        expect(wallet.balance_cents).to eq 1000_00
+        expect(wallet.ongoing_balance_cents).to eq 890_00
+        expect(wallet.credits_ongoing_balance).to eq 89.0
+        expect(wallet.ongoing_usage_balance_cents).to eq 110_00
+        expect(wallet.credits_ongoing_usage_balance).to eq 11.0
+      end
+
+      # ingest second events that would trigger first threshold
+      # units = 10
+      # total = 10 * 10 = 100 + 10% tax = 110 - this time the progressive billing threshold is reached
+      travel_to time_0 + 10.days do
+        ingest_event(subscription, 10)
+        perform_usage_update
+        expect(customer.invoices.count).to eq(1)
+        expect(subscription.invoices.count).to eq(1)
+        expect(subscription.invoices.first.sub_total_including_taxes_amount_cents).to eq(220_00)
+        # we need to force refreshing wallets, because the threshold usage is not recalculated
+        customer.flag_wallets_for_refresh
+        recalculate_wallet_balances
+        wallet.reload
+        # wallet balance in cents = 1000 - 220 = 780
+        # ongoing balance in cents = 780
+        expect(wallet.credits_balance).to eq 78
+        expect(wallet.balance_cents).to eq 780_00
+        expect(wallet.ongoing_balance_cents).to eq 780_00
+        expect(wallet.credits_ongoing_balance).to eq 78.0
+        expect(wallet.ongoing_usage_balance_cents).to eq 0
+        expect(wallet.credits_ongoing_usage_balance).to eq 0
+      end
+
+      # ingest third event only reaching the recurring threshold
+      # units = 20
+      # sub3 total = 10 * 20 = 200 + 10% tax = 330 - second threshold is reached
+      travel_to time_0 + 15.days do
+        ingest_event(subscription, 30)
+        perform_usage_update
+        expect(customer.invoices.count).to eq(2)
+        expect(subscription.invoices.count).to eq(2)
+        expect(subscription.invoices.order(created_at: :asc).last.sub_total_including_taxes_amount_cents).to eq(330_00)
+        # we need to force refreshing wallets, because the threshold usage is not recalculated
+        customer.flag_wallets_for_refresh
+        recalculate_wallet_balances
+        wallet.reload
+        # wallet balance in cents = 780 - 330 = 450
+        # ongoing balance in cents = 450
+        expect(wallet.credits_balance).to eq 45
+        expect(wallet.balance_cents).to eq 450_00
+        expect(wallet.ongoing_balance_cents).to eq 450_00
+        expect(wallet.credits_ongoing_balance).to eq 45
+        expect(wallet.ongoing_usage_balance_cents).to eq 0
+        expect(wallet.credits_ongoing_usage_balance).to eq 0
+      end
+
+      # recurring threshold is reached
+      travel_to time_0 + 20.days do
+        ingest_event(subscription, 20)
+        perform_usage_update
+        expect(subscription.invoices.count).to eq(3)
+        expect(subscription.invoices.order(created_at: :asc).last.sub_total_including_taxes_amount_cents).to eq(220_00)
+        # we need to force refreshing wallets, because the threshold usage is not recalculated
+        customer.flag_wallets_for_refresh
+        recalculate_wallet_balances
+        wallet.reload
+        # wallet balance in cents = 450 - 220 = 230
+        # ongoing balance in cents = 230
+        expect(wallet.credits_balance).to eq 23
+        expect(wallet.balance_cents).to eq 230_00
+        expect(wallet.ongoing_balance_cents).to eq 230_00
+        expect(wallet.credits_ongoing_balance).to eq 23
+        expect(wallet.ongoing_usage_balance_cents).to eq 0
+        expect(wallet.credits_ongoing_usage_balance).to eq 0
+      end
+    end
+  end
 end
