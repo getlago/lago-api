@@ -5,8 +5,9 @@ require "rails_helper"
 RSpec.describe Customers::CreateFromApiService, type: :service do
   subject(:result) { described_class.call(organization:, params: create_args) }
 
+  let(:billing_entity) { create :billing_entity }
+  let(:organization) { billing_entity.organization }
   let(:membership) { create(:membership, organization:) }
-  let(:organization) { create(:organization) }
   let(:external_id) { SecureRandom.uuid }
 
   let(:create_args) do
@@ -67,6 +68,11 @@ RSpec.describe Customers::CreateFromApiService, type: :service do
     expect(customer.shipping_country).to eq(shipping_address[:country])
   end
 
+  it "creates customer with the default billing entity" do
+    expect(result).to be_success
+    expect(result.customer.billing_entity).to eq(billing_entity)
+  end
+
   it "creates customer with correctly persisted attributes" do
     expect(result).to be_success
 
@@ -88,6 +94,34 @@ RSpec.describe Customers::CreateFromApiService, type: :service do
     customer = result.customer
 
     expect(SendWebhookJob).to have_received(:perform_later).with("customer.created", customer)
+  end
+
+  context "when organization has multiple billing entities" do
+    let(:billing_entity_2) { create(:billing_entity, organization:) }
+
+    before { billing_entity_2 }
+
+    it "fails" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::NotFoundFailure)
+      expect(result.error.error_code).to eq("billing_entity_not_found")
+    end
+
+    context "with billing_entity_code" do
+      let(:create_args) do
+        {
+          external_id:,
+          name: "Foo Bar",
+          currency: "EUR",
+          billing_entity_code: billing_entity_2.code
+        }
+      end
+
+      it "creates a new customer" do
+        expect(result).to be_success
+        expect(result.customer.billing_entity).to eq(billing_entity_2)
+      end
+    end
   end
 
   context "with account_type 'partner'" do
@@ -143,6 +177,43 @@ RSpec.describe Customers::CreateFromApiService, type: :service do
       customers = organization.customers.with_discarded
       expect(customers.count).to eq(2)
       expect(customers.pluck(:external_id).uniq).to eq([external_id])
+    end
+  end
+
+  context "with an external_id already in use in a different billing entity" do
+    let(:customer) do
+      create(:customer, organization:, billing_entity: billing_entity_2, external_id:)
+    end
+
+    let(:billing_entity_2) { create(:billing_entity, organization:) }
+
+    let(:create_args) do
+      {
+        external_id:,
+        name: "Foo Bar",
+        currency: "EUR",
+        billing_entity_code: billing_entity.code
+      }
+    end
+
+    before { customer }
+
+    it "updates the billing_entity of the customer" do
+      expect(result).to be_success
+      expect(result.customer).to eq(customer)
+      expect(result.customer.billing_entity).to eq(billing_entity)
+    end
+
+    context "when the customer already has an invoice" do
+      before do
+        create(:invoice, customer: customer)
+      end
+
+      it "does not update the billing_entity of the customer" do
+        expect(result).to be_success
+        expect(result.customer).to eq(customer)
+        expect(result.customer.billing_entity).to eq(billing_entity_2)
+      end
     end
   end
 
@@ -671,6 +742,7 @@ RSpec.describe Customers::CreateFromApiService, type: :service do
         create(
           :customer,
           organization:,
+          billing_entity:,
           external_id: create_args[:external_id],
           email: "foo@bar.com",
           payment_provider_code: nil,
@@ -808,6 +880,7 @@ RSpec.describe Customers::CreateFromApiService, type: :service do
         create(
           :customer,
           organization:,
+          billing_entity:,
           external_id: create_args[:external_id],
           payment_provider: nil,
           payment_provider_code: nil,
