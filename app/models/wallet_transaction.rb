@@ -42,6 +42,10 @@ class WalletTransaction < ApplicationRecord
   def amount_cents
     amount * wallet.currency_for_balance.subunit_to_unit
   end
+
+  def unit_amount_cents
+    wallet.rate_amount * wallet.currency_for_balance.subunit_to_unit
+  end
 end
 
 # == Schema Information

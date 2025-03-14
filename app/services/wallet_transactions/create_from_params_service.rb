@@ -106,7 +106,7 @@ module WalletTransactions
 
         Wallets::Balance::IncreaseService.new(
           wallet:,
-          credits_amount:,
+          wallet_transaction:,
           reset_consumed_credits:
         ).call
 
