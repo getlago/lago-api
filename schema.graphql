@@ -7305,6 +7305,16 @@ type Query {
   ): Wallet
 
   """
+  Query a single wallet transaction
+  """
+  walletTransaction(
+    """
+    Unique ID of the wallet transaction
+    """
+    transactionId: ID!
+  ): WalletTransaction
+
+  """
   Query wallet transactions
   """
   walletTransactions(
