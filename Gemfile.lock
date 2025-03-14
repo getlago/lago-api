@@ -988,6 +988,7 @@ DEPENDENCIES
   paper_trail
   parallel
   pg
+  pry
   puma (~> 6.5)
   rack-cors
   rails (~> 7.2)
