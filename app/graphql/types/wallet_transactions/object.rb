@@ -16,6 +16,7 @@ module Types
       field :transaction_type, Types::WalletTransactions::TransactionTypeEnum, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :metadata, [Types::WalletTransactions::MetadataObject], null: true
       field :settled_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
     end

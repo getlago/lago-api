@@ -15,6 +15,7 @@ module Mutations
 
       argument :granted_credits, String, required: false
       argument :invoice_requires_successful_payment, Boolean, required: false
+      argument :metadata, [Types::WalletTransactions::MetadataInput], required: false
       argument :paid_credits, String, required: false
       argument :voided_credits, String, required: false
 
