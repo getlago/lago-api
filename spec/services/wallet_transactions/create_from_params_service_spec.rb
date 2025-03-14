@@ -15,12 +15,14 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
       :wallet,
       customer:,
       currency:,
+      rate_amount:,
       balance_cents: 1000,
       credits_balance: 10.0,
       ongoing_balance_cents: 1000,
       credits_ongoing_balance: 10.0
     )
   end
+  let(:rate_amount) { 1 }
 
   before do
     subscription
@@ -120,18 +122,40 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
 
       it "creates wallet transaction with rounded value" do
         result = create_service
-        expect(result.wallet_transactions.first.credit_amount).to eq(4.39999)
+        expect(result.wallet_transactions.first.credit_amount).to eq(4.40)
         expect(result.wallet_transactions.first.amount).to eq(4.40)
       end
     end
 
-    context "with decimal value and currency without digits" do
+    context "with decimal value and small rate amount" do
       let(:paid_credits) { "4.399999" }
+      let(:rate_amount) { 0.01 }
+
+      it "creates wallet transaction with rounded value" do
+        result = create_service
+        expect(result.wallet_transactions.first.credit_amount).to eq(4)
+        expect(result.wallet_transactions.first.amount).to eq(0.04)
+      end
+    end
+
+    context "with decimal value and large rate amount" do
+      let(:paid_credits) { "4.3789" }
+      let(:rate_amount) { 100 }
+
+      it "creates wallet transaction with rounded value" do
+        result = create_service
+        expect(result.wallet_transactions.first.credit_amount).to eq(4.3789)
+        expect(result.wallet_transactions.first.amount).to eq(437.89)
+      end
+    end
+
+    context "with decimal value and currency without digits" do
+      let(:paid_credits) { "4.39999" }
       let(:currency) { "JPY" }
 
       it "creates wallet transaction with rounded value" do
         result = create_service
-        expect(result.wallet_transactions.first.credit_amount).to eq(4.39999)
+        expect(result.wallet_transactions.first.credit_amount).to eq(4)
         expect(result.wallet_transactions.first.amount).to eq(4)
       end
     end
