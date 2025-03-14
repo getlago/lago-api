@@ -1,7 +1,7 @@
 / Fee per unit
 tr.details
   td.body-2 = I18n.t('invoice.volume.fee_per_unit')
-  td.body-2 = units.round(Fee::UNITS_ROUNDING_PRECISION)
+  td.body-2 = RoundingHelper.round_decimal_part(units)
   td.body-2 = MoneyHelper.format_with_precision(BigDecimal(amount_details['per_unit_amount']), amount_currency)
   td.body-2 == TaxHelper.applied_taxes(self)
   td.body-2 = MoneyHelper.format(amount_details['per_unit_total_amount'].to_money(amount_currency))
