@@ -101,10 +101,10 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
 
     before { billing_entity_2 }
 
-    it "fails" do
-      expect(result).to be_failure
-      expect(result.error).to be_a(BaseService::NotFoundFailure)
-      expect(result.error.error_code).to eq("billing_entity_not_found")
+    it "creates a customer assigned to the organization's default billing entity" do
+      expect(result).to be_success
+      expect(result.customer.billing_entity).to be_present
+      expect(result.customer.billing_entity).to eq(organization.default_billing_entity)
     end
 
     context "with billing_entity_code" do
