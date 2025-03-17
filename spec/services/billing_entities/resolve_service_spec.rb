@@ -5,6 +5,36 @@ RSpec.describe BillingEntities::ResolveService do
 
   let(:organization) { create(:organization) }
 
+  context "when organiztaion has no active billing entity" do
+    let(:billing_entity_code) { organization.billing_entities.first.code }
+
+    before do
+      organization.billing_entities.update_all(archived_at: Time.current)
+    end
+
+    it "returns not found failure" do
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::NotFoundFailure)
+      expect(result.error.error_code).to eq("billing_entity_not_found")
+    end
+  end
+
+  context "when billing_entity_code is not provided" do
+    let(:billing_entity_code) { nil }
+
+    let(:billing_entities) { create_list(:billing_entity, 3, organization:) }
+
+    before do
+      billing_entities
+      organization.billing_entities.first.discard!
+    end
+
+    it "returns organization's default billing entity" do
+      expect(result).to be_success
+      expect(result.billing_entity).to eq(organization.default_billing_entity)
+    end
+  end
+
   context "when billing_entity_code is provided" do
     let(:billing_entity_code) { "123" }
 
@@ -28,48 +58,6 @@ RSpec.describe BillingEntities::ResolveService do
       it "returns billing entity" do
         expect(result).to be_success
         expect(result.billing_entity).to eq(billing_entity_2)
-      end
-    end
-  end
-
-  context "when billing_entity_code is not provided" do
-    let(:billing_entity_code) { nil }
-
-    context "when there is no active billing entity" do
-      before do
-        organization.billing_entities.first.update!(archived_at: Time.current)
-      end
-
-      it "returns not found failure" do
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(result.error.error_code).to eq("billing_entity_not_found")
-      end
-    end
-
-    context "when there is one active billing entity" do
-      let(:billing_entity) { create(:billing_entity, organization:) }
-
-      before do
-        organization.billing_entities.first.discard!
-        billing_entity
-      end
-
-      it "returns billing entity" do
-        expect(result).to be_success
-        expect(result.billing_entity).to eq(billing_entity)
-      end
-    end
-
-    context "when there are multiple active billing entities" do
-      let(:billing_entities) { create_list(:billing_entity, 2, organization:) }
-
-      before { billing_entities }
-
-      it "returns not found failure" do
-        expect(result).to be_failure
-        expect(result.error).to be_a(BaseService::NotFoundFailure)
-        expect(result.error.error_code).to eq("billing_entity_not_found")
       end
     end
   end
