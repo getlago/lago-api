@@ -49,6 +49,13 @@ class KarafkaApp < Karafka::App
 
           dead_letter_queue(topic: "unprocessed_events", max_retries: 1, independent: true, dispatch_method: :produce_sync)
         end
+
+        topic ENV["LAGO_KAFKA_REFRESHED_SUBSCRIPTIONS_TOPIC"] do
+          consumer FlagRefreshedSubscriptionsConsumer
+
+          # TODO
+          dead_letter_queue(topic: "unprocessed_refreshed", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+        end
       end
     end
   end
