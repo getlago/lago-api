@@ -9,6 +9,7 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
     create(
       :wallet,
       customer:,
+      depleted_ongoing_balance:,
       balance_cents: 1000,
       ongoing_balance_cents: 800,
       ongoing_usage_balance_cents: 200,
@@ -18,8 +19,8 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
     )
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:depleted_ongoing_balance) { false }
+  let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:first_subscription) do
     create(:subscription, organization:, customer:, started_at: Time.zone.now - 2.years)
@@ -107,6 +108,53 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
           .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(11.0)
           .and change(wallet, :ongoing_balance_cents).from(800).to(-100)
           .and change(wallet, :credits_ongoing_balance).from(8.0).to(-1.0)
+      end
+    end
+
+    context "when there is a progressive billing invoice" do
+      let(:invoice_type) { :progressive_billing }
+      let(:timestamp) { Time.current }
+      let(:charges_to_datetime) { timestamp + 1.week }
+      let(:charges_from_datetime) { timestamp - 1.week }
+      let(:invoice_subscription) { create(:invoice_subscription, subscription: first_subscription, charges_from_datetime:, charges_to_datetime:) }
+      let(:invoice) { invoice_subscription.invoice }
+
+      before do
+        invoice.update!(invoice_type:, fees_amount_cents: 100, total_amount_cents: 100)
+      end
+
+      it "deducts progressively_billed amount from the ongoing usage" do
+        expect { refresh_service.call }
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1000)
+          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(10.0)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(0)
+          .and change(wallet, :credits_ongoing_balance).from(8.0).to(0)
+      end
+    end
+
+    context "when recalculated ongoing balance is less than 0" do
+      before do
+        allow(Wallets::Balance::UpdateOngoingService).to receive(:call).and_call_original
+      end
+
+      context "when wallet is not depleted" do
+        it "sends update params with depleted_ongoing_balance set to true" do
+          refresh_service.call
+
+          expect(Wallets::Balance::UpdateOngoingService).to have_received(:call)
+            .with(wallet: wallet, update_params: hash_including(depleted_ongoing_balance: true))
+        end
+      end
+
+      context "when wallet is depleted before the update" do
+        let(:depleted_ongoing_balance) { true }
+
+        it "doesn't send update params with depleted_ongoing_balance set to true" do
+          refresh_service.call
+
+          expect(Wallets::Balance::UpdateOngoingService).to have_received(:call)
+            .with(wallet: wallet, update_params: hash_excluding(:depleted_ongoing_balance))
+        end
       end
     end
 

@@ -276,45 +276,5 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
         expect(result.error.code).to eq("no_active_subscription")
       end
     end
-
-    context "when there are multiple progressive billing invoices in current billing period" do
-      let(:progressive_billing_invoice1) do
-        create(
-          :invoice, :subscription,
-          subscriptions: [subscription],
-          organization: organization,
-          customer: customer,
-          invoice_type: :progressive_billing,
-          total_amount_cents: 1000, # how much customer actually have to pay
-          prepaid_credit_amount_cents: 2000 # how much was paid by coupons
-        )
-      end
-      let(:progressive_billing_invoice2) do
-        create(
-          :invoice, :subscription,
-          subscriptions: [subscription],
-          organization: organization,
-          customer: customer,
-          invoice_type: :progressive_billing,
-          total_amount_cents: 5000 # how much customer actually have to pay
-        )
-      end
-
-      before do
-        progressive_billing_invoice1
-        progressive_billing_invoice1.invoice_subscriptions.first.update(invoicing_reason: "progressive_billing")
-        progressive_billing_invoice2
-        progressive_billing_invoice2.invoice_subscriptions.first.update(invoicing_reason: "progressive_billing")
-      end
-
-      it "returns the progressive billing invoices values calculated" do
-        result = usage_service.call
-
-        expect(result).to be_success
-        expect(result.invoice).to be_a(Invoice)
-        expect(result.invoice.total_paid_amount_cents).to eq(6000)
-        expect(result.invoice.prepaid_credit_amount_cents).to eq(2000)
-      end
-    end
   end
 end

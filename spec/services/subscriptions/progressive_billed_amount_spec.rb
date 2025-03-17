@@ -18,6 +18,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
     it "returns 0" do
       result = service.call
       expect(result.progressive_billed_amount).to be_zero
+      expect(result.total_billed_amount_cents).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
       expect(result.to_credit_amount).to be_zero
     end
@@ -29,12 +30,13 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
     let(:other_invoice) { invoice_subscription.invoice }
 
     before do
-      other_invoice.update!(invoice_type:, fees_amount_cents: 20)
+      other_invoice.update!(invoice_type:, fees_amount_cents: 20, total_amount_cents: 20)
     end
 
     it "returns 0" do
       result = service.call
       expect(result.progressive_billed_amount).to be_zero
+      expect(result.total_billed_amount_cents).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
       expect(result.to_credit_amount).to be_zero
     end
@@ -45,12 +47,13 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
     let(:invoice) { invoice_subscription.invoice }
 
     before do
-      invoice.update!(invoice_type:, fees_amount_cents: 20)
+      invoice.update!(invoice_type:, fees_amount_cents: 20, total_amount_cents: 20)
     end
 
     it "returns the fees_amount_cents from that invoice" do
       result = service.call
       expect(result.progressive_billed_amount).to eq(20)
+      expect(result.total_billed_amount_cents).to eq(20)
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.to_credit_amount).to eq(20)
     end
@@ -61,12 +64,13 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
     let(:invoice) { invoice_subscription.invoice }
 
     before do
-      invoice.update!(invoice_type:, status: :failed, fees_amount_cents: 20)
+      invoice.update!(invoice_type:, status: :failed, fees_amount_cents: 20, prepaid_credit_amount_cents: 20)
     end
 
     it "returns the fees_amount_cents from that invoice" do
       result = service.call
       expect(result.progressive_billed_amount).to eq(20)
+      expect(result.total_billed_amount_cents).to eq(20)
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.to_credit_amount).to eq(20)
     end
@@ -79,12 +83,13 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
     let(:invoice) { invoice_subscription.invoice }
 
     before do
-      invoice.update!(invoice_type:, fees_amount_cents: 20)
+      invoice.update!(invoice_type:, fees_amount_cents: 20, prepaid_credit_amount_cents: 20)
     end
 
     it "returns 0" do
       result = service.call
       expect(result.progressive_billed_amount).to be_zero
+      expect(result.total_billed_amount_cents).to be_zero
       expect(result.progressive_billing_invoice).to be_nil
       expect(result.to_credit_amount).to be_zero
     end
@@ -97,13 +102,14 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
     let(:invoice2) { invoice_subscription2.invoice }
 
     before do
-      invoice.update!(invoice_type:, issuing_date: timestamp - 2.days, fees_amount_cents: 20)
-      invoice2.update!(invoice_type:, issuing_date: timestamp - 1.day, fees_amount_cents: 40)
+      invoice.update!(invoice_type:, issuing_date: timestamp - 2.days, fees_amount_cents: 20, total_amount_cents: 0, prepaid_credit_amount_cents: 20)
+      invoice2.update!(invoice_type:, issuing_date: timestamp - 1.day, fees_amount_cents: 40, total_amount_cents: 10, prepaid_credit_amount_cents: 10)
     end
 
     it "returns the last issued invoice fees_amount_cents" do
       result = service.call
       expect(result.progressive_billed_amount).to eq(40)
+      expect(result.total_billed_amount_cents).to eq(40)
       expect(result.progressive_billing_invoice).to eq(invoice2)
       expect(result.to_credit_amount).to eq(40)
     end
