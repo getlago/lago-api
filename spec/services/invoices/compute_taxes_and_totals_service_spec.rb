@@ -102,6 +102,24 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
           expect(invoice.reload.tax_status).to eq("pending")
         end
       end
+
+      context "when there is no fees" do
+        let(:fee_subscription) { nil }
+        let(:fee_charge) { nil }
+        let(:result) { BaseService::Result.new }
+
+        before do
+          allow(Invoices::ComputeAmountsFromFees).to receive(:call)
+            .with(invoice:)
+            .and_return(result)
+        end
+
+        it "skips tax provider flow" do
+          totals_service.call
+
+          expect(Invoices::ComputeAmountsFromFees).to have_received(:call)
+        end
+      end
     end
 
     context "when there is NO tax provider" do

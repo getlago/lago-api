@@ -47,9 +47,39 @@ RSpec.describe Mutations::Invoices::Finalize, type: :graphql do
   context "with tax provider" do
     let(:integration) { create(:anrok_integration, organization:) }
     let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+    let(:timestamp) { Time.zone.now.beginning_of_month }
+    let(:subscription) do
+      create(
+        :subscription,
+        customer:,
+        subscription_at: Time.current - 3.months,
+        started_at: Time.current - 3.months,
+        created_at: Time.current - 3.months
+      )
+    end
+    let(:date_service) do
+      Subscriptions::DatesService.new_instance(
+        subscription,
+        Time.zone.at(timestamp),
+        current_usage: false
+      )
+    end
+    let(:invoice_subscription) do
+      create(
+        :invoice_subscription,
+        subscription:,
+        invoice:,
+        timestamp:,
+        from_datetime: date_service.from_datetime,
+        to_datetime: date_service.to_datetime,
+        charges_from_datetime: date_service.charges_from_datetime,
+        charges_to_datetime: date_service.charges_to_datetime
+      )
+    end
 
     before do
       integration_customer
+      invoice_subscription
     end
 
     it "returns pending invoice" do

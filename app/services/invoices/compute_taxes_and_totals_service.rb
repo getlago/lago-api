@@ -12,7 +12,7 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
 
-      if customer_provider_taxation?
+      if customer_provider_taxation? && invoice.fees.any?
         invoice.status = "pending" if finalizing
         invoice.tax_status = "pending"
         invoice.save!

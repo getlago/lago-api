@@ -29,7 +29,7 @@ module Invoices
         invoice.fees_amount_cents - invoice.progressive_billing_credit_amount_cents - invoice.coupons_amount_cents
       )
 
-      taxes_result = if customer_provider_taxation?
+      taxes_result = if customer_provider_taxation? && invoice.fees.any?
         Invoices::ApplyProviderTaxesService.call(invoice:, provider_taxes:)
       else
         Invoices::ApplyTaxesService.call(invoice:)

@@ -7,6 +7,7 @@ module Invoices
 
       retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
       retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 6
+      retry_on OpenSSL::SSL::SSLError, wait: :polynomially_longer, attempts: 6
       retry_on Net::ReadTimeout, wait: :polynomially_longer, attempts: 6
 
       def perform(invoice:)
