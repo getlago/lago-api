@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Customers
-  # Creates or updates a customer from an API request
-  class CreateFromApiService < BaseService
+  # Upsert (creates or updates) a customer from an API request
+  class UpsertFromApiService < BaseService
     include Customers::PaymentProviderFinder
 
     Result = BaseResult[:customer]

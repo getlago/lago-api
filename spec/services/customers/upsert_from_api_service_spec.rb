@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Customers::CreateFromApiService, type: :service do
+RSpec.describe Customers::UpsertFromApiService, type: :service do
   subject(:result) { described_class.call(organization:, params: create_args) }
 
   let(:billing_entity) { create :billing_entity }
