@@ -4,7 +4,7 @@ module Api
   module V1
     class CustomersController < Api::BaseController
       def create
-        result = ::Customers::CreateFromApiService.call(
+        result = ::Customers::UpsertFromApiService.call(
           organization: current_organization,
           params: create_params.to_h.deep_symbolize_keys
         )
