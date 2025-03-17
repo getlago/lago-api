@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Customers
+  # Creates or updates a customer from an API request
   class CreateFromApiService < BaseService
     include Customers::PaymentProviderFinder
 
