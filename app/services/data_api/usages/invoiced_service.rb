@@ -17,7 +17,7 @@ module DataApi
       private
 
       def action_path
-        "usages/#{organization.id}/invoiced"
+        "usages/#{organization.id}/invoiced/"
       end
     end
   end
