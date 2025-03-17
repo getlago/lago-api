@@ -9,7 +9,7 @@ RSpec.describe BillingEntities::ResolveService do
     let(:billing_entity_code) { organization.billing_entities.first.code }
 
     before do
-      organization.billing_entities.update_all(archived_at: Time.current)
+      organization.billing_entities.update_all(archived_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
 
     it "returns not found failure" do
