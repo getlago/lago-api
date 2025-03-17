@@ -9,47 +9,56 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
   let(:organization) { create(:organization) }
 
   let(:event_json) do
-    path = Rails.root.join("spec/fixtures/stripe/#{fixtures_filename}")
+    path = Rails.root.join("spec/fixtures/stripe/webhooks/payment_intent_succeeded-#{fixtures_version}.json")
     File.read(path)
   end
 
-  context "when payment intent event" do
-    let(:fixtures_filename) { "payment_intent_event.json" }
+  ["2020-08-27", "2022-11-15", "2024-09-30.acacia"].each do |fixtures_version|
+    context "when payment intent event (api_version: #{fixtures_version})" do
+      let(:fixtures_version) { fixtures_version }
 
-    it "updates the payment status and save the payment method" do
-      expect_any_instance_of(Invoices::Payments::StripeService).to receive(:update_payment_status) # rubocop:disable RSpec/AnyInstance
-        .with(
-          organization_id: organization.id,
-          status: "succeeded",
-          stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
-            id: "pi_3Qu0oXQ8iJWBZFaM2cc2RG6D",
+      it "updates the payment status and save the payment method" do
+        expect_any_instance_of(Invoices::Payments::StripeService).to receive(:update_payment_status) # rubocop:disable RSpec/AnyInstance
+          .with(
+            organization_id: organization.id,
             status: "succeeded",
-            metadata: {
-              invoice_type: "one_off",
-              lago_customer_id: "475c46b6-b907-4e5e-8dc7-934377b1cb3c",
-              invoice_issuing_date: "2025-02-19",
-              lago_invoice_id: "a587e552-36bc-4334-81f2-abcbf034ad3f"
-            }
-          )
-        ).and_call_original
+            stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
+              id: "pi_3R3dvoQ8iJWBZFaM0uu1G1rx",
+              status: "succeeded",
+              metadata: {
+                invoice_type: "one_off",
+                lago_customer_id: "e4674f68-a7ba-4ce8-95e9-981f346b49d7",
+                invoice_issuing_date: "2025-03-17",
+                lago_invoice_id: "5ccdc601-18a5-4f22-a8e7-a53ca18e1f00"
+              }
+            )
+          ).and_call_original
 
-      payment = create(:payment, provider_payment_id: event.data.object.id)
+        payment = create(:payment, provider_payment_id: event.data.object.id)
 
-      result = event_service.call
+        stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
+          status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/retrieve_payment_method.json"))
+        )
 
-      expect(result).to be_success
+        result = event_service.call
 
-      expect(payment.reload.provider_payment_method_data).to eq({
-        "id" => "pm_1Qu0lNQ8iJWBZFaMkKPH3KFv",
-        "type" => "card",
-        "brand" => "visa",
-        "last4" => "4242"
-      })
+        expect(result).to be_success
+
+        expect(payment.reload.provider_payment_method_data).to eq({
+          "id" => "pm_1R2DFsQ8iJWBZFaMw3LLbR0r",
+          "type" => "card",
+          "brand" => "visa",
+          "last4" => "4242"
+        })
+      end
     end
   end
 
   context "when payment intent event for a payment request" do
-    let(:fixtures_filename) { "payment_intent_event_payment_request.json" }
+    let(:event_json) do
+      path = Rails.root.join("spec/fixtures/stripe/payment_intent_event_payment_request.json")
+      File.read(path)
+    end
 
     it "routes the event to an other service" do
       expect_any_instance_of(PaymentRequests::Payments::StripeService).to receive(:update_payment_status) # rubocop:disable RSpec/AnyInstance
@@ -69,11 +78,15 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
       payment = create(:payment, provider_payment_id: event.data.object.id)
       create(:payment_request, customer: create(:customer, organization:), payments: [payment])
 
+      stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
+        status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/retrieve_payment_method.json"))
+      )
+
       result = event_service.call
 
       expect(result).to be_success
       expect(payment.reload.provider_payment_method_data).to eq({
-        "id" => "pm_1Qu0lNQ8iJWBZFaMkKPH3KFv",
+        "id" => "pm_1R2DFsQ8iJWBZFaMw3LLbR0r",
         "type" => "card",
         "brand" => "visa",
         "last4" => "4242"
@@ -82,7 +95,10 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
   end
 
   context "when payment intent event with an invalid payable type" do
-    let(:fixtures_filename) { "payment_intent_event_invalid_payable_type.json" }
+    let(:event_json) do
+      path = Rails.root.join("spec/fixtures/stripe/payment_intent_event_invalid_payable_type.json")
+      File.read(path)
+    end
 
     it do
       expect { event_service.call }.to raise_error(NameError, "Invalid lago_payable_type: InvalidPayableTypeName")
