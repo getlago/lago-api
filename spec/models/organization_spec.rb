@@ -18,6 +18,7 @@ RSpec.describe Organization, type: :model do
 
   it { is_expected.to have_many(:api_keys) }
   it { is_expected.to have_many(:billing_entities) }
+  it { is_expected.to have_one(:default_billing_entity).class_name("BillingEntity") }
   it { is_expected.to have_many(:webhook_endpoints) }
   it { is_expected.to have_many(:webhooks).through(:webhook_endpoints) }
   it { is_expected.to have_many(:hubspot_integrations) }
@@ -333,12 +334,12 @@ RSpec.describe Organization, type: :model do
   end
 
   describe "#default_billing_entity" do
+    subject(:default_billing_entity) { organization.default_billing_entity }
+
     let(:organization) { create(:organization, billing_entities: []) }
 
     context "when the organization has no billing entities" do
-      it "returns the default billing entity" do
-        expect(organization.default_billing_entity).to eq(nil)
-      end
+      it { is_expected.to eq(nil) }
     end
 
     context "when the organization has one billing entity" do
@@ -346,23 +347,22 @@ RSpec.describe Organization, type: :model do
 
       before { billing_entity }
 
-      it "returns the default billing entity" do
-        expect(organization.reload.default_billing_entity).to eq(billing_entity)
-      end
+      it { is_expected.to eq(billing_entity) }
     end
 
     context "when the organization has multiple billing entities" do
-      let(:billing_entities) do
-        [
-          create(:billing_entity, organization:),
-          create(:billing_entity, organization:, created_at: 2.days.ago)
-        ]
+      let(:billing_entity_1) { create(:billing_entity, organization:, created_at: 1.day.ago) }
+      let(:billing_entity_2) { create(:billing_entity, organization:, created_at: 2.days.ago) }
+      let(:billing_entity_3) { create(:billing_entity, organization:, created_at: 3.days.ago, archived_at: Time.current) }
+
+      before do
+        billing_entity_1
+        billing_entity_2
+        billing_entity_3
       end
 
-      before { billing_entities }
-
-      it "returns the default billing entity" do
-        expect(organization.reload.default_billing_entity).to eq(billing_entities.last)
+      it "returns the oldest active billing entity" do
+        expect(default_billing_entity).to eq(billing_entity_2)
       end
     end
   end
