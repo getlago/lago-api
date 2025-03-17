@@ -11,13 +11,18 @@ class WalletCredit
   end
 
   # we'll assume you construct this normally for a wallet and a credit amount
-  def initialize(wallet:, credit_amount:)
+  def initialize(wallet:, credit_amount:, invoiceable: true)
     @wallet = wallet
-
-    # Here we convert to amount, round to the currency and then convert back to credits
     currency = wallet.currency_for_balance
     @amount = (credit_amount * wallet.rate_amount).round(currency.exponent)
-    @credit_amount = amount.fdiv(wallet.rate_amount)
+
+    @credit_amount = if invoiceable
+      # Here we convert to amount andconvert back to credits
+      # as we're talking about invoiceable credits. (only multiples of 1 cent should be accepted)
+      amount.fdiv(wallet.rate_amount)
+    else
+      credit_amount
+    end
   end
 
   attr_reader :wallet, :credit_amount, :amount

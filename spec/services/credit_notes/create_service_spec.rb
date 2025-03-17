@@ -459,7 +459,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           payment_status: :succeeded
         )
       end
-      let(:wallet) { create :wallet, customer:, balance_cents: 1000, rate_amount: }
+      let(:wallet) { create :wallet, customer:, balance_cents: 1000, rate_amount:, credits_balance: 1 }
       let(:rate_amount) { 10 }
       let(:wallet_transaction) { create :wallet_transaction, wallet: }
       let(:fee) { create :fee, invoice:, fee_type: :credit, invoiceable: wallet_transaction, amount_cents: 1000 }

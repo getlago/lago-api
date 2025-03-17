@@ -11,15 +11,15 @@ module Wallets
       end
 
       def call
-        amount_cents = wallet_transaction.amount_cents
         credits_amount = wallet_transaction.credit_amount
+        currency = wallet.currency_for_balance
 
         wallet.update!(
-          balance_cents: wallet.balance_cents - amount_cents,
+          balance_cents: ((wallet.credits_balance - credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor,
           credits_balance: wallet.credits_balance - credits_amount,
           last_balance_sync_at: Time.zone.now,
           consumed_credits: wallet.consumed_credits + credits_amount,
-          consumed_amount_cents: wallet.consumed_amount_cents + amount_cents,
+          consumed_amount_cents: ((wallet.consumed_credits + credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor,
           last_consumed_credit_at: Time.current
         )
 
