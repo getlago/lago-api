@@ -18,7 +18,8 @@ class Organization < ApplicationRecord
   }.freeze
 
   has_many :api_keys
-  has_many :billing_entities
+  has_many :billing_entities, -> { active }
+  has_many :all_billing_entities, class_name: "BillingEntity"
   has_many :memberships
   has_many :users, through: :memberships
   has_many :billable_metrics
