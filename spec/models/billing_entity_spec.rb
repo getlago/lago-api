@@ -48,12 +48,33 @@ RSpec.describe BillingEntity, type: :model do
     end
   end
 
+  describe "Scopes" do
+    let(:active_billing_entity) { create(:billing_entity) }
+    let(:archived_billing_entity) { create(:billing_entity, :archived) }
+
+    before do
+      active_billing_entity
+      archived_billing_entity
+    end
+
+    describe ".active" do
+      it "returns active billing entities" do
+        expect(described_class.active).to eq [active_billing_entity]
+      end
+    end
+  end
+
   describe "Validations" do
     let(:billing_entity) { build(:billing_entity) }
 
     it "is valid with valid attributes" do
       expect(billing_entity).to be_valid
     end
+
+    it { is_expected.to validate_length_of(:document_number_prefix).is_at_least(1).is_at_most(10).on(:update) }
+
+    it { is_expected.to allow_value(nil).for(:document_number_prefix).on(:create) }
+    it { is_expected.to validate_length_of(:document_number_prefix).is_at_least(1).is_at_most(10).on(:create) }
 
     it "is not valid without name" do
       billing_entity.name = nil
@@ -174,6 +195,14 @@ RSpec.describe BillingEntity, type: :model do
       it "does not change document number prefix of billing_entity" do
         expect { subject }.not_to change(billing_entity, :document_number_prefix)
       end
+    end
+  end
+
+  describe "#country=" do
+    it "upcases country" do
+      billing_entity.country = "us"
+
+      expect(billing_entity.country).to eq "US"
     end
   end
 
