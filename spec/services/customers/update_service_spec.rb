@@ -76,6 +76,18 @@ RSpec.describe Customers::UpdateService, type: :service do
         expect(result.customer.billing_entity).to eq(billing_entity_2)
       end
 
+      context "when billing entity is archived" do
+        before { billing_entity_2.update!(archived_at: Time.current) }
+
+        it "fails" do
+          result = customers_service.call
+
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("billing_entity")
+        end
+      end
+
       context "when customer is attached to a subscription" do
         before do
           create(:subscription, customer:)
