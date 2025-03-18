@@ -1,6 +1,6 @@
 {
   "details": "https://github.com/ibericode/vat-rates",
-  "version": 3,
+  "version": 4,
   "items": {
     "ES": [
       {
@@ -52,7 +52,8 @@
       {
         "effective_from": "0000-01-01",
         "rates": {
-          "reduced": 12,
+          "reduced1": 5,
+          "reduced2": 12,
           "standard": 21
         }
       }
@@ -67,11 +68,28 @@
         }
       }
     ],
+    "GB": [
+      {
+        "effective_from": "2011-01-04",
+        "rates": {
+          "standard": 20,
+          "reduced": 5
+        }
+      }
+    ],
     "CZ": [
+      {
+        "effective_from": "2024-01-01",
+        "rates": {
+          "reduced": 12,
+          "standard": 21
+        }
+      },
       {
         "effective_from": "0000-01-01",
         "rates": {
-          "reduced": 15,
+          "reduced1": 10,
+          "reduced2": 15,
           "standard": 21
         }
       }
@@ -91,7 +109,8 @@
         "effective_from": "0000-01-01",
         "rates": {
           "super_reduced": 4,
-          "reduced": 10,
+          "reduced1": 5,
+          "reduced2": 10,
           "standard": 22
         },
         "exceptions": [
@@ -112,7 +131,8 @@
       {
         "effective_from": "0000-01-01",
         "rates": {
-          "reduced": 9.5,
+          "reduced1": 5,
+          "reduced2": 9.5,
           "standard": 22
         }
       }
@@ -175,6 +195,14 @@
           "reduced2": 14,
           "standard": 25.5
         }
+      },
+      {
+        "effective_from": "0000-01-01",
+        "rates": {
+          "reduced1": 10,
+          "reduced2": 14,
+          "standard": 24
+        }
       }
     ],
     "CY": [
@@ -194,7 +222,7 @@
           "super_reduced": 3,
           "reduced1": 8,
           "standard": 17,
-          "parking": 13
+          "parking": 14
         }
       },
       {
@@ -290,7 +318,7 @@
         "effective_from": "2016-06-01",
         "rates": {
           "reduced1": 6,
-          "reduced2": 13.5,
+          "reduced2": 13,
           "standard": 24
         },
         "exceptions": [
@@ -428,6 +456,13 @@
       }
     ],
     "SK": [
+      {
+        "effective_from": "2025-01-01",
+        "rates": {
+          "reduced": 19,
+          "standard": 23
+        }
+      },
       {
         "effective_from": "0000-01-01",
         "rates": {
