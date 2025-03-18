@@ -6,6 +6,9 @@ module Subscriptions
 
     def initialize(payload)
       @payload = payload
+
+      puts payload
+
       @subscription_id = payload['subscription_id']
       super
     end

@@ -41,20 +41,26 @@ class KarafkaApp < Karafka::App
     Sentry.capture_exception(event[:error])
   end
 
-  if ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"].present?
+  if ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"].present? || ENV["LAGO_KAFKA_REFRESHED_SUBSCRIPTIONS_TOPIC"].present?
     routes.draw do
-      consumer_group :lago_events_charged_in_advance_consumer do
-        topic ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"] do
-          consumer EventsChargedInAdvanceConsumer
+      if ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"].present?
+        consumer_group :lago_events_charged_in_advance_consumer do
+          topic ENV["LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC"] do
+            consumer EventsChargedInAdvanceConsumer
 
-          dead_letter_queue(topic: "unprocessed_events", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+            dead_letter_queue(topic: "unprocessed_events", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+          end
         end
+      end
 
-        topic ENV["LAGO_KAFKA_REFRESHED_SUBSCRIPTIONS_TOPIC"] do
-          consumer FlagRefreshedSubscriptionsConsumer
-
-          # TODO
-          dead_letter_queue(topic: "unprocessed_refreshed", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+      if ENV["LAGO_KAFKA_REFRESHED_SUBSCRIPTIONS_TOPIC"].present?
+        consumer_group :lago_refreshed_usage do
+          topic ENV["LAGO_KAFKA_REFRESHED_SUBSCRIPTIONS_TOPIC"] do
+            consumer FlagRefreshedSubscriptionConsumer
+            active(false)
+            #delay_by(120_000)
+            dead_letter_queue(topic: "unprocessed_refreshed", max_retries: 1, independent: true, dispatch_method: :produce_sync)
+          end
         end
       end
     end
