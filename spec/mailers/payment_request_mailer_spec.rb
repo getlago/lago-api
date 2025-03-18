@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequestMailer, type: :mailer do
-  subject(:payment_request_mailer) { described_class }
+  subject(:mailer) { described_class.with(payment_request:).requested }
 
   let(:organization) { create(:organization, document_number_prefix: "ORG-123B") }
   let(:first_invoice) { create(:invoice, total_amount_cents: 1000, total_paid_amount_cents: 1, organization:) }
@@ -38,10 +38,9 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
     end
 
     specify do
-      mailer = payment_request_mailer.with(payment_request:).requested
-
       expect(mailer.to).to eq([payment_request.email])
       expect(mailer.reply_to).to eq([payment_request.organization.email])
+      expect(mailer.bcc).to be_nil
       expect(mailer.body.encoded).to include(CGI.escapeHTML(first_invoice.number))
       expect(mailer.body.encoded).to include(CGI.escapeHTML(second_invoice.number))
       expect(mailer.body.encoded).to include(CGI.escapeHTML(MoneyHelper.format(first_invoice.total_due_amount)))
@@ -49,7 +48,6 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
     end
 
     it "calls the generate payment url service" do
-      mailer = payment_request_mailer.with(payment_request:).requested
       parsed_body = Nokogiri::HTML(mailer.body.encoded)
 
       expect(parsed_body.at_css("a#payment_link")["href"]).to eq(payment_url)
@@ -59,11 +57,23 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
         .with(payable: payment_request)
     end
 
+    context "when payment request has dunning campaign attached and there are 2 addresses in bcc_emails" do
+      let(:bcc_emails) { %w[bcc1@example.com bcc2@example.com] }
+      let(:dunning_campaign) { create(:dunning_campaign, organization:, bcc_emails:) }
+
+      before do
+        payment_request.update(dunning_campaign:)
+      end
+
+      it "includes the BCC email addresses in the mailer" do
+        expect(mailer.bcc).to match_array(bcc_emails)
+      end
+    end
+
     context "when payment request email is nil" do
       before { payment_request.update(email: nil) }
 
       it "returns a mailer with nil values" do
-        mailer = payment_request_mailer.with(payment_request:).requested
         expect(mailer.to).to be_nil
       end
     end
@@ -72,7 +82,6 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
       before { organization.update(email: nil) }
 
       it "returns a mailer with nil values" do
-        mailer = payment_request_mailer.with(payment_request:).requested
         expect(mailer.to).to be_nil
       end
     end
@@ -85,7 +94,6 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
       end
 
       it "does not include the payment link" do
-        mailer = payment_request_mailer.with(payment_request:).requested
         parsed_body = Nokogiri::HTML(mailer.body.encoded)
 
         expect(parsed_body.css("a#payment_link")).not_to be_present

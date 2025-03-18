@@ -52,6 +52,7 @@ end
 #
 #  id                      :uuid             not null, primary key
 #  applied_to_organization :boolean          default(FALSE), not null
+#  bcc_emails              :string           default([]), is an Array
 #  code                    :string           not null
 #  days_between_attempts   :integer          default(1), not null
 #  deleted_at              :datetime

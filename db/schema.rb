@@ -629,6 +629,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_03_18_175216) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "deleted_at", precision: nil
+    t.string "bcc_emails", default: [], array: true
     t.index ["deleted_at"], name: "index_dunning_campaigns_on_deleted_at"
     t.index ["organization_id", "code"], name: "index_dunning_campaigns_on_organization_id_and_code", unique: true, where: "(deleted_at IS NULL)"
     t.index ["organization_id"], name: "index_dunning_campaigns_on_organization_id"
