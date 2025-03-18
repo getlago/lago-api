@@ -99,8 +99,7 @@ module BillingEntities
           .raise_if_error!
       end
 
-      # FIXME: update the service to rename the params use billing_entity instead of organization
-      Taxes::AutoGenerateService.call(organization: billing_entity)
+      Taxes::AutoGenerateService.call(organization:)
 
       billing_entity.eu_tax_management = params[:eu_tax_management]
     end

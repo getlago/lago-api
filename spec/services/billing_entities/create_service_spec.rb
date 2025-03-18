@@ -135,7 +135,7 @@ RSpec.describe BillingEntities::CreateService, type: :service do
           expect(result.billing_entity.document_locale).to eq("fr")
           expect(result.billing_entity.eu_tax_management).to eq(true)
           expect(result.billing_entity.logo).to be_attached
-          expect(Taxes::AutoGenerateService).to have_received(:call).with(organization: result.billing_entity)
+          expect(Taxes::AutoGenerateService).to have_received(:call).with(organization:)
         end
       end
 
