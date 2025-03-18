@@ -1767,23 +1767,25 @@ RSpec.describe Invoice, type: :model do
   end
 
   describe "should_apply_provider_tax?" do
+    subject { invoice.should_apply_provider_tax? }
+
     let(:invoice) { create(:invoice, :subscription, subscriptions: [subscription]) }
     let(:plan) { create(:plan) }
     let(:subscription) { create(:subscription, plan:) }
-
     let(:charge) { create(:standard_charge, plan:) }
-    let(:charge_fee) { create(:charge_fee, charge:, invoice:, amount: 100) }
 
     before { charge_fee }
 
     context "when there are fees with non zero amount" do
-      it { expect(invoice).to be_should_apply_provider_tax }
+      let(:charge_fee) { create(:charge_fee, charge:, invoice:, amount: 100) }
+
+      it { expect(subject).to be true }
     end
 
     context "when there are no fees" do
       let(:charge_fee) { nil }
 
-      it { expect(invoice).not_to be_should_apply_provider_tax }
+      it { expect(subject).to be false }
     end
 
     context "when fees amount is zero with skip configuration" do
@@ -1793,7 +1795,7 @@ RSpec.describe Invoice, type: :model do
         invoice.customer.update!(finalize_zero_amount_invoice: "skip")
       end
 
-      it { expect(invoice).not_to be_should_apply_provider_tax }
+      it { expect(subject).to be false }
     end
 
     context "when fees amount is zero with finalize configuration" do
@@ -1803,7 +1805,7 @@ RSpec.describe Invoice, type: :model do
         invoice.customer.update!(finalize_zero_amount_invoice: "finalize")
       end
 
-      it { expect(invoice).to be_should_apply_provider_tax }
+      it { expect(subject).to be true }
     end
   end
 end
