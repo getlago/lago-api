@@ -15,7 +15,7 @@ RSpec.describe Wallets::RefreshOngoingBalanceJob, type: :job do
     allow(refresh_service).to receive(:call).and_return(result)
   end
 
-  context "when wallet is ready to be refreshed" do
+  context "when wallet is not ready to be refreshed" do
     let(:wallet) { create(:wallet, ready_to_be_refreshed: false) }
 
     it "does not call the RefreshOngoingBalance service" do
@@ -28,5 +28,17 @@ RSpec.describe Wallets::RefreshOngoingBalanceJob, type: :job do
     described_class.perform_now(wallet)
     expect(Wallets::Balance::RefreshOngoingService).to have_received(:new)
     expect(refresh_service).to have_received(:call)
+  end
+
+  context "when refresh wallet failed" do
+    let(:result) { BaseService::Result.new.validation_failure!(errors: {tax_error: "error"}) }
+
+    before do
+      allow(refresh_service).to receive(:call).and_return(result)
+    end
+
+    it "fails with an error" do
+      expect { described_class.perform_now(wallet) }.to raise_error(BaseService::ValidationFailure)
+    end
   end
 end

@@ -11,7 +11,7 @@ module Wallets
     def perform(wallet)
       return unless wallet.ready_to_be_refreshed?
 
-      Wallets::Balance::RefreshOngoingService.call(wallet:)
+      Wallets::Balance::RefreshOngoingService.call!(wallet:)
     end
   end
 end
