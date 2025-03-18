@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class IntegrationItemsQuery < BaseQuery
+  Result = BaseResult[:integration_items]
+
   def call
     integration_items = base_scope.result
     integration_items = paginate(integration_items)

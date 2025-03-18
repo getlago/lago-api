@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class InvoicesQuery < BaseQuery
+  Result = BaseResult[:invoices]
+
   def call
     invoices = base_scope.result.includes(:customer).includes(file_attachment: :blob)
     invoices = paginate(invoices)

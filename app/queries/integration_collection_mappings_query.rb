@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class IntegrationCollectionMappingsQuery < BaseQuery
+  Result = BaseResult[:integration_collection_mappings]
+
   def call
     integration_collection_mappings = paginate(base_scope)
     integration_collection_mappings = apply_consistent_ordering(integration_collection_mappings)

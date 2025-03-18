@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class DunningCampaignsQuery < BaseQuery
+  Result = BaseResult[:dunning_campaigns]
+
   DEFAULT_ORDER = "name"
 
   def call

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class BillableMetricsQuery < BaseQuery
+  Result = BaseResult[:billable_metrics]
+
   def call
     return result unless validate_filters.success?
 

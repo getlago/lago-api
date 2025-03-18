@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class PlansQuery < BaseQuery
+  Result = BaseResult[:plans]
+
   def call
     plans = base_scope.result
     plans = paginate(plans)

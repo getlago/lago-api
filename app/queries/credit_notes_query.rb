@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class CreditNotesQuery < BaseQuery
+  Result = BaseResult[:credit_notes]
+
   def call
     credit_notes = base_scope.result
     credit_notes = paginate(credit_notes)

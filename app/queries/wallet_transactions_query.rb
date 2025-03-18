@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class WalletTransactionsQuery < BaseQuery
+  Result = BaseResult[:wallet_transactions]
+
   def initialize(organization:, wallet_id:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
     @wallet = organization.wallets.find_by(id: wallet_id)
     super(organization:, pagination:, filters:, search_term:, order:)

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class PaymentReceiptsQuery < BaseQuery
+  Result = BaseResult[:payment_receipts]
+
   def call
     return result unless validate_filters.success?
 
