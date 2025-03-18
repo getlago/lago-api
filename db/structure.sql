@@ -727,7 +727,6 @@ CREATE TABLE public.credit_notes_taxes (
 --
 
 CREATE TABLE public.credits (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
     invoice_id uuid,
     applied_coupon_id uuid,
     amount_cents bigint NOT NULL,
@@ -736,6 +735,7 @@ CREATE TABLE public.credits (
     updated_at timestamp(6) without time zone NOT NULL,
     credit_note_id uuid,
     before_taxes boolean DEFAULT false NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
     progressive_billing_invoice_id uuid
 );
 
@@ -955,7 +955,8 @@ CREATE TABLE public.events (
     external_customer_id character varying,
     external_subscription_id character varying,
     precise_total_amount_cents numeric(40,15)
-);
+)
+WITH (autovacuum_vacuum_scale_factor='0.005');
 
 
 --
@@ -1297,7 +1298,7 @@ CREATE TABLE public.invoices (
     voided_at timestamp(6) without time zone,
     organization_sequential_id integer DEFAULT 0 NOT NULL,
     ready_to_be_refreshed boolean DEFAULT false NOT NULL,
-    payment_dispute_lost_at timestamp(6) without time zone,
+    payment_dispute_lost_at timestamp(6) without time zone DEFAULT NULL::timestamp without time zone,
     skip_charges boolean DEFAULT false NOT NULL,
     payment_overdue boolean DEFAULT false,
     negative_amount_cents bigint DEFAULT 0 NOT NULL,
@@ -4594,6 +4595,22 @@ ALTER TABLE ONLY public.add_ons_taxes
 
 
 --
+-- Name: coupon_targets fk_rails_0bb6dcc01f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coupon_targets
+    ADD CONSTRAINT fk_rails_0bb6dcc01f FOREIGN KEY (coupon_id) REFERENCES public.coupons(id);
+
+
+--
+-- Name: customers_taxes fk_rails_0d2be3d72c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customers_taxes
+    ADD CONSTRAINT fk_rails_0d2be3d72c FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
 -- Name: invoices fk_rails_0d349e632f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4623,6 +4640,14 @@ ALTER TABLE ONLY public.applied_invoice_custom_sections
 
 ALTER TABLE ONLY public.daily_usages
     ADD CONSTRAINT fk_rails_12d29bc654 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+
+
+--
+-- Name: coupon_targets fk_rails_1454058c96; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coupon_targets
+    ADD CONSTRAINT fk_rails_1454058c96 FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
 
 
 --
@@ -4682,6 +4707,14 @@ ALTER TABLE ONLY public.invoices_taxes
 
 
 --
+-- Name: taxes fk_rails_23975f5a47; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.taxes
+    ADD CONSTRAINT fk_rails_23975f5a47 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: credit_notes_taxes fk_rails_25232a0ec3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4703,6 +4736,14 @@ ALTER TABLE ONLY public.refunds
 
 ALTER TABLE ONLY public.adjusted_fees
     ADD CONSTRAINT fk_rails_2561c00887 FOREIGN KEY (fee_id) REFERENCES public.fees(id);
+
+
+--
+-- Name: fees fk_rails_257af22645; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_257af22645 FOREIGN KEY (true_up_parent_fee_id) REFERENCES public.fees(id);
 
 
 --
@@ -4770,6 +4811,14 @@ ALTER TABLE ONLY public.credits
 
 
 --
+-- Name: credits fk_rails_310fcb3585; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credits
+    ADD CONSTRAINT fk_rails_310fcb3585 FOREIGN KEY (credit_note_id) REFERENCES public.credit_notes(id);
+
+
+--
 -- Name: payment_requests fk_rails_32600e5a72; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4807,22 +4856,6 @@ ALTER TABLE ONLY public.groups
 
 ALTER TABLE ONLY public.inbound_webhooks
     ADD CONSTRAINT fk_rails_36cda06530 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
-
-
---
--- Name: customers_taxes fk_rails_3708a65be3; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.customers_taxes
-    ADD CONSTRAINT fk_rails_3708a65be3 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
-
-
---
--- Name: fees fk_rails_38047eb662; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.fees
-    ADD CONSTRAINT fk_rails_38047eb662 FOREIGN KEY (true_up_parent_fee_id) REFERENCES public.fees(id);
 
 
 --
@@ -4906,14 +4939,6 @@ ALTER TABLE ONLY public.credit_notes
 
 
 --
--- Name: usage_thresholds fk_rails_450b79f2a9; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.usage_thresholds
-    ADD CONSTRAINT fk_rails_450b79f2a9 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
-
-
---
 -- Name: payment_provider_customers fk_rails_50d46d3679; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4994,14 +5019,6 @@ ALTER TABLE ONLY public.credit_notes
 
 
 --
--- Name: coupon_targets fk_rails_5fce5ea2b5; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.coupon_targets
-    ADD CONSTRAINT fk_rails_5fce5ea2b5 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
-
-
---
 -- Name: fees fk_rails_6023b3f2dd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5039,14 +5056,6 @@ ALTER TABLE ONLY public.subscriptions
 
 ALTER TABLE ONLY public.memberships
     ADD CONSTRAINT fk_rails_64267aab58 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
-
-
---
--- Name: taxes fk_rails_65b48ef6bf; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.taxes
-    ADD CONSTRAINT fk_rails_65b48ef6bf FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -5234,14 +5243,6 @@ ALTER TABLE ONLY public.invoice_subscriptions
 
 
 --
--- Name: coupon_targets fk_rails_8872c07e0d; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.coupon_targets
-    ADD CONSTRAINT fk_rails_8872c07e0d FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
-
-
---
 -- Name: add_ons_taxes fk_rails_89e1020aca; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5255,14 +5256,6 @@ ALTER TABLE ONLY public.add_ons_taxes
 
 ALTER TABLE ONLY public.invoice_metadata
     ADD CONSTRAINT fk_rails_8bb5b094c4 FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
-
-
---
--- Name: credits fk_rails_8ca834cd4a; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.credits
-    ADD CONSTRAINT fk_rails_8ca834cd4a FOREIGN KEY (credit_note_id) REFERENCES public.credit_notes(id);
 
 
 --
@@ -5474,6 +5467,14 @@ ALTER TABLE ONLY public.invites
 
 
 --
+-- Name: usage_thresholds fk_rails_caeb5a3949; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_thresholds
+    ADD CONSTRAINT fk_rails_caeb5a3949 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
+
+
+--
 -- Name: plans fk_rails_cbf700aeb8; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5495,14 +5496,6 @@ ALTER TABLE ONLY public.integration_mappings
 
 ALTER TABLE ONLY public.wallet_transactions
     ADD CONSTRAINT fk_rails_d07bc24ce3 FOREIGN KEY (wallet_id) REFERENCES public.wallets(id);
-
-
---
--- Name: coupon_targets fk_rails_d1dc5814e9; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.coupon_targets
-    ADD CONSTRAINT fk_rails_d1dc5814e9 FOREIGN KEY (coupon_id) REFERENCES public.coupons(id);
 
 
 --
@@ -5530,11 +5523,27 @@ ALTER TABLE ONLY public.invoice_custom_section_selections
 
 
 --
+-- Name: coupon_targets fk_rails_de6b3c3138; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coupon_targets
+    ADD CONSTRAINT fk_rails_de6b3c3138 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
+
+
+--
 -- Name: credit_note_items fk_rails_dea748e529; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.credit_note_items
     ADD CONSTRAINT fk_rails_dea748e529 FOREIGN KEY (fee_id) REFERENCES public.fees(id);
+
+
+--
+-- Name: customers_taxes fk_rails_e86903e081; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customers_taxes
+    ADD CONSTRAINT fk_rails_e86903e081 FOREIGN KEY (tax_id) REFERENCES public.taxes(id);
 
 
 --
@@ -5567,14 +5576,6 @@ ALTER TABLE ONLY public.fees
 
 ALTER TABLE ONLY public.invoices_payment_requests
     ADD CONSTRAINT fk_rails_ed387e0992 FOREIGN KEY (payment_request_id) REFERENCES public.payment_requests(id);
-
-
---
--- Name: customers_taxes fk_rails_ef731e48be; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.customers_taxes
-    ADD CONSTRAINT fk_rails_ef731e48be FOREIGN KEY (tax_id) REFERENCES public.taxes(id);
 
 
 --
@@ -5636,7 +5637,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250303104151'),
 ('20250227155522'),
 ('20250227091909'),
-('20250224192149'),
 ('20250220223944'),
 ('20250220180114'),
 ('20250220180113'),
