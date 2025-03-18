@@ -114,7 +114,9 @@ module LagoHttpClient
     attr_reader :http_client
 
     def raise_error(response)
-      raise(::LagoHttpClient::HttpError.new(response.code, response.body, uri, response_headers: response.to_hash))
+      raise(
+        ::LagoHttpClient::HttpError.new(response.code, response.body, uri, response_headers: response.each_header.to_h)
+      )
     end
   end
 end
