@@ -12,9 +12,10 @@ module CreditNotes
     def call
       return result.not_found_failure!(resource: "credit_note") if credit_note.blank? || !credit_note.finalized?
 
-      generate_pdf(credit_note) if should_generate_pdf?
-
-      SendWebhookJob.perform_later("credit_note.generated", credit_note)
+      if should_generate_pdf?
+        generate_pdf(credit_note)
+        SendWebhookJob.perform_later("credit_note.generated", credit_note)
+      end
 
       result.credit_note = credit_note
       result
@@ -39,6 +40,8 @@ module CreditNotes
     end
 
     def should_generate_pdf?
+      return false if ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_PDF_GENERATION"])
+
       context == "admin" || credit_note.file.blank?
     end
 

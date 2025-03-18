@@ -21,6 +21,16 @@ RSpec.describe InvoiceMailer, type: :mailer do
       expect(mailer.attachments.first.filename).to eq("invoice-#{invoice.number}.pdf")
     end
 
+    context "when pdfs are disabled" do
+      before { ENV["LAGO_DISABLE_PDF_GENERATION"] = "true" }
+
+      it "does not attach the pdf" do
+        mailer = invoice_mailer.with(invoice:).finalized
+
+        expect(mailer.attachments).to be_empty
+      end
+    end
+
     context "with no pdf file" do
       let(:pdf_service) { instance_double(Invoices::GeneratePdfService) }
 

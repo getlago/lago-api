@@ -21,6 +21,16 @@ RSpec.describe CreditNoteMailer, type: :mailer do
       expect(mailer.attachments.first.filename).to eq("credit_note-#{credit_note.number}.pdf")
     end
 
+    context "when pdfs are disabled" do
+      before { ENV["LAGO_DISABLE_PDF_GENERATION"] = "true" }
+
+      it "does not attach the pdf" do
+        mailer = credit_note_mailer.with(credit_note:).created
+
+        expect(mailer.attachments).to be_empty
+      end
+    end
+
     context "with no pdf file" do
       let(:pdf_service) { instance_double(CreditNotes::GenerateService) }
 
