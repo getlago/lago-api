@@ -5,8 +5,8 @@ RSpec.describe BillingEntities::ResolveService do
 
   let(:organization) { create(:organization) }
 
-  context "when organiztaion has no active billing entity" do
-    let(:billing_entity_code) { organization.billing_entities.first.code }
+  context "when organization has no active billing entity" do
+    let(:billing_entity_code) { organization.all_billing_entities.first.code }
 
     before do
       organization.billing_entities.update_all(archived_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
