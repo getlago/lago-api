@@ -10,7 +10,9 @@ module Wallets
 
       def call
         usage_amount_cents = customer.active_subscriptions.map do |subscription|
-          invoice = ::Invoices::CustomerUsageService.call(customer:, subscription:).invoice
+          customer_usage_result = ::Invoices::CustomerUsageService.call(customer:, subscription:)
+          return customer_usage_result if customer_usage_result.failure?
+          invoice = customer_usage_result.invoice
 
           {
             total_usage_amount_cents: invoice.total_amount.to_f * wallet.ongoing_balance.currency.subunit_to_unit,

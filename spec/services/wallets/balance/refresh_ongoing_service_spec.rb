@@ -87,5 +87,22 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
     it "returns the wallet" do
       expect(refresh_service.call.wallet).to eq(wallet)
     end
+
+    context "when failed to fetch taxes to calculate current usage" do
+      let(:anrok_customer) { create(:anrok_customer, customer:) }
+
+      before do
+        anrok_customer
+        allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call)
+          .and_return(BaseService::Result.new.service_failure!(code: "customerAddressCouldNotResolve", message: "Customer address could not resolve"))
+      end
+
+      it "fails with an error" do
+        result = refresh_service.call
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:tax_error]).to eq(["customerAddressCouldNotResolve"])
+      end
+    end
   end
 end
