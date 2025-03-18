@@ -114,16 +114,21 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
             .and_return(result)
         end
 
-        it "skips tax provider flow" do
+        it "calls compute amounts service" do
           totals_service.call
 
           expect(Invoices::ComputeAmountsFromFees).to have_received(:call)
         end
+
+        it "does not enqueue a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
+          expect do
+            totals_service.call
+          end.not_to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+        end
       end
 
-      context "with zero amount" do
+      context "with zero amount invoice" do
         let(:fee_charge) { nil }
-        let(:customer) { create(:customer, organization:, finalize_zero_amount_invoice: "skip") }
         let(:result) { BaseService::Result.new }
         let(:fee_subscription) do
           create(
@@ -141,16 +146,26 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
             .and_return(result)
         end
 
-        it "does not use tax provider flow when zero amount invoices are skipped" do
-          totals_service.call
+        context "when skip zero amount invoice configuration is used" do
+          let(:customer) { create(:customer, organization:, finalize_zero_amount_invoice: "skip") }
 
-          expect(Invoices::ComputeAmountsFromFees).to have_received(:call)
+          it "calls compute amounts service" do
+            totals_service.call
+
+            expect(Invoices::ComputeAmountsFromFees).to have_received(:call)
+          end
+
+          it "does not enqueue a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
+            expect do
+              totals_service.call
+            end.not_to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+          end
         end
 
-        context "with finalize configuration" do
+        context "when finalize zero amount invoice configuration is used" do
           let(:customer) { create(:customer, organization:, finalize_zero_amount_invoice: "finalize") }
 
-          it "does not skip tax provider flow" do
+          it "does not call compute amounts service" do
             totals_service.call
 
             expect(Invoices::ComputeAmountsFromFees).not_to have_received(:call)
