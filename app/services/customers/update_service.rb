@@ -195,7 +195,7 @@ module Customers
     def_delegators :customer, :organization
 
     def billing_entity
-      @billing_entity ||= organization.billing_entities.active.find_by!(code: args[:billing_entity_code])
+      @billing_entity ||= organization.billing_entities.find_by!(code: args[:billing_entity_code])
     end
 
     def valid_metadata_count?(metadata:)
