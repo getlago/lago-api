@@ -23,6 +23,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
       expect(result.invoice).to be_generating
       expect(result.invoice.organization).to eq(customer.organization)
       expect(result.invoice.customer).to eq(customer)
+      expect(result.invoice.billing_entity).to eq(customer.billing_entity)
       expect(result.invoice).to be_one_off
       expect(result.invoice.currency).to eq(currency)
       expect(result.invoice.timezone).to eq(customer.applicable_timezone)
