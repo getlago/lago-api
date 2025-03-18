@@ -388,6 +388,12 @@ class Invoice < ApplicationRecord
     I18n.t("invoice.document_name")
   end
 
+  def should_apply_provider_tax?
+    should_finalize_invoice = Invoices::TransitionToFinalStatusService.new(invoice: self).should_finalize_invoice?
+
+    fees.any? && should_finalize_invoice
+  end
+
   private
 
   def should_assign_sequential_id?

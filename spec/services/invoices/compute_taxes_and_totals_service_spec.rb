@@ -120,6 +120,49 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
           expect(Invoices::ComputeAmountsFromFees).to have_received(:call)
         end
       end
+
+      context "with zero amount" do
+        let(:fee_charge) { nil }
+        let(:customer) { create(:customer, organization:, finalize_zero_amount_invoice: "skip") }
+        let(:result) { BaseService::Result.new }
+        let(:fee_subscription) do
+          create(
+            :fee,
+            invoice:,
+            subscription:,
+            fee_type: :subscription,
+            amount_cents: 0
+          )
+        end
+
+        before do
+          allow(Invoices::ComputeAmountsFromFees).to receive(:call)
+            .with(invoice:)
+            .and_return(result)
+        end
+
+        it "does not use tax provider flow when zero amount invoices are skipped" do
+          totals_service.call
+
+          expect(Invoices::ComputeAmountsFromFees).to have_received(:call)
+        end
+
+        context "with finalize configuration" do
+          let(:customer) { create(:customer, organization:, finalize_zero_amount_invoice: "finalize") }
+
+          it "does not skip tax provider flow" do
+            totals_service.call
+
+            expect(Invoices::ComputeAmountsFromFees).not_to have_received(:call)
+          end
+
+          it "enqueues a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
+            expect do
+              totals_service.call
+            end.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+          end
+        end
+      end
     end
 
     context "when there is NO tax provider" do
