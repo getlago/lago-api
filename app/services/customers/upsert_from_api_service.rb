@@ -151,7 +151,7 @@ module Customers
 
     private
 
-    attr_reader :billing_entity, :organization, :params
+    attr_reader :organization, :params
 
     def valid_finalize_zero_amount_invoice?(value)
       return true if value.nil?
