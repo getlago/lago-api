@@ -63,7 +63,7 @@ module Customers
     end
 
     def eu_countries_code
-      LagoEuVat::Rate.new.countries_code
+      LagoEuVat::Rate.country_codes
     end
 
     def applicable_tax_exceptions(country_code:)
@@ -73,7 +73,7 @@ module Customers
     end
 
     def eu_country_exceptions(country_code:)
-      @eu_country_exceptions ||= LagoEuVat::Rate.new.country_rates(country_code:)[:exceptions]
+      @eu_country_exceptions ||= LagoEuVat::Rate.country_rates(country_code:)[:exceptions]
     end
 
     def should_apply_eu_taxes?
