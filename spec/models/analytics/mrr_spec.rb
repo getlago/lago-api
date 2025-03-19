@@ -50,4 +50,65 @@ RSpec.describe Analytics::Mrr, type: :model do
       end
     end
   end
+
+  describe ".find_all_by" do
+    subject(:mrrs) { described_class.find_all_by(organization.id, **args) }
+
+    let(:organization) { create(:organization, created_at: 3.months.ago) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:) }
+    let(:billing_entity1) { organization.default_billing_entity }
+    let(:billing_entity2) { create(:billing_entity, organization: organization) }
+    
+    let(:billable_metric) { create(:billable_metric, organization:, code: 'api_calls') }
+    let(:charge) { create(:standard_charge, billable_metric:) }
+    
+    let(:fee1) do
+      create(:charge_fee, charge:, subscription:, amount_cents: 100, amount_currency: 'EUR', created_at: 2.months.ago)
+    end
+    
+    let(:fee2) do
+      create(:charge_fee, charge:, subscription:, amount_cents: 200, amount_currency: 'EUR', created_at: 2.months.ago)
+    end
+    
+    let(:fee3) do
+      create(:charge_fee, charge:, subscription:, amount_cents: 300, amount_currency: 'EUR', created_at: 1.month.ago)
+    end
+    
+    let(:fee4) do
+      create(:charge_fee, charge:, subscription:, amount_cents: 400, amount_currency: 'EUR', created_at: 1.month.ago)
+    end
+    
+    let(:invoice1) do
+      create(:invoice, organization:, billing_entity: billing_entity1, issuing_date: 2.months.ago, status: :finalized, fees: [fee1, fee2])
+    end
+    
+    let(:invoice2) do
+      create(:invoice, organization:, billing_entity: billing_entity2, issuing_date: 1.month.ago, status: :finalized, fees: [fee3, fee4])
+    end
+    
+    before do
+      invoice1
+      invoice2
+    end
+
+    context "with no arguments" do
+      let(:args) { {} }
+
+      it "returns all MRRs" do
+        byebug
+        expect(mrrs).to match_array([hash_including({
+          "amount_cents"=>700.0,
+          "code"=>"api_calls",
+          "currency"=>"EUR",
+          "month"=>Time.current.beginning_of_month - 1.month
+        }), hash_including({
+          "amount_cents"=>300.0,
+          "code"=>"api_calls",
+          "currency"=>"EUR",
+          "month"=>Time.current.beginning_of_month - 2.month
+        })])
+      end
+    end
+  end
 end

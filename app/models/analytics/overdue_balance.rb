@@ -6,6 +6,10 @@ module Analytics
 
     class << self
       def query(organization_id, **args)
+        if args[:billing_entity_id].present?
+          and_billing_entity_id_sql = sanitize_sql(["AND i.billing_entity_id = :billing_entity_id", args[:billing_entity_id]])
+        end
+
         if args[:external_customer_id].present?
           and_external_customer_id_sql = sanitize_sql(
             ["AND c.external_id = :external_customer_id AND c.deleted_at IS NULL", args[:external_customer_id]]
@@ -57,6 +61,7 @@ module Analytics
             AND i.self_billed IS FALSE
             AND i.payment_overdue IS TRUE
             #{and_external_customer_id_sql}
+            #{and_billing_entity_id_sql}
             GROUP BY month, i.currency, total_amount_cents
             ORDER BY month ASC
           )
