@@ -7,3 +7,9 @@ def pp(*args)
     ap arg, {sort_vars: false, sort_keys: false, indent: -2}
   end
 end
+
+def pps(*args)
+  pp "--------------------------------------"
+  pp(*args)
+  pp "--------------------------------------"
+end
