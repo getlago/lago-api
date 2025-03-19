@@ -136,7 +136,7 @@ group :development do
   gem "graphiql-rails", git: "https://github.com/rmosolgo/graphiql-rails.git"
 
   gem "standard", require: false
-  gem "annotate"
+  gem "annotaterb"
 
   gem "sass-rails"
   gem "uglifier"
