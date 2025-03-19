@@ -92,9 +92,13 @@ module Customers
         Customers::UpdateInvoicePaymentDueDateService.call(customer:, net_payment_term: args[:net_payment_term])
       end
 
-      # NOTE: external_id and account_type are not editable if customer is attached to subscriptions
+      # NOTE: Some fields are not editable if customer is attached to subscriptions:
+      #       external_id,
+      #       account_type,
+      #       billing_entity_id
       if customer.editable?
         customer.external_id = args[:external_id] if args.key?(:external_id)
+        customer.billing_entity = billing_entity if args.key?(:billing_entity_code)
 
         if organization.revenue_share_enabled?
           customer.account_type = args[:account_type] if args.key?(:account_type)
@@ -189,6 +193,10 @@ module Customers
 
     attr_reader :customer, :args
     def_delegators :customer, :organization
+
+    def billing_entity
+      @billing_entity ||= organization.billing_entities.find_by!(code: args[:billing_entity_code])
+    end
 
     def valid_metadata_count?(metadata:)
       return true if metadata.blank?

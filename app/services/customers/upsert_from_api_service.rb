@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 module Customers
-  class CreateFromApiService < BaseService
+  # Upsert (creates or updates) a customer from an API request
+  class UpsertFromApiService < BaseService
     include Customers::PaymentProviderFinder
 
     Result = BaseResult[:customer]
@@ -13,6 +14,10 @@ module Customers
     end
 
     def call
+      billing_entity = BillingEntities::ResolveService.call(
+        organization:, billing_entity_code: params[:billing_entity_code]
+      ).raise_if_error!.billing_entity
+
       customer = organization.customers.find_or_initialize_by(external_id: params[:external_id])
       new_customer = customer.new_record?
       shipping_address = params[:shipping_address] ||= {}
@@ -41,6 +46,7 @@ module Customers
       ActiveRecord::Base.transaction do
         original_tax_values = customer.slice(:tax_identification_number, :zipcode, :country).symbolize_keys
 
+        customer.billing_entity = billing_entity if customer.editable?
         customer.name = params[:name] if params.key?(:name)
         customer.country = params[:country]&.upcase if params.key?(:country)
         customer.address_line1 = params[:address_line1] if params.key?(:address_line1)

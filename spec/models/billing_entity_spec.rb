@@ -49,17 +49,21 @@ RSpec.describe BillingEntity, type: :model do
   end
 
   describe "Scopes" do
-    let(:active_billing_entity) { create(:billing_entity) }
+    let(:active_billing_entity_1) { create(:billing_entity, created_at: 1.week.ago) }
+    let(:active_billing_entity_2) { create(:billing_entity, created_at: 2.weeks.ago) }
     let(:archived_billing_entity) { create(:billing_entity, :archived) }
+    let(:deleted_billing_entity) { create(:billing_entity, :deleted) }
 
     before do
-      active_billing_entity
+      active_billing_entity_1
+      active_billing_entity_2
       archived_billing_entity
+      deleted_billing_entity
     end
 
     describe ".active" do
-      it "returns active billing entities" do
-        expect(described_class.active).to eq [active_billing_entity]
+      it "returns active billing entities ordered" do
+        expect(described_class.active).to eq [active_billing_entity_2, active_billing_entity_1]
       end
     end
   end
