@@ -53,9 +53,9 @@ module CreditNotes
           total_amount_cents: credit_note.credit_amount_cents + credit_note.refund_amount_cents,
           balance_amount_cents: credit_note.credit_amount_cents
         )
-        if invoice.credit?
+        if wallet_credit
           WalletTransactions::VoidService.call(wallet: associated_wallet,
-            credits_amount: voiding_credits, credit_note_id: credit_note.id)
+            wallet_credit:, credit_note_id: credit_note.id)
         end
       end
 
@@ -237,14 +237,10 @@ module CreditNotes
       @associated_wallet ||= invoice.associated_active_wallet
     end
 
-    def voiding_credits
-      return 0 unless invoice.credit? && associated_wallet.present?
+    def wallet_credit
+      return nil unless invoice.credit? && associated_wallet.present?
 
-      # wallet transactions don't have cents amount, so we have to convert value into full amount
-      # and then convert money into amount of credits
-      amount_cents = credit_note.refund_amount_cents
-      amount = amount_cents.fdiv(credit_note.refund_amount.currency.subunit_to_unit)
-      amount.fdiv(associated_wallet.rate_amount)
+      WalletCredit.from_amount_cents(wallet: associated_wallet, amount_cents: credit_note.refund_amount_cents)
     end
   end
 end

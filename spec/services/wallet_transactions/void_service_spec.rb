@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe WalletTransactions::VoidService, type: :service do
-  subject(:void_service) { described_class.call(wallet:, credits_amount:) }
+  subject(:void_service) { described_class.call(wallet:, wallet_credit:) }
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
@@ -20,6 +20,7 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
     )
   end
   let(:credits_amount) { BigDecimal("10.00") }
+  let(:wallet_credit) { WalletCredit.new(wallet:, credit_amount: credits_amount) }
 
   before do
     subscription
@@ -35,7 +36,7 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
     end
 
     context "when transaction have metadata" do
-      subject(:void_service) { described_class.call(wallet:, credits_amount:, metadata:) }
+      subject(:void_service) { described_class.call(wallet:, wallet_credit:, metadata:) }
 
       let(:metadata) { [{"key" => "valid_value", "value" => "also_valid"}] }
 
@@ -80,7 +81,7 @@ RSpec.describe WalletTransactions::VoidService, type: :service do
     end
 
     context "when credit_note_id is passed" do
-      subject(:void_service) { described_class.call(wallet:, credits_amount:, credit_note_id:) }
+      subject(:void_service) { described_class.call(wallet:, wallet_credit:, credit_note_id:) }
 
       let(:credit_note_id) { create(:credit_note, organization: organization).id }
 

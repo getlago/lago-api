@@ -3,23 +3,23 @@
 module Wallets
   module Balance
     class DecreaseService < BaseService
-      def initialize(wallet:, credits_amount:)
-        super(nil)
-
+      def initialize(wallet:, wallet_transaction:)
         @wallet = wallet
-        @credits_amount = credits_amount
+        @wallet_transaction = wallet_transaction
+
+        super
       end
 
       def call
-        currency = wallet.balance.currency
-        amount_cents = wallet.rate_amount * credits_amount * currency.subunit_to_unit
+        credits_amount = wallet_transaction.credit_amount
+        currency = wallet.currency_for_balance
 
         wallet.update!(
-          balance_cents: wallet.balance_cents - amount_cents,
+          balance_cents: ((wallet.credits_balance - credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor,
           credits_balance: wallet.credits_balance - credits_amount,
           last_balance_sync_at: Time.zone.now,
           consumed_credits: wallet.consumed_credits + credits_amount,
-          consumed_amount_cents: wallet.consumed_amount_cents + amount_cents,
+          consumed_amount_cents: ((wallet.consumed_credits + credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor,
           last_consumed_credit_at: Time.current
         )
 
@@ -33,7 +33,7 @@ module Wallets
 
       private
 
-      attr_reader :wallet, :credits_amount
+      attr_reader :wallet, :wallet_transaction
     end
   end
 end

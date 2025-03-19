@@ -3,27 +3,27 @@
 module Wallets
   module Balance
     class IncreaseService < BaseService
-      def initialize(wallet:, credits_amount:, reset_consumed_credits: false)
+      def initialize(wallet:, wallet_transaction:, reset_consumed_credits: false)
         super
 
         @wallet = wallet
-        @credits_amount = credits_amount
+        @wallet_transaction = wallet_transaction
         @reset_consumed_credits = reset_consumed_credits
       end
 
       def call
-        currency = wallet.balance.currency
-        amount_cents = wallet.rate_amount * credits_amount * currency.subunit_to_unit
+        credits_amount = wallet_transaction.credit_amount
 
+        currency = wallet.currency_for_balance
         update_params = {
-          balance_cents: wallet.balance_cents + amount_cents,
+          balance_cents: ((wallet.credits_balance + credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor,
           credits_balance: wallet.credits_balance + credits_amount,
           last_balance_sync_at: Time.current
         }
 
         if reset_consumed_credits
           update_params[:consumed_credits] = [0.0, wallet.consumed_credits - credits_amount].max
-          update_params[:consumed_amount_cents] = [0, wallet.consumed_amount_cents - amount_cents].max
+          update_params[:consumed_amount_cents] = [0, ((wallet.consumed_credits - credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor].max
         end
 
         wallet.update!(update_params)
@@ -38,7 +38,7 @@ module Wallets
 
       private
 
-      attr_reader :wallet, :credits_amount, :reset_consumed_credits
+      attr_reader :wallet, :wallet_transaction, :reset_consumed_credits
     end
   end
 end

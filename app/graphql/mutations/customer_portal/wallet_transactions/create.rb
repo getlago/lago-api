@@ -16,7 +16,7 @@ module Mutations
 
         def resolve(**args)
           organization = context[:customer_portal_user].organization
-          result = ::WalletTransactions::CreateService.call(organization:, params: args)
+          result = ::WalletTransactions::CreateFromParamsService.call(organization:, params: args)
 
           result.success? ? result.wallet_transactions : result_error(result)
         end

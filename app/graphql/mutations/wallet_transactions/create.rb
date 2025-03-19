@@ -22,7 +22,7 @@ module Mutations
       type Types::WalletTransactions::Object.collection_type
 
       def resolve(**args)
-        result = ::WalletTransactions::CreateService.call(organization: current_organization, params: args)
+        result = ::WalletTransactions::CreateFromParamsService.call(organization: current_organization, params: args)
 
         result.success? ? result.wallet_transactions : result_error(result)
       end
