@@ -270,7 +270,7 @@ module Invoices
       else
         apply_zero_tax
       end
-    rescue BaseService::ThrottlingError
+    rescue BaseService::ThrottlingError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError
       apply_zero_tax
     end
 

@@ -743,6 +743,30 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               end
             end
           end
+
+          context "when there is Net::OpenTimeout error" do
+            before do
+              allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:new)
+                .and_raise(Net::OpenTimeout)
+            end
+
+            it "uses zero taxes" do
+              travel_to(timestamp) do
+                result = preview_service.call
+
+                expect(result).to be_success
+                expect(result.invoice.subscriptions.first).to eq(subscription)
+                expect(result.invoice.fees.length).to eq(1)
+                expect(result.invoice.invoice_type).to eq("subscription")
+                expect(result.invoice.issuing_date.to_s).to eq("2024-04-01")
+                expect(result.invoice.fees_amount_cents).to eq(6)
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(6)
+                expect(result.invoice.taxes_amount_cents).to eq(0)
+                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(6)
+                expect(result.invoice.total_amount_cents).to eq(6)
+              end
+            end
+          end
         end
       end
 
