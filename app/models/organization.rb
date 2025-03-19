@@ -150,7 +150,7 @@ class Organization < ApplicationRecord
   end
 
   def eu_vat_eligible?
-    country && LagoEuVat::Rate.new.countries_code.include?(country)
+    country && LagoEuVat::Rate.country_codes.include?(country)
   end
 
   def payment_provider(provider)
