@@ -12,7 +12,7 @@ module Invoices
     def call
       if should_apply_fee_taxes?
         invoice.fees.each do |fee|
-          taxes_result = if provider_taxes && customer_provider_taxation?
+          taxes_result = if provider_taxes && customer_provider_taxation? && invoice.should_apply_provider_tax?
             Fees::ApplyProviderTaxesService.call(fee:, fee_taxes: fee_taxes(fee))
           else
             Fees::ApplyTaxesService.call(fee:)
@@ -29,7 +29,7 @@ module Invoices
         invoice.fees_amount_cents - invoice.progressive_billing_credit_amount_cents - invoice.coupons_amount_cents
       )
 
-      taxes_result = if customer_provider_taxation?
+      taxes_result = if customer_provider_taxation? && invoice.should_apply_provider_tax?
         Invoices::ApplyProviderTaxesService.call(invoice:, provider_taxes:)
       else
         Invoices::ApplyTaxesService.call(invoice:)

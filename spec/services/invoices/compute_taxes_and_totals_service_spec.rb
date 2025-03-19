@@ -102,6 +102,82 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
           expect(invoice.reload.tax_status).to eq("pending")
         end
       end
+
+      context "when there is no fees" do
+        let(:fee_subscription) { nil }
+        let(:fee_charge) { nil }
+        let(:result) { BaseService::Result.new }
+
+        before do
+          allow(Invoices::ComputeAmountsFromFees).to receive(:call)
+            .with(invoice:)
+            .and_return(result)
+        end
+
+        it "calls compute amounts service" do
+          totals_service.call
+
+          expect(Invoices::ComputeAmountsFromFees).to have_received(:call)
+        end
+
+        it "does not enqueue a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
+          expect do
+            totals_service.call
+          end.not_to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+        end
+      end
+
+      context "with zero amount invoice" do
+        let(:fee_charge) { nil }
+        let(:result) { BaseService::Result.new }
+        let(:fee_subscription) do
+          create(
+            :fee,
+            invoice:,
+            subscription:,
+            fee_type: :subscription,
+            amount_cents: 0
+          )
+        end
+
+        before do
+          allow(Invoices::ComputeAmountsFromFees).to receive(:call)
+            .with(invoice:)
+            .and_return(result)
+        end
+
+        context "when skip zero amount invoice configuration is used" do
+          let(:customer) { create(:customer, organization:, finalize_zero_amount_invoice: "skip") }
+
+          it "calls compute amounts service" do
+            totals_service.call
+
+            expect(Invoices::ComputeAmountsFromFees).to have_received(:call)
+          end
+
+          it "does not enqueue a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
+            expect do
+              totals_service.call
+            end.not_to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+          end
+        end
+
+        context "when finalize zero amount invoice configuration is used" do
+          let(:customer) { create(:customer, organization:, finalize_zero_amount_invoice: "finalize") }
+
+          it "does not call compute amounts service" do
+            totals_service.call
+
+            expect(Invoices::ComputeAmountsFromFees).not_to have_received(:call)
+          end
+
+          it "enqueues a Invoices::ProviderTaxes::PullTaxesAndApplyJob" do
+            expect do
+              totals_service.call
+            end.to have_enqueued_job(Invoices::ProviderTaxes::PullTaxesAndApplyJob).with(invoice:)
+          end
+        end
+      end
     end
 
     context "when there is NO tax provider" do

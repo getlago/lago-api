@@ -19,10 +19,6 @@ module Invoices
       result
     end
 
-    private
-
-    attr_reader :invoice, :customer, :organization
-
     def should_finalize_invoice?
       return true unless invoice.fees_amount_cents.zero?
       customer_setting = customer.finalize_zero_amount_invoice
@@ -32,5 +28,9 @@ module Invoices
         customer_setting == "finalize"
       end
     end
+
+    private
+
+    attr_reader :invoice, :customer, :organization
   end
 end
