@@ -67,6 +67,15 @@ RSpec.describe DunningCampaigns::CreateService, type: :service, aggregate_failur
           result = create_service.call
           expect(result.dunning_campaign).to be_a(DunningCampaign)
           expect(result.dunning_campaign.thresholds.first).to be_a(DunningCampaignThreshold)
+          expect(result.dunning_campaign.bcc_emails).to eq([])
+        end
+
+        context "when bcc_emails" do
+          it do
+            result = described_class.new(organization:, params: params.merge(bcc_emails: ["earl@example.com"])).call
+
+            expect(result.dunning_campaign.bcc_emails).to eq(["earl@example.com"])
+          end
         end
 
         context "with a previous dunning campaign set as applied_to_organization" do

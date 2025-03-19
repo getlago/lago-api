@@ -16,6 +16,7 @@ class DunningCampaign < ApplicationRecord
   accepts_nested_attributes_for :thresholds
 
   validates :name, presence: true
+  validates :bcc_emails, email_array: true
   validates :days_between_attempts, numericality: {greater_than: 0}
   validates :max_attempts, numericality: {greater_than: 0}
   validates :code,
