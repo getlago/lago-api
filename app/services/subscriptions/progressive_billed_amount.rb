@@ -4,9 +4,10 @@ module Subscriptions
   class ProgressiveBilledAmount < BaseService
     Result = BaseResult[:progressive_billed_amount, :progressive_billing_invoice, :to_credit_amount, :total_billed_amount_cents]
 
-    def initialize(subscription:, timestamp: Time.current)
+    def initialize(subscription:, timestamp: Time.current, include_generating_invoices: false)
       @subscription = subscription
       @timestamp = timestamp
+      @include_generating_invoices = include_generating_invoices
 
       super
     end
@@ -17,23 +18,33 @@ module Subscriptions
       result.progressive_billing_invoice = nil
       result.to_credit_amount = 0
 
+      # Note: we might be refreshing balance while applying credits on generating invoice.
+      # in this case this invoice should be included
+      invoices_scope = if include_generating_invoices
+        Invoice.finalized.or(Invoice.failed).or(Invoice.generating)
+      else
+        Invoice.finalized.or(Invoice.failed)
+      end
       invoice_subscriptions = InvoiceSubscription
         .where("charges_to_datetime > ?", timestamp)
         .where("charges_from_datetime <= ?", timestamp)
         .joins(:invoice)
         .merge(Invoice.progressive_billing)
-        .merge(Invoice.finalized.or(Invoice.failed))
+        .merge(invoices_scope)
         .where(subscription: subscription)
         .order("invoices.issuing_date" => :desc, "invoices.created_at" => :desc)
 
       return result if invoice_subscriptions.blank?
-      # total billed amount includes taxes and is spread between all invoices, where the billed amount is sum of
-      # prepaid_credit_amount_cents and total_amount_cents
+
+      # Note: included in scope generating invoice won't have values, so we have to iterate through the fees,
+      # but progressively billed fees include previously progressively paid fees, so we need to get
+      # sub_total_excluding_taxes_amount_cents and taxes_amount_cents from fees to get the exact billed amount
       total_billed_amount_cents = invoice_subscriptions.sum do |invoice_subscription|
-        invoice_subscription.invoice.prepaid_credit_amount_cents +
-          invoice_subscription.invoice.total_amount_cents
+        invoice_subscription.invoice.fees.sum(&:taxes_amount_cents) +
+          invoice_subscription.invoice.fees.sum(&:sub_total_excluding_taxes_amount_cents)
       end
       result.total_billed_amount_cents = total_billed_amount_cents
+
       invoice_subscription = invoice_subscriptions.first
       invoice = invoice_subscription.invoice
       result.progressive_billing_invoice = invoice
@@ -53,6 +64,6 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :timestamp
+    attr_reader :subscription, :timestamp, :include_generating_invoices
   end
 end

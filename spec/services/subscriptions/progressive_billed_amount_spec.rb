@@ -45,8 +45,10 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
   context "with progressive billing invoice for this subscription" do
     let(:invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
     let(:invoice) { invoice_subscription.invoice }
+    let(:fee) { create(:charge_fee, invoice:, subscription:, amount_cents: 20, taxes_amount_cents: 0) }
 
     before do
+      fee
       invoice.update!(invoice_type:, fees_amount_cents: 20, total_amount_cents: 20)
     end
 
@@ -62,8 +64,10 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
   context "with failed progressive billing invoice for this subscription" do
     let(:invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
     let(:invoice) { invoice_subscription.invoice }
+    let(:fee) { create(:charge_fee, invoice:, subscription:, amount_cents: 20, taxes_amount_cents: 0) }
 
     before do
+      fee
       invoice.update!(invoice_type:, status: :failed, fees_amount_cents: 20, prepaid_credit_amount_cents: 20)
     end
 
@@ -73,6 +77,37 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
       expect(result.total_billed_amount_cents).to eq(20)
       expect(result.progressive_billing_invoice).to eq(invoice)
       expect(result.to_credit_amount).to eq(20)
+    end
+  end
+
+  context "with generating progressive billing invoice for this subscription" do
+    let(:invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
+    let(:invoice) { invoice_subscription.invoice }
+    let(:fee) { create(:charge_fee, invoice:, subscription:, amount_cents: 20, taxes_amount_cents: 0) }
+
+    before do
+      fee
+      invoice.update!(invoice_type:, status: :generating, fees_amount_cents: 20, prepaid_credit_amount_cents: 20)
+    end
+
+    it "returns 0" do
+      result = service.call
+      expect(result.progressive_billed_amount).to be_zero
+      expect(result.total_billed_amount_cents).to be_zero
+      expect(result.progressive_billing_invoice).to be_nil
+      expect(result.to_credit_amount).to be_zero
+    end
+
+    context "when passing include_generating_invoices: true" do
+      subject(:service) { described_class.new(subscription:, timestamp:, include_generating_invoices: true) }
+
+      it "returns the fees_amount_cents from that invoice" do
+        result = service.call
+        expect(result.progressive_billed_amount).to eq(20)
+        expect(result.total_billed_amount_cents).to eq(20)
+        expect(result.progressive_billing_invoice).to eq(invoice)
+        expect(result.to_credit_amount).to eq(20)
+      end
     end
   end
 
@@ -98,10 +133,14 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
   context "with multiple progressive billing invoice for this subscription" do
     let(:invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
     let(:invoice) { invoice_subscription.invoice }
+    let(:fee1) { create(:charge_fee, invoice:, subscription:, amount_cents: 20, taxes_amount_cents: 0) }
     let(:invoice_subscription2) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
     let(:invoice2) { invoice_subscription2.invoice }
+    let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, taxes_amount_cents: 0, precise_coupons_amount_cents: 20) }
 
     before do
+      fee1
+      fee2
       invoice.update!(invoice_type:, issuing_date: timestamp - 2.days, fees_amount_cents: 20, total_amount_cents: 0, prepaid_credit_amount_cents: 20)
       invoice2.update!(invoice_type:, issuing_date: timestamp - 1.day, fees_amount_cents: 40, total_amount_cents: 10, prepaid_credit_amount_cents: 10)
     end
@@ -118,10 +157,14 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
   context "with multiple progressive billing invoice for this subscription and the last one failed" do
     let(:invoice_subscription) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
     let(:invoice) { invoice_subscription.invoice }
+    let(:fee1) { create(:charge_fee, invoice:, subscription:, amount_cents: 20, taxes_amount_cents: 0) }
     let(:invoice_subscription2) { create(:invoice_subscription, subscription:, charges_from_datetime:, charges_to_datetime:) }
     let(:invoice2) { invoice_subscription2.invoice }
+    let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, taxes_amount_cents: 0, precise_coupons_amount_cents: 20) }
 
     before do
+      fee1
+      fee2
       invoice.update!(invoice_type:, issuing_date: timestamp - 2.days, fees_amount_cents: 20)
       invoice2.update!(invoice_type:, status: :failed, issuing_date: timestamp - 1.day, fees_amount_cents: 40)
     end
@@ -129,6 +172,7 @@ RSpec.describe Subscriptions::ProgressiveBilledAmount, type: :service do
     it "returns the last issued invoice fees_amount_cents" do
       result = service.call
       expect(result.progressive_billed_amount).to eq(40)
+      expect(result.total_billed_amount_cents).to eq(40)
       expect(result.progressive_billing_invoice).to eq(invoice2)
       expect(result.to_credit_amount).to eq(40)
     end

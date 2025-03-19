@@ -105,12 +105,12 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
 
       # 11th day of the billing period; the invoice is finalized
       # invoice sum = 6$ is deducted from the balance,
+      # no need to recalculate balance as it's recalculated when credits are applied
       # remaining current usage is 3$
       travel_to time_1 + 10.days do
         perform_finalize_refresh
         expect(subscription.invoices.count).to eq(1)
         expect(subscription.invoices.first.status).to eq("finalized")
-        recalculate_wallet_balances
         wallet.reload
         expect(wallet.credits_balance).to eq 4
         expect(wallet.balance_cents).to eq 400
@@ -293,9 +293,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(subscription2.invoices.order(created_at: :asc).last.sub_total_including_taxes_amount_cents).to eq(22_00)
         expect(subscription3.invoices.count).to eq(1)
         expect(subscription3.invoices.first.sub_total_including_taxes_amount_cents).to eq(220_00)
-        # we need to force refreshing wallets, because the threshold usage is not recalculated
-        customer.flag_wallets_for_refresh
-        recalculate_wallet_balances
+        # we don't need to force refreshing wallets, because when invoices are triggered, the wallet balances are recalculated
         wallet.reload
         # wallet balance in cents = 978 - 22 - 220 = 736
         # ongoing balance in cents = 736 - 22 = 714
@@ -313,12 +311,11 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
       travel_to time_0 + 15.days do
         ingest_event(subscription3, 20)
         perform_usage_update
+        perform_all_enqueued_jobs
         expect(customer.invoices.count).to eq(4)
         expect(subscription3.invoices.count).to eq(2)
         expect(subscription3.invoices.order(created_at: :asc).last.sub_total_including_taxes_amount_cents).to eq(220_00)
-        # we need to force refreshing wallets, because the threshold usage is not recalculated
-        customer.flag_wallets_for_refresh
-        recalculate_wallet_balances
+        # when an invoice is issued, the wallet balances are recalculated
         wallet.reload
         # wallet balance in cents = 736 - 220 = 516
         # ongoing balance in cents = 516 - 22 = 494
@@ -400,9 +397,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(customer.invoices.count).to eq(1)
         expect(subscription.invoices.count).to eq(1)
         expect(subscription.invoices.first.sub_total_including_taxes_amount_cents).to eq(220_00)
-        # we need to force refreshing wallets, because the threshold usage is not recalculated
-        customer.flag_wallets_for_refresh
-        recalculate_wallet_balances
+        # no need to force refreshing wallets, because the invoice with applied credits is generated - wallet is refreshed
         wallet.reload
         # wallet balance in cents = 1000 - 220 = 780
         # ongoing balance in cents = 780
@@ -423,9 +418,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         expect(customer.invoices.count).to eq(2)
         expect(subscription.invoices.count).to eq(2)
         expect(subscription.invoices.order(created_at: :asc).last.sub_total_including_taxes_amount_cents).to eq(330_00)
-        # we need to force refreshing wallets, because the threshold usage is not recalculated
-        customer.flag_wallets_for_refresh
-        recalculate_wallet_balances
+        # no need to force refreshing wallets, because the invoice with applied credits is generated - wallet is refreshed
         wallet.reload
         # wallet balance in cents = 780 - 330 = 450
         # ongoing balance in cents = 450
@@ -443,9 +436,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
         perform_usage_update
         expect(subscription.invoices.count).to eq(3)
         expect(subscription.invoices.order(created_at: :asc).last.sub_total_including_taxes_amount_cents).to eq(220_00)
-        # we need to force refreshing wallets, because the threshold usage is not recalculated
-        customer.flag_wallets_for_refresh
-        recalculate_wallet_balances
+        # no need to force refreshing wallets, because the invoice with applied credits is generated - wallet is refreshed
         wallet.reload
         # wallet balance in cents = 450 - 220 = 230
         # ongoing balance in cents = 230

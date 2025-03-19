@@ -3,8 +3,9 @@
 module Wallets
   module Balance
     class RefreshOngoingService < BaseService
-      def initialize(wallet:)
+      def initialize(wallet:, include_generating_invoices: false)
         @wallet = wallet
+        @include_generating_invoices = include_generating_invoices
         super
       end
 
@@ -13,7 +14,7 @@ module Wallets
           customer_usage_result = ::Invoices::CustomerUsageService.call(customer:, subscription:)
           return customer_usage_result if customer_usage_result.failure?
           invoice = customer_usage_result.invoice
-          progressive_billed_total = ::Subscriptions::ProgressiveBilledAmount.call(subscription: subscription).total_billed_amount_cents
+          progressive_billed_total = ::Subscriptions::ProgressiveBilledAmount.call(subscription:, include_generating_invoices:).total_billed_amount_cents
 
           {
             total_usage_amount_cents: invoice.total_amount_cents,
@@ -23,6 +24,10 @@ module Wallets
 
         @total_usage_amount_cents = usage_amount_cents.sum { |e| e[:total_usage_amount_cents] }
         @total_billed_usage_amount_cents = usage_amount_cents.sum { |e| e[:billed_usage_amount_cents] }
+        # Before this service is called, the wallet is already loaded in the memory. If while calculating current usage we received
+        # a pay_in_advance_fee, wallet will be updated by Wallets::Balance::DecreaseService and current wallet version will throw an
+        # `Attempted to update a stale object` error. To avoid this, we reload the wallet before updating it.
+        wallet.reload
         update_params = wallet_update_params
 
         Wallets::Balance::UpdateOngoingService.call(wallet:, update_params:).raise_if_error!
@@ -33,7 +38,7 @@ module Wallets
 
       private
 
-      attr_reader :wallet, :total_usage_amount_cents, :total_billed_usage_amount_cents
+      attr_reader :wallet, :total_usage_amount_cents, :total_billed_usage_amount_cents, :include_generating_invoices
 
       delegate :customer, to: :wallet
 

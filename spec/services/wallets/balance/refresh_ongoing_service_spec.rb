@@ -118,17 +118,38 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
       let(:charges_from_datetime) { timestamp - 1.week }
       let(:invoice_subscription) { create(:invoice_subscription, subscription: first_subscription, charges_from_datetime:, charges_to_datetime:) }
       let(:invoice) { invoice_subscription.invoice }
+      let(:fee) do
+        create(:charge_fee, subscription: first_subscription, precise_coupons_amount_cents: 0,
+          invoice: invoice, amount_cents: 100, taxes_amount_cents: 10)
+      end
 
       before do
-        invoice.update!(invoice_type:, fees_amount_cents: 100, total_amount_cents: 100)
+        fee
+        invoice.update!(invoice_type:, fees_amount_cents: 110, total_amount_cents: 110)
       end
 
       it "deducts progressively_billed amount from the ongoing usage" do
         expect { refresh_service.call }
-          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(1000)
-          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(10.0)
-          .and change(wallet, :ongoing_balance_cents).from(800).to(0)
-          .and change(wallet, :credits_ongoing_balance).from(8.0).to(0)
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(990)
+          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(9.9)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(10)
+          .and change(wallet, :credits_ongoing_balance).from(8.0).to(0.1)
+      end
+
+      context "when refreshing balance while finalizing progressively billed invoice" do
+        subject(:refresh_service) { described_class.new(wallet:, include_generating_invoices: true) }
+
+        before do
+          invoice.generating!
+        end
+
+        it "calculates generating invoice in current usage" do
+          expect { refresh_service.call }
+            .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(990)
+            .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(9.9)
+            .and change(wallet, :ongoing_balance_cents).from(800).to(10)
+            .and change(wallet, :credits_ongoing_balance).from(8.0).to(0.1)
+        end
       end
     end
 
