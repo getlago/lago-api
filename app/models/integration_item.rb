@@ -25,20 +25,16 @@ end
 # Table name: integration_items
 #
 #  id                    :uuid             not null, primary key
+#  integration_id        :uuid             not null
+#  item_type             :integer          not null
+#  external_id           :string           not null
 #  external_account_code :string
 #  external_name         :string
-#  item_type             :integer          not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
-#  external_id           :string           not null
-#  integration_id        :uuid             not null
 #
 # Indexes
 #
 #  index_int_items_on_external_id_and_int_id_and_type  (external_id,integration_id,item_type) UNIQUE
 #  index_integration_items_on_integration_id           (integration_id)
-#
-# Foreign Keys
-#
-#  fk_rails_...  (integration_id => integrations.id)
 #

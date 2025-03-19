@@ -77,21 +77,17 @@ end
 # Table name: api_keys
 #
 #  id              :uuid             not null, primary key
+#  organization_id :uuid             not null
+#  value           :string           not null
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
 #  expires_at      :datetime
 #  last_used_at    :datetime
 #  name            :string
 #  permissions     :jsonb            not null
-#  value           :string           not null
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  organization_id :uuid             not null
 #
 # Indexes
 #
 #  index_api_keys_on_organization_id  (organization_id)
 #  index_api_keys_on_value            (value) UNIQUE
-#
-# Foreign Keys
-#
-#  fk_rails_...  (organization_id => organizations.id)
 #

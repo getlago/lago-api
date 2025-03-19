@@ -26,19 +26,15 @@ end
 # Table name: commitments
 #
 #  id                   :uuid             not null, primary key
-#  amount_cents         :bigint           not null
+#  plan_id              :uuid             not null
 #  commitment_type      :integer          not null
+#  amount_cents         :integer          not null
 #  invoice_display_name :string
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
-#  plan_id              :uuid             not null
 #
 # Indexes
 #
 #  index_commitments_on_commitment_type_and_plan_id  (commitment_type,plan_id) UNIQUE
 #  index_commitments_on_plan_id                      (plan_id)
-#
-# Foreign Keys
-#
-#  fk_rails_...  (plan_id => plans.id)
 #
