@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::IntegrationsResolver, type: :graphql do
-  let(:required_permission) { "organization:integrations:view" }
+  let(:required_permission) { "customers:view" }
   let(:query) do
     <<~GQL
       query {
@@ -29,7 +29,7 @@ RSpec.describe Resolvers::IntegrationsResolver, type: :graphql do
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "organization:integrations:view"
+  it_behaves_like "requires permission", %w[customers:view organization:integrations:view]
 
   context "when type is present" do
     let(:query) do

@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = "organization:integrations:view"
+    REQUIRED_PERMISSION = %w[organization:integrations:view customers:view]
 
     description "Query organization's integrations"
 
