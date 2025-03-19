@@ -12,14 +12,18 @@ end
 # Table name: password_resets
 #
 #  id         :uuid             not null, primary key
-#  user_id    :uuid             not null
-#  token      :string           not null
 #  expire_at  :datetime         not null
+#  token      :string           not null
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
+#  user_id    :uuid             not null
 #
 # Indexes
 #
 #  index_password_resets_on_token    (token) UNIQUE
 #  index_password_resets_on_user_id  (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (user_id => users.id)
 #
