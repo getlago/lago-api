@@ -6,7 +6,7 @@ class FulfillAdjustedFeeUnitPreciseAmountCents < ActiveRecord::Migration[7.1]
   end
 
   class Invoice < ApplicationRecord
-    enum status: {draft: 0}
+    enum :status, {draft: 0}
   end
 
   def up
