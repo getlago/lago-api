@@ -103,30 +103,25 @@ end
 # Table name: invoice_subscriptions
 #
 #  id                    :uuid             not null, primary key
-#  charges_from_datetime :datetime
-#  charges_to_datetime   :datetime
-#  from_datetime         :datetime
-#  invoicing_reason      :enum
-#  recurring             :boolean
-#  timestamp             :datetime
-#  to_datetime           :datetime
-#  created_at            :datetime         not null
-#  updated_at            :datetime         not null
 #  invoice_id            :uuid             not null
 #  subscription_id       :uuid             not null
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  recurring             :boolean
+#  timestamp             :datetime
+#  from_datetime         :datetime
+#  to_datetime           :datetime
+#  charges_from_datetime :datetime
+#  charges_to_datetime   :datetime
+#  invoicing_reason      :enum
 #
 # Indexes
 #
 #  index_invoice_subscriptions_boundaries                         (subscription_id,from_datetime,to_datetime)
-#  index_invoice_subscriptions_on_charges_from_and_to_datetime    (subscription_id,charges_from_datetime,charges_to_datetime) UNIQUE WHERE ((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE))
+#  index_invoice_subscriptions_on_charges_from_and_to_datetime    (subscription_id,charges_from_datetime,charges_to_datetime) UNIQUE
 #  index_invoice_subscriptions_on_invoice_id                      (invoice_id)
-#  index_invoice_subscriptions_on_invoice_id_and_subscription_id  (invoice_id,subscription_id) UNIQUE WHERE (created_at >= '2023-11-23 00:00:00'::timestamp without time zone)
+#  index_invoice_subscriptions_on_invoice_id_and_subscription_id  (invoice_id,subscription_id) UNIQUE
 #  index_invoice_subscriptions_on_subscription_id                 (subscription_id)
-#  index_unique_starting_subscription_invoice                     (subscription_id,invoicing_reason) UNIQUE WHERE (invoicing_reason = 'subscription_starting'::subscription_invoicing_reason)
-#  index_unique_terminating_subscription_invoice                  (subscription_id,invoicing_reason) UNIQUE WHERE (invoicing_reason = 'subscription_terminating'::subscription_invoicing_reason)
-#
-# Foreign Keys
-#
-#  fk_rails_...  (invoice_id => invoices.id)
-#  fk_rails_...  (subscription_id => subscriptions.id)
+#  index_unique_starting_subscription_invoice                     (subscription_id,invoicing_reason) UNIQUE
+#  index_unique_terminating_subscription_invoice                  (subscription_id,invoicing_reason) UNIQUE
 #

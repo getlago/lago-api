@@ -12,12 +12,12 @@ end
 # Table name: invoice_custom_section_selections
 #
 #  id                        :uuid             not null, primary key
+#  invoice_custom_section_id :uuid             not null
+#  organization_id           :uuid
+#  customer_id               :uuid
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #  billing_entity_id         :uuid
-#  customer_id               :uuid
-#  invoice_custom_section_id :uuid             not null
-#  organization_id           :uuid
 #
 # Indexes
 #
@@ -25,10 +25,4 @@ end
 #  index_invoice_custom_section_selections_on_billing_entity_id  (billing_entity_id)
 #  index_invoice_custom_section_selections_on_customer_id        (customer_id)
 #  index_invoice_custom_section_selections_on_organization_id    (organization_id)
-#
-# Foreign Keys
-#
-#  fk_rails_...  (customer_id => customers.id)
-#  fk_rails_...  (invoice_custom_section_id => invoice_custom_sections.id)
-#  fk_rails_...  (organization_id => organizations.id)
 #

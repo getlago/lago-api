@@ -27,16 +27,16 @@ end
 # Table name: invoice_custom_sections
 #
 #  id              :uuid             not null, primary key
-#  code            :string           not null
-#  deleted_at      :datetime
-#  description     :string
-#  details         :string
-#  display_name    :string
 #  name            :string           not null
 #  section_type    :enum             default("manual"), not null
+#  code            :string           not null
+#  description     :string
+#  display_name    :string
+#  details         :string
+#  organization_id :uuid             not null
+#  deleted_at      :datetime
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
-#  organization_id :uuid             not null
 #
 # Indexes
 #
