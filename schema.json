@@ -21871,6 +21871,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "analytics_dashboards",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -32577,6 +32583,12 @@
             },
             {
               "name": "multi_entities_enterprise",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "analytics_dashboards",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

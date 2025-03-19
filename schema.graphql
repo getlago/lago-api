@@ -4617,6 +4617,7 @@ enum IntegrationItemTypeEnum {
 }
 
 enum IntegrationTypeEnum {
+  analytics_dashboards
   anrok
   api_permissions
   auto_dunning
@@ -6702,6 +6703,7 @@ input PlanOverridesInput {
 }
 
 enum PremiumIntegrationTypeEnum {
+  analytics_dashboards
   api_permissions
   auto_dunning
   beta_payment_authorization
