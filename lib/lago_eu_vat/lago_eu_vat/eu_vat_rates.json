@@ -68,15 +68,6 @@
         }
       }
     ],
-    "GB": [
-      {
-        "effective_from": "2011-01-04",
-        "rates": {
-          "standard": 20,
-          "reduced": 5
-        }
-      }
-    ],
     "CZ": [
       {
         "effective_from": "2024-01-01",
