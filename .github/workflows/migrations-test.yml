@@ -67,6 +67,6 @@ jobs:
       - name: Ensure no changes to structure.sql
         run: diff db/structure.sql db/structure-before-dump.sql
       - name: Ensure annotations are up to date
-        run: bundle exec annotate --frozen
+        run: bundle exec annotaterb --frozen
       - name: Perform Clickhouse database migrations
         run: bin/rails db:migrate:clickhouse
