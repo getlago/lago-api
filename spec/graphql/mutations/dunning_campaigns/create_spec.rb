@@ -11,6 +11,7 @@ RSpec.describe Mutations::DunningCampaigns::Create, type: :graphql do
       name: "Dunning campaign name",
       code: "dunning-campaign-code",
       description: "Dunning campaign description",
+      bccEmails: ["earl@example.com"],
       maxAttempts: 3,
       daysBetweenAttempts: 1,
       appliedToOrganization: false,
@@ -31,6 +32,7 @@ RSpec.describe Mutations::DunningCampaigns::Create, type: :graphql do
           name
           code
           description
+          bccEmails
           maxAttempts
           daysBetweenAttempts
           appliedToOrganization
@@ -63,6 +65,7 @@ RSpec.describe Mutations::DunningCampaigns::Create, type: :graphql do
       "name" => "Dunning campaign name",
       "code" => "dunning-campaign-code",
       "description" => "Dunning campaign description",
+      "bccEmails" => ["earl@example.com"],
       "maxAttempts" => 3,
       "daysBetweenAttempts" => 1,
       "appliedToOrganization" => false,
