@@ -64,11 +64,13 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         create(:organization, premium_integrations: ["multi_entities_pro"])
       end
 
-      it "creates a billing entity" do
+      it "creates a billing entity with default document_numbering" do
         expect(organization.billing_entities.count).to eq(1)
         expect(result).to be_success
         expect(result.billing_entity).to be_persisted
         expect(result.billing_entity.name).to eq("Billing Entity")
+        expect(result.billing_entity.code).to eq("billing-entity")
+        expect(result.billing_entity.document_numbering).to eq("per_customer")
       end
 
       context "when creating billing entity with full data" do

@@ -352,12 +352,17 @@ RSpec.describe Organization, type: :model do
     end
 
     context "when the organization has multiple billing entities" do
-      let(:billing_entities) { create_list(:billing_entity, 2, organization:) }
+      let(:billing_entities) do
+        [
+          create(:billing_entity, organization:),
+          create(:billing_entity, organization:, created_at: 2.days.ago)
+        ]
+      end
 
       before { billing_entities }
 
       it "returns the default billing entity" do
-        expect(organization.default_billing_entity).to eq(nil)
+        expect(organization.reload.default_billing_entity).to eq(billing_entities.last)
       end
     end
   end

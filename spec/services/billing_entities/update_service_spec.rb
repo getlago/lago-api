@@ -232,5 +232,17 @@ RSpec.describe BillingEntities::UpdateService do
         end
       end
     end
+
+    context "when billing_entity is not provided" do
+      let(:billing_entity) { nil }
+
+      it "raises an error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("billing_entity")
+      end
+    end
   end
 end
