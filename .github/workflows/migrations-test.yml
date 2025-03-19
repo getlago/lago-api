@@ -61,6 +61,6 @@ jobs:
       - name: Ensure no changes to schema.rb
         run: diff db/schema.rb db/schema-before-dump.rb
       - name: Ensure annotations are up to date
-        run: bundle exec annotate --frozen
+        run: bundle exec annotaterb --frozen
       - name: Perform Clickhouse database migrations
         run: bin/rails db:migrate:clickhouse
