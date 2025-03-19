@@ -9,6 +9,7 @@ module Invoices
       retry_on LagoHttpClient::HttpError, wait: :polynomially_longer, attempts: 6
       retry_on OpenSSL::SSL::SSLError, wait: :polynomially_longer, attempts: 6
       retry_on Net::ReadTimeout, wait: :polynomially_longer, attempts: 6
+      retry_on Net::OpenTimeout, wait: :polynomially_longer, attempts: 6
 
       def perform(invoice:)
         Invoices::ProviderTaxes::PullTaxesAndApplyService.call!(invoice:)
