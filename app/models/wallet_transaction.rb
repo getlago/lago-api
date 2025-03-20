@@ -11,7 +11,8 @@ class WalletTransaction < ApplicationRecord
 
   STATUSES = [
     :pending,
-    :settled
+    :settled,
+    :failed
   ].freeze
 
   TRANSACTION_STATUSES = [
@@ -46,6 +47,12 @@ class WalletTransaction < ApplicationRecord
   def unit_amount_cents
     wallet.rate_amount * wallet.currency_for_balance.subunit_to_unit
   end
+
+  def mark_as_failed!(timestamp = Time.zone.now)
+    return if failed?
+
+    update!(status: :failed, failed_at: timestamp)
+  end
 end
 
 # == Schema Information
@@ -55,6 +62,7 @@ end
 #  id                                  :uuid             not null, primary key
 #  amount                              :decimal(30, 5)   default(0.0), not null
 #  credit_amount                       :decimal(30, 5)   default(0.0), not null
+#  failed_at                           :datetime
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
 #  metadata                            :jsonb
 #  settled_at                          :datetime

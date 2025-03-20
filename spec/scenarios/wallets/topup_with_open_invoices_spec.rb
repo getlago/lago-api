@@ -108,7 +108,7 @@ describe "Wallet Transaction with invoice after payment", :scenarios, type: :req
         expect(invoice.file?).to be false
 
         wt.reload
-        expect(wt.status).to eq "pending"
+        expect(wt.status).to eq "failed"
         expect(wt.settled_at).to be_nil
 
         wallet.reload

@@ -199,7 +199,7 @@ RSpec.describe Invoices::UpdateService do
       end
     end
 
-    context "when invoice type is credit and new payment_status is succeeded" do
+    context "when invoice type is credit" do
       let(:subscription) { create(:subscription, customer: invoice.customer) }
       let(:wallet) { create(:wallet, customer: invoice.customer, balance: 10.0, credits_balance: 10.0) }
       let(:wallet_transaction) do
@@ -222,10 +222,22 @@ RSpec.describe Invoices::UpdateService do
         invoice.update(invoice_type: "credit")
       end
 
-      it "calls Invoices::PrepaidCreditJob" do
-        result
+      context "when payment_status is succeeded" do
+        let(:update_args) { {payment_status: "succeeded"} }
 
-        expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice)
+        it "calls Invoices::PrepaidCreditJob with the correct arguments" do
+          result
+          expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice, "succeeded")
+        end
+      end
+
+      context "when payment_status is failed" do
+        let(:update_args) { {payment_status: "failed"} }
+
+        it "calls Invoices::PrepaidCreditJob with the correct arguments" do
+          result
+          expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice, "failed")
+        end
       end
     end
 

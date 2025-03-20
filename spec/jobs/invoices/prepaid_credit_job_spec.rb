@@ -62,4 +62,13 @@ RSpec.describe Invoices::PrepaidCreditJob, type: :job do
       }.to have_enqueued_job(described_class)
     end
   end
+
+  context "when payment fails" do
+    it "marks the wallet transaction as failed" do
+      allow(WalletTransactions::MarkAsFailedService).to receive(:new).and_call_original
+      described_class.perform_now(invoice, :failed)
+      expect(WalletTransactions::MarkAsFailedService).to have_received(:new).with(wallet_transaction: wallet_transaction)
+      expect(wallet_transaction.reload.status).to eq("failed")
+    end
+  end
 end

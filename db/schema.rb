@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_03_10_213734) do
+ActiveRecord::Schema[7.2].define(version: 2025_03_18_175216) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -1380,6 +1380,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_03_10_213734) do
     t.boolean "invoice_requires_successful_payment", default: false, null: false
     t.jsonb "metadata", default: []
     t.uuid "credit_note_id"
+    t.datetime "failed_at"
     t.index ["credit_note_id"], name: "index_wallet_transactions_on_credit_note_id"
     t.index ["invoice_id"], name: "index_wallet_transactions_on_invoice_id"
     t.index ["wallet_id"], name: "index_wallet_transactions_on_wallet_id"

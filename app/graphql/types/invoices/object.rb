@@ -70,6 +70,7 @@ module Types
       field :integration_salesforce_syncable, GraphQL::Types::Boolean, null: false
       field :integration_syncable, GraphQL::Types::Boolean, null: false
       field :payable_type, GraphQL::Types::String, null: false
+      field :payments, [Types::Payments::Object], null: true
       field :tax_provider_voidable, GraphQL::Types::Boolean, null: false
 
       def payable_type
@@ -78,6 +79,10 @@ module Types
 
       def applied_taxes
         object.applied_taxes.order(tax_rate: :desc)
+      end
+
+      def payments
+        object.payments.order(updated_at: :desc)
       end
 
       def integration_syncable

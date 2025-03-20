@@ -22667,6 +22667,26 @@
               "args": []
             },
             {
+              "name": "payments",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "Payment",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "prepaidCreditAmountCents",
               "description": null,
               "type": {
@@ -36998,6 +37018,35 @@
               ]
             },
             {
+              "name": "walletTransaction",
+              "description": "Query a single wallet transaction",
+              "type": {
+                "kind": "OBJECT",
+                "name": "WalletTransaction",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "id",
+                  "description": "Unique ID of the wallet transaction",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "walletTransactions",
               "description": "Query wallet transactions",
               "type": {
@@ -46400,6 +46449,18 @@
               "args": []
             },
             {
+              "name": "failedAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "id",
               "description": null,
               "type": {
@@ -46410,6 +46471,18 @@
                   "name": "ID",
                   "ofType": null
                 }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "invoice",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "Invoice",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -46697,6 +46770,12 @@
             },
             {
               "name": "settled",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "failed",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
