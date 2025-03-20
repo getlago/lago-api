@@ -6,6 +6,7 @@ module Types
       graphql_name "CreateDunningCampaignInput"
 
       argument :applied_to_organization, Boolean, required: true
+      argument :bcc_emails, [String], required: false
       argument :code, String, required: true
       argument :days_between_attempts, Integer, required: true
       argument :max_attempts, Integer, required: true

@@ -8,6 +8,7 @@ module Types
       argument :id, ID, required: true
 
       argument :applied_to_organization, Boolean, required: false
+      argument :bcc_emails, [String], required: false
       argument :code, String, required: false
       argument :days_between_attempts, Integer, required: false
       argument :description, String, required: false

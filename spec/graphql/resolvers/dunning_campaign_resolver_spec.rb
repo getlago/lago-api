@@ -21,6 +21,7 @@ RSpec.describe Resolvers::DunningCampaignResolver, type: :graphql do
           id
           customersCount
           appliedToOrganization
+          bccEmails
           code
           daysBetweenAttempts
           description
@@ -37,7 +38,7 @@ RSpec.describe Resolvers::DunningCampaignResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:dunning_campaign) { create(:dunning_campaign, organization:) }
+  let(:dunning_campaign) { create(:dunning_campaign, organization:, bcc_emails: %w[earl@example.com]) }
   let(:dunning_campaign_threshold) { create(:dunning_campaign_threshold, dunning_campaign:) }
 
   before do
@@ -57,6 +58,7 @@ RSpec.describe Resolvers::DunningCampaignResolver, type: :graphql do
         "id" => dunning_campaign.id,
         "customersCount" => 0,
         "appliedToOrganization" => dunning_campaign.applied_to_organization,
+        "bccEmails" => dunning_campaign.bcc_emails,
         "code" => dunning_campaign.code,
         "daysBetweenAttempts" => dunning_campaign.days_between_attempts,
         "description" => dunning_campaign.description,

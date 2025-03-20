@@ -8,6 +8,7 @@ module Types
       field :id, ID, null: false
 
       field :applied_to_organization, Boolean, null: false
+      field :bcc_emails, [String], null: true
       field :code, String, null: false
       field :customers_count, Integer, null: false
       field :days_between_attempts, Integer, null: false

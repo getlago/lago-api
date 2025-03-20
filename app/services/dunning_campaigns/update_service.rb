@@ -33,7 +33,7 @@ module DunningCampaigns
     attr_reader :dunning_campaign, :organization, :params
 
     def permitted_attributes
-      params.slice(:name, :code, :description, :days_between_attempts, :max_attempts)
+      params.slice(:name, :bcc_emails, :code, :description, :days_between_attempts, :max_attempts)
     end
 
     def handle_thresholds

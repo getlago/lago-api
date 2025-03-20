@@ -103,6 +103,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
         it "updates the dunning campaign" do
           expect(result).to be_success
           expect(result.dunning_campaign.name).to eq(params[:name])
+          expect(result.dunning_campaign.bcc_emails).to eq([])
           expect(result.dunning_campaign.code).to eq(params[:code])
           expect(result.dunning_campaign.days_between_attempts).to eq(params[:days_between_attempts])
           expect(result.dunning_campaign.max_attempts).to eq(params[:max_attempts])
@@ -113,6 +114,22 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             .to have_attributes({amount_cents: 999_99, currency: "GBP"})
           expect(result.dunning_campaign.thresholds.where.not(id: dunning_campaign_threshold.id).first)
             .to have_attributes({amount_cents: 5_55, currency: "CHF"})
+        end
+
+        context "when bcc_emails is set and should be reset" do
+          let(:dunning_campaign) { create(:dunning_campaign, organization:, applied_to_organization: true, bcc_emails: ["earl@example.com"]) }
+          let(:params) do
+            {
+              name: "Updated Dunning Campaign",
+              bcc_emails: []
+            }
+          end
+
+          it "updates the dunning campaign" do
+            expect(result).to be_success
+            expect(result.dunning_campaign.name).to eq(params[:name])
+            expect(result.dunning_campaign.bcc_emails).to eq([])
+          end
         end
 
         shared_examples "resets customer last dunning campaign attempt fields" do |customer_name|
