@@ -10,17 +10,13 @@ RSpec.describe Integrations::Aggregator::ItemsService do
   describe ".call" do
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
     let(:items_endpoint) { "https://api.nango.dev/v1/netsuite/items" }
+    let(:params) { {limit: 450} }
+
     let(:headers) do
       {
         "Connection-Id" => integration.connection_id,
         "Authorization" => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
         "Provider-Config-Key" => "netsuite-tba"
-      }
-    end
-    let(:params) do
-      {
-        limit: 450,
-        cursor: ""
       }
     end
 
@@ -59,6 +55,31 @@ RSpec.describe Integrations::Aggregator::ItemsService do
 
     it "returns the path" do
       expect(subject).to eq(action_path)
+    end
+  end
+
+  describe "#params" do
+    subject(:params_call) { items_service.__send__(:params) }
+
+    context "when cursor is not present" do
+      let(:params) { {limit: 450} }
+
+      it "returns the params" do
+        expect(subject).to eq(params)
+      end
+    end
+
+    context "when cursor is present" do
+      let(:params) { {limit: 450, cursor:} }
+      let(:cursor) { "cursor" }
+
+      before do
+        items_service.instance_variable_set(:@cursor, cursor)
+      end
+
+      it "returns the params with cursor" do
+        expect(subject).to eq(params)
+      end
     end
   end
 end

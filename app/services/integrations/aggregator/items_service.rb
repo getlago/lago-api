@@ -61,9 +61,8 @@ module Integrations
 
       def params
         {
-          limit: LIMIT,
-          cursor:
-        }
+          limit: LIMIT
+        }.merge(cursor.present? ? {cursor:} : {})
       end
     end
   end
