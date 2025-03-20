@@ -11,7 +11,7 @@ module Resolvers
 
     argument :id, ID, required: true, description: "Uniq ID of the billing_entity"
 
-    type Types::BillingEntity::Object, null: true
+    type Types::BillingEntities::Object, null: true
 
     def resolve(id: nil)
       current_organization.all_billing_entities.find(id)

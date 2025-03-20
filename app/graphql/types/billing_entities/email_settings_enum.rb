@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Types
-  module BillingEntity
+  module BillingEntities
     class EmailSettingsEnum < Types::BaseEnum
       graphql_name "BillingEntityEmailSettingsEnum"
       description "BillingEntity Email Settings Values"

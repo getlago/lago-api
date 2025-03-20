@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Types
-  module BillingEntity
+  module BillingEntities
     class Object < Types::BaseObject
       graphql_name "BillingEntity"
       description "Base billing entity"
@@ -13,7 +13,6 @@ module Types
       field :name, String, null: false
       field :logo_url, String
       field :timezone, Types::TimezoneEnum
-
       field :default_currency, Types::CurrencyEnum, null: false
       field :email, String
 
@@ -30,22 +29,16 @@ module Types
       field :zipcode, String
 
       field :document_number_prefix, String, null: false
-      field :document_numbering, Types::BillingEntity::DocumentNumberingEnum, null: false
+      field :document_numbering, Types::BillingEntities::DocumentNumberingEnum, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :eu_tax_management, Boolean, null: false
 
-      field :billing_configuration, Types::BillingEntity::BillingConfiguration, permission: "organization:invoices:view"
-      field :email_settings, [Types::BillingEntity::EmailSettingsEnum], permission: "organization:emails:view"
+      field :billing_configuration, Types::BillingEntities::BillingConfiguration, permission: "organization:invoices:view"
+      field :email_settings, [Types::BillingEntities::EmailSettingsEnum], permission: "organization:emails:view"
       field :finalize_zero_amount_invoice, Boolean, null: false
-      field :taxes, [Types::Taxes::Object], resolver: Resolvers::TaxesResolver, permission: "organization:taxes:view"
-
-      field :adyen_payment_providers, [Types::PaymentProviders::Adyen], permission: "organization:integrations:view"
-      field :cashfree_payment_providers, [Types::PaymentProviders::Cashfree], permission: "organization:integrations:view"
-      field :gocardless_payment_providers, [Types::PaymentProviders::Gocardless], permission: "organization:integrations:view"
-      field :stripe_payment_providers, [Types::PaymentProviders::Stripe], permission: "organization:integrations:view"
 
       field :applied_dunning_campaign, Types::DunningCampaigns::Object
     end
