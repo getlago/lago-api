@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Types
-  module BillingEntity
+  module BillingEntities
     class DocumentNumberingEnum < Types::BaseEnum
       graphql_name "BillingEntityDocumentNumberingEnum"
       description "Document numbering type"

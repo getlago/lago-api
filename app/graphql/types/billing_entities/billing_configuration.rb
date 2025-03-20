@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Types
-  module BillingEntity
+  module BillingEntities
     class BillingConfiguration < Types::BaseObject
       graphql_name "BillingEntityBillingConfiguration"
 

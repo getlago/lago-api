@@ -9,7 +9,7 @@ module Resolvers
 
     description "Query active billing_entities of an organization"
 
-    type Types::BillingEntity::Object.collection_type, null: false
+    type Types::BillingEntities::Object.collection_type, null: false
 
     def resolve(_args)
       organization.billing_entities
