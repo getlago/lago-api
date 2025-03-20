@@ -13,6 +13,8 @@ module Resolvers
         description "Query monthly recurring revenues plans of an organization"
 
         argument :currency, Types::CurrencyEnum, required: false
+        argument :limit, Integer, required: false
+        argument :offset, Integer, required: false
 
         type Types::DataApi::Mrrs::Plans::Object.collection_type, null: false
 

@@ -6985,7 +6985,7 @@ type Query {
   """
   Query monthly recurring revenues plans of an organization
   """
-  dataApiMrrsPlans(currency: CurrencyEnum): DataApiMrrPlanCollection!
+  dataApiMrrsPlans(currency: CurrencyEnum, limit: Int, offset: Int): DataApiMrrPlanCollection!
 
   """
   Query revenue streams of an organization

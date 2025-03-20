@@ -6,8 +6,8 @@ RSpec.describe Resolvers::DataApi::Mrrs::PlansResolver, type: :graphql do
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL
-      query($currency: CurrencyEnum) {
-        dataApiMrrsPlans(currency: $currency) {
+      query($currency: CurrencyEnum, $limit: Int, $offset: Int) {
+        dataApiMrrsPlans(currency: $currency, limit: $limit, offset: $offset) {
           collection {
             amountCurrency
             dt
