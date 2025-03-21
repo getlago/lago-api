@@ -152,14 +152,16 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
               "account" => "m22",
               "quantity" => 1,
               "rate" => 2.12,
-              "taxdetailsreference" => anything
+              "taxdetailsreference" => anything,
+              "description" => charge_fee.item_name
             },
             {
               "item" => "2",
               "account" => "22",
               "quantity" => 1,
               "rate" => -20.0,
-              "taxdetailsreference" => "coupon_item"
+              "taxdetailsreference" => "coupon_item",
+              "description" => description
             }
           ]
         }
@@ -169,6 +171,8 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
       }
     }
   end
+
+  let(:description) { credit_note.invoice.credits.coupon_kind.map(&:item_name).join(",") }
 
   before do
     allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
