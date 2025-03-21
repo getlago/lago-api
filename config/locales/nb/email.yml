@@ -23,11 +23,8 @@ nb:
         subject: 'Faktura fra %{organization_name} #%{invoice_number}'
     payment_receipt:
       created:
-        hello: Hello %{customer_name},
-        invoice_number: Invoice number
-        payment_receipt_number: Payment receipt number
-        subject: 'Your payment receipt from %{organization_name} #%{payment_receipt_number}'
-        thank_you: Thank you.
+        payment_receipt_from: Betalingskvittering fra %{organization_name}
+        subject: 'Din betalingskvittering fra %{organization_name} #%{payment_receipt_number}'
     payment_request:
       requested:
         already_paid: Hvis du allerede har foretatt betalingen, vennligst se bort fra denne e-posten.
