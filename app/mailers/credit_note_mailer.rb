@@ -12,8 +12,10 @@ class CreditNoteMailer < ApplicationMailer
     return if @organization.email.blank?
     return if @customer.email.blank?
 
-    @credit_note.file.open do |file|
-      attachments["credit_note-#{@credit_note.number}.pdf"] = file.read
+    if @pdfs_enabled
+      @credit_note.file.open do |file|
+        attachments["credit_note-#{@credit_note.number}.pdf"] = file.read
+      end
     end
 
     I18n.with_locale(@customer.preferred_document_locale) do

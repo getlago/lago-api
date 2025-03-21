@@ -13,9 +13,10 @@ module Invoices
       return result.not_found_failure!(resource: "invoice") if invoice.blank?
       return result.not_allowed_failure!(code: "is_draft") if invoice.draft?
 
-      generate_pdf if should_generate_pdf?
-
-      SendWebhookJob.perform_later("invoice.generated", invoice)
+      if should_generate_pdf?
+        generate_pdf
+        SendWebhookJob.perform_later("invoice.generated", invoice)
+      end
 
       result.invoice = invoice
       result
@@ -62,6 +63,8 @@ module Invoices
     end
 
     def should_generate_pdf?
+      return false if ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_PDF_GENERATION"])
+
       context == "admin" || invoice.file.blank?
     end
 

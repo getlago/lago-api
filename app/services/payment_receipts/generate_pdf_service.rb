@@ -49,6 +49,8 @@ module PaymentReceipts
     end
 
     def should_generate_pdf?
+      return false if ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_PDF_GENERATION"])
+
       context == "admin" || payment_receipt.file.blank?
     end
   end
