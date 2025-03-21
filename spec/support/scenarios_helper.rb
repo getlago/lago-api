@@ -131,6 +131,16 @@ module ScenariosHelper
 
   ### Events
 
+  def ingest_event(subscription, billable_metric, amount)
+    create_event({
+      transaction_id: SecureRandom.uuid,
+      code: billable_metric.code,
+      external_subscription_id: subscription.external_id,
+      properties: {billable_metric&.field_name => amount}
+    })
+    perform_usage_update
+  end
+
   def create_event(params)
     post_with_token(organization, "/api/v1/events", {event: params})
     perform_all_enqueued_jobs
