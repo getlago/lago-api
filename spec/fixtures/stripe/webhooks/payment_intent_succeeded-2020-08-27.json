@@ -1,18 +1,18 @@
 {
-  "id": "evt_3Qu0oXQ8iJWBZFaM2POll434",
+  "id": "evt_3R3dvoQ8iJWBZFaM0Wh4E44o",
   "object": "event",
   "api_version": "2020-08-27",
-  "created": 1739923617,
+  "created": 1742218937,
   "data": {
     "object": {
-      "id": "pi_3Qu0oXQ8iJWBZFaM2cc2RG6D",
+      "id": "pi_3R3dvoQ8iJWBZFaM0uu1G1rx",
       "object": "payment_intent",
-      "amount": 9995,
+      "amount": 3897,
       "amount_capturable": 0,
       "amount_details": {
         "tip": {}
       },
-      "amount_received": 9995,
+      "amount_received": 3897,
       "application": null,
       "application_fee_amount": null,
       "automatic_payment_methods": null,
@@ -23,34 +23,34 @@
         "object": "list",
         "data": [
           {
-            "id": "ch_3Qu0oXQ8iJWBZFaM2mejOQKg",
+            "id": "ch_3R3dvoQ8iJWBZFaM0NhAbztB",
             "object": "charge",
-            "amount": 9995,
-            "amount_captured": 9995,
+            "amount": 3897,
+            "amount_captured": 3897,
             "amount_refunded": 0,
             "application": null,
             "application_fee": null,
             "application_fee_amount": null,
-            "balance_transaction": "txn_3Qu0oXQ8iJWBZFaM2dA7i3aQ",
+            "balance_transaction": "txn_3R3dvoQ8iJWBZFaM0vIgoQgO",
             "billing_details": {
               "address": {
                 "city": null,
-                "country": "US",
+                "country": "FR",
                 "line1": null,
                 "line2": null,
-                "postal_code": "45678",
+                "postal_code": null,
                 "state": null
               },
-              "email": "julienbourdeau@hey.com",
+              "email": "awdawd@desf.com",
               "name": "Testing Stripe",
               "phone": null
             },
             "calculated_statement_descriptor": "JULIEN",
             "captured": true,
-            "created": 1739923617,
+            "created": 1742218936,
             "currency": "usd",
-            "customer": "cus_RnWzeE8gaYbSve",
-            "description": "Hooli - Invoice HOO-CAAB-010-001",
+            "customer": "cus_Rw5Qso78STEap3",
+            "description": "Hooli - Invoice HOO-CAAB-028-004",
             "destination": null,
             "dispute": null,
             "disputed": false,
@@ -61,8 +61,10 @@
             "invoice": null,
             "livemode": false,
             "metadata": {
-              "lago_payment_request_id": "a587e552-36bc-4334-81f2-abcbf034ad3f",
-              "lago_payable_type": "PaymentRequest"
+              "invoice_type": "one_off",
+              "lago_customer_id": "e4674f68-a7ba-4ce8-95e9-981f346b49d7",
+              "invoice_issuing_date": "2025-03-17",
+              "lago_invoice_id": "5ccdc601-18a5-4f22-a8e7-a53ca18e1f00"
             },
             "on_behalf_of": null,
             "order": null,
@@ -73,22 +75,22 @@
               "network_status": "approved_by_network",
               "reason": null,
               "risk_level": "normal",
-              "risk_score": 14,
+              "risk_score": 49,
               "seller_message": "Payment complete.",
               "type": "authorized"
             },
             "paid": true,
-            "payment_intent": "pi_3Qu0oXQ8iJWBZFaM2cc2RG6D",
+            "payment_intent": "pi_3R3dvoQ8iJWBZFaM0uu1G1rx",
             "payment_method": "pm_1R2DFsQ8iJWBZFaMw3LLbR0r",
             "payment_method_details": {
               "card": {
-                "amount_authorized": 9995,
+                "amount_authorized": 3897,
                 "authorization_code": null,
                 "brand": "visa",
                 "checks": {
                   "address_line1_check": null,
-                  "address_postal_code_check": "pass",
-                  "cvc_check": "pass"
+                  "address_postal_code_check": null,
+                  "cvc_check": null
                 },
                 "country": "US",
                 "exp_month": 12,
@@ -113,7 +115,7 @@
                 },
                 "network_transaction_id": "568479105665299",
                 "overcapture": {
-                  "maximum_amount_capturable": 9995,
+                  "maximum_amount_capturable": 3897,
                   "status": "unavailable"
                 },
                 "regulated_status": "unregulated",
@@ -125,14 +127,14 @@
             "radar_options": {},
             "receipt_email": null,
             "receipt_number": null,
-            "receipt_url": "https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUXNPODZROGlKV0JaRmFNKKLB1L0GMgZyY5dzQos6LBYmPDJ2CJS8Ofst88nIYdxk7dQPCLdbAkTKJVa3ly3jF3irJxsp03NFOUjj",
+            "receipt_url": "https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xUXNPODZROGlKV0JaRmFNKLnN4L4GMgZG_ZU7Occ6LBa2vkaCb0vmYUzyS_hCt6KVClQQn57DEam-9o5grpM2ZtQsdc7xMPJsKpwG",
             "refunded": false,
             "refunds": {
               "object": "list",
               "data": [],
               "has_more": false,
               "total_count": 0,
-              "url": "/v1/charges/ch_3Qu0oXQ8iJWBZFaM2mejOQKg/refunds"
+              "url": "/v1/charges/ch_3R3dvoQ8iJWBZFaM0NhAbztB/refunds"
             },
             "review": null,
             "shipping": null,
@@ -147,21 +149,23 @@
         ],
         "has_more": false,
         "total_count": 1,
-        "url": "/v1/charges?payment_intent=pi_3Qu0oXQ8iJWBZFaM2cc2RG6D"
+        "url": "/v1/charges?payment_intent=pi_3R3dvoQ8iJWBZFaM0uu1G1rx"
       },
-      "client_secret": "pi_3Qu0oXQ8iJWBZFaM2cc2RG6D_secret_wV73MVI9F0SNoZNeODtkLsOKc",
+      "client_secret": "pi_3R3dvoQ8iJWBZFaM0uu1G1rx_secret_qADOJoHblKMdHbpS73aZEncpt",
       "confirmation_method": "automatic",
-      "created": 1739923617,
+      "created": 1742218936,
       "currency": "usd",
-      "customer": "cus_RnWzeE8gaYbSve",
-      "description": "Hooli - Invoice HOO-CAAB-010-001",
+      "customer": "cus_Rw5Qso78STEap3",
+      "description": "Hooli - Invoice HOO-CAAB-028-004",
       "invoice": null,
       "last_payment_error": null,
-      "latest_charge": "ch_3Qu0oXQ8iJWBZFaM2mejOQKg",
+      "latest_charge": "ch_3R3dvoQ8iJWBZFaM0NhAbztB",
       "livemode": false,
       "metadata": {
-        "lago_payment_request_id": "a587e552-36bc-4334-81f2-abcbf034ad3f",
-        "lago_payable_type": "PaymentRequest"
+        "invoice_type": "one_off",
+        "lago_customer_id": "e4674f68-a7ba-4ce8-95e9-981f346b49d7",
+        "invoice_issuing_date": "2025-03-17",
+        "lago_invoice_id": "5ccdc601-18a5-4f22-a8e7-a53ca18e1f00"
       },
       "next_action": null,
       "on_behalf_of": null,
@@ -194,10 +198,10 @@
     }
   },
   "livemode": false,
-  "pending_webhooks": 1,
+  "pending_webhooks": 3,
   "request": {
-    "id": "req_STTo2yGuTiiuNq",
-    "idempotency_key": "payment-31e11fc4-60a4-467f-8661-1f24f410fbe0"
+    "id": "req_O6QX7CMLkdywUG",
+    "idempotency_key": "payment-086e04f0-7459-41d2-ab66-8795f2c0ff9e"
   },
   "type": "payment_intent.succeeded"
 }
