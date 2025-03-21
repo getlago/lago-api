@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class CouponsQuery < BaseQuery
+  Result = BaseResult[:coupons]
+
   def call
     coupons = base_scope.result
     coupons = paginate(coupons)

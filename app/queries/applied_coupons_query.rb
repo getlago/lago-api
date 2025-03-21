@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class AppliedCouponsQuery < BaseQuery
+  Result = BaseResult[:applied_coupons]
+
   def call
     applied_coupons = paginate(base_scope)
     applied_coupons = apply_consistent_ordering(applied_coupons)

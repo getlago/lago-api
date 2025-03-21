@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class WalletsQuery < BaseQuery
+  Result = BaseResult[:wallets]
+
   def call
     validate_filters
     return result if result.error.present?

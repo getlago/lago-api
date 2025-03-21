@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class TaxesQuery < BaseQuery
+  Result = BaseResult[:taxes]
+
   DEFAULT_ORDER = "name"
 
   def call

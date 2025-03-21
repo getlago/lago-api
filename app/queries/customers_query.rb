@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class CustomersQuery < BaseQuery
+  Result = BaseResult[:customers]
+
   def call
     return result unless validate_filters.success?
 

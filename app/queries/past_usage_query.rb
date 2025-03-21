@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class PastUsageQuery < BaseQuery
+  Result = BaseResult[:usage_periods, :current_page, :next_page, :prev_page, :total_pages, :total_count]
+
   def call
     validate_filters
     return result if result.error.present?

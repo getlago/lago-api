@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class EventsQuery < BaseQuery
+  Result = BaseResult[:events]
+
   def call
     events = organization.clickhouse_events_store? ? Clickhouse::EventsRaw : Event
     events = events.where(organization_id: organization.id)

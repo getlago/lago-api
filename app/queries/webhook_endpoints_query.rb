@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class WebhookEndpointsQuery < BaseQuery
+  Result = BaseResult[:webhook_endpoints]
+
   def call
     webhook_endpoints = base_scope.result
     webhook_endpoints = paginate(webhook_endpoints)

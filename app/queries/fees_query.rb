@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class FeesQuery < BaseQuery
+  Result = BaseResult[:fees]
+
   def call
     base_scope = if filters.external_customer_id
       Fee.from_customer(organization, filters.external_customer_id)

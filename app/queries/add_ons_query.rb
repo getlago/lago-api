@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class AddOnsQuery < BaseQuery
+  Result = BaseResult[:add_ons]
+
   def call
     add_ons = base_scope.result
     add_ons = paginate(add_ons)

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class WebhooksQuery < BaseQuery
+  Result = BaseResult[:webhooks]
+
   def initialize(webhook_endpoint:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
     @webhook_endpoint = webhook_endpoint
     super(organization: webhook_endpoint.organization, pagination:, filters:, search_term:, order:)

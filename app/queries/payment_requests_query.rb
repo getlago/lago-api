@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class PaymentRequestsQuery < BaseQuery
+  Result = BaseResult[:payment_requests]
+
   def call
     payment_requests = PaymentRequest.where(organization:)
     payment_requests = paginate(payment_requests)

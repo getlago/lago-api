@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class SubscriptionsQuery < BaseQuery
+  Result = BaseResult[:subscriptions]
+
   def call
     subscriptions = paginate(organization.subscriptions)
     subscriptions = subscriptions.where(status: filtered_statuses)
