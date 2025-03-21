@@ -21,16 +21,6 @@ describe "Progressive billing invoices", :scenarios, type: :request do
 
   around { |test| lago_premium!(&test) }
 
-  def ingest_event(subscription, amount)
-    create_event({
-      transaction_id: SecureRandom.uuid,
-      code: billable_metric.code,
-      external_subscription_id: subscription.external_id,
-      properties: {"total" => amount}
-    })
-    perform_usage_update
-  end
-
   it "generates an invoice in the middle of the month and a final invoice at the end of the month" do
     time_0 = DateTime.new(2022, 12, 1)
     travel_to time_0 do
@@ -45,13 +35,13 @@ describe "Progressive billing invoices", :scenarios, type: :request do
     subscription = customer.subscriptions.first
 
     travel_to time_0 + 5.days do
-      ingest_event(subscription, 1000000)
+      ingest_event(subscription, billable_metric, 1000000)
       expect(Invoice.count).to eq(1)
       expect(Invoice.last.total_amount_cents).to eq(20000)
     end
 
     travel_to time_0 + 15.days do
-      ingest_event(subscription, 1000000)
+      ingest_event(subscription, billable_metric, 1000000)
       expect(Invoice.count).to eq(1)
       progressive_billing_invoice = subscription.invoices.first
       expect(progressive_billing_invoice.total_amount_cents).to eq(20000)
@@ -84,13 +74,13 @@ describe "Progressive billing invoices", :scenarios, type: :request do
       subscription = customer.subscriptions.first
 
       travel_to time_0 + 5.days do
-        ingest_event(subscription, 1000000)
+        ingest_event(subscription, billable_metric, 1000000)
         expect(Invoice.count).to eq(1)
         expect(Invoice.last.total_amount_cents).to eq(20000)
       end
 
       travel_to time_0 + 15.days do
-        ingest_event(subscription, 1000000)
+        ingest_event(subscription, billable_metric, 1000000)
         expect(Invoice.count).to eq(1)
         progressive_billing_invoice = subscription.invoices.first
         expect(progressive_billing_invoice.total_amount_cents).to eq(20000)
@@ -128,7 +118,7 @@ describe "Progressive billing invoices", :scenarios, type: :request do
     subscription = customer.subscriptions.first
 
     travel_to time_0 + 15.days do
-      ingest_event(subscription, 1000000)
+      ingest_event(subscription, billable_metric, 1000000)
       expect(Invoice.count).to eq(1)
       expect(Invoice.last.total_amount_cents).to eq(20000)
     end
@@ -157,7 +147,7 @@ describe "Progressive billing invoices", :scenarios, type: :request do
     subscription = customer.subscriptions.first
 
     travel_to time_0 + 15.days do
-      ingest_event(subscription, 1000000)
+      ingest_event(subscription, billable_metric, 1000000)
       expect(Invoice.count).to eq(1)
       expect(Invoice.last.total_amount_cents).to eq(20000)
     end
@@ -202,7 +192,7 @@ describe "Progressive billing invoices", :scenarios, type: :request do
     end
 
     travel_to time_0 + 1.month + 15.days do
-      ingest_event(subscription, 3000000)
+      ingest_event(subscription, billable_metric, 3000000)
       expect(Invoice.count).to eq(2)
       progressive_invoice = subscription.invoices.order(:created_at).last
       expect(progressive_invoice.total_amount_cents).to eq(60000)
@@ -242,18 +232,18 @@ describe "Progressive billing invoices", :scenarios, type: :request do
     subscription = customer.subscriptions.first
 
     travel_to time_0 + 15.days do
-      ingest_event(subscription, 1000000)
+      ingest_event(subscription, billable_metric, 1000000)
       expect(Invoice.count).to eq(1)
       expect(subscription.invoices.order(:created_at).last.total_amount_cents).to eq(20000)
     end
 
     travel_to time_0 + 20.days do
-      ingest_event(subscription, 1000000)
+      ingest_event(subscription, billable_metric, 1000000)
       expect(Invoice.count).to eq(1)
     end
 
     travel_to time_0 + 25.days do
-      ingest_event(subscription, 1000000)
+      ingest_event(subscription, billable_metric, 1000000)
       expect(Invoice.count).to eq(2)
       expect(subscription.invoices.order(:created_at).last.total_amount_cents).to eq(40000)
     end
@@ -302,7 +292,7 @@ describe "Progressive billing invoices", :scenarios, type: :request do
 
     # First billing period
     travel_to time_0 + 15.days do
-      ingest_event(subscription, 1000000)
+      ingest_event(subscription, billable_metric, 1000000)
       expect(Invoice.count).to eq(1)
       expect(subscription.invoices.order(:created_at).last.total_amount_cents).to eq(20000)
     end
@@ -316,7 +306,7 @@ describe "Progressive billing invoices", :scenarios, type: :request do
 
     # Second billing period
     travel_to time_0 + 1.month + 15.days do
-      ingest_event(subscription, 2000000)
+      ingest_event(subscription, billable_metric, 2000000)
       expect(Invoice.count).to eq(2)
     end
 
@@ -328,7 +318,7 @@ describe "Progressive billing invoices", :scenarios, type: :request do
 
     # Third billing period
     travel_to time_0 + 2.months + 15.days do
-      ingest_event(subscription, 3000000)
+      ingest_event(subscription, billable_metric, 3000000)
       expect(Invoice.count).to eq(3)
     end
 
@@ -358,36 +348,36 @@ describe "Progressive billing invoices", :scenarios, type: :request do
 
     # First billing period
     travel_to date_0 + 5.days do
-      ingest_event(subscription, 11000)
+      ingest_event(subscription, billable_metric, 11000)
       expect(Invoice.count).to eq(1)
       expect(subscription.invoices.order(:created_at).last.total_amount_cents).to eq(220)
     end
 
     travel_to date_0 + 10.days do
-      ingest_event(subscription, 11000)
+      ingest_event(subscription, billable_metric, 11000)
       expect(Invoice.count).to eq(1)
     end
 
     travel_to date_0 + 15.days do
-      ingest_event(subscription, 11000)
+      ingest_event(subscription, billable_metric, 11000)
       expect(Invoice.count).to eq(2)
       expect(subscription.invoices.order(:created_at).last.total_amount_cents).to eq(440)
     end
 
     travel_to date_0 + 20.days do
-      ingest_event(subscription, 11000)
+      ingest_event(subscription, billable_metric, 11000)
       expect(Invoice.count).to eq(3)
       expect(subscription.invoices.order(:created_at).last.total_amount_cents).to eq(220)
     end
 
     travel_to date_0 + 25.days do
-      ingest_event(subscription, 110000)
+      ingest_event(subscription, billable_metric, 110000)
       expect(Invoice.count).to eq(4)
       expect(subscription.invoices.order(:created_at).last.total_amount_cents).to eq(2200)
     end
 
     travel_to date_0 + 27.days do
-      ingest_event(subscription, 110000)
+      ingest_event(subscription, billable_metric, 110000)
       expect(Invoice.count).to eq(5)
       expect(subscription.invoices.order(:created_at).last.total_amount_cents).to eq(2200)
     end
@@ -401,7 +391,7 @@ describe "Progressive billing invoices", :scenarios, type: :request do
     end
 
     travel_to date_0 + 1.month + 5.days do
-      ingest_event(subscription, 110000)
+      ingest_event(subscription, billable_metric, 110000)
       expect(Invoice.count).to eq(7)
       expect(subscription.invoices.order(:created_at).last.total_amount_cents).to eq(2200)
     end
