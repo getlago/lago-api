@@ -136,7 +136,7 @@ describe "Create partner and run billing Scenarios", :scenarios, type: :request 
         inv.number.gsub("#{organization.document_number_prefix}-202406-", "")
       end.uniq.sort).to eq(["003", "004"])
     end
-    update_overdue_balance
+    perform_overdue_balance_update
 
     # check payments
     expect(partner.invoices.map(&:payments).flatten).to be_empty
