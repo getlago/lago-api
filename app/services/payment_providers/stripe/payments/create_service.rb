@@ -115,6 +115,14 @@ module PaymentProviders
           )
         end
 
+        def enriched_metadata
+          metadata.merge(
+            {
+              lago_payment_id: payment.id
+            }
+          )
+        end
+
         def payment_intent_payload
           payload = {
             amount: payment.amount_cents,
@@ -127,7 +135,7 @@ module PaymentProviders
             return_url: success_redirect_url,
             error_on_requires_action: error_on_requires_action?,
             description: reference,
-            metadata: metadata
+            metadata: enriched_metadata
           }
           payload.merge!(customer_balance_fields) if provider_customer.provider_payment_methods == ["customer_balance"]
           payload

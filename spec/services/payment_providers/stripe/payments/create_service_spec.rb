@@ -16,6 +16,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
     {
       lago_customer_id: customer.id,
       lago_invoice_id: invoice.id,
+      lago_payment_id: payment.id,
       invoice_issuing_date: invoice.issuing_date.iso8601,
       invoice_type: invoice.invoice_type
     }
