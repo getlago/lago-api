@@ -15,6 +15,9 @@ module Clock
     end
 
     def perform
+      # TODO: Turn into it's own job because Clock:: shouldn't do work
+      # TODO: make this a batch and use perform_all_later 😎
+      # TODO: add `select(:id)` to optimise if no perform_all_later
       Invoice
         .finalized
         .not_payment_succeeded

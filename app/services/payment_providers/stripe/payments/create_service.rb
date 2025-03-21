@@ -88,7 +88,7 @@ module PaymentProviders
         end
 
         def update_payment_method_id
-          result = ::Stripe::Customer.retrieve(
+          stripe_customer = ::Stripe::Customer.retrieve(
             provider_customer.provider_customer_id,
             {api_key: payment_provider.secret_key}
           )
@@ -96,9 +96,9 @@ module PaymentProviders
           # TODO: stripe customer should be updated/deleted
           # TODO: deliver error webhook
           # TODO(payment): update payment status
-          return if result.deleted?
+          return if stripe_customer.deleted?
 
-          if (payment_method_id = result.invoice_settings.default_payment_method || result.default_source)
+          if (payment_method_id = stripe_customer.invoice_settings.default_payment_method || stripe_customer.default_source)
             provider_customer.update!(payment_method_id:)
           end
         end
