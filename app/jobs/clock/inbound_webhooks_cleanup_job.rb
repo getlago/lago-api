@@ -2,7 +2,9 @@
 
 module Clock
   class InboundWebhooksCleanupJob < ApplicationJob
-    include SentryCronConcern
+    if ENV["SENTRY_DSN"].present? && ENV["SENTRY_ENABLE_CRONS"].present?
+      include SentryCronConcern
+    end
 
     queue_as "clock"
 
