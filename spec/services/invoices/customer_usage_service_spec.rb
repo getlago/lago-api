@@ -82,7 +82,30 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
     it "initializes an invoice" do
       result = usage_service.call
 
-      aggregate_failures do
+      expect(result).to be_success
+      expect(result.invoice).to be_a(Invoice)
+      expect(result.invoice.total_paid_amount_cents).to eq(0)
+      expect(result.invoice.prepaid_credit_amount_cents).to eq(0)
+
+      expect(result.usage).to have_attributes(
+        from_datetime: Time.current.beginning_of_month.iso8601,
+        to_datetime: Time.current.end_of_month.iso8601,
+        issuing_date: Time.zone.today.end_of_month.iso8601,
+        currency: "EUR",
+        amount_cents: 2532, # 1266 * 2,
+        taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
+        total_amount_cents: 3038
+      )
+      expect(result.usage.fees.size).to eq(1)
+      expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+    end
+
+    context "when apply_taxes property is set to false" do
+      let(:apply_taxes) { false }
+
+      it "initializes an invoice" do
+        result = usage_service.call
+
         expect(result).to be_success
         expect(result.invoice).to be_a(Invoice)
 
@@ -92,36 +115,11 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
           issuing_date: Time.zone.today.end_of_month.iso8601,
           currency: "EUR",
           amount_cents: 2532, # 1266 * 2,
-          taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
-          total_amount_cents: 3038
+          taxes_amount_cents: 0,
+          total_amount_cents: 2532
         )
         expect(result.usage.fees.size).to eq(1)
         expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
-      end
-    end
-
-    context "when apply_taxes property is set to false" do
-      let(:apply_taxes) { false }
-
-      it "initializes an invoice" do
-        result = usage_service.call
-
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice).to be_a(Invoice)
-
-          expect(result.usage).to have_attributes(
-            from_datetime: Time.current.beginning_of_month.iso8601,
-            to_datetime: Time.current.end_of_month.iso8601,
-            issuing_date: Time.zone.today.end_of_month.iso8601,
-            currency: "EUR",
-            amount_cents: 2532, # 1266 * 2,
-            taxes_amount_cents: 0,
-            total_amount_cents: 2532
-          )
-          expect(result.usage.fees.size).to eq(1)
-          expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
-        end
       end
     end
 
@@ -210,12 +208,10 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
       it "changes the from date of the invoice" do
         result = usage_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.usage.id).to be_nil
-          expect(result.usage.from_datetime).to eq(subscription.started_at.iso8601)
-        end
+        expect(result.usage.id).to be_nil
+        expect(result.usage.from_datetime).to eq(subscription.started_at.iso8601)
       end
     end
 
@@ -240,22 +236,20 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
         travel_to(current_date) do
           result = usage_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice).to be_a(Invoice)
+          expect(result).to be_success
+          expect(result.invoice).to be_a(Invoice)
 
-            expect(result.usage).to have_attributes(
-              issuing_date: "2022-07-06",
-              currency: "EUR",
-              amount_cents: 2532, # 1266 * 2,
-              taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
-              total_amount_cents: 3038
-            )
+          expect(result.usage).to have_attributes(
+            issuing_date: "2022-07-06",
+            currency: "EUR",
+            amount_cents: 2532, # 1266 * 2,
+            taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
+            total_amount_cents: 3038
+          )
 
-            expect(result.usage.from_datetime.to_date.to_s).to eq("2022-06-07")
-            expect(result.usage.to_datetime.to_date.to_s).to eq("2022-07-06")
-            expect(result.usage.fees.size).to eq(1)
-          end
+          expect(result.usage.from_datetime.to_date.to_s).to eq("2022-06-07")
+          expect(result.usage.to_datetime.to_date.to_s).to eq("2022-07-06")
+          expect(result.usage.fees.size).to eq(1)
         end
       end
     end
@@ -277,11 +271,9 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
       it "fails" do
         result = usage_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("no_active_subscription")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+        expect(result.error.code).to eq("no_active_subscription")
       end
     end
   end

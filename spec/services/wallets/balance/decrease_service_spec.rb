@@ -23,6 +23,7 @@ RSpec.describe Wallets::Balance::DecreaseService, type: :service do
   before do
     wallet
     wallet_transaction
+    allow(Wallets::Balance::RefreshOngoingService).to receive(:call).and_call_original
   end
 
   describe ".call" do
@@ -47,6 +48,11 @@ RSpec.describe Wallets::Balance::DecreaseService, type: :service do
     it "sends a `wallet.updated` webhook" do
       expect { create_service.call }
         .to have_enqueued_job(SendWebhookJob).with("wallet.updated", Wallet)
+    end
+
+    it "calls Wallets::Balance::RefreshOngoingService" do
+      create_service.call
+      expect(Wallets::Balance::RefreshOngoingService).to have_received(:call).with(wallet: wallet, include_generating_invoices: true)
     end
   end
 end
