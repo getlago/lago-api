@@ -63,7 +63,10 @@ module Events
           precise_total_amount_cents: event.precise_total_amount_cents.present? ? event.precise_total_amount_cents.to_s : "0.0",
           properties: event.properties,
           ingested_at: Time.zone.now.iso8601[...-1],
-          source: "http_ruby"
+          source: "http_ruby",
+          source_metadata: {
+            api_post_processed: !organization.clickhouse_events_store?
+          }
         }.to_json
       )
     end
