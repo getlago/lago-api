@@ -30,10 +30,18 @@ module GraphQLHelper
       }
     )
 
-    LagoApiSchema.execute(
+    res = LagoApiSchema.execute(
       query,
       **args
     )
+
+    res["errors"]&.each do |e|
+      if e.dig("extensions", "code") == "undefinedField" && e.dig("extensions", "fieldName").match?(/_/)
+        pps "HINT: GraphQL field name should use camelCase even if its declaration is snake_case."
+      end
+    end
+
+    res
   end
 
   def expect_graphql_error(result:, message:)
