@@ -164,7 +164,8 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               "amount" => 2.0,
               "taxdetailsreference" => anything,
               "custcol_service_period_date_from" => anything,
-              "custcol_service_period_date_to" => anything
+              "custcol_service_period_date_to" => anything,
+              "description" => anything
             },
             {
               "item" => "4",
@@ -174,7 +175,8 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               "amount" => 2.0,
               "taxdetailsreference" => anything,
               "custcol_service_period_date_from" => anything,
-              "custcol_service_period_date_to" => anything
+              "custcol_service_period_date_to" => anything,
+              "description" => anything
             },
             {
               "item" => "m2",
@@ -184,28 +186,32 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               "amount" => 2.0,
               "taxdetailsreference" => anything,
               "custcol_service_period_date_from" => anything,
-              "custcol_service_period_date_to" => anything
+              "custcol_service_period_date_to" => anything,
+              "description" => anything
             },
             {
               "item" => "2",
               "account" => "22",
               "quantity" => 1,
               "rate" => -20.0,
-              "taxdetailsreference" => "coupon_item"
+              "taxdetailsreference" => "coupon_item",
+              "description" => anything
             },
             {
               "item" => "6",
               "account" => "66",
               "quantity" => 1,
               "rate" => -40.0,
-              "taxdetailsreference" => "credit_item"
+              "taxdetailsreference" => "credit_item",
+              "description" => anything
             },
             {
               "item" => "1", # Fallback item instead of credit note
               "account" => "11",
               "quantity" => 1,
               "rate" => -60.0,
-              "taxdetailsreference" => "credit_note_item"
+              "taxdetailsreference" => "credit_note_item",
+              "description" => anything
             }
           ]
         }

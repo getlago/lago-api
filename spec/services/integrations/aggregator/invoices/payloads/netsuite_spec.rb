@@ -173,7 +173,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 "taxdetailsreference" => fee_sub.id,
                 "custcol_service_period_date_from" =>
                   fee_sub.properties["from_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
-                "custcol_service_period_date_to" => fee_sub.properties["to_datetime"]&.to_date&.strftime("%-m/%-d/%Y")
+                "custcol_service_period_date_to" => fee_sub.properties["to_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
+                "description" => fee_sub.item_name
               },
               {
                 "item" => "4",
@@ -185,7 +186,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 "custcol_service_period_date_from" =>
                   minimum_commitment_fee.properties["from_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
                 "custcol_service_period_date_to" =>
-                  minimum_commitment_fee.properties["to_datetime"]&.to_date&.strftime("%-m/%-d/%Y")
+                  minimum_commitment_fee.properties["to_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
+                "description" => minimum_commitment_fee.item_name
               },
               {
                 "item" => "m2",
@@ -197,35 +199,40 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 "custcol_service_period_date_from" =>
                   charge_fee.properties["charges_from_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
                 "custcol_service_period_date_to" =>
-                  charge_fee.properties["charges_to_datetime"]&.to_date&.strftime("%-m/%-d/%Y")
+                  charge_fee.properties["charges_to_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
+                "description" => charge_fee.item_name
               },
               {
                 "item" => "2",
                 "account" => "22",
                 "quantity" => 1,
                 "rate" => -20.0,
-                "taxdetailsreference" => "coupon_item"
+                "taxdetailsreference" => "coupon_item",
+                "description" => invoice.credits.coupon_kind.map(&:item_name).join(",")
               },
               {
                 "item" => "6",
                 "account" => "66",
                 "quantity" => 1,
                 "rate" => -40.0,
-                "taxdetailsreference" => "credit_item"
+                "taxdetailsreference" => "credit_item",
+                "description" => "Prepaid credits"
               },
               {
                 "item" => "6",
                 "account" => "66",
                 "quantity" => 1,
                 "rate" => -1.0,
-                "taxdetailsreference" => "credit_item_progressive_billing"
+                "taxdetailsreference" => "credit_item_progressive_billing",
+                "description" => invoice.credits.progressive_billing_invoice_kind.map(&:item_name).join(",")
               },
               {
                 "item" => "1", # Fallback item instead of credit note
                 "account" => "11",
                 "quantity" => 1,
                 "rate" => -60.0,
-                "taxdetailsreference" => "credit_note_item"
+                "taxdetailsreference" => "credit_note_item",
+                "description" => invoice.credits.credit_note_kind.map(&:item_name).join(",")
               }
             ]
           }

@@ -123,7 +123,8 @@ module Integrations
               "amount" => limited_rate(amount(fee.amount_cents, resource: invoice)),
               "taxdetailsreference" => fee.id,
               "custcol_service_period_date_from" => fee.properties[from_property]&.to_date&.strftime("%-m/%-d/%Y"),
-              "custcol_service_period_date_to" => fee.properties[to_property]&.to_date&.strftime("%-m/%-d/%Y")
+              "custcol_service_period_date_to" => fee.properties[to_property]&.to_date&.strftime("%-m/%-d/%Y"),
+              "description" => fee.item_name
             }
           end
 
@@ -136,7 +137,8 @@ module Integrations
                 "account" => coupon_item.external_account_code,
                 "quantity" => 1,
                 "rate" => -amount(invoice.coupons_amount_cents, resource: invoice),
-                "taxdetailsreference" => "coupon_item"
+                "taxdetailsreference" => "coupon_item",
+                "description" => invoice.credits.coupon_kind.map(&:item_name).join(",")
               }
             end
 
@@ -146,7 +148,8 @@ module Integrations
                 "account" => credit_item.external_account_code,
                 "quantity" => 1,
                 "rate" => -amount(invoice.prepaid_credit_amount_cents, resource: invoice),
-                "taxdetailsreference" => "credit_item"
+                "taxdetailsreference" => "credit_item",
+                "description" => "Prepaid credits"
               }
             end
 
@@ -156,7 +159,8 @@ module Integrations
                 "account" => credit_item.external_account_code,
                 "quantity" => 1,
                 "rate" => -amount(invoice.progressive_billing_credit_amount_cents, resource: invoice),
-                "taxdetailsreference" => "credit_item_progressive_billing"
+                "taxdetailsreference" => "credit_item_progressive_billing",
+                "description" => invoice.credits.progressive_billing_invoice_kind.map(&:item_name).join(",")
               }
             end
 
@@ -166,7 +170,8 @@ module Integrations
                 "account" => credit_note_item.external_account_code,
                 "quantity" => 1,
                 "rate" => -amount(invoice.credit_notes_amount_cents, resource: invoice),
-                "taxdetailsreference" => "credit_note_item"
+                "taxdetailsreference" => "credit_note_item",
+                "description" => invoice.credits.credit_note_kind.map(&:item_name).join(",")
               }
             end
 
