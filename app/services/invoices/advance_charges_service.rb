@@ -41,16 +41,16 @@ module Invoices
     attr_accessor :initial_subscriptions, :billing_at, :customer, :organization, :currency
 
     def subscriptions
-      return [] unless organization
+      return [] unless customer
 
-      # NOTE: filter all active/terminated subscriptions having non-invoiceable fees not yet attached to an invoice
-      @subscriptions ||= organization.subscriptions
+      # NOTE: filter all active/terminated subscriptions having non-invoiceable (in advance) fees not yet attached to an invoice
+      @subscriptions ||= customer.subscriptions
         .where(
-          id: Fee.from_organization(organization)
+          id: Fee.joins(:subscription)
             .where(invoice_id: nil, payment_status: :succeeded)
             .where("succeeded_at <= ?", billing_at)
-            .joins(:subscription)
             .where(subscriptions: {
+              customer_id: customer.id,
               external_id: initial_subscriptions.pluck(:external_id).uniq,
               status: [:active, :terminated]
             })
