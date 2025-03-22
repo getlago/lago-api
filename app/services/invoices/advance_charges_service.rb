@@ -47,7 +47,7 @@ module Invoices
       @subscriptions ||= customer.subscriptions
         .where(
           id: Fee.joins(:subscription)
-            .where(payment_status: :succeeded)
+            .where(invoice_id: nil, payment_status: :succeeded)
             .where("succeeded_at <= ?", billing_at)
             .where(subscriptions: {
               customer_id: customer.id,
