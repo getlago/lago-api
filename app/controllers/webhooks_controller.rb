@@ -74,4 +74,19 @@ class WebhooksController < ApplicationController
   def adyen_params
     params["notificationItems"]&.first&.dig("NotificationRequestItem")&.permit!
   end
+
+  def moneyhash
+    result = InboundWebhooks::CreateService.call(
+      organization_id: params[:organization_id],
+      webhook_source: :moneyhash,
+      code: params[:code].presence,
+      payload: JSON.parse(request.body.read),
+      # signature: request.headers["Moneyhash-Signature"], # TODO: Implement moneyhash signature
+      event_type: params[:type]
+    )
+
+    return head(:bad_request) unless result.success?
+
+    head(:ok)
+  end
 end

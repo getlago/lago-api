@@ -64,6 +64,22 @@ input AddGocardlessPaymentProviderInput {
   successRedirectUrl: String
 }
 
+"""
+Moneyhash input arguments
+"""
+input AddMoneyhashPaymentProviderInput {
+  apiKey: String!
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String!
+  flowId: String!
+  name: String!
+  successRedirectUrl: String
+}
+
 type AddOn {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
@@ -5053,6 +5069,15 @@ type Metadata {
   totalPages: Int!
 }
 
+type MoneyhashProvider {
+  apiKey: String
+  code: String!
+  flowId: String
+  id: ID!
+  name: String!
+  successRedirectUrl: String
+}
+
 type Mrr {
   amountCents: BigInt
   currency: CurrencyEnum
@@ -5114,6 +5139,16 @@ type Mutation {
     """
     input: AddGocardlessPaymentProviderInput!
   ): GocardlessProvider
+
+  """
+  Add Moneyhash payment provider
+  """
+  addMoneyhashPaymentProvider(
+    """
+    Parameters for AddMoneyhashPaymentProvider
+    """
+    input: AddMoneyhashPaymentProviderInput!
+  ): MoneyhashProvider
 
   """
   Add Stripe API keys to the organization
@@ -6184,6 +6219,16 @@ type Mutation {
   ): Membership
 
   """
+  Update Moneyhash payment provider
+  """
+  updateMoneyhashPaymentProvider(
+    """
+    Parameters for UpdateMoneyhashPaymentProvider
+    """
+    input: UpdateMoneyhashPaymentProviderInput!
+  ): MoneyhashProvider
+
+  """
   Update Netsuite integration
   """
   updateNetsuiteIntegration(
@@ -6471,7 +6516,7 @@ type PaymentCollection {
   metadata: CollectionMetadata!
 }
 
-union PaymentProvider = AdyenProvider | CashfreeProvider | GocardlessProvider | StripeProvider
+union PaymentProvider = AdyenProvider | CashfreeProvider | GocardlessProvider | MoneyhashProvider | StripeProvider
 
 """
 PaymentProviderCollection type
@@ -6788,6 +6833,7 @@ enum ProviderTypeEnum {
   adyen
   cashfree
   gocardless
+  moneyhash
   stripe
 }
 
@@ -8663,6 +8709,7 @@ input UpdateAdyenPaymentProviderInput {
   """
   clientMutationId: String
   code: String
+  flowId: String
   id: ID!
   name: String
   successRedirectUrl: String
@@ -8728,6 +8775,7 @@ input UpdateCashfreePaymentProviderInput {
   """
   clientMutationId: String
   code: String
+  flowId: String
   id: ID!
   name: String
   successRedirectUrl: String
@@ -8900,6 +8948,7 @@ input UpdateGocardlessPaymentProviderInput {
   """
   clientMutationId: String
   code: String
+  flowId: String
   id: ID!
   name: String
   successRedirectUrl: String
@@ -9010,6 +9059,21 @@ input UpdateMembershipInput {
   clientMutationId: String
   id: ID!
   role: MembershipRole!
+}
+
+"""
+Update input arguments
+"""
+input UpdateMoneyhashPaymentProviderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String
+  flowId: String
+  id: ID!
+  name: String
+  successRedirectUrl: String
 }
 
 """
@@ -9149,6 +9213,7 @@ input UpdateStripePaymentProviderInput {
   """
   clientMutationId: String
   code: String
+  flowId: String
   id: ID!
   name: String
   successRedirectUrl: String
