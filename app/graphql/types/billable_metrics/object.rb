@@ -39,7 +39,7 @@ module Types
       end
 
       def subscriptions_count
-        object.plans.joins(:subscriptions).count
+        Subscription.where(plan_id: object.charges.select(:plan_id).distinct).count
       end
 
       def active_subscriptions_count
@@ -53,7 +53,7 @@ module Types
       end
 
       def plans_count
-        object.plans.distinct.count
+        object.charges.distinct.count(:plan_id)
       end
 
       def integration_mappings(integration_id: nil)
