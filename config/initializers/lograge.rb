@@ -5,6 +5,8 @@ Rails.application.configure do
   config.lograge.formatter = Lograge::Formatters::Json.new
   config.colorize_logging = Rails.env.development?
 
+  config.lograge.ignore_actions = ["ApplicationController#health"]
+
   config.lograge.custom_options = lambda do |event|
     # If ENV[OTEL_EXPORTER] is not set, the span context will have all zero values.
     span = OpenTelemetry::Trace.current_span
