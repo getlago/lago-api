@@ -32,7 +32,7 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: "customer") unless @customer
+      return result.not_found_failure!(resource: "customer") unless customer
       return result.not_allowed_failure!(code: "no_active_subscription") if subscription.blank?
 
       result.usage = compute_usage
@@ -42,9 +42,10 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime
+    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
+    delegate :billing_entity, to: :customer
 
     # NOTE: Since computing customer usage could take some time as it as to
     #       loop over a lot of records in database, the result is stored in a cache store.
@@ -53,8 +54,9 @@ module Invoices
     #       - Cache will be automatically cleared if a new event is sent for a specific charge
     def compute_usage
       @invoice = Invoice.new(
-        organization: subscription.organization,
-        customer: subscription.customer,
+        organization:,
+        billing_entity:,
+        customer:,
         issuing_date: boundaries[:issuing_date],
         currency: plan.amount_currency
       )

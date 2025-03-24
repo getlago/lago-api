@@ -84,6 +84,8 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
 
       expect(result).to be_success
       expect(result.invoice).to be_a(Invoice)
+      expect(result.invoice.organization).to eq(organization)
+      expect(result.invoice.billing_entity).to eq(customer.billing_entity)
       expect(result.invoice.total_paid_amount_cents).to eq(0)
       expect(result.invoice.prepaid_credit_amount_cents).to eq(0)
 
