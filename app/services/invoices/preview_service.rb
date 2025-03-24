@@ -25,6 +25,7 @@ module Invoices
 
       @invoice = Invoice.new(
         organization:,
+        billing_entity:,
         customer:,
         invoice_type: :subscription,
         currency: first_subscription.plan.amount_currency,
@@ -51,6 +52,7 @@ module Invoices
 
     attr_accessor :customer, :subscriptions, :invoice, :applied_coupons, :first_subscription, :persisted_subscriptions, :subscription_context
     delegate :organization, to: :customer
+    delegate :billing_entity, to: :customer
 
     def fetch_context
       return :terminated if subscriptions.any?(&:terminated?)
