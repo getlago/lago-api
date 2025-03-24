@@ -7,17 +7,40 @@ RSpec.describe DunningCampaign, type: :model do
 
   it_behaves_like "paper_trail traceable"
 
-  it { is_expected.to belong_to(:organization) }
-  it { is_expected.to have_many(:thresholds).dependent(:destroy) }
-  it { is_expected.to have_many(:customers).dependent(:nullify) }
-  it { is_expected.to have_many(:payment_requests).dependent(:nullify) }
+  it do
+    expect(subject).to belong_to(:organization)
+    expect(subject).to have_many(:thresholds).dependent(:destroy)
+    expect(subject).to have_many(:customers).dependent(:nullify)
+    expect(subject).to have_many(:payment_requests).dependent(:nullify)
 
-  it { is_expected.to validate_presence_of(:name) }
+    expect(subject).to validate_presence_of(:name)
 
-  it { is_expected.to validate_numericality_of(:days_between_attempts).is_greater_than(0) }
-  it { is_expected.to validate_numericality_of(:max_attempts).is_greater_than(0) }
+    expect(subject).to validate_numericality_of(:days_between_attempts).is_greater_than(0)
+    expect(subject).to validate_numericality_of(:max_attempts).is_greater_than(0)
 
-  it { is_expected.to validate_uniqueness_of(:code).scoped_to(:organization_id) }
+    expect(subject).to validate_uniqueness_of(:code).scoped_to(:organization_id)
+  end
+
+  describe "bcc_emails validation" do
+    it do
+      expect(dunning_campaign).to be_valid
+
+      dunning_campaign.bcc_emails = nil
+      expect(dunning_campaign).not_to be_valid
+
+      dunning_campaign.bcc_emails = []
+      expect(dunning_campaign).to be_valid
+
+      dunning_campaign.bcc_emails = ["test1@example.com", "test2@example.com"]
+      expect(dunning_campaign).to be_valid
+
+      dunning_campaign.bcc_emails = ["test1@example.com", "name.com"]
+      expect(dunning_campaign).not_to be_valid
+      expect(dunning_campaign.errors.messages).to eq({
+        bcc_emails: ["invalid_email_format[1,name.com]"]
+      })
+    end
+  end
 
   describe "code validation" do
     let(:code) { "123456" }

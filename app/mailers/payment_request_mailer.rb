@@ -15,10 +15,13 @@ class PaymentRequestMailer < ApplicationMailer
     @invoices = @payment_request.invoices
     @payment_url = ::PaymentRequests::Payments::GeneratePaymentUrlService.call(payable: @payment_request).payment_url
 
+    bcc_emails = @payment_request.dunning_campaign&.bcc_emails
+
     I18n.with_locale(@customer.preferred_document_locale) do
       mail(
         to: @payment_request.email,
         from: email_address_with_name(@organization.from_email_address, @organization.name),
+        bcc: bcc_emails,
         reply_to: email_address_with_name(@organization.email, @organization.name),
         subject: I18n.t(
           "email.payment_request.requested.subject",
