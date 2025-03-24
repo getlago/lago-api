@@ -14,6 +14,7 @@ module Invoices
       ActiveRecord::Base.transaction do
         invoice = Invoice.create!(
           organization: customer.organization,
+          billing_entity: customer.billing_entity,
           customer:,
           issuing_date:,
           payment_due_date:,

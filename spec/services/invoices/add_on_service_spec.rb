@@ -29,6 +29,8 @@ RSpec.describe Invoices::AddOnService, type: :service do
 
       expect(result.invoice.subscriptions.first).to be_nil
       expect(result.invoice).to have_attributes(
+        organization: organization,
+        billing_entity: customer.billing_entity,
         issuing_date: datetime.to_date,
         invoice_type: "add_on",
         payment_status: "pending",
