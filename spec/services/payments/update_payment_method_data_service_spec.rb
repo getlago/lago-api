@@ -18,8 +18,8 @@ RSpec.describe Payments::UpdatePaymentMethodDataService, type: :service do
 
         result = service.call
 
+        expect(result.payment.provider_payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
         expect(result.payment.provider_payment_method_data).to eq({
-          "id" => "pm_1R2DFsQ8iJWBZFaMw3LLbR0r",
           "type" => "card",
           "brand" => "visa",
           "last4" => "4242"

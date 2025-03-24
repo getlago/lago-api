@@ -108,6 +108,7 @@ end
 #  payment_provider_customer_id :uuid
 #  payment_provider_id          :uuid
 #  provider_payment_id          :string
+#  provider_payment_method_id   :string
 #
 # Indexes
 #

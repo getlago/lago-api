@@ -43,9 +43,8 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         result = event_service.call
 
         expect(result).to be_success
-
+        expect(payment.reload.provider_payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
         expect(payment.reload.provider_payment_method_data).to eq({
-          "id" => "pm_1R2DFsQ8iJWBZFaMw3LLbR0r",
           "type" => "card",
           "brand" => "visa",
           "last4" => "4242"
@@ -85,8 +84,8 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
       result = event_service.call
 
       expect(result).to be_success
+      expect(payment.reload.provider_payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
       expect(payment.reload.provider_payment_method_data).to eq({
-        "id" => "pm_1R2DFsQ8iJWBZFaMw3LLbR0r",
         "type" => "card",
         "brand" => "visa",
         "last4" => "4242"

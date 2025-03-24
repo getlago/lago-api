@@ -20,7 +20,8 @@ module Payments
         raise NotImplementedError, "Service not implemented for #{payment_provider.payment_type}"
       end
 
-      payment.update!(provider_payment_method_data: data)
+      id = data.delete(:id)
+      payment.update!(provider_payment_method_id: id, provider_payment_method_data: data)
 
       result.payment = payment
       result
