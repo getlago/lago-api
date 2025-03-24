@@ -34,10 +34,10 @@ RSpec.describe DunningCampaign, type: :model do
       dunning_campaign.bcc_emails = ["test1@example.com", "test2@example.com"]
       expect(dunning_campaign).to be_valid
 
-      dunning_campaign.bcc_emails = ["test1@example.com", "name"]
+      dunning_campaign.bcc_emails = ["test1@example.com", "name.com"]
       expect(dunning_campaign).not_to be_valid
       expect(dunning_campaign.errors.messages).to eq({
-        bcc_emails: ["value name at position 1 is not a valid email address"]
+        bcc_emails: ["invalid_email_format[1,name.com]"]
       })
     end
   end
