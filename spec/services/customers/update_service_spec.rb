@@ -5,12 +5,21 @@ require "rails_helper"
 RSpec.describe Customers::UpdateService, type: :service do
   subject(:customers_service) { described_class.new(customer:, args: update_args) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:billing_entity) { create(:billing_entity) }
+  let(:organization) { billing_entity.organization }
   let(:payment_provider_code) { "stripe_1" }
 
   describe "update" do
-    let(:customer) { create(:customer, organization:, payment_provider: "stripe", payment_provider_code:) }
+    let(:customer) do
+      create(
+        :customer,
+        organization:,
+        billing_entity:,
+        payment_provider: "stripe",
+        payment_provider_code:
+      )
+    end
+
     let(:external_id) { SecureRandom.uuid }
 
     let(:update_args) do
@@ -47,6 +56,48 @@ RSpec.describe Customers::UpdateService, type: :service do
         shipping_address = update_args[:shipping_address]
         expect(updated_customer.shipping_city).to eq(shipping_address[:city])
         expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", updated_customer)
+      end
+    end
+
+    context "when updating the billing entity reference" do
+      let(:billing_entity_2) { create(:billing_entity, organization:) }
+
+      let(:update_args) do
+        {
+          id: customer.id,
+          name: "Updated customer name",
+          billing_entity_code: billing_entity_2.code
+        }
+      end
+
+      it "updates the billing entity" do
+        result = customers_service.call
+        expect(result).to be_success
+        expect(result.customer.billing_entity).to eq(billing_entity_2)
+      end
+
+      context "when billing entity is archived" do
+        before { billing_entity_2.update!(archived_at: Time.current) }
+
+        it "fails" do
+          result = customers_service.call
+
+          expect(result).to be_failure
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("billing_entity")
+        end
+      end
+
+      context "when customer is attached to a subscription" do
+        before do
+          create(:subscription, customer:)
+        end
+
+        it "does not update the billing entity" do
+          result = customers_service.call
+          expect(result).to be_success
+          expect(result.customer.billing_entity).to eq(billing_entity)
+        end
       end
     end
 
@@ -559,8 +610,6 @@ RSpec.describe Customers::UpdateService, type: :service do
         let(:organization) do
           create(:organization, premium_integrations: ["auto_dunning"])
         end
-
-        let(:membership) { create(:membership, organization: organization) }
 
         let(:update_args) do
           {applied_dunning_campaign_id: dunning_campaign.id}

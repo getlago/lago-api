@@ -18,7 +18,8 @@ class Organization < ApplicationRecord
   }.freeze
 
   has_many :api_keys
-  has_many :billing_entities
+  has_many :billing_entities, -> { active }
+  has_many :all_billing_entities, class_name: "BillingEntity"
   has_many :memberships
   has_many :users, through: :memberships
   has_many :billable_metrics
@@ -58,6 +59,7 @@ class Organization < ApplicationRecord
   has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
+  has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
 
   has_many :invoice_custom_sections
   has_many :invoice_custom_section_selections
@@ -185,11 +187,6 @@ class Organization < ApplicationRecord
 
   def can_create_billing_entity?
     remaining_billing_entities > 0
-  end
-
-  # default billing_entity will be chronologically first active billing_entity
-  def default_billing_entity
-    billing_entities.active.first
   end
 
   private
