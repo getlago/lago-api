@@ -22,6 +22,16 @@ RSpec.describe PaymentReceiptMailer, type: :mailer do
       expect(mailer.attachments.first.filename).to eq("receipt-#{payment_receipt.number}.pdf")
     end
 
+    context "when pdfs are disabled" do
+      before { ENV["LAGO_DISABLE_PDF_GENERATION"] = "true" }
+
+      it "does not attach the pdf" do
+        mailer = payment_receipt_mailer.with(payment_receipt:).created
+
+        expect(mailer.attachments).to be_empty
+      end
+    end
+
     context "with no pdf file" do
       let(:pdf_service) { instance_double(PaymentReceipts::GeneratePdfService) }
 

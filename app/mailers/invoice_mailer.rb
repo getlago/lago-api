@@ -15,8 +15,10 @@ class InvoiceMailer < ApplicationMailer
 
     I18n.locale = @customer.preferred_document_locale
 
-    @invoice.file.open do |file|
-      attachments["invoice-#{@invoice.number}.pdf"] = file.read
+    if @pdfs_enabled
+      @invoice.file.open do |file|
+        attachments["invoice-#{@invoice.number}.pdf"] = file.read
+      end
     end
 
     I18n.with_locale(@customer.preferred_document_locale) do
