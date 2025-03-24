@@ -21893,6 +21893,12 @@
               "deprecationReason": null
             },
             {
+              "name": "lifetime_usage",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "hubspot",
               "description": null,
               "isDeprecated": false,
@@ -32703,6 +32709,12 @@
             },
             {
               "name": "progressive_billing",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "lifetime_usage",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

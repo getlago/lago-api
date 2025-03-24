@@ -12,6 +12,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       netsuite
       okta
       progressive_billing
+      lifetime_usage
       revenue_analytics
       revenue_share
       salesforce
