@@ -94,18 +94,17 @@ RSpec.describe Analytics::GrossRevenue, type: :model do
       let(:args) { {billing_entity_id: billing_entity1.id} }
 
       it "returns all gross revenues for the billing entity" do
-        expect(gross_revenues).to include hash_including({
+        expect(gross_revenues).to match_array([hash_including({
           "month" => Time.current.beginning_of_month - 1.month,
           "currency" => "EUR",
           "invoices_count" => 1,
           "amount_cents" => 1000.0
-        })
-        expect(gross_revenues).to include hash_including({
+        }), hash_including({
           "month" => Time.current.beginning_of_month - 2.months,
           "currency" => "EUR",
           "invoices_count" => 1,
           "amount_cents" => 3000.0
-        })
+        })])
       end
     end
   end

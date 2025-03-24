@@ -2,10 +2,9 @@
 
 module Analytics
   class BaseService < BaseService
+    Result = BaseResult[:records]
     def initialize(organization, **filters)
       @organization = organization
-      # should billing_entity_id be passed as a parameter or a filter?
-      # @billing_entity = BillingEntity.find_by(organization_id: organization.id, code: billing_entity_code)
       @filters = filters
 
       super()
@@ -13,6 +12,6 @@ module Analytics
 
     private
 
-    attr_reader :billing_entity, :organization, :filters, :records
+    attr_reader :organization, :filters, :records
   end
 end

@@ -6,7 +6,6 @@ module Analytics
 
     class << self
       def query(organization_id, **args)
-        # do we want to pass billing_entity_id as a parameter or a filter?
         if args[:billing_entity_id].present?
           and_billing_entity_id_sql = sanitize_sql(["AND i.billing_entity_id = :billing_entity_id", args[:billing_entity_id]])
         end

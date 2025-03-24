@@ -10,6 +10,7 @@ module Resolvers
 
       description "Query invoice collections of an organization"
 
+      argument :billing_entity_id, ID, required: false
       argument :currency, Types::CurrencyEnum, required: false
 
       type Types::Analytics::InvoiceCollections::Object.collection_type, null: false
