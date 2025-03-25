@@ -42,10 +42,13 @@ RSpec.describe Organizations::CreateService, type: :service do
           expect { service_result }.to change(BillingEntity, :count).by(1)
 
           billing_entity = service_result.organization.billing_entities.first
-          expect(billing_entity).to have_attributes(organization: service_result.organization,
+          expect(billing_entity).to have_attributes(
+            id: service_result.organization.id,
+            organization: service_result.organization,
             name: service_result.organization.name,
             code: service_result.organization.name.parameterize(separator: "_"),
-            document_numbering: "per_customer")
+            document_numbering: "per_customer"
+          )
         end
       end
 
@@ -62,10 +65,13 @@ RSpec.describe Organizations::CreateService, type: :service do
           expect { service_result }.to change(BillingEntity, :count).by(1)
 
           billing_entity = service_result.organization.billing_entities.first
-          expect(billing_entity).to have_attributes(organization: service_result.organization,
+          expect(billing_entity).to have_attributes(
+            id: service_result.organization.id,
+            organization: service_result.organization,
             name: service_result.organization.name,
             code: "this_code_will_be_used_for_billing_entity",
-            document_numbering: "per_billing_entity")
+            document_numbering: "per_billing_entity"
+          )
         end
       end
     end
