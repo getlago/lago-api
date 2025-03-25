@@ -2896,9 +2896,13 @@
               "name": "organization",
               "description": null,
               "type": {
-                "kind": "OBJECT",
-                "name": "Organization",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Organization",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -3037,6 +3041,53 @@
             }
           ],
           "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "BillingEntityBillingConfigurationInput",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "documentLocale",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoiceFooter",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoiceGracePeriod",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "Int",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
           "enumValues": null
         },
         {
@@ -7454,7 +7505,7 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "name",
+              "name": "code",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -7470,7 +7521,7 @@
               "deprecationReason": null
             },
             {
-              "name": "code",
+              "name": "name",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -7694,7 +7745,7 @@
               "description": null,
               "type": {
                 "kind": "INPUT_OBJECT",
-                "name": "OrganizationBillingConfigurationInput",
+                "name": "BillingEntityBillingConfigurationInput",
                 "ofType": null
               },
               "defaultValue": null,
@@ -7712,7 +7763,7 @@
                   "name": null,
                   "ofType": {
                     "kind": "ENUM",
-                    "name": "EmailSettingsEnum",
+                    "name": "BillingEntityEmailSettingsEnum",
                     "ofType": null
                   }
                 }
@@ -10973,9 +11024,13 @@
               "name": "billingEntity",
               "description": null,
               "type": {
-                "kind": "OBJECT",
-                "name": "BillingEntity",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "BillingEntity",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -13872,9 +13927,13 @@
               "name": "billingEntity",
               "description": null,
               "type": {
-                "kind": "OBJECT",
-                "name": "BillingEntity",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "BillingEntity",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -23656,9 +23715,13 @@
               "name": "billingEntity",
               "description": null,
               "type": {
-                "kind": "OBJECT",
-                "name": "BillingEntity",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "BillingEntity",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -27110,7 +27173,7 @@
               "description": "Creates a new Billing Entity",
               "type": {
                 "kind": "OBJECT",
-                "name": "BillableMetric",
+                "name": "BillingEntity",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -29641,7 +29704,7 @@
               "description": "Updates a new Billing Entity",
               "type": {
                 "kind": "OBJECT",
-                "name": "BillableMetric",
+                "name": "BillingEntity",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -32433,6 +32496,166 @@
             },
             {
               "name": "billableMetricsView",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "billingEntitiesCreate",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "billingEntitiesDelete",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "billingEntitiesEmailsUpdate",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "billingEntitiesEmailsView",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "billingEntitiesInvoicesUpdate",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "billingEntitiesInvoicesView",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "billingEntitiesTaxesUpdate",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "billingEntitiesTaxesView",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "billingEntitiesUpdate",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "billingEntitiesView",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -35385,14 +35608,14 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "id",
-                  "description": "Uniq ID of the billing_entity",
+                  "name": "code",
+                  "description": "Code of the billing_entity",
                   "type": {
                     "kind": "NON_NULL",
                     "name": null,
                     "ofType": {
                       "kind": "SCALAR",
-                      "name": "ID",
+                      "name": "String",
                       "ofType": null
                     }
                   },
@@ -43776,18 +43999,6 @@
           "fields": null,
           "inputFields": [
             {
-              "name": "name",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "code",
               "description": null,
               "type": {
@@ -43798,6 +44009,18 @@
                   "name": "String",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "name",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
@@ -44012,7 +44235,7 @@
               "description": null,
               "type": {
                 "kind": "INPUT_OBJECT",
-                "name": "OrganizationBillingConfigurationInput",
+                "name": "BillingEntityBillingConfigurationInput",
                 "ofType": null
               },
               "defaultValue": null,
@@ -44030,7 +44253,7 @@
                   "name": null,
                   "ofType": {
                     "kind": "ENUM",
-                    "name": "EmailSettingsEnum",
+                    "name": "BillingEntityEmailSettingsEnum",
                     "ofType": null
                   }
                 }

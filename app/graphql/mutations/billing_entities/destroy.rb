@@ -6,7 +6,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "billing_entities:destroy"
+      REQUIRED_PERMISSION = "billing_entities:delete"
 
       graphql_name "DestroyBillingEntity"
       description "Destroys a new Billing Entity"
@@ -15,7 +15,7 @@ module Mutations
       field :code, String, null: true
 
       # We're not allowing now to destroy billing entities
-      def resolve(_code:)
+      def resolve(**args)
         current_organization.default_billing_entity
       end
     end

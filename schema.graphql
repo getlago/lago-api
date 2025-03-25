@@ -351,7 +351,7 @@ type BillingEntity {
   logoUrl: String
   name: String!
   netPaymentTerm: Int!
-  organization: Organization
+  organization: Organization!
   state: String
   taxIdentificationNumber: String
   timezone: TimezoneEnum
@@ -364,6 +364,12 @@ type BillingEntityBillingConfiguration {
   id: ID!
   invoiceFooter: String
   invoiceGracePeriod: Int!
+}
+
+input BillingEntityBillingConfigurationInput {
+  documentLocale: String
+  invoiceFooter: String
+  invoiceGracePeriod: Int
 }
 
 """
@@ -2012,7 +2018,7 @@ Create Billing Entity input arguments
 input CreateBillingEntityInput {
   addressLine1: String
   addressLine2: String
-  billingConfiguration: OrganizationBillingConfigurationInput
+  billingConfiguration: BillingEntityBillingConfigurationInput
   city: String
 
   """
@@ -2025,7 +2031,7 @@ input CreateBillingEntityInput {
   documentNumberPrefix: String
   documentNumbering: BillingEntityDocumentNumberingEnum
   email: String
-  emailSettings: [EmailSettingsEnum!]
+  emailSettings: [BillingEntityEmailSettingsEnum!]
   euTaxManagement: Boolean
   finalizeZeroAmountInvoice: Boolean
   legalName: String
@@ -2480,7 +2486,7 @@ CreditNote
 type CreditNote {
   appliedTaxes: [CreditNoteAppliedTax!]
   balanceAmountCents: BigInt!
-  billingEntity: BillingEntity
+  billingEntity: BillingEntity!
 
   """
   Check if credit note can be voided
@@ -3384,7 +3390,7 @@ type Customer {
   appliedCoupons: [AppliedCoupon!]
   appliedDunningCampaign: DunningCampaign
   billingConfiguration: CustomerBillingConfiguration
-  billingEntity: BillingEntity
+  billingEntity: BillingEntity!
 
   """
   Check if customer attributes are editable
@@ -4845,7 +4851,7 @@ type Invoice {
   appliedTaxes: [InvoiceAppliedTax!]
   associatedActiveWalletPresent: Boolean!
   availableToCreditAmountCents: BigInt!
-  billingEntity: BillingEntity
+  billingEntity: BillingEntity!
   chargeAmountCents: BigInt!
   couponsAmountCents: BigInt!
   createdAt: ISO8601DateTime!
@@ -5377,7 +5383,7 @@ type Mutation {
     Parameters for CreateBillingEntity
     """
     input: CreateBillingEntityInput!
-  ): BillableMetric
+  ): BillingEntity
 
   """
   Creates a new Coupon
@@ -6235,7 +6241,7 @@ type Mutation {
     Parameters for UpdateBillingEntity
     """
     input: UpdateBillingEntityInput!
-  ): BillableMetric
+  ): BillingEntity
 
   """
   Update Cashfree payment provider
@@ -6784,6 +6790,16 @@ type Permissions {
   billableMetricsDelete: Boolean!
   billableMetricsUpdate: Boolean!
   billableMetricsView: Boolean!
+  billingEntitiesCreate: Boolean!
+  billingEntitiesDelete: Boolean!
+  billingEntitiesEmailsUpdate: Boolean!
+  billingEntitiesEmailsView: Boolean!
+  billingEntitiesInvoicesUpdate: Boolean!
+  billingEntitiesInvoicesView: Boolean!
+  billingEntitiesTaxesUpdate: Boolean!
+  billingEntitiesTaxesView: Boolean!
+  billingEntitiesUpdate: Boolean!
+  billingEntitiesView: Boolean!
   couponsAttach: Boolean!
   couponsCreate: Boolean!
   couponsDelete: Boolean!
@@ -7079,9 +7095,9 @@ type Query {
   """
   billingEntity(
     """
-    Uniq ID of the billing_entity
+    Code of the billing_entity
     """
-    id: ID!
+    code: String!
   ): BillingEntity
 
   """
@@ -8944,7 +8960,7 @@ Update Billing Entity input arguments
 input UpdateBillingEntityInput {
   addressLine1: String
   addressLine2: String
-  billingConfiguration: OrganizationBillingConfigurationInput
+  billingConfiguration: BillingEntityBillingConfigurationInput
   city: String
 
   """
@@ -8957,7 +8973,7 @@ input UpdateBillingEntityInput {
   documentNumberPrefix: String
   documentNumbering: BillingEntityDocumentNumberingEnum
   email: String
-  emailSettings: [EmailSettingsEnum!]
+  emailSettings: [BillingEntityEmailSettingsEnum!]
   euTaxManagement: Boolean
   finalizeZeroAmountInvoice: Boolean
   legalName: String

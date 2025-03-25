@@ -7,8 +7,6 @@ module Types
       graphql_name "CreditNote"
 
       field :id, ID, null: false
-      # empty billing_entity will not be allowed...
-      field :billing_entity, Types::BillingEntities::Object, null: true
       field :number, String, null: false
       field :sequential_id, ID, null: false
 
@@ -39,6 +37,7 @@ module Types
       field :file_url, String, null: true
 
       field :applied_taxes, [Types::CreditNotes::AppliedTaxes::Object]
+      field :billing_entity, Types::BillingEntities::Object, null: false
       field :customer, Types::Customers::Object, null: false
       field :invoice, Types::Invoices::Object
       field :items, [Types::CreditNoteItems::Object], null: false

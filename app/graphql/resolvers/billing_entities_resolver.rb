@@ -11,8 +11,8 @@ module Resolvers
 
     type Types::BillingEntities::Object.collection_type, null: false
 
-    def resolve(_args)
-      organization.billing_entities
+    def resolve(**args)
+      BillingEntity.active.where(organization: current_organization)
     end
   end
 end

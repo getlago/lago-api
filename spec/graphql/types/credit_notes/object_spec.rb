@@ -7,6 +7,7 @@ RSpec.describe Types::CreditNotes::Object do
 
   it do
     expect(subject).to have_field(:id).of_type("ID!")
+    expect(subject).to have_field(:billing_entity).of_type("BillingEntity!")
     expect(subject).to have_field(:number).of_type("String!")
     expect(subject).to have_field(:sequential_id).of_type("ID!")
 
