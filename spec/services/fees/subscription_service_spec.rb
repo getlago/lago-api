@@ -12,7 +12,8 @@ RSpec.describe Fees::SubscriptionService do
     )
   end
 
-  let(:organization) { create(:organization) }
+  let(:billing_entity) { create(:billing_entity) }
+  let(:organization) { billing_entity.organization }
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
   let(:started_at) { Time.zone.parse("2022-01-01 00:01") }
@@ -58,6 +59,7 @@ RSpec.describe Fees::SubscriptionService do
       expect(result.fee).to have_attributes(
         id: String,
         organization_id: organization.id,
+        billing_entity_id: billing_entity.id,
         invoice_id: invoice.id,
         amount_cents: 100,
         precise_amount_cents: 100.0,

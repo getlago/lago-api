@@ -2,6 +2,8 @@
 
 module Fees
   class InitFromAdjustedChargeFeeService < ::BaseService
+    Result = BaseResult[:fee]
+
     def initialize(adjusted_fee:, boundaries:, properties:)
       @adjusted_fee = adjusted_fee
       @boundaries = boundaries
@@ -23,7 +25,6 @@ module Fees
     attr_reader :adjusted_fee, :boundaries, :properties
 
     delegate :charge, :charge_filter, :invoice, :subscription, to: :adjusted_fee
-    # delegate :organization, to: :invoice
 
     def compute_amount
       adjusted_fee_result = BaseService::Result.new
