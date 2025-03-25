@@ -53,8 +53,6 @@ module PaymentRequests
         update_invoices_paid_amount_cents(payment_status: payable_payment_status)
         reset_customer_dunning_campaign_status(payable_payment_status)
 
-        PaymentReceipts::CreateJob.perform_later(payment) if payment.payable.organization.issue_receipts_enabled?
-
         PaymentRequestMailer.with(payment_request: payment.payable).requested.deliver_later if result.payable.payment_failed?
 
         result

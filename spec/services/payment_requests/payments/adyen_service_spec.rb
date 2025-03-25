@@ -163,15 +163,6 @@ RSpec.describe PaymentRequests::Payments::AdyenService, type: :service do
       expect { result }.not_to have_enqueued_mail(PaymentRequestMailer, :requested)
     end
 
-    context "when issue_receipts_enabled is true" do
-      around { |test| lago_premium!(&test) }
-      before { organization.update!(premium_integrations: %w[issue_receipts]) }
-
-      it "enqueues a payment receipt job" do
-        expect { result }.to have_enqueued_job(PaymentReceipts::CreateJob)
-      end
-    end
-
     context "when the payment request belongs to a dunning campaign" do
       let(:customer) do
         create(

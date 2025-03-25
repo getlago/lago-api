@@ -68,21 +68,6 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
       )
     end
 
-    context "when issue_receipts_enabled is true" do
-      around { |test| lago_premium!(&test) }
-      before { organization.update!(premium_integrations: %w[issue_receipts]) }
-
-      it "enqueues a payment receipt job" do
-        expect do
-          cashfree_service.update_payment_status(
-            organization_id: organization.id,
-            status: cashfree_payment.status,
-            cashfree_payment:
-          )
-        end.to have_enqueued_job(PaymentReceipts::CreateJob)
-      end
-    end
-
     context "when status is failed" do
       let(:cashfree_payment) do
         PaymentProviders::CashfreeProvider::CashfreePayment.new(

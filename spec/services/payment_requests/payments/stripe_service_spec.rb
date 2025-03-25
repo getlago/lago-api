@@ -161,15 +161,6 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       expect(invoice_2.total_paid_amount_cents).to eq(invoice_2.total_amount_cents)
     end
 
-    context "when issue_receipts_enabled is true" do
-      around { |test| lago_premium!(&test) }
-      before { organization.update!(premium_integrations: %w[issue_receipts]) }
-
-      it "enqueues a payment receipt job" do
-        expect { result }.to have_enqueued_job(PaymentReceipts::CreateJob)
-      end
-    end
-
     it "does not send payment requested email" do
       expect { result }.not_to have_enqueued_mail(PaymentRequestMailer, :requested)
     end

@@ -147,21 +147,6 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       )
     end
 
-    context "when issue_receipts_enabled is true" do
-      around { |test| lago_premium!(&test) }
-      before { organization.update!(premium_integrations: %w[issue_receipts]) }
-
-      it "enqueues a payment receipt job" do
-        expect do
-          stripe_service.update_payment_status(
-            organization_id: organization.id,
-            status: "succeeded",
-            stripe_payment:
-          )
-        end.to have_enqueued_job(PaymentReceipts::CreateJob)
-      end
-    end
-
     context "when status is failed" do
       let(:stripe_payment) do
         PaymentProviders::StripeProvider::StripePayment.new(

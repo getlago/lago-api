@@ -31,7 +31,6 @@ module Invoices
         payment.payable_payment_status = payable_payment_status
         payment.save!
 
-        PaymentReceipts::CreateJob.perform_later(payment) if result.invoice.organization.issue_receipts_enabled?
         update_invoice_payment_status(payment_status: payable_payment_status)
 
         result
