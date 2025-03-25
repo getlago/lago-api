@@ -3,7 +3,7 @@ FROM ruby:3.3.6-slim
 WORKDIR /app
 
 RUN apt update -qq && \
-  apt install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-client-14 -y && \
+  apt install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-client-13 -y && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y
 
 ENV BUNDLER_VERSION='2.5.5'
