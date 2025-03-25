@@ -7,8 +7,6 @@ module Types
       graphql_name "CreditNote"
 
       field :id, ID, null: false
-      # empty billing_entity will not be allowed...
-      field :billing_entity, Types::BillingEntities::Object, null: true
       field :number, String, null: false
       field :sequential_id, ID, null: false
 
