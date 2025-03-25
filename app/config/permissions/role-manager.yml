@@ -73,6 +73,20 @@ organization:
     create: false
     update: false
     delete: false
+billing_entities:
+  view: false
+  create: false
+  update: false
+  delete: false
+  invoices:
+    view: false
+    update: false
+  taxes:
+    view: false
+    update: false
+  emails:
+    view: false
+    update: false
 payment_requests:
   view: true
   create: true

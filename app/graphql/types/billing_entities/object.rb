@@ -7,14 +7,14 @@ module Types
       description "Base billing entity"
 
       field :id, ID, null: false
-      field :organization, Types::Organizations::OrganizationType
+      field :organization, Types::Organizations::OrganizationType, null: false
 
       field :code, String, null: false
-      field :name, String, null: false
-      field :logo_url, String
-      field :timezone, Types::TimezoneEnum
       field :default_currency, Types::CurrencyEnum, null: false
       field :email, String
+      field :logo_url, String
+      field :name, String, null: false
+      field :timezone, Types::TimezoneEnum
 
       field :legal_name, String
       field :legal_number, String

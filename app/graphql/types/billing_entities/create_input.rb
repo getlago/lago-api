@@ -5,8 +5,8 @@ module Types
     class CreateInput < BaseInputObject
       description "Create Billing Entity input arguments"
 
-      argument :name, String, required: true
       argument :code, String, required: true
+      argument :name, String, required: true
 
       argument :default_currency, Types::CurrencyEnum, required: false
       argument :email, String, required: false
@@ -30,8 +30,8 @@ module Types
       argument :document_number_prefix, String, required: false
       argument :document_numbering, Types::BillingEntities::DocumentNumberingEnum, required: false
 
-      argument :billing_configuration, Types::Organizations::BillingConfigurationInput, required: false, permission: "organization:invoices:view"
-      argument :email_settings, [Types::Organizations::EmailSettingsEnum], required: false, permission: "organization:emails:view"
+      argument :billing_configuration, Types::BillingEntities::BillingConfigurationInput, required: false, permission: "organization:invoices:view"
+      argument :email_settings, [Types::BillingEntities::EmailSettingsEnum], required: false, permission: "organization:emails:view"
       argument :finalize_zero_amount_invoice, Boolean, required: false
     end
   end

@@ -5,16 +5,16 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = "billing_entity:view"
+    REQUIRED_PERMISSION = "billing_entities:view"
 
     description "Query a single billing_entity of an organization"
 
-    argument :id, ID, required: true, description: "Uniq ID of the billing_entity"
+    argument :code, String, required: true, description: "Code of the billing_entity"
 
     type Types::BillingEntities::Object, null: true
 
-    def resolve(id: nil)
-      current_organization.all_billing_entities.find(id)
+    def resolve(code:)
+      BillingEntity.find_by!(code:, organization: current_organization)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "billing_entity")
     end

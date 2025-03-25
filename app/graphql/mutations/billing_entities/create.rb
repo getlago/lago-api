@@ -13,9 +13,9 @@ module Mutations
 
       input_object_class Types::BillingEntities::CreateInput
 
-      type Types::BillableMetrics::Object
+      type Types::BillingEntities::Object
 
-      # We're not allowing now to create a new billing entity
+      # We're not allowing now to create a new billing entity, but this endpoint is needed for FE
       def resolve(_args)
         current_organization.default_billing_entity
       end

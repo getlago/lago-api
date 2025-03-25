@@ -6,8 +6,6 @@ module Types
       graphql_name "Customer"
 
       field :id, ID, null: false
-      # empty billing_entity will not be allowed...
-      field :billing_entity, Types::BillingEntities::Object, null: true
 
       field :account_type, Types::Customers::AccountTypeEnum, null: false
       field :customer_type, Types::Customers::CustomerTypeEnum
@@ -56,6 +54,7 @@ module Types
       field :salesforce_customer, Types::IntegrationCustomers::Salesforce, null: true
       field :xero_customer, Types::IntegrationCustomers::Xero, null: true
 
+      field :billing_entity, Types::BillingEntities::Object, null: false
       field :invoices, [Types::Invoices::Object]
 
       field :applied_add_ons, [Types::AppliedAddOns::Object], null: true

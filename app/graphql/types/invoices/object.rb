@@ -6,9 +6,8 @@ module Types
       description "Invoice"
       graphql_name "Invoice"
 
+      field :billing_entity, Types::BillingEntities::Object, null: false
       field :customer, Types::Customers::Object, null: false
-      # empty billing_entity will not be allowed...
-      field :billing_entity, Types::BillingEntities::Object, null: true
 
       field :id, ID, null: false
       field :number, String, null: false

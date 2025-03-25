@@ -13,7 +13,7 @@ module Mutations
 
       input_object_class Types::BillingEntities::UpdateInput
 
-      type Types::BillableMetrics::Object
+      type Types::BillingEntities::Object
 
       # We're not allowing now to update billing entities
       def resolve(_args)
