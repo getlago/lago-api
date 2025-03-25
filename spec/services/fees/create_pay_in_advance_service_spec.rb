@@ -5,7 +5,8 @@ require "rails_helper"
 RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
   subject(:fee_service) { described_class.new(charge:, event:, billing_at: event.timestamp, estimate:) }
 
-  let(:organization) { create(:organization) }
+  let(:billing_entity) { create(:billing_entity) }
+  let(:organization) { billing_entity.organization }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
@@ -65,36 +66,35 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
     it "creates a fee" do
       result = fee_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.fees.count).to eq(1)
-        expect(result.fees.first).to have_attributes(
-          subscription:,
-          organization_id: organization.id,
-          charge:,
-          amount_cents: 10,
-          precise_amount_cents: 10.0,
-          amount_currency: "EUR",
-          fee_type: "charge",
-          pay_in_advance: true,
-          invoiceable: charge,
-          units: 9,
-          properties: Hash,
-          events_count: 1,
-          charge_filter: nil,
-          pay_in_advance_event_id: event.id,
-          pay_in_advance_event_transaction_id: event.transaction_id,
-          payment_status: "pending",
-          unit_amount_cents: 1,
-          precise_unit_amount: 0.01111111111,
+      expect(result.fees.count).to eq(1)
+      expect(result.fees.first).to have_attributes(
+        subscription:,
+        organization_id: organization.id,
+        billing_entity_id: billing_entity.id,
+        charge:,
+        amount_cents: 10,
+        precise_amount_cents: 10.0,
+        amount_currency: "EUR",
+        fee_type: "charge",
+        pay_in_advance: true,
+        invoiceable: charge,
+        units: 9,
+        properties: Hash,
+        events_count: 1,
+        charge_filter: nil,
+        pay_in_advance_event_id: event.id,
+        pay_in_advance_event_transaction_id: event.transaction_id,
+        payment_status: "pending",
+        unit_amount_cents: 1,
+        precise_unit_amount: 0.01111111111,
 
-          taxes_rate: 20.0,
-          taxes_amount_cents: 2,
-          taxes_precise_amount_cents: 2.0
-        )
-        expect(result.fees.first.applied_taxes.count).to eq(1)
-      end
+        taxes_rate: 20.0,
+        taxes_amount_cents: 2,
+        taxes_precise_amount_cents: 2.0
+      )
+      expect(result.fees.first.applied_taxes.count).to eq(1)
     end
 
     it "delivers a webhook" do
@@ -136,34 +136,34 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
       it "creates fees" do
         result = fee_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.fees.count).to eq(1)
-          expect(result.fees.first).to have_attributes(
-            subscription:,
-            charge:,
-            amount_cents: 10,
-            precise_amount_cents: 10.0,
-            amount_currency: "EUR",
-            fee_type: "charge",
-            pay_in_advance: true,
-            invoiceable: charge,
-            units: 9,
-            properties: Hash,
-            events_count: 1,
-            charge_filter: nil,
-            pay_in_advance_event_id: event.id,
-            pay_in_advance_event_transaction_id: event.transaction_id,
-            payment_status: "pending",
-            unit_amount_cents: 1,
-            precise_unit_amount: 0.01111111111,
-            taxes_rate: 10.0,
-            taxes_amount_cents: 1,
-            taxes_precise_amount_cents: 1.0
-          )
-          expect(result.fees.first.applied_taxes.count).to eq(2)
-        end
+        expect(result.fees.count).to eq(1)
+        expect(result.fees.first).to have_attributes(
+          subscription:,
+          charge:,
+          organization_id: organization.id,
+          billing_entity_id: billing_entity.id,
+          amount_cents: 10,
+          precise_amount_cents: 10.0,
+          amount_currency: "EUR",
+          fee_type: "charge",
+          pay_in_advance: true,
+          invoiceable: charge,
+          units: 9,
+          properties: Hash,
+          events_count: 1,
+          charge_filter: nil,
+          pay_in_advance_event_id: event.id,
+          pay_in_advance_event_transaction_id: event.transaction_id,
+          payment_status: "pending",
+          unit_amount_cents: 1,
+          precise_unit_amount: 0.01111111111,
+          taxes_rate: 10.0,
+          taxes_amount_cents: 1,
+          taxes_precise_amount_cents: 1.0
+        )
+        expect(result.fees.first.applied_taxes.count).to eq(2)
       end
 
       context "when there is error received from the provider" do

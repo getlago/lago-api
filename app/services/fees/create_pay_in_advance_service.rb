@@ -52,7 +52,6 @@ module Fees
 
     delegate :billable_metric, to: :charge
     delegate :subscription, to: :event
-    # delegate :organization, to: :customer
 
     def create_fee(properties:, charge_filter: nil)
       ActiveRecord::Base.transaction do

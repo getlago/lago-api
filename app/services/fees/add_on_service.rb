@@ -2,6 +2,8 @@
 
 module Fees
   class AddOnService < BaseService
+    Result = BaseResult[:fee]
+
     def initialize(invoice:, applied_add_on:)
       @invoice = invoice
       @applied_add_on = applied_add_on
@@ -45,9 +47,6 @@ module Fees
     private
 
     attr_reader :invoice, :applied_add_on
-
-    # do we really need these customer and organization?
-    # delegate :customer, :organization, to: :invoice
 
     def already_billed?
       existing_fee = invoice.fees.find_by(applied_add_on_id: applied_add_on.id)
