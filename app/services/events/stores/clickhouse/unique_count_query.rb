@@ -291,7 +291,7 @@ module Events
                     if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
                     if(
                       (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
-                      toDateTime64(:to_datetime, 3, 'UTC'),
+                      toDateTime64(:from_datetime, 3, 'UTC'),
                       leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
                     ),
                     :timezone
