@@ -4,7 +4,7 @@ module Charges
   class UpdateService < BaseService
     def initialize(charge:, params:, cascade_options: {})
       @charge = charge
-      @params = params
+      @params = params.to_h.deep_symbolize_keys
       @cascade_options = cascade_options
       @cascade = cascade_options[:cascade]
 
