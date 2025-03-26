@@ -19,6 +19,10 @@ module Organizations
         if params[:document_numbering]
           params[:document_numbering] = "per_billing_entity" if params[:document_numbering] == "per_organization"
         end
+
+        # NOTE: ensure first billing entity has the same id as the organization to ease the migration to multi entities.
+        params[:id] = organization.id
+
         params[:code] = params[:name]&.parameterize(separator: "_") if params[:code].blank?
         BillingEntities::CreateService.call(organization: organization, params: params)
       end

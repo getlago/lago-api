@@ -46,6 +46,15 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         expect(result.billing_entity.timezone).to eq("UTC")
         expect(result.billing_entity.email_settings).to be_empty
       end
+
+      context "when an id is provided in the params hash" do
+        it "creates a billing entity with the provided id" do
+          params[:id] = organization.id
+
+          expect(result).to be_success
+          expect(result.billing_entity.id).to eq(organization.id)
+        end
+      end
     end
   end
 
