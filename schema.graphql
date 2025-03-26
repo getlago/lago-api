@@ -7559,6 +7559,7 @@ type RevenueStreamPlan {
   netRevenueAmountCents: BigInt!
   netRevenueShare: Float!
   planCode: String!
+  planDeletedAt: ISO8601DateTime
   planId: ID!
   planInterval: PlanInterval!
   planName: String!

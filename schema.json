@@ -38608,6 +38608,18 @@
               "args": []
             },
             {
+              "name": "planDeletedAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "planId",
               "description": null,
               "type": {

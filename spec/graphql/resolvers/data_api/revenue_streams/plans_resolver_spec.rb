@@ -10,6 +10,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
         dataApiRevenueStreamsPlans(currency: $currency, orderBy: $orderBy, limit: $limit, page: $page) {
           collection {
             planCode
+            planDeletedAt
             planId
             planInterval
             planName
@@ -55,6 +56,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
         "planId" => "8d39f27f-8371-43ea-a327-c9579e70eeb3",
         "amountCurrency" => "EUR",
         "planCode" => "custom_plan_penny",
+        "planDeletedAt" => nil,
         "customersCount" => 1,
         "grossRevenueAmountCents" => "120735293",
         "netRevenueAmountCents" => "120735293",

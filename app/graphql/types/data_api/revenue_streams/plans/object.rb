@@ -8,6 +8,7 @@ module Types
           graphql_name "RevenueStreamPlan"
 
           field :plan_code, String, null: false
+          field :plan_deleted_at, GraphQL::Types::ISO8601DateTime, null: true
           field :plan_id, ID, null: false
           field :plan_interval, Types::Plans::IntervalEnum, null: false
           field :plan_name, String, null: false
