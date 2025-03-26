@@ -4,14 +4,11 @@ module Taxes
   class AutoGenerateService < BaseService
     def initialize(organization:)
       @organization = organization
-      @lago_eu_vat = LagoEuVat::Rate.new
       super
     end
 
     def call
-      countries_code = lago_eu_vat.countries_code
-
-      countries_code.each do |country_code|
+      LagoEuVat::Rate.country_codes.each do |country_code|
         create_country_tax(country_code)
       end
 
@@ -20,10 +17,10 @@ module Taxes
 
     private
 
-    attr_reader :organization, :lago_eu_vat
+    attr_reader :organization
 
     def create_country_tax(country_code)
-      country_taxes = lago_eu_vat.country_rates(country_code:)
+      country_taxes = LagoEuVat::Rate.country_rates(country_code:)
 
       country_rates = country_taxes[:rates]
       tax_code = "lago_eu_#{country_code.downcase}_standard"
