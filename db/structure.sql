@@ -142,11 +142,6 @@ ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_085d1cc97b;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_07b21049f2;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
-DROP TRIGGER IF EXISTS subscription_trigger ON public.subscriptions;
-DROP TRIGGER IF EXISTS organization_trigger ON public.organizations;
-DROP TRIGGER IF EXISTS charges_in_advance_trigger ON public.charges;
-DROP TRIGGER IF EXISTS billable_metrics_trigger ON public.billable_metrics;
-DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
 SELECT
     NULL::uuid AS organization_id,
@@ -5330,41 +5325,6 @@ CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
 
 
 --
--- Name: payment_receipts before_payment_receipt_insert; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER before_payment_receipt_insert BEFORE INSERT ON public.payment_receipts FOR EACH ROW EXECUTE FUNCTION public.set_payment_receipt_number();
-
-
---
--- Name: billable_metrics billable_metrics_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER billable_metrics_trigger AFTER INSERT OR UPDATE ON public.billable_metrics FOR EACH ROW EXECUTE FUNCTION public.billable_metrics_notify();
-
-
---
--- Name: charges charges_in_advance_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER charges_in_advance_trigger AFTER INSERT OR UPDATE ON public.charges FOR EACH ROW WHEN ((new.pay_in_advance = true)) EXECUTE FUNCTION public.charges_in_advance_notify();
-
-
---
--- Name: organizations organization_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER organization_trigger AFTER INSERT OR UPDATE ON public.organizations FOR EACH ROW EXECUTE FUNCTION public.organizations_notify();
-
-
---
--- Name: subscriptions subscription_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER subscription_trigger AFTER INSERT OR UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION public.subscriptions_notify();
-
-
---
 -- Name: wallet_transactions fk_rails_01a4c0c7db; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6435,6 +6395,8 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250325162648'),
+('20250325145324'),
 ('20250324125056'),
 ('20250324122757'),
 ('20250318175216'),
