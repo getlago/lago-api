@@ -3576,6 +3576,7 @@ type DataApiMrrPlan {
   mrr: Float!
   mrrShare: Float!
   planCode: String!
+  planDeletedAt: ISO8601DateTime
   planId: ID!
   planInterval: PlanInterval!
   planName: String!

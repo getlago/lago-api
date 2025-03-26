@@ -12,6 +12,7 @@ RSpec.describe Resolvers::DataApi::Mrrs::PlansResolver, type: :graphql do
             amountCurrency
             dt
             planCode
+            planDeletedAt
             planId
             planInterval
             planName
@@ -59,6 +60,7 @@ RSpec.describe Resolvers::DataApi::Mrrs::PlansResolver, type: :graphql do
         "mrrShare" => 0.0279,
         "planName" => "Tondr",
         "planCode" => "custom_plan_tondr",
+        "planDeletedAt" => nil,
         "planInterval" => "monthly",
         "activeCustomersShare" => 0.009
       }

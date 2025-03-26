@@ -9,6 +9,7 @@
       "plan_name": "Tondr",
       "organization_id": "2537afc4-0e7c-4abb-89b7-d9b28c35780b",
       "plan_code": "custom_plan_tondr",
+      "plan_deleted_at": null,
       "plan_interval": "monthly",
       "active_customers_share": 0.009
   },
@@ -22,6 +23,7 @@
       "plan_name": "Place",
       "organization_id": "2537afc4-0e7c-4abb-89b7-d9b28c35780b",
       "plan_code": "custom_plan_place",
+      "plan_deleted_at": null,
       "plan_interval": "monthly",
       "active_customers_share": 0.009
   },
@@ -35,6 +37,7 @@
       "plan_name": "Silo",
       "organization_id": "2537afc4-0e7c-4abb-89b7-d9b28c35780b",
       "plan_code": "custom_plan_silo",
+      "plan_deleted_at": null,
       "plan_interval": "monthly",
       "active_customers_share": 0.009
   },
@@ -48,6 +51,7 @@
       "plan_name": "Penny",
       "organization_id": "2537afc4-0e7c-4abb-89b7-d9b28c35780b",
       "plan_code": "custom_plan_penny",
+      "plan_deleted_at": null,
       "plan_interval": "monthly",
       "active_customers_share": 0.009
   }
