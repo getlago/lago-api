@@ -10,6 +10,9 @@ class BillableMetric < ApplicationRecord
 
   has_many :charges, dependent: :destroy
   has_many :plans, through: :charges
+  has_many :subscriptions, through: :plans
+  has_many :fees, through: :charges
+  has_many :invoices, through: :fees
   has_many :coupon_targets
   has_many :coupons, through: :coupon_targets
   has_many :groups, dependent: :delete_all

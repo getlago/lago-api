@@ -16,16 +16,22 @@ RSpec.describe Types::BillableMetrics::Object do
     expect(subject).to have_field(:field_name).of_type("String")
     expect(subject).to have_field(:weighted_interval).of_type("WeightedIntervalEnum")
     expect(subject).to have_field(:filters).of_type("[BillableMetricFilter!]")
-    expect(subject).to have_field(:active_subscriptions_count).of_type("Int!")
-    expect(subject).to have_field(:draft_invoices_count).of_type("Int!")
-    expect(subject).to have_field(:plans_count).of_type("Int!")
     expect(subject).to have_field(:recurring).of_type("Boolean!")
-    expect(subject).to have_field(:subscriptions_count).of_type("Int!")
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:deleted_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:integration_mappings).of_type("[Mapping!]")
     expect(subject).to have_field(:rounding_function).of_type("RoundingFunctionEnum")
     expect(subject).to have_field(:rounding_precision).of_type("Int")
+
+    expect(subject).to have_field(:has_active_subscriptions).of_type("Boolean!")
+    expect(subject).to have_field(:has_draft_invoices).of_type("Boolean!")
+    expect(subject).to have_field(:has_plans).of_type("Boolean!")
+    expect(subject).to have_field(:has_subscriptions).of_type("Boolean!")
+
+    expect(subject).to have_field(:active_subscriptions_count).of_type("Int!")
+    expect(subject).to have_field(:draft_invoices_count).of_type("Int!")
+    expect(subject).to have_field(:plans_count).of_type("Int!")
+    expect(subject).to have_field(:subscriptions_count).of_type("Int!")
   end
 end
