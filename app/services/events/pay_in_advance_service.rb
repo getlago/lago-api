@@ -51,7 +51,7 @@ module Events
     end
 
     def already_processed?
-      Fee.from_organization(event.organization).where(pay_in_advance_event_transaction_id: event.transaction_id).exists?
+      Fee.from_organization_pay_in_advance(event.organization).where(pay_in_advance_event_transaction_id: event.transaction_id).exists?
     end
 
     def can_create_fee?
