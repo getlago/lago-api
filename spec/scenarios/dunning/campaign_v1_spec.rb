@@ -92,6 +92,12 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
     File.read("spec/fixtures/stripe/payment_intent_failed_card_declined.json")
   end
 
+  def build_stripe_payment_intent_response
+    JSON.parse(stripe_payment_intent_response, symbolize_names: true).tap do |h|
+      h[:error][:payment_intent][:id] = "pi_#{SecureRandom.hex}"
+    end
+  end
+
   # TODO: make it a test metadata `:scenarios, type: :request, premium: true`
   around { |test| lago_premium!(&test) }
 
@@ -110,9 +116,28 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
     stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_customer.provider_customer_id}/payment_methods/pm_123456")
       .and_return(status: 200, body: stripe_payment_method_response.to_json)
     stub_request(:post, "https://api.stripe.com/v1/payment_intents")
-      .and_return(status: 402, body: stripe_payment_intent_response)
+      .and_return(
+        status: 402,
+        body: lambda { |_req| build_stripe_payment_intent_response.to_json }
+      )
     stub_request(:post, "https://api.stripe.com/v1/checkout/sessions")
       .and_return(status: 200, body: {url: "https://stripe.com/checkout/session/cs_test_123"}.to_json)
+
+    WebMock.after_request do |request_signature, response|
+      if request_signature.uri.path.match?(%r{/v1/payment_intents})
+        request_body_hash = if request_signature.url_encoded?
+          Rack::Utils.parse_nested_query(request_signature.body)
+        elsif request_signature.body.json_encoded?
+          JSON.parse(request_signature.body)
+        end
+
+        Jobs::MockStripeWebhookEventJob.perform_later(
+          organization,
+          request_body_hash,
+          JSON.parse(response.body)
+        )
+      end
+    end
   end
 
   it do
@@ -166,7 +191,9 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
 
       expect(ActionMailer::Base.deliveries.count).to eq(0)
       perform_dunning
-      expect(ActionMailer::Base.deliveries.count).to eq(1)
+      # NOTE: Email is sent twice: first synchronously after Stripe response, and then when the webhook is received
+      expect(ActionMailer::Base.deliveries.count).to eq(2)
+      expect(ActionMailer::Base.deliveries.map(&:subject)).to all eq "Your overdue balance from JC AI"
 
       mail = ActionMailer::Base.deliveries.last
       expect(mail.subject).to eq "Your overdue balance from JC AI"
@@ -182,7 +209,7 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
       travel_to(date) do
         perform_overdue_balance_update
         perform_dunning
-        expect(ActionMailer::Base.deliveries.count).to eq(1)
+        expect(ActionMailer::Base.deliveries.count).to eq(2) # nothing new
       end
     end
 
@@ -190,16 +217,16 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
     travel_to(DateTime.new(2025, 1, 10, 10)) do
       perform_overdue_balance_update
       perform_dunning
-      expect(ActionMailer::Base.deliveries.count).to eq(2)
+      expect(ActionMailer::Base.deliveries.count).to eq(4)
 
-      expect(customer.payment_requests.reload.map(&:amount_cents)).to eq([155_00, 155_00])
+      expect(customer.payment_requests.reload.map(&:amount_cents)).to all eq 155_00
     end
 
     # This is over
     travel_to(DateTime.new(2025, 1, 13, 13)) do
       perform_overdue_balance_update
       perform_dunning
-      expect(ActionMailer::Base.deliveries.count).to eq(2)
+      expect(ActionMailer::Base.deliveries.count).to eq(4) # Nothing new
     end
   end
 end
