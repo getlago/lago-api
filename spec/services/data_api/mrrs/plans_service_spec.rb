@@ -41,6 +41,7 @@ RSpec.describe DataApi::Mrrs::PlansService, type: :service do
             "plan_name" => "Tondr",
             "organization_id" => "2537afc4-0e7c-4abb-89b7-d9b28c35780b",
             "plan_code" => "custom_plan_tondr",
+            "plan_deleted_at" => nil,
             "plan_interval" => "monthly",
             "active_customers_share" => 0.009
           }

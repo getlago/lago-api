@@ -33,6 +33,7 @@ RSpec.describe DataApi::RevenueStreams::CustomersService, type: :service do
         expect(service_call.revenue_streams_customers.first).to eq(
           {
             "amount_currency" => "EUR",
+            "customer_deleted_at" => nil,
             "customer_id" => "e4676e50-1234-4606-bcdb-42effbc2b635",
             "customer_name" => "Penny",
             "external_customer_id" => "2537afc4-1234-4abb-89b7-d9b28c35780b",

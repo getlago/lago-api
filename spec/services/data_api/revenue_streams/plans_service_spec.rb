@@ -35,6 +35,7 @@ RSpec.describe DataApi::RevenueStreams::PlansService, type: :service do
             "plan_id" => "8d39f27f-8371-43ea-a327-c9579e70eeb3",
             "amount_currency" => "EUR",
             "plan_code" => "custom_plan_penny",
+            "plan_deleted_at" => nil,
             "customers_count" => 1,
             "gross_revenue_amount_cents" => 120735293,
             "net_revenue_amount_cents" => 120735293,

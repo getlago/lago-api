@@ -10,6 +10,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::CustomersResolver, type: :gra
         dataApiRevenueStreamsCustomers(currency: $currency, orderBy: $orderBy, limit: $limit, page: $page) {
           collection {
             customerId
+            customerDeletedAt
             externalCustomerId
             customerName
             amountCurrency
@@ -51,6 +52,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::CustomersResolver, type: :gra
       {
         "amountCurrency" => "EUR",
         "customerId" => "e4676e50-1234-4606-bcdb-42effbc2b635",
+        "customerDeletedAt" => nil,
         "externalCustomerId" => "2537afc4-1234-4abb-89b7-d9b28c35780b",
         "customerName" => "Penny",
         "grossRevenueAmountCents" => "124628322",
