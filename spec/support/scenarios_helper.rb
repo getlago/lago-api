@@ -72,7 +72,7 @@ module ScenariosHelper
     invoice.reload
   end
 
-  def create_one_off_invoice(customer, addons)
+  def create_one_off_invoice(customer, addons, taxes: [], units: 1)
     create_invoice_params = {
       external_customer_id: customer.external_id,
       currency: "EUR",
@@ -84,11 +84,9 @@ module ScenariosHelper
         add_on_id: fee.id,
         add_on_code: fee.code,
         name: fee.name,
-        units: 1,
+        units:,
         unit_amount_cents: fee.amount_cents,
-        tax_codes: [
-          tax.code
-        ]
+        tax_codes: taxes
       }
       create_invoice_params[:fees].push(fee_addon_params)
     end
@@ -203,8 +201,13 @@ module ScenariosHelper
     perform_all_enqueued_jobs
   end
 
-  def update_overdue_balance
+  def perform_overdue_balance_update
     Clock::MarkInvoicesAsPaymentOverdueJob.perform_later
+    perform_all_enqueued_jobs
+  end
+
+  def perform_dunning
+    Clock::ProcessDunningCampaignsJob.perform_later
     perform_all_enqueued_jobs
   end
 end

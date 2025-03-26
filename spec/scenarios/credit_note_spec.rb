@@ -350,7 +350,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
         it "solves the rounding issue" do
           #  create a one off invoice with two addons and small amounts as feed
-          create_one_off_invoice(customer, add_ons)
+          create_one_off_invoice(customer, add_ons, taxes: [tax.code])
           # invoice amount should be with taxes calculated on items sum:
           invoice = customer.invoices.order(:created_at).last
           expect(invoice.total_amount_cents).to eq(163_99)
@@ -466,7 +466,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
         it "solves the rounding issue" do
           #  create a one off invoice with two addons and small amounts as feed
-          create_one_off_invoice(customer, add_ons)
+          create_one_off_invoice(customer, add_ons, taxes: [tax.code])
           # invoice amount should be with taxes calculated on items sum:
           invoice = customer.invoices.order(:created_at).last
           expect(invoice.total_amount_cents).to eq(327_98)

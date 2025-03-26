@@ -47,6 +47,10 @@ Style/FrozenStringLiteralComment:
 Performance/CaseWhenSplat:
   Enabled: true
 
+Rails/ApplicationJob:
+  Exclude:
+    - 'spec/support/jobs/**/*'
+
 Rails/InverseOf:
   Description: 'Checks for associations where the inverse cannot be determined automatically.'
   Enabled: false
