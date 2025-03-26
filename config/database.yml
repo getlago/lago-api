@@ -9,7 +9,7 @@ development:
     password: changeme
     database: lago
     port: 5432
-    schema_search_path: 'public'
+    schema_search_path: "public"
   events:
     <<: *default
     host: db
@@ -33,6 +33,7 @@ test:
     <<: *default
     url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
     schema_dump: <% if ENV['LAGO_DISABLE_SCHEMA_DUMP'].present? %> false <% else %> structure.sql <% end %>
+    schema_search_path: "public"
   events:
     <<: *default
     url: <%= ENV['DATABASE_TEST_URL'].presence || ENV['DATABASE_URL'] %>
