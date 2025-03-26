@@ -19,7 +19,9 @@ module Clock
     def perform
       return unless License.premium?
 
-      DunningCampaigns::BulkProcessJob.perform_later
+      Organization.with_auto_dunning_support.find_each do |organization|
+        DunningCampaigns::OrganizationProcessJob.perform_later(organization)
+      end
     end
   end
 end

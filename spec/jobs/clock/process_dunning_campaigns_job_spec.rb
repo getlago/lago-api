@@ -3,7 +3,10 @@
 require "rails_helper"
 
 describe Clock::ProcessDunningCampaignsJob, job: true do
-  subject { described_class }
+  before do
+    create(:organization, premium_integrations: [])
+    create_list(:organization, 2, premium_integrations: %w[auto_dunning])
+  end
 
   describe ".perform" do
     context "when premium features are enabled" do
@@ -11,13 +14,13 @@ describe Clock::ProcessDunningCampaignsJob, job: true do
 
       it "queue a DunningCampaigns::ProcessDunningCampaignsJob" do
         described_class.perform_now
-        expect(DunningCampaigns::BulkProcessJob).to have_been_enqueued
+        expect(DunningCampaigns::OrganizationProcessJob).to have_been_enqueued.exactly(2).times
       end
     end
 
     it "does nothing" do
       described_class.perform_now
-      expect(DunningCampaigns::BulkProcessJob).not_to have_been_enqueued
+      expect(DunningCampaigns::OrganizationProcessJob).not_to have_been_enqueued
     end
   end
 end
