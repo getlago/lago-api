@@ -9,6 +9,626 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_fd399a23d3;
+ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_f98413d404;
+ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_f66617edcb;
+ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_f53ff93138;
+ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_f510acb495;
+ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_f228550fda;
+ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_ef731e48be;
+ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_ed387e0992;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_eaca9421be;
+ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ea80151038;
+ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_e8bac9c5bb;
+ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
+ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_dd7e076158;
+ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_dd342449a6;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_d9ffb8b4a1;
+ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_d1dc5814e9;
+ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
+ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_cc318ad1ff;
+ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf700aeb8;
+ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_c71f4b2026;
+ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
+ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
+ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
+ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
+ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_ba128983c2;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_b50dc82c1e;
+ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
+ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_ac146c9541;
+ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_aaa12f7d3e;
+ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
+ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
+ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
+ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_9ff1d277f3;
+ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_9f22076477;
+ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_9ea6759859;
+ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS fk_rails_9c8e276cc0;
+ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_9c704027e2;
+ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_9c08b43701;
+ALTER TABLE IF EXISTS ONLY public.active_storage_variant_records DROP CONSTRAINT IF EXISTS fk_rails_993965df05;
+ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails_99326fb65d;
+ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_98980b326b;
+ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
+ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
+ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_90d93bd016;
+ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_8fa6f0d920;
+ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_8ca834cd4a;
+ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
+ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_89e1020aca;
+ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_8872c07e0d;
+ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_88349fc20a;
+ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_86676be631;
+ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_84f4587409;
+ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS fk_rails_81e3b6abba;
+ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_7eb0484711;
+ALTER TABLE IF EXISTS ONLY public.billable_metrics DROP CONSTRAINT IF EXISTS fk_rails_7e8a2f26e5;
+ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_7da558cadc;
+ALTER TABLE IF EXISTS ONLY public.invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_7c0e340dbd;
+ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_7b324610ad;
+ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS fk_rails_7aab96f30e;
+ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS fk_rails_7a0704ce72;
+ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS fk_rails_7995206484;
+ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_7886e1bc34;
+ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rails_755d734f25;
+ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
+ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_745b4ca7dd;
+ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_73d83e23b6;
+ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_6e148ccbb1;
+ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_6d465e6b10;
+ALTER TABLE IF EXISTS ONLY public.dunning_campaigns DROP CONSTRAINT IF EXISTS fk_rails_6c720a8ccd;
+ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_6b1e3d1159;
+ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_67d4eb3c92;
+ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_66eb6b32c1;
+ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS fk_rails_65b48ef6bf;
+ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails_64267aab58;
+ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_63d3df128b;
+ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62d18ea517;
+ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
+ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_5fce5ea2b5;
+ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_5cb67dee79;
+ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_5c2e0b6d34;
+ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS fk_rails_5c21eece29;
+ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
+ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
+ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
+ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS fk_rails_526379cd99;
+ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_521b5240ed;
+ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_51ac39a0c6;
+ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_50d46d3679;
+ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_450b79f2a9;
+ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_4117574b51;
+ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_3ff27d7624;
+ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_3f7be5debc;
+ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_3ec3563cf3;
+ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_3d568ff9de;
+ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_3cfe1d68d7;
+ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_3c7c3920c0;
+ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_3acf9e789c;
+ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_3a303bf667;
+ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_3926855f12;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_38047eb662;
+ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_3708a65be3;
+ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS fk_rails_36cda06530;
+ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_34b5ee1894;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_34ab152115;
+ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_348acbd245;
+ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_32600e5a72;
+ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_2fd7ee65e6;
+ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_2fb2147151;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_2ea4db3a4c;
+ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_2dc6171f57;
+ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_2b35eef34b;
+ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_27b55b8574;
+ALTER TABLE IF EXISTS ONLY public.payment_providers DROP CONSTRAINT IF EXISTS fk_rails_26be2f764d;
+ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_268c288aaa;
+ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_2561c00887;
+ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_25267b0e17;
+ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_25232a0ec3;
+ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_22af6c6d28;
+ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_21eb389927;
+ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS fk_rails_21808fa528;
+ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_216ac8a975;
+ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_20cc0de4c7;
+ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_1db0057d9b;
+ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
+ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
+ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
+ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_0e464363cb;
+ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_0d349e632f;
+ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_08dfe87131;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_085d1cc97b;
+ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_07b21049f2;
+ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
+DROP TRIGGER IF EXISTS subscription_trigger ON public.subscriptions;
+DROP TRIGGER IF EXISTS organization_trigger ON public.organizations;
+DROP TRIGGER IF EXISTS charges_in_advance_trigger ON public.charges;
+DROP TRIGGER IF EXISTS billable_metrics_trigger ON public.billable_metrics;
+DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
+CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
+SELECT
+    NULL::uuid AS organization_id,
+    NULL::character varying AS code,
+    NULL::integer AS aggregation_type,
+    NULL::character varying AS field_name,
+    NULL::uuid AS plan_id,
+    NULL::uuid AS charge_id,
+    NULL::boolean AS pay_in_advance,
+    NULL::jsonb AS grouped_by,
+    NULL::uuid AS charge_filter_id,
+    NULL::json AS filters,
+    NULL::jsonb AS filters_grouped_by;
+DROP INDEX IF EXISTS public.index_webhooks_on_webhook_endpoint_id;
+DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organization_id;
+DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
+DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
+DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
+DROP INDEX IF EXISTS public.index_wallet_transactions_on_wallet_id;
+DROP INDEX IF EXISTS public.index_wallet_transactions_on_invoice_id;
+DROP INDEX IF EXISTS public.index_wallet_transactions_on_credit_note_id;
+DROP INDEX IF EXISTS public.index_versions_on_item_type_and_item_id;
+DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id_and_recurring;
+DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id;
+DROP INDEX IF EXISTS public.index_unique_transaction_id;
+DROP INDEX IF EXISTS public.index_unique_terminating_subscription_invoice;
+DROP INDEX IF EXISTS public.index_unique_starting_subscription_invoice;
+DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
+DROP INDEX IF EXISTS public.index_timestamp_lookup;
+DROP INDEX IF EXISTS public.index_timestamp_group_lookup;
+DROP INDEX IF EXISTS public.index_timestamp_filter_lookup;
+DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
+DROP INDEX IF EXISTS public.index_taxes_on_code_and_organization_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_status;
+DROP INDEX IF EXISTS public.index_subscriptions_on_started_at_and_ending_at;
+DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
+DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_status;
+DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_external_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
+DROP INDEX IF EXISTS public.index_search_quantified_events;
+DROP INDEX IF EXISTS public.index_refunds_on_payment_provider_id;
+DROP INDEX IF EXISTS public.index_refunds_on_payment_provider_customer_id;
+DROP INDEX IF EXISTS public.index_refunds_on_payment_id;
+DROP INDEX IF EXISTS public.index_refunds_on_credit_note_id;
+DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_wallet_id;
+DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_started_at;
+DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_expiration_at;
+DROP INDEX IF EXISTS public.index_quantified_events_on_organization_id;
+DROP INDEX IF EXISTS public.index_quantified_events_on_group_id;
+DROP INDEX IF EXISTS public.index_quantified_events_on_external_id;
+DROP INDEX IF EXISTS public.index_quantified_events_on_deleted_at;
+DROP INDEX IF EXISTS public.index_quantified_events_on_charge_filter_id;
+DROP INDEX IF EXISTS public.index_quantified_events_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_plans_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id_and_tax_id;
+DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id;
+DROP INDEX IF EXISTS public.index_plans_on_parent_id;
+DROP INDEX IF EXISTS public.index_plans_on_organization_id_and_code;
+DROP INDEX IF EXISTS public.index_plans_on_organization_id;
+DROP INDEX IF EXISTS public.index_plans_on_deleted_at;
+DROP INDEX IF EXISTS public.index_plans_on_created_at;
+DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
+DROP INDEX IF EXISTS public.index_payments_on_payment_type;
+DROP INDEX IF EXISTS public.index_payments_on_payment_provider_id;
+DROP INDEX IF EXISTS public.index_payments_on_payment_provider_customer_id;
+DROP INDEX IF EXISTS public.index_payments_on_payable_type_and_payable_id;
+DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type;
+DROP INDEX IF EXISTS public.index_payments_on_invoice_id;
+DROP INDEX IF EXISTS public.index_payment_requests_on_organization_id;
+DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
+DROP INDEX IF EXISTS public.index_payment_requests_on_customer_id;
+DROP INDEX IF EXISTS public.index_payment_receipts_on_payment_id;
+DROP INDEX IF EXISTS public.index_payment_receipts_on_organization_id;
+DROP INDEX IF EXISTS public.index_payment_providers_on_organization_id;
+DROP INDEX IF EXISTS public.index_payment_providers_on_code_and_organization_id;
+DROP INDEX IF EXISTS public.index_payment_provider_customers_on_provider_customer_id;
+DROP INDEX IF EXISTS public.index_payment_provider_customers_on_payment_provider_id;
+DROP INDEX IF EXISTS public.index_payment_provider_customers_on_customer_id_and_type;
+DROP INDEX IF EXISTS public.index_password_resets_on_user_id;
+DROP INDEX IF EXISTS public.index_password_resets_on_token;
+DROP INDEX IF EXISTS public.index_organizations_on_hmac_key;
+DROP INDEX IF EXISTS public.index_organizations_on_api_key;
+DROP INDEX IF EXISTS public.index_memberships_on_user_id_and_organization_id;
+DROP INDEX IF EXISTS public.index_memberships_on_user_id;
+DROP INDEX IF EXISTS public.index_memberships_on_organization_id;
+DROP INDEX IF EXISTS public.index_lifetime_usages_on_subscription_id;
+DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_invoiced_usage;
+DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_current_usage;
+DROP INDEX IF EXISTS public.index_lifetime_usages_on_organization_id;
+DROP INDEX IF EXISTS public.index_invoices_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id_and_tax_id;
+DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id;
+DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_payment_request_id;
+DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_invoice_id;
+DROP INDEX IF EXISTS public.index_invoices_on_status;
+DROP INDEX IF EXISTS public.index_invoices_on_sequential_id;
+DROP INDEX IF EXISTS public.index_invoices_on_self_billed;
+DROP INDEX IF EXISTS public.index_invoices_on_ready_to_be_refreshed;
+DROP INDEX IF EXISTS public.index_invoices_on_payment_overdue;
+DROP INDEX IF EXISTS public.index_invoices_on_organization_id;
+DROP INDEX IF EXISTS public.index_invoices_on_number;
+DROP INDEX IF EXISTS public.index_invoices_on_issuing_date;
+DROP INDEX IF EXISTS public.index_invoices_on_customer_id_and_sequential_id;
+DROP INDEX IF EXISTS public.index_invoices_on_customer_id;
+DROP INDEX IF EXISTS public.index_invoices_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_subscription_id;
+DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id_and_subscription_id;
+DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id;
+DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_charges_from_and_to_datetime;
+DROP INDEX IF EXISTS public.index_invoice_subscriptions_boundaries;
+DROP INDEX IF EXISTS public.index_invoice_metadata_on_invoice_id_and_key;
+DROP INDEX IF EXISTS public.index_invoice_metadata_on_invoice_id;
+DROP INDEX IF EXISTS public.index_invoice_custom_sections_on_organization_id_and_code;
+DROP INDEX IF EXISTS public.index_invoice_custom_sections_on_organization_id;
+DROP INDEX IF EXISTS public.index_invoice_custom_section_selections_on_organization_id;
+DROP INDEX IF EXISTS public.index_invoice_custom_section_selections_on_customer_id;
+DROP INDEX IF EXISTS public.index_invoice_custom_section_selections_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_invites_on_token;
+DROP INDEX IF EXISTS public.index_invites_on_organization_id;
+DROP INDEX IF EXISTS public.index_invites_on_membership_id;
+DROP INDEX IF EXISTS public.index_integrations_on_organization_id;
+DROP INDEX IF EXISTS public.index_integrations_on_code_and_organization_id;
+DROP INDEX IF EXISTS public.index_integration_resources_on_syncable;
+DROP INDEX IF EXISTS public.index_integration_resources_on_integration_id;
+DROP INDEX IF EXISTS public.index_integration_mappings_on_mappable;
+DROP INDEX IF EXISTS public.index_integration_mappings_on_integration_id;
+DROP INDEX IF EXISTS public.index_integration_items_on_integration_id;
+DROP INDEX IF EXISTS public.index_integration_customers_on_integration_id;
+DROP INDEX IF EXISTS public.index_integration_customers_on_external_customer_id;
+DROP INDEX IF EXISTS public.index_integration_customers_on_customer_id_and_type;
+DROP INDEX IF EXISTS public.index_integration_customers_on_customer_id;
+DROP INDEX IF EXISTS public.index_integration_collection_mappings_on_integration_id;
+DROP INDEX IF EXISTS public.index_int_items_on_external_id_and_int_id_and_type;
+DROP INDEX IF EXISTS public.index_int_collection_mappings_on_mapping_type_and_int_id;
+DROP INDEX IF EXISTS public.index_inbound_webhooks_on_status_and_processing_at;
+DROP INDEX IF EXISTS public.index_inbound_webhooks_on_status_and_created_at;
+DROP INDEX IF EXISTS public.index_inbound_webhooks_on_organization_id;
+DROP INDEX IF EXISTS public.index_groups_on_parent_group_id;
+DROP INDEX IF EXISTS public.index_groups_on_deleted_at;
+DROP INDEX IF EXISTS public.index_groups_on_billable_metric_id_and_parent_group_id;
+DROP INDEX IF EXISTS public.index_groups_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_group_properties_on_group_id;
+DROP INDEX IF EXISTS public.index_group_properties_on_deleted_at;
+DROP INDEX IF EXISTS public.index_group_properties_on_charge_id_and_group_id;
+DROP INDEX IF EXISTS public.index_group_properties_on_charge_id;
+DROP INDEX IF EXISTS public.index_fees_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id_and_tax_id;
+DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id;
+DROP INDEX IF EXISTS public.index_fees_on_true_up_parent_fee_id;
+DROP INDEX IF EXISTS public.index_fees_on_subscription_id;
+DROP INDEX IF EXISTS public.index_fees_on_pay_in_advance_event_transaction_id;
+DROP INDEX IF EXISTS public.index_fees_on_organization_id;
+DROP INDEX IF EXISTS public.index_fees_on_invoiceable;
+DROP INDEX IF EXISTS public.index_fees_on_invoice_id;
+DROP INDEX IF EXISTS public.index_fees_on_group_id;
+DROP INDEX IF EXISTS public.index_fees_on_deleted_at;
+DROP INDEX IF EXISTS public.index_fees_on_charge_id_and_invoice_id;
+DROP INDEX IF EXISTS public.index_fees_on_charge_id;
+DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
+DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
+DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
+DROP INDEX IF EXISTS public.index_events_on_subscription_id_and_code_and_timestamp;
+DROP INDEX IF EXISTS public.index_events_on_subscription_id;
+DROP INDEX IF EXISTS public.index_events_on_properties;
+DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
+DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code_and_created_at;
+DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
+DROP INDEX IF EXISTS public.index_events_on_organization_id;
+DROP INDEX IF EXISTS public.index_events_on_external_subscription_id_with_included;
+DROP INDEX IF EXISTS public.index_events_on_external_subscription_id_precise_amount;
+DROP INDEX IF EXISTS public.index_events_on_external_subscription_id_and_code_and_timestamp;
+DROP INDEX IF EXISTS public.index_events_on_deleted_at;
+DROP INDEX IF EXISTS public.index_events_on_customer_id;
+DROP INDEX IF EXISTS public.index_error_details_on_owner;
+DROP INDEX IF EXISTS public.index_error_details_on_organization_id;
+DROP INDEX IF EXISTS public.index_error_details_on_error_code;
+DROP INDEX IF EXISTS public.index_error_details_on_deleted_at;
+DROP INDEX IF EXISTS public.index_dunning_campaigns_on_organization_id_and_code;
+DROP INDEX IF EXISTS public.index_dunning_campaigns_on_organization_id;
+DROP INDEX IF EXISTS public.index_dunning_campaigns_on_deleted_at;
+DROP INDEX IF EXISTS public.index_dunning_campaign_thresholds_on_dunning_campaign_id;
+DROP INDEX IF EXISTS public.index_dunning_campaign_thresholds_on_deleted_at;
+DROP INDEX IF EXISTS public.index_data_exports_on_organization_id;
+DROP INDEX IF EXISTS public.index_data_exports_on_membership_id;
+DROP INDEX IF EXISTS public.index_data_export_parts_on_data_export_id;
+DROP INDEX IF EXISTS public.index_daily_usages_on_usage_date;
+DROP INDEX IF EXISTS public.index_daily_usages_on_subscription_id;
+DROP INDEX IF EXISTS public.index_daily_usages_on_organization_id;
+DROP INDEX IF EXISTS public.index_daily_usages_on_customer_id;
+DROP INDEX IF EXISTS public.index_customers_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id_and_tax_id;
+DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id;
+DROP INDEX IF EXISTS public.index_customers_on_organization_id;
+DROP INDEX IF EXISTS public.index_customers_on_external_id_and_organization_id;
+DROP INDEX IF EXISTS public.index_customers_on_deleted_at;
+DROP INDEX IF EXISTS public.index_customers_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_customers_on_applied_dunning_campaign_id;
+DROP INDEX IF EXISTS public.index_customers_on_account_type;
+DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id_and_key;
+DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id;
+DROP INDEX IF EXISTS public.index_credits_on_progressive_billing_invoice_id;
+DROP INDEX IF EXISTS public.index_credits_on_invoice_id;
+DROP INDEX IF EXISTS public.index_credits_on_credit_note_id;
+DROP INDEX IF EXISTS public.index_credits_on_applied_coupon_id;
+DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_tax_code;
+DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id_and_tax_code;
+DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id;
+DROP INDEX IF EXISTS public.index_credit_notes_on_invoice_id;
+DROP INDEX IF EXISTS public.index_credit_notes_on_customer_id;
+DROP INDEX IF EXISTS public.index_credit_note_items_on_fee_id;
+DROP INDEX IF EXISTS public.index_credit_note_items_on_credit_note_id;
+DROP INDEX IF EXISTS public.index_coupons_on_organization_id_and_code;
+DROP INDEX IF EXISTS public.index_coupons_on_organization_id;
+DROP INDEX IF EXISTS public.index_coupons_on_deleted_at;
+DROP INDEX IF EXISTS public.index_coupon_targets_on_plan_id;
+DROP INDEX IF EXISTS public.index_coupon_targets_on_deleted_at;
+DROP INDEX IF EXISTS public.index_coupon_targets_on_coupon_id;
+DROP INDEX IF EXISTS public.index_coupon_targets_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_commitments_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id;
+DROP INDEX IF EXISTS public.index_commitments_on_plan_id;
+DROP INDEX IF EXISTS public.index_commitments_on_commitment_type_and_plan_id;
+DROP INDEX IF EXISTS public.index_charges_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_charges_taxes_on_charge_id_and_tax_id;
+DROP INDEX IF EXISTS public.index_charges_taxes_on_charge_id;
+DROP INDEX IF EXISTS public.index_charges_pay_in_advance;
+DROP INDEX IF EXISTS public.index_charges_on_plan_id;
+DROP INDEX IF EXISTS public.index_charges_on_parent_id;
+DROP INDEX IF EXISTS public.index_charges_on_deleted_at;
+DROP INDEX IF EXISTS public.index_charges_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_charge_filters_on_deleted_at;
+DROP INDEX IF EXISTS public.index_charge_filters_on_charge_id;
+DROP INDEX IF EXISTS public.index_charge_filter_values_on_deleted_at;
+DROP INDEX IF EXISTS public.index_charge_filter_values_on_charge_filter_id;
+DROP INDEX IF EXISTS public.index_charge_filter_values_on_billable_metric_filter_id;
+DROP INDEX IF EXISTS public.index_cached_aggregations_on_organization_id;
+DROP INDEX IF EXISTS public.index_cached_aggregations_on_group_id;
+DROP INDEX IF EXISTS public.index_cached_aggregations_on_external_subscription_id;
+DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_transaction_id;
+DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_id;
+DROP INDEX IF EXISTS public.index_cached_aggregations_on_charge_id;
+DROP INDEX IF EXISTS public.index_billing_entities_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_billing_entities_taxes_on_billing_entity_id_and_tax_id;
+DROP INDEX IF EXISTS public.index_billing_entities_taxes_on_billing_entity_id;
+DROP INDEX IF EXISTS public.index_billing_entities_on_organization_id;
+DROP INDEX IF EXISTS public.index_billing_entities_on_code_and_organization_id;
+DROP INDEX IF EXISTS public.index_billing_entities_on_applied_dunning_campaign_id;
+DROP INDEX IF EXISTS public.index_billable_metrics_on_organization_id_and_code;
+DROP INDEX IF EXISTS public.index_billable_metrics_on_organization_id;
+DROP INDEX IF EXISTS public.index_billable_metrics_on_org_id_and_code_and_expr;
+DROP INDEX IF EXISTS public.index_billable_metrics_on_deleted_at;
+DROP INDEX IF EXISTS public.index_billable_metric_filters_on_deleted_at;
+DROP INDEX IF EXISTS public.index_billable_metric_filters_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_usage_threshold_id;
+DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_invoice_id;
+DROP INDEX IF EXISTS public.index_applied_invoice_custom_sections_on_invoice_id;
+DROP INDEX IF EXISTS public.index_applied_coupons_on_customer_id;
+DROP INDEX IF EXISTS public.index_applied_coupons_on_coupon_id;
+DROP INDEX IF EXISTS public.index_applied_add_ons_on_customer_id;
+DROP INDEX IF EXISTS public.index_applied_add_ons_on_add_on_id_and_customer_id;
+DROP INDEX IF EXISTS public.index_applied_add_ons_on_add_on_id;
+DROP INDEX IF EXISTS public.index_api_keys_on_value;
+DROP INDEX IF EXISTS public.index_api_keys_on_organization_id;
+DROP INDEX IF EXISTS public.index_adjusted_fees_on_subscription_id;
+DROP INDEX IF EXISTS public.index_adjusted_fees_on_invoice_id;
+DROP INDEX IF EXISTS public.index_adjusted_fees_on_group_id;
+DROP INDEX IF EXISTS public.index_adjusted_fees_on_fee_id;
+DROP INDEX IF EXISTS public.index_adjusted_fees_on_charge_id;
+DROP INDEX IF EXISTS public.index_adjusted_fees_on_charge_filter_id;
+DROP INDEX IF EXISTS public.index_add_ons_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_add_ons_taxes_on_add_on_id_and_tax_id;
+DROP INDEX IF EXISTS public.index_add_ons_taxes_on_add_on_id;
+DROP INDEX IF EXISTS public.index_add_ons_on_organization_id_and_code;
+DROP INDEX IF EXISTS public.index_add_ons_on_organization_id;
+DROP INDEX IF EXISTS public.index_add_ons_on_deleted_at;
+DROP INDEX IF EXISTS public.index_active_storage_variant_records_uniqueness;
+DROP INDEX IF EXISTS public.index_active_storage_blobs_on_key;
+DROP INDEX IF EXISTS public.index_active_storage_attachments_uniqueness;
+DROP INDEX IF EXISTS public.index_active_storage_attachments_on_blob_id;
+DROP INDEX IF EXISTS public.index_active_metric_filters;
+DROP INDEX IF EXISTS public.index_active_charge_filters;
+DROP INDEX IF EXISTS public.index_active_charge_filter_values;
+DROP INDEX IF EXISTS public.idx_on_usage_threshold_id_invoice_id_cb82cdf163;
+DROP INDEX IF EXISTS public.idx_on_timestamp_charge_id_external_subscription_id;
+DROP INDEX IF EXISTS public.idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167;
+DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
+DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
+DROP INDEX IF EXISTS public.idx_on_organization_id_deleted_at_225e3f789d;
+DROP INDEX IF EXISTS public.idx_on_organization_id_billing_entity_sequential_id_20bfd08c5a;
+DROP INDEX IF EXISTS public.idx_on_invoice_id_payment_request_id_aa550779a4;
+DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_7edbcef7b5;
+DROP INDEX IF EXISTS public.idx_on_dunning_campaign_id_currency_fbf233b2ae;
+DROP INDEX IF EXISTS public.idx_on_amount_cents_plan_id_recurring_888044d66b;
+ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
+ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
+ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_pkey;
+ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_pkey;
+ALTER TABLE IF EXISTS ONLY public.versions DROP CONSTRAINT IF EXISTS versions_pkey;
+ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS usage_thresholds_pkey;
+ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS taxes_pkey;
+ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_pkey;
+ALTER TABLE IF EXISTS ONLY public.schema_migrations DROP CONSTRAINT IF EXISTS schema_migrations_pkey;
+ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS refunds_pkey;
+ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS recurring_transaction_rules_pkey;
+ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS quantified_events_pkey;
+ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_taxes_pkey;
+ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
+ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS payments_pkey;
+ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS payment_requests_pkey;
+ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS payment_receipts_pkey;
+ALTER TABLE IF EXISTS ONLY public.payment_providers DROP CONSTRAINT IF EXISTS payment_providers_pkey;
+ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS payment_provider_customers_pkey;
+ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS password_resets_pkey;
+ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_pkey;
+ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS memberships_pkey;
+ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS lifetime_usages_pkey;
+ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS invoices_taxes_pkey;
+ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS invoices_pkey;
+ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS invoices_payment_requests_pkey;
+ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS invoice_subscriptions_pkey;
+ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS invoice_metadata_pkey;
+ALTER TABLE IF EXISTS ONLY public.invoice_custom_sections DROP CONSTRAINT IF EXISTS invoice_custom_sections_pkey;
+ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS invoice_custom_section_selections_pkey;
+ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS invites_pkey;
+ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS integrations_pkey;
+ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS integration_resources_pkey;
+ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS integration_mappings_pkey;
+ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS integration_items_pkey;
+ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS integration_customers_pkey;
+ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS integration_collection_mappings_pkey;
+ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS inbound_webhooks_pkey;
+ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS groups_pkey;
+ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS group_properties_pkey;
+ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fees_taxes_pkey;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fees_pkey;
+ALTER TABLE IF EXISTS ONLY public.events DROP CONSTRAINT IF EXISTS events_pkey;
+ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS error_details_pkey;
+ALTER TABLE IF EXISTS ONLY public.dunning_campaigns DROP CONSTRAINT IF EXISTS dunning_campaigns_pkey;
+ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS dunning_campaign_thresholds_pkey;
+ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS data_exports_pkey;
+ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS data_export_parts_pkey;
+ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS daily_usages_pkey;
+ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS customers_taxes_pkey;
+ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS customers_pkey;
+ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS customer_metadata_pkey;
+ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS credits_pkey;
+ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS credit_notes_taxes_pkey;
+ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS credit_notes_pkey;
+ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS credit_note_items_pkey;
+ALTER TABLE IF EXISTS ONLY public.coupons DROP CONSTRAINT IF EXISTS coupons_pkey;
+ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS coupon_targets_pkey;
+ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS commitments_taxes_pkey;
+ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS commitments_pkey;
+ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS charges_taxes_pkey;
+ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS charges_pkey;
+ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS charge_filters_pkey;
+ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS charge_filter_values_pkey;
+ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS cached_aggregations_pkey;
+ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS billing_entities_taxes_pkey;
+ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS billing_entities_pkey;
+ALTER TABLE IF EXISTS ONLY public.billable_metrics DROP CONSTRAINT IF EXISTS billable_metrics_pkey;
+ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS billable_metric_filters_pkey;
+ALTER TABLE IF EXISTS ONLY public.ar_internal_metadata DROP CONSTRAINT IF EXISTS ar_internal_metadata_pkey;
+ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS applied_usage_thresholds_pkey;
+ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS applied_invoice_custom_sections_pkey;
+ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS applied_coupons_pkey;
+ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS applied_add_ons_pkey;
+ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS api_keys_pkey;
+ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS adjusted_fees_pkey;
+ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS add_ons_taxes_pkey;
+ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS add_ons_pkey;
+ALTER TABLE IF EXISTS ONLY public.active_storage_variant_records DROP CONSTRAINT IF EXISTS active_storage_variant_records_pkey;
+ALTER TABLE IF EXISTS ONLY public.active_storage_blobs DROP CONSTRAINT IF EXISTS active_storage_blobs_pkey;
+ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS active_storage_attachments_pkey;
+ALTER TABLE IF EXISTS public.versions ALTER COLUMN id DROP DEFAULT;
+DROP TABLE IF EXISTS public.webhooks;
+DROP TABLE IF EXISTS public.webhook_endpoints;
+DROP TABLE IF EXISTS public.wallets;
+DROP TABLE IF EXISTS public.wallet_transactions;
+DROP SEQUENCE IF EXISTS public.versions_id_seq;
+DROP TABLE IF EXISTS public.versions;
+DROP TABLE IF EXISTS public.users;
+DROP TABLE IF EXISTS public.usage_thresholds;
+DROP TABLE IF EXISTS public.taxes;
+DROP TABLE IF EXISTS public.subscriptions;
+DROP TABLE IF EXISTS public.schema_migrations;
+DROP TABLE IF EXISTS public.refunds;
+DROP TABLE IF EXISTS public.recurring_transaction_rules;
+DROP TABLE IF EXISTS public.quantified_events;
+DROP TABLE IF EXISTS public.plans_taxes;
+DROP TABLE IF EXISTS public.plans;
+DROP TABLE IF EXISTS public.payments;
+DROP TABLE IF EXISTS public.payment_requests;
+DROP TABLE IF EXISTS public.payment_receipts;
+DROP TABLE IF EXISTS public.payment_providers;
+DROP TABLE IF EXISTS public.payment_provider_customers;
+DROP TABLE IF EXISTS public.password_resets;
+DROP TABLE IF EXISTS public.organizations;
+DROP TABLE IF EXISTS public.memberships;
+DROP TABLE IF EXISTS public.lifetime_usages;
+DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
+DROP TABLE IF EXISTS public.invoices_taxes;
+DROP TABLE IF EXISTS public.invoices_payment_requests;
+DROP TABLE IF EXISTS public.invoices;
+DROP TABLE IF EXISTS public.invoice_subscriptions;
+DROP TABLE IF EXISTS public.invoice_metadata;
+DROP TABLE IF EXISTS public.invoice_custom_sections;
+DROP TABLE IF EXISTS public.invoice_custom_section_selections;
+DROP TABLE IF EXISTS public.invites;
+DROP TABLE IF EXISTS public.integrations;
+DROP TABLE IF EXISTS public.integration_resources;
+DROP TABLE IF EXISTS public.integration_mappings;
+DROP TABLE IF EXISTS public.integration_items;
+DROP TABLE IF EXISTS public.integration_customers;
+DROP TABLE IF EXISTS public.integration_collection_mappings;
+DROP TABLE IF EXISTS public.inbound_webhooks;
+DROP TABLE IF EXISTS public.groups;
+DROP TABLE IF EXISTS public.group_properties;
+DROP TABLE IF EXISTS public.fees_taxes;
+DROP TABLE IF EXISTS public.fees;
+DROP TABLE IF EXISTS public.events;
+DROP TABLE IF EXISTS public.error_details;
+DROP TABLE IF EXISTS public.dunning_campaigns;
+DROP TABLE IF EXISTS public.dunning_campaign_thresholds;
+DROP TABLE IF EXISTS public.data_exports;
+DROP TABLE IF EXISTS public.data_export_parts;
+DROP TABLE IF EXISTS public.daily_usages;
+DROP TABLE IF EXISTS public.customers_taxes;
+DROP TABLE IF EXISTS public.customers;
+DROP TABLE IF EXISTS public.customer_metadata;
+DROP TABLE IF EXISTS public.credits;
+DROP TABLE IF EXISTS public.credit_notes_taxes;
+DROP TABLE IF EXISTS public.credit_notes;
+DROP TABLE IF EXISTS public.credit_note_items;
+DROP TABLE IF EXISTS public.coupons;
+DROP TABLE IF EXISTS public.coupon_targets;
+DROP TABLE IF EXISTS public.commitments_taxes;
+DROP TABLE IF EXISTS public.commitments;
+DROP TABLE IF EXISTS public.charges_taxes;
+DROP TABLE IF EXISTS public.charges;
+DROP TABLE IF EXISTS public.charge_filters;
+DROP TABLE IF EXISTS public.charge_filter_values;
+DROP TABLE IF EXISTS public.cached_aggregations;
+DROP TABLE IF EXISTS public.billing_entities_taxes;
+DROP TABLE IF EXISTS public.billing_entities;
+DROP VIEW IF EXISTS public.billable_metrics_grouped_charges;
+DROP TABLE IF EXISTS public.billable_metrics;
+DROP TABLE IF EXISTS public.billable_metric_filters;
+DROP TABLE IF EXISTS public.ar_internal_metadata;
+DROP TABLE IF EXISTS public.applied_usage_thresholds;
+DROP TABLE IF EXISTS public.applied_invoice_custom_sections;
+DROP TABLE IF EXISTS public.applied_coupons;
+DROP TABLE IF EXISTS public.applied_add_ons;
+DROP TABLE IF EXISTS public.api_keys;
+DROP TABLE IF EXISTS public.adjusted_fees;
+DROP TABLE IF EXISTS public.add_ons_taxes;
+DROP TABLE IF EXISTS public.add_ons;
+DROP TABLE IF EXISTS public.active_storage_variant_records;
+DROP TABLE IF EXISTS public.active_storage_blobs;
+DROP TABLE IF EXISTS public.active_storage_attachments;
+DROP PROCEDURE IF EXISTS public.trigger_subscription_update(IN p_organization_id uuid, IN p_external_subscription_id character varying, INOUT result_id uuid);
+DROP FUNCTION IF EXISTS public.subscriptions_notify();
+DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
+DROP FUNCTION IF EXISTS public.organizations_notify();
+DROP FUNCTION IF EXISTS public.charges_in_advance_notify();
+DROP FUNCTION IF EXISTS public.billable_metrics_notify();
+DROP FUNCTION IF EXISTS public.billable_metrics_expr_notify();
+DROP TYPE IF EXISTS public.tax_status;
+DROP TYPE IF EXISTS public.subscription_invoicing_reason;
+DROP TYPE IF EXISTS public.payment_type;
+DROP TYPE IF EXISTS public.payment_payable_payment_status;
+DROP TYPE IF EXISTS public.inbound_webhook_status;
+DROP TYPE IF EXISTS public.entity_document_numbering;
+DROP TYPE IF EXISTS public.customer_type;
+DROP TYPE IF EXISTS public.customer_account_type;
+DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
+DROP TYPE IF EXISTS public.billable_metric_rounding_function;
+DROP SCHEMA IF EXISTS public;
 --
 -- Name: public; Type: SCHEMA; Schema: -; Owner: -
 --
@@ -133,6 +753,107 @@ CREATE TYPE public.tax_status AS ENUM (
 
 
 --
+-- Name: billable_metrics_expr_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.billable_metrics_expr_notify() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+		DECLARE
+			payload varchar;
+		BEGIN
+			payload = json_build_object(
+				'organization_id', NEW.organization_id,
+				'code', NEW.code,
+				'field_name', NEW.field_name,
+				'expression', NEW.expression,
+				'deleted_at', NEW.deleted_at
+			)::varchar;
+			PERFORM pg_notify('new_billable_metric', payload);
+			RETURN NEW;
+		END;
+		$$;
+
+
+--
+-- Name: billable_metrics_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.billable_metrics_notify() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+		DECLARE
+			payload varchar;
+		BEGIN
+			payload = json_build_object(
+				'organization_id', NEW.organization_id,
+				'code', NEW.code,
+				'field_name', NEW.field_name,
+				'expression', NEW.expression,
+				'deleted_at', NEW.deleted_at
+			)::varchar;
+			PERFORM pg_notify('new_billable_metric', payload);
+			RETURN NEW;
+		END;
+		$$;
+
+
+--
+-- Name: charges_in_advance_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.charges_in_advance_notify() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+		DECLARE
+			payload varchar;
+			code varchar;
+			organization_id varchar;
+		BEGIN
+			SELECT
+				billable_metrics.code::varchar,
+				billable_metrics.organization_id::varchar
+				INTO code, organization_id
+			FROM
+				billable_metrics
+			WHERE
+				billable_metrics.id = NEW.billable_metric_id;
+
+			payload = json_build_object(
+				'organization_id', organization_id::varchar,
+				'plan_id', NEW.plan_id::varchar,
+				'code', code::varchar,
+				'pay_in_advance', NEW.pay_in_advance::varchar,
+				'deleted_at', NEW.deleted_at
+			)::varchar;
+
+			PERFORM pg_notify('new_charge_in_advance', payload);
+			RETURN NEW;
+		END;
+		$$;
+
+
+--
+-- Name: organizations_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.organizations_notify() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+		DECLARE
+			payload varchar;
+		BEGIN
+			payload = json_build_object(
+				'organization_id',NEW.id,
+				'api_key', NEW.api_key
+			)::varchar;
+			PERFORM pg_notify('new_organization', payload);
+			RETURN NEW;
+		END;
+		$$;
+
+
+--
 -- Name: set_payment_receipt_number(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -173,6 +894,57 @@ CREATE FUNCTION public.set_payment_receipt_number() RETURNS trigger
           RETURN NEW;
         END;
         $$;
+
+
+--
+-- Name: subscriptions_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.subscriptions_notify() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+		DECLARE
+			organization_id uuid;
+			payload varchar;
+		BEGIN
+			SELECT plans.organization_id INTO organization_id FROM plans WHERE plans.id = NEW.plan_id;
+			payload = json_build_object(
+				'subscription_id',NEW.id,
+				'external_subscription_id', NEW.external_id,
+				'plan_id', NEW.plan_id,
+				'organization_id', organization_id,
+				'terminated_at', NEW.terminated_at
+			)::varchar;
+			IF NEW.status IN (1, 2) THEN -- 1: active, 2: terminated
+				PERFORM pg_notify('new_subscription', payload);
+			END IF;
+			RETURN NEW;
+		END;
+		$$;
+
+
+--
+-- Name: trigger_subscription_update(uuid, character varying, uuid); Type: PROCEDURE; Schema: public; Owner: -
+--
+
+CREATE PROCEDURE public.trigger_subscription_update(IN p_organization_id uuid, IN p_external_subscription_id character varying, INOUT result_id uuid)
+    LANGUAGE plpgsql
+    AS $$
+  BEGIN
+      INSERT INTO subscription_event_triggers (
+          organization_id,
+          external_subscription_id,
+          created_at
+      )
+      VALUES (
+          p_organization_id,
+          p_external_subscription_id,
+          NOW()
+      )
+      ON CONFLICT DO NOTHING
+      RETURNING id INTO result_id;
+  END;
+  $$;
 
 
 SET default_tablespace = '';
@@ -727,6 +1499,7 @@ CREATE TABLE public.credit_notes_taxes (
 --
 
 CREATE TABLE public.credits (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
     invoice_id uuid,
     applied_coupon_id uuid,
     amount_cents bigint NOT NULL,
@@ -735,7 +1508,6 @@ CREATE TABLE public.credits (
     updated_at timestamp(6) without time zone NOT NULL,
     credit_note_id uuid,
     before_taxes boolean DEFAULT false NOT NULL,
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
     progressive_billing_invoice_id uuid
 );
 
@@ -914,7 +1686,8 @@ CREATE TABLE public.dunning_campaigns (
     max_attempts integer DEFAULT 1 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    bcc_emails character varying[] DEFAULT '{}'::character varying[]
 );
 
 
@@ -955,8 +1728,7 @@ CREATE TABLE public.events (
     external_customer_id character varying,
     external_subscription_id character varying,
     precise_total_amount_cents numeric(40,15)
-)
-WITH (autovacuum_vacuum_scale_factor='0.005');
+);
 
 
 --
@@ -1298,7 +2070,7 @@ CREATE TABLE public.invoices (
     voided_at timestamp(6) without time zone,
     organization_sequential_id integer DEFAULT 0 NOT NULL,
     ready_to_be_refreshed boolean DEFAULT false NOT NULL,
-    payment_dispute_lost_at timestamp(6) without time zone DEFAULT NULL::timestamp without time zone,
+    payment_dispute_lost_at timestamp(6) without time zone,
     skip_charges boolean DEFAULT false NOT NULL,
     payment_overdue boolean DEFAULT false,
     negative_amount_cents bigint DEFAULT 0 NOT NULL,
@@ -1564,7 +2336,8 @@ CREATE TABLE public.payments (
     payable_payment_status public.payment_payable_payment_status,
     payment_type public.payment_type DEFAULT 'provider'::public.payment_type NOT NULL,
     reference character varying,
-    provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL
+    provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
+    provider_payment_method_id character varying
 );
 
 
@@ -1807,7 +2580,8 @@ CREATE TABLE public.wallet_transactions (
     transaction_status integer DEFAULT 0 NOT NULL,
     invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
     metadata jsonb DEFAULT '[]'::jsonb,
-    credit_note_id uuid
+    credit_note_id uuid,
+    failed_at timestamp(6) without time zone
 );
 
 
@@ -4563,6 +5337,34 @@ CREATE TRIGGER before_payment_receipt_insert BEFORE INSERT ON public.payment_rec
 
 
 --
+-- Name: billable_metrics billable_metrics_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER billable_metrics_trigger AFTER INSERT OR UPDATE ON public.billable_metrics FOR EACH ROW EXECUTE FUNCTION public.billable_metrics_notify();
+
+
+--
+-- Name: charges charges_in_advance_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER charges_in_advance_trigger AFTER INSERT OR UPDATE ON public.charges FOR EACH ROW WHEN ((new.pay_in_advance = true)) EXECUTE FUNCTION public.charges_in_advance_notify();
+
+
+--
+-- Name: organizations organization_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER organization_trigger AFTER INSERT OR UPDATE ON public.organizations FOR EACH ROW EXECUTE FUNCTION public.organizations_notify();
+
+
+--
+-- Name: subscriptions subscription_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER subscription_trigger AFTER INSERT OR UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION public.subscriptions_notify();
+
+
+--
 -- Name: wallet_transactions fk_rails_01a4c0c7db; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4595,22 +5397,6 @@ ALTER TABLE ONLY public.add_ons_taxes
 
 
 --
--- Name: coupon_targets fk_rails_0bb6dcc01f; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.coupon_targets
-    ADD CONSTRAINT fk_rails_0bb6dcc01f FOREIGN KEY (coupon_id) REFERENCES public.coupons(id);
-
-
---
--- Name: customers_taxes fk_rails_0d2be3d72c; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.customers_taxes
-    ADD CONSTRAINT fk_rails_0d2be3d72c FOREIGN KEY (customer_id) REFERENCES public.customers(id);
-
-
---
 -- Name: invoices fk_rails_0d349e632f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4640,14 +5426,6 @@ ALTER TABLE ONLY public.applied_invoice_custom_sections
 
 ALTER TABLE ONLY public.daily_usages
     ADD CONSTRAINT fk_rails_12d29bc654 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
-
-
---
--- Name: coupon_targets fk_rails_1454058c96; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.coupon_targets
-    ADD CONSTRAINT fk_rails_1454058c96 FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
 
 
 --
@@ -4707,14 +5485,6 @@ ALTER TABLE ONLY public.invoices_taxes
 
 
 --
--- Name: taxes fk_rails_23975f5a47; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.taxes
-    ADD CONSTRAINT fk_rails_23975f5a47 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
-
-
---
 -- Name: credit_notes_taxes fk_rails_25232a0ec3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4736,14 +5506,6 @@ ALTER TABLE ONLY public.refunds
 
 ALTER TABLE ONLY public.adjusted_fees
     ADD CONSTRAINT fk_rails_2561c00887 FOREIGN KEY (fee_id) REFERENCES public.fees(id);
-
-
---
--- Name: fees fk_rails_257af22645; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.fees
-    ADD CONSTRAINT fk_rails_257af22645 FOREIGN KEY (true_up_parent_fee_id) REFERENCES public.fees(id);
 
 
 --
@@ -4811,14 +5573,6 @@ ALTER TABLE ONLY public.credits
 
 
 --
--- Name: credits fk_rails_310fcb3585; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.credits
-    ADD CONSTRAINT fk_rails_310fcb3585 FOREIGN KEY (credit_note_id) REFERENCES public.credit_notes(id);
-
-
---
 -- Name: payment_requests fk_rails_32600e5a72; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4856,6 +5610,22 @@ ALTER TABLE ONLY public.groups
 
 ALTER TABLE ONLY public.inbound_webhooks
     ADD CONSTRAINT fk_rails_36cda06530 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: customers_taxes fk_rails_3708a65be3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customers_taxes
+    ADD CONSTRAINT fk_rails_3708a65be3 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
+-- Name: fees fk_rails_38047eb662; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_38047eb662 FOREIGN KEY (true_up_parent_fee_id) REFERENCES public.fees(id);
 
 
 --
@@ -4939,6 +5709,14 @@ ALTER TABLE ONLY public.credit_notes
 
 
 --
+-- Name: usage_thresholds fk_rails_450b79f2a9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_thresholds
+    ADD CONSTRAINT fk_rails_450b79f2a9 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
+
+
+--
 -- Name: payment_provider_customers fk_rails_50d46d3679; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5019,6 +5797,14 @@ ALTER TABLE ONLY public.credit_notes
 
 
 --
+-- Name: coupon_targets fk_rails_5fce5ea2b5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coupon_targets
+    ADD CONSTRAINT fk_rails_5fce5ea2b5 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
+
+
+--
 -- Name: fees fk_rails_6023b3f2dd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5056,6 +5842,14 @@ ALTER TABLE ONLY public.subscriptions
 
 ALTER TABLE ONLY public.memberships
     ADD CONSTRAINT fk_rails_64267aab58 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: taxes fk_rails_65b48ef6bf; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.taxes
+    ADD CONSTRAINT fk_rails_65b48ef6bf FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -5243,6 +6037,14 @@ ALTER TABLE ONLY public.invoice_subscriptions
 
 
 --
+-- Name: coupon_targets fk_rails_8872c07e0d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coupon_targets
+    ADD CONSTRAINT fk_rails_8872c07e0d FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
+
+
+--
 -- Name: add_ons_taxes fk_rails_89e1020aca; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5256,6 +6058,14 @@ ALTER TABLE ONLY public.add_ons_taxes
 
 ALTER TABLE ONLY public.invoice_metadata
     ADD CONSTRAINT fk_rails_8bb5b094c4 FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
+
+
+--
+-- Name: credits fk_rails_8ca834cd4a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credits
+    ADD CONSTRAINT fk_rails_8ca834cd4a FOREIGN KEY (credit_note_id) REFERENCES public.credit_notes(id);
 
 
 --
@@ -5467,14 +6277,6 @@ ALTER TABLE ONLY public.invites
 
 
 --
--- Name: usage_thresholds fk_rails_caeb5a3949; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.usage_thresholds
-    ADD CONSTRAINT fk_rails_caeb5a3949 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
-
-
---
 -- Name: plans fk_rails_cbf700aeb8; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5496,6 +6298,14 @@ ALTER TABLE ONLY public.integration_mappings
 
 ALTER TABLE ONLY public.wallet_transactions
     ADD CONSTRAINT fk_rails_d07bc24ce3 FOREIGN KEY (wallet_id) REFERENCES public.wallets(id);
+
+
+--
+-- Name: coupon_targets fk_rails_d1dc5814e9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coupon_targets
+    ADD CONSTRAINT fk_rails_d1dc5814e9 FOREIGN KEY (coupon_id) REFERENCES public.coupons(id);
 
 
 --
@@ -5523,27 +6333,11 @@ ALTER TABLE ONLY public.invoice_custom_section_selections
 
 
 --
--- Name: coupon_targets fk_rails_de6b3c3138; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.coupon_targets
-    ADD CONSTRAINT fk_rails_de6b3c3138 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
-
-
---
 -- Name: credit_note_items fk_rails_dea748e529; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.credit_note_items
     ADD CONSTRAINT fk_rails_dea748e529 FOREIGN KEY (fee_id) REFERENCES public.fees(id);
-
-
---
--- Name: customers_taxes fk_rails_e86903e081; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.customers_taxes
-    ADD CONSTRAINT fk_rails_e86903e081 FOREIGN KEY (tax_id) REFERENCES public.taxes(id);
 
 
 --
@@ -5576,6 +6370,14 @@ ALTER TABLE ONLY public.fees
 
 ALTER TABLE ONLY public.invoices_payment_requests
     ADD CONSTRAINT fk_rails_ed387e0992 FOREIGN KEY (payment_request_id) REFERENCES public.payment_requests(id);
+
+
+--
+-- Name: customers_taxes fk_rails_ef731e48be; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customers_taxes
+    ADD CONSTRAINT fk_rails_ef731e48be FOREIGN KEY (tax_id) REFERENCES public.taxes(id);
 
 
 --
@@ -5633,7 +6435,12 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250324125056'),
+('20250324122757'),
+('20250318175216'),
+('20250318093216'),
 ('20250310213734'),
+('20250304163656'),
 ('20250303104151'),
 ('20250227155522'),
 ('20250227091909'),
@@ -5676,6 +6483,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20241216110525'),
 ('20241213182343'),
 ('20241213142739'),
+('20241203141040'),
+('20241203140905'),
+('20241203135310'),
 ('20241128132010'),
 ('20241128091634'),
 ('20241126141853'),
