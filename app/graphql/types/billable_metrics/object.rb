@@ -64,19 +64,19 @@ module Types
       end
 
       def has_active_subscriptions
-        Subscription.active.where(plan_id: object.charges.select(:plan_id)).limit(1).exists?
+        object.subscriptions.active.exists?
       end
 
       def has_subscriptions
-        Subscription.where(plan_id: object.charges.select(:plan_id)).limit(1).exists?
+        object.subscriptions.exists?
       end
 
       def has_draft_invoices
-        Invoice.draft.joins(:fees).where(fees: {charge_id: object.charges.select(:id)}).limit(1).exists?
+        object.invoices.draft.exists?
       end
 
       def has_plans
-        object.charges.where.not(plan_id: nil).limit(1).exists?
+        object.plans.exists?
       end
 
       def integration_mappings(integration_id: nil)

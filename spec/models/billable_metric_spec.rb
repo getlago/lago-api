@@ -7,6 +7,13 @@ RSpec.describe BillableMetric, type: :model do
 
   it_behaves_like "paper_trail traceable"
 
+  it { is_expected.to belong_to(:organization) }
+
+  it { is_expected.to have_many(:charges).dependent(:destroy) }
+  it { is_expected.to have_many(:plans).through(:charges) }
+  it { is_expected.to have_many(:fees).through(:charges) }
+  it { is_expected.to have_many(:subscriptions).through(:plans) }
+  it { is_expected.to have_many(:invoices).through(:fees) }
   it { is_expected.to have_many(:filters).dependent(:delete_all) }
   it { is_expected.to have_many(:netsuite_mappings).dependent(:destroy) }
 
