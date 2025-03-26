@@ -21,11 +21,18 @@ module Types
 
       field :filters, [Types::BillableMetricFilters::Object], null: true
 
+      field :recurring, Boolean, null: false
+
+      # TODO: remove these count fields after frontend migration is completed
       field :active_subscriptions_count, Integer, null: false
       field :draft_invoices_count, Integer, null: false
       field :plans_count, Integer, null: false
-      field :recurring, Boolean, null: false
       field :subscriptions_count, Integer, null: false
+
+      field :has_active_subscriptions, Boolean, null: false
+      field :has_draft_invoices, Boolean, null: false
+      field :has_plans, Boolean, null: false
+      field :has_subscriptions, Boolean, null: false
 
       field :rounding_function, Types::BillableMetrics::RoundingFunctionEnum, null: true
       field :rounding_precision, Integer, null: true
@@ -54,6 +61,22 @@ module Types
 
       def plans_count
         object.charges.distinct.count(:plan_id)
+      end
+
+      def has_active_subscriptions
+        Subscription.active.where(plan_id: object.charges.select(:plan_id)).limit(1).exists?
+      end
+
+      def has_subscriptions
+        Subscription.where(plan_id: object.charges.select(:plan_id)).limit(1).exists?
+      end
+
+      def has_draft_invoices
+        Invoice.draft.joins(:fees).where(fees: {charge_id: object.charges.select(:id)}).limit(1).exists?
+      end
+
+      def has_plans
+        object.charges.where.not(plan_id: nil).limit(1).exists?
       end
 
       def integration_mappings(integration_id: nil)

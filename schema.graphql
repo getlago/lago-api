@@ -265,6 +265,10 @@ type BillableMetric {
   expression: String
   fieldName: String
   filters: [BillableMetricFilter!]
+  hasActiveSubscriptions: Boolean!
+  hasDraftInvoices: Boolean!
+  hasPlans: Boolean!
+  hasSubscriptions: Boolean!
   id: ID!
   integrationMappings(integrationId: ID): [Mapping!]
   name: String!
