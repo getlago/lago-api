@@ -4,10 +4,10 @@ module Payments
   class UpdatePaymentMethodDataService < BaseService
     Result = BaseResult[:payment]
 
-    def initialize(payment:, payment_method_id:)
+    def initialize(payment:, provider_payment_method_id:)
       @payment = payment
       @payment_provider = payment.payment_provider
-      @provider_payment_method_id = payment_method_id
+      @provider_payment_method_id = provider_payment_method_id
 
       super
     end

@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Payments::UpdatePaymentMethodDataService, type: :service do
-  subject(:service) { described_class.new(payment:, payment_method_id:) }
+  subject(:service) { described_class.new(payment:, provider_payment_method_id:) }
 
-  let(:payment_method_id) { "pm_1R2DFsQ8iJWBZFaMw3LLbR0r" }
+  let(:provider_payment_method_id) { "pm_1R2DFsQ8iJWBZFaMw3LLbR0r" }
 
   describe "#call" do
     context "with Stripe" do

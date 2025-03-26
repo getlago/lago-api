@@ -13,6 +13,11 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
     File.read(path)
   end
 
+  before do
+    allow(::Payments::UpdatePaymentMethodDataJob).to receive(:perform_later)
+      .and_invoke(->(args) { ::Payments::UpdatePaymentMethodDataJob.perform_now(**args) })
+  end
+
   ["2020-08-27", "2022-11-15", "2024-09-30.acacia"].each do |fixtures_version|
     context "when payment intent event (api_version: #{fixtures_version})" do
       let(:fixtures_version) { fixtures_version }
