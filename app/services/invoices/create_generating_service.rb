@@ -21,6 +21,7 @@ module Invoices
         invoice = Invoice.create!(
           id: invoice_id || SecureRandom.uuid,
           organization:,
+          billing_entity: customer.billing_entity,
           customer:,
           invoice_type:,
           currency:,

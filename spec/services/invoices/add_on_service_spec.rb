@@ -25,27 +25,27 @@ RSpec.describe Invoices::AddOnService, type: :service do
     it "creates an invoice" do
       result = invoice_service.create
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        expect(result.invoice.subscriptions.first).to be_nil
-        expect(result.invoice).to have_attributes(
-          issuing_date: datetime.to_date,
-          invoice_type: "add_on",
-          payment_status: "pending",
-          currency: "EUR",
-          fees_amount_cents: 200,
-          sub_total_excluding_taxes_amount_cents: 200,
-          taxes_amount_cents: 40,
-          taxes_rate: 20,
-          sub_total_including_taxes_amount_cents: 240,
-          total_amount_cents: 240
-        )
+      expect(result.invoice.subscriptions.first).to be_nil
+      expect(result.invoice).to have_attributes(
+        organization: organization,
+        billing_entity: customer.billing_entity,
+        issuing_date: datetime.to_date,
+        invoice_type: "add_on",
+        payment_status: "pending",
+        currency: "EUR",
+        fees_amount_cents: 200,
+        sub_total_excluding_taxes_amount_cents: 200,
+        taxes_amount_cents: 40,
+        taxes_rate: 20,
+        sub_total_including_taxes_amount_cents: 240,
+        total_amount_cents: 240
+      )
 
-        expect(result.invoice.applied_taxes.count).to eq(1)
+      expect(result.invoice.applied_taxes.count).to eq(1)
 
-        expect(result.invoice).to be_finalized
-      end
+      expect(result.invoice).to be_finalized
     end
 
     it "enqueues a SendWebhookJob" do

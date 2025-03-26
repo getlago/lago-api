@@ -104,6 +104,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             result = preview_service.call
 
             expect(result).to be_success
+            expect(result.invoice.organization).to eq(organization)
+            expect(result.invoice.billing_entity).to eq(customer.billing_entity)
             expect(result.invoice.subscriptions.first).to eq(subscription)
             expect(result.invoice.fees.length).to eq(1)
             expect(result.invoice.invoice_type).to eq("subscription")
@@ -139,6 +141,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               result = preview_service.call
 
               expect(result).to be_success
+              expect(result.invoice.organization).to eq(organization)
+              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
               expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.fees.length).to eq(1)
               expect(result.invoice.invoice_type).to eq("subscription")
@@ -188,6 +192,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 result = preview_service.call
 
                 expect(result).to be_success
+                expect(result.invoice.organization).to eq(organization)
+                expect(result.invoice.billing_entity).to eq(customer.billing_entity)
                 expect(result.invoice.subscriptions.first).to eq(subscription)
                 expect(result.invoice.fees.length).to eq(2)
                 expect(result.invoice.invoice_type).to eq("subscription")
@@ -402,6 +408,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               result = preview_service.call
 
               expect(result).to be_success
+              expect(result.invoice.organization).to eq(organization)
+              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
               expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.fees.length).to eq(1)
               expect(result.invoice.invoice_type).to eq("subscription")
@@ -437,6 +445,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               result = preview_service.call
 
               expect(result).to be_success
+              expect(result.invoice.organization).to eq(organization)
+              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
               expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.fees.length).to eq(1)
               expect(result.invoice.invoice_type).to eq("subscription")
@@ -574,6 +584,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               result = described_class.new(customer:, subscriptions: [subscription], applied_coupons: [applied_coupon]).call
 
               expect(result).to be_success
+              expect(result.invoice.organization).to eq(organization)
+              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
               expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.fees.length).to eq(1)
               expect(result.invoice.invoice_type).to eq("subscription")
@@ -610,6 +622,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               result = preview_service.call
 
               expect(result).to be_success
+              expect(result.invoice.organization).to eq(organization)
+              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
               expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.fees.length).to eq(1)
               expect(result.invoice.invoice_type).to eq("subscription")
@@ -703,6 +717,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 result = preview_service.call
 
                 expect(result).to be_success
+                expect(result.invoice.organization).to eq(organization)
+                expect(result.invoice.billing_entity).to eq(customer.billing_entity)
                 expect(result.invoice.subscriptions.first).to eq(subscription)
                 expect(result.invoice.fees.length).to eq(1)
                 expect(result.invoice.invoice_type).to eq("subscription")
@@ -778,6 +794,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             result = preview_service.call
 
             expect(result).to be_success
+            expect(result.invoice.organization).to eq(organization)
+            expect(result.invoice.billing_entity).to eq(customer.billing_entity)
             expect(result.invoice.subscriptions.first).to eq(subscription)
             expect(result.invoice.fees.length).to eq(1)
             expect(result.invoice.invoice_type).to eq("subscription")
@@ -811,6 +829,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               result = preview_service.call
 
               expect(result).to be_success
+              expect(result.invoice.organization).to eq(organization)
+              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
               expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.fees.length).to eq(1)
               expect(result.invoice.invoice_type).to eq("subscription")
@@ -858,6 +878,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 result = preview_service.call
 
                 expect(result).to be_success
+                expect(result.invoice.organization).to eq(organization)
+                expect(result.invoice.billing_entity).to eq(customer.billing_entity)
                 expect(result.invoice.subscriptions.first).to eq(subscription)
                 expect(result.invoice.fees.length).to eq(2)
                 expect(result.invoice.invoice_type).to eq("subscription")
@@ -907,6 +929,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               result = preview_service.call
 
               expect(result).to be_success
+              expect(result.invoice.organization).to eq(organization)
+              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
               expect(result.invoice.subscriptions.map { |s| s.id }).to match_array([subscription1.id, subscription2.id])
               expect(result.invoice.fees.length).to eq(2)
               expect(result.invoice.invoice_type).to eq("subscription")
