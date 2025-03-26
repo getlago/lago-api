@@ -52,6 +52,7 @@ jobs:
         shell: bash
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
+      - run: "pg_dump --version"
       - name: Move db schema for comparison
         run: mv db/structure.sql db/structure-before-dump.sql
       - name: Perform Postgres database migrations
