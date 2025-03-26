@@ -28,7 +28,6 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
 
   let(:external_subscription_id) { "sub_overdue-dunning-campaign-v1" }
   let(:plan) { create(:plan, organization:, pay_in_advance: true, amount_cents: 149_00) }
-  let!(:addon) { create(:add_on, organization:) }
 
   let(:webhooks_sent) { [] }
 
@@ -140,7 +139,7 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
     end
   end
 
-  it do
+  it "retries overdue invoices" do
     travel_to(DateTime.new(2025, 1, 1, 10)) do
       create_subscription(
         {
@@ -177,6 +176,7 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
 
     # Create a one-off invoice to reach the threshold
     travel_to(DateTime.new(2025, 1, 4, 18)) do
+      addon = create(:add_on, organization:)
       create_one_off_invoice(customer, [addon], units: 3)
       perform_all_enqueued_jobs
 
@@ -200,8 +200,6 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
 
       pr = customer.payment_requests.sole
       expect(pr.amount_cents).to eq(155_00)
-
-      # TODO Simulate webhook payment failed received
     end
 
     # The next 2 days nothing happens
@@ -213,7 +211,7 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
       end
     end
 
-    # The next day nothing happens
+    # The day after, we make another attempt
     travel_to(DateTime.new(2025, 1, 10, 10)) do
       perform_overdue_balance_update
       perform_dunning
@@ -222,7 +220,7 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
       expect(customer.payment_requests.reload.map(&:amount_cents)).to all eq 155_00
     end
 
-    # This is over
+    # After the last attempt the invoice are still overdue but we don't try anymore
     travel_to(DateTime.new(2025, 1, 13, 13)) do
       perform_overdue_balance_update
       perform_dunning
