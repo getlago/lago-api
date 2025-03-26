@@ -50,7 +50,7 @@ module Types
       end
 
       def lifetime_usage
-        return nil unless object.plan.usage_thresholds.any?
+        return nil unless object.plan.usage_thresholds.any? || object.organization.lifetime_usage_enabled?
 
         object.lifetime_usage
       end
