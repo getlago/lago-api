@@ -90,7 +90,8 @@ module Integrations
               "account" => mapped_item.external_account_code,
               "quantity" => 1,
               "rate" => amount(credit_note_item.amount_cents, resource: credit_note_item.credit_note),
-              "taxdetailsreference" => credit_note_item.id
+              "taxdetailsreference" => credit_note_item.id,
+              "description" => credit_note_item.fee.item_name
             }
           end
 
@@ -138,7 +139,8 @@ module Integrations
                 "account" => coupon_item&.external_account_code,
                 "quantity" => 1,
                 "rate" => -amount(credit_note.coupons_adjustment_amount_cents, resource: credit_note),
-                "taxdetailsreference" => "coupon_item"
+                "taxdetailsreference" => "coupon_item",
+                "description" => credit_note.invoice.credits.coupon_kind.map(&:item_name).join(",")
               }
             end
 
