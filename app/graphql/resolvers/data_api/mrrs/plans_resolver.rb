@@ -14,7 +14,7 @@ module Resolvers
 
         argument :currency, Types::CurrencyEnum, required: false
         argument :limit, Integer, required: false
-        argument :offset, Integer, required: false
+        argument :page, Integer, required: false
 
         type Types::DataApi::Mrrs::Plans::Object.collection_type, null: false
 

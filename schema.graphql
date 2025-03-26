@@ -6998,7 +6998,7 @@ type Query {
   """
   Query monthly recurring revenues plans of an organization
   """
-  dataApiMrrsPlans(currency: CurrencyEnum, limit: Int, offset: Int): DataApiMrrPlanCollection!
+  dataApiMrrsPlans(currency: CurrencyEnum, limit: Int, page: Int): DataApiMrrPlanCollection!
 
   """
   Query revenue streams of an organization
@@ -7008,12 +7008,12 @@ type Query {
   """
   Query revenue streams customers of an organization
   """
-  dataApiRevenueStreamsCustomers(currency: CurrencyEnum, limit: Int, offset: Int, orderBy: OrderByEnum): DataApiRevenueStreamCustomerCollection!
+  dataApiRevenueStreamsCustomers(currency: CurrencyEnum, limit: Int, orderBy: OrderByEnum, page: Int): DataApiRevenueStreamCustomerCollection!
 
   """
   Query revenue streams plans of an organization
   """
-  dataApiRevenueStreamsPlans(currency: CurrencyEnum, limit: Int, offset: Int, orderBy: OrderByEnum): RevenueStreamPlanCollection!
+  dataApiRevenueStreamsPlans(currency: CurrencyEnum, limit: Int, orderBy: OrderByEnum, page: Int): RevenueStreamPlanCollection!
 
   """
   Query invoiced usages of an organization

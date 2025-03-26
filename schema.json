@@ -34919,7 +34919,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "offset",
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -35097,11 +35097,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "offset",
+                  "name": "orderBy",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
+                    "kind": "ENUM",
+                    "name": "OrderByEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -35109,11 +35109,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "orderBy",
+                  "name": "page",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "OrderByEnum",
+                    "kind": "SCALAR",
+                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -35162,11 +35162,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "offset",
+                  "name": "orderBy",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
+                    "kind": "ENUM",
+                    "name": "OrderByEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -35174,11 +35174,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "orderBy",
+                  "name": "page",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "OrderByEnum",
+                    "kind": "SCALAR",
+                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,

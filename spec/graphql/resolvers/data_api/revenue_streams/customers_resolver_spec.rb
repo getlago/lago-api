@@ -6,8 +6,8 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::CustomersResolver, type: :gra
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL
-      query($currency: CurrencyEnum, $orderBy: OrderByEnum, $limit: Int, $offset: Int) {
-        dataApiRevenueStreamsCustomers(currency: $currency, orderBy: $orderBy, limit: $limit, offset: $offset) {
+      query($currency: CurrencyEnum, $orderBy: OrderByEnum, $limit: Int, $page: Int) {
+        dataApiRevenueStreamsCustomers(currency: $currency, orderBy: $orderBy, limit: $limit, page: $page) {
           collection {
             customerId
             externalCustomerId

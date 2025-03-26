@@ -14,8 +14,8 @@ module Resolvers
 
         argument :currency, Types::CurrencyEnum, required: false
         argument :limit, Integer, required: false
-        argument :offset, Integer, required: false
         argument :order_by, Types::DataApi::RevenueStreams::OrderByEnum, required: false
+        argument :page, Integer, required: false
 
         type Types::DataApi::RevenueStreams::Customers::Object.collection_type, null: false
 
