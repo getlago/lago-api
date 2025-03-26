@@ -16,11 +16,6 @@ module LifetimeUsages
         return result
       end
 
-      if lifetime_usage.recalculate_current_usage
-        lifetime_usage.current_usage_amount_cents = calculate_current_usage_amount_cents
-        lifetime_usage.recalculate_current_usage = false
-        lifetime_usage.current_usage_amount_refreshed_at = Time.current
-      end
       if lifetime_usage.recalculate_invoiced_usage
         lifetime_usage.invoiced_usage_amount_cents = calculate_invoiced_usage_amount_cents
         lifetime_usage.current_usage_amount_cents = calculate_current_usage_amount_cents
@@ -29,6 +24,13 @@ module LifetimeUsages
         lifetime_usage.invoiced_usage_amount_refreshed_at = Time.current
         lifetime_usage.current_usage_amount_refreshed_at = Time.current
       end
+
+      if lifetime_usage.recalculate_current_usage
+        lifetime_usage.current_usage_amount_cents = calculate_current_usage_amount_cents
+        lifetime_usage.recalculate_current_usage = false
+        lifetime_usage.current_usage_amount_refreshed_at = Time.current
+      end
+
       lifetime_usage.save!
 
       result

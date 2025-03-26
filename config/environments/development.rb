@@ -61,7 +61,7 @@ Rails.application.configure do
   config.hosts << "api.lago.dev"
   config.hosts << "api"
 
-  config.license_url = "http://license:3000"
+  config.license_url = ENV.fetch("LAGO_LICENSE_URL", "http://license:3000")
 
   config.action_mailer.perform_caching = false
   config.action_mailer.perform_deliveries = true
