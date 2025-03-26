@@ -58,8 +58,8 @@ jobs:
         run: bin/rails db:migrate:primary
       - name: dump schema
         run: LAGO_DISABLE_SCHEMA_DUMP="" bin/rails db:schema:dump:primary
-      # - name: Ensure no changes to structure.sql
-      #   run: diff db/structure.sql db/structure-before-dump.sql
+      - name: Ensure no changes to structure.sql
+        run: diff db/structure.sql db/structure-before-dump.sql
       - name: Ensure annotations are up to date
         run: bundle exec annotate --frozen
       - name: Perform Clickhouse database migrations
