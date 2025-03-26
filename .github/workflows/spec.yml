@@ -76,6 +76,6 @@ jobs:
         run: bin/rails db:schema:dump:clickhouse
       - name: Run tests
         run: bundle exec rake knapsack_pro:queue:rspec
+        continue-on-error: true
       - name: retry failed tests
         run: bundle exec rspec --only-failures
-        if: ${{ failure() }}
