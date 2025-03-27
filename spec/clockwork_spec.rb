@@ -240,4 +240,30 @@ describe Clockwork do
       expect(Clock::InboundWebhooksRetryJob).to have_been_enqueued
     end
   end
+
+  describe "schedule:refresh_flagged_subscriptions" do
+    let(:job) { "schedule:refresh_flagged_subscriptions" }
+    let(:start_time) { Time.zone.parse("2025-03-27T00:05:00") }
+    let(:end_time) { Time.zone.parse("2025-03-27T00:06:00") }
+
+    before do
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("LAGO_KAFKA_BOOTSTRAP_SERVERS").and_return("redpanda:9092")
+    end
+
+    it "enqueue a retry inbound webhooks job" do
+      Clockwork::Test.run(
+        file: clock_file,
+        start_time:,
+        end_time:,
+        tick_speed: 1.minute
+      )
+
+      expect(Clockwork::Test).to be_ran_job(job)
+      expect(Clockwork::Test.times_run(job)).to eq(1)
+
+      Clockwork::Test.block_for(job).call
+      expect(Clock::ConsumeSubscriptionRefreshedQueueJob).to have_been_enqueued
+    end
+  end
 end
