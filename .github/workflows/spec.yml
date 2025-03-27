@@ -74,8 +74,6 @@ jobs:
         run: bin/rails db:schema:load:primary
       - name: Set up Clickhouse database schema
         run: bin/rails db:migrate:clickhouse
-      - name: Dump Clickhouse database schema
-        run: bin/rails db:schema:dump:clickhouse
       - name: Run tests
         run: bundle exec rake knapsack_pro:queue:rspec
         continue-on-error: true

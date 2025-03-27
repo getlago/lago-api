@@ -1,10 +1,13 @@
 FROM ruby:3.3.6-slim
 
 WORKDIR /app
+ENV POSTGRES_VERSION=14
 
 RUN apt update -qq && \
-  apt install nodejs build-essential curl git pkg-config libpq-dev libclang-dev -y && \
-  curl https://sh.rustup.rs -sSf | bash -s -- -y
+  apt-get install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-common -y && \
+  curl https://sh.rustup.rs -sSf | bash -s -- -y && \
+  /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -i -v $POSTGRES_VERSION
+
 
 ENV BUNDLER_VERSION='2.5.5'
 ENV PATH="$PATH:/root/.cargo/bin/"

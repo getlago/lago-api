@@ -46,20 +46,25 @@ jobs:
         with:
           ruby-version: "3.3.6"
           bundler-cache: true
+      - name: Install pg 14
+        uses: tj-actions/install-postgresql@v3
+        with:
+          postgresql-version: "14"
       - name: Start Clickhouse database
         run: |
           docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml -e CLICKHOUSE_PASSWORD=password clickhouse/clickhouse-server
         shell: bash
       - name: Generate RSA keys
         run: ./scripts/generate.rsa.sh
+      - run: "pg_dump --version"
       - name: Move db schema for comparison
-        run: mv db/schema.rb db/schema-before-dump.rb
+        run: mv db/structure.sql db/structure-before-dump.sql
       - name: Perform Postgres database migrations
         run: bin/rails db:migrate:primary
       - name: dump schema
         run: LAGO_DISABLE_SCHEMA_DUMP="" bin/rails db:schema:dump:primary
-      - name: Ensure no changes to schema.rb
-        run: diff db/schema.rb db/schema-before-dump.rb
+      - name: Ensure no changes to structure.sql
+        run: diff db/structure.sql db/structure-before-dump.sql
       - name: Ensure annotations are up to date
         run: bundle exec annotate --frozen
       - name: Perform Clickhouse database migrations
