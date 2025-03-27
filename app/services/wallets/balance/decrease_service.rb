@@ -25,9 +25,10 @@ module Wallets
             last_consumed_credit_at: Time.current
           )
         rescue ActiveRecord::StaleObjectError
-          wallet.reload
           retries += 1
+          wallet.reload
           retry if retries < 3
+          raise
         end
 
         Wallets::Balance::RefreshOngoingService.call(wallet:, include_generating_invoices: true)

@@ -4,7 +4,7 @@ WORKDIR /app
 ENV POSTGRES_VERSION=14
 
 RUN apt update -qq && \
-  apt-get install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-common -y && \
+  apt-get install nodejs build-essential curl git pkg-config libpq-dev libclang-dev postgresql-common postgresql-client -y && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y && \
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -i -v $POSTGRES_VERSION
 
