@@ -55,8 +55,8 @@ RSpec.describe Wallets::Balance::DecreaseService, type: :service do
       expect(Wallets::Balance::RefreshOngoingService).to have_received(:call).with(wallet: wallet, include_generating_invoices: true)
     end
 
-    context 'when wallet is stale' do
-      it 'retries the update on stale object' do
+    context "when wallet is stale" do
+      it "retries the update on stale object" do
         # Create a stale version by loading the same wallet twice
         stale_wallet = Wallet.find(wallet.id)
         current_wallet = Wallet.find(wallet.id)
