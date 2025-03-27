@@ -29,8 +29,8 @@ RSpec.describe DataApi::Mrrs::PlansService, type: :service do
 
       it "returns expected mrrs plans" do
         expect(service_call).to be_success
-        expect(service_call.mrrs_plans.count).to eq(4)
-        expect(service_call.mrrs_plans.first).to eq(
+        expect(service_call.data_mrrs_plans["mrrs_plans"].count).to eq(4)
+        expect(service_call.data_mrrs_plans["mrrs_plans"].first).to eq(
           {
             "dt" => "2025-02-25",
             "amount_currency" => "EUR",
@@ -44,6 +44,15 @@ RSpec.describe DataApi::Mrrs::PlansService, type: :service do
             "plan_deleted_at" => nil,
             "plan_interval" => "monthly",
             "active_customers_share" => 0.009
+          }
+        )
+        expect(service_call.data_mrrs_plans["meta"]).to eq(
+          {
+            "current_page" => 1,
+            "next_page" => 2,
+            "prev_page" => 0,
+            "total_count" => 100,
+            "total_pages" => 5
           }
         )
       end

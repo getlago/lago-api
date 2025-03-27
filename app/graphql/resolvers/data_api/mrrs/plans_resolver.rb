@@ -16,11 +16,11 @@ module Resolvers
         argument :limit, Integer, required: false
         argument :page, Integer, required: false
 
-        type Types::DataApi::Mrrs::Plans::Object.collection_type, null: false
+        type Types::DataApi::Mrrs::Plans::Collection, null: false
 
         def resolve(**args)
           result = ::DataApi::Mrrs::PlansService.call(current_organization, **args)
-          result.mrrs_plans
+          result.data_mrrs_plans
         end
       end
     end

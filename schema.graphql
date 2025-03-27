@@ -3590,19 +3590,9 @@ type DataApiMrrPlan {
   planName: String!
 }
 
-"""
-DataApiMrrPlanCollection type
-"""
-type DataApiMrrPlanCollection {
-  """
-  A collection of paginated DataApiMrrPlanCollection
-  """
-  collection: [DataApiMrrPlan!]!
-
-  """
-  Pagination Metadata for navigating the Pagination
-  """
-  metadata: CollectionMetadata!
+type DataApiMrrsPlans {
+  meta: DataApiMetadata!
+  mrrsPlans: [DataApiMrrPlan!]!
 }
 
 type DataApiRevenueStream {
@@ -3645,6 +3635,21 @@ type DataApiRevenueStreamCustomer {
   netRevenueShare: Float!
 }
 
+type DataApiRevenueStreamPlan {
+  amountCurrency: CurrencyEnum!
+  customersCount: Int!
+  customersShare: Float!
+  grossRevenueAmountCents: BigInt!
+  grossRevenueShare: Float!
+  netRevenueAmountCents: BigInt!
+  netRevenueShare: Float!
+  planCode: String!
+  planDeletedAt: ISO8601DateTime
+  planId: ID!
+  planInterval: PlanInterval!
+  planName: String!
+}
+
 type DataApiRevenueStreamsCustomers {
   meta: DataApiMetadata!
   revenueStreamsCustomers: [DataApiRevenueStreamCustomer!]!
@@ -3652,7 +3657,7 @@ type DataApiRevenueStreamsCustomers {
 
 type DataApiRevenueStreamsPlans {
   meta: DataApiMetadata!
-  revenueStreamsPlans: [RevenueStreamPlan!]!
+  revenueStreamsPlans: [DataApiRevenueStreamPlan!]!
 }
 
 type DataApiUsageInvoiced {
@@ -7003,7 +7008,7 @@ type Query {
   """
   Query monthly recurring revenues plans of an organization
   """
-  dataApiMrrsPlans(currency: CurrencyEnum, limit: Int, page: Int): DataApiMrrPlanCollection!
+  dataApiMrrsPlans(currency: CurrencyEnum, limit: Int, page: Int): DataApiMrrsPlans!
 
   """
   Query revenue streams of an organization
@@ -7552,21 +7557,6 @@ input RetryWebhookInput {
   """
   clientMutationId: String
   id: ID!
-}
-
-type RevenueStreamPlan {
-  amountCurrency: CurrencyEnum!
-  customersCount: Int!
-  customersShare: Float!
-  grossRevenueAmountCents: BigInt!
-  grossRevenueShare: Float!
-  netRevenueAmountCents: BigInt!
-  netRevenueShare: Float!
-  planCode: String!
-  planDeletedAt: ISO8601DateTime
-  planId: ID!
-  planInterval: PlanInterval!
-  planName: String!
 }
 
 """

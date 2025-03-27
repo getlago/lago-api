@@ -29,8 +29,8 @@ RSpec.describe DataApi::RevenueStreams::CustomersService, type: :service do
 
       it "returns expected revenue streams customers" do
         expect(service_call).to be_success
-        expect(service_call.revenue_streams_customers.count).to eq(4)
-        expect(service_call.revenue_streams_customers.first).to eq(
+        expect(service_call.data_revenue_streams_customers["revenue_streams_customers"].count).to eq(4)
+        expect(service_call.data_revenue_streams_customers["revenue_streams_customers"].first).to eq(
           {
             "amount_currency" => "EUR",
             "customer_deleted_at" => nil,
@@ -42,6 +42,15 @@ RSpec.describe DataApi::RevenueStreams::CustomersService, type: :service do
             "net_revenue_amount_cents" => 124628322,
             "net_revenue_share" => 0.1185,
             "organization_id" => "c0047031-41b6-4386-a10b-0a36f787c84f"
+          }
+        )
+        expect(service_call.data_revenue_streams_customers["meta"]).to eq(
+          {
+            "current_page" => 1,
+            "next_page" => 2,
+            "prev_page" => 0,
+            "total_count" => 100,
+            "total_pages" => 5
           }
         )
       end

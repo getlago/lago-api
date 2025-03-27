@@ -8,7 +8,7 @@ RSpec.describe Resolvers::DataApi::Mrrs::PlansResolver, type: :graphql do
     <<~GQL
       query($currency: CurrencyEnum, $limit: Int, $page: Int) {
         dataApiMrrsPlans(currency: $currency, limit: $limit, page: $page) {
-          collection {
+          mrrsPlans {
             amountCurrency
             dt
             planCode
@@ -20,6 +20,13 @@ RSpec.describe Resolvers::DataApi::Mrrs::PlansResolver, type: :graphql do
             activeCustomersShare
             mrr
             mrrShare
+          }
+          meta {
+            currentPage
+            nextPage
+            prevPage
+            totalCount
+            totalPages
           }
         }
       }
@@ -50,7 +57,7 @@ RSpec.describe Resolvers::DataApi::Mrrs::PlansResolver, type: :graphql do
     )
 
     mrrs_response = result["data"]["dataApiMrrsPlans"]
-    expect(mrrs_response["collection"].first).to include(
+    expect(mrrs_response["mrrsPlans"].first).to include(
       {
         "dt" => "2025-02-25",
         "amountCurrency" => "EUR",
@@ -64,6 +71,13 @@ RSpec.describe Resolvers::DataApi::Mrrs::PlansResolver, type: :graphql do
         "planInterval" => "monthly",
         "activeCustomersShare" => 0.009
       }
+    )
+    expect(mrrs_response["meta"]).to include(
+      "currentPage" => 1,
+      "nextPage" => 2,
+      "prevPage" => 0,
+      "totalCount" => 100,
+      "totalPages" => 5
     )
   end
 end

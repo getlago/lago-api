@@ -21,7 +21,7 @@ module Resolvers
 
         def resolve(**args)
           result = ::DataApi::RevenueStreams::PlansService.call(current_organization, **args)
-          result.revenue_streams_plans
+          result.data_revenue_streams_plans
         end
       end
     end
