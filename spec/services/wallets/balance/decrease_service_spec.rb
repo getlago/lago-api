@@ -56,31 +56,21 @@ RSpec.describe Wallets::Balance::DecreaseService, type: :service do
     end
 
     context 'when wallet is stale' do
-      let(:wallet) { create(:wallet, balance_cents: 1000, credits_balance: 10.0) }
-      let(:wallet_transaction) { create(:wallet_transaction, credit_amount: 5.0) }
+      it 'retries the update on stale object' do
+        # Create a stale version by loading the same wallet twice
+        stale_wallet = Wallet.find(wallet.id)
+        current_wallet = Wallet.find(wallet.id)
 
-      it 'reloads the wallet and retries the operation' do
-        # Simulate a concurrent update that will cause a stale object error
-        allow(wallet).to receive(:update!).and_raise(ActiveRecord::StaleObjectError.new(wallet, 'update!'))
-        
-        # After reload, simulate the wallet with updated values
-        reloaded_wallet = create(:wallet, balance_cents: 1000, credits_balance: 10.0)
-        allow(wallet).to receive(:reload).and_return(reloaded_wallet)
-        
-        # Expect the update! to be called again after reload with the correct values
-        expect(reloaded_wallet).to receive(:update!).with(
-          balance_cents: 500,
-          credits_balance: 5.0,
-          last_balance_sync_at: kind_of(Time),
-          consumed_credits: 5.0,
-          consumed_amount_cents: 500,
-          last_consumed_credit_at: kind_of(Time)
-        )
+        # Update the current wallet to make stale_wallet outdated
+        current_wallet.update!(credits_balance: 15.0)
 
-        result = described_class.call(wallet:, wallet_transaction:)
+        # Create service with stale wallet
+        service = described_class.new(wallet: stale_wallet, wallet_transaction:)
 
-        expect(result).to be_success
-        expect(result.wallet).to eq(reloaded_wallet)
+        # Should succeed despite the stale wallet
+        expect { service.call }
+          .to change { stale_wallet.reload.credits_balance }.from(15.0).to(10.5)
+          .and change { stale_wallet.consumed_credits }.from(0).to(4.5)
       end
     end
   end
