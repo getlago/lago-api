@@ -54,5 +54,23 @@ RSpec.describe Wallets::Balance::DecreaseService, type: :service do
       create_service.call
       expect(Wallets::Balance::RefreshOngoingService).to have_received(:call).with(wallet: wallet, include_generating_invoices: true)
     end
+
+    context 'when wallet is stale' do
+      let(:wallet) { create(:wallet, balance_cents: 1000, credits_balance: 10.0) }
+      let(:wallet_transaction) { create(:wallet_transaction, credit_amount: 5.0) }
+
+      it 'reloads the wallet and retries the operation' do
+        allow(wallet).to receive(:update!).and_raise(ActiveRecord::StaleObjectError.new(wallet, 'update!'))
+
+        expect(wallet).to receive(:reload)
+        expect(wallet).to receive(:update!).and_call_original
+
+        result = described_class.call(wallet:, wallet_transaction:)
+
+        expect(result).to be_success
+        expect(result.wallet.balance_cents).to eq(500)
+        expect(result.wallet.credits_balance).to eq(5.0)
+      end
+    end
   end
 end
