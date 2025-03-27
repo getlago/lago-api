@@ -434,10 +434,10 @@ DROP INDEX IF EXISTS public.idx_on_pay_in_advance_event_transaction_id_charge_i_
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
 DROP INDEX IF EXISTS public.idx_on_organization_id_deleted_at_225e3f789d;
-DROP INDEX IF EXISTS public.idx_on_organization_id_billing_entity_sequential_id_20bfd08c5a;
 DROP INDEX IF EXISTS public.idx_on_invoice_id_payment_request_id_aa550779a4;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_7edbcef7b5;
 DROP INDEX IF EXISTS public.idx_on_dunning_campaign_id_currency_fbf233b2ae;
+DROP INDEX IF EXISTS public.idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655;
 DROP INDEX IF EXISTS public.idx_on_amount_cents_plan_id_recurring_888044d66b;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
@@ -1932,7 +1932,7 @@ CREATE TABLE public.invoices (
     self_billed boolean DEFAULT false NOT NULL,
     applied_grace_period integer,
     billing_entity_id uuid NOT NULL,
-    billing_entity_sequential_id integer DEFAULT 0,
+    billing_entity_sequential_id integer,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -3177,6 +3177,13 @@ CREATE UNIQUE INDEX idx_on_amount_cents_plan_id_recurring_888044d66b ON public.u
 
 
 --
+-- Name: idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655 ON public.invoices USING btree (billing_entity_id, billing_entity_sequential_id DESC) INCLUDE (self_billed);
+
+
+--
 -- Name: idx_on_dunning_campaign_id_currency_fbf233b2ae; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3195,13 +3202,6 @@ CREATE INDEX idx_on_invoice_custom_section_id_7edbcef7b5 ON public.invoice_custo
 --
 
 CREATE UNIQUE INDEX idx_on_invoice_id_payment_request_id_aa550779a4 ON public.invoices_payment_requests USING btree (invoice_id, payment_request_id);
-
-
---
--- Name: idx_on_organization_id_billing_entity_sequential_id_20bfd08c5a; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_on_organization_id_billing_entity_sequential_id_20bfd08c5a ON public.invoices USING btree (organization_id, billing_entity_sequential_id DESC) INCLUDE (self_billed);
 
 
 --
@@ -6285,6 +6285,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250402150920'),
 ('20250402135038'),
 ('20250402113844'),
+('20250327130155'),
+('20250327124640'),
 ('20250325162648'),
 ('20250325145324'),
 ('20250324125056'),
