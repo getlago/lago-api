@@ -16,7 +16,7 @@ RSpec.describe Taxes::AutoGenerateService, type: :service do
 
     it "updates eu taxes for organization" do
       auto_generate_service.call
-      organization.taxes.update_all(rate: 99)
+      organization.taxes.update_all(rate: 99) # rubocop:disable Rails/SkipsModelValidations
       expect(organization.taxes.pluck(:rate)).to all eq 99
 
       auto_generate_service.call
