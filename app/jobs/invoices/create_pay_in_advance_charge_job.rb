@@ -12,9 +12,9 @@ module Invoices
 
     retry_on Sequenced::SequenceError
     retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
-    retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6, jitter: 0.75
+    retry_on ActiveJob::Uniqueness::JobNotUnique, wait: :polynomially_longer, attempts: 25
 
-    unique :until_executed, on_conflict: :log
+    unique :until_executed
 
     def perform(charge:, event:, timestamp:, invoice: nil)
       result = Invoices::CreatePayInAdvanceChargeService.call(charge:, event:, timestamp:, invoice:)
@@ -32,6 +32,8 @@ module Invoices
         timestamp:,
         invoice: result.invoice
       )
+    ensure
+      unlock_unique_job
     end
 
     def lock_key_arguments
@@ -46,6 +48,13 @@ module Invoices
       return false unless result.error.is_a?(BaseService::ValidationFailure)
 
       result.error&.messages&.dig(:tax_error).present?
+    end
+
+    def unlock_unique_job
+      lock_key = ActiveJob::Uniqueness::LockKey.new(self).key
+      Sidekiq.redis { |conn| conn.del(lock_key) }
+    rescue => e
+      Rails.logger.error "Failed to release lock: #{e.message}"
     end
   end
 end
