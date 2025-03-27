@@ -3656,8 +3656,8 @@ type DataApiRevenueStreamsCustomers {
 }
 
 type DataApiRevenueStreamsPlans {
-  meta: DataApiMetadata!
-  revenueStreamsPlans: [DataApiRevenueStreamPlan!]!
+  collection: [DataApiRevenueStreamPlan!]!
+  metadata: DataApiMetadata!
 }
 
 type DataApiUsageInvoiced {
