@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_03_25_162648) do
+ActiveRecord::Schema[7.2].define(version: 2025_03_27_130155) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -991,13 +991,13 @@ ActiveRecord::Schema[7.2].define(version: 2025_03_25_162648) do
     t.boolean "self_billed", default: false, null: false
     t.integer "applied_grace_period"
     t.uuid "billing_entity_id"
-    t.integer "billing_entity_sequential_id", default: 0
+    t.integer "billing_entity_sequential_id"
+    t.index ["billing_entity_id", "billing_entity_sequential_id"], name: "idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655", unique: true, order: { billing_entity_sequential_id: :desc }, include: ["self_billed"]
     t.index ["billing_entity_id"], name: "index_invoices_on_billing_entity_id"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["issuing_date"], name: "index_invoices_on_issuing_date"
     t.index ["number"], name: "index_invoices_on_number"
-    t.index ["organization_id", "billing_entity_sequential_id"], name: "idx_on_organization_id_billing_entity_sequential_id_20bfd08c5a", order: { billing_entity_sequential_id: :desc }, include: ["self_billed"]
     t.index ["organization_id", "organization_sequential_id"], name: "idx_on_organization_id_organization_sequential_id_2387146f54", order: { organization_sequential_id: :desc }, include: ["self_billed"]
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
