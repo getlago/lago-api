@@ -72,7 +72,7 @@ gem "newrelic_rpm"
 gem "opentelemetry-exporter-otlp"
 gem "opentelemetry-instrumentation-all"
 gem "opentelemetry-sdk"
-gem 'stackprof', require: false
+gem "stackprof", require: false
 gem "sentry-rails", require: false
 gem "sentry-ruby", require: false
 gem "sentry-sidekiq", require: false
@@ -119,6 +119,7 @@ group :development, :test do
   gem "rubocop-thread_safety", require: false
   gem "awesome_print"
   gem "pry"
+  gem "knapsack_pro", "~> 8.1"
 end
 
 group :test do
