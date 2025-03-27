@@ -13,6 +13,7 @@ module Wallets
       def call
         credits_amount = wallet_transaction.credit_amount
         currency = wallet.currency_for_balance
+        retries = 0
 
         begin
           wallet.update!(
@@ -25,7 +26,8 @@ module Wallets
           )
         rescue ActiveRecord::StaleObjectError
           wallet.reload
-          retry
+          retries += 1
+          retry if retries < 3
         end
 
         Wallets::Balance::RefreshOngoingService.call(wallet:, include_generating_invoices: true)
