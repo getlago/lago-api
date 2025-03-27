@@ -11,9 +11,8 @@ module LifetimeUsages
     end
 
     def call
-      LifetimeUsages::CalculateService.call(lifetime_usage:).raise_if_error!
-      check_result = LifetimeUsages::UsageThresholds::CheckService.call!(lifetime_usage:, progressive_billed_amount:)
-      usage_thresholds = check_result.passed_thresholds
+      LifetimeUsages::CalculateService.call!(lifetime_usage:)
+      usage_thresholds = LifetimeUsages::UsageThresholds::CheckService.call!(lifetime_usage:, progressive_billed_amount:).passed_thresholds
       if usage_thresholds.any?
         usage_thresholds.each do |usage_threshold|
           SendWebhookJob.perform_later("subscription.usage_threshold_reached", subscription, usage_threshold:)
@@ -32,8 +31,7 @@ module LifetimeUsages
     delegate :subscription, to: :lifetime_usage
 
     def progressive_billed_amount
-      result = Subscriptions::ProgressiveBilledAmount.call(subscription:).raise_if_error!
-      result.progressive_billed_amount
+      Subscriptions::ProgressiveBilledAmount.call!(subscription:).progressive_billed_amount
     end
 
     def tax_error?(result)

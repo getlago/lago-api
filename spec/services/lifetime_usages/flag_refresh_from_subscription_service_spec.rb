@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe LifetimeUsages::FlagRefreshFromSubscriptionService, type: :service do
   subject(:flag_service) { described_class.new(subscription:) }
 
+  around { |test| lago_premium!(&test) }
+
   let(:subscription) { create(:subscription, plan:, customer:) }
   let(:lifetime_usage) { create(:lifetime_usage, subscription:) }
 
@@ -13,7 +15,10 @@ RSpec.describe LifetimeUsages::FlagRefreshFromSubscriptionService, type: :servic
 
   let(:threshold) { create(:usage_threshold, plan: plan) }
 
-  before { threshold }
+  before do
+    threshold
+    lifetime_usage
+  end
 
   describe ".call" do
     it "flags the lifetime usage for refresh" do
@@ -24,7 +29,7 @@ RSpec.describe LifetimeUsages::FlagRefreshFromSubscriptionService, type: :servic
     context "when the subscription is not active" do
       let(:subscription) { create(:subscription, :terminated) }
 
-      it "does not flags the lifetime usage", aggregate_failure: true do
+      it "does not flags the lifetime usage" do
         expect(flag_service.call).to be_success
         expect(lifetime_usage.reload.recalculate_current_usage).to be(false)
       end
@@ -33,7 +38,7 @@ RSpec.describe LifetimeUsages::FlagRefreshFromSubscriptionService, type: :servic
     context "when the lifetime usage does not exists" do
       let(:lifetime_usage) { nil }
 
-      it "creates a new lifetime usage", aggregate_failures: true do
+      it "creates a new lifetime usage" do
         expect { flag_service.call }
           .to change(LifetimeUsage, :count).by(1)
 
@@ -47,6 +52,17 @@ RSpec.describe LifetimeUsages::FlagRefreshFromSubscriptionService, type: :servic
       it "does not flags the lifetime usage", aggregate_failures: true do
         expect(flag_service.call).to be_success
         expect(lifetime_usage.reload.recalculate_current_usage).to be(false)
+      end
+
+      context "when organization has lifetime_usage enabled" do
+        before do
+          subscription.organization.update!(premium_integrations: ["lifetime_usage"])
+        end
+
+        it "flags the lifetime usage for refresh" do
+          expect(flag_service.call).to be_success
+          expect(lifetime_usage.reload.recalculate_current_usage).to be(true)
+        end
       end
     end
   end

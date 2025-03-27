@@ -79,6 +79,7 @@ class Organization < ApplicationRecord
     anrok
     xero
     progressive_billing
+    lifetime_usage
     hubspot
     auto_dunning
     revenue_analytics

@@ -108,6 +108,8 @@ RSpec.configure do |config|
     DatabaseCleaner.clean_with(:deletion)
   end
 
+  config.include_context "with Time travel enabled", :time_travel
+
   config.before do |example|
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
     DatabaseCleaner.strategy = :transaction

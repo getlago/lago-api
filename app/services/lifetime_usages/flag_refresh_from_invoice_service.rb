@@ -9,7 +9,7 @@ module LifetimeUsages
 
     def call
       return result unless invoice.subscription?
-      return result unless has_plan_usage_thresholds?
+      return result unless should_flag_refresh_from_invoice?
 
       result.lifetime_usages = []
 
@@ -31,8 +31,8 @@ module LifetimeUsages
 
     attr_reader :invoice
 
-    def has_plan_usage_thresholds?
-      invoice.subscriptions.any? { |s| s.plan.usage_thresholds.any? }
+    def should_flag_refresh_from_invoice?
+      invoice.organization.lifetime_usage_enabled? || invoice.subscriptions.any? { |s| s.plan.usage_thresholds.any? }
     end
   end
 end

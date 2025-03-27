@@ -4631,6 +4631,7 @@ enum IntegrationTypeEnum {
   from_email
   hubspot
   issue_receipts
+  lifetime_usage
   manual_payments
   multi_entities_enterprise
   multi_entities_pro
@@ -6722,6 +6723,7 @@ enum PremiumIntegrationTypeEnum {
   from_email
   hubspot
   issue_receipts
+  lifetime_usage
   manual_payments
   multi_entities_enterprise
   multi_entities_pro

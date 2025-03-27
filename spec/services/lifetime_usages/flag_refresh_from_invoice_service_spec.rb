@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, type: :service do
   subject(:flag_service) { described_class.new(invoice:) }
 
-  let(:invoice) { create(:invoice, :subscription, subscriptions:) }
+  around { |test| lago_premium!(&test) }
+
+  let(:invoice) { create(:invoice, :subscription, subscriptions:, organization: customer.organization) }
   let(:lifetime_usage) { create(:lifetime_usage, subscription: invoice.subscriptions.first) }
 
   let(:customer) { create(:customer) }
@@ -14,7 +16,10 @@ RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, type: :service do
 
   let(:usage_thresold) { create(:usage_threshold, plan:) }
 
-  before { usage_thresold }
+  before do
+    usage_thresold
+    lifetime_usage
+  end
 
   describe ".call" do
     it "flags the lifetime usages for refresh" do
@@ -23,6 +28,7 @@ RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, type: :service do
     end
 
     context "when the invoice is not subscription" do
+      let(:lifetime_usage) { nil }
       let(:invoice) { create(:invoice, invoice_type: "one_off") }
 
       it { expect(flag_service.call).to be_success }
@@ -37,7 +43,7 @@ RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, type: :service do
     context "when the lifetime usage does not exists" do
       let(:lifetime_usage) { nil }
 
-      it "creates a new lifetime usage", aggregate_failures: true do
+      it "creates a new lifetime usage" do
         expect { flag_service.call }
           .to change(LifetimeUsage, :count).by(1)
 
@@ -48,9 +54,20 @@ RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, type: :service do
     context "when the invoice has no plan usage thresholds" do
       let(:usage_thresold) { nil }
 
-      it "does not flags the lifetime usage", aggregate_failures: true do
+      it "does not flags the lifetime usage" do
         expect(flag_service.call).to be_success
         expect(lifetime_usage.reload.recalculate_invoiced_usage).to be(false)
+      end
+
+      context "when organization has lifetime_usage enabled" do
+        before do
+          customer.organization.update!(premium_integrations: ["lifetime_usage"])
+        end
+
+        it "flags the lifetime usage for refresh" do
+          expect(flag_service.call).to be_success
+          expect(lifetime_usage.reload.recalculate_invoiced_usage).to be(true)
+        end
       end
     end
   end
