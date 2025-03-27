@@ -618,12 +618,20 @@ DROP TYPE IF EXISTS public.customer_type;
 DROP TYPE IF EXISTS public.customer_account_type;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
-DROP SCHEMA IF EXISTS public;
+DROP EXTENSION IF EXISTS unaccent;
+DROP EXTENSION IF EXISTS pgcrypto;
 --
--- Name: public; Type: SCHEMA; Schema: -; Owner: -
+-- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
 
-CREATE SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+
+--
+-- Name: unaccent; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
 
 
 --
@@ -6236,7 +6244,7 @@ ALTER TABLE ONLY public.adjusted_fees
 -- PostgreSQL database dump complete
 --
 
-SET search_path TO public;
+SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250325162648'),
