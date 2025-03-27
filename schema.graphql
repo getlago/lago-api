@@ -6658,7 +6658,12 @@ type Plan {
   customersCount: Int!
   description: String
   draftInvoicesCount: Int!
+  hasActiveSubscriptions: Boolean!
+  hasCharges: Boolean!
+  hasCustomers: Boolean!
+  hasDraftInvoices: Boolean!
   hasOverriddenPlans: Boolean
+  hasSubscriptions: Boolean!
   id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
