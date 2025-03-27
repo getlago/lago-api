@@ -11,7 +11,17 @@ RSpec.describe Taxes::AutoGenerateService, type: :service do
     it "creates eu taxes for organization" do
       auto_generate_service.call
 
-      expect(Tax.count).to eq(46) # EU taxes + 2 defaults
+      expect(organization.taxes.count).to eq(46) # EU taxes + 2 defaults
+    end
+
+    it "updates eu taxes for organization" do
+      auto_generate_service.call
+      organization.taxes.update_all(rate: 99)
+      expect(organization.taxes.pluck(:rate)).to all eq 99
+
+      auto_generate_service.call
+      expect(organization.taxes.count).to eq(46) # No new taxes created
+      expect(organization.taxes.pluck(:rate)).to all(be < 99)
     end
   end
 end
