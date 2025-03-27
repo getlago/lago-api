@@ -3,6 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graphql do
+  let(:now) { Time.zone.now }
   let(:query) do
     <<~GQL
       query($subscriptionId: ID!) {
@@ -43,7 +44,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
       :subscription,
       plan:,
       customer:,
-      started_at: Time.zone.now - 2.years
+      started_at: now - 2.years
     )
   end
   let(:plan) { create(:plan, interval: "monthly") }
@@ -102,7 +103,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
       customer:,
       subscription:,
       code: metric.code,
-      timestamp: Time.zone.now
+      timestamp: now - 1.hour
     )
 
     create_list(
@@ -112,7 +113,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
       customer:,
       subscription:,
       code: sum_metric.code,
-      timestamp: Time.zone.now,
+      timestamp: now - 1.hour,
       properties: {
         agent_name: "frodo",
         cloud: "aws",
@@ -136,10 +137,10 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
     usage_response = result["data"]["customerPortalCustomerUsage"]
 
     aggregate_failures do
-      expect(usage_response["fromDatetime"]).to eq(Time.current.beginning_of_month.iso8601)
-      expect(usage_response["toDatetime"]).to eq(Time.current.end_of_month.iso8601)
+      expect(usage_response["fromDatetime"]).to eq(now.beginning_of_month.iso8601)
+      expect(usage_response["toDatetime"]).to eq(now.end_of_month.iso8601)
       expect(usage_response["currency"]).to eq("EUR")
-      expect(usage_response["issuingDate"]).to eq(Time.zone.today.end_of_month.iso8601)
+      expect(usage_response["issuingDate"]).to eq(now.to_date.end_of_month.iso8601)
       expect(usage_response["amountCents"]).to eq("405")
       expect(usage_response["totalAmountCents"]).to eq("405")
       expect(usage_response["taxesAmountCents"]).to eq("0")
@@ -212,7 +213,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
         customer:,
         subscription:,
         code: metric.code,
-        timestamp: Time.zone.now,
+        timestamp: now - 1.hour,
         properties: {cloud: "aws"}
       )
 
@@ -222,7 +223,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
         customer:,
         subscription:,
         code: metric.code,
-        timestamp: Time.zone.now,
+        timestamp: now - 1.hour,
         properties: {cloud: "google"}
       )
     end
@@ -237,7 +238,9 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
         }
       )
 
-      charge_usage = result["data"]["customerPortalCustomerUsage"]["chargesUsage"][0]
+      charge_usage = result["data"]["customerPortalCustomerUsage"]["chargesUsage"].find do |usage|
+        usage["billableMetric"]["code"] == metric.code
+      end
       filters_usage = charge_usage["filters"]
 
       aggregate_failures do

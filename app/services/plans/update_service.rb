@@ -122,7 +122,7 @@ module Plans
         if child_charge
           Charges::UpdateJob.perform_later(
             charge: child_charge,
-            params: payload_charge,
+            params: payload_charge.deep_stringify_keys,
             cascade_options: {
               cascade: true,
               parent_filters: charge.filters.map(&:attributes),
