@@ -3,9 +3,9 @@
 require "rails_helper"
 
 describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: false do
-  let(:customer_first) { create(:customer, organization:) }
-  let(:customer_second) { create(:customer, organization:) }
-  let(:customer_third) { create(:customer, organization:) }
+  let(:customer_first) { create(:customer, organization:, billing_entity: billing_entity_first) }
+  let(:customer_second) { create(:customer, organization:, billing_entity: billing_entity_first) }
+  let(:customer_third) { create(:customer, organization:, billing_entity: billing_entity_first) }
   let(:subscription_at) { DateTime.new(2023, 7, 19, 12, 12) }
 
   let(:organization) do
@@ -17,6 +17,8 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
       email_settings: []
     )
   end
+
+  let(:billing_entity_first) { organization.default_billing_entity }
 
   let(:monthly_plan) do
     create(
@@ -76,10 +78,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
       invoices = organization.invoices.order(created_at: :desc).limit(3)
       sequential_ids = invoices.pluck(:sequential_id)
       organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+      billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
       numbers = invoices.pluck(:number)
 
       expect(sequential_ids).to match_array([1, 1, 1])
       expect(organization_sequential_ids).to match_array([0, 0, 0])
+      expect(billing_entity_sequential_ids).to match_array([1, 2, 3])
       expect(numbers).to match_array(%w[ORG-1-001-001 ORG-1-002-001 ORG-1-003-001])
     end
 
@@ -90,10 +94,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
       invoices = organization.invoices.order(created_at: :desc).limit(3)
       sequential_ids = invoices.pluck(:sequential_id)
       organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+      billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
       numbers = invoices.pluck(:number)
 
       expect(sequential_ids).to match_array([2, 2, 2])
       expect(organization_sequential_ids).to match_array([0, 0, 0])
+      expect(billing_entity_sequential_ids).to match_array([4, 5, 6])
       expect(numbers).to match_array(%w[ORG-1-001-002 ORG-1-002-002 ORG-1-003-002])
     end
 
@@ -104,10 +110,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
       invoices = organization.invoices.order(created_at: :desc).limit(3)
       sequential_ids = invoices.pluck(:sequential_id)
       organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+      billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
       numbers = invoices.pluck(:number)
 
       expect(sequential_ids).to match_array([3, 3, 3])
       expect(organization_sequential_ids).to match_array([0, 0, 0])
+      expect(billing_entity_sequential_ids).to match_array([7, 8, 9])
       expect(numbers).to match_array(%w[ORG-1-001-003 ORG-1-002-003 ORG-1-003-003])
     end
 
@@ -120,10 +128,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
       invoices = organization.invoices.order(created_at: :desc).limit(3)
       sequential_ids = invoices.pluck(:sequential_id)
       organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+      billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
       numbers = invoices.pluck(:number)
 
       expect(sequential_ids).to match_array([4, 4, 4])
       expect(organization_sequential_ids).to match_array([10, 11, 12])
+      expect(billing_entity_sequential_ids).to match_array([10, 11, 12])
       expect(numbers).to match_array(%w[ORG-11-202310-010 ORG-11-202310-011 ORG-11-202310-012])
     end
 
@@ -136,10 +146,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
       invoices = organization.invoices.order(created_at: :desc).limit(3)
       sequential_ids = invoices.pluck(:sequential_id)
       organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+      billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
       numbers = invoices.pluck(:number)
 
       expect(sequential_ids).to match_array([5, 5, 5])
       expect(organization_sequential_ids).to match_array([0, 0, 0])
+      expect(billing_entity_sequential_ids).to match_array([13, 14, 15])
       expect(numbers).to match_array(%w[ORG-11-001-005 ORG-11-002-005 ORG-11-003-005])
     end
 
@@ -160,6 +172,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       expect(invoices.first.sequential_id).to eq(6)
       expect(invoices.first.organization_sequential_id).to eq(0)
+      expect(invoices.first.billing_entity_sequential_id).to eq(16)
       expect(invoices.pluck(:number))
         .to match_array(
           %w[
@@ -192,10 +205,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
       invoices = organization.invoices.order(created_at: :desc).limit(3)
       sequential_ids = invoices.pluck(:sequential_id)
       organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+      billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
       numbers = invoices.pluck(:number)
 
       expect(sequential_ids).to match_array([6, 6, 7])
       expect(organization_sequential_ids).to match_array([17, 18, 19])
+      expect(billing_entity_sequential_ids).to match_array([17, 18, 19])
       expect(numbers).to match_array(%w[ORG-11-202312-017 ORG-11-202312-018 ORG-11-202312-019])
     end
 
@@ -206,10 +221,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
       invoices = organization.invoices.order(created_at: :desc).limit(3)
       sequential_ids = invoices.pluck(:sequential_id)
       organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+      billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
       numbers = invoices.pluck(:number)
 
       expect(sequential_ids).to match_array([7, 7, 8])
       expect(organization_sequential_ids).to match_array([20, 21, 22])
+      expect(billing_entity_sequential_ids).to match_array([20, 21, 22])
       expect(numbers).to match_array(%w[ORG-11-202401-020 ORG-11-202401-021 ORG-11-202401-022])
     end
   end
@@ -249,10 +266,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([1, 1, 1])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([1, 2, 3])
         expect(numbers).to match_array(%w[ORG-1-001-001 ORG-1-002-001 ORG-1-003-001])
       end
 
@@ -263,10 +282,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([2, 2, 2])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([4, 5, 6])
         expect(numbers).to match_array(%w[ORG-1-001-002 ORG-1-002-002 ORG-1-003-002])
       end
 
@@ -277,10 +298,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([3, 3, 3])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([7, 8, 9])
         expect(numbers).to match_array(%w[ORG-1-001-003 ORG-1-002-003 ORG-1-003-003])
       end
 
@@ -298,10 +321,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([4, 4, 4])
         expect(organization_sequential_ids).to match_array([10, 11, 12])
+        expect(billing_entity_sequential_ids).to match_array([10, 11, 12])
         expect(numbers).to match_array(%w[ORG-11-202310-010 ORG-11-202310-011 ORG-11-202310-012])
       end
     end
@@ -344,10 +369,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([1, nil, 1])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([1, nil, 2])
         expect(numbers).to match_array(%w[ORG-1-001-001 ORG-1-DRAFT ORG-1-003-001])
       end
 
@@ -368,6 +395,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(invoices.first.sequential_id).to eq(2)
         expect(invoices.first.organization_sequential_id).to eq(0)
+        expect(invoices.first.billing_entity_sequential_id).to eq(3)
         expect(invoices.pluck(:number))
           .to match_array(
             %w[
@@ -394,8 +422,9 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         invoices = organization.reload.invoices.order(created_at: :desc)
 
-        expect(invoices.first.sequential_id).to eq(nil)
+        expect(invoices.first.sequential_id).to be_nil
         expect(invoices.first.organization_sequential_id).to eq(0)
+        expect(invoices.first.billing_entity_sequential_id).to be_nil
         expect(invoices.pluck(:number))
           .to match_array(
             %w[
@@ -453,10 +482,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = organization.reload.invoices.order(created_at: :desc).pluck(:number)
 
         expect(sequential_ids).to match_array([3, nil, 2])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([6, nil, 7])
         expect(numbers)
           .to match_array(
             %w[
@@ -479,10 +510,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = organization.reload.invoices.order(created_at: :desc).pluck(:number)
 
         expect(sequential_ids).to match_array([4, nil, 3])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([8, nil, 9])
         expect(numbers)
           .to match_array(
             %w[
@@ -550,10 +583,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([1, nil, 1])
         expect(organization_sequential_ids).to match_array([1, 0, 2])
+        expect(billing_entity_sequential_ids).to match_array([1, nil, 2])
         expect(numbers).to match_array(%w[ORG-1-202307-001 ORG-1-DRAFT ORG-1-202307-002])
       end
 
@@ -574,6 +609,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(invoices.first.sequential_id).to eq(2)
         expect(invoices.first.organization_sequential_id).to eq(3)
+        expect(invoices.first.billing_entity_sequential_id).to eq(3)
         expect(invoices.pluck(:number))
           .to match_array(
             %w[
@@ -600,8 +636,9 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         invoices = organization.reload.invoices.order(created_at: :desc)
 
-        expect(invoices.first.sequential_id).to eq(nil)
+        expect(invoices.first.sequential_id).to be_nil
         expect(invoices.first.organization_sequential_id).to eq(0)
+        expect(invoices.first.billing_entity_sequential_id).to be_nil
         expect(invoices.pluck(:number))
           .to match_array(
             %w[
@@ -659,10 +696,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = organization.reload.invoices.order(created_at: :desc).pluck(:number)
 
         expect(sequential_ids).to match_array([3, nil, 2])
         expect(organization_sequential_ids).to match_array([6, 0, 7])
+        expect(billing_entity_sequential_ids).to match_array([6, nil, 7])
         expect(numbers)
           .to match_array(
             %w[
@@ -685,10 +724,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = organization.reload.invoices.order(created_at: :desc).pluck(:number)
 
         expect(sequential_ids).to match_array([4, nil, 3])
         expect(organization_sequential_ids).to match_array([8, 0, 9])
+        expect(billing_entity_sequential_ids).to match_array([8, nil, 9])
         expect(numbers)
           .to match_array(
             %w[
@@ -735,7 +776,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
   end
 
   context "with partner customer" do
-    let(:customer_third) { create(:customer, organization:, account_type: "partner") }
+    let(:customer_third) { create(:customer, organization:, billing_entity: billing_entity_first, account_type: "partner") }
 
     around { |test| lago_premium!(&test) }
 
@@ -775,10 +816,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([1, 1, 1])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([1, 2, nil])
         expect(numbers).to match_array(%w[ORG-1-001-001 ORG-1-002-001 ORG-1-003-001])
       end
 
@@ -789,10 +832,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([2, 2, 2])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([3, 4, nil])
         expect(numbers).to match_array(%w[ORG-1-001-002 ORG-1-002-002 ORG-1-003-002])
       end
 
@@ -803,10 +848,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([3, 3, 3])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([5, 6, nil])
         expect(numbers).to match_array(%w[ORG-1-001-003 ORG-1-002-003 ORG-1-003-003])
       end
 
@@ -819,10 +866,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([4, 4, 4])
         expect(organization_sequential_ids).to match_array([7, 8, 0])
+        expect(billing_entity_sequential_ids).to match_array([7, 8, nil])
         expect(numbers).to match_array(%w[ORG-11-202310-007 ORG-11-202310-008 ORG-11-003-004])
       end
 
@@ -835,10 +884,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([5, 5, 5])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([9, 10, nil])
         expect(numbers).to match_array(%w[ORG-11-001-005 ORG-11-002-005 ORG-11-003-005])
       end
 
@@ -851,11 +902,186 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.invoices.order(created_at: :desc).limit(3)
         sequential_ids = invoices.pluck(:sequential_id)
         organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
         numbers = invoices.pluck(:number)
 
         expect(sequential_ids).to match_array([6, 6, 6])
         expect(organization_sequential_ids).to match_array([11, 12, 0])
+        expect(billing_entity_sequential_ids).to match_array([11, 12, nil])
         expect(numbers).to match_array(%w[ORG-11-202312-011 ORG-11-202312-012 ORG-11-003-006])
+      end
+    end
+  end
+
+  context "with multiple billing entities" do
+    let(:billing_entity_second) { create(:billing_entity, organization:) }
+    let(:customer_fourth) { create(:customer, organization:, billing_entity: billing_entity_second) }
+    let(:customer_fifth) { create(:customer, organization:, billing_entity: billing_entity_second) }
+
+    it "creates invoice numbers correctly" do
+      # NOTE: Jul 19th: create the subscriptions
+      travel_to(subscription_at) do
+        # First billing entity customers
+        create_subscription(
+          {
+            external_customer_id: customer_first.external_id,
+            external_id: customer_first.external_id,
+            plan_code: monthly_plan.code,
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
+        )
+        create_subscription(
+          {
+            external_customer_id: customer_second.external_id,
+            external_id: customer_second.external_id,
+            plan_code: monthly_plan.code,
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
+        )
+        create_subscription(
+          {
+            external_customer_id: customer_third.external_id,
+            external_id: customer_third.external_id,
+            plan_code: monthly_plan.code,
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
+        )
+
+        # Second billing entity customers
+        create_subscription(
+          {
+            external_customer_id: customer_fourth.external_id,
+            external_id: customer_fourth.external_id,
+            plan_code: monthly_plan.code,
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
+        )
+        create_subscription(
+          {
+            external_customer_id: customer_fifth.external_id,
+            external_id: customer_fifth.external_id,
+            plan_code: monthly_plan.code,
+            billing_time: "anniversary",
+            subscription_at: subscription_at.iso8601
+          }
+        )
+
+        invoices = organization.invoices.order(created_at: :desc).limit(5)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([1, 1, 1, 1, 1])
+        expect(organization_sequential_ids).to match_array([0, 0, 0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([1, 2, 3, 1, 2])
+        expect(numbers).to match_array(%w[ORG-1-001-001 ORG-1-002-001 ORG-1-003-001 ORG-1-004-001 ORG-1-005-001])
+      end
+
+      # NOTE: August 19th: Bill subscriptions
+      travel_to(DateTime.new(2023, 8, 19, 12, 12)) do
+        perform_billing
+
+        invoices = organization.invoices.order(created_at: :desc).limit(5)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([2, 2, 2, 2, 2])
+        expect(organization_sequential_ids).to match_array([0, 0, 0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([4, 5, 6, 3, 4])
+        expect(numbers).to match_array(%w[ORG-1-001-002 ORG-1-002-002 ORG-1-003-002 ORG-1-004-002 ORG-1-005-002])
+      end
+
+      # NOTE: September 19th: Bill subscriptions
+      travel_to(DateTime.new(2023, 9, 19, 12, 12)) do
+        perform_billing
+
+        invoices = organization.invoices.order(created_at: :desc).limit(5)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([3, 3, 3, 3, 3])
+        expect(organization_sequential_ids).to match_array([0, 0, 0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([7, 8, 9, 5, 6])
+        expect(numbers).to match_array(%w[ORG-1-001-003 ORG-1-002-003 ORG-1-003-003 ORG-1-004-003 ORG-1-005-003])
+      end
+
+      # NOTE: October 19th: Switching to per_organization numbering and Bill subscriptions
+      travel_to(DateTime.new(2023, 10, 19, 12, 12)) do
+        organization.update!(document_numbering: "per_organization", document_number_prefix: "ORG-11")
+
+        perform_billing
+
+        invoices = organization.invoices.order(created_at: :desc).limit(5)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([4, 4, 4, 4, 4])
+        expect(organization_sequential_ids).to match_array([16, 17, 18, 19, 20])
+        expect(billing_entity_sequential_ids).to match_array([10, 11, 12, 7, 8])
+        expect(numbers).to match_array(%w[ORG-11-202310-016 ORG-11-202310-017 ORG-11-202310-018 ORG-11-202310-019 ORG-11-202310-020])
+      end
+
+      # NOTE: November 19th: Switching to per_customer numbering and Bill subscriptions
+      travel_to(DateTime.new(2023, 11, 19, 12, 12)) do
+        organization.update!(document_numbering: "per_customer")
+
+        perform_billing
+
+        invoices = organization.invoices.order(created_at: :desc).limit(5)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([5, 5, 5, 5, 5])
+        expect(organization_sequential_ids).to match_array([0, 0, 0, 0, 0])
+        expect(billing_entity_sequential_ids).to match_array([13, 14, 15, 9, 10])
+        expect(numbers).to match_array(%w[ORG-11-001-005 ORG-11-002-005 ORG-11-003-005 ORG-11-004-005 ORG-11-005-005])
+      end
+
+      # NOTE: December 19th: Switching to per_organization numbering and Bill subscriptions
+      travel_to(DateTime.new(2023, 12, 19, 12, 12)) do
+        organization.update!(document_numbering: "per_organization")
+
+        perform_billing
+
+        invoices = organization.invoices.order(created_at: :desc).limit(5)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([6, 6, 6, 6, 6])
+        expect(organization_sequential_ids).to match_array([26, 27, 28, 29, 30])
+        expect(billing_entity_sequential_ids).to match_array([16, 17, 18, 11, 12])
+        expect(numbers).to match_array(%w[ORG-11-202312-026 ORG-11-202312-027 ORG-11-202312-028 ORG-11-202312-029 ORG-11-202312-030])
+      end
+
+      # NOTE: January 19th 2024: Billing subscriptions
+      travel_to(DateTime.new(2024, 1, 19, 12, 12)) do
+        perform_billing
+
+        invoices = organization.invoices.order(created_at: :desc).limit(5)
+        sequential_ids = invoices.pluck(:sequential_id)
+        organization_sequential_ids = invoices.pluck(:organization_sequential_id)
+        billing_entity_sequential_ids = invoices.pluck(:billing_entity_sequential_id)
+        numbers = invoices.pluck(:number)
+
+        expect(sequential_ids).to match_array([7, 7, 7, 7, 7])
+        expect(organization_sequential_ids).to match_array([31, 32, 33, 34, 35])
+        expect(billing_entity_sequential_ids).to match_array([19, 20, 21, 13, 14])
+        expect(numbers).to match_array(%w[ORG-11-202401-031 ORG-11-202401-032 ORG-11-202401-033 ORG-11-202401-034 ORG-11-202401-035])
       end
     end
   end
