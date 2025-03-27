@@ -9,7 +9,6 @@ module DataApi
         return result.forbidden_failure! unless License.premium?
 
         data_revenue_streams_customers = http_client.get(headers:, params:)
-
         result.revenue_streams_customers = data_revenue_streams_customers
         result
       end

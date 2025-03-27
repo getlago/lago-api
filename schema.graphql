@@ -3540,6 +3540,14 @@ type CustomerUsage {
   totalAmountCents: BigInt!
 }
 
+type DataApiMetadata {
+  currentPage: Int!
+  nextPage: Int!
+  prevPage: Int!
+  totalCount: Int!
+  totalPages: Int!
+}
+
 type DataApiMrr {
   amountCurrency: CurrencyEnum!
   endOfPeriodDt: ISO8601Date!
@@ -3637,19 +3645,9 @@ type DataApiRevenueStreamCustomer {
   netRevenueShare: Float!
 }
 
-"""
-DataApiRevenueStreamCustomerCollection type
-"""
-type DataApiRevenueStreamCustomerCollection {
-  """
-  A collection of paginated DataApiRevenueStreamCustomerCollection
-  """
-  collection: [DataApiRevenueStreamCustomer!]!
-
-  """
-  Pagination Metadata for navigating the Pagination
-  """
-  metadata: CollectionMetadata!
+type DataApiRevenueStreamsCustomers {
+  meta: DataApiMetadata!
+  revenueStreamsCustomers: [DataApiRevenueStreamCustomer!]!
 }
 
 type DataApiUsageInvoiced {
@@ -7010,7 +7008,7 @@ type Query {
   """
   Query revenue streams customers of an organization
   """
-  dataApiRevenueStreamsCustomers(currency: CurrencyEnum, limit: Int, orderBy: OrderByEnum, page: Int): DataApiRevenueStreamCustomerCollection!
+  dataApiRevenueStreamsCustomers(currency: CurrencyEnum, limit: Int, orderBy: OrderByEnum, page: Int): DataApiRevenueStreamsCustomers!
 
   """
   Query revenue streams plans of an organization

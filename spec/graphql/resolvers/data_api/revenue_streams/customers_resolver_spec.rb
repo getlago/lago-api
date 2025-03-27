@@ -8,7 +8,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::CustomersResolver, type: :gra
     <<~GQL
       query($currency: CurrencyEnum, $orderBy: OrderByEnum, $limit: Int, $page: Int) {
         dataApiRevenueStreamsCustomers(currency: $currency, orderBy: $orderBy, limit: $limit, page: $page) {
-          collection {
+          revenueStreamsCustomers {
             customerId
             customerDeletedAt
             externalCustomerId
@@ -18,6 +18,13 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::CustomersResolver, type: :gra
             grossRevenueShare
             netRevenueAmountCents
             netRevenueShare
+          }
+          meta {
+            currentPage
+            nextPage
+            prevPage
+            totalCount
+            totalPages
           }
         }
       }
@@ -48,7 +55,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::CustomersResolver, type: :gra
     )
 
     revenue_streams_response = result["data"]["dataApiRevenueStreamsCustomers"]
-    expect(revenue_streams_response["collection"].first).to include(
+    expect(revenue_streams_response["revenueStreamsCustomers"].first).to include(
       {
         "amountCurrency" => "EUR",
         "customerId" => "e4676e50-1234-4606-bcdb-42effbc2b635",
@@ -60,6 +67,13 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::CustomersResolver, type: :gra
         "grossRevenueShare" => 0.1185,
         "netRevenueShare" => 0.1185
       }
+    )
+    expect(revenue_streams_response["meta"]).to include(
+      "currentPage" => 1,
+      "nextPage" => 2,
+      "prevPage" => 0,
+      "totalCount" => 100,
+      "totalPages" => 5
     )
   end
 end
