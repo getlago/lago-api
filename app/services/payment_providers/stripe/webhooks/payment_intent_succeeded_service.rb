@@ -7,10 +7,12 @@ module PaymentProviders
         def call
           @result = update_payment_status! "succeeded"
 
-          ::Payments::UpdatePaymentMethodDataJob.perform_later(
-            provider_payment_id: event.data.object.id,
-            provider_payment_method_id: event.data.object.payment_method
-          )
+          if result.payment
+            ::Payments::UpdatePaymentMethodDataJob.perform_later(
+              payment: result.payment,
+              provider_payment_method_id: event.data.object.payment_method
+            )
+          end
 
           result
         end
