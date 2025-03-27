@@ -25,7 +25,12 @@ module Types
       field :charges, [Types::Charges::Object]
       field :taxes, [Types::Taxes::Object]
 
+      field :has_active_subscriptions, Boolean, null: false
+      field :has_charges, Boolean, null: false
+      field :has_customers, Boolean, null: false
+      field :has_draft_invoices, Boolean, null: false
       field :has_overridden_plans, Boolean
+      field :has_subscriptions, Boolean, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -48,15 +53,49 @@ module Types
         object.charges.count
       end
 
-      def has_overridden_plans
-        object.children.any?
-      end
-
       def subscriptions_count
         count = object.subscriptions.count
         return count unless object.children
 
         count + object.children.joins(:subscriptions).select("subscriptions.id").distinct.count
+      end
+
+      def has_active_subscriptions
+        object.subscriptions.active.exists? || has_active_subscriptions_on_children
+      end
+
+      def has_active_subscriptions_on_children
+        object.children.joins(:subscriptions).merge(Subscription.active).exists?
+      end
+
+      # NOTE: should this one include children charges?
+      def has_charges
+        object.charges.exists?
+      end
+
+      # NOTE: if it has active subscriptions, it has customers
+      def has_customers
+        has_active_subscriptions
+      end
+
+      def has_draft_invoices
+        object.invoices.draft.exists? || has_draft_invoices_on_children
+      end
+
+      def has_draft_invoices_on_children
+        object.children.joins(:invoices).merge(Invoice.draft).exists?
+      end
+
+      def has_overridden_plans
+        object.children.exists?
+      end
+
+      def has_subscriptions
+        object.subscriptions.exists? || has_subscriptions_on_children
+      end
+
+      def has_subscriptions_on_children
+        object.children.joins(:subscriptions).exists?
       end
     end
   end
