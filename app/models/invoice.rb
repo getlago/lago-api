@@ -13,6 +13,7 @@ class Invoice < ApplicationRecord
   TAX_INVOICE_LABEL_COUNTRIES = %w[AU AE NZ ID SG].freeze
 
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
+  before_save :ensure_billing_entity_sequential_id, unless: -> { self_billed? }
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
@@ -420,6 +421,30 @@ class Invoice < ApplicationRecord
       formatted_year_and_month = Time.now.in_time_zone(organization.timezone || "UTC").strftime("%Y%m")
 
       self.number = "#{organization.document_number_prefix}-#{formatted_year_and_month}-#{org_formatted_sequential_id}"
+    end
+  end
+
+  def ensure_billing_entity_sequential_id
+    return if self_billed?
+    return if billing_entity_sequential_id
+
+    # NOTE: this should actually be run by the state machine, however,
+    #       we are not using it and status is changed without calling the state machine event
+    return unless status_changed_to_finalized?
+
+    attempts = 0
+    max_attempts = 10
+
+    begin
+      attempts += 1
+
+      self.class.transaction do
+        last_sequential_id = billing_entity.invoices.non_self_billed.with_generated_number.count
+        update!(billing_entity_sequential_id: last_sequential_id.next)
+      end
+    rescue ActiveRecord::RecordNotUnique
+      retry if attempts < max_attempts
+      raise "Failed to generate billing entity sequential id after #{max_attempts} attempts"
     end
   end
 
