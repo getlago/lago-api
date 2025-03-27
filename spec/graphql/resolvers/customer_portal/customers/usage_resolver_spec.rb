@@ -236,7 +236,9 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
         }
       )
 
-      charge_usage = result["data"]["customerPortalCustomerUsage"]["chargesUsage"][0]
+      charge_usage = result["data"]["customerPortalCustomerUsage"]["chargesUsage"].find do |usage|
+        usage["billableMetric"]["code"] == metric.code
+      end
       filters_usage = charge_usage["filters"]
 
       aggregate_failures do
