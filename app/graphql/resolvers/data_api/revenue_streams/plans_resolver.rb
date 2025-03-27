@@ -17,7 +17,7 @@ module Resolvers
         argument :order_by, Types::DataApi::RevenueStreams::OrderByEnum, required: false
         argument :page, Integer, required: false
 
-        type Types::DataApi::RevenueStreams::Plans::Object.collection_type, null: false
+        type Types::DataApi::RevenueStreams::Plans::Collection, null: false
 
         def resolve(**args)
           result = ::DataApi::RevenueStreams::PlansService.call(current_organization, **args)

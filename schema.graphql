@@ -3650,6 +3650,11 @@ type DataApiRevenueStreamsCustomers {
   revenueStreamsCustomers: [DataApiRevenueStreamCustomer!]!
 }
 
+type DataApiRevenueStreamsPlans {
+  meta: DataApiMetadata!
+  revenueStreamsPlans: [RevenueStreamPlan!]!
+}
+
 type DataApiUsageInvoiced {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
@@ -7013,7 +7018,7 @@ type Query {
   """
   Query revenue streams plans of an organization
   """
-  dataApiRevenueStreamsPlans(currency: CurrencyEnum, limit: Int, orderBy: OrderByEnum, page: Int): RevenueStreamPlanCollection!
+  dataApiRevenueStreamsPlans(currency: CurrencyEnum, limit: Int, orderBy: OrderByEnum, page: Int): DataApiRevenueStreamsPlans!
 
   """
   Query invoiced usages of an organization
@@ -7562,21 +7567,6 @@ type RevenueStreamPlan {
   planId: ID!
   planInterval: PlanInterval!
   planName: String!
-}
-
-"""
-RevenueStreamPlanCollection type
-"""
-type RevenueStreamPlanCollection {
-  """
-  A collection of paginated RevenueStreamPlanCollection
-  """
-  collection: [RevenueStreamPlan!]!
-
-  """
-  Pagination Metadata for navigating the Pagination
-  """
-  metadata: CollectionMetadata!
 }
 
 """

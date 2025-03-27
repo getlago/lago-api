@@ -8,7 +8,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
     <<~GQL
       query($currency: CurrencyEnum, $orderBy: OrderByEnum, $limit: Int, $page: Int) {
         dataApiRevenueStreamsPlans(currency: $currency, orderBy: $orderBy, limit: $limit, page: $page) {
-          collection {
+          revenueStreamsPlans {
             planCode
             planDeletedAt
             planId
@@ -21,6 +21,13 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
             grossRevenueShare
             netRevenueAmountCents
             netRevenueShare
+          }
+          meta {
+            currentPage
+            nextPage
+            prevPage
+            totalCount
+            totalPages
           }
         }
       }
@@ -51,7 +58,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
     )
 
     revenue_streams_response = result["data"]["dataApiRevenueStreamsPlans"]
-    expect(revenue_streams_response["collection"].first).to include(
+    expect(revenue_streams_response["revenueStreamsPlans"].first).to include(
       {
         "planId" => "8d39f27f-8371-43ea-a327-c9579e70eeb3",
         "amountCurrency" => "EUR",
@@ -66,6 +73,13 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
         "grossRevenueShare" => 0.1148,
         "netRevenueShare" => 0.1148
       }
+    )
+    expect(revenue_streams_response["meta"]).to include(
+      "currentPage" => 1,
+      "nextPage" => 2,
+      "prevPage" => 0,
+      "totalCount" => 100,
+      "totalPages" => 5
     )
   end
 end
