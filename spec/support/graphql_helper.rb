@@ -8,6 +8,8 @@ module GraphQLHelper
   end
 
   def execute_graphql(current_user: nil, query: nil, current_organization: nil, customer_portal_user: nil, request: nil, permissions: nil, **kwargs) # rubocop:disable Metrics/ParameterLists
+    previous_source = CurrentContext.source
+    CurrentContext.source = "graphql"
     unless permissions.is_a?(Hash)
       # we allow passing a single permission string or an array for convenience
       permissions = Array.wrap(permissions).index_with { true }
@@ -41,6 +43,7 @@ module GraphQLHelper
       end
     end
 
+    CurrentContext.source = previous_source
     res
   end
 
