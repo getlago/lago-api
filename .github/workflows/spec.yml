@@ -76,5 +76,8 @@ jobs:
         run: bin/rails db:migrate:clickhouse
       - name: Dump Clickhouse database schema
         run: bin/rails db:schema:dump:clickhouse
-      - name: Run tests & retry failed tests
-        run: bundle exec rake knapsack_pro:queue:rspec || bundle exec rspec --only-failures
+      - name: Run tests
+        run: bundle exec rake knapsack_pro:queue:rspec
+        continue-on-error: true
+      - name: retry failed tests
+        run: bundle exec rspec --only-failures
