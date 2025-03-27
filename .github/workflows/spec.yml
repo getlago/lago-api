@@ -32,6 +32,7 @@ jobs:
       matrix:
         ci_node_total: [8]
         ci_node_index: [0, 1, 2, 3, 4, 5, 6, 7]
+
     env:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
@@ -75,8 +76,5 @@ jobs:
         run: bin/rails db:migrate:clickhouse
       - name: Dump Clickhouse database schema
         run: bin/rails db:schema:dump:clickhouse
-      - name: Run tests
-        run: bundle exec rake knapsack_pro:queue:rspec
-        continue-on-error: true
-      - name: retry failed tests
-        run: bundle exec rspec --only-failures
+      - name: Run tests & retry failed tests
+        run: bundle exec rake knapsack_pro:queue:rspec || bundle exec rspec --only-failures
