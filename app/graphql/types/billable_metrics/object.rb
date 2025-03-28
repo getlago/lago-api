@@ -23,12 +23,6 @@ module Types
 
       field :recurring, Boolean, null: false
 
-      # TODO: remove these count fields after frontend migration is completed
-      field :active_subscriptions_count, Integer, null: false
-      field :draft_invoices_count, Integer, null: false
-      field :plans_count, Integer, null: false
-      field :subscriptions_count, Integer, null: false
-
       field :has_active_subscriptions, Boolean, null: false
       field :has_draft_invoices, Boolean, null: false
       field :has_plans, Boolean, null: false
@@ -43,24 +37,6 @@ module Types
 
       field :integration_mappings, [Types::IntegrationMappings::Object], null: true do
         argument :integration_id, ID, required: false
-      end
-
-      def subscriptions_count
-        Subscription.where(plan_id: object.charges.select(:plan_id).distinct).count
-      end
-
-      def active_subscriptions_count
-        Subscription.active.where(plan_id: object.charges.select(:plan_id).distinct).count
-      end
-
-      def draft_invoices_count
-        Invoice.draft.where(id: object.charges
-          .joins(:fees)
-          .select(:invoice_id)).count
-      end
-
-      def plans_count
-        object.charges.distinct.count(:plan_id)
       end
 
       def has_active_subscriptions
