@@ -6667,6 +6667,7 @@ type Plan {
   Number of customers attached to a plan
   """
   customersCount: Int!
+  deletedAt: ISO8601DateTime
   description: String
   draftInvoicesCount: Int!
   hasActiveSubscriptions: Boolean!
