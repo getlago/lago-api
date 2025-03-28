@@ -13,6 +13,7 @@ class Invoice < ApplicationRecord
   TAX_INVOICE_LABEL_COUNTRIES = %w[AU AE NZ ID SG].freeze
 
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
+  before_save :ensure_billing_entity_sequential_id, unless: -> { self_billed? }
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
@@ -423,6 +424,30 @@ class Invoice < ApplicationRecord
     end
   end
 
+  def ensure_billing_entity_sequential_id
+    return if self_billed?
+    return if billing_entity_sequential_id
+
+    # NOTE: this should actually be run by the state machine, however,
+    #       we are not using it and status is changed without calling the state machine event
+    return unless status_changed_to_finalized?
+
+    attempts = 0
+    max_attempts = 10
+
+    begin
+      attempts += 1
+
+      self.class.transaction do
+        last_sequential_id = billing_entity.invoices.non_self_billed.with_generated_number.count
+        update!(billing_entity_sequential_id: last_sequential_id.next)
+      end
+    rescue ActiveRecord::RecordNotUnique
+      retry if attempts < max_attempts
+      raise "Failed to generate billing entity sequential id after #{max_attempts} attempts"
+    end
+  end
+
   def ensure_organization_sequential_id
     return if organization_sequential_id.present? && organization_sequential_id.positive?
     return unless status_changed_to_finalized?
@@ -527,7 +552,7 @@ end
 #  created_at                              :datetime         not null
 #  updated_at                              :datetime         not null
 #  billing_entity_id                       :uuid
-#  billing_entity_sequential_id            :integer          default(0)
+#  billing_entity_sequential_id            :integer
 #  customer_id                             :uuid
 #  organization_id                         :uuid             not null
 #  organization_sequential_id              :integer          default(0), not null
@@ -535,7 +560,7 @@ end
 #
 # Indexes
 #
-#  idx_on_organization_id_billing_entity_sequential_id_20bfd08c5a  (organization_id,billing_entity_sequential_id DESC)
+#  idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655  (billing_entity_id,billing_entity_sequential_id DESC) UNIQUE
 #  idx_on_organization_id_organization_sequential_id_2387146f54    (organization_id,organization_sequential_id DESC)
 #  index_invoices_on_billing_entity_id                             (billing_entity_id)
 #  index_invoices_on_customer_id                                   (customer_id)
