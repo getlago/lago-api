@@ -154,8 +154,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Xero do
             {
               "external_id" => "m2",
               "description" => charge_fee.invoice_name,
-              "units" => 2.0,
-              "precise_unit_amount" => 4.121212121233378,
+              "units" => 1,
+              "amount_cents" => charge_fee.amount_cents,
               "account_code" => "m22",
               "taxes_amount_cents" => 2
             },
