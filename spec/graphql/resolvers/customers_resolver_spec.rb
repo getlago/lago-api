@@ -92,4 +92,43 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
       expect(invoices_response["metadata"]["totalCount"]).to eq(1)
     end
   end
+
+  context "when filtering by with_deleted" do
+    let(:customer) { create(:customer, organization:) }
+    let(:deleted_customer) { create(:customer, organization:, deleted_at: Time.current) }
+
+    let(:query) do
+      <<~GQL
+        query($withDeleted: Boolean) {
+          customers(limit: 5, withDeleted: $withDeleted) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      customer
+      deleted_customer
+    end
+
+    it "returns all customers including deleted ones" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {withDeleted: true}
+      )
+
+      customers_response = result["data"]["customers"]
+
+      expect(customers_response["collection"].count).to eq(2)
+      expect(customers_response["collection"].map { |c| c["id"] }).to include(customer.id, deleted_customer.id)
+
+      expect(customers_response["metadata"]["currentPage"]).to eq(1)
+      expect(customers_response["metadata"]["totalCount"]).to eq(2)
+    end
+  end
 end

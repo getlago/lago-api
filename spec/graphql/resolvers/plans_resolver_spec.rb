@@ -6,8 +6,8 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
   let(:required_permission) { "plans:view" }
   let(:query) do
     <<~GQL
-      query {
-        plans(limit: 5) {
+      query($withDeleted: Boolean) {
+        plans(limit: 5, withDeleted: $withDeleted) {
           collection { id chargesCount customersCount }
           metadata { currentPage, totalCount }
         }
@@ -50,6 +50,33 @@ RSpec.describe Resolvers::PlansResolver, type: :graphql do
 
       expect(plans_response["metadata"]["currentPage"]).to eq(1)
       expect(plans_response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
+
+  context "when filtering by with_deleted" do
+    let(:plan) { create(:plan, organization:) }
+    let(:deleted_plan) { create(:plan, organization:, deleted_at: Time.current) }
+
+    before do
+      plan
+      deleted_plan
+    end
+
+    it "returns all plans including deleted ones" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {withDeleted: true}
+      )
+
+      plans_response = result["data"]["plans"]
+      expect(plans_response["collection"].count).to eq(2)
+      expect(plans_response["collection"].map { |p| p["id"] }).to include(plan.id, deleted_plan.id)
+
+      expect(plans_response["metadata"]["currentPage"]).to eq(1)
+      expect(plans_response["metadata"]["totalCount"]).to eq(2)
     end
   end
 end
