@@ -22,6 +22,9 @@ module Clock
         next unless invoice.invoice_subscriptions.any?
         invoicing_reasons = invoice.invoice_subscriptions.pluck(:invoicing_reason).uniq.compact
         invoicing_reason = (invoicing_reasons.size == 1) ? invoicing_reasons.first : :upgrading
+
+        next if invoicing_reason.to_s == "in_advance_charge"
+
         BillSubscriptionJob.perform_later(
           invoice.subscriptions.to_a,
           invoice.invoice_subscriptions.first.timestamp.to_i,
