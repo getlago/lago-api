@@ -13,23 +13,15 @@ module Wallets
       def call
         credits_amount = wallet_transaction.credit_amount
         currency = wallet.currency_for_balance
-        retries = 0
 
-        begin
-          wallet.update!(
-            balance_cents: ((wallet.credits_balance - credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor,
-            credits_balance: wallet.credits_balance - credits_amount,
-            last_balance_sync_at: Time.zone.now,
-            consumed_credits: wallet.consumed_credits + credits_amount,
-            consumed_amount_cents: ((wallet.consumed_credits + credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor,
-            last_consumed_credit_at: Time.current
-          )
-        rescue ActiveRecord::StaleObjectError
-          retries += 1
-          wallet.reload
-          retry if retries < 3
-          raise
-        end
+        wallet.update!(
+          balance_cents: ((wallet.credits_balance - credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor,
+          credits_balance: wallet.credits_balance - credits_amount,
+          last_balance_sync_at: Time.zone.now,
+          consumed_credits: wallet.consumed_credits + credits_amount,
+          consumed_amount_cents: ((wallet.consumed_credits + credits_amount) * wallet.rate_amount * currency.subunit_to_unit).floor,
+          last_consumed_credit_at: Time.current
+        )
 
         Wallets::Balance::RefreshOngoingService.call(wallet:, include_generating_invoices: true)
 
