@@ -54,6 +54,7 @@ module Types
       field :salesforce_customer, Types::IntegrationCustomers::Salesforce, null: true
       field :xero_customer, Types::IntegrationCustomers::Xero, null: true
 
+      field :billing_entity, Types::BillingEntities::Object, null: false
       field :invoices, [Types::Invoices::Object]
 
       field :applied_add_ons, [Types::AppliedAddOns::Object], null: true
