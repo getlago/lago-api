@@ -10,7 +10,7 @@ module Events
       end
     end
 
-    retry_on ActiveJob::Uniqueness::JobNotUnique, wait: :polynomially_longer, attempts: 10, jitter: 0.75
+    retry_on ActiveJob::Uniqueness::JobNotUnique, wait: :polynomially_longer, attempts: 3, jitter: 0.75
 
     unique :until_executed, on_conflict: :log
 

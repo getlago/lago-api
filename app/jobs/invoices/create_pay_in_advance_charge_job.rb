@@ -12,9 +12,9 @@ module Invoices
 
     retry_on Sequenced::SequenceError
     retry_on BaseService::ThrottlingError, wait: :polynomially_longer, attempts: 25
-    retry_on ActiveJob::Uniqueness::JobNotUnique, wait: :polynomially_longer, attempts: 25
+    retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6, jitter: 0.75
 
-    unique :until_executed
+    unique :until_executed, on_conflict: :log
 
     def perform(charge:, event:, timestamp:, invoice: nil)
       result = Invoices::CreatePayInAdvanceChargeService.call(charge:, event:, timestamp:, invoice:)
@@ -39,7 +39,7 @@ module Invoices
     def lock_key_arguments
       args = arguments.first
       event = Events::CommonFactory.new_instance(source: args[:event])
-      [args[:charge], event.organization_id, event.external_subscription_id]
+      [args[:charge], event.organization_id, event.external_subscription_id, event.transaction_id]
     end
 
     private
