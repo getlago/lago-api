@@ -3,7 +3,8 @@
 module InboundWebhooks
   class ProcessService < BaseService
     WEBHOOK_HANDLER_SERVICES = {
-      stripe: PaymentProviders::Stripe::HandleIncomingWebhookService
+      stripe: PaymentProviders::Stripe::HandleIncomingWebhookService,
+      moneyhash: PaymentProviders::Moneyhash::HandleIncomingWebhookService
     }
 
     def initialize(inbound_webhook:)
