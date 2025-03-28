@@ -27,6 +27,10 @@ module Api
         def resource_name
           "analytic"
         end
+
+        def billing_entity
+          @billing_entity ||= BillingEntity.find_by(organization_id: current_organization.id, code: params[:billing_entity_code])
+        end
       end
     end
   end

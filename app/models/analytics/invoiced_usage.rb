@@ -6,6 +6,10 @@ module Analytics
 
     class << self
       def query(organization_id, **args)
+        if args[:billing_entity_id].present?
+          and_billing_entity_id_sql = sanitize_sql(["AND i.billing_entity_id = :billing_entity_id", args[:billing_entity_id]])
+        end
+
         if args[:months].present?
           months_interval = (args[:months].to_i <= 1) ? 0 : args[:months].to_i - 1
 
@@ -51,6 +55,7 @@ module Analytics
             AND f.fee_type = 0
             AND i.self_billed IS FALSE
             AND i.payment_dispute_lost_at IS NULL
+            #{and_billing_entity_id_sql}
             AND c.organization_id = :organization_id
           ),
           total_revenue_per_bm AS (
