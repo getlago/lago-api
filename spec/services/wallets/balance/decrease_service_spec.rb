@@ -54,5 +54,24 @@ RSpec.describe Wallets::Balance::DecreaseService, type: :service do
       create_service.call
       expect(Wallets::Balance::RefreshOngoingService).to have_received(:call).with(wallet: wallet, include_generating_invoices: true)
     end
+
+    context "when wallet is stale" do
+      it "retries the update on stale object" do
+        # Create a stale version by loading the same wallet twice
+        stale_wallet = Wallet.find(wallet.id)
+        current_wallet = Wallet.find(wallet.id)
+
+        # Update the current wallet to make stale_wallet outdated
+        current_wallet.update!(credits_balance: 15.0)
+
+        # Create service with stale wallet
+        service = described_class.new(wallet: stale_wallet, wallet_transaction:)
+
+        # Should succeed despite the stale wallet
+        expect { service.call }
+          .to change { stale_wallet.reload.credits_balance }.from(15.0).to(10.5)
+          .and change { stale_wallet.consumed_credits }.from(0).to(4.5)
+      end
+    end
   end
 end
