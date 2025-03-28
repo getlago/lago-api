@@ -14,11 +14,9 @@ module Credits
         return result.service_failure!(code: "already_applied", message: "Prepaid credits already applied")
       end
 
-      amount_cents = compute_amount
-      wallet_credit = WalletCredit.from_amount_cents(wallet:, amount_cents:)
-
-      ActiveRecord::Base.transaction do
-        ActiveRecord::Base.connection.execute("SET LOCAL lock_timeout = '10s'")
+      wallet.with_lock("FOR UPDATE NOWAIT") do
+        amount_cents = compute_amount
+        wallet_credit = WalletCredit.from_amount_cents(wallet:, amount_cents:)
         wallet_transaction = WalletTransactions::CreateService.call!(
           wallet:,
           wallet_credit:,
