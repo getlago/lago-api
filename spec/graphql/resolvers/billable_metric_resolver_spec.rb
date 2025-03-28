@@ -24,11 +24,6 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
           hasActiveSubscriptions
           hasDraftInvoices
           hasPlans
-
-          subscriptionsCount
-          activeSubscriptionsCount
-          draftInvoicesCount
-          plansCount
         }
       }
     GQL
@@ -50,10 +45,6 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
     expect(metric_response["hasActiveSubscriptions"]).to eq(false)
     expect(metric_response["hasDraftInvoices"]).to eq(false)
     expect(metric_response["hasPlans"]).to eq(false)
-
-    expect(metric_response["subscriptionsCount"]).to eq(0)
-    expect(metric_response["activeSubscriptionsCount"]).to eq(0)
-    expect(metric_response["draftInvoicesCount"]).to eq(0)
   end
 
   context "when billable metric has subscriptions" do
@@ -66,9 +57,6 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
       metric_response = graphql_request["data"]["billableMetric"]
       expect(metric_response["hasSubscriptions"]).to eq(true)
       expect(metric_response["hasActiveSubscriptions"]).to eq(false)
-
-      expect(metric_response["subscriptionsCount"]).to eq(1)
-      expect(metric_response["activeSubscriptionsCount"]).to eq(0)
     end
   end
 
@@ -85,9 +73,6 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
       metric_response = graphql_request["data"]["billableMetric"]
       expect(metric_response["hasSubscriptions"]).to eq(true)
       expect(metric_response["hasActiveSubscriptions"]).to eq(true)
-
-      expect(metric_response["subscriptionsCount"]).to eq(2)
-      expect(metric_response["activeSubscriptionsCount"]).to eq(1)
     end
   end
 
@@ -110,7 +95,6 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
     it "returns true for has draft invoices" do
       metric_response = graphql_request["data"]["billableMetric"]
       expect(metric_response["hasDraftInvoices"]).to eq(true)
-      expect(metric_response["draftInvoicesCount"]).to eq(1)
     end
   end
 
@@ -125,7 +109,6 @@ RSpec.describe Resolvers::BillableMetricResolver, type: :graphql do
     it "returns true for has plans" do
       metric_response = graphql_request["data"]["billableMetric"]
       expect(metric_response["hasPlans"]).to eq(true)
-      expect(metric_response["plansCount"]).to eq(2)
     end
   end
 
