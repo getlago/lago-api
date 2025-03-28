@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # This file is auto-generated from the current state of the database. Instead
 # of editing this file, please use the migrations feature of Active Record to
 # incrementally modify your database, and then regenerate this schema definition.
@@ -992,13 +994,13 @@ ActiveRecord::Schema[7.2].define(version: 2025_03_27_130155) do
     t.integer "applied_grace_period"
     t.uuid "billing_entity_id"
     t.integer "billing_entity_sequential_id"
-    t.index ["billing_entity_id", "billing_entity_sequential_id"], name: "idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655", unique: true, order: { billing_entity_sequential_id: :desc }, include: ["self_billed"]
+    t.index ["billing_entity_id", "billing_entity_sequential_id"], name: "idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655", unique: true, order: {billing_entity_sequential_id: :desc}, include: ["self_billed"]
     t.index ["billing_entity_id"], name: "index_invoices_on_billing_entity_id"
     t.index ["customer_id", "sequential_id"], name: "index_invoices_on_customer_id_and_sequential_id", unique: true
     t.index ["customer_id"], name: "index_invoices_on_customer_id"
     t.index ["issuing_date"], name: "index_invoices_on_issuing_date"
     t.index ["number"], name: "index_invoices_on_number"
-    t.index ["organization_id", "organization_sequential_id"], name: "idx_on_organization_id_organization_sequential_id_2387146f54", order: { organization_sequential_id: :desc }, include: ["self_billed"]
+    t.index ["organization_id", "organization_sequential_id"], name: "idx_on_organization_id_organization_sequential_id_2387146f54", order: {organization_sequential_id: :desc}, include: ["self_billed"]
     t.index ["organization_id"], name: "index_invoices_on_organization_id"
     t.index ["payment_overdue"], name: "index_invoices_on_payment_overdue"
     t.index ["ready_to_be_refreshed"], name: "index_invoices_on_ready_to_be_refreshed", where: "(ready_to_be_refreshed = true)"
