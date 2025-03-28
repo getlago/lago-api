@@ -33,6 +33,7 @@ module Types
       field :has_subscriptions, Boolean, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       field :active_subscriptions_count, Integer, null: false
