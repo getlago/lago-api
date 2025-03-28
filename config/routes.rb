@@ -20,6 +20,8 @@ Rails.application.routes.draw do
         get :overdue_balance, to: "overdue_balances#index", as: :overdue_balance
       end
 
+      resources :billing_entities, param: :code, only: %i[index show]
+
       resources :customers, param: :external_id, only: %i[create index show destroy] do
         get :portal_url
 
