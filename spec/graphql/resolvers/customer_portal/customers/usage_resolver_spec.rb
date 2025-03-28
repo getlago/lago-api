@@ -229,7 +229,6 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
     end
 
     it "returns the filter usage for the customer" do
-      Subscriptions::ChargeCacheService.expire_for_subscription(subscription)
       result = execute_graphql(
         customer_portal_user: customer,
         query:,

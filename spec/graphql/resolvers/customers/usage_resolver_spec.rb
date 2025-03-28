@@ -243,7 +243,10 @@ RSpec.describe Resolvers::Customers::UsageResolver, type: :graphql do
         }
       )
 
-      charge_usage = result["data"]["customerUsage"]["chargesUsage"][0]
+      charge_usage = result["data"]["customerUsage"]["chargesUsage"].find do |usage|
+        usage["billableMetric"]["code"] == metric.code
+      end
+
       filters_usage = charge_usage["filters"]
 
       aggregate_failures do
