@@ -24,6 +24,7 @@ module Invoices
       result.invoice = invoice
 
       ActiveRecord::Base.transaction do
+        ActiveRecord::Base.connection.execute("SET LOCAL lock_timeout = '10s'")
         fees.each { |f| f.update!(invoice:) }
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
