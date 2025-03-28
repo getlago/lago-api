@@ -9,6 +9,7 @@ class PlansQuery < BaseQuery
     plans = apply_consistent_ordering(plans)
 
     plans = exclude_pending_deletion(plans) unless filters.include_pending_deletion
+    plans = plans.with_discarded if filters.with_deleted
 
     result.plans = plans
     result

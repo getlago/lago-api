@@ -6998,7 +6998,7 @@ type Query {
   """
   Query customers of an organization
   """
-  customers(accountType: [CustomerAccountTypeEnum!], limit: Int, page: Int, searchTerm: String): CustomerCollection!
+  customers(accountType: [CustomerAccountTypeEnum!], limit: Int, page: Int, searchTerm: String, withDeleted: Boolean): CustomerCollection!
 
   """
   Query monthly recurring revenues of an organization
@@ -7288,7 +7288,7 @@ type Query {
   """
   Query plans of an organization
   """
-  plans(limit: Int, page: Int, searchTerm: String): PlanCollection!
+  plans(limit: Int, page: Int, searchTerm: String, withDeleted: Boolean): PlanCollection!
 
   """
   Query a single subscription of an organization

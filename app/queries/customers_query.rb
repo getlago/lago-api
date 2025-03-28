@@ -11,6 +11,7 @@ class CustomersQuery < BaseQuery
     customers = apply_consistent_ordering(customers)
 
     customers = with_account_type(customers) if filters.account_type.present?
+    customers = customers.with_discarded if filters.with_deleted
 
     result.customers = customers
     result
