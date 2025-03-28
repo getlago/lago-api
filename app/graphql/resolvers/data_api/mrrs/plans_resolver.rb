@@ -20,7 +20,11 @@ module Resolvers
 
         def resolve(**args)
           result = ::DataApi::Mrrs::PlansService.call(current_organization, **args)
-          result.data_mrrs_plans
+
+          {
+            collection: result.data_mrrs_plans["mrrs_plans"],
+            metadata: result.data_mrrs_plans["meta"]
+          }
         end
       end
     end

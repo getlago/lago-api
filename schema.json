@@ -15788,23 +15788,7 @@
           "possibleTypes": null,
           "fields": [
             {
-              "name": "meta",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "DataApiMetadata",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "mrrsPlans",
+              "name": "collection",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -15821,6 +15805,22 @@
                       "ofType": null
                     }
                   }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "metadata",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "DataApiMetadata",
+                  "ofType": null
                 }
               },
               "isDeprecated": false,
@@ -16411,23 +16411,7 @@
           "possibleTypes": null,
           "fields": [
             {
-              "name": "meta",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "DataApiMetadata",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "revenueStreamsCustomers",
+              "name": "collection",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -16444,6 +16428,22 @@
                       "ofType": null
                     }
                   }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "metadata",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "DataApiMetadata",
+                  "ofType": null
                 }
               },
               "isDeprecated": false,

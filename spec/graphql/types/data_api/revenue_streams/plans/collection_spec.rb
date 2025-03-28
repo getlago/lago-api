@@ -7,7 +7,7 @@ RSpec.describe Types::DataApi::RevenueStreams::Plans::Collection do
 
   it do
     expect(subject.graphql_name).to eq("DataApiRevenueStreamsPlans")
-    expect(subject).to have_field(:revenue_streams_plans).of_type("[DataApiRevenueStreamPlan!]!")
-    expect(subject).to have_field(:meta).of_type("DataApiMetadata!")
+    expect(subject).to have_field(:collection).of_type("[DataApiRevenueStreamPlan!]!")
+    expect(subject).to have_field(:metadata).of_type("DataApiMetadata!")
   end
 end

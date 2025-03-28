@@ -3591,8 +3591,8 @@ type DataApiMrrPlan {
 }
 
 type DataApiMrrsPlans {
-  meta: DataApiMetadata!
-  mrrsPlans: [DataApiMrrPlan!]!
+  collection: [DataApiMrrPlan!]!
+  metadata: DataApiMetadata!
 }
 
 type DataApiRevenueStream {
@@ -3651,8 +3651,8 @@ type DataApiRevenueStreamPlan {
 }
 
 type DataApiRevenueStreamsCustomers {
-  meta: DataApiMetadata!
-  revenueStreamsCustomers: [DataApiRevenueStreamCustomer!]!
+  collection: [DataApiRevenueStreamCustomer!]!
+  metadata: DataApiMetadata!
 }
 
 type DataApiRevenueStreamsPlans {

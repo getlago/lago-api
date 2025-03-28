@@ -21,7 +21,11 @@ module Resolvers
 
         def resolve(**args)
           result = ::DataApi::RevenueStreams::CustomersService.call(current_organization, **args)
-          result.data_revenue_streams_customers
+
+          {
+            collection: result.data_revenue_streams_customers["revenue_streams_customers"],
+            metadata: result.data_revenue_streams_customers["meta"]
+          }
         end
       end
     end

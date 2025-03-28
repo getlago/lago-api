@@ -7,9 +7,9 @@ module Types
         class Collection < Types::BaseObject
           graphql_name "DataApiMrrsPlans"
 
-          field :mrrs_plans, [Types::DataApi::Mrrs::Plans::Object], null: false
+          field :collection, [Types::DataApi::Mrrs::Plans::Object], null: false
 
-          field :meta, Types::DataApi::Metadata, null: false
+          field :metadata, Types::DataApi::Metadata, null: false
         end
       end
     end
