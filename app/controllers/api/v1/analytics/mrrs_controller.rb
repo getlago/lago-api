@@ -5,7 +5,7 @@ module Api
     module Analytics
       class MrrsController < BaseController
         def index
-          @result = ::Analytics::MrrsService.new(current_organization, **filters).call
+          @result = ::Analytics::MrrsService.call(current_organization, **filters)
 
           super
         end
@@ -15,7 +15,8 @@ module Api
         def filters
           {
             currency: params[:currency]&.upcase,
-            months: params[:months]
+            months: params[:months],
+            billing_entity_id: billing_entity&.id
           }
         end
       end

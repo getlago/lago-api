@@ -2,6 +2,7 @@
 
 module Analytics
   class BaseService < BaseService
+    Result = BaseResult[:records]
     def initialize(organization, **filters)
       @organization = organization
       @filters = filters

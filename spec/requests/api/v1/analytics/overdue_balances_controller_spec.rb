@@ -4,10 +4,16 @@ require "rails_helper"
 
 RSpec.describe Api::V1::Analytics::OverdueBalancesController, type: :request do
   describe "GET /analytics/overdue_balance" do
-    subject { get_with_token(organization, "/api/v1/analytics/overdue_balance") }
+    subject { get_with_token(organization, "/api/v1/analytics/overdue_balance", params) }
 
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization, created_at: DateTime.new(2023, 11, 1)) }
+    let(:billing_entity) { create(:billing_entity, organization: organization) }
+    let(:params) { {} }
+
+    before do
+      allow(Analytics::OverdueBalancesService).to receive(:call).and_call_original
+    end
 
     include_examples "requires API permission", "analytic", "read"
 
@@ -37,6 +43,16 @@ RSpec.describe Api::V1::Analytics::OverdueBalancesController, type: :request do
             }
           ]
         )
+      end
+      expect(Analytics::OverdueBalancesService).to have_received(:call).with(organization, billing_entity_id: nil, currency: nil, months: nil, external_customer_id: nil)
+    end
+
+    context "when sending params" do
+      let(:params) { {billing_entity_code: billing_entity.code} }
+
+      it "calls the service with the billing_entity_id" do
+        subject
+        expect(Analytics::OverdueBalancesService).to have_received(:call).with(organization, billing_entity_id: billing_entity.id, currency: nil, months: nil, external_customer_id: nil)
       end
     end
   end

@@ -7058,7 +7058,7 @@ type Query {
   """
   Query gross revenue of an organization
   """
-  grossRevenues(currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): GrossRevenueCollection!
+  grossRevenues(billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): GrossRevenueCollection!
 
   """
   Query a single integration
@@ -7143,7 +7143,7 @@ type Query {
   """
   Query invoice collections of an organization
   """
-  invoiceCollections(currency: CurrencyEnum): FinalizedInvoiceCollectionCollection!
+  invoiceCollections(billingEntityId: ID, currency: CurrencyEnum): FinalizedInvoiceCollectionCollection!
 
   """
   Query invoice's credit note
@@ -7175,7 +7175,7 @@ type Query {
   """
   Query invoiced usage of an organization
   """
-  invoicedUsages(currency: CurrencyEnum): InvoicedUsageCollection!
+  invoicedUsages(billingEntityId: ID, currency: CurrencyEnum): InvoicedUsageCollection!
 
   """
   Query invoices
@@ -7213,7 +7213,7 @@ type Query {
   """
   Query MRR of an organization
   """
-  mrrs(currency: CurrencyEnum): MrrCollection!
+  mrrs(billingEntityId: ID, currency: CurrencyEnum): MrrCollection!
 
   """
   Query the current organization
@@ -7223,7 +7223,7 @@ type Query {
   """
   Query overdue balances of an organization
   """
-  overdueBalances(currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): OverdueBalanceCollection!
+  overdueBalances(billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): OverdueBalanceCollection!
 
   """
   Query a password reset by token

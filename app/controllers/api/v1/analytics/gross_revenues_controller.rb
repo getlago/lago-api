@@ -5,7 +5,7 @@ module Api
     module Analytics
       class GrossRevenuesController < BaseController
         def index
-          @result = ::Analytics::GrossRevenuesService.new(current_organization, **filters).call
+          @result = ::Analytics::GrossRevenuesService.call(current_organization, **filters)
 
           super
         end
@@ -16,7 +16,8 @@ module Api
           {
             external_customer_id: params[:external_customer_id],
             currency: params[:currency]&.upcase,
-            months: params[:months]
+            months: params[:months],
+            billing_entity_id: billing_entity&.id
           }
         end
       end

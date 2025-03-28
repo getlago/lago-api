@@ -54,4 +54,72 @@ RSpec.describe Analytics::OverdueBalance, type: :model do
       end
     end
   end
+
+  describe ".find_all_by" do
+    subject(:overdue_balances) { described_class.find_all_by(organization.id, **args) }
+
+    let(:organization) { create(:organization, created_at: 3.months.ago) }
+    let(:customer) { create(:customer, organization:) }
+    let(:subscription) { create(:subscription, customer:) }
+    let(:billing_entity1) { organization.default_billing_entity }
+    let(:billing_entity2) { create(:billing_entity, organization: organization) }
+    let(:invoice1) do
+      create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 1.month.ago,
+        total_amount_cents: 100, billing_entity: billing_entity1, issuing_date: 1.month.ago)
+    end
+    let(:invoice2) do
+      create(:invoice, customer:, organization:, payment_overdue: false, payment_due_date: 1.month.ago,
+        total_amount_cents: 200, billing_entity: billing_entity2, issuing_date: 1.month.ago)
+    end
+    let(:invoice3) do
+      create(:invoice, customer:, organization:, payment_overdue: false, payment_due_date: 2.months.ago,
+        total_amount_cents: 300, billing_entity: billing_entity1, issuing_date: 2.months.ago)
+    end
+    let(:invoice4) do
+      create(:invoice, customer:, organization:, payment_overdue: true, payment_due_date: 2.months.ago,
+        total_amount_cents: 400, billing_entity: billing_entity2, issuing_date: 2.months.ago)
+    end
+
+    before do
+      invoice1
+      invoice2
+      invoice3
+      invoice4
+    end
+
+    context "with no arguments" do
+      let(:args) { {} }
+
+      it "returns the overdue balances" do
+        expect(overdue_balances).to match_array([
+          hash_including({
+            "month" => Time.current.beginning_of_month - 2.months,
+            "currency" => "EUR",
+            "amount_cents" => 400,
+            "lago_invoice_ids" => "[[\"#{invoice4.id}\"]]"
+          }), hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "currency" => "EUR",
+            "amount_cents" => 100,
+            "lago_invoice_ids" => "[[\"#{invoice1.id}\"]]"
+          })
+        ])
+      end
+    end
+
+    context "with billing entity id" do
+      let(:args) { {billing_entity_id: billing_entity1.id} }
+
+      it "returns the overdue balances for provided billing_entity only" do
+        expect(overdue_balances).to match_array([
+          hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "currency" => "EUR",
+            "amount_cents" => 100,
+            "lago_invoice_ids" => "[[\"#{invoice1.id}\"]]"
+          })
+        ])
+      end
+    end
+  end
 end
