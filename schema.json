@@ -15286,6 +15286,97 @@
         },
         {
           "kind": "OBJECT",
+          "name": "DataApiMetadata",
+          "description": null,
+          "interfaces": [],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "currentPage",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "nextPage",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "prevPage",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "totalCount",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "totalPages",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
           "name": "DataApiMrr",
           "description": null,
           "interfaces": [],
@@ -15626,6 +15717,18 @@
               "args": []
             },
             {
+              "name": "planDeletedAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "planId",
               "description": null,
               "type": {
@@ -15679,14 +15782,14 @@
         },
         {
           "kind": "OBJECT",
-          "name": "DataApiMrrPlanCollection",
-          "description": "DataApiMrrPlanCollection type",
+          "name": "DataApiMrrsPlans",
+          "description": null,
           "interfaces": [],
           "possibleTypes": null,
           "fields": [
             {
               "name": "collection",
-              "description": "A collection of paginated DataApiMrrPlanCollection",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -15710,13 +15813,13 @@
             },
             {
               "name": "metadata",
-              "description": "Pagination Metadata for navigating the Pagination",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "CollectionMetadata",
+                  "name": "DataApiMetadata",
                   "ofType": null
                 }
               },
@@ -15974,6 +16077,18 @@
               "args": []
             },
             {
+              "name": "customerDeletedAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "customerId",
               "description": null,
               "type": {
@@ -16091,14 +16206,213 @@
         },
         {
           "kind": "OBJECT",
-          "name": "DataApiRevenueStreamCustomerCollection",
-          "description": "DataApiRevenueStreamCustomerCollection type",
+          "name": "DataApiRevenueStreamPlan",
+          "description": null,
+          "interfaces": [],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "amountCurrency",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "CurrencyEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "customersCount",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "customersShare",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Float",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "grossRevenueAmountCents",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "BigInt",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "grossRevenueShare",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Float",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "netRevenueAmountCents",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "BigInt",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "netRevenueShare",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Float",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "planCode",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "planDeletedAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "planId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "planInterval",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "PlanInterval",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "planName",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "DataApiRevenueStreamsCustomers",
+          "description": null,
           "interfaces": [],
           "possibleTypes": null,
           "fields": [
             {
               "name": "collection",
-              "description": "A collection of paginated DataApiRevenueStreamCustomerCollection",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
@@ -16122,13 +16436,64 @@
             },
             {
               "name": "metadata",
-              "description": "Pagination Metadata for navigating the Pagination",
+              "description": null,
               "type": {
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "CollectionMetadata",
+                  "name": "DataApiMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "DataApiRevenueStreamsPlans",
+          "description": null,
+          "interfaces": [],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "collection",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "DataApiRevenueStreamPlan",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "metadata",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "DataApiMetadata",
                   "ofType": null
                 }
               },
@@ -34887,7 +35252,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "DataApiMrrPlanCollection",
+                  "name": "DataApiMrrsPlans",
                   "ofType": null
                 }
               },
@@ -34919,7 +35284,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "offset",
+                  "name": "page",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -35065,7 +35430,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "DataApiRevenueStreamCustomerCollection",
+                  "name": "DataApiRevenueStreamsCustomers",
                   "ofType": null
                 }
               },
@@ -35097,11 +35462,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "offset",
+                  "name": "orderBy",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
+                    "kind": "ENUM",
+                    "name": "OrderByEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -35109,11 +35474,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "orderBy",
+                  "name": "page",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "OrderByEnum",
+                    "kind": "SCALAR",
+                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -35130,7 +35495,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "OBJECT",
-                  "name": "RevenueStreamPlanCollection",
+                  "name": "DataApiRevenueStreamsPlans",
                   "ofType": null
                 }
               },
@@ -35162,11 +35527,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "offset",
+                  "name": "orderBy",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "Int",
+                    "kind": "ENUM",
+                    "name": "OrderByEnum",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -35174,11 +35539,11 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "orderBy",
+                  "name": "page",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "OrderByEnum",
+                    "kind": "SCALAR",
+                    "name": "Int",
                     "ofType": null
                   },
                   "defaultValue": null,
@@ -38458,244 +38823,6 @@
               "deprecationReason": null
             }
           ],
-          "enumValues": null
-        },
-        {
-          "kind": "OBJECT",
-          "name": "RevenueStreamPlan",
-          "description": null,
-          "interfaces": [],
-          "possibleTypes": null,
-          "fields": [
-            {
-              "name": "amountCurrency",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "CurrencyEnum",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "customersCount",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "customersShare",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Float",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "grossRevenueAmountCents",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "grossRevenueShare",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Float",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "netRevenueAmountCents",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "BigInt",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "netRevenueShare",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Float",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "planCode",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "planId",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "planInterval",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "ENUM",
-                  "name": "PlanInterval",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "planName",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            }
-          ],
-          "inputFields": null,
-          "enumValues": null
-        },
-        {
-          "kind": "OBJECT",
-          "name": "RevenueStreamPlanCollection",
-          "description": "RevenueStreamPlanCollection type",
-          "interfaces": [],
-          "possibleTypes": null,
-          "fields": [
-            {
-              "name": "collection",
-              "description": "A collection of paginated RevenueStreamPlanCollection",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "RevenueStreamPlan",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "metadata",
-              "description": "Pagination Metadata for navigating the Pagination",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "CollectionMetadata",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            }
-          ],
-          "inputFields": null,
           "enumValues": null
         },
         {

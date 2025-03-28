@@ -3,14 +3,14 @@
 module DataApi
   module RevenueStreams
     class PlansService < DataApi::BaseService
-      Result = BaseResult[:revenue_streams_plans]
+      Result = BaseResult[:data_revenue_streams_plans]
 
       def call
         return result.forbidden_failure! unless License.premium?
 
         data_revenue_streams_plans = http_client.get(headers:, params:)
 
-        result.revenue_streams_plans = data_revenue_streams_plans
+        result.data_revenue_streams_plans = data_revenue_streams_plans
         result
       end
 

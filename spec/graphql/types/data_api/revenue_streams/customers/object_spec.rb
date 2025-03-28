@@ -8,6 +8,7 @@ RSpec.describe Types::DataApi::RevenueStreams::Customers::Object do
   it do
     expect(subject.graphql_name).to eq("DataApiRevenueStreamCustomer")
     expect(subject).to have_field(:customer_id).of_type("ID!")
+    expect(subject).to have_field(:customer_deleted_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:external_customer_id).of_type("String!")
     expect(subject).to have_field(:customer_name).of_type("String!")
     expect(subject).to have_field(:amount_currency).of_type("CurrencyEnum!")

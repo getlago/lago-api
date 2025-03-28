@@ -29,12 +29,13 @@ RSpec.describe DataApi::RevenueStreams::PlansService, type: :service do
 
       it "returns expected revenue streams plans" do
         expect(service_call).to be_success
-        expect(service_call.revenue_streams_plans.count).to eq(4)
-        expect(service_call.revenue_streams_plans.first).to eq(
+        expect(service_call.data_revenue_streams_plans["revenue_streams_plans"].count).to eq(4)
+        expect(service_call.data_revenue_streams_plans["revenue_streams_plans"].first).to eq(
           {
             "plan_id" => "8d39f27f-8371-43ea-a327-c9579e70eeb3",
             "amount_currency" => "EUR",
             "plan_code" => "custom_plan_penny",
+            "plan_deleted_at" => nil,
             "customers_count" => 1,
             "gross_revenue_amount_cents" => 120735293,
             "net_revenue_amount_cents" => 120735293,
@@ -44,6 +45,15 @@ RSpec.describe DataApi::RevenueStreams::PlansService, type: :service do
             "customers_share" => 0.0055,
             "gross_revenue_share" => 0.1148,
             "net_revenue_share" => 0.1148
+          }
+        )
+        expect(service_call.data_revenue_streams_plans["meta"]).to eq(
+          {
+            "current_page" => 1,
+            "next_page" => 2,
+            "prev_page" => 0,
+            "total_count" => 100,
+            "total_pages" => 5
           }
         )
       end

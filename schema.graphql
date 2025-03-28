@@ -3540,6 +3540,14 @@ type CustomerUsage {
   totalAmountCents: BigInt!
 }
 
+type DataApiMetadata {
+  currentPage: Int!
+  nextPage: Int!
+  prevPage: Int!
+  totalCount: Int!
+  totalPages: Int!
+}
+
 type DataApiMrr {
   amountCurrency: CurrencyEnum!
   endOfPeriodDt: ISO8601Date!
@@ -3576,24 +3584,15 @@ type DataApiMrrPlan {
   mrr: Float!
   mrrShare: Float!
   planCode: String!
+  planDeletedAt: ISO8601DateTime
   planId: ID!
   planInterval: PlanInterval!
   planName: String!
 }
 
-"""
-DataApiMrrPlanCollection type
-"""
-type DataApiMrrPlanCollection {
-  """
-  A collection of paginated DataApiMrrPlanCollection
-  """
+type DataApiMrrsPlans {
   collection: [DataApiMrrPlan!]!
-
-  """
-  Pagination Metadata for navigating the Pagination
-  """
-  metadata: CollectionMetadata!
+  metadata: DataApiMetadata!
 }
 
 type DataApiRevenueStream {
@@ -3626,6 +3625,7 @@ type DataApiRevenueStreamCollection {
 
 type DataApiRevenueStreamCustomer {
   amountCurrency: CurrencyEnum!
+  customerDeletedAt: ISO8601DateTime
   customerId: ID!
   customerName: String!
   externalCustomerId: String!
@@ -3635,19 +3635,29 @@ type DataApiRevenueStreamCustomer {
   netRevenueShare: Float!
 }
 
-"""
-DataApiRevenueStreamCustomerCollection type
-"""
-type DataApiRevenueStreamCustomerCollection {
-  """
-  A collection of paginated DataApiRevenueStreamCustomerCollection
-  """
-  collection: [DataApiRevenueStreamCustomer!]!
+type DataApiRevenueStreamPlan {
+  amountCurrency: CurrencyEnum!
+  customersCount: Int!
+  customersShare: Float!
+  grossRevenueAmountCents: BigInt!
+  grossRevenueShare: Float!
+  netRevenueAmountCents: BigInt!
+  netRevenueShare: Float!
+  planCode: String!
+  planDeletedAt: ISO8601DateTime
+  planId: ID!
+  planInterval: PlanInterval!
+  planName: String!
+}
 
-  """
-  Pagination Metadata for navigating the Pagination
-  """
-  metadata: CollectionMetadata!
+type DataApiRevenueStreamsCustomers {
+  collection: [DataApiRevenueStreamCustomer!]!
+  metadata: DataApiMetadata!
+}
+
+type DataApiRevenueStreamsPlans {
+  collection: [DataApiRevenueStreamPlan!]!
+  metadata: DataApiMetadata!
 }
 
 type DataApiUsageInvoiced {
@@ -6998,7 +7008,7 @@ type Query {
   """
   Query monthly recurring revenues plans of an organization
   """
-  dataApiMrrsPlans(currency: CurrencyEnum, limit: Int, offset: Int): DataApiMrrPlanCollection!
+  dataApiMrrsPlans(currency: CurrencyEnum, limit: Int, page: Int): DataApiMrrsPlans!
 
   """
   Query revenue streams of an organization
@@ -7008,12 +7018,12 @@ type Query {
   """
   Query revenue streams customers of an organization
   """
-  dataApiRevenueStreamsCustomers(currency: CurrencyEnum, limit: Int, offset: Int, orderBy: OrderByEnum): DataApiRevenueStreamCustomerCollection!
+  dataApiRevenueStreamsCustomers(currency: CurrencyEnum, limit: Int, orderBy: OrderByEnum, page: Int): DataApiRevenueStreamsCustomers!
 
   """
   Query revenue streams plans of an organization
   """
-  dataApiRevenueStreamsPlans(currency: CurrencyEnum, limit: Int, offset: Int, orderBy: OrderByEnum): RevenueStreamPlanCollection!
+  dataApiRevenueStreamsPlans(currency: CurrencyEnum, limit: Int, orderBy: OrderByEnum, page: Int): DataApiRevenueStreamsPlans!
 
   """
   Query invoiced usages of an organization
@@ -7547,35 +7557,6 @@ input RetryWebhookInput {
   """
   clientMutationId: String
   id: ID!
-}
-
-type RevenueStreamPlan {
-  amountCurrency: CurrencyEnum!
-  customersCount: Int!
-  customersShare: Float!
-  grossRevenueAmountCents: BigInt!
-  grossRevenueShare: Float!
-  netRevenueAmountCents: BigInt!
-  netRevenueShare: Float!
-  planCode: String!
-  planId: ID!
-  planInterval: PlanInterval!
-  planName: String!
-}
-
-"""
-RevenueStreamPlanCollection type
-"""
-type RevenueStreamPlanCollection {
-  """
-  A collection of paginated RevenueStreamPlanCollection
-  """
-  collection: [RevenueStreamPlan!]!
-
-  """
-  Pagination Metadata for navigating the Pagination
-  """
-  metadata: CollectionMetadata!
 }
 
 """

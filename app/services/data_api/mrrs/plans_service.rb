@@ -3,14 +3,14 @@
 module DataApi
   module Mrrs
     class PlansService < DataApi::BaseService
-      Result = BaseResult[:mrrs_plans]
+      Result = BaseResult[:data_mrrs_plans]
 
       def call
         return result.forbidden_failure! unless License.premium?
 
         data_mrrs_plans = http_client.get(headers:, params:)
 
-        result.mrrs_plans = data_mrrs_plans
+        result.data_mrrs_plans = data_mrrs_plans
         result
       end
 

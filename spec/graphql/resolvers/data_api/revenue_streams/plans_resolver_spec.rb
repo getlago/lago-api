@@ -6,10 +6,11 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL
-      query($currency: CurrencyEnum, $orderBy: OrderByEnum, $limit: Int, $offset: Int) {
-        dataApiRevenueStreamsPlans(currency: $currency, orderBy: $orderBy, limit: $limit, offset: $offset) {
+      query($currency: CurrencyEnum, $orderBy: OrderByEnum, $limit: Int, $page: Int) {
+        dataApiRevenueStreamsPlans(currency: $currency, orderBy: $orderBy, limit: $limit, page: $page) {
           collection {
             planCode
+            planDeletedAt
             planId
             planInterval
             planName
@@ -20,6 +21,13 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
             grossRevenueShare
             netRevenueAmountCents
             netRevenueShare
+          }
+          metadata {
+            currentPage
+            nextPage
+            prevPage
+            totalCount
+            totalPages
           }
         }
       }
@@ -55,6 +63,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
         "planId" => "8d39f27f-8371-43ea-a327-c9579e70eeb3",
         "amountCurrency" => "EUR",
         "planCode" => "custom_plan_penny",
+        "planDeletedAt" => nil,
         "customersCount" => 1,
         "grossRevenueAmountCents" => "120735293",
         "netRevenueAmountCents" => "120735293",
@@ -64,6 +73,13 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
         "grossRevenueShare" => 0.1148,
         "netRevenueShare" => 0.1148
       }
+    )
+    expect(revenue_streams_response["metadata"]).to include(
+      "currentPage" => 1,
+      "nextPage" => 2,
+      "prevPage" => 0,
+      "totalCount" => 100,
+      "totalPages" => 5
     )
   end
 end

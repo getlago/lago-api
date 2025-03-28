@@ -7,6 +7,7 @@ module Types
         class Object < Types::BaseObject
           graphql_name "DataApiRevenueStreamCustomer"
 
+          field :customer_deleted_at, GraphQL::Types::ISO8601DateTime, null: true
           field :customer_id, ID, null: false
           field :customer_name, String, null: false
           field :external_customer_id, String, null: false

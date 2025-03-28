@@ -14,13 +14,17 @@ module Resolvers
 
         argument :currency, Types::CurrencyEnum, required: false
         argument :limit, Integer, required: false
-        argument :offset, Integer, required: false
+        argument :page, Integer, required: false
 
-        type Types::DataApi::Mrrs::Plans::Object.collection_type, null: false
+        type Types::DataApi::Mrrs::Plans::Collection, null: false
 
         def resolve(**args)
           result = ::DataApi::Mrrs::PlansService.call(current_organization, **args)
-          result.mrrs_plans
+
+          {
+            collection: result.data_mrrs_plans["mrrs_plans"],
+            metadata: result.data_mrrs_plans["meta"]
+          }
         end
       end
     end
