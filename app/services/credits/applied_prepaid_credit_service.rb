@@ -18,6 +18,7 @@ module Credits
       wallet_credit = WalletCredit.from_amount_cents(wallet:, amount_cents:)
 
       ActiveRecord::Base.transaction do
+        ActiveRecord::Base.connection.execute("SET LOCAL lock_timeout = '10s'")
         wallet_transaction = WalletTransactions::CreateService.call!(
           wallet:,
           wallet_credit:,
