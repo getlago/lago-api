@@ -2,6 +2,18 @@
 
 module Invoices
   class CustomerUsageService < BaseService
+    Result = BaseResult[:fees_taxes, :usage, :invoice]
+    UsageData = Data.define(
+      :from_datetime,
+      :to_datetime,
+      :issuing_date,
+      :currency,
+      :amount_cents,
+      :total_amount_cents,
+      :taxes_amount_cents,
+      :fees
+    )
+
     def initialize(customer:, subscription:, timestamp: Time.current, apply_taxes: true, with_cache: true, max_to_datetime: nil)
       super
 
@@ -174,7 +186,7 @@ module Invoices
     end
 
     def format_usage
-      OpenStruct.new(
+      UsageData.new(
         from_datetime: boundaries[:charges_from_datetime].iso8601,
         to_datetime: boundaries[:charges_to_datetime].iso8601,
         issuing_date: invoice.issuing_date.iso8601,
