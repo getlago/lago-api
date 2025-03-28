@@ -107,7 +107,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
   end
 
-  describe ".update_payment_status" do
+  describe "#update_payment_status" do
     let(:payment) do
       create(
         :payment,

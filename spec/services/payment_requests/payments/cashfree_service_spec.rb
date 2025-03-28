@@ -46,7 +46,7 @@ RSpec.describe PaymentRequests::Payments::CashfreeService, type: :service do
     )
   end
 
-  describe ".update_payment_status" do
+  describe "#update_payment_status" do
     let(:payment) do
       create(
         :payment,

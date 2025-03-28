@@ -8,6 +8,9 @@ class PaymentReceiptMailer < ApplicationMailer
     @organization = @payment_receipt.organization
     @customer = @payment_receipt.payment.payable.customer
     @show_lago_logo = !@organization.remove_branding_watermark_enabled?
+    @total_due_amount = @payment_receipt.payment.payable.is_a?(Invoice) ?
+      @payment_receipt.payment.payable.total_due_amount :
+      @payment_receipt.payment.payable.amount - @payment_receipt.payment.amount
 
     return if @organization.email.blank?
     return if @customer.email.blank?

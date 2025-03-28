@@ -27,7 +27,7 @@ RSpec.describe Invoices::Payments::GocardlessService, type: :service do
     )
   end
 
-  describe ".update_payment_status" do
+  describe "#update_payment_status" do
     let(:payment) do
       create(
         :payment,
