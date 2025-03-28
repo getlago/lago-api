@@ -9,6 +9,7 @@ RSpec.describe Fees::PaidCreditService do
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
+  let(:billing_entity) { customer.billing_entity }
   let(:invoice) { create(:invoice, organization:) }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:, rate_amount: "1.00") }
@@ -27,6 +28,7 @@ RSpec.describe Fees::PaidCreditService do
         id: String,
         fee_type: "credit",
         organization_id: organization.id,
+        billing_entity_id: billing_entity.id,
         invoice_id: invoice.id,
         invoiceable_type: "WalletTransaction",
         invoiceable_id: wallet_transaction.id,

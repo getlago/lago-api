@@ -13,6 +13,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
     )
   end
   let(:organization) { invoice.organization }
+  let(:billing_entity) { organization.default_billing_entity }
   let(:invoice) { create(:invoice, status: :draft) }
   let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
 
@@ -64,6 +65,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       expect(result.fee).to have_attributes(
         id: nil,
         organization_id: organization.id,
+        billing_entity_id: billing_entity.id,
         invoice:,
         subscription:,
         charge:,

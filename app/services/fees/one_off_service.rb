@@ -24,7 +24,8 @@ module Fees
 
           fee = Fee.new(
             invoice:,
-            organization_id: organization.id,
+            organization_id: invoice.organization_id,
+            billing_entity_id: invoice.billing_entity_id,
             add_on:,
             invoice_display_name: fee[:invoice_display_name].presence,
             description: fee[:description] || add_on.description,
