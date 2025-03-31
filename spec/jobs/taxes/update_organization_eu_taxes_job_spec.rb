@@ -10,7 +10,7 @@ RSpec.describe Taxes::UpdateOrganizationEuTaxesJob, type: :job do
     let(:result) { BaseService::Result.new }
 
     it "calls the subscriptions biller service" do
-      allow(Taxes::AutoGenerateService).to receive(:call!)
+      allow(Taxes::AutoGenerateService).to receive(:call!).and_call_original
 
       described_class.perform_now(organization)
 
