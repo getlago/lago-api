@@ -24,6 +24,7 @@ RSpec.describe ::V1::InvoiceSerializer do
     aggregate_failures do
       expect(result["invoice"]).to include(
         "lago_id" => invoice.id,
+        "billing_entity_code" => invoice.billing_entity.code,
         "sequential_id" => invoice.sequential_id,
         "number" => invoice.number,
         "issuing_date" => invoice.issuing_date.iso8601,

@@ -5,6 +5,7 @@ module V1
     def serialize
       payload = {
         lago_id: model.id,
+        billing_entity_code: model.billing_entity.code,
         external_id: model.external_id,
         account_type: model.account_type,
         name: model.name,

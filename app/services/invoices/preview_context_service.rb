@@ -4,8 +4,9 @@ module Invoices
   class PreviewContextService < BaseService
     Result = BaseResult[:customer, :subscriptions, :applied_coupons]
 
-    def initialize(organization:, params:)
+    def initialize(organization:, params:, billing_entity: nil)
       @organization = organization
+      @billing_entity = billing_entity || organization.default_billing_entity
       @params = params.presence || {}
       super
     end
@@ -34,7 +35,7 @@ module Invoices
 
     private
 
-    attr_reader :params, :organization
+    attr_reader :params, :organization, :billing_entity
 
     def subscription_params
       params.slice(:billing_time, :plan_code, :subscription_at, :subscriptions)
@@ -46,7 +47,7 @@ module Invoices
       customer = if customer_params.key?(:external_id)
         organization.customers.find_by!(external_id: customer_params[:external_id])
       else
-        organization.customers.new(created_at: Time.current, updated_at: Time.current)
+        organization.customers.new(created_at: Time.current, updated_at: Time.current, billing_entity:)
       end
 
       customer.assign_attributes(

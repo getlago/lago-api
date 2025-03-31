@@ -32,10 +32,8 @@ RSpec.describe V1::BillingEntitySerializer, type: :serializer do
     expect(billing_entity_serialized.fetch("document_number_prefix")).to eq(billing_entity.document_number_prefix)
     expect(billing_entity_serialized.fetch("tax_identification_number")).to eq(billing_entity.tax_identification_number)
     expect(billing_entity_serialized.fetch("finalize_zero_amount_invoice")).to eq(billing_entity.finalize_zero_amount_invoice)
-    expect(billing_entity_serialized.fetch("billing_configuration")).to match(hash_including(
-      "invoice_footer" => billing_entity.invoice_footer,
-      "invoice_grace_period" => billing_entity.invoice_grace_period,
-      "document_locale" => billing_entity.document_locale
-    ))
+    expect(billing_entity_serialized.fetch("invoice_footer")).to eq(billing_entity.invoice_footer)
+    expect(billing_entity_serialized.fetch("invoice_grace_period")).to eq(billing_entity.invoice_grace_period)
+    expect(billing_entity_serialized.fetch("document_locale")).to eq(billing_entity.document_locale)
   end
 end
