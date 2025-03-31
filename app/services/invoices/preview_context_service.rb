@@ -4,9 +4,9 @@ module Invoices
   class PreviewContextService < BaseService
     Result = BaseResult[:customer, :subscriptions, :applied_coupons]
 
-    def initialize(organization:, params:, billing_entity: nil)
+    def initialize(organization:, billing_entity:, params:)
       @organization = organization
-      @billing_entity = billing_entity || organization.default_billing_entity
+      @billing_entity = billing_entity
       @params = params.presence || {}
       super
     end

@@ -1034,12 +1034,64 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
       expect(response).to have_http_status(:success)
       expect(json[:invoice]).to include(
+        billing_entity_code: organization.default_billing_entity.code,
         invoice_type: "subscription",
         fees_amount_cents: 100,
         taxes_amount_cents: 20,
         total_amount_cents: 120,
         currency: "EUR"
       )
+    end
+
+    context "when sending billing_entity_code" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:preview_params) do
+        {
+          customer: {
+            name: "test 1",
+            currency: "EUR",
+            tax_identification_number: "123456789"
+          },
+          plan_code: plan.code,
+          billing_time: "anniversary",
+          billing_entity_code: billing_entity.code
+        }
+      end
+
+      it "creates a preview invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice]).to include(
+          billing_entity_code: billing_entity.code,
+          invoice_type: "subscription",
+          fees_amount_cents: 100,
+          taxes_amount_cents: 20,
+          total_amount_cents: 120,
+          currency: "EUR"
+        )
+      end
+
+      context "when billing entity does not exist" do
+        let(:preview_params) do
+          {
+            customer: {
+              name: "test 1",
+              currency: "EUR",
+              tax_identification_number: "123456789"
+            },
+            plan_code: plan.code,
+            billing_time: "anniversary",
+            billing_entity_code: SecureRandom.uuid
+          }
+        end
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to have_http_status(:not_found)
+        end
+      end
     end
 
     context "when subscriptions are persisted" do

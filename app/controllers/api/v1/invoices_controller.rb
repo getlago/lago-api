@@ -223,8 +223,15 @@ module Api
           )
         end
 
+        billing_entity_resolver = BillingEntities::ResolveService.call(
+          organization: current_organization, billing_entity_code: params[:billing_entity_code]
+        )
+        return render_error_response(billing_entity_resolver) unless billing_entity_resolver.success?
+        billing_entity = billing_entity_resolver.billing_entity
+
         result = Invoices::PreviewContextService.call(
           organization: current_organization,
+          billing_entity: billing_entity,
           params: preview_params.to_h.deep_symbolize_keys
         )
         return render_error_response(result) unless result.success?
