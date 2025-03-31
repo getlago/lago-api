@@ -46,7 +46,7 @@ module Invoices
       customer = if customer_params.key?(:external_id)
         organization.customers.find_by!(external_id: customer_params[:external_id])
       else
-        organization.customers.new(created_at: Time.current, updated_at: Time.current)
+        organization.customers.new(created_at: Time.current, updated_at: Time.current, billing_entity_id: organization.default_billing_entity.id)
       end
 
       customer.assign_attributes(
