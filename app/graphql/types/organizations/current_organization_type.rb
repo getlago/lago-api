@@ -52,6 +52,7 @@ module Types
       field :stripe_payment_providers, [Types::PaymentProviders::Stripe], permission: "organization:integrations:view"
 
       field :applied_dunning_campaign, Types::DunningCampaigns::Object
+      field :can_create_billing_entity, Boolean, null: false, method: :can_create_billing_entity?
 
       def webhook_url
         object.webhook_endpoints.map(&:webhook_url).first

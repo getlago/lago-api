@@ -17,6 +17,7 @@ module Types
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
     field :billing_entities, resolver: Resolvers::BillingEntitiesResolver
     field :billing_entity, resolver: Resolvers::BillingEntityResolver
+    field :billing_entity_taxes, resolver: Resolvers::BillingEntityTaxesResolver
     field :coupon, resolver: Resolvers::CouponResolver
     field :coupons, resolver: Resolvers::CouponsResolver
     field :credit_note, resolver: Resolvers::CreditNoteResolver
