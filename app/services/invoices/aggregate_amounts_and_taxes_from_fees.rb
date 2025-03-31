@@ -32,8 +32,8 @@ module Invoices
         (invoice.taxes_amount_cents.to_f * 100 / invoice.fees_amount_cents).round(2)
       end
 
-      invoice.applied_taxes = invoice.fees.flat_map(&:applied_taxes).group_by(&:tax_id).map do |tax_id, taxes|
-        t = taxes.first
+      invoice.applied_taxes = invoice.fees.includes(:applied_taxes).flat_map(&:applied_taxes).group_by(&:tax_id).map do |tax_id, applied_taxes|
+        t = applied_taxes.first
         Invoice::AppliedTax.new(
           tax_id: tax_id,
           tax_name: t.tax_name,
@@ -42,9 +42,9 @@ module Invoices
           tax_rate: t.tax_rate,
           amount_currency: t.amount_currency,
 
-          amount_cents: taxes.sum(&:amount_cents),
-          fees_amount_cents: taxes.sum(&:amount_cents),
-          taxable_base_amount_cents: taxes.sum(&:precise_amount_cents)
+          amount_cents: applied_taxes.sum(&:amount_cents),
+          fees_amount_cents: applied_taxes.sum(&:amount_cents),
+          taxable_base_amount_cents: applied_taxes.sum { |at| at.fee.taxes_base_rate * at.fee.sub_total_excluding_taxes_amount_cents }
         )
       end
 
