@@ -142,16 +142,29 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
         let(:expected_attributes) do
           params[:customer].tap do |hash|
             hash[:integration_customers] = array_including(IntegrationCustomers::AnrokCustomer)
+            hash[:billing_entity_id] = organization.default_billing_entity.id
           end
         end
 
         before { create(:anrok_integration, organization:, code: "code") }
 
-        it "returns new customer build from params including integration customers" do
+        it "returns new customer build from params including integration customers and default billing_entity" do
           expect(subject)
             .to be_present
             .and be_new_record
             .and have_attributes(expected_attributes)
+        end
+
+        context "when passing billing_entity" do
+          let(:billing_entity) { create(:billing_entity, organization:) }
+          let(:result) { described_class.call(organization:, params:, billing_entity:) }
+
+          it "returns new customer build with provided billing_entity" do
+            expect(subject)
+              .to be_present
+              .and be_new_record
+              .and have_attributes({billing_entity_id: billing_entity.id})
+          end
         end
       end
 

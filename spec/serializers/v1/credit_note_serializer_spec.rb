@@ -22,6 +22,7 @@ RSpec.describe V1::CreditNoteSerializer, type: :serializer do
 
     expect(result["credit_note"]).to include(
       "lago_id" => credit_note.id,
+      "billing_entity_code" => credit_note.invoice.billing_entity.code,
       "sequential_id" => credit_note.sequential_id,
       "number" => credit_note.number,
       "lago_invoice_id" => credit_note.invoice_id,
