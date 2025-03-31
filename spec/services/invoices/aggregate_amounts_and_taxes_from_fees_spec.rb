@@ -35,11 +35,13 @@ RSpec.describe Invoices::AggregateAmountsAndTaxesFromFees, type: :service do
     expect(applied_tax_5.tax_description).to eq tax_5.description
     expect(applied_tax_5.tax_rate).to eq tax_5.rate
     expect(applied_tax_5.amount_cents).to eq(9 + 16)
+    expect(applied_tax_5.taxable_base_amount_cents).to eq(200 + 120)
 
     applied_tax_12 = invoice.applied_taxes.find { |at| at.tax_code == tax_12.code }
     expect(applied_tax_12.tax_name).to eq tax_12.name
     expect(applied_tax_12.tax_description).to eq tax_12.description
     expect(applied_tax_12.tax_rate).to eq tax_12.rate
     expect(applied_tax_12.amount_cents).to eq(2 + 11)
+    expect(applied_tax_12.taxable_base_amount_cents).to eq(120 + 50)
   end
 end

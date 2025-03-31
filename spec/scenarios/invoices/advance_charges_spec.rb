@@ -64,6 +64,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
 
         advance_charges_invoice = customer.invoices.where(invoice_type: :advance_charges).sole
         expect(advance_charges_invoice.fees_amount_cents).to eq(2008 + 1908 + 1807)
+        expect(advance_charges_invoice.applied_taxes.first.taxable_base_amount_cents).to eq(2008 + 1908 + 1807)
       end
 
       travel_to(DateTime.new(2024, 7, 10, 10)) do
@@ -88,6 +89,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
         expect(advance_charges_invoice.fees_amount_cents).to eq 18373
 
         expect(advance_charges_invoice.sub_total_excluding_taxes_amount_cents).to eq 18373 # == fees_amount_cents
+        expect(advance_charges_invoice.applied_taxes.first.taxable_base_amount_cents).to eq(18373)
         expect(advance_charges_invoice.sub_total_including_taxes_amount_cents).to eq 22047 # == fees_amount_cents + taxes_amount_cents == total_amount_cents
 
         expect(advance_charges_invoice.coupons_amount_cents).to eq 0
