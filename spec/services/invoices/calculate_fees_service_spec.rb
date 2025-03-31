@@ -93,9 +93,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       organization: organization,
       subscription: subscription,
       code: billable_metric.code,
-      timestamp: date_service.charges_to_datetime - 2.days
+      timestamp: event_timestamp
     )
   end
+
+  let(:event_timestamp) { [date_service.charges_to_datetime - 2.days, started_at].max }
 
   before do
     tax
