@@ -28,10 +28,5 @@ RSpec.describe Types::BillableMetrics::Object do
     expect(subject).to have_field(:has_draft_invoices).of_type("Boolean!")
     expect(subject).to have_field(:has_plans).of_type("Boolean!")
     expect(subject).to have_field(:has_subscriptions).of_type("Boolean!")
-
-    expect(subject).to have_field(:active_subscriptions_count).of_type("Int!")
-    expect(subject).to have_field(:draft_invoices_count).of_type("Int!")
-    expect(subject).to have_field(:plans_count).of_type("Int!")
-    expect(subject).to have_field(:subscriptions_count).of_type("Int!")
   end
 end
