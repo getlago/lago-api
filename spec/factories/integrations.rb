@@ -42,6 +42,21 @@ FactoryBot.define do
     end
   end
 
+  factory :avalara_integration, class: "Integrations::AvalaraIntegration" do
+    organization
+    type { "Integrations::AvalaraIntegration" }
+    code { "avalara" }
+    name { "Avalara Integration" }
+
+    settings do
+      {account_id: SecureRandom.uuid}
+    end
+
+    secrets do
+      {connection_id: SecureRandom.uuid, license_key: SecureRandom.uuid}.to_json
+    end
+  end
+
   factory :xero_integration, class: "Integrations::XeroIntegration" do
     organization
     type { "Integrations::XeroIntegration" }
