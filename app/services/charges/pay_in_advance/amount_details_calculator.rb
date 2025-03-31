@@ -31,10 +31,10 @@ module Charges
       def calculate_percentage_charge_details
         fixed_values = {rate: all_charges_details[:rate], fixed_fee_unit_amount: all_charges_details[:fixed_fee_unit_amount]}
         details = PERCENTAGE_CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(fixed_values) do |key, result|
-          result[key] = (all_charges_details[key].to_f - charges_details_without_last_event[key].to_f).to_s
+          result[key] = (BigDecimal(all_charges_details[key].to_s) - BigDecimal(charges_details_without_last_event[key].to_s)).to_s
         end
         # TODO: remove this when Charges::ChargeModels::PercentageService#free_units_value respects :exclude_event flag
-        details[:free_units] = (details[:units].to_f - details[:paid_units].to_f).to_s
+        details[:free_units] = (BigDecimal(details[:units].to_s) - BigDecimal(details[:paid_units].to_s)).to_s
         details
       end
 
@@ -45,12 +45,15 @@ module Charges
           end || Hash.new(0)
 
           total_with_flat_amount = range_with_last_event[:total_with_flat_amount] - corresponding_range_without_last_event[:total_with_flat_amount]
-          units = range_with_last_event[:units].to_f - corresponding_range_without_last_event[:units].to_f
+          units = BigDecimal(range_with_last_event[:units].to_s) - BigDecimal(corresponding_range_without_last_event[:units].to_s)
           {
-            from_value: range_with_last_event[:from_value], to_value: range_with_last_event[:to_value],
+            from_value: range_with_last_event[:from_value],
+            to_value: range_with_last_event[:to_value],
             flat_unit_amount: range_with_last_event[:flat_unit_amount] - corresponding_range_without_last_event[:flat_unit_amount],
-            rate: range_with_last_event[:rate], units: units.to_s,
-            per_unit_total_amount: (units > 0) ? (total_with_flat_amount / units).round(2).to_s : "0.0", total_with_flat_amount: total_with_flat_amount
+            rate: range_with_last_event[:rate],
+            units: units.to_s,
+            per_unit_total_amount: (units > 0) ? (total_with_flat_amount / units).round(2).to_s : "0.0",
+            total_with_flat_amount: total_with_flat_amount
           }
         end
         {graduated_percentage_ranges: calculated_ranges}
