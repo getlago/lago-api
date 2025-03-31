@@ -6620,6 +6620,7 @@ Safe Organization Type
 """
 type Organization {
   billingConfiguration: OrganizationBillingConfiguration
+  canCreateBillingEntity: Boolean!
   defaultCurrency: CurrencyEnum!
   id: ID!
   logoUrl: String

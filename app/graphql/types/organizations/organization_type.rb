@@ -22,6 +22,8 @@ module Types
       field :timezone, Types::TimezoneEnum, null: true
 
       field :billing_configuration, Types::Organizations::BillingConfiguration, null: true
+
+      field :can_create_billing_entity, Boolean, null: false, method: :can_create_billing_entity?
     end
   end
 end
