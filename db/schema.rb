@@ -1353,6 +1353,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_03_25_162648) do
     t.string "password_digest"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "last_login_at"
+    t.integer "last_login_method"
   end
 
   create_table "versions", force: :cascade do |t|

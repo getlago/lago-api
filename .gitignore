@@ -38,6 +38,7 @@ db/clickhouse_structure.sql
 config/keys/*
 .rsa_private.pem
 .rsa_public.pem
+config/keys
 LAGO_VERSION
 
 **/.DS_Store
