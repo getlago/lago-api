@@ -21,6 +21,7 @@ module PaymentProviderCustomers
         provider_customer_id: stripe_result.id
       )
 
+      get_funding_instructions
       deliver_success_webhook
       PaymentProviderCustomers::StripeCheckoutUrlJob.perform_later(stripe_customer)
 
@@ -32,6 +33,7 @@ module PaymentProviderCustomers
       return result if !stripe_payment_provider || stripe_customer.provider_customer_id.blank?
 
       ::Stripe::Customer.update(stripe_customer.provider_customer_id, stripe_update_payload, {api_key:})
+      get_funding_instructions
       result
     rescue ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
       deliver_error_webhook(e)
@@ -104,6 +106,13 @@ module PaymentProviderCustomers
     attr_accessor :stripe_customer
 
     delegate :customer, to: :stripe_customer
+
+    def get_funding_instructions
+      return if stripe_customer.provider_customer_id.blank?
+      return unless stripe_customer.provider_payment_methods&.include?("customer_balance")
+
+      PaymentProviderCustomers::StripeFetchFundingInstructionsJob.perform_later(stripe_customer)
+    end
 
     def organization
       customer.organization
