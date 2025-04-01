@@ -82,7 +82,7 @@ module Invoices
       return unless invoice.invoice_type&.to_sym == :credit
       return unless %i[succeeded failed].include?(payment_status.to_sym)
 
-      Invoices::PrepaidCreditJob.perform_later(invoice, payment_status)
+      Invoices::PrepaidCreditJob.perform_later(invoice, payment_status.to_sym)
     end
 
     def valid_metadata_count?(metadata:)
