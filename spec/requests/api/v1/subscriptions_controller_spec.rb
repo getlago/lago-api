@@ -130,7 +130,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         )
       end
 
-      it "creates a new customer" do
+      it "creates a new customer in the organization default billing entity" do
         expect { subject }.to change(Customer, :count).by(1)
 
         customer = Customer.find_by(external_id: "123")
