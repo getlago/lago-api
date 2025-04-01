@@ -190,6 +190,10 @@ class Organization < ApplicationRecord
     remaining_billing_entities > 0
   end
 
+  def failed_invoices_count
+    invoices.where(status: :failed).joins(:error_details).where(error_details: {error_code: "tax_error"}).count
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
