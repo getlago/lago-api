@@ -227,7 +227,7 @@ RSpec.describe Invoices::UpdateService do
 
         it "calls Invoices::PrepaidCreditJob with the correct arguments" do
           result
-          expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice, "succeeded")
+          expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice, :succeeded)
         end
       end
 
@@ -236,7 +236,7 @@ RSpec.describe Invoices::UpdateService do
 
         it "calls Invoices::PrepaidCreditJob with the correct arguments" do
           result
-          expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice, "failed")
+          expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice, :failed)
         end
       end
     end
