@@ -644,7 +644,6 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         end
       end
     end
-
   end
 
   describe "PUT /api/v1/invoices/:id/refresh" do
