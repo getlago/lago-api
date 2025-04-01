@@ -13,6 +13,7 @@ class CreditNote < ApplicationRecord
   belongs_to :invoice
 
   has_one :organization, through: :invoice
+  has_one :billing_entity, through: :invoice
 
   has_many :items, class_name: "CreditNoteItem", dependent: :destroy
   has_many :fees, through: :items

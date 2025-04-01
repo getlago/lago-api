@@ -99,6 +99,20 @@ organization:
     create:
     update:
     delete:
+billing_entities:
+  view:
+  create:
+  update:
+  delete:
+  invoices:
+    view:
+    update:
+  taxes:
+    view:
+    update:
+  emails:
+    view:
+    update:
 payment_requests:
   view: true
   create:

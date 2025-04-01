@@ -7,6 +7,7 @@ RSpec.describe Types::Customers::Object do
 
   it do
     expect(subject).to have_field(:id).of_type("ID!")
+    expect(subject).to have_field(:billing_entity).of_type("BillingEntity!")
 
     expect(subject).to have_field(:account_type).of_type("CustomerAccountTypeEnum!")
     expect(subject).to have_field(:customer_type).of_type(Types::Customers::CustomerTypeEnum)
