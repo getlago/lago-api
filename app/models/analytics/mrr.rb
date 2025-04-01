@@ -192,6 +192,7 @@ module Analytics
           "mrr",
           Date.current.strftime("%Y-%m-%d"),
           organization_id,
+          args[:billing_entity_id],
           args[:currency],
           args[:months]
         ].join("/")
