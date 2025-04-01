@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 if ENV["SENTRY_DSN"].present?
+  require "stackprof" if ENV["SENTRY_ENABLE_PROFILING"].present?
   require "sentry-ruby"
   require "sentry-rails"
   require "sentry-sidekiq"
-  require "stackprof" if ENV["SENTRY_ENABLE_PROFILING"].present?
 
   Sentry.init do |config|
     config.dsn = ENV["SENTRY_DSN"]
