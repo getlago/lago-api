@@ -5,11 +5,17 @@ module Api
     class SubscriptionsController < Api::BaseController
       def create
         response = {}
+        billing_entity_result = BillingEntities::ResolveService.call(
+          organization: current_organization, billing_entity_code: params.dig(:subscription, :billing_entity_code)
+        )
+        return render_error_response(billing_entity_result) unless billing_entity_result.success?
+        billing_entity = billing_entity_result.billing_entity
 
         customer = Customer.find_or_initialize_by(
           external_id: create_params[:external_customer_id].to_s.strip,
           organization_id: current_organization.id
         )
+        customer.billing_entity ||= billing_entity
 
         if params[:authorization] && !current_organization.beta_payment_authorization_enabled?
           return render(
