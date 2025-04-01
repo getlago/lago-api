@@ -267,4 +267,65 @@ RSpec.describe WebhooksController, type: :request do
       end
     end
   end
+
+  describe "POST /moneyhash" do
+    let(:organization_id) { Faker::Internet.uuid }
+    let(:code) { "moneyhash_1" }
+
+    let(:body) do
+      path = Rails.root.join("spec/fixtures/moneyhash/intent.processed.json")
+      JSON.parse(File.read(path))
+    end
+
+    let(:result) { BaseService::Result.new }
+
+    before do
+      allow(InboundWebhooks::CreateService)
+        .to receive(:call)
+        .with(
+          organization_id:,
+          webhook_source: :moneyhash,
+          code:,
+          payload: body,
+          signature: "t=1743090080,v1=placeholder,v2=placeholder,v3=placeholder",
+          event_type: body["type"]
+        )
+        .and_return(result)
+    end
+
+    it "handle moneyhash webhooks" do
+      post(
+        "/webhooks/moneyhash/#{organization_id}?code=#{code}",
+        params: body.to_json,
+        headers: {
+          "Content-Type" => "application/json",
+          "Moneyhash-Signature" => "t=1743090080,v1=placeholder,v2=placeholder,v3=placeholder"
+        }
+      )
+
+      expect(response).to have_http_status(:success)
+
+      expect(InboundWebhooks::CreateService).to have_received(:call)
+    end
+
+    context "when InboundWebhooks::CreateService is not successful" do
+      before do
+        result.record_validation_failure!(record: build(:inbound_webhook))
+      end
+
+      it "returns a bad request" do
+        post(
+          "/webhooks/moneyhash/#{organization_id}?code=#{code}",
+          params: body.to_json,
+          headers: {
+            "Content-Type" => "application/json",
+            "Moneyhash-Signature" => "t=1743090080,v1=placeholder,v2=placeholder,v3=placeholder"
+          }
+        )
+
+        expect(response).to have_http_status(:bad_request)
+        expect(InboundWebhooks::CreateService).to have_received(:call)
+      end
+    end
+  end
 end
