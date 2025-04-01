@@ -2,6 +2,8 @@
 
 module Taxes
   class AutoGenerateService < BaseService
+    Result = BaseResult
+
     def initialize(organization:)
       @organization = organization
       super
@@ -13,6 +15,8 @@ module Taxes
       end
 
       create_generic_taxes
+
+      result
     end
 
     private
