@@ -405,7 +405,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
                 funding_type: "bank_transfer"
               }
             }
-          )
+          ).tap { |p| p.delete(:payment_method) }
         end
 
         context "when currency is EUR" do
@@ -422,6 +422,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
                 }
               }
             )
+
             expect(payment_intent_payload).to eq(expected_payload)
           end
         end

@@ -128,7 +128,6 @@ module PaymentProviders
             amount: payment.amount_cents,
             currency: payment.amount_currency.downcase,
             customer: provider_customer.provider_customer_id,
-            payment_method: stripe_payment_method,
             payment_method_types: provider_customer.provider_payment_methods,
             confirm: true,
             off_session: off_session?,
@@ -137,7 +136,13 @@ module PaymentProviders
             description: reference,
             metadata: enriched_metadata
           }
-          payload.merge!(customer_balance_fields) if provider_customer.provider_payment_methods == ["customer_balance"]
+
+          if provider_customer.provider_payment_methods == ["customer_balance"]
+            payload.merge!(customer_balance_fields)
+          else
+            payload[:payment_method] = stripe_payment_method
+          end
+
           payload
         end
 
