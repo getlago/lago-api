@@ -16,6 +16,7 @@ module Resolvers
 
     argument :amount_from, Integer, required: false
     argument :amount_to, Integer, required: false
+    argument :billing_entity_id, ID, required: false
     argument :credit_status, [Types::CreditNotes::CreditStatusTypeEnum], required: false
     argument :currency, Types::CurrencyEnum, required: false
     argument :customer_external_id, String, required: false
@@ -36,6 +37,7 @@ module Resolvers
         filters: {
           amount_from: args[:amount_from],
           amount_to: args[:amount_to],
+          billing_entity_id: args[:billing_entity_id],
           credit_status: args[:credit_status],
           currency: args[:currency],
           customer_external_id: args[:customer_external_id],

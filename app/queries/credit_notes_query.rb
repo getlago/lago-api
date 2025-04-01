@@ -8,6 +8,7 @@ class CreditNotesQuery < BaseQuery
     credit_notes = paginate(credit_notes)
     credit_notes = apply_consistent_ordering(credit_notes)
 
+    credit_notes = with_billing_entity_id(credit_notes) if filters.billing_entity_id.present?
     credit_notes = with_currency(credit_notes) if filters.currency.present?
     credit_notes = with_customer_external_id(credit_notes) if filters.customer_external_id
     credit_notes = with_customer_id(credit_notes) if filters.customer_id.present?
@@ -102,6 +103,10 @@ class CreditNotesQuery < BaseQuery
       .where(invoices: {
         self_billed: ActiveModel::Type::Boolean.new.cast(filters.self_billed)
       })
+  end
+
+  def with_billing_entity_id(scope)
+    scope.joins(:invoice).where(invoices: {billing_entity_id: filters.billing_entity_id})
   end
 
   def issuing_date_from
