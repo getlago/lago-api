@@ -38,6 +38,8 @@ module Integrations
         "Integrations::OktaIntegration"
       when "anrok"
         "Integrations::AnrokIntegration"
+      when "avalara"
+        "Integrations::AvalaraIntegration"
       when "xero"
         "Integrations::XeroIntegration"
       when "hubspot"
