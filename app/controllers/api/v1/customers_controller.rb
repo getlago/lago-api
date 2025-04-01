@@ -35,13 +35,14 @@ module Api
       end
 
       def index
+        billing_entity = current_organization.all_billing_entities.find_by!(code: params[:billing_entity_code]) if params[:billing_entity_code].present?
         result = CustomersQuery.call(
           organization: current_organization,
           pagination: {
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
           },
-          filters: params.slice(:account_type)
+          filters: params.slice(:account_type).merge(billing_entity_id: billing_entity&.id)
         )
 
         if result.success?
@@ -57,6 +58,8 @@ module Api
         else
           render_error_response(result)
         end
+      rescue ActiveRecord::RecordNotFound => e
+        not_found_error(resource: e.model)
       end
 
       def show

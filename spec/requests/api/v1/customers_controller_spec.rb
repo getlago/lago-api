@@ -370,6 +370,33 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customers].first[:lago_id]).to eq(partner.id)
       end
     end
+
+    context "when filtering by billing_entity_code" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:customer) { create(:customer, organization:, billing_entity:) }
+      let(:params) { {billing_entity_code: billing_entity.code} }
+
+      before { customer }
+
+      it "returns customers for the specified billing entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customers].count).to eq(1)
+        expect(json[:customers].first[:lago_id]).to eq(customer.id)
+      end
+
+      context "when billing entity does not exist" do
+        let(:params) { {billing_entity_code: "non_existent_code"} }
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to have_http_status(:not_found)
+          expect(json[:code]).to eq("BillingEntity_not_found")
+        end
+      end
+    end
   end
 
   describe "GET /api/v1/customers/:customer_id" do
