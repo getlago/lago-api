@@ -43,6 +43,7 @@ module Api
       end
 
       def index
+        billing_entity = current_organization.all_billing_entities.find_by!(code: params[:billing_entity_code]) if params[:billing_entity_code].present?
         result = InvoicesQuery.call(
           organization: current_organization,
           pagination: {
@@ -53,6 +54,7 @@ module Api
           filters: {
             amount_from: params[:amount_from],
             amount_to: params[:amount_to],
+            billing_entity_id: billing_entity&.id,
             currency: params[:currency],
             customer_external_id: params[:external_customer_id],
             invoice_type: params[:invoice_type],
@@ -81,6 +83,8 @@ module Api
         else
           render_error_response(result)
         end
+      rescue ActiveRecord::RecordNotFound => e
+        not_found_error(resource: e.model)
       end
 
       def download

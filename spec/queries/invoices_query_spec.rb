@@ -11,14 +11,16 @@ RSpec.describe InvoicesQuery, type: :query do
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { nil }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:organization) { create(:organization) }
+  let(:billing_entity1) { organization.default_billing_entity }
+  let(:billing_entity2) { create(:billing_entity, organization:) }
   let(:customer_first) { create(:customer, organization:, name: "Rick Sanchez", firstname: "RickFirst", lastname: "SanchezLast", email: "pickle@hotmail.com") }
   let(:customer_second) { create(:customer, organization:, name: "Morty Smith", firstname: "MortyFirst", lastname: "SmithLast", email: "ilovejessica@gmail.com") }
   let(:invoice_first) do
     create(
       :invoice,
       organization:,
+      billing_entity: billing_entity1,
       status: "finalized",
       payment_status: "succeeded",
       customer: customer_first,
@@ -30,6 +32,7 @@ RSpec.describe InvoicesQuery, type: :query do
     create(
       :invoice,
       organization:,
+      billing_entity: billing_entity1,
       status: "finalized",
       payment_status: "pending",
       customer: customer_second,
@@ -41,6 +44,7 @@ RSpec.describe InvoicesQuery, type: :query do
     create(
       :invoice,
       organization:,
+      billing_entity: billing_entity1,
       status: "finalized",
       payment_status: "failed",
       payment_overdue: true,
@@ -53,6 +57,7 @@ RSpec.describe InvoicesQuery, type: :query do
     create(
       :invoice,
       organization:,
+      billing_entity: billing_entity2,
       status: "draft",
       payment_status: "pending",
       customer: customer_second,
@@ -65,6 +70,7 @@ RSpec.describe InvoicesQuery, type: :query do
       :invoice,
       :credit,
       organization:,
+      billing_entity: billing_entity2,
       status: "draft",
       payment_status: "pending",
       customer: customer_first,
@@ -76,6 +82,7 @@ RSpec.describe InvoicesQuery, type: :query do
       :invoice,
       :dispute_lost,
       organization:,
+      billing_entity: billing_entity2,
       payment_status: "pending",
       customer: customer_first,
       number: "6666666666"
@@ -785,6 +792,15 @@ RSpec.describe InvoicesQuery, type: :query do
           expect(returned_ids).to include(invoice_second.id)
         end
       end
+    end
+  end
+
+  context "when filtering by billing_entity_id" do
+    let(:filters) { {billing_entity_id: billing_entity1.id} }
+
+    it "returns invoices for the specified billing entity" do
+      expect(returned_ids).to include(invoice_first.id, invoice_second.id, invoice_third.id)
+      expect(returned_ids).not_to include(invoice_fourth.id, invoice_fifth.id, invoice_sixth.id)
     end
   end
 end
