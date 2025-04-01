@@ -376,7 +376,6 @@ RSpec.describe CreditNotesQuery, type: :query do
     end
   end
 
-
   context "when search term filter applied" do
     context "with term matching credit note by id" do
       let(:search_term) { matching_credit_note.id.first(10) }
