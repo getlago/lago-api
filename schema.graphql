@@ -7249,7 +7249,7 @@ type Query {
   """
   Query customers of an organization
   """
-  customers(accountType: [CustomerAccountTypeEnum!], limit: Int, page: Int, searchTerm: String, withDeleted: Boolean): CustomerCollection!
+  customers(accountType: [CustomerAccountTypeEnum!], billingEntityId: ID, limit: Int, page: Int, searchTerm: String, withDeleted: Boolean): CustomerCollection!
 
   """
   Query monthly recurring revenues of an organization
