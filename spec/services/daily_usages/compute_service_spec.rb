@@ -134,11 +134,13 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
       end
 
       context "when subscription is terminated after the timestamp" do
+        # Ensure that we terminate he subscription and ingest event at the same billing period
+        let(:termination_date) { Time.current.beginning_of_month - 2.days }
         let(:subscription) do
-          create(:subscription, :terminated, :calendar, customer:, plan:, started_at: 1.year.ago)
+          create(:subscription, :terminated, :calendar, customer:, plan:, started_at: 1.year.ago, terminated_at: termination_date)
         end
 
-        let(:timestamp) { subscription.terminated_at - 1.day }
+        let(:timestamp) { termination_date - 1.day }
 
         it "creates a daily usage" do
           travel_to("2024-11-24") do

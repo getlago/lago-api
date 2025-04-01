@@ -46,6 +46,8 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     let(:override_amount_cents) { 777 }
     let(:override_display_name) { "Overriden Threshold 12" }
 
+    before { customer }
+
     include_examples "requires API permission", "subscription", "write"
 
     it "returns a success", :aggregate_failures do
@@ -81,6 +83,10 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           amount_cents: commitment_amount_cents
         )
       end
+    end
+
+    it "doesn't create a new customer" do
+      expect { subject }.not_to change(Customer, :count)
     end
 
     context "when progressive billing premium integration is present" do
@@ -122,6 +128,72 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           name: "456",
           external_id: "789"
         )
+      end
+
+      it "creates a new customer in the organization default billing entity" do
+        expect { subject }.to change(Customer, :count).by(1)
+
+        customer = Customer.find_by(external_id: "123")
+        expect(customer.organization).to eq(organization)
+        expect(customer.billing_entity).to eq(organization.default_billing_entity)
+      end
+
+      context "when passing billing_entity_code" do
+        let(:billing_entity) { create(:billing_entity, organization:) }
+        let(:params) do
+          {
+            external_customer_id: 123,
+            plan_code:,
+            name: 456,
+            external_id: 789,
+            billing_entity_code: billing_entity.code
+          }
+        end
+
+        it "creates a new customer with the given billing entity" do
+          expect { subject }.to change(Customer, :count).by(1)
+
+          customer = Customer.find_by(external_id: "123")
+          expect(customer.billing_entity).to eq(billing_entity)
+        end
+
+        context "when billing entity does not exist" do
+          let(:params) do
+            {
+              external_customer_id: 123,
+              plan_code:,
+              name: 456,
+              external_id: 789,
+              billing_entity_code: SecureRandom.uuid
+            }
+          end
+
+          it "returns a not_found error" do
+            subject
+
+            expect(response).to have_http_status(:not_found)
+            expect(json[:code]).to eq("billing_entity_not_found")
+          end
+        end
+
+        context "when passing external_id from another billing entity" do
+          let(:params) do
+            {
+              external_customer_id: customer.external_id,
+              plan_code:,
+              name: 456,
+              external_id: 789,
+              billing_entity_code: billing_entity.id
+            }
+          end
+
+          it "uses the customer ignoring billing_entity" do
+            expect { subject }.not_to change(Customer, :count)
+
+            customer.reload
+            expect(customer.billing_entity).to eq(organization.default_billing_entity)
+          end
+        end
       end
     end
 
