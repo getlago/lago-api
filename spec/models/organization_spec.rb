@@ -375,11 +375,35 @@ RSpec.describe Organization, type: :model do
     let(:invoice1) { create(:invoice, organization:, status: :failed) }
     let(:invoice2) { create(:invoice, organization:, status: :failed) }
     let(:invoice3) { create(:invoice, organization:, status: :draft) }
+    let(:error_detail1) do
+      create(
+        :error_detail,
+        owner: invoice1,
+        organization:,
+        error_code: :tax_error,
+        details: {
+          tax_error: "productExternalIdUnknown"
+        }
+      )
+    end
+    let(:error_detail2) do
+      create(
+        :error_detail,
+        owner: invoice2,
+        organization:,
+        error_code: :tax_error,
+        details: {
+          tax_error: "productExternalIdUnknown"
+        }
+      )
+    end
 
     before do
       invoice1
       invoice2
       invoice3
+      error_detail1
+      error_detail2
     end
 
     it "returns the count of failed invoices" do
