@@ -59,7 +59,7 @@ module Organizations
         if params.key?(:document_numbering)
           Organizations::UpdateInvoiceNumberingService.call(
             organization:,
-            document_numbering: params[:document_numbering],
+            document_numbering: params[:document_numbering]
           )
         end
 
