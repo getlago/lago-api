@@ -8,7 +8,8 @@ RSpec.describe Fees::OneOffService do
   end
 
   let(:invoice) { create(:invoice, organization:, customer:) }
-  let(:organization) { create(:organization) }
+  let(:billing_entity) { create(:billing_entity) }
+  let(:organization) { billing_entity.organization }
   let(:customer) { create(:customer, organization:) }
   let(:tax) { create(:tax, organization:) }
   let(:tax2) { create(:tax, organization:, applied_to_organization: false) }
@@ -42,41 +43,41 @@ RSpec.describe Fees::OneOffService do
       first_fee = result.fees[0]
       second_fee = result.fees[1]
 
-      aggregate_failures do
-        expect(first_fee).to have_attributes(
-          id: String,
-          organization_id: organization.id,
-          invoice_id: invoice.id,
-          add_on_id: add_on_first.id,
-          description: "desc-123",
-          unit_amount_cents: 1200,
-          precise_unit_amount: 12,
-          units: 2,
-          amount_cents: 2400,
-          precise_amount_cents: 2400.0,
-          amount_currency: "EUR",
-          fee_type: "add_on",
-          payment_status: "pending"
-        )
-        expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
+      expect(first_fee).to have_attributes(
+        id: String,
+        organization_id: organization.id,
+        billing_entity_id: billing_entity.id,
+        invoice_id: invoice.id,
+        add_on_id: add_on_first.id,
+        description: "desc-123",
+        unit_amount_cents: 1200,
+        precise_unit_amount: 12,
+        units: 2,
+        amount_cents: 2400,
+        precise_amount_cents: 2400.0,
+        amount_currency: "EUR",
+        fee_type: "add_on",
+        payment_status: "pending"
+      )
+      expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
 
-        expect(second_fee).to have_attributes(
-          id: String,
-          organization_id: organization.id,
-          invoice_id: invoice.id,
-          add_on_id: add_on_second.id,
-          description: add_on_second.description,
-          unit_amount_cents: 400,
-          precise_unit_amount: 4,
-          units: 1,
-          amount_cents: 400,
-          precise_amount_cents: 400.0,
-          amount_currency: "EUR",
-          fee_type: "add_on",
-          payment_status: "pending"
-        )
-        expect(second_fee.taxes.map(&:code)).to contain_exactly(tax.code)
-      end
+      expect(second_fee).to have_attributes(
+        id: String,
+        organization_id: organization.id,
+        billing_entity_id: billing_entity.id,
+        invoice_id: invoice.id,
+        add_on_id: add_on_second.id,
+        description: add_on_second.description,
+        unit_amount_cents: 400,
+        precise_unit_amount: 4,
+        units: 1,
+        amount_cents: 400,
+        precise_amount_cents: 400.0,
+        amount_currency: "EUR",
+        fee_type: "add_on",
+        payment_status: "pending"
+      )
+      expect(second_fee.taxes.map(&:code)).to contain_exactly(tax.code)
     end
 
     context "when add_on_code is invalid" do
@@ -121,23 +122,21 @@ RSpec.describe Fees::OneOffService do
 
         first_fee = result.fees[0]
 
-        aggregate_failures do
-          expect(first_fee).to have_attributes(
-            id: String,
-            invoice_id: invoice.id,
-            add_on_id: add_on_first.id,
-            description: "desc-123",
-            unit_amount_cents: 1200,
-            precise_unit_amount: 12,
-            units: 2,
-            amount_cents: 2400,
-            precise_amount_cents: 2400.0,
-            amount_currency: "EUR",
-            fee_type: "add_on",
-            payment_status: "pending"
-          )
-          expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
-        end
+        expect(first_fee).to have_attributes(
+          id: String,
+          invoice_id: invoice.id,
+          add_on_id: add_on_first.id,
+          description: "desc-123",
+          unit_amount_cents: 1200,
+          precise_unit_amount: 12,
+          units: 2,
+          amount_cents: 2400,
+          precise_amount_cents: 2400.0,
+          amount_currency: "EUR",
+          fee_type: "add_on",
+          payment_status: "pending"
+        )
+        expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
       end
     end
 
@@ -193,48 +192,46 @@ RSpec.describe Fees::OneOffService do
         first_fee = result.fees[0]
         second_fee = result.fees[1]
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(first_fee).to have_attributes(
-            id: String,
-            invoice_id: invoice.id,
-            add_on_id: add_on_first.id,
-            description: "desc-123",
-            unit_amount_cents: 1200,
-            precise_unit_amount: 12,
-            units: 2,
-            amount_cents: 2400,
-            amount_currency: "EUR",
-            fee_type: "add_on",
-            payment_status: "pending",
-            taxes_rate: 10,
-            taxes_base_rate: 1.0
-          )
-          expect(first_fee.applied_taxes.first.amount_cents).to eq(240)
-          expect(first_fee.applied_taxes.first.precise_amount_cents).to eq(240.0)
+        expect(first_fee).to have_attributes(
+          id: String,
+          invoice_id: invoice.id,
+          add_on_id: add_on_first.id,
+          description: "desc-123",
+          unit_amount_cents: 1200,
+          precise_unit_amount: 12,
+          units: 2,
+          amount_cents: 2400,
+          amount_currency: "EUR",
+          fee_type: "add_on",
+          payment_status: "pending",
+          taxes_rate: 10,
+          taxes_base_rate: 1.0
+        )
+        expect(first_fee.applied_taxes.first.amount_cents).to eq(240)
+        expect(first_fee.applied_taxes.first.precise_amount_cents).to eq(240.0)
 
-          expect(second_fee).to have_attributes(
-            id: String,
-            invoice_id: invoice.id,
-            add_on_id: add_on_second.id,
-            description: add_on_second.description,
-            unit_amount_cents: 400,
-            precise_unit_amount: 4,
-            units: 1,
-            amount_cents: 400,
-            precise_amount_cents: 400.0,
-            amount_currency: "EUR",
-            fee_type: "add_on",
-            payment_status: "pending",
-            taxes_rate: 15,
-            taxes_base_rate: 1.0
-          )
-          expect(second_fee.applied_taxes.first.amount_cents).to eq(60)
-          expect(second_fee.applied_taxes.first.precise_amount_cents).to eq(60.0)
+        expect(second_fee).to have_attributes(
+          id: String,
+          invoice_id: invoice.id,
+          add_on_id: add_on_second.id,
+          description: add_on_second.description,
+          unit_amount_cents: 400,
+          precise_unit_amount: 4,
+          units: 1,
+          amount_cents: 400,
+          precise_amount_cents: 400.0,
+          amount_currency: "EUR",
+          fee_type: "add_on",
+          payment_status: "pending",
+          taxes_rate: 15,
+          taxes_base_rate: 1.0
+        )
+        expect(second_fee.applied_taxes.first.amount_cents).to eq(60)
+        expect(second_fee.applied_taxes.first.precise_amount_cents).to eq(60.0)
 
-          expect(invoice.reload.error_details.count).to eq(0)
-        end
+        expect(invoice.reload.error_details.count).to eq(0)
       end
 
       context "when there is tax deduction" do
@@ -257,48 +254,46 @@ RSpec.describe Fees::OneOffService do
           first_fee = result.fees[0]
           second_fee = result.fees[1]
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            expect(first_fee).to have_attributes(
-              id: String,
-              invoice_id: invoice.id,
-              add_on_id: add_on_first.id,
-              description: "desc-123",
-              unit_amount_cents: 1200,
-              precise_unit_amount: 12,
-              units: 2,
-              amount_cents: 2400,
-              amount_currency: "EUR",
-              fee_type: "add_on",
-              payment_status: "pending",
-              taxes_rate: 10,
-              taxes_base_rate: 0.8
-            )
-            expect(first_fee.applied_taxes.first.amount_cents).to eq(192)
-            expect(first_fee.applied_taxes.first.precise_amount_cents).to eq(192.0)
+          expect(first_fee).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            add_on_id: add_on_first.id,
+            description: "desc-123",
+            unit_amount_cents: 1200,
+            precise_unit_amount: 12,
+            units: 2,
+            amount_cents: 2400,
+            amount_currency: "EUR",
+            fee_type: "add_on",
+            payment_status: "pending",
+            taxes_rate: 10,
+            taxes_base_rate: 0.8
+          )
+          expect(first_fee.applied_taxes.first.amount_cents).to eq(192)
+          expect(first_fee.applied_taxes.first.precise_amount_cents).to eq(192.0)
 
-            expect(second_fee).to have_attributes(
-              id: String,
-              invoice_id: invoice.id,
-              add_on_id: add_on_second.id,
-              description: add_on_second.description,
-              unit_amount_cents: 400,
-              precise_unit_amount: 4,
-              units: 1,
-              amount_cents: 400,
-              precise_amount_cents: 400.0,
-              amount_currency: "EUR",
-              fee_type: "add_on",
-              payment_status: "pending",
-              taxes_rate: 15,
-              taxes_base_rate: 0.8
-            )
-            expect(second_fee.applied_taxes.first.amount_cents).to eq(48)
-            expect(second_fee.applied_taxes.first.precise_amount_cents).to eq(48.0)
+          expect(second_fee).to have_attributes(
+            id: String,
+            invoice_id: invoice.id,
+            add_on_id: add_on_second.id,
+            description: add_on_second.description,
+            unit_amount_cents: 400,
+            precise_unit_amount: 4,
+            units: 1,
+            amount_cents: 400,
+            precise_amount_cents: 400.0,
+            amount_currency: "EUR",
+            fee_type: "add_on",
+            payment_status: "pending",
+            taxes_rate: 15,
+            taxes_base_rate: 0.8
+          )
+          expect(second_fee.applied_taxes.first.amount_cents).to eq(48)
+          expect(second_fee.applied_taxes.first.precise_amount_cents).to eq(48.0)
 
-            expect(invoice.reload.error_details.count).to eq(0)
-          end
+          expect(invoice.reload.error_details.count).to eq(0)
         end
       end
 
@@ -311,14 +306,12 @@ RSpec.describe Fees::OneOffService do
         it "returns tax error" do
           result = one_off_service.create
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error.code).to eq("tax_error")
-            expect(result.error.error_message).to eq("taxDateTooFarInFuture")
+          expect(result).not_to be_success
+          expect(result.error.code).to eq("tax_error")
+          expect(result.error.error_message).to eq("taxDateTooFarInFuture")
 
-            expect(invoice.reload.error_details.count).to eq(1)
-            expect(invoice.reload.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
-          end
+          expect(invoice.reload.error_details.count).to eq(1)
+          expect(invoice.reload.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
         end
 
         context "with api limit error" do
@@ -330,16 +323,14 @@ RSpec.describe Fees::OneOffService do
           it "returns and store proper error details" do
             result = one_off_service.create
 
-            aggregate_failures do
-              expect(result).not_to be_success
-              expect(result.error.code).to eq("tax_error")
-              expect(result.error.error_message).to eq("validationError")
+            expect(result).not_to be_success
+            expect(result.error.code).to eq("tax_error")
+            expect(result.error.error_message).to eq("validationError")
 
-              expect(invoice.reload.error_details.count).to eq(1)
-              expect(invoice.reload.error_details.first.details["tax_error"]).to eq("validationError")
-              expect(invoice.reload.error_details.first.details["tax_error_message"])
-                .to eq("You've exceeded your API limit of 10 per second")
-            end
+            expect(invoice.reload.error_details.count).to eq(1)
+            expect(invoice.reload.error_details.first.details["tax_error"]).to eq("validationError")
+            expect(invoice.reload.error_details.first.details["tax_error_message"])
+              .to eq("You've exceeded your API limit of 10 per second")
           end
         end
       end

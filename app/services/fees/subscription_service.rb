@@ -35,13 +35,14 @@ module Fees
 
     attr_reader :invoice, :subscription, :boundaries, :context
 
-    delegate :customer, :organization, to: :invoice
+    delegate :customer, to: :invoice
     delegate :previous_subscription, :plan, to: :subscription
 
     def initialize_fee(new_amount_cents, new_precise_amount_cents)
       base_fee = Fee.new(
         invoice:,
-        organization_id: organization.id,
+        organization_id: invoice.organization_id,
+        billing_entity_id: invoice.billing_entity_id,
         subscription:,
         amount_cents: new_amount_cents,
         precise_amount_cents: new_precise_amount_cents.to_d,
