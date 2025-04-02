@@ -223,4 +223,42 @@ RSpec.describe Api::V1::WalletTransactionsController, type: :request do
       end
     end
   end
+
+  describe "POST /api/v1/wallet_transactions/:id/payment_url" do
+    subject do
+      post_with_token(organization, "/api/v1/wallet_transactions/#{wallet_transaction_id}/payment_url")
+    end
+
+    context "when wallet transaction exits" do
+      let(:wallet_transaction_id) { wallet_transaction.id }
+      let(:wallet_transaction) { create(:wallet_transaction, :with_invoice, wallet:, status: :pending, customer:) }
+      let(:wallet) { create(:wallet, customer:) }
+      let(:customer) { create(:customer, :with_stripe_payment_provider, organization:) }
+      let(:generated_payment_url) { "https://example.com" }
+
+      before do
+        allow(::Stripe::Checkout::Session).to receive(:create).and_return({"url" => generated_payment_url})
+      end
+
+      include_examples "requires API permission", "wallet_transaction", "write"
+
+      it "returns the generated payment url" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json).to match({
+          wallet_transaction_payment_details: hash_including(payment_url: generated_payment_url)
+        })
+      end
+    end
+
+    context "when wallet_transaction does not exist" do
+      let(:wallet_transaction_id) { SecureRandom.uuid }
+
+      it "returns not_found error" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
 end

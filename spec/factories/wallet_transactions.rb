@@ -13,5 +13,13 @@ FactoryBot.define do
       status { "failed" }
       failed_at { Time.current }
     end
+
+    trait :with_invoice do
+      transient do
+        customer { association(:customer) }
+      end
+
+      invoice { association(:invoice, customer:, organization: customer.organization) }
+    end
   end
 end
