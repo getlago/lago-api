@@ -1,17 +1,28 @@
 ---
 fr:
   invoice:
+    account_holder_name: Nom du titulaire du compte
+    account_number: Numéro de compte
+    account_type: Type de compte
     all_subscriptions: Tous les abonnements
     all_usage_based_fees: Tous les frais de consommation
     already_paid: Déjà payé
     amount: Montant
     amount_with_tax: Montant (TTC)
     amount_without_tax: Montant (HT)
+    bank_code: Code banque
+    bank_name: Nom de la banque
+    bank_transfer_info: Les virements bancaires peuvent prendre plusieurs jours ouvrables pour être traités. Pour payer par virement bancaire, transférez des fonds en utilisant les informations bancaires suivantes.
+    bic: BIC
     bill_from: De
     bill_to: Facturé à
+    branch_code: Code guichet
+    branch_name: Nom de l'agence
     breakdown: Détails de consommation
     breakdown_for_days: "%{breakdown_duration} sur %{breakdown_total_duration} jours"
     breakdown_of: Détails de consommation de %{fee_filter_display_name}
+    clabe: CLABE
+    country: Pays
     coupons: Réduction(s)
     credit_notes: Avoir(s)
     date_from: Du
@@ -29,6 +40,7 @@ fr:
       flat_fee_for_the_first: Frais fixes pour les %{to} premières
       flat_fee_for_the_last: Frais fixes pour %{from} et plus
       flat_fee_for_the_next: Frais fixes pour les suivantes de %{from} à %{to}
+    iban: IBAN
     invoice_number: Nº de facture
     issue_date: Date d'émission
     item: Article
@@ -43,6 +55,7 @@ fr:
       free_units_for_the_first: Unités gratuites pour les premiers %{count}
     paid_invoice: Facture payée
     paid_tax_invoice: Facture fiscale payée
+    pay_with_bank_transfer: Payer par virement bancaire
     payment_term: Délai de paiement
     payment_term_days: "%{net_payment_term} jours"
     percentage:
@@ -60,15 +73,18 @@ fr:
     quarter: trimestre
     quarterly: trimestriellement
     reached_usage_threshold: Cette facturation progressive est générée car votre usage cumulé a atteint %{usage_amount}, dépassant le seuil de %{threshold_amount}.
+    routing_number: Numéro de routage
     see_breakdown: Consultez le détail ci-après
     self_billed:
       document_name: Facture d'autofacturation
       footer: Cette facture d'autofacturation a été émise par le client au nom du partenaire, avec son consentement. Le partenaire a accepté de ne pas établir sa propre facture pour cette transaction.
+    sort_code: Code de tri
     sub_total: Sous total
     sub_total_with_tax: Sous total (TTC)
     sub_total_without_tax: Sous total (HT)
     subscription: Abonnement
     subscription_interval: Abonnement %{plan_interval} - %{plan_name}
+    swift_code: Code SWIFT
     tax: TVA
     tax_identification_number: 'ID fiscal: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% sur %{amount})"
@@ -109,19 +125,3 @@ fr:
     weekly: hebdomadaire
     year: année
     yearly: annuel
-    pay_with_bank_transfer: Payer par virement bancaire
-    bank_transfer_info: Les virements bancaires peuvent prendre plusieurs jours ouvrables pour être traités. Pour payer par virement bancaire, transférez des fonds en utilisant les informations bancaires suivantes.
-    bank_name: Nom de la banque
-    routing_number: Numéro de routage
-    account_number: Numéro de compte
-    swift_code: Code SWIFT
-    bic: BIC
-    iban: IBAN
-    country: Pays
-    account_holder_name: Nom du titulaire du compte
-    sort_code: Code de tri
-    bank_code: Code banque
-    branch_code: Code guichet
-    branch_name: Nom de l'agence
-    account_type: Type de compte
-    clabe: CLABE

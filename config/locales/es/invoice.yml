@@ -1,17 +1,28 @@
 ---
 es:
   invoice:
+    account_holder_name: Nombre del titular de la cuenta
+    account_number: Número de cuenta
+    account_type: Tipo de cuenta
     all_subscriptions: Todos los suscripciones
     all_usage_based_fees: Todos los cargos basados en el uso
     already_paid: Ya pagado
     amount: Total (excl. impuestos)
     amount_with_tax: Total (impuestos incl.)
     amount_without_tax: Total (impuestos excl.)
+    bank_code: Código bancario
+    bank_name: Nombre del banco
+    bank_transfer_info: Las transferencias bancarias pueden tardar varios días hábiles en procesarse. Para pagar mediante transferencia bancaria, transfiere fondos utilizando la siguiente información bancaria.
+    bic: BIC
     bill_from: Emitida por
     bill_to: Factura destinada a
+    branch_code: Código de sucursal
+    branch_name: Nombre de la sucursal
     breakdown: Desglose
     breakdown_for_days: Utilizados %{breakdown_duration} de %{breakdown_total_duration} días
     breakdown_of: Desglose de %{fee_filter_display_name}
+    clabe: CLABE
+    country: País
     credit_notes: Notas de crédito
     date_from: Tarifas desde
     date_to: hasta
@@ -28,6 +39,7 @@ es:
       flat_fee_for_the_first: Tarifa fija para las %{to} primeras
       flat_fee_for_the_last: Tarifa fija para %{from} y superiores
       flat_fee_for_the_next: Tarifa fija para las siguientes de %{from} a %{to}
+    iban: IBAN
     invoice_number: Número de la factura
     issue_date: Fecha de emisión
     item: Ítem
@@ -42,6 +54,7 @@ es:
       free_units_for_the_first: Unidades gratuitas para las %{count} primeras
     paid_invoice: Factura pagada
     paid_tax_invoice: Factura fiscal pagada
+    pay_with_bank_transfer: Paga con transferencia bancaria
     payment_term: Plazo de pago neto
     payment_term_days: "%{net_payment_term} días"
     percentage:
@@ -59,15 +72,18 @@ es:
     quarter: trimestre
     quarterly: Trimestral
     reached_usage_threshold: Esta facturación progresiva se genera porque su uso acumulado ha alcanzado los %{usage_amount}, superando el umbral de %{threshold_amount}.
+    routing_number: Número de ruta
     see_breakdown: Consulte el desglose a continuación
     self_billed:
       document_name: Factura de autoliquidación
       footer: Esta factura de autoliquidación ha sido emitida por el cliente en nombre del socio, con su consentimiento. El socio ha aceptado no emitir su propia factura para esta transacción.
+    sort_code: Código de clasificación
     sub_total: Subtotal
     sub_total_with_tax: Subtotal (impuestos incl.)
     sub_total_without_tax: Subtotal (impuestos excl.)
     subscription: Suscripción
     subscription_interval: Suscripción %{plan_interval} - %{plan_name}
+    swift_code: Código SWIFT
     tax: Impuesto
     tax_identification_number: 'ID del impuesto: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% sobre %{amount})"
@@ -107,19 +123,3 @@ es:
     weekly: Semanal
     year: año
     yearly: Anual
-    pay_with_bank_transfer: Paga con transferencia bancaria
-    bank_transfer_info: Las transferencias bancarias pueden tardar varios días hábiles en procesarse. Para pagar mediante transferencia bancaria, transfiere fondos utilizando la siguiente información bancaria.
-    bank_name: Nombre del banco
-    routing_number: Número de ruta
-    account_number: Número de cuenta
-    swift_code: Código SWIFT
-    bic: BIC
-    iban: IBAN
-    country: País
-    account_holder_name: Nombre del titular de la cuenta
-    sort_code: Código de clasificación
-    bank_code: Código bancario
-    branch_code: Código de sucursal
-    branch_name: Nombre de la sucursal
-    account_type: Tipo de cuenta
-    clabe: CLABE

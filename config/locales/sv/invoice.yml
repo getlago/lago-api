@@ -1,17 +1,28 @@
 ---
 sv:
   invoice:
+    account_holder_name: Kontoinnehavarens namn
+    account_number: Kontonummer
+    account_type: Kontotyp
     all_subscriptions: Alla prenumerationer
     all_usage_based_fees: Alla avgifter baserade på användning
     already_paid: Redan betalt
     amount: Belopp (exkl. moms)
     amount_with_tax: Belopp (inkl. moms)
     amount_without_tax: Belopp (exkl. moms)
+    bank_code: Bankkod
+    bank_name: Banknamn
+    bank_transfer_info: Banköverföringar kan ta flera arbetsdagar att behandla. För att betala med banköverföring, överför medel med följande bankinformation.
+    bic: BIC
     bill_from: Avsändare
     bill_to: Mottagare
+    branch_code: Filialkod
+    branch_name: Filialnamn
     breakdown: Specifikation
     breakdown_for_days: Använt %{breakdown_duration} av %{breakdown_total_duration} dagar
     breakdown_of: Specifikation för %{fee_filter_display_name}
+    clabe: CLABE
+    country: Land
     credit_notes: Kreditfakturor
     date_from: Avser period
     date_to: till och med
@@ -28,6 +39,7 @@ sv:
       flat_fee_for_the_first: Fast avgift för de första %{to}
       flat_fee_for_the_last: Fast avgift för %{from} och högre
       flat_fee_for_the_next: Fast avgift för de nästa %{from} till %{to}
+    iban: IBAN
     invoice_number: Fakturanummer
     issue_date: Fakturadatum
     item: Artikel
@@ -42,6 +54,7 @@ sv:
       free_units_for_the_first: Gratis enheter för de första %{count}
     paid_invoice: Betald faktura
     paid_tax_invoice: Betald skattefaktura
+    pay_with_bank_transfer: Betala med banköverföring
     payment_term: Betalningsvillkor
     payment_term_days: "%{net_payment_term} dagar"
     percentage:
@@ -59,15 +72,18 @@ sv:
     quarter: kvartal
     quarterly: Kvartalsvis
     reached_usage_threshold: Denna progressiva fakturering skapas eftersom din ackumulerade användning har nått %{usage_amount} och överstiger %{threshold_amount} tröskeln.
+    routing_number: Routingnummer
     see_breakdown: Se uppdelning nedan
     self_billed:
       document_name: Självfakturering
       footer: Denna självfaktura har utfärdats av kunden för partnerns räkning, med deras samtycke. Partnern har gått med på att inte utfärda en egen faktura för denna transaktion.
+    sort_code: Sorteringskod
     sub_total: Delsumma
     sub_total_with_tax: Delsumma (inkl. moms)
     sub_total_without_tax: Delsumma (exkl. moms)
     subscription: Prenumeration
     subscription_interval: "%{plan_interval} prenumeration - %{plan_name}"
+    swift_code: SWIFT-kod
     tax: Skatt
     tax_identification_number: 'Skatte ID: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% på %{amount})"
@@ -107,19 +123,3 @@ sv:
     weekly: Veckovis
     year: år
     yearly: Årsvis
-    pay_with_bank_transfer: Betala med banköverföring
-    bank_transfer_info: Banköverföringar kan ta flera arbetsdagar att behandla. För att betala med banköverföring, överför medel med följande bankinformation.
-    bank_name: Banknamn
-    routing_number: Routingnummer
-    account_number: Kontonummer
-    swift_code: SWIFT-kod
-    bic: BIC
-    iban: IBAN
-    country: Land
-    account_holder_name: Kontoinnehavarens namn
-    sort_code: Sorteringskod
-    bank_code: Bankkod
-    branch_code: Filialkod
-    branch_name: Filialnamn
-    account_type: Kontotyp
-    clabe: CLABE

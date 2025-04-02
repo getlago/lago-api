@@ -1,17 +1,28 @@
 ---
 it:
   invoice:
+    account_holder_name: Nome del titolare del conto
+    account_number: Numero di conto
+    account_type: Tipo di conto
     all_subscriptions: Tutti gli abbonamenti
     all_usage_based_fees: Tutte le tariffe basate sull'utilizzo
     already_paid: Già pagato
     amount: Importo
     amount_with_tax: Importo (incl. tasse)
     amount_without_tax: Importo (escl. tasse)
+    bank_code: Codice banca
+    bank_name: Nome della banca
+    bank_transfer_info: I bonifici bancari possono richiedere diversi giorni lavorativi per essere elaborati. Per pagare tramite bonifico bancario, trasferisci i fondi utilizzando le seguenti informazioni bancarie.
+    bic: BIC
     bill_from: Da
     bill_to: Fatturare a
+    branch_code: Codice filiale
+    branch_name: Nome filiale
     breakdown: Ripartizione
     breakdown_for_days: Utilizzati %{breakdown_duration} su %{breakdown_total_duration} giorni
     breakdown_of: Ripartizione di %{fee_filter_display_name}
+    clabe: CLABE
+    country: Paese
     coupons: Coupon
     credit_notes: Note di Credito
     date_from: Dal
@@ -29,6 +40,7 @@ it:
       flat_fee_for_the_first: Tariffa fissa per le prime %{to}
       flat_fee_for_the_last: Tariffa fissa per %{from} e oltre
       flat_fee_for_the_next: Tariffa fissa per le seguenti da %{from} a %{to}
+    iban: IBAN
     invoice_number: Numero Fattura
     issue_date: Data Emissione
     item: Articolo
@@ -43,6 +55,7 @@ it:
       free_units_for_the_first: Unità gratuite per il primo %{count}
     paid_invoice: Fattura pagata
     paid_tax_invoice: Fattura fiscale pagata
+    pay_with_bank_transfer: Paga con bonifico bancario
     payment_term: Termine di pagamento
     payment_term_days: "%{net_payment_term} giorni"
     percentage:
@@ -60,15 +73,18 @@ it:
     quarter: trimestre
     quarterly: Trimestrale
     reached_usage_threshold: Questa fatturazione progressiva è generata poiché il tuo utilizzo cumulato ha raggiunto %{usage_amount}, superando la soglia di %{threshold_amount}.
+    routing_number: Numero di routing
     see_breakdown: Vedere la ripartizione per l'unità totale
     self_billed:
       document_name: Fattura di autofatturazione
       footer: Questa fattura di autofatturazione è stata emessa dal cliente per conto del partner, con il suo consenso. Il partner ha accettato di non emettere una propria fattura per questa transazione.
+    sort_code: Codice di ordinamento
     sub_total: Subtotale
     sub_total_with_tax: Subtotale (incl. tasse)
     sub_total_without_tax: Subtotale (escl. tasse)
     subscription: Abbonamento
     subscription_interval: Abbonamento %{plan_interval} - %{plan_name}
+    swift_code: Codice SWIFT
     tax: Tasse
     tax_identification_number: 'Identificativo fiscale: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% su %{amount})"
@@ -109,19 +125,3 @@ it:
     weekly: Settimanale
     year: anno
     yearly: Annuale
-    pay_with_bank_transfer: Paga con bonifico bancario
-    bank_transfer_info: I bonifici bancari possono richiedere diversi giorni lavorativi per essere elaborati. Per pagare tramite bonifico bancario, trasferisci i fondi utilizzando le seguenti informazioni bancarie.
-    bank_name: Nome della banca
-    routing_number: Numero di routing
-    account_number: Numero di conto
-    swift_code: Codice SWIFT
-    bic: BIC
-    iban: IBAN
-    country: Paese
-    account_holder_name: Nome del titolare del conto
-    sort_code: Codice di ordinamento
-    bank_code: Codice banca
-    branch_code: Codice filiale
-    branch_name: Nome filiale
-    account_type: Tipo di conto
-    clabe: CLABE
