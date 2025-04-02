@@ -8,5 +8,10 @@ FactoryBot.define do
     amount { "1.00" }
     credit_amount { "1.00" }
     settled_at { Time.zone.now }
+
+    trait :failed do
+      status { "failed" }
+      failed_at { Time.current }
+    end
   end
 end

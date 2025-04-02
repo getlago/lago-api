@@ -19,6 +19,8 @@ module Invoices
       create_generating_invoice unless invoice
       result.invoice = invoice
 
+      wallet_transaction.update!(invoice: result.invoice)
+
       ActiveRecord::Base.transaction do
         create_credit_fee(invoice)
         compute_amounts(invoice)

@@ -52,6 +52,11 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end
     end
 
+    it "assigns invoice to the wallet transaction" do
+      expect { invoice_service.call }
+        .to change(wallet_transaction, :invoice).from(nil).to(Invoice)
+    end
+
     it "enqueues a SendWebhookJob" do
       expect do
         invoice_service.call

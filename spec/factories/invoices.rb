@@ -65,5 +65,9 @@ FactoryBot.define do
     trait :self_billed do
       self_billed { true }
     end
+
+    trait :invisible do
+      status { Invoice::INVISIBLE_STATUS.keys.sample }
+    end
   end
 end
