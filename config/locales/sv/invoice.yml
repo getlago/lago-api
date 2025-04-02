@@ -107,3 +107,19 @@ sv:
     weekly: Veckovis
     year: år
     yearly: Årsvis
+    pay_with_bank_transfer: Betala med banköverföring
+    bank_transfer_info: Banköverföringar kan ta flera arbetsdagar att behandla. För att betala med banköverföring, överför medel med följande bankinformation.
+    bank_name: Banknamn
+    routing_number: Routingnummer
+    account_number: Kontonummer
+    swift_code: SWIFT-kod
+    bic: BIC
+    iban: IBAN
+    country: Land
+    account_holder_name: Kontoinnehavarens namn
+    sort_code: Sorteringskod
+    bank_code: Bankkod
+    branch_code: Filialkod
+    branch_name: Filialnamn
+    account_type: Kontotyp
+    clabe: CLABE

@@ -109,3 +109,19 @@ de:
     weekly: Wöchentlich
     year: jahr
     yearly: Jährlich
+    pay_with_bank_transfer: Zahlung per Banküberweisung
+    bank_transfer_info: Banküberweisungen können mehrere Werktage zur Bearbeitung benötigen. Um per Banküberweisung zu bezahlen, überweisen Sie den Betrag unter Verwendung der folgenden Bankdaten.
+    bank_name: Bankname
+    routing_number: Routing-Nummer
+    account_number: Kontonummer
+    swift_code: SWIFT-Code
+    bic: BIC
+    iban: IBAN
+    country: Land
+    account_holder_name: Kontoinhaber
+    sort_code: Sortiercode
+    bank_code: Bankleitzahl
+    branch_code: Filialnummer
+    branch_name: Filialname
+    account_type: Kontotyp
+    clabe: CLABE

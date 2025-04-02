@@ -107,3 +107,19 @@ es:
     weekly: Semanal
     year: año
     yearly: Anual
+    pay_with_bank_transfer: Paga con transferencia bancaria
+    bank_transfer_info: Las transferencias bancarias pueden tardar varios días hábiles en procesarse. Para pagar mediante transferencia bancaria, transfiere fondos utilizando la siguiente información bancaria.
+    bank_name: Nombre del banco
+    routing_number: Número de ruta
+    account_number: Número de cuenta
+    swift_code: Código SWIFT
+    bic: BIC
+    iban: IBAN
+    country: País
+    account_holder_name: Nombre del titular de la cuenta
+    sort_code: Código de clasificación
+    bank_code: Código bancario
+    branch_code: Código de sucursal
+    branch_name: Nombre de la sucursal
+    account_type: Tipo de cuenta
+    clabe: CLABE

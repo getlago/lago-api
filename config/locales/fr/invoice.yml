@@ -109,3 +109,19 @@ fr:
     weekly: hebdomadaire
     year: année
     yearly: annuel
+    pay_with_bank_transfer: Payer par virement bancaire
+    bank_transfer_info: Les virements bancaires peuvent prendre plusieurs jours ouvrables pour être traités. Pour payer par virement bancaire, transférez des fonds en utilisant les informations bancaires suivantes.
+    bank_name: Nom de la banque
+    routing_number: Numéro de routage
+    account_number: Numéro de compte
+    swift_code: Code SWIFT
+    bic: BIC
+    iban: IBAN
+    country: Pays
+    account_holder_name: Nom du titulaire du compte
+    sort_code: Code de tri
+    bank_code: Code banque
+    branch_code: Code guichet
+    branch_name: Nom de l'agence
+    account_type: Type de compte
+    clabe: CLABE

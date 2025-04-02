@@ -109,3 +109,19 @@ nb:
     weekly: Ukentlig
     year: år
     yearly: Årlig
+    pay_with_bank_transfer: Betal med bankoverføring
+    bank_transfer_info: Bankoverføringer kan ta flere virkedager å behandle. For å betale med bankoverføring, overfør midler ved å bruke følgende bankinformasjon.
+    bank_name: Banknavn
+    routing_number: Routing-nummer
+    account_number: Kontonummer
+    swift_code: SWIFT-kode
+    bic: BIC
+    iban: IBAN
+    country: Land
+    account_holder_name: Kontoinnehaver
+    sort_code: Sorteringskode
+    bank_code: Bankkode
+    branch_code: Filialkode
+    branch_name: Filialnavn
+    account_type: Kontotype
+    clabe: CLABE

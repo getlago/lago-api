@@ -109,3 +109,19 @@ it:
     weekly: Settimanale
     year: anno
     yearly: Annuale
+    pay_with_bank_transfer: Paga con bonifico bancario
+    bank_transfer_info: I bonifici bancari possono richiedere diversi giorni lavorativi per essere elaborati. Per pagare tramite bonifico bancario, trasferisci i fondi utilizzando le seguenti informazioni bancarie.
+    bank_name: Nome della banca
+    routing_number: Numero di routing
+    account_number: Numero di conto
+    swift_code: Codice SWIFT
+    bic: BIC
+    iban: IBAN
+    country: Paese
+    account_holder_name: Nome del titolare del conto
+    sort_code: Codice di ordinamento
+    bank_code: Codice banca
+    branch_code: Codice filiale
+    branch_name: Nome filiale
+    account_type: Tipo di conto
+    clabe: CLABE

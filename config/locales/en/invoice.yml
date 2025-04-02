@@ -110,3 +110,19 @@ en:
     weekly: Weekly
     year: year
     yearly: Yearly
+    pay_with_bank_transfer: Pay with a bank transfer
+    bank_transfer_info: Bank transfers may take several business days to process. To pay via bank transfer, transfer funds using the following bank information.
+    bank_name: Bank name
+    routing_number: Routing number
+    account_number: Account number
+    swift_code: SWIFT code
+    bic: BIC
+    iban: IBAN
+    country: Country
+    account_holder_name: Account holder name
+    sort_code: Sort code
+    bank_code: Bank code
+    branch_code: Branch code
+    branch_name: Branch name
+    account_type: Account type
+    clabe: CLABE
