@@ -3,6 +3,8 @@
 module Mutations
   module BillingEntities
     class RemoveTaxes < ::Mutations::BaseMutation
+      include AuthenticableApiUser
+      include RequiredOrganization
       graphql_name "RemoveTaxes"
 
       argument :billing_entity_id, ID, required: true
