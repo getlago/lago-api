@@ -14,7 +14,7 @@ module PaymentProviderCustomers
       def call
         return result unless eligible_for_funding_instructions?
 
-        funding_instructions = fetch_funding_instructions_from_stripe
+        funding_instructions = fetch_funding_instructions
         create_invoice_section_with_funding_info(funding_instructions)
         result.funding_instructions = funding_instructions
         result
@@ -51,7 +51,7 @@ module PaymentProviderCustomers
         )
       end
 
-      def fetch_funding_instructions_from_stripe
+      def fetch_funding_instructions
         ::Stripe::Customer.create_funding_instructions(
           stripe_customer.provider_customer_id,
           {
