@@ -37,12 +37,11 @@ RSpec.describe Organizations::UpdateInvoiceNumberingService, type: :service do
 
       before do
         invoice1
-        invoice2 
+        invoice2
         invoice3
         self_billed_invoice
         voided_invoice
       end
-      
 
       it "updates the organization sequential id for the latest invoice" do
         expect {
@@ -72,4 +71,4 @@ RSpec.describe Organizations::UpdateInvoiceNumberingService, type: :service do
       end
     end
   end
-end 
+end
