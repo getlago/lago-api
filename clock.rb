@@ -32,9 +32,11 @@ module Clockwork
 
   lifetime_usage_refresh_interval = ENV["LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS"].presence || 5.minutes
   every(lifetime_usage_refresh_interval.to_i.seconds, "schedule:refresh_lifetime_usages") do
-    Clock::RefreshLifetimeUsagesJob
-      .set(sentry: {"slug" => "lago_refresh_lifetime_usages", "cron" => "#{lifetime_usage_refresh_interval} interval"})
-      .perform_later
+    unless ENV["LAGO_DISABLE_LIFETIME_USAGE_REFRESH"] == "true"
+      Clock::RefreshLifetimeUsagesJob
+        .set(sentry: {"slug" => "lago_refresh_lifetime_usages", "cron" => "#{lifetime_usage_refresh_interval} interval"})
+        .perform_later
+    end
   end
 
   if ENV["LAGO_MEMCACHE_SERVERS"].present? || ENV["LAGO_REDIS_CACHE_URL"].present?
