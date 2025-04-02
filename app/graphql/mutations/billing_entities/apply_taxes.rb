@@ -3,6 +3,8 @@
 module Mutations
   module BillingEntities
     class ApplyTaxes < ::Mutations::BaseMutation
+      include AuthenticableApiUser
+      include RequiredOrganization
       graphql_name "ApplyTaxes"
 
       argument :billing_entity_id, ID, required: true
