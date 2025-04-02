@@ -2,25 +2,19 @@
 
 module Types
   module Integrations
-    class Anrok < Types::BaseObject
-      graphql_name "AnrokIntegration"
+    class Avalara < Types::BaseObject
+      graphql_name "AvalaraIntegration"
 
-      field :api_key, ObfuscatedStringType, null: false
+      field :account_id, String, null: false
       field :code, String, null: false
-      field :external_account_id, String, null: true
       field :failed_invoices_count, Integer, null: true
       field :has_mappings_configured, Boolean
       field :id, ID, null: false
+      field :license_key, ObfuscatedStringType, null: false
       field :name, String, null: false
 
       def has_mappings_configured
-        object.integration_collection_mappings.where(type: "IntegrationCollectionMappings::AnrokCollectionMapping").any?
-      end
-
-      def external_account_id
-        return nil unless object.api_key.include?("/")
-
-        object.api_key.split("/")[0]
+        object.integration_collection_mappings.where(type: "IntegrationCollectionMappings::AvalaraCollectionMapping").any?
       end
 
       def failed_invoices_count
