@@ -13,7 +13,7 @@ class AddSectionTypeToInvoiceCustomSections < ActiveRecord::Migration[7.2]
     end
 
     # Backfill all existing rows as manual
-    InvoiceCustomSection.in_batches(of: 10_000).update_all(section_type: "manual") # rubocop:disable Rails/SkipsModelValidations
+    InvoiceCustomSection.unscoped.in_batches(of: 10_000).update_all(section_type: "manual") # rubocop:disable Rails/SkipsModelValidations
 
     safety_assured do
       execute <<~SQL
