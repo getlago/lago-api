@@ -13,7 +13,7 @@ RSpec.describe Organizations::UpdateInvoiceNumberingService, type: :service do
       result = update_service.call
 
       expect(result).to be_success
-      expect(result.organization.per_organization?).to be_truthy
+      expect(result.organization).to be_per_organization
     end
 
     context "when document_numbering is not changing" do
@@ -23,7 +23,7 @@ RSpec.describe Organizations::UpdateInvoiceNumberingService, type: :service do
         result = update_service.call
 
         expect(result).to be_success
-        expect(result.organization.per_customer?).to be_truthy
+        expect(result.organization).to be_per_customer
       end
     end
 
@@ -49,7 +49,7 @@ RSpec.describe Organizations::UpdateInvoiceNumberingService, type: :service do
           update_service.call
         }.to change { voided_invoice.reload.organization_sequential_id }.to(3)
 
-        expect(organization.per_organization?).to be_truthy
+        expect(organization).to be_per_organization
       end
 
       it "only counts non-self-billed invoices with generated numbers" do
@@ -68,7 +68,7 @@ RSpec.describe Organizations::UpdateInvoiceNumberingService, type: :service do
         result = update_service.call
 
         expect(result).to be_success
-        expect(result.organization.per_customer?).to be_truthy
+        expect(result.organization).to be_per_customer
       end
     end
   end

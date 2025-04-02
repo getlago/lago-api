@@ -16,8 +16,12 @@ module Organizations
       return result if organization.document_numbering == document_numbering
 
       if organization.per_customer? && document_numbering == "per_organization"
-        organization_invoices_count = organization.invoices.non_self_billed.with_generated_number.count
-        organization.invoices.order(created_at: :desc).first&.update!(organization_sequential_id: organization_invoices_count)
+        last_invoice = organization.invoices.non_self_billed.with_generated_number.order(created_at: :desc).first
+
+        if last_invoice
+            organization_invoices_count = organization.invoices.non_self_billed.with_generated_number.count
+            last_invoice.update!(organization_sequential_id: organization_invoices_count)
+        end
       end
 
       organization.document_numbering = document_numbering
