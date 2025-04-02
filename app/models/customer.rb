@@ -64,7 +64,14 @@ class Customer < ApplicationRecord
 
   has_many :invoice_custom_sections
   has_many :invoice_custom_section_selections
-  has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section
+  has_many :selected_invoice_custom_sections,
+    -> { where(section_type: :manual) },
+    through: :invoice_custom_section_selections,
+    source: :invoice_custom_section
+  has_many :system_generated_invoice_custom_sections,
+    -> { where(section_type: :system_generated) },
+    through: :invoice_custom_section_selections,
+    source: :invoice_custom_section
 
   has_one :stripe_customer, class_name: "PaymentProviderCustomers::StripeCustomer"
   has_one :gocardless_customer, class_name: "PaymentProviderCustomers::GocardlessCustomer"

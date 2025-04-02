@@ -139,11 +139,11 @@ module PaymentProviderCustomers
       def eligible_for_funding_instructions?
         stripe_customer.provider_customer_id.present? &&
           stripe_customer.provider_payment_methods&.include?("customer_balance") &&
-          !customer.selected_invoice_custom_sections.exists?(code: "funding_instructions")
+          !customer.system_generated_invoice_custom_sections.exists?(code: "funding_instructions_#{customer.id}")
       end
 
       def customer_currency
-        customer.currency.downcase
+        customer.currency&.downcase || customer.organization.default_currency.downcase
       end
 
       def preferred_locale

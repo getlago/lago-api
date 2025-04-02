@@ -7,10 +7,7 @@ class InvoiceCustomSection < ApplicationRecord
   belongs_to :organization
   has_many :invoice_custom_section_selections, dependent: :destroy
 
-  SECTION_TYPES = {
-    manual: "manual",
-    system_generated: "system_generated"
-  }.freeze
+  SECTION_TYPES = {manual: "manual", system_generated: "system_generated"}.freeze
   enum :section_type, SECTION_TYPES, default: :manual, prefix: :section_type
   attribute :payment_type, :string
 
