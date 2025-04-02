@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module InvoiceCustomSections
   class CreateService < BaseService
     def initialize(organization:, create_params:, selected: false, system_generated: false)

@@ -15,8 +15,7 @@ module Resolvers
     type Types::InvoiceCustomSections::Object.collection_type, null: true
 
     def resolve(page: nil, limit: nil)
-      current_organization.invoice_custom_sections
-        .where(section_type: :manual)
+      current_organization.manual_invoice_custom_sections
         .joins('LEFT JOIN invoice_custom_section_selections ON invoice_custom_sections.id = invoice_custom_section_selections.invoice_custom_section_id
                 AND invoice_custom_section_selections.customer_id is NULL')
         .order(
