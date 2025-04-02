@@ -82,14 +82,14 @@ module PaymentProviderCustomers
 
               case address_type
               when :aba
-                lines << "#{t.call(:bank_name)} #{details[:bank_name] || '-'}"
-                lines << "#{t.call(:account_number)} #{details[:account_number] || '-'}"
-                lines << "#{t.call(:routing_number)} #{details[:routing_number] || '-'}"
+                lines << "#{t.call(:bank_name)} #{details[:bank_name] || "-"}"
+                lines << "#{t.call(:account_number)} #{details[:account_number] || "-"}"
+                lines << "#{t.call(:routing_number)} #{details[:routing_number] || "-"}"
                 lines << ""
               when :swift
-                lines << "#{t.call(:bank_name)} #{details[:bank_name] || '-'}"
-                lines << "#{t.call(:account_number)} #{details[:account_number] || '-'}"
-                lines << "#{t.call(:swift_code)} #{details[:swift_code] || '-'}"
+                lines << "#{t.call(:bank_name)} #{details[:bank_name] || "-"}"
+                lines << "#{t.call(:account_number)} #{details[:account_number] || "-"}"
+                lines << "#{t.call(:swift_code)} #{details[:swift_code] || "-"}"
                 lines << ""
               end
             end
@@ -97,35 +97,35 @@ module PaymentProviderCustomers
           when "mx_bank_transfer"
             address = addresses.first
             details = address&.dig(:mx_bank_transfer) || {}
-            lines << "#{t.call(:clabe)} #{details[:clabe] || '-'}"
-            lines << "#{t.call(:bank_name)} #{details[:bank_name] || '-'}"
-            lines << "#{t.call(:bank_code)} #{details[:bank_code] || '-'}"
+            lines << "#{t.call(:clabe)} #{details[:clabe] || "-"}"
+            lines << "#{t.call(:bank_name)} #{details[:bank_name] || "-"}"
+            lines << "#{t.call(:bank_code)} #{details[:bank_code] || "-"}"
 
           when "jp_bank_transfer"
             address = addresses.first
             details = address&.dig(:jp_bank_transfer) || {}
-            lines << "#{t.call(:bank_code)} #{details[:bank_code] || '-'}"
-            lines << "#{t.call(:bank_name)} #{details[:bank_name] || '-'}"
-            lines << "#{t.call(:branch_code)} #{details[:branch_code] || '-'}"
-            lines << "#{t.call(:branch_name)} #{details[:branch_name] || '-'}"
-            lines << "#{t.call(:account_type)} #{details[:account_type] || '-'}"
-            lines << "#{t.call(:account_number)} #{details[:account_number] || '-'}"
-            lines << "#{t.call(:account_holder_name)} #{details[:account_holder_name] || '-'}"
+            lines << "#{t.call(:bank_code)} #{details[:bank_code] || "-"}"
+            lines << "#{t.call(:bank_name)} #{details[:bank_name] || "-"}"
+            lines << "#{t.call(:branch_code)} #{details[:branch_code] || "-"}"
+            lines << "#{t.call(:branch_name)} #{details[:branch_name] || "-"}"
+            lines << "#{t.call(:account_type)} #{details[:account_type] || "-"}"
+            lines << "#{t.call(:account_number)} #{details[:account_number] || "-"}"
+            lines << "#{t.call(:account_holder_name)} #{details[:account_holder_name] || "-"}"
 
           when "gb_bank_transfer"
             address = addresses.first
             details = address&.dig(:sort_code) || {}
-            lines << "#{t.call(:account_number)} #{details[:account_number] || '-'}"
-            lines << "#{t.call(:sort_code)} #{details[:sort_code] || '-'}"
-            lines << "#{t.call(:account_holder_name)} #{details[:account_holder_name] || '-'}"
+            lines << "#{t.call(:account_number)} #{details[:account_number] || "-"}"
+            lines << "#{t.call(:sort_code)} #{details[:sort_code] || "-"}"
+            lines << "#{t.call(:account_holder_name)} #{details[:account_holder_name] || "-"}"
 
           when "eu_bank_transfer"
             address = addresses.first
             details = address&.dig(:iban) || {}
-            lines << "#{t.call(:bic)} #{details[:bic] || '-'}"
-            lines << "#{t.call(:iban)} #{details[:iban] || '-'}"
-            lines << "#{t.call(:country)} #{details[:country] || '-'}"
-            lines << "#{t.call(:account_holder_name)} #{details[:account_holder_name] || '-'}"
+            lines << "#{t.call(:bic)} #{details[:bic] || "-"}"
+            lines << "#{t.call(:iban)} #{details[:iban] || "-"}"
+            lines << "#{t.call(:country)} #{details[:country] || "-"}"
+            lines << "#{t.call(:account_holder_name)} #{details[:account_holder_name] || "-"}"
 
           else
             lines << "- #{t.call(:bank_transfer_info)} -"
