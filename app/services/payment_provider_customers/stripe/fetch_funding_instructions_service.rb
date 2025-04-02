@@ -39,7 +39,8 @@ module PaymentProviderCustomers
             display_name: I18n.t("invoice.pay_with_bank_transfer", locale: preferred_locale),
             details: format_funding_details_text(funding_details_data)
           },
-          selected: false
+          selected: false,
+          system_generated: true
         )
 
         return unless section_result.success?
