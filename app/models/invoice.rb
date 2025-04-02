@@ -446,7 +446,7 @@ class Invoice < ApplicationRecord
       organization_sequential_id = organization
         .invoices
         .non_self_billed
-        .maximum(:organization_sequential_id)
+        .maximum(:organization_sequential_id) || 0
 
       # NOTE: Start with the most recent sequential id and find first available sequential id that haven't occurred
       loop do
