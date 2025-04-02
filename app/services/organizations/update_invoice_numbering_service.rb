@@ -19,8 +19,8 @@ module Organizations
         last_invoice = organization.invoices.non_self_billed.with_generated_number.order(created_at: :desc).first
 
         if last_invoice
-            organization_invoices_count = organization.invoices.non_self_billed.with_generated_number.count
-            last_invoice.update!(organization_sequential_id: organization_invoices_count)
+          organization_invoices_count = organization.invoices.non_self_billed.with_generated_number.count
+          last_invoice.update!(organization_sequential_id: organization_invoices_count)
         end
       end
 
