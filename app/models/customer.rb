@@ -149,9 +149,10 @@ class Customer < ApplicationRecord
   end
 
   def applicable_invoice_custom_sections
-    return [] if skip_invoice_custom_sections?
+    return [] if skip_invoice_custom_sections? && system_generated_invoice_custom_sections.empty?
 
-    selected_invoice_custom_sections.order(:name).presence || organization.selected_invoice_custom_sections.order(:name)
+    invoice_custom_sections = selected_invoice_custom_sections.order(:name).presence || organization.selected_invoice_custom_sections.order(:name)
+    invoice_custom_sections + system_generated_invoice_custom_sections
   end
 
   def editable?

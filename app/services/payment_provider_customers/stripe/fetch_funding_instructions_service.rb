@@ -162,7 +162,7 @@ module PaymentProviderCustomers
       end
 
       def eu_bank_transfer_payload
-        customer_country = customer.country.upcase
+        customer_country = customer.country.upcase || customer.organization.country.upcase
         {type: "eu_bank_transfer", eu_bank_transfer: {country: customer_country}}
       end
 
