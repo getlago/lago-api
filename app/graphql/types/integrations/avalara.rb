@@ -18,7 +18,7 @@ module Types
       end
 
       def failed_invoices_count
-        object.organization.failed_invoices_count
+        object.organization.failed_tax_invoices_count
       end
     end
   end

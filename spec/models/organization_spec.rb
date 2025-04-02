@@ -368,8 +368,8 @@ RSpec.describe Organization, type: :model do
     end
   end
 
-  describe "#failed_invoices_count" do
-    subject(:failed_invoices_count) { organization.failed_invoices_count }
+  describe "#failed_tax_invoices_count" do
+    subject(:failed_tax_invoices_count) { organization.failed_tax_invoices_count }
 
     let(:organization) { create(:organization) }
     let(:invoice1) { create(:invoice, organization:, status: :failed) }
@@ -406,8 +406,8 @@ RSpec.describe Organization, type: :model do
       error_detail2
     end
 
-    it "returns the count of failed invoices" do
-      expect(failed_invoices_count).to eq(2)
+    it "returns the count of failed tax invoices" do
+      expect(failed_tax_invoices_count).to eq(2)
     end
   end
 end
