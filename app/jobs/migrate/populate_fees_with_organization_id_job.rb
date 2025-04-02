@@ -2,7 +2,7 @@
 
 module Migrate
   class PopulateFeesWithOrganizationIdJob < ApplicationJob
-    queue_as :long_running
+    queue_as :low_priority
 
     def perform
       Fee.where(organization_id: nil).find_in_batches(batch_size: 1000) do |batch|
