@@ -149,10 +149,10 @@ class Customer < ApplicationRecord
   end
 
   def applicable_invoice_custom_sections
-    manual_sections = configurable_invoice_custom_sections
-    system_sections = system_generated_invoice_custom_sections
+    manual_ids = configurable_invoice_custom_sections.map(&:id)
+    system_ids = system_generated_invoice_custom_sections.ids
 
-    (manual_sections + system_sections)
+    InvoiceCustomSection.where(id: manual_ids + system_ids)
   end
 
   def configurable_invoice_custom_sections
