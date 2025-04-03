@@ -7,7 +7,7 @@ RSpec.describe InvoiceCustomSections::CreateService, type: :service do
     subject(:service_result) { described_class.call(organization:, create_params:, selected:) }
 
     let(:organization) { create(:organization) }
-    let(:create_params) { nil }
+    let(:create_params) { {} }
     let(:selected) { nil }
 
     context "with valid params" do
