@@ -459,12 +459,16 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with billing entity code filter" do
-      let(:params) { {billing_entity_code: billing_entity.code} }
+    context "with billing entity codes filter" do
+      let(:params) { {billing_entity_codes: [billing_entity.code]} }
       let(:billing_entity) { create(:billing_entity, organization:) }
-      let!(:matching_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, billing_entity:)) }
+      let(:matching_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, billing_entity:)) }
+      let(:other_credit_note) { create(:credit_note, customer:) }
 
-      before { create(:credit_note, customer:) }
+      before do
+        matching_credit_note
+        other_credit_note
+      end
 
       it "returns credit notes with matching billing entity code" do
         subject
@@ -474,13 +478,13 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
 
       context "when billing entity code is not found" do
-        let(:params) { {billing_entity_code: "non_existent_code"} }
+        let(:params) { {billing_entity_codes: [SecureRandom.uuid]} }
 
         it "returns an error" do
           subject
 
           expect(response).to have_http_status(:not_found)
-          expect(json[:code]).to eq("BillingEntity_not_found")
+          expect(json[:code]).to eq("billing_entity_not_found")
         end
       end
     end

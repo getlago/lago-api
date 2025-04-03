@@ -7147,7 +7147,7 @@ type Query {
   creditNotes(
     amountFrom: Int
     amountTo: Int
-    billingEntityId: ID
+    billingEntityIds: [ID!]
     creditStatus: [CreditNoteCreditStatusEnum!]
     currency: CurrencyEnum
     customerExternalId: String

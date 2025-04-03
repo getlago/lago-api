@@ -93,7 +93,9 @@ module Api
       end
 
       def index
-        billing_entity = current_organization.billing_entities.find_by!(code: params[:billing_entity_code]) if params[:billing_entity_code].present?
+        billing_entities = current_organization.billing_entities.where(code: params[:billing_entity_codes]) if params[:billing_entity_codes].present?
+        return not_found_error(resource: "billing_entity") if params[:billing_entity_codes].present? && billing_entities.blank?
+
         result = CreditNotesQuery.call(
           organization: current_organization,
           pagination: {
@@ -104,7 +106,7 @@ module Api
           filters: {
             amount_from: params[:amount_from],
             amount_to: params[:amount_to],
-            billing_entity_id: billing_entity&.id,
+            billing_entity_ids: billing_entities&.ids,
             credit_status: params[:credit_status],
             currency: params[:currency],
             customer_external_id: params[:external_customer_id],
@@ -130,8 +132,6 @@ module Api
         else
           render_error_response(result)
         end
-      rescue ActiveRecord::RecordNotFound => e
-        not_found_error(resource: e.model)
       end
 
       def estimate
