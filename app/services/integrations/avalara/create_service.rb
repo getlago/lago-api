@@ -3,8 +3,14 @@
 module Integrations
   module Avalara
     class CreateService < BaseService
-      def call(**args)
-        organization = Organization.find_by(id: args[:organization_id])
+      def initialize(params:)
+        @params = params
+
+        super
+      end
+
+      def call
+        organization = Organization.find_by(id: params[:organization_id])
 
         unless organization.avalara_enabled?
           return result.not_allowed_failure!(code: "premium_integration_missing")
@@ -12,11 +18,11 @@ module Integrations
 
         integration = Integrations::AvalaraIntegration.new(
           organization:,
-          name: args[:name],
-          code: args[:code],
-          connection_id: args[:connection_id],
-          account_id: args[:account_id],
-          license_key: args[:license_key]
+          name: params[:name],
+          code: params[:code],
+          connection_id: params[:connection_id],
+          account_id: params[:account_id],
+          license_key: params[:license_key]
         )
 
         integration.save!
@@ -26,6 +32,10 @@ module Integrations
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
       end
+
+      private
+
+      attr_reader :params
     end
   end
 end
