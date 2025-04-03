@@ -28,28 +28,35 @@ module PaymentProviderCustomers
         funding_instructions.bank_transfer.to_hash
         unique_code = "funding_instructions_#{customer.id}"
 
-        section_result = InvoiceCustomSections::CreateService.call(
+        existing_section = customer.organization.system_generated_invoice_custom_sections.find_by(code: unique_code)
+
+        formatter = InvoiceCustomSections::FundingInstructionsFormatterService.call(
+          funding_data: funding_instructions.bank_transfer.to_hash,
+          locale: preferred_locale
+        )
+
+        details = formatter.details
+
+        invoice_custom_section = existing_section || InvoiceCustomSections::CreateService.call(
           organization: customer.organization,
           create_params: {
             code: unique_code,
             name: "Funding Instructions",
             display_name: I18n.t("invoice.pay_with_bank_transfer", locale: preferred_locale),
-            details: "BUE CENAS AQUI PARA ESTE CUSTOMER"
+            details: details
           },
           selected: false,
           system_generated: true
+        ).invoice_custom_section
+
+        return unless invoice_custom_section
+
+        all_section_ids = customer.selected_invoice_custom_sections.ids | [invoice_custom_section.id]
+        Customers::ManageInvoiceCustomSectionsService.call(
+          customer: customer,
+          skip_invoice_custom_sections: false,
+          section_ids: [all_section_ids]
         )
-
-        return unless section_result.success?
-        Rails.logger.debug "-----------------------------------------------------------------------------"
-        Rails.logger.debug "entrei aqui ate agora tudo ok"
-        Rails.logger.debug "-----------------------------------------------------------------------------"
-
-        # Customers::ManageInvoiceCustomSectionsService.call(
-        #   customer: customer,
-        #   skip_invoice_custom_sections: false,
-        #   section_ids: [section_result.invoice_custom_section.id]
-        # )
       end
 
       def fetch_funding_instructions
