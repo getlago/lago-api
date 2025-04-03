@@ -20,7 +20,7 @@ module Mutations
           billing_entity.applied_taxes.create(tax:)
         end
 
-        billing_entity.applied_taxes
+        billing_entity.taxes
       end
     end
   end
