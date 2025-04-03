@@ -11,6 +11,7 @@ module Resolvers
 
     argument :amount_from, Integer, required: false
     argument :amount_to, Integer, required: false
+    argument :billing_entity_id, ID, required: false
     argument :currency, Types::CurrencyEnum, required: false
     argument :customer_external_id, String, required: false
     argument :customer_id, ID, required: false, description: "Uniq ID of the customer"
@@ -33,6 +34,7 @@ module Resolvers
     def resolve( # rubocop:disable Metrics/ParameterLists
       amount_from: nil,
       amount_to: nil,
+      billing_entity_id: nil,
       currency: nil,
       customer_external_id: nil,
       customer_id: nil,
@@ -57,6 +59,7 @@ module Resolvers
         filters: {
           amount_from:,
           amount_to:,
+          billing_entity_id:,
           currency:,
           customer_external_id:,
           customer_id:,

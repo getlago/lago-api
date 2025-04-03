@@ -7434,6 +7434,7 @@ type Query {
   invoices(
     amountFrom: Int
     amountTo: Int
+    billingEntityId: ID
     currency: CurrencyEnum
     customerExternalId: String
 

@@ -11,6 +11,7 @@ class InvoicesQuery < BaseQuery
       default_order: {issuing_date: :desc, created_at: :desc}
     )
 
+    invoices = with_billing_entity_id(invoices) if filters.billing_entity_id.present?
     invoices = with_currency(invoices) if filters.currency
     invoices = with_customer_external_id(invoices) if filters.customer_external_id
     invoices = with_customer_id(invoices) if filters.customer_id.present?
@@ -55,6 +56,10 @@ class InvoicesQuery < BaseQuery
       customer_external_id_cont: search_term,
       customer_email_cont: search_term
     )
+  end
+
+  def with_billing_entity_id(scope)
+    scope.where(billing_entity_id: filters.billing_entity_id)
   end
 
   def with_currency(scope)
