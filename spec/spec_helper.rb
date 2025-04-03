@@ -140,8 +140,12 @@ RSpec.configure do |config|
   end
 
   config.around do |example|
-    DatabaseCleaner.cleaning do
+    if example.metadata[:bypass_cleaner]
       example.run
+    else
+      DatabaseCleaner.cleaning do
+        example.run
+      end
     end
   end
 end
