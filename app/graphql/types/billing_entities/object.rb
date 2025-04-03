@@ -36,11 +36,21 @@ module Types
 
       field :eu_tax_management, Boolean, null: false
 
-      field :billing_configuration, Types::BillingEntities::BillingConfiguration, permission: "billing_entity:invoices:view"
-      field :email_settings, [Types::BillingEntities::EmailSettingsEnum], permission: "billing_entity:emails:view"
+      field :billing_configuration, Types::BillingEntities::BillingConfiguration, permission: "billing_entities:invoices:view"
+      field :email_settings, [Types::BillingEntities::EmailSettingsEnum], permission: "billing_entities:emails:view"
       field :finalize_zero_amount_invoice, Boolean, null: false
 
       field :applied_dunning_campaign, Types::DunningCampaigns::Object
+
+      def billing_configuration
+        {
+          id: "#{object&.id}-c0nf", # Each nested object needs ID so that appollo cache system can work properly
+          invoice_footer: object&.invoice_footer,
+          invoice_grace_period: object&.invoice_grace_period,
+          document_locale: object&.document_locale,
+          eu_tax_management: object&.eu_tax_management
+        }
+      end
     end
   end
 end
