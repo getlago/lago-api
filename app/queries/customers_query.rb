@@ -11,7 +11,7 @@ class CustomersQuery < BaseQuery
     customers = apply_consistent_ordering(customers)
 
     customers = with_account_type(customers) if filters.account_type.present?
-    customers = with_billing_entity_id(customers) if filters.billing_entity_id.present?
+    customers = with_billing_entity_ids(customers) if filters.billing_entity_ids.present?
     customers = customers.with_discarded if filters.with_deleted
 
     result.customers = customers
@@ -46,7 +46,7 @@ class CustomersQuery < BaseQuery
     scope.where(account_type: filters.account_type)
   end
 
-  def with_billing_entity_id(scope)
-    scope.where(billing_entity_id: filters.billing_entity_id)
+  def with_billing_entity_ids(scope)
+    scope.where(billing_entity_id: filters.billing_entity_ids)
   end
 end

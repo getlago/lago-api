@@ -101,8 +101,8 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
 
     let(:query) do
       <<~GQL
-        query($billingEntityId: ID) {
-          customers(limit: 5, billingEntityId: $billingEntityId) {
+        query($billingEntityIds: [ID!]) {
+          customers(limit: 5, billingEntityIds: $billingEntityIds) {
             collection { id }
             metadata { currentPage, totalCount }
           }
@@ -121,7 +121,7 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
         current_organization: organization,
         permissions: required_permission,
         query:,
-        variables: {billingEntityId: billing_entity2.id}
+        variables: {billingEntityIds: [billing_entity2.id]}
       )
 
       customers_response = result["data"]["customers"]

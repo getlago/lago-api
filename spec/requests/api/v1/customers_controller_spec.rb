@@ -374,7 +374,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     context "when filtering by billing_entity_code" do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:customer) { create(:customer, organization:, billing_entity:) }
-      let(:params) { {billing_entity_code: billing_entity.code} }
+      let(:params) { {billing_entity_codes: [billing_entity.code]} }
 
       before { customer }
 
@@ -387,13 +387,13 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
 
       context "when billing entity does not exist" do
-        let(:params) { {billing_entity_code: "non_existent_code"} }
+        let(:params) { {billing_entity_codes: ["non_existent_code"]} }
 
         it "returns a not found error" do
           subject
 
           expect(response).to have_http_status(:not_found)
-          expect(json[:code]).to eq("BillingEntity_not_found")
+          expect(json[:code]).to eq("billing_entity_not_found")
         end
       end
     end

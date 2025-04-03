@@ -16,6 +16,14 @@ RSpec.describe Queries::CustomersQueryFiltersContract, type: :contract do
     end
   end
 
+  context "when filtering by billing entity ids" do
+    let(:filters) { {billing_entity_ids: ["123e4567-e89b-12d3-a456-426614174000"]} }
+
+    it "is valid" do
+      expect(result.success?).to be(true)
+    end
+  end
+
   context "when search_term is provided and valid" do
     let(:search_term) { "valid_search_term" }
 
@@ -45,5 +53,7 @@ RSpec.describe Queries::CustomersQueryFiltersContract, type: :contract do
 
     it_behaves_like "an invalid filter", :account_type, nil, ["must be an array"]
     it_behaves_like "an invalid filter", :account_type, %w[random], {0 => ["must be one of: customer, partner"]}
+    it_behaves_like "an invalid filter", :billing_entity_ids, SecureRandom.uuid, ["must be an array"]
+    it_behaves_like "an invalid filter", :billing_entity_ids, %w[random], {0 => ["is in invalid format"]}
   end
 end

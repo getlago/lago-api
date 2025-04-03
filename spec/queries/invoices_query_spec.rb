@@ -796,7 +796,7 @@ RSpec.describe InvoicesQuery, type: :query do
   end
 
   context "when filtering by billing_entity_id" do
-    let(:filters) { {billing_entity_id: billing_entity1.id} }
+    let(:filters) { {billing_entity_ids: [billing_entity1.id]} }
 
     it "returns invoices for the specified billing entity" do
       expect(returned_ids).to include(invoice_first.id, invoice_second.id, invoice_third.id)

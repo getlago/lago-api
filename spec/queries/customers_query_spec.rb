@@ -70,7 +70,7 @@ RSpec.describe CustomersQuery, type: :query do
   end
 
   context "when filtering by billing_entity_id" do
-    let(:filters) { {billing_entity_id: billing_entity2.id} }
+    let(:filters) { {billing_entity_ids: [billing_entity2.id]} }
 
     it "returns customers for the specified billing entity" do
       expect(returned_ids.count).to eq(1)
