@@ -14,6 +14,8 @@ module PaymentProviders
             )
           end
 
+          PaymentReceipts::CreateJob.perform_later(result.payment) if result.payment.customer.organization.issue_receipts_enabled?
+
           result
         end
       end

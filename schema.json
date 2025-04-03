@@ -31859,6 +31859,18 @@
               "args": []
             },
             {
+              "name": "paymentReceipt",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "PaymentReceipt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "paymentType",
               "description": null,
               "type": {
@@ -33656,22 +33668,6 @@
             },
             {
               "name": "organizationView",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "Boolean",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "paymentReceiptsView",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
