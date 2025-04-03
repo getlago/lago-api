@@ -23,10 +23,7 @@ module Types
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
       def invoice
-        return object.invoice if object.invoice_id.present?
-
-        fee = Fee.find_by(invoiceable_id: object.id, invoiceable_type: "WalletTransaction")
-        fee&.invoice
+        object.invoice&.visible? ? object.invoice : nil
       end
     end
   end
