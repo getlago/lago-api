@@ -336,6 +336,56 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       end
     end
 
+    context "when the payment is found by stripe payment id" do
+      let(:payment) do
+        create(
+          :payment,
+          payable: payment_request,
+          provider_payment_id: stripe_payment.id,
+          status: "pending"
+        )
+      end
+
+      let(:stripe_payment) do
+        PaymentProviders::StripeProvider::StripePayment.new(
+          id: "ch_123456",
+          status: "succeeded",
+          metadata: {
+            lago_payable_id: payment_request.id,
+            lago_payable_type: "PaymentRequest",
+            payment_type: "one-time"
+          }
+        )
+      end
+
+      before do
+        stripe_payment_provider
+        stripe_customer
+        payment
+      end
+
+      it "updates the payment status and related entities", :aggregate_failures do
+        expect(result).to be_success
+        expect(result.payment.status).to eq("succeeded")
+        expect(result.payment.payable_payment_status).to eq("succeeded")
+
+        expect(result.payable.reload).to be_payment_succeeded
+        expect(result.payable.ready_for_payment_processing).to eq(false)
+
+        expect(invoice_1.reload).to be_payment_succeeded
+        expect(invoice_1.ready_for_payment_processing).to eq(false)
+        expect(invoice_2.reload).to be_payment_succeeded
+        expect(invoice_2.ready_for_payment_processing).to eq(false)
+
+        expect(invoice_1.total_paid_amount_cents).to eq(invoice_1.total_amount_cents)
+        expect(invoice_2.total_paid_amount_cents).to eq(invoice_2.total_amount_cents)
+      end
+
+      it "does not create a new payment" do
+        expect { result }.not_to change(Payment, :count)
+      end
+    end
+
     context "when payment is not found" do
       let(:payment) { nil }
       let(:status) { "succeeded" }
