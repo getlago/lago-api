@@ -3,12 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Invoices::PreviewContextService, type: :service do
-  let(:result) { described_class.call(organization:, params:) }
+  let(:result) { described_class.call(organization:, params:, billing_entity:) }
 
   describe "#call" do
     let(:organization) { create(:organization) }
     let(:plan) { create(:plan, organization:) }
     let(:customer) { create(:customer, organization:) }
+    let(:billing_entity) { organization.default_billing_entity }
 
     let(:params) do
       {
@@ -33,6 +34,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
     subject { result.customer }
 
     let(:organization) { create(:organization) }
+    let(:billing_entity) { organization.default_billing_entity }
 
     before { create(:customer, organization:) }
 
@@ -92,6 +94,14 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
             expect { subject }.not_to change { customer.reload.integration_customers.empty? }
           end
         end
+
+        context "when customer matching external_id with another billing_entity" do
+          let(:billing_entity) { create(:billing_entity, organization:) }
+
+          it "does not change existing customer" do
+            expect { subject }.not_to change { customer.reload.updated_at }
+          end
+        end
       end
 
       context "when customer matching external id does not exist in organization" do
@@ -142,7 +152,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
         let(:expected_attributes) do
           params[:customer].tap do |hash|
             hash[:integration_customers] = array_including(IntegrationCustomers::AnrokCustomer)
-            hash[:billing_entity_id] = organization.default_billing_entity.id
+            hash[:billing_entity_id] = billing_entity.id
           end
         end
 
@@ -153,18 +163,6 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
             .to be_present
             .and be_new_record
             .and have_attributes(expected_attributes)
-        end
-
-        context "when passing billing_entity" do
-          let(:billing_entity) { create(:billing_entity, organization:) }
-          let(:result) { described_class.call(organization:, params:, billing_entity:) }
-
-          it "returns new customer build with provided billing_entity" do
-            expect(subject)
-              .to be_present
-              .and be_new_record
-              .and have_attributes({billing_entity_id: billing_entity.id})
-          end
         end
       end
 
@@ -184,6 +182,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
     subject { result.subscriptions }
 
     let(:organization) { customer.organization }
+    let(:billing_entity) { organization.default_billing_entity }
     let(:customer) { create(:customer) }
 
     let(:params) do
@@ -236,6 +235,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
     subject { result.applied_coupons }
 
     let(:organization) { create(:organization) }
+    let(:billing_entity) { organization.default_billing_entity }
     let(:plan) { create(:plan, organization:) }
 
     let(:params) do
