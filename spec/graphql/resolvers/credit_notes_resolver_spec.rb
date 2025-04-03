@@ -258,7 +258,7 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
     let(:query) do
       <<~GQL
         query {
-          creditNotes(limit: 5, billingEntityId: "#{billing_entity.id}") {
+          creditNotes(limit: 5, billingEntityIds: ["#{billing_entity.id}"]) {
             collection { id }
             metadata { currentPage, totalCount }
           }

@@ -362,13 +362,17 @@ RSpec.describe CreditNotesQuery, type: :query do
     end
   end
 
-  context "when billing entity id filter applied" do
+  context "when billing entity ids filter applied" do
     let(:billing_entity) { create(:billing_entity, organization:) }
-    let(:filters) { {billing_entity_id: billing_entity.id} }
+    let(:filters) { {billing_entity_ids: [billing_entity.id]} }
 
-    let!(:matching_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, billing_entity:)) }
+    let(:matching_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, billing_entity:)) }
+    let(:other_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, organization:)) }
 
-    before { create(:credit_note, customer:, invoice: create(:invoice, organization:)) }
+    before do
+      matching_credit_note
+      other_credit_note
+    end
 
     it "returns credit notes with matching billing entity id" do
       expect(result).to be_success
