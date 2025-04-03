@@ -7,6 +7,7 @@ RSpec.describe Analytics::OverdueBalance, type: :model do
     subject(:overdue_balance_cache_key) { described_class.cache_key(organization_id, **args) }
 
     let(:organization_id) { SecureRandom.uuid }
+    let(:billing_entity_id) { SecureRandom.uuid }
     let(:external_customer_id) { "customer_01" }
     let(:currency) { "EUR" }
     let(:months) { 12 }
@@ -14,7 +15,7 @@ RSpec.describe Analytics::OverdueBalance, type: :model do
 
     context "with no arguments" do
       let(:args) { {} }
-      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}///" }
+      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}////" }
 
       it "returns the cache key" do
         expect(overdue_balance_cache_key).to eq(cache_key)
@@ -25,11 +26,22 @@ RSpec.describe Analytics::OverdueBalance, type: :model do
       let(:args) { {external_customer_id:, currency:, months:} }
 
       let(:cache_key) do
-        "overdue-balance/#{date}/#{organization_id}/#{external_customer_id}/#{currency}/#{months}"
+        "overdue-balance/#{date}/#{organization_id}//#{external_customer_id}/#{currency}/#{months}"
       end
 
       it "returns the cache key" do
         expect(overdue_balance_cache_key).to eq(cache_key)
+      end
+
+      context "with billing_entity_id" do
+        let(:args) { {billing_entity_id:, external_customer_id:, currency:, months:} }
+        let(:cache_key) do
+          "overdue-balance/#{date}/#{organization_id}/#{billing_entity_id}/#{external_customer_id}/#{currency}/#{months}"
+        end
+
+        it "returns the cache key" do
+          expect(overdue_balance_cache_key).to eq(cache_key)
+        end
       end
     end
 
@@ -37,7 +49,7 @@ RSpec.describe Analytics::OverdueBalance, type: :model do
       let(:args) { {external_customer_id:} }
 
       let(:cache_key) do
-        "overdue-balance/#{date}/#{organization_id}/#{external_customer_id}//"
+        "overdue-balance/#{date}/#{organization_id}//#{external_customer_id}//"
       end
 
       it "returns the cache key" do
@@ -47,7 +59,16 @@ RSpec.describe Analytics::OverdueBalance, type: :model do
 
     context "with currency" do
       let(:args) { {currency:} }
-      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}//#{currency}/" }
+      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}///#{currency}/" }
+
+      it "returns the cache key" do
+        expect(overdue_balance_cache_key).to eq(cache_key)
+      end
+    end
+
+    context "with billing_entity_id" do
+      let(:args) { {billing_entity_id:} }
+      let(:cache_key) { "overdue-balance/#{date}/#{organization_id}/#{billing_entity_id}///" }
 
       it "returns the cache key" do
         expect(overdue_balance_cache_key).to eq(cache_key)

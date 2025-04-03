@@ -8,13 +8,14 @@ RSpec.describe Analytics::InvoiceCollection, type: :model do
 
     let(:organization_id) { SecureRandom.uuid }
     let(:external_customer_id) { "customer_01" }
+    let(:billing_entity_id) { SecureRandom.uuid }
     let(:currency) { "EUR" }
     let(:months) { 12 }
     let(:date) { Date.current.strftime("%Y-%m-%d") }
 
     context "with no arguments" do
       let(:args) { {} }
-      let(:cache_key) { "invoice-collection/#{date}/#{organization_id}///" }
+      let(:cache_key) { "invoice-collection/#{date}/#{organization_id}////" }
 
       it "returns the cache key" do
         expect(invoice_collection_cache_key).to eq(cache_key)
@@ -25,11 +26,22 @@ RSpec.describe Analytics::InvoiceCollection, type: :model do
       let(:args) { {external_customer_id:, currency:, months:} }
 
       let(:cache_key) do
-        "invoice-collection/#{date}/#{organization_id}/#{external_customer_id}/#{currency}/#{months}"
+        "invoice-collection/#{date}/#{organization_id}//#{external_customer_id}/#{currency}/#{months}"
       end
 
       it "returns the cache key" do
         expect(invoice_collection_cache_key).to eq(cache_key)
+      end
+
+      context "with billing entity id" do
+        let(:args) { {external_customer_id:, currency:, months:, billing_entity_id:} }
+        let(:cache_key) do
+          "invoice-collection/#{date}/#{organization_id}/#{billing_entity_id}/#{external_customer_id}/#{currency}/#{months}"
+        end
+
+        it "returns the cache key" do
+          expect(invoice_collection_cache_key).to eq(cache_key)
+        end
       end
     end
 
@@ -37,7 +49,7 @@ RSpec.describe Analytics::InvoiceCollection, type: :model do
       let(:args) { {months:} }
 
       let(:cache_key) do
-        "invoice-collection/#{date}/#{organization_id}///#{months}"
+        "invoice-collection/#{date}/#{organization_id}////#{months}"
       end
 
       it "returns the cache key" do
@@ -47,7 +59,16 @@ RSpec.describe Analytics::InvoiceCollection, type: :model do
 
     context "with currency" do
       let(:args) { {currency:} }
-      let(:cache_key) { "invoice-collection/#{date}/#{organization_id}//#{currency}/" }
+      let(:cache_key) { "invoice-collection/#{date}/#{organization_id}///#{currency}/" }
+
+      it "returns the cache key" do
+        expect(invoice_collection_cache_key).to eq(cache_key)
+      end
+    end
+
+    context "with billing_entity_id" do
+      let(:args) { {billing_entity_id:} }
+      let(:cache_key) { "invoice-collection/#{date}/#{organization_id}/#{billing_entity_id}///" }
 
       it "returns the cache key" do
         expect(invoice_collection_cache_key).to eq(cache_key)

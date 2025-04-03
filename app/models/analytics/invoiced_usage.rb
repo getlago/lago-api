@@ -93,6 +93,7 @@ module Analytics
           "invoiced-usage",
           Date.current.strftime("%Y-%m-%d"),
           organization_id,
+          args[:billing_entity_id],
           args[:currency],
           args[:months]
         ].join("/")
