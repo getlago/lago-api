@@ -2103,6 +2103,7 @@ input CreateCustomerInput {
   addressLine1: String
   addressLine2: String
   billingConfiguration: CustomerBillingConfigurationInput
+  billingEntityCode: String
   city: String
 
   """
@@ -9090,6 +9091,7 @@ input UpdateCustomerInput {
   applicableInvoiceCustomSectionIds: [ID!]
   appliedDunningCampaignId: ID
   billingConfiguration: CustomerBillingConfigurationInput
+  billingEntityCode: String
   city: String
 
   """

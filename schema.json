@@ -8545,6 +8545,18 @@
               "deprecationReason": null
             },
             {
+              "name": "billingEntityCode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "shippingAddress",
               "description": null,
               "type": {
@@ -45240,6 +45252,18 @@
             },
             {
               "name": "zipcode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billingEntityCode",
               "description": null,
               "type": {
                 "kind": "SCALAR",
