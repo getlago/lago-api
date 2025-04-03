@@ -2,6 +2,6 @@
 
 class EnsureOrganizationLastInvoiceGotOrganizationSequentialId < ActiveRecord::Migration[7.2]
   def change
-    DataMigrations::InvoicesOrganizationSequentialIdFixerJob.perform_later
+    DatabaseMigrations::FixInvoicesOrganizationSequentialIdJob.perform_later
   end
 end
