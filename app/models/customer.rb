@@ -64,7 +64,14 @@ class Customer < ApplicationRecord
 
   has_many :invoice_custom_sections
   has_many :invoice_custom_section_selections
-  has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section
+  has_many :selected_invoice_custom_sections,
+    -> { where(section_type: :manual) },
+    through: :invoice_custom_section_selections,
+    source: :invoice_custom_section
+  has_many :system_generated_invoice_custom_sections,
+    -> { where(section_type: :system_generated) },
+    through: :invoice_custom_section_selections,
+    source: :invoice_custom_section
 
   has_one :stripe_customer, class_name: "PaymentProviderCustomers::StripeCustomer"
   has_one :gocardless_customer, class_name: "PaymentProviderCustomers::GocardlessCustomer"
@@ -142,9 +149,10 @@ class Customer < ApplicationRecord
   end
 
   def applicable_invoice_custom_sections
-    return [] if skip_invoice_custom_sections?
+    return [] if skip_invoice_custom_sections? && system_generated_invoice_custom_sections.empty?
 
-    selected_invoice_custom_sections.order(:name).presence || organization.selected_invoice_custom_sections.order(:name)
+    invoice_custom_sections = selected_invoice_custom_sections.order(:name).presence || organization.selected_invoice_custom_sections.order(:name)
+    invoice_custom_sections + system_generated_invoice_custom_sections
   end
 
   def editable?

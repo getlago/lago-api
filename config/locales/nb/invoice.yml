@@ -1,17 +1,28 @@
 ---
 nb:
   invoice:
+    account_holder_name: Kontoinnehaver
+    account_number: Kontonummer
+    account_type: Kontotype
     all_subscriptions: Alle Abonnement
     all_usage_based_fees: Alle bruksbaserte kostnader
     already_paid: Allerede betalt
     amount: Beløp
     amount_with_tax: Beløp (inkl. MVA)
     amount_without_tax: Beløp (ekskl. MVA)
+    bank_code: Bankkode
+    bank_name: Banknavn
+    bank_transfer_info: Bankoverføringer kan ta flere virkedager å behandle. For å betale med bankoverføring, overfør midler ved å bruke følgende bankinformasjon.
+    bic: BIC
     bill_from: Fra
     bill_to: Til
+    branch_code: Filialkode
+    branch_name: Filialnavn
     breakdown: Oversikt
     breakdown_for_days: "%{breakdown_duration} av %{breakdown_total_duration} dager"
     breakdown_of: Fordeling av %{fee_filter_display_name}
+    clabe: CLABE
+    country: Land
     coupons: Kuponger
     credit_notes: Kreditnotaer
     date_from: Fra
@@ -29,6 +40,7 @@ nb:
       flat_fee_for_the_first: Fast avgift for de første %{to}
       flat_fee_for_the_last: Fast avgift for %{from} og mer
       flat_fee_for_the_next: Fast avgift for de neste %{from} til %{to}
+    iban: IBAN
     invoice_number: Fakturanummer
     issue_date: Dato
     item: Vare
@@ -43,6 +55,7 @@ nb:
       free_units_for_the_first: Gratis enheter for de første %{count}
     paid_invoice: Betalt faktura
     paid_tax_invoice: Betalt skattefaktura
+    pay_with_bank_transfer: Betal med bankoverføring
     payment_term: Betalingsperiode
     payment_term_days: "%{net_payment_term} dager"
     percentage:
@@ -60,15 +73,18 @@ nb:
     quarter: kvartal
     quarterly: Kvartalsvis
     reached_usage_threshold: Denne progressive faktureringen er generert fordi din akkumulerte bruk har nådd %{usage_amount}, og overskredet terskelen på %{threshold_amount}.
+    routing_number: Routing-nummer
     see_breakdown: Se oversikt for antall enheter
     self_billed:
       document_name: Egenfakturering
       footer: Denne egenfakturaen ble utstedt av kunden på vegne av partneren, med deres samtykke. Partneren har gått med på å ikke utstede sin egen faktura for denne transaksjonen.
+    sort_code: Sorteringskode
     sub_total: Sub total
     sub_total_with_tax: Sub total (inkl. MVA)
     sub_total_without_tax: Sub total (ekskl. MVA)
     subscription: Abonnement
     subscription_interval: "%{plan_interval} abonnement - %{plan_name}"
+    swift_code: SWIFT-kode
     tax: Merverdiavgift
     tax_identification_number: 'Skatte-ID: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% on %{amount})"

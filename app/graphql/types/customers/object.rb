@@ -159,6 +159,12 @@ module Types
       def has_overwritten_invoice_custom_sections_selection
         !object.skip_invoice_custom_sections && object.selected_invoice_custom_sections.any?
       end
+
+      def applicable_invoice_custom_sections
+        object.applicable_invoice_custom_sections.select do |invoice_custom_section|
+          invoice_custom_section.section_type_manual?
+        end
+      end
     end
   end
 end

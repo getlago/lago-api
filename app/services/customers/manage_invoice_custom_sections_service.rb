@@ -50,10 +50,14 @@ module Customers
 
     def assign_selected_sections
       # Note: when assigning organization's sections, an empty array will be sent
+
       if section_ids.nil?
+        section_codes = []
+        section_codes.push(*customer.system_generated_invoice_custom_sections.pluck(:code))
         return customer.selected_invoice_custom_sections = customer.organization.invoice_custom_sections.where(code: section_codes)
       end
 
+      section_ids << customer.system_generated_invoice_custom_sections.pluck(:id)
       customer.selected_invoice_custom_sections = customer.organization.invoice_custom_sections.where(id: section_ids)
     end
   end
