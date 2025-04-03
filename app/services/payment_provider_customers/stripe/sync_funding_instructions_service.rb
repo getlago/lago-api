@@ -35,15 +35,13 @@ module PaymentProviderCustomers
           locale: preferred_locale
         )
 
-        details = formatter.details
-
         invoice_custom_section = existing_section || InvoiceCustomSections::CreateService.call(
           organization: customer.organization,
           create_params: {
             code: unique_code,
             name: "Funding Instructions",
             display_name: I18n.t("invoice.pay_with_bank_transfer", locale: preferred_locale),
-            details: details
+            details: formatter.details
           },
           selected: false,
           system_generated: true
