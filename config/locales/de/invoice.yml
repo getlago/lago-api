@@ -1,17 +1,28 @@
 ---
 de:
   invoice:
+    account_holder_name: Kontoinhaber
+    account_number: Kontonummer
+    account_type: Kontotyp
     all_subscriptions: Alle Abonnements
     all_usage_based_fees: Alle nutzungsabhängigen Gebühren
     already_paid: Bereits bezahlt
     amount: Betrag
     amount_with_tax: Betrag (inkl. Steuern)
     amount_without_tax: Betrag (ohne Steuern)
+    bank_code: Bankleitzahl
+    bank_name: Bankname
+    bank_transfer_info: Banküberweisungen können mehrere Werktage zur Bearbeitung benötigen. Um per Banküberweisung zu bezahlen, überweisen Sie den Betrag unter Verwendung der folgenden Bankdaten.
+    bic: BIC
     bill_from: Von
     bill_to: An
+    branch_code: Filialnummer
+    branch_name: Filialname
     breakdown: Aufschlüsselung
     breakdown_for_days: "%{breakdown_duration} für %{breakdown_total_duration} Tage"
     breakdown_of: Aufschlüsselung für %{fee_filter_display_name}
+    clabe: CLABE
+    country: Land
     coupons: Coupons
     credit_notes: Gutschriften
     date_from: Vom
@@ -29,6 +40,7 @@ de:
       flat_fee_for_the_first: Pauschalgebühr für die ersten %{to}
       flat_fee_for_the_last: Pauschalgebühr für %{from} und höher
       flat_fee_for_the_next: Pauschalgebühr für die nächsten %{from} bis %{to}
+    iban: IBAN
     invoice_number: Rechnungsnummer
     issue_date: Ausgabedatum
     item: Artikel
@@ -43,6 +55,7 @@ de:
       free_units_for_the_first: Gebühr pro Einheit für die ersten %{count}
     paid_invoice: Bezahlte Rechnung
     paid_tax_invoice: Bezahlte Steuerrechnung
+    pay_with_bank_transfer: Zahlung per Banküberweisung
     payment_term: Zahlungsfrist
     payment_term_days: "%{net_payment_term} Tage"
     percentage:
@@ -60,15 +73,18 @@ de:
     quarter: quartal
     quarterly: Vierteljährlich
     reached_usage_threshold: Diese progressive Rechnung wird erstellt, da Ihre kumulierte Nutzung %{usage_amount} erreicht hat und den Schwellenwert von %{threshold_amount} überschritten hat.
+    routing_number: Routing-Nummer
     see_breakdown: Siehe Aufschlüsselung für Gesamtübersicht
     self_billed:
       document_name: Gutschriftrechnung
       footer: Diese Gutschriftrechnung wurde vom Kunden im Namen des Partners mit dessen Zustimmung erstellt. Der Partner hat zugestimmt, keine eigene Rechnung für diese Transaktion auszustellen.
+    sort_code: Sortiercode
     sub_total: Zwischensumme
     sub_total_with_tax: Zwischensumme (inkl. Steuern)
     sub_total_without_tax: Zwischensumme (ohne Steuern)
     subscription: Abonnement
     subscription_interval: "%{plan_interval}es Abonnement - %{plan_name}"
+    swift_code: SWIFT-Code
     tax: Steuern
     tax_identification_number: 'Steuer ID: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% on %{amount})"
