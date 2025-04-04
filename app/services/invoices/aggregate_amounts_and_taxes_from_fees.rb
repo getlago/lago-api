@@ -43,7 +43,7 @@ module Invoices
           amount_currency: t.amount_currency,
 
           amount_cents: applied_taxes.sum(&:amount_cents),
-          fees_amount_cents: applied_taxes.sum(&:amount_cents),
+          fees_amount_cents: applied_taxes.sum { |at| at.fee.sub_total_excluding_taxes_amount_cents },
           taxable_base_amount_cents: applied_taxes.sum { |at| at.fee.taxes_base_rate * at.fee.sub_total_excluding_taxes_amount_cents }
         )
       end
