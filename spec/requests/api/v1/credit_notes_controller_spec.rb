@@ -458,6 +458,36 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(json[:credit_notes].pluck(:lago_id)).to contain_exactly matching_credit_note.id
       end
     end
+
+    context "with billing entity codes filter" do
+      let(:params) { {billing_entity_codes: [billing_entity.code]} }
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:matching_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, billing_entity:)) }
+      let(:other_credit_note) { create(:credit_note, customer:) }
+
+      before do
+        matching_credit_note
+        other_credit_note
+      end
+
+      it "returns credit notes with matching billing entity code" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:credit_notes].pluck(:lago_id)).to contain_exactly matching_credit_note.id
+      end
+
+      context "when one of billing entity codes is not found" do
+        let(:params) { {billing_entity_codes: [billing_entity.code, SecureRandom.uuid]} }
+
+        it "returns an error" do
+          subject
+
+          expect(response).to have_http_status(:not_found)
+          expect(json[:code]).to eq("billing_entity_not_found")
+        end
+      end
+    end
   end
 
   describe "POST /api/v1/credit_notes" do

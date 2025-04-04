@@ -362,6 +362,40 @@ RSpec.describe CreditNotesQuery, type: :query do
     end
   end
 
+  context "when billing entity ids filter applied" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:filters) { {billing_entity_ids: [billing_entity.id]} }
+
+    let(:matching_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, billing_entity:)) }
+    let(:other_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, organization:)) }
+
+    before do
+      matching_credit_note
+      other_credit_note
+    end
+
+    it "returns credit notes with matching billing entity id" do
+      expect(result).to be_success
+      expect(result.credit_notes.pluck(:id)).to contain_exactly matching_credit_note.id
+    end
+
+    context "when matching credit notes from more than one billing_entity" do
+      let(:billing_entity_2) { create(:billing_entity, organization:) }
+      let(:filters) { {billing_entity_ids: [billing_entity.id, billing_entity_2.id]} }
+
+      let(:matching_credit_note_2) { create(:credit_note, customer:, invoice: create(:invoice, billing_entity: billing_entity_2)) }
+
+      before do
+        matching_credit_note_2
+      end
+
+      it "returns credit notes with matching billing entity ids" do
+        expect(result).to be_success
+        expect(result.credit_notes.pluck(:id)).to contain_exactly(matching_credit_note.id, matching_credit_note_2.id)
+      end
+    end
+  end
+
   context "when search term filter applied" do
     context "with term matching credit note by id" do
       let(:search_term) { matching_credit_note.id.first(10) }

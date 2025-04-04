@@ -93,6 +93,9 @@ module Api
       end
 
       def index
+        billing_entities = current_organization.billing_entities.where(code: params[:billing_entity_codes]) if params[:billing_entity_codes].present?
+        return not_found_error(resource: "billing_entity") if params[:billing_entity_codes].present? && billing_entities.count != params[:billing_entity_codes].count
+
         result = CreditNotesQuery.call(
           organization: current_organization,
           pagination: {
@@ -103,6 +106,7 @@ module Api
           filters: {
             amount_from: params[:amount_from],
             amount_to: params[:amount_to],
+            billing_entity_ids: billing_entities&.ids,
             credit_status: params[:credit_status],
             currency: params[:currency],
             customer_external_id: params[:external_customer_id],

@@ -249,4 +249,34 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
       expect(result["data"]["creditNotes"]["metadata"]["totalCount"]).to eq(1)
     end
   end
+
+  context "when filtering by billing_entity_id" do
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:matching_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, billing_entity:)) }
+    let(:non_matching_credit_note) { create(:credit_note, customer:) }
+
+    let(:query) do
+      <<~GQL
+        query {
+          creditNotes(limit: 5, billingEntityIds: ["#{billing_entity.id}"]) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      matching_credit_note
+      non_matching_credit_note
+    end
+
+    it "returns credit notes with matching billing entity id" do
+      expect(response_collection.count).to eq(1)
+      expect(response_collection.first["id"]).to eq(matching_credit_note.id)
+
+      expect(result["data"]["creditNotes"]["metadata"]["currentPage"]).to eq(1)
+      expect(result["data"]["creditNotes"]["metadata"]["totalCount"]).to eq(1)
+    end
+  end
 end
