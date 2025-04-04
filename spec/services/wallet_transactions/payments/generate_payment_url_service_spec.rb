@@ -16,21 +16,21 @@ RSpec.describe WalletTransactions::Payments::GeneratePaymentUrlService do
     context "when wallet transaction exists" do
       let(:wallet_transaction) { build(:wallet_transaction, status:, transaction_status:) }
 
-      context "when transaction is already settled" do
-        let(:status) { "settled" }
-        let(:transaction_status) { nil }
+      context "when transactions status is purchased" do
+        let(:transaction_status) { "purchased" }
+        let(:status) { nil }
 
-        it "fails with wallet transaction already settled error" do
-          expect(result).to be_failure
-          expect(result.error.messages).to match(base: ["wallet_transaction_already_settled"])
+        context "when transaction is already settled" do
+          let(:status) { "settled" }
+
+          it "fails with wallet transaction already settled error" do
+            expect(result).to be_failure
+            expect(result.error.messages).to match(base: ["wallet_transaction_already_settled"])
+          end
         end
-      end
 
-      context "when transaction is not settled" do
-        let(:status) { WalletTransaction::STATUSES.excluding(:settled).sample }
-
-        context "when transactions status is purchased" do
-          let(:transaction_status) { "purchased" }
+        context "when transaction is not settled" do
+          let(:status) { WalletTransaction::STATUSES.excluding(:settled).sample }
 
           context "when transaction's invoice is missing" do
             it "fails with no attached invoice error" do
@@ -66,14 +66,15 @@ RSpec.describe WalletTransactions::Payments::GeneratePaymentUrlService do
             end
           end
         end
+      end
 
-        context "when transactions status is not purchased" do
-          let(:transaction_status) { WalletTransaction::TRANSACTION_STATUSES.excluding(:purchased).sample }
+      context "when transactions status is not purchased" do
+        let(:transaction_status) { WalletTransaction::TRANSACTION_STATUSES.excluding(:purchased).sample }
+        let(:status) { nil }
 
-          it "fails with wallet transaction not purchased error" do
-            expect(result).to be_failure
-            expect(result.error.messages).to match(base: ["wallet_transaction_not_purchased"])
-          end
+        it "fails with wallet transaction not purchased error" do
+          expect(result).to be_failure
+          expect(result.error.messages).to match(base: ["wallet_transaction_not_purchased"])
         end
       end
     end

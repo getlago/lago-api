@@ -11,12 +11,12 @@ module WalletTransactions
       def call
         return result.not_found_failure!(resource: "wallet_transaction") unless wallet_transaction
 
-        if wallet_transaction.settled?
-          return result.single_validation_failure!(error_code: "wallet_transaction_already_settled")
-        end
-
         unless wallet_transaction.purchased?
           return result.single_validation_failure!(error_code: "wallet_transaction_not_purchased")
+        end
+
+        if wallet_transaction.settled?
+          return result.single_validation_failure!(error_code: "wallet_transaction_already_settled")
         end
 
         unless invoice
