@@ -23,6 +23,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       from_email
       issue_receipts
       preview
+      avalara
       multi_entities_pro
       multi_entities_enterprise
       analytics_dashboards

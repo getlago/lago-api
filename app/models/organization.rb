@@ -77,6 +77,7 @@ class Organization < ApplicationRecord
     netsuite
     okta
     anrok
+    avalara
     xero
     progressive_billing
     lifetime_usage
