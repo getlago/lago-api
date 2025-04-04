@@ -113,7 +113,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
     # NOTE: October 19th: Switching to per_organization numbering and Bill subscription
     travel_to(DateTime.new(2023, 10, 19, 12, 12)) do
-      organization.update!(document_numbering: "per_organization", document_number_prefix: "ORG-11")
+      update_organization(document_numbering: "per_organization", document_number_prefix: "ORG-11")
 
       perform_billing
 
@@ -129,7 +129,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
     # NOTE: November 19th: Switching to per_customer numbering and Bill subscription
     travel_to(DateTime.new(2023, 11, 19, 12, 12)) do
-      organization.update!(document_numbering: "per_customer")
+      update_organization(document_numbering: "per_customer")
 
       perform_billing
 
@@ -185,7 +185,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
     # NOTE: December 19th: Switching to per_organization numbering and Bill subscription
     travel_to(DateTime.new(2023, 12, 19, 12, 12)) do
-      organization.update!(document_numbering: "per_organization")
+      update_organization(document_numbering: "per_organization")
 
       perform_billing
 
@@ -291,7 +291,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       # NOTE: October 1st: Switching to per_organization numbering and Bill subscription
       travel_to(DateTime.new(2023, 9, 30, 23, 10)) do
-        organization.update!(document_numbering: "per_organization", document_number_prefix: "ORG-11")
+        update_organization(document_numbering: "per_organization", document_number_prefix: "ORG-11")
 
         perform_billing
 
@@ -812,7 +812,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       # NOTE: October 19th: Switching to per_organization numbering and Bill subscription
       travel_to(DateTime.new(2023, 10, 19, 12, 12)) do
-        organization.update!(document_numbering: "per_organization", document_number_prefix: "ORG-11")
+        update_organization(document_numbering: "per_organization", document_number_prefix: "ORG-11")
 
         perform_billing
 
@@ -828,7 +828,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       # NOTE: November 19th: Switching to per_customer numbering and Bill subscription
       travel_to(DateTime.new(2023, 11, 19, 12, 12)) do
-        organization.update!(document_numbering: "per_customer")
+        update_organization(document_numbering: "per_customer")
 
         perform_billing
 
@@ -844,7 +844,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       # NOTE: December 19th: Switching to per_organization numbering and Bill subscription
       travel_to(DateTime.new(2023, 12, 19, 12, 12)) do
-        organization.update!(document_numbering: "per_organization")
+        update_organization(document_numbering: "per_organization")
 
         perform_billing
 
