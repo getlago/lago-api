@@ -128,6 +128,7 @@ module Api
           :external_salesforce_id,
           :finalize_zero_amount_invoice,
           :skip_invoice_custom_sections,
+          :billing_entity_code,
           integration_customers: [
             :id,
             :external_customer_id,

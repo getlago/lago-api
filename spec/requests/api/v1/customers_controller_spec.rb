@@ -38,6 +38,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       expect(json[:customer][:currency]).to eq(create_params[:currency])
       expect(json[:customer][:external_salesforce_id]).to eq(create_params[:external_salesforce_id])
       expect(json[:customer][:account_type]).to eq("customer")
+      expect(json[:customer][:billing_entity_code]).to eq(organization.default_billing_entity.code)
     end
 
     context "with premium features" do
@@ -301,6 +302,24 @@ RSpec.describe Api::V1::CustomersController, type: :request do
 
           expect(json[:error_details][:invoice_custom_sections]).to include("skip_sections_and_selected_ids_sent_together")
         end
+      end
+    end
+
+    context "when billing_entity_code is provided" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:create_params) do
+        {
+          external_id: SecureRandom.uuid,
+          name: "Foo Bar",
+          billing_entity_code: billing_entity.code
+        }
+      end
+
+      it "creates customer associated to the provided billing_entity" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:billing_entity_code]).to eq(billing_entity.code)
       end
     end
   end

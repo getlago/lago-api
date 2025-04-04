@@ -43,5 +43,6 @@ RSpec.describe Types::Customers::UpdateCustomerInput do
 
     expect(subject).to accept_argument(:applied_dunning_campaign_id).of_type("ID")
     expect(subject).to accept_argument(:exclude_from_dunning_campaign).of_type("Boolean")
+    expect(subject).to accept_argument(:billing_entity_code).of_type("String")
   end
 end

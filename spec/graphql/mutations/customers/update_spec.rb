@@ -6,6 +6,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
   let(:required_permissions) { "customers:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:billing_entity) { create(:billing_entity, organization:) }
   let(:customer) { create(:customer, organization:, legal_name: nil) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:tax) { create(:tax, organization:) }
@@ -31,6 +32,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           canEditAttributes
           invoiceGracePeriod
           finalizeZeroAmountInvoice
+          billingEntity { code }
           providerCustomer { id, providerCustomerId, providerPaymentMethods }
           billingConfiguration { id, documentLocale }
           metadata { id, key, value, displayInInvoice }
@@ -61,6 +63,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       currency: "USD",
       netPaymentTerm: 3,
       finalizeZeroAmountInvoice: "skip",
+      billingEntityCode: billing_entity.code,
       providerCustomer: {
         providerCustomerId: "cu_12345",
         providerPaymentMethods: %w[card sepa_debit]
@@ -133,6 +136,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       expect(result_data["metadata"][0]["key"]).to eq("test-key")
       expect(result_data["taxes"][0]["code"]).to eq(tax.code)
       expect(result_data["applicableInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })
+      expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
     end
   end
 
