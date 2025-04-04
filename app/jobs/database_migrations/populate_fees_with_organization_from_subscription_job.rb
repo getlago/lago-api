@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Migrate
+module DatabaseMigrations
   class PopulateFeesWithOrganizationFromSubscriptionJob < ApplicationJob
     queue_as :low_priority
     unique :until_executed
