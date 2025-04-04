@@ -35,7 +35,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
           billingConfiguration { id, documentLocale }
           metadata { id, key, value, displayInInvoice }
           taxes { code }
-          applicableInvoiceCustomSections { id }
+          configurableInvoiceCustomSections { id }
         }
       }
     GQL
@@ -76,7 +76,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
         }
       ],
       taxCodes: [tax.code],
-      applicableInvoiceCustomSectionIds: invoice_custom_sections.map(&:id)
+      configurableInvoiceCustomSectionIds: invoice_custom_sections.map(&:id)
     }
   end
 
@@ -132,7 +132,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
       expect(result_data["billingConfiguration"]["id"]).to eq("#{customer.id}-c0nf")
       expect(result_data["metadata"][0]["key"]).to eq("test-key")
       expect(result_data["taxes"][0]["code"]).to eq(tax.code)
-      expect(result_data["applicableInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })
+      expect(result_data["configurableInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })
     end
   end
 
