@@ -6,6 +6,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
   let(:required_permissions) { "customers:create" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:billing_entity) { create(:billing_entity, organization:) }
   let(:stripe_provider) { create(:stripe_provider, organization:) }
   let(:tax) { create(:tax, organization:) }
 
@@ -35,6 +36,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           shippingAddress { addressLine1 city state }
           metadata { id, key, value, displayInInvoice }
           taxes { code }
+          billingEntity { code }
         }
       }
     GQL
@@ -78,6 +80,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
           currency: "EUR",
           netPaymentTerm: 30,
           finalizeZeroAmountInvoice: "skip",
+          billingEntityCode: billing_entity.code,
           providerCustomer: {
             providerCustomerId: "cu_12345",
             providerPaymentMethods: ["card"]
@@ -130,6 +133,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
       expect(result_data["metadata"].count).to eq(1)
       expect(result_data["metadata"][0]["value"]).to eq("John Doe")
       expect(result_data["taxes"][0]["code"]).to eq(tax.code)
+      expect(result_data["billingEntity"]["code"]).to eq(billing_entity.code)
     end
   end
 

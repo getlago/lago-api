@@ -39,5 +39,6 @@ RSpec.describe Types::Customers::CreateCustomerInput do
     expect(subject).to accept_argument(:integration_customers).of_type("[IntegrationCustomerInput!]")
     expect(subject).to accept_argument(:billing_configuration).of_type("CustomerBillingConfigurationInput")
     expect(subject).to accept_argument(:finalize_zero_amount_invoice).of_type("FinalizeZeroAmountInvoiceEnum")
+    expect(subject).to accept_argument(:billing_entity_code).of_type("String")
   end
 end
