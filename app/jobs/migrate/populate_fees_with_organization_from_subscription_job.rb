@@ -8,9 +8,8 @@ module Migrate
     BATCH_SIZE = 1000
 
     def perform(batch_number = 1)
-      Rails.logger.info("batch number: #{batch_number}")
       batch = Fee.unscoped.where(organization_id: nil).where.not(subscription_id: nil)
-                 .joins(subscription: :customer).limit(BATCH_SIZE)
+        .joins(subscription: :customer).limit(BATCH_SIZE)
 
       if batch.exists?
         # rubocop:disable Rails/SkipsModelValidations
@@ -22,7 +21,7 @@ module Migrate
                               JOIN customers ON customers.id = subscriptions.customer_id
                               WHERE subscriptions.id = fees.subscription_id)"
         )
-
+        # rubocop:enable Rails/SkipsModelValidations
         # Queue the next batch
         self.class.perform_later(batch_number + 1)
       else
