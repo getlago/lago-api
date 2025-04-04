@@ -7,8 +7,8 @@ module DatabaseMigrations
 
     BATCH_SIZE = 1000
 
-    def perform(batch_number = 1, time = Time.current)
-      batch = Fee.where(billing_entity_id: nil).limit(BATCH_SIZE)
+    def perform(batch_number = 1)
+      batch = Fee.unscoped.where(billing_entity_id: nil).limit(BATCH_SIZE)
 
       if batch.exists?
         # rubocop:disable Rails/SkipsModelValidations
@@ -16,9 +16,9 @@ module DatabaseMigrations
         # rubocop:enable Rails/SkipsModelValidations
 
         # Queue the next batch
-        self.class.perform_later(batch_number + 1, time)
+        self.class.perform_later(batch_number + 1)
       else
-        Rails.logger.info("Finished the execution in #{Time.current - time} seconds")
+        Rails.logger.info("Finished the execution")
       end
     end
 
