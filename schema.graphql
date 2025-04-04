@@ -9058,7 +9058,6 @@ input UpdateCustomerInput {
   accountType: CustomerAccountTypeEnum
   addressLine1: String
   addressLine2: String
-  applicableInvoiceCustomSectionIds: [ID!]
   appliedDunningCampaignId: ID
   billingConfiguration: CustomerBillingConfigurationInput
   city: String
@@ -9067,6 +9066,7 @@ input UpdateCustomerInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  configurableInvoiceCustomSectionIds: [ID!]
   country: CountryCode
   currency: CurrencyEnum
   customerType: CustomerTypeEnum

@@ -45259,7 +45259,7 @@
               "deprecationReason": null
             },
             {
-              "name": "applicableInvoiceCustomSectionIds",
+              "name": "configurableInvoiceCustomSectionIds",
               "description": null,
               "type": {
                 "kind": "LIST",
