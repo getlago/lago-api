@@ -47,11 +47,13 @@ module InvoiceCustomSections
 
         case type
         when :aba
+          lines << "US ACH, Domestic Wire"
           lines << "#{t.call(:bank_name)}: #{details_or_default(details[:bank_name])}"
           lines << "#{t.call(:account_number)}: #{details_or_default(details[:account_number])}"
           lines << "#{t.call(:routing_number)}: #{details_or_default(details[:routing_number])}"
           lines << ""
         when :swift
+          lines << "SWIFT"
           lines << "#{t.call(:bank_name)}: #{details_or_default(details[:bank_name])}"
           lines << "#{t.call(:account_number)}: #{details_or_default(details[:account_number])}"
           lines << "#{t.call(:swift_code)}: #{details_or_default(details[:swift_code])}"

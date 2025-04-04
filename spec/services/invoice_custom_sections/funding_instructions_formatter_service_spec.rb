@@ -42,11 +42,23 @@ RSpec.describe InvoiceCustomSections::FundingInstructionsFormatterService do
       end
 
       include_examples "includes bank transfer info intro"
-      it "formats ABA and SWIFT details correctly" do
-        expect(result.details).to include("Bank name: US Test Bank")
-        expect(result.details).to include("Account number: 11119987600453127")
-        expect(result.details).to include("Routing number: 999999999")
-        expect(result.details).to include("SWIFT code: TESTUS99XXX")
+      it "formats ABA and SWIFT details correctly with headers" do
+        aba_section = <<~TEXT.strip
+          US ACH, Domestic Wire
+          Bank name: US Test Bank
+          Account number: 11119987600453127
+          Routing number: 999999999
+        TEXT
+
+        swift_section = <<~TEXT.strip
+          SWIFT
+          Bank name: US Test Bank
+          Account number: 11119987600453127
+          SWIFT code: TESTUS99XXX
+        TEXT
+
+        expect(result.details).to include(aba_section)
+        expect(result.details).to include(swift_section)
       end
     end
 
