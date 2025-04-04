@@ -477,8 +477,8 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(json[:credit_notes].pluck(:lago_id)).to contain_exactly matching_credit_note.id
       end
 
-      context "when billing entity code is not found" do
-        let(:params) { {billing_entity_codes: [SecureRandom.uuid]} }
+      context "when one of billing entity codes is not found" do
+        let(:params) { {billing_entity_codes: [billing_entity.code, SecureRandom.uuid]} }
 
         it "returns an error" do
           subject
