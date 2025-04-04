@@ -16,14 +16,16 @@ module Fees
     def call
       fees = []
 
-      ActiveRecord::Base.transaction do
+      ActiveRecord::Base.transaction(**isolation_mode) do
         fees << if charge.filters.any?
-          create_charge_filter_fee
+          init_charge_filter_fee
         else
-          create_fee(properties:)
+          init_fee(properties:)
         end
+      end
 
-        result.fees = fees.compact
+      ActiveRecord::Base.transaction do
+        result.fees = persist_fees(fees.compact)
 
         if customer_provider_taxation?
           fee_taxes_result = apply_provider_taxes(fees)
@@ -53,57 +55,58 @@ module Fees
     delegate :billable_metric, to: :charge
     delegate :subscription, to: :event
 
-    def create_fee(properties:, charge_filter: nil)
-      ActiveRecord::Base.transaction do
-        aggregation_result = aggregate(properties:, charge_filter:)
+    def init_fee(properties:, charge_filter: nil)
+      aggregation_result = aggregate(properties:, charge_filter:)
 
-        cache_aggregation_result(aggregation_result:, charge_filter:)
+      cache_aggregation_result(aggregation_result:, charge_filter:)
 
-        charge_model_result = apply_charge_model(aggregation_result:, properties:)
-        unit_amount_cents = charge_model_result.unit_amount * subscription.plan.amount.currency.subunit_to_unit
+      charge_model_result = apply_charge_model(aggregation_result:, properties:)
+      unit_amount_cents = charge_model_result.unit_amount * subscription.plan.amount.currency.subunit_to_unit
 
-        fee = Fee.new(
-          subscription:,
-          charge:,
-          organization_id: customer.organization_id,
-          billing_entity_id: customer.billing_entity_id,
-          amount_cents: charge_model_result.amount,
-          precise_amount_cents: charge_model_result.precise_amount,
-          amount_currency: subscription.plan.amount_currency,
-          fee_type: :charge,
-          invoiceable: charge,
-          units: charge_model_result.units,
-          total_aggregated_units: charge_model_result.units,
-          properties: boundaries,
-          events_count: charge_model_result.count,
-          charge_filter_id: charge_filter&.id,
-          pay_in_advance_event_id: event.id,
-          pay_in_advance_event_transaction_id: event.transaction_id,
-          payment_status: :pending,
-          pay_in_advance: true,
-          taxes_amount_cents: 0,
-          taxes_precise_amount_cents: 0.to_d,
-          unit_amount_cents:,
-          precise_unit_amount: charge_model_result.unit_amount,
-          grouped_by: format_grouped_by,
-          amount_details: charge_model_result.amount_details || {}
-        )
+      Fee.new(
+        subscription:,
+        charge:,
+        organization_id: customer.organization_id,
+        billing_entity_id: customer.billing_entity_id,
+        amount_cents: charge_model_result.amount,
+        precise_amount_cents: charge_model_result.precise_amount,
+        amount_currency: subscription.plan.amount_currency,
+        fee_type: :charge,
+        invoiceable: charge,
+        units: charge_model_result.units,
+        total_aggregated_units: charge_model_result.units,
+        properties: boundaries,
+        events_count: charge_model_result.count,
+        charge_filter_id: charge_filter&.id,
+        pay_in_advance_event_id: event.id,
+        pay_in_advance_event_transaction_id: event.transaction_id,
+        payment_status: :pending,
+        pay_in_advance: true,
+        taxes_amount_cents: 0,
+        taxes_precise_amount_cents: 0.to_d,
+        unit_amount_cents:,
+        precise_unit_amount: charge_model_result.unit_amount,
+        grouped_by: format_grouped_by,
+        amount_details: charge_model_result.amount_details || {}
+      )
+    end
 
+    def init_charge_filter_fee
+      filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
+
+      init_fee(properties:, charge_filter: filter || ChargeFilter.new(charge:))
+    end
+
+    def persist_fees(fees)
+      fees.map do |fee|
         unless customer_provider_taxation?
           taxes_result = Fees::ApplyTaxesService.call(fee:)
           taxes_result.raise_if_error!
         end
 
         fee.save! unless estimate
-
         fee
       end
-    end
-
-    def create_charge_filter_fee
-      filter = ChargeFilters::EventMatchingService.call(charge:, event:).charge_filter
-
-      create_fee(properties:, charge_filter: filter || ChargeFilter.new(charge:))
     end
 
     def date_service
@@ -219,6 +222,13 @@ module Fees
         currency: subscription.plan.amount_currency,
         customer:
       )
+    end
+
+    def isolation_mode
+      # NOTE: this is only to avoid failure with spec scnearios
+      return {} if ActiveRecord::Base.connection.transaction_open?
+
+      {isolation: :repeatable_read}
     end
   end
 end
