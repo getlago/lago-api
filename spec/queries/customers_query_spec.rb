@@ -11,14 +11,15 @@ RSpec.describe CustomersQuery, type: :query do
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { {} }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:organization) { create(:organization) }
+  let(:billing_entity1) { organization.default_billing_entity }
+  let(:billing_entity2) { create(:billing_entity, organization:) }
 
   let(:customer_first) do
-    create(:customer, organization:, name: "defgh", firstname: "John", lastname: "Doe", legal_name: "Legalname", external_id: "11", email: "1@example.com")
+    create(:customer, organization:, name: "defgh", firstname: "John", lastname: "Doe", legal_name: "Legalname", external_id: "11", email: "1@example.com", billing_entity: billing_entity1)
   end
   let(:customer_second) do
-    create(:customer, organization:, name: "abcde", firstname: "Jane", lastname: "Smith", legal_name: "other name", external_id: "22", email: "2@example.com")
+    create(:customer, organization:, name: "abcde", firstname: "Jane", lastname: "Smith", legal_name: "other name", external_id: "22", email: "2@example.com", billing_entity: billing_entity1)
   end
   let(:customer_third) do
     create(
@@ -30,7 +31,8 @@ RSpec.describe CustomersQuery, type: :query do
       firstname: "Mary",
       lastname: "Johnson",
       legal_name: "Company name",
-      name: "presuv"
+      name: "presuv",
+      billing_entity: billing_entity2
     )
   end
 
@@ -64,6 +66,15 @@ RSpec.describe CustomersQuery, type: :query do
       expect(returned_ids.count).to eq(2)
       expect(returned_ids).to include customer_first.id
       expect(returned_ids).to include customer_second.id
+    end
+  end
+
+  context "when filtering by billing_entity_id" do
+    let(:filters) { {billing_entity_ids: [billing_entity2.id]} }
+
+    it "returns customers for the specified billing entity" do
+      expect(returned_ids.count).to eq(1)
+      expect(returned_ids).to include(customer_third.id)
     end
   end
 

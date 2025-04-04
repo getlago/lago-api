@@ -15,6 +15,7 @@ module Resolvers
     argument :search_term, String, required: false
 
     argument :account_type, [Types::Customers::AccountTypeEnum], required: false
+    argument :billing_entity_ids, [ID], required: false
     argument :with_deleted, Boolean, required: false
 
     type Types::Customers::Object.collection_type, null: false
@@ -27,7 +28,7 @@ module Resolvers
           page: args[:page],
           limit: args[:limit]
         },
-        filters: args.slice(:account_type, :with_deleted)
+        filters: args.slice(:account_type, :billing_entity_ids, :with_deleted)
       )
 
       result.customers

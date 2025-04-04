@@ -7261,7 +7261,7 @@ type Query {
   """
   Query customers of an organization
   """
-  customers(accountType: [CustomerAccountTypeEnum!], limit: Int, page: Int, searchTerm: String, withDeleted: Boolean): CustomerCollection!
+  customers(accountType: [CustomerAccountTypeEnum!], billingEntityIds: [ID!], limit: Int, page: Int, searchTerm: String, withDeleted: Boolean): CustomerCollection!
 
   """
   Query monthly recurring revenues of an organization
@@ -7446,7 +7446,7 @@ type Query {
   invoices(
     amountFrom: Int
     amountTo: Int
-    billingEntityId: ID
+    billingEntityIds: [ID!]
     currency: CurrencyEnum
     customerExternalId: String
 

@@ -622,7 +622,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
 
       context "when filtering by billing entity" do
-        let(:params) { {billing_entity_code: billing_entity2.code} }
+        let(:params) { {billing_entity_codes: [billing_entity2.code]} }
 
         it "returns invoices for the specified billing entity" do
           subject
@@ -632,14 +632,14 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           expect(json[:invoices].first[:lago_id]).to eq(invoice2.id)
         end
 
-        context "when billing entity does not exist" do
-          let(:params) { {billing_entity_code: "non_existent_code"} }
+        context "when one of billing entities does not exist" do
+          let(:params) { {billing_entity_codes: [billing_entity2.code, SecureRandom.uuid]} }
 
           it "returns a not found error" do
             subject
 
             expect(response).to have_http_status(:not_found)
-            expect(json[:code]).to eq("BillingEntity_not_found")
+            expect(json[:code]).to eq("billing_entity_not_found")
           end
         end
       end

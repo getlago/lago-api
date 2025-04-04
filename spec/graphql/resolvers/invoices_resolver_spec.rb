@@ -583,7 +583,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
     let(:query) do
       <<~GQL
         query {
-          invoices(limit: 5, billingEntityId: "#{billing_entity2.id}") {
+          invoices(limit: 5, billingEntityIds: ["#{billing_entity2.id}"]) {
             collection { id }
             metadata { currentPage, totalCount }
           }

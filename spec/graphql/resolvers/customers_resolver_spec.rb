@@ -17,6 +17,8 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:billing_entity1) { organization.default_billing_entity }
+  let(:billing_entity2) { create(:billing_entity, organization:) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -90,6 +92,45 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
 
       expect(invoices_response["metadata"]["currentPage"]).to eq(1)
       expect(invoices_response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
+
+  context "when filtering by billing_entity_id" do
+    let(:customer) { create(:customer, organization:, billing_entity: billing_entity1) }
+    let(:customer2) { create(:customer, organization:, billing_entity: billing_entity2) }
+
+    let(:query) do
+      <<~GQL
+        query($billingEntityIds: [ID!]) {
+          customers(limit: 5, billingEntityIds: $billingEntityIds) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      customer
+      customer2
+    end
+
+    it "returns all customers for the specified billing entity" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {billingEntityIds: [billing_entity2.id]}
+      )
+
+      customers_response = result["data"]["customers"]
+
+      expect(customers_response["collection"].count).to eq(1)
+      expect(customers_response["collection"].first["id"]).to eq(customer2.id)
+
+      expect(customers_response["metadata"]["currentPage"]).to eq(1)
+      expect(customers_response["metadata"]["totalCount"]).to eq(1)
     end
   end
 
