@@ -63,6 +63,23 @@ module Api
         )
       end
 
+      def payment_url
+        wallet_transaction = current_organization.wallet_transactions.find_by(id: params[:id])
+        result = ::WalletTransactions::Payments::GeneratePaymentUrlService.call(wallet_transaction:)
+
+        if result.success?
+          render(
+            json: ::V1::PaymentProviders::WalletTransactionPaymentSerializer.new(
+              wallet_transaction,
+              root_name: "wallet_transaction_payment_details",
+              payment_url: result.payment_url
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       private
 
       def input_params
