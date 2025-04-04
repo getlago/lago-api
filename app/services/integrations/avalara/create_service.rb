@@ -3,6 +3,8 @@
 module Integrations
   module Avalara
     class CreateService < BaseService
+      Result = BaseResult[:integration]
+
       def initialize(params:)
         @params = params
 
