@@ -386,8 +386,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customers].first[:lago_id]).to eq(customer.id)
       end
 
-      context "when billing entity does not exist" do
-        let(:params) { {billing_entity_codes: ["non_existent_code"]} }
+      context "when one of billing entities does not exist" do
+        let(:params) { {billing_entity_codes: [billing_entity.code, "non_existent_code"]} }
 
         it "returns a not found error" do
           subject

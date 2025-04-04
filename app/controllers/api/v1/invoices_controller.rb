@@ -44,7 +44,7 @@ module Api
 
       def index
         billing_entities = current_organization.all_billing_entities.where(code: params[:billing_entity_codes]) if params[:billing_entity_codes].present?
-        return not_found_error(resource: "billing_enitity") if params[:billing_entity_codes].present? && billing_entities.blank?
+        return not_found_error(resource: "billing_entity") if params[:billing_entity_codes].present? && billing_entities.count != params[:billing_entity_codes].count
 
         result = InvoicesQuery.call(
           organization: current_organization,
