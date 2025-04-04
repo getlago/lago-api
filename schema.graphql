@@ -3390,11 +3390,6 @@ type Customer {
   addressLine1: String
   addressLine2: String
   anrokCustomer: AnrokCustomer
-
-  """
-  Invoice custom sections applicable to the customer
-  """
-  applicableInvoiceCustomSections: [InvoiceCustomSection!]
   applicableTimezone: TimezoneEnum!
   appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
@@ -3407,6 +3402,11 @@ type Customer {
   """
   canEditAttributes: Boolean!
   city: String
+
+  """
+  Invoice custom sections applicable to the customer
+  """
+  configurableInvoiceCustomSections: [InvoiceCustomSection!]
   country: CountryCode
   createdAt: ISO8601DateTime!
   creditNotes: [CreditNote!]
