@@ -22,6 +22,7 @@ module PaymentProviderCustomers
       )
 
       deliver_success_webhook
+      sync_funding_instructions
       PaymentProviderCustomers::StripeCheckoutUrlJob.perform_later(stripe_customer)
 
       result.stripe_customer = stripe_customer
@@ -32,6 +33,7 @@ module PaymentProviderCustomers
       return result if !stripe_payment_provider || stripe_customer.provider_customer_id.blank?
 
       ::Stripe::Customer.update(stripe_customer.provider_customer_id, stripe_update_payload, {api_key:})
+      sync_funding_instructions
       result
     rescue ::Stripe::InvalidRequestError, ::Stripe::PermissionError => e
       deliver_error_webhook(e)
@@ -220,6 +222,13 @@ module PaymentProviderCustomers
       return result if Customer.find_by(id: metadata[:lago_customer_id], organization_id:).nil?
 
       result.not_found_failure!(resource: "stripe_customer")
+    end
+
+    def sync_funding_instructions
+      return if stripe_customer.provider_customer_id.blank?
+      return unless stripe_customer.provider_payment_methods&.include?("customer_balance")
+
+      PaymentProviderCustomers::StripeSyncFundingInstructionsJob.perform_later(stripe_customer)
     end
 
     def stripe_payment_provider

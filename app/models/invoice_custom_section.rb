@@ -7,6 +7,10 @@ class InvoiceCustomSection < ApplicationRecord
   belongs_to :organization
   has_many :invoice_custom_section_selections, dependent: :destroy
 
+  SECTION_TYPES = {manual: "manual", system_generated: "system_generated"}.freeze
+  enum :section_type, SECTION_TYPES, default: :manual, prefix: :section_type
+  attribute :payment_type, :string
+
   validates :name, presence: true
   validates :code,
     presence: true,
@@ -30,6 +34,7 @@ end
 #  details         :string
 #  display_name    :string
 #  name            :string           not null
+#  section_type    :enum             default("manual"), not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  organization_id :uuid             not null
@@ -39,6 +44,7 @@ end
 #  idx_on_organization_id_deleted_at_225e3f789d               (organization_id,deleted_at)
 #  index_invoice_custom_sections_on_organization_id           (organization_id)
 #  index_invoice_custom_sections_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE (deleted_at IS NULL)
+#  index_invoice_custom_sections_on_section_type              (section_type)
 #
 # Foreign Keys
 #

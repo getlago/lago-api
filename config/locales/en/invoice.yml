@@ -1,18 +1,29 @@
 ---
 en:
   invoice:
+    account_holder_name: Account holder name
+    account_number: Account number
+    account_type: Account type
     all_subscriptions: All Subscriptions
     all_usage_based_fees: All usage based fees
     already_paid: Already paid
     amount: Amount
     amount_with_tax: Amount (incl. tax)
     amount_without_tax: Amount (excl. tax)
+    bank_code: Bank code
+    bank_name: Bank name
+    bank_transfer_info: Bank transfers may take several business days to process. To pay via bank transfer, transfer funds using the following bank information.
+    bic: BIC
     bill_from: From
     bill_to: Bill to
+    branch_code: Branch code
+    branch_name: Branch name
     breakdown: Breakdown
     breakdown_for_days: Used %{breakdown_duration} out of %{breakdown_total_duration} days
     breakdown_of: Breakdown of %{fee_filter_display_name}
     charges_paid_in_advance: Charges paid in advance
+    clabe: CLABE
+    country: Country
     coupons: Coupons
     credit_notes: Credit notes
     date_from: From
@@ -30,6 +41,7 @@ en:
       flat_fee_for_the_first: Flat fee for first %{to}
       flat_fee_for_the_last: Flat fee for %{from} and above
       flat_fee_for_the_next: Flat fee for the next %{from} to %{to}
+    iban: IBAN
     invoice_number: Invoice Number
     issue_date: Issue Date
     item: Item
@@ -44,6 +56,7 @@ en:
       free_units_for_the_first: Free units for the first %{count}
     paid_invoice: Paid invoice
     paid_tax_invoice: Paid tax invoice
+    pay_with_bank_transfer: Pay with a bank transfer
     payment_term: Payment term
     payment_term_days: "%{net_payment_term} days"
     percentage:
@@ -61,15 +74,18 @@ en:
     quarter: quarter
     quarterly: Quarterly
     reached_usage_threshold: This progressive billing is generated because your cumulative usage has reached %{usage_amount}, exceeding the %{threshold_amount} threshold.
+    routing_number: Routing number
     see_breakdown: See breakdown for total unit
     self_billed:
       document_name: Self-billing invoice
       footer: This self-billing invoice was issued by the client on behalf of the partner, with their consent. The partner has agreed not to issue their own invoice for this transaction.
+    sort_code: Sort code
     sub_total: Subtotal
     sub_total_with_tax: Subtotal (incl. tax)
     sub_total_without_tax: Subtotal (excl. tax)
     subscription: Subscription
     subscription_interval: "%{plan_interval} subscription - %{plan_name}"
+    swift_code: SWIFT code
     tax: Tax
     tax_identification_number: 'Tax ID: %{tax_identification_number}'
     tax_name: "%{name} (%{rate}% on %{amount})"
