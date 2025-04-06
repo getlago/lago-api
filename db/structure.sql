@@ -31,6 +31,7 @@ ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf70
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_caeb5a3949;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_c71f4b2026;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
+ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_bff25bb1bb;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
@@ -1431,7 +1432,7 @@ CREATE TABLE public.customers (
     last_dunning_campaign_attempt_at timestamp without time zone,
     skip_invoice_custom_sections boolean DEFAULT false NOT NULL,
     account_type public.customer_account_type DEFAULT 'customer'::public.customer_account_type NOT NULL,
-    billing_entity_id uuid,
+    billing_entity_id uuid NOT NULL,
     payment_receipt_counter bigint DEFAULT 0 NOT NULL,
     CONSTRAINT check_customers_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_customers_on_net_payment_term CHECK ((net_payment_term >= 0))
@@ -6094,6 +6095,14 @@ ALTER TABLE ONLY public.charge_filter_values
 
 
 --
+-- Name: customers fk_rails_bff25bb1bb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customers
+    ADD CONSTRAINT fk_rails_bff25bb1bb FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
+
+
+--
 -- Name: active_storage_attachments fk_rails_c3b3935057; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6279,6 +6288,10 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250407202459'),
 ('20250403110833'),
 ('20250403093628'),
+('20250402152030'),
+('20250402152000'),
+('20250402151930'),
+('20250402151900'),
 ('20250402151747'),
 ('20250402151113'),
 ('20250402150959'),
