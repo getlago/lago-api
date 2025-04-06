@@ -248,7 +248,7 @@ end
 #  updated_at                          :datetime         not null
 #  add_on_id                           :uuid
 #  applied_add_on_id                   :uuid
-#  billing_entity_id                   :uuid
+#  billing_entity_id                   :uuid             not null
 #  charge_filter_id                    :uuid
 #  charge_id                           :uuid
 #  group_id                            :uuid
@@ -282,6 +282,7 @@ end
 #
 #  fk_rails_...  (add_on_id => add_ons.id)
 #  fk_rails_...  (applied_add_on_id => applied_add_ons.id)
+#  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (charge_id => charges.id)
 #  fk_rails_...  (group_id => groups.id)
 #  fk_rails_...  (invoice_id => invoices.id)
