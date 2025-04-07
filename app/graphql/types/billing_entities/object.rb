@@ -39,6 +39,7 @@ module Types
       field :billing_configuration, Types::BillingEntities::BillingConfiguration, permission: "billing_entities:invoices:view"
       field :email_settings, [Types::BillingEntities::EmailSettingsEnum], permission: "billing_entities:emails:view"
       field :finalize_zero_amount_invoice, Boolean, null: false
+      field :is_default, Boolean, null: false
 
       field :applied_dunning_campaign, Types::DunningCampaigns::Object
 
@@ -50,6 +51,10 @@ module Types
           document_locale: object&.document_locale,
           eu_tax_management: object&.eu_tax_management
         }
+      end
+
+      def is_default
+        object.organization.default_billing_entity&.id == object.id
       end
     end
   end
