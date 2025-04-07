@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :customer do
     organization
+    billing_entity { organization&.default_billing_entity }
     name { Faker::TvShows::SiliconValley.character }
     firstname { Faker::Name.first_name }
     lastname { Faker::Name.last_name }
@@ -21,10 +22,6 @@ FactoryBot.define do
     legal_name { Faker::Company.name }
     legal_number { Faker::Company.duns_number }
     currency { "EUR" }
-
-    after :build do |customer, values|
-      customer.billing_entity ||= values.organization&.default_billing_entity
-    end
 
     trait :with_shipping_address do
       shipping_address_line1 { Faker::Address.street_address }
