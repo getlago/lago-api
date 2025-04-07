@@ -7,6 +7,8 @@ module Subscriptions
     PROCESSING_TIMEOUT = 1.minute
 
     def call
+      return if ENV["LAGO_REDIS_STORE_URL"].blank?
+
       start_time = Time.current
 
       loop do
@@ -29,8 +31,13 @@ module Subscriptions
     private
 
     def redis_client
+      return @redis_client if defined? @redis_client
+
+      url = ENV["LAGO_REDIS_STORE_URL"].split(":")
+
       @redis_client ||= Redis.new(
-        url: "redis://#{ENV["LAGO_REDIS_STORE_URL"]}",
+        host: url.first,
+        port: url.last,
         password: ENV["LAGO_REDIS_STORE_PASSWORD"].presence,
         db: ENV["LAGO_REDIS_STORE_DB"],
         ssl: true,
