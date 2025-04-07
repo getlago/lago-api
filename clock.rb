@@ -166,4 +166,13 @@ module Clockwork
       .set(sentry: {"slug" => "lago_retry_inbound_webhooks", "cron" => "*/15 * * * *"})
       .perform_later
   end
+
+  # NOTE: Enable wallets and lifetime usage refresh from the events-processor
+  if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present?
+    every(1.minute, "schedule:refresh_flagged_subscriptions") do
+      Clock::ConsumeSubscriptionRefreshedQueueJob
+        .set(sentry: {"slug" => "lago_refresh_flagged_subscriptions", "cron" => "*/1 * * * *"})
+        .perform_later
+    end
+  end
 end
