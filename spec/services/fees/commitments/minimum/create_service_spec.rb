@@ -54,6 +54,7 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
           expect(fee).to have_attributes(
             id: String,
             organization_id: organization.id,
+            billing_entity_id: customer.billing_entity_id,
             precise_amount_cents: 1000.0
           )
         end

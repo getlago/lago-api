@@ -23,6 +23,7 @@ module Fees
           new_fee = Fee.new(
             invoice:,
             organization_id: organization.id,
+            billing_entity_id: invoice.billing_entity_id,
             subscription:,
             fee_type: :commitment,
             invoiceable_type: "Commitment",
