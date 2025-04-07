@@ -14,7 +14,7 @@ module DataApi
     private
 
     def action_path
-      "prepaid_credits/#{organization.id}"
+      "prepaid_credits/#{organization.id}/"
     end
   end
 end

@@ -10,7 +10,7 @@ RSpec.describe DataApi::PrepaidCreditsService, type: :service do
   let(:params) { {} }
 
   before do
-    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/prepaid_credits/#{organization.id}")
+    stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/prepaid_credits/#{organization.id}/")
       .to_return(status: 200, body: body_response, headers: {})
   end
 

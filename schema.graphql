@@ -3771,6 +3771,35 @@ type DataApiMrrsPlans {
   metadata: DataApiMetadata!
 }
 
+type DataApiPrepaidCredit {
+  amountCurrency: CurrencyEnum!
+  consumedAmount: BigInt!
+  consumedCreditsQuantity: BigInt!
+  endOfPeriodDt: ISO8601Date!
+  offeredAmount: BigInt!
+  offeredCreditsQuantity: BigInt!
+  purchasedAmount: BigInt!
+  purchasedCreditsQuantity: BigInt!
+  startOfPeriodDt: ISO8601Date!
+  voidedAmount: BigInt!
+  voidedCreditsQuantity: BigInt!
+}
+
+"""
+DataApiPrepaidCreditCollection type
+"""
+type DataApiPrepaidCreditCollection {
+  """
+  A collection of paginated DataApiPrepaidCreditCollection
+  """
+  collection: [DataApiPrepaidCredit!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 type DataApiRevenueStream {
   amountCurrency: CurrencyEnum!
   commitmentFeeAmountCents: BigInt!
@@ -7318,6 +7347,11 @@ type Query {
   Query monthly recurring revenues plans of an organization
   """
   dataApiMrrsPlans(currency: CurrencyEnum, limit: Int, page: Int): DataApiMrrsPlans!
+
+  """
+  Query prepaid credits of an organization
+  """
+  dataApiPrepaidCredits(currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiPrepaidCreditCollection!
 
   """
   Query revenue streams of an organization
