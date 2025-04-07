@@ -168,7 +168,7 @@ module Clockwork
   end
 
   # NOTE: Enable wallets and lifetime usage refresh from the events-processor
-  if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present?
+  if ENV["LAGO_REDIS_STORE_URL"].present?
     every(1.minute, "schedule:refresh_flagged_subscriptions") do
       Clock::ConsumeSubscriptionRefreshedQueueJob
         .set(sentry: {"slug" => "lago_refresh_flagged_subscriptions", "cron" => "*/1 * * * *"})
