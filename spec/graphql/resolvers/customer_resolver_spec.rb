@@ -35,7 +35,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
           appliedCoupons { id amountCents amountCurrency coupon { id name } }
           appliedAddOns { id amountCents amountCurrency addOn { id name } }
           taxes { id code name }
-          applicableInvoiceCustomSections { id name }
+          configurableInvoiceCustomSections { id name }
           creditNotes {
             id
             creditStatus
@@ -111,7 +111,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
       expect(customer_response["creditNotesBalanceAmountCents"]).to eq("120")
       expect(customer_response["hasOverwrittenInvoiceCustomSectionsSelection"]).to be true
       expect(customer_response["skipInvoiceCustomSections"]).to be false
-      expect(customer_response["applicableInvoiceCustomSections"].count).to eq(2)
+      expect(customer_response["configurableInvoiceCustomSections"].count).to eq(2)
     end
   end
 

@@ -256,6 +256,7 @@ DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_charges_from_and_to_d
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_boundaries;
 DROP INDEX IF EXISTS public.index_invoice_metadata_on_invoice_id_and_key;
 DROP INDEX IF EXISTS public.index_invoice_metadata_on_invoice_id;
+DROP INDEX IF EXISTS public.index_invoice_custom_sections_on_section_type;
 DROP INDEX IF EXISTS public.index_invoice_custom_sections_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_invoice_custom_sections_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoice_custom_section_selections_on_organization_id;
@@ -612,6 +613,7 @@ DROP TYPE IF EXISTS public.tax_status;
 DROP TYPE IF EXISTS public.subscription_invoicing_reason;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
+DROP TYPE IF EXISTS public.invoice_custom_section_type;
 DROP TYPE IF EXISTS public.inbound_webhook_status;
 DROP TYPE IF EXISTS public.entity_document_numbering;
 DROP TYPE IF EXISTS public.customer_type;
@@ -693,6 +695,16 @@ CREATE TYPE public.inbound_webhook_status AS ENUM (
     'processing',
     'succeeded',
     'failed'
+);
+
+
+--
+-- Name: invoice_custom_section_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.invoice_custom_section_type AS ENUM (
+    'manual',
+    'system_generated'
 );
 
 
@@ -1836,7 +1848,8 @@ CREATE TABLE public.invoice_custom_sections (
     organization_id uuid NOT NULL,
     deleted_at timestamp without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    section_type public.invoice_custom_section_type DEFAULT 'manual'::public.invoice_custom_section_type NOT NULL
 );
 
 
@@ -4439,6 +4452,13 @@ CREATE UNIQUE INDEX index_invoice_custom_sections_on_organization_id_and_code ON
 
 
 --
+-- Name: index_invoice_custom_sections_on_section_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoice_custom_sections_on_section_type ON public.invoice_custom_sections USING btree (section_type);
+
+
+--
 -- Name: index_invoice_metadata_on_invoice_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6247,6 +6267,8 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250407202459'),
+('20250403110833'),
 ('20250403093628'),
 ('20250402135038'),
 ('20250402113844'),

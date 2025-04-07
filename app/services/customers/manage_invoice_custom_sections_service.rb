@@ -50,11 +50,16 @@ module Customers
 
     def assign_selected_sections
       # Note: when assigning organization's sections, an empty array will be sent
-      if section_ids.nil?
-        return customer.selected_invoice_custom_sections = customer.organization.invoice_custom_sections.where(code: section_codes)
+      selected_sections = if section_ids
+        customer.organization.invoice_custom_sections.where(id: section_ids)
+      elsif section_codes
+        customer.organization.invoice_custom_sections.where(code: section_codes)
+      else
+        InvoiceCustomSection.none
       end
 
-      customer.selected_invoice_custom_sections = customer.organization.invoice_custom_sections.where(id: section_ids)
+      system_generated_sections = customer.system_generated_invoice_custom_sections
+      customer.selected_invoice_custom_sections = selected_sections + system_generated_sections
     end
   end
 end

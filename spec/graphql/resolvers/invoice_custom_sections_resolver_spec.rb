@@ -25,7 +25,9 @@ RSpec.describe Resolvers::InvoiceCustomSectionsResolver, type: :graphql do
       create(:invoice_custom_section, organization:, name: "c"),
       create(:invoice_custom_section, organization:, name: "a"),
       create(:invoice_custom_section, organization:, name: "z"),
-      create(:invoice_custom_section, organization:, name: "n")
+      create(:invoice_custom_section, organization:, name: "n"),
+      create(:invoice_custom_section, organization:, name: "not show", section_type: "system_generated"),
+      create(:invoice_custom_section, organization:, name: "not show2", section_type: "system_generated")
     ]
   end
 

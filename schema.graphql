@@ -3408,11 +3408,6 @@ type Customer {
   addressLine1: String
   addressLine2: String
   anrokCustomer: AnrokCustomer
-
-  """
-  Invoice custom sections applicable to the customer
-  """
-  applicableInvoiceCustomSections: [InvoiceCustomSection!]
   applicableTimezone: TimezoneEnum!
   appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
@@ -3425,6 +3420,11 @@ type Customer {
   """
   canEditAttributes: Boolean!
   city: String
+
+  """
+  Invoice custom sections manually configured by the customer
+  """
+  configurableInvoiceCustomSections: [InvoiceCustomSection!]
   country: CountryCode
   createdAt: ISO8601DateTime!
   creditNotes: [CreditNote!]
@@ -9115,7 +9115,6 @@ input UpdateCustomerInput {
   accountType: CustomerAccountTypeEnum
   addressLine1: String
   addressLine2: String
-  applicableInvoiceCustomSectionIds: [ID!]
   appliedDunningCampaignId: ID
   billingConfiguration: CustomerBillingConfigurationInput
   billingEntityCode: String
@@ -9125,6 +9124,7 @@ input UpdateCustomerInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
+  configurableInvoiceCustomSectionIds: [ID!]
   country: CountryCode
   currency: CurrencyEnum
   customerType: CustomerTypeEnum
