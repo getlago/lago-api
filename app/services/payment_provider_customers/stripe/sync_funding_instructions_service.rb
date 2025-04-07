@@ -41,7 +41,8 @@ module PaymentProviderCustomers
             code: unique_code,
             name: "Funding Instructions",
             display_name: I18n.t("invoice.pay_with_bank_transfer", locale: preferred_locale),
-            details: formatter.details
+            details: formatter.details,
+            section_type: :system_generated
           },
           selected: false
         ).invoice_custom_section
