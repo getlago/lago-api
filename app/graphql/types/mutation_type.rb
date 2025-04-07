@@ -149,6 +149,7 @@ module Types
     field :create_anrok_integration, mutation: Mutations::Integrations::Anrok::Create
     field :update_anrok_integration, mutation: Mutations::Integrations::Anrok::Update
 
+    field :create_avalara_integration, mutation: Mutations::Integrations::Avalara::Create
     field :update_avalara_integration, mutation: Mutations::Integrations::Avalara::Update
 
     field :fetch_draft_invoice_taxes, mutation: Mutations::Integrations::Anrok::FetchDraftInvoiceTaxes
