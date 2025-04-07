@@ -9,7 +9,6 @@ class InvoiceCustomSection < ApplicationRecord
 
   SECTION_TYPES = {manual: "manual", system_generated: "system_generated"}.freeze
   enum :section_type, SECTION_TYPES, default: :manual, prefix: :section_type
-  attribute :payment_type, :string
 
   validates :name, presence: true
   validates :code,
