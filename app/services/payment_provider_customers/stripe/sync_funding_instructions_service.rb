@@ -43,8 +43,7 @@ module PaymentProviderCustomers
             display_name: I18n.t("invoice.pay_with_bank_transfer", locale: preferred_locale),
             details: formatter.details
           },
-          selected: false,
-          system_generated: true
+          selected: false
         ).invoice_custom_section
 
         return unless invoice_custom_section
