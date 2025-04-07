@@ -37,6 +37,7 @@ jobs:
       RAILS_ENV: test
       DATABASE_URL: "postgres://lago:lago@localhost:5432/lago"
       LAGO_REDIS_CACHE_URL: "redis://localhost:6379"
+      LAGO_REDIS_STORE_URL: "localhost:6379"
       RAILS_MASTER_KEY: N+XcWoGDzKjuoxrU8BIPN5D0/GSuqx9s
       SECRET_KEY_BASE: cvIAI6ycC0OnVDRAjT5hmbRxnjCxl4YB
       LAGO_API_URL: https://api.lago.dev
