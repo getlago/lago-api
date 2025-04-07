@@ -11,4 +11,4 @@ class ValidateAddNonNullToCustomersBillingEntityId < ActiveRecord::Migration[7.2
     add_check_constraint :customers, "billing_entity_id IS NOT NULL", name: "customers_billing_entity_id_null", validate: false
     change_column_null :customers, :billing_entity_id, true
   end
-end 
+end

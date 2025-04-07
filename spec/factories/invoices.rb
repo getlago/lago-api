@@ -10,7 +10,9 @@ FactoryBot.define do
     payment_due_date { issuing_date }
     payment_status { "pending" }
     currency { "EUR" }
-    billing_entity { organization.billing_entities.first }
+    # in case the organization was only build and not saved, it won't have a default_billing_entity, so we need
+    # to build it as well
+    billing_entity { organization&.default_billing_entity || association(:billing_entity) }
 
     organization_sequential_id { rand(1_000_000) }
 

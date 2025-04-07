@@ -3,7 +3,7 @@
 FactoryBot.define do
   factory :customer do
     organization
-    billing_entity { organization&.default_billing_entity }
+    billing_entity { organization&.default_billing_entity || association(:billing_entity) }
     name { Faker::TvShows::SiliconValley.character }
     firstname { Faker::Name.first_name }
     lastname { Faker::Name.last_name }
