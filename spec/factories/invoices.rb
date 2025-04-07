@@ -10,12 +10,9 @@ FactoryBot.define do
     payment_due_date { issuing_date }
     payment_status { "pending" }
     currency { "EUR" }
+    billing_entity { organization.billing_entities.first }
 
     organization_sequential_id { rand(1_000_000) }
-
-    after :build do |invoice, values|
-      invoice.billing_entity ||= values.organization&.default_billing_entity
-    end
 
     trait :draft do
       status { :draft }
