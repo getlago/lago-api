@@ -11,7 +11,7 @@ module PaymentProviders
       when :adyen
         PaymentProviders::Adyen::Payments::CreateService
       when :cashfree
-        PaymentProviders::Cachfree::Payments::CreateService
+        PaymentProviders::Cashfree::Payments::CreateService
       when :gocardless
         PaymentProviders::Gocardless::Payments::CreateService
       when :stripe
