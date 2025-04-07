@@ -27,6 +27,22 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
       end
     end
 
+    context "when stripe customer is created and has customer_balance payment method" do
+      before do
+        allow(Stripe::Customer).to receive(:create)
+          .and_return(Stripe::Customer.new(id: "cus_123456"))
+
+        stripe_customer.update(provider_payment_methods: ["customer_balance"])
+      end
+
+      it "enqueues StripeSyncFundingInstructionsJob" do
+        stripe_service.create
+
+        expect(PaymentProviderCustomers::StripeSyncFundingInstructionsJob)
+          .to have_been_enqueued.with(stripe_customer)
+      end
+    end
+
     context "when customer name is not present" do
       it "creates a stripe customer with the customer firstname and lastname" do
         allow(Stripe::Customer).to receive(:create)
@@ -304,6 +320,22 @@ RSpec.describe PaymentProviderCustomers::StripeService, type: :service do
             expect { stripe_service.update }.not_to enqueue_job(SendWebhookJob)
           end
         end
+      end
+    end
+
+    context "when updating a stripe customer with customer_balance method" do
+      let(:provider_customer_id) { "cus_123456" }
+
+      before do
+        stripe_customer.update(provider_payment_methods: ["customer_balance"])
+        allow(Stripe::Customer).to receive(:update).and_return(true)
+      end
+
+      it "enqueues StripeSyncFundingInstructionsJob" do
+        stripe_service.update
+
+        expect(PaymentProviderCustomers::StripeSyncFundingInstructionsJob)
+          .to have_been_enqueued.with(stripe_customer)
       end
     end
 
