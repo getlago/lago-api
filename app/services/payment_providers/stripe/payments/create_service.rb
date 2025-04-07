@@ -202,7 +202,7 @@ module PaymentProviders
 
           payment.update!(status: :failed, payable_payment_status:)
 
-          result.service_failure!(code: "stripe_error", message: error.message)
+          result.service_failure!(code: "stripe_error", message: error.message, error:)
         end
       end
     end

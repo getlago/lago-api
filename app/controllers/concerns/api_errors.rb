@@ -99,7 +99,7 @@ module ApiErrors
     when BaseService::UnauthorizedFailure
       unauthorized_error(message: error_result.error.message)
     when BaseService::ProviderFailure
-      provider_error(error_result.error.provider, error_result.error.error_details)
+      provider_error(error_result.error.provider, error_result.error.original_error_details)
     when BaseService::ThirdPartyFailure
       thirdpary_error(error: error_result.error)
     else
