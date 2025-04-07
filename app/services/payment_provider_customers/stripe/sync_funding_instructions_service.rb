@@ -25,36 +25,39 @@ module PaymentProviderCustomers
       delegate :customer, to: :stripe_customer
 
       def create_invoice_section_with_funding_info(funding_instructions)
-        funding_instructions.bank_transfer.to_hash
-        unique_code = "funding_instructions_#{customer.id}"
+        section = find_or_create_invoice_section(funding_instructions)
+        return unless section
 
-        existing_section = customer.organization.system_generated_invoice_custom_sections.find_by(code: unique_code)
-
-        formatter = InvoiceCustomSections::FundingInstructionsFormatterService.call(
-          funding_data: funding_instructions.bank_transfer.to_hash,
-          locale: preferred_locale
-        )
-
-        invoice_custom_section = existing_section || InvoiceCustomSections::CreateService.call(
-          organization: customer.organization,
-          create_params: {
-            code: unique_code,
-            name: "Funding Instructions",
-            display_name: I18n.t("invoice.pay_with_bank_transfer", locale: preferred_locale),
-            details: formatter.details,
-            section_type: :system_generated
-          },
-          selected: false
-        ).invoice_custom_section
-
-        return unless invoice_custom_section
-
-        all_section_ids = customer.selected_invoice_custom_sections.ids | [invoice_custom_section.id]
+        section_ids = customer.selected_invoice_custom_sections.ids | [section.id]
         Customers::ManageInvoiceCustomSectionsService.call(
           customer: customer,
           skip_invoice_custom_sections: false,
-          section_ids: [all_section_ids]
+          section_ids: [section_ids]
         )
+      end
+
+      def find_or_create_invoice_section(funding_instructions)
+        existing_section = customer.organization.system_generated_invoice_custom_sections.find_by(code: funding_instructions_code)
+        return existing_section if existing_section
+
+        formatted_details = InvoiceCustomSections::FundingInstructionsFormatterService.call(
+          funding_data: funding_instructions.bank_transfer.to_hash,
+          locale: preferred_locale
+        ).details
+
+        created = InvoiceCustomSections::CreateService.call(
+          organization: customer.organization,
+          create_params: {
+            code: funding_instructions_code,
+            name: "Funding Instructions",
+            display_name: I18n.t("invoice.pay_with_bank_transfer", locale: preferred_locale),
+            details: formatted_details,
+            section_type: :system_generated
+          },
+          selected: false
+        )
+
+        created.invoice_custom_section
       end
 
       def fetch_funding_instructions
@@ -104,6 +107,10 @@ module PaymentProviderCustomers
         end
 
         currency.downcase
+      end
+
+      def funding_instructions_code
+        "funding_instructions_#{customer.id}"
       end
 
       def preferred_locale
