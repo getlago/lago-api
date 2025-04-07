@@ -12,6 +12,8 @@ module IntegrationMappings
         IntegrationMappings::NetsuiteMapping
       when "Integrations::AnrokIntegration"
         IntegrationMappings::AnrokMapping
+      when "Integrations::AvalaraIntegration"
+        IntegrationMappings::AvalaraMapping
       when "Integrations::XeroIntegration"
         IntegrationMappings::XeroMapping
       else
