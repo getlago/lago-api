@@ -47,8 +47,8 @@ class BaseResult
     validation_failure!(errors: {field.to_sym => [error_code]})
   end
 
-  def service_failure!(code:, message:)
-    fail_with_error!(BaseService::ServiceFailure.new(self, code:, error_message: message))
+  def service_failure!(code:, message:, error: nil)
+    fail_with_error!(BaseService::ServiceFailure.new(self, code:, error_message: message, original_error: error))
   end
 
   def unknown_tax_failure!(code:, message:)

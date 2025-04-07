@@ -4,12 +4,31 @@ class BaseService
   include AfterCommitEverywhere
 
   class FailedResult < StandardError
-    attr_reader :result
+    attr_reader :result, :original_error
 
-    def initialize(result, message)
+    def initialize(result, message, original_error: nil)
       @result = result
+      @original_error = original_error
 
       super(message)
+    end
+
+    def original_error_details
+      if original_error.is_a?(::Stripe::StripeError)
+        stripe_error_details(original_error)
+      end
+    end
+
+    private
+
+    def stripe_error_details(err)
+      {
+        code: err.code,
+        message: err.message,
+        request_id: err.request_id,
+        http_status: err.http_status,
+        http_body: JSON.parse(err.http_body || "{}")
+      }
     end
   end
 
@@ -58,11 +77,11 @@ class BaseService
   class ServiceFailure < FailedResult
     attr_reader :code, :error_message
 
-    def initialize(result, code:, error_message:)
+    def initialize(result, code:, error_message:, original_error: nil)
       @code = code
       @error_message = error_message
 
-      super(result, "#{code}: #{error_message}")
+      super(result, "#{code}: #{error_message}", original_error:)
     end
   end
 
@@ -94,30 +113,11 @@ class BaseService
   end
 
   class ProviderFailure < FailedResult
-    attr_reader :provider, :error
+    attr_reader :provider
 
     def initialize(result, provider:, error:)
       @provider = provider
-      @error = error
-      super(result, nil)
-    end
-
-    def error_details
-      if error.is_a?(::Stripe::StripeError)
-        stripe_error_details
-      end
-    end
-
-    private
-
-    def stripe_error_details
-      {
-        code: error.code,
-        message: error.message,
-        request_id: error.request_id,
-        http_status: error.http_status,
-        http_body: JSON.parse(error.http_body)
-      }
+      super(result, nil, original_error: error)
     end
   end
 
@@ -180,8 +180,8 @@ class BaseService
       validation_failure!(errors: {field.to_sym => [error_code]})
     end
 
-    def service_failure!(code:, message:)
-      fail_with_error!(ServiceFailure.new(self, code:, error_message: message))
+    def service_failure!(code:, message:, error: nil)
+      fail_with_error!(ServiceFailure.new(self, code:, error_message: message, original_error: error))
     end
 
     def unknown_tax_failure!(code:, message:)
