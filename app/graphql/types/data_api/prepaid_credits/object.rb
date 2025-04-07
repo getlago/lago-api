@@ -8,10 +8,10 @@ module Types
 
         field :amount_currency, Types::CurrencyEnum, null: false
 
-        field :consumed_amount_cents, GraphQL::Types::BigInt, null: false
-        field :offered_amount_cents, GraphQL::Types::BigInt, null: false
-        field :purchased_amount_cents, GraphQL::Types::BigInt, null: false
-        field :voided_amount_cents, GraphQL::Types::BigInt, null: false
+        field :consumed_amount, GraphQL::Types::BigInt, null: false
+        field :offered_amount, GraphQL::Types::BigInt, null: false
+        field :purchased_amount, GraphQL::Types::BigInt, null: false
+        field :voided_amount, GraphQL::Types::BigInt, null: false
 
         field :consumed_credits_quantity, GraphQL::Types::BigInt, null: false
         field :offered_credits_quantity, GraphQL::Types::BigInt, null: false
