@@ -32,7 +32,13 @@ module Subscriptions
       @redis_client ||= Redis.new(
         url: "redis://#{ENV["LAGO_REDIS_STORE_URL"]}",
         password: ENV["LAGO_REDIS_STORE_PASSWORD"].presence,
-        db: ENV["LAGO_REDIS_STORE_DB"]
+        db: ENV["LAGO_REDIS_STORE_DB"],
+        ssl: true,
+        ssl_params: {
+          verify_mode: OpenSSL::SSL::VERIFY_PEER
+        },
+        timeout: 5.0,
+        reconnect_attempts: 3
       )
     end
   end
