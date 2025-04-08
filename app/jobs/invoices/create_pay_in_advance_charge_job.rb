@@ -26,12 +26,12 @@ module Invoices
 
       result.raise_if_error! if invoice || result.invoice.nil? || !result.invoice.generating?
 
-      # NOTE: retry the job with the already created invoice in a previous failed attempt
+      # NOTE: retry the job, but don't pass the invoice as it's not persisted.
       self.class.set(wait: 3.seconds).perform_later(
         charge:,
         event:,
         timestamp:,
-        invoice: result.invoice
+        invoice: nil
       )
     end
 
