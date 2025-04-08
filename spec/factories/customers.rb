@@ -75,5 +75,20 @@ FactoryBot.define do
     trait :with_skipped_invoice_custom_section_selections do
       skip_invoice_custom_sections { true }
     end
+
+    trait :with_stripe_payment_provider do
+      payment_provider { "stripe" }
+      payment_provider_code { Faker::Lorem.word }
+
+      after(:create) do |customer|
+        payment_provider = build(
+          :stripe_provider,
+          organization: customer.organization,
+          code: customer.payment_provider_code
+        )
+
+        create(:stripe_customer, customer:, payment_provider:)
+      end
+    end
   end
 end

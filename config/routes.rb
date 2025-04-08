@@ -75,7 +75,9 @@ Rails.application.routes.draw do
       resources :payments, only: %i[create index show]
       resources :plans, param: :code, code: /.*/
       resources :taxes, param: :code, code: /.*/
-      resources :wallet_transactions, only: %i[create show]
+      resources :wallet_transactions, only: %i[create show] do
+        post :payment_url, on: :member
+      end
       get "/wallets/:id/wallet_transactions", to: "wallet_transactions#index"
       resources :wallets, only: %i[create update show index]
       delete "/wallets/:id", to: "wallets#terminate"
