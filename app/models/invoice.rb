@@ -13,7 +13,7 @@ class Invoice < ApplicationRecord
   TAX_INVOICE_LABEL_COUNTRIES = %w[AU AE NZ ID SG].freeze
 
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
-  before_save :ensure_billing_entity_sequential_id, unless: -> { self_billed? }
+  before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
 
   belongs_to :customer, -> { with_discarded }
@@ -432,20 +432,30 @@ class Invoice < ApplicationRecord
     #       we are not using it and status is changed without calling the state machine event
     return unless status_changed_to_finalized?
 
-    attempts = 0
-    max_attempts = 10
+    self.billing_entity_sequential_id = generate_billing_entity_sequential_id
+  end
 
-    begin
-      attempts += 1
+  def generate_billing_entity_sequential_id
+    # Use advisory lock to ensure only one process can generate IDs for this billing entity at a time
+    lock_key = "billing_entity_sequential_id_#{billing_entity_id}"
 
-      self.class.transaction do
-        last_sequential_id = billing_entity.invoices.non_self_billed.with_generated_number.count
-        update!(billing_entity_sequential_id: last_sequential_id.next)
+    result = Invoice.with_advisory_lock(lock_key, transaction: true, timeout_seconds: 10.seconds) do
+      billing_entity_sequential_id = billing_entity
+        .invoices
+        .non_self_billed
+        .with_generated_number
+        .maximum(:billing_entity_sequential_id) || 0
+
+      loop do
+        billing_entity_sequential_id += 1
+        break billing_entity_sequential_id unless billing_entity.invoices.non_self_billed.with_generated_number.exists?(billing_entity_sequential_id:)
       end
-    rescue ActiveRecord::RecordNotUnique
-      retry if attempts < max_attempts
-      raise "Failed to generate billing entity sequential id after #{max_attempts} attempts"
     end
+
+    # NOTE: If the application was unable to acquire the lock, the block returns false
+    raise(SequenceError, "Unable to acquire lock on the database") unless result
+
+    result
   end
 
   def ensure_organization_sequential_id
