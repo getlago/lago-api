@@ -12,8 +12,6 @@ module PaymentProviderCustomers
     def perform(stripe_customer)
       result = PaymentProviderCustomers::Stripe::SyncFundingInstructionsService.new(stripe_customer).call
       result.raise_if_error!
-    rescue BaseService::UnauthorizedFailure => e
-      Rails.logger.warn(e.message)
     end
   end
 end
