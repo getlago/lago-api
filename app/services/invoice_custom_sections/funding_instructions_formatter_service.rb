@@ -18,10 +18,10 @@ module InvoiceCustomSections
 
         case funding_data[:type]
         when "us_bank_transfer" then format_us_bank_transfer(lines, t)
-        when "mx_bank_transfer" then format_mx_bank_transfer(lines, t)
-        when "jp_bank_transfer" then format_jp_bank_transfer(lines, t)
-        when "gb_bank_transfer" then format_gb_bank_transfer(lines, t)
-        when "eu_bank_transfer" then format_eu_bank_transfer(lines, t)
+        when "mx_bank_transfer" then lines << format_mx_bank_transfer(t)
+        when "jp_bank_transfer" then lines << format_jp_bank_transfer(t)
+        when "gb_bank_transfer" then lines << format_gb_bank_transfer(t)
+        when "eu_bank_transfer" then lines << format_eu_bank_transfer(t)
         else
           result.service_failure!(
             code: "unsupported_funding_type",
@@ -45,54 +45,67 @@ module InvoiceCustomSections
         type = address[:type]&.to_sym
         details = address[type] || {}
 
-        case type
+        block = case type
         when :aba
-          lines << "US ACH, Domestic Wire"
-          lines << "#{t.call(:bank_name)}: #{details_or_default(details[:bank_name])}"
-          lines << "#{t.call(:account_number)}: #{details_or_default(details[:account_number])}"
-          lines << "#{t.call(:routing_number)}: #{details_or_default(details[:routing_number])}"
-          lines << ""
+          <<~TEXT
+            US ACH, Domestic Wire
+            #{t.call(:bank_name)}: #{details_or_default(details[:bank_name])}
+            #{t.call(:account_number)}: #{details_or_default(details[:account_number])}
+            #{t.call(:routing_number)}: #{details_or_default(details[:routing_number])}
+          TEXT
         when :swift
-          lines << "SWIFT"
-          lines << "#{t.call(:bank_name)}: #{details_or_default(details[:bank_name])}"
-          lines << "#{t.call(:account_number)}: #{details_or_default(details[:account_number])}"
-          lines << "#{t.call(:swift_code)}: #{details_or_default(details[:swift_code])}"
-          lines << ""
+          <<~TEXT
+            SWIFT
+            #{t.call(:bank_name)}: #{details_or_default(details[:bank_name])}
+            #{t.call(:account_number)}: #{details_or_default(details[:account_number])}
+            #{t.call(:swift_code)}: #{details_or_default(details[:swift_code])}
+          TEXT
         end
+
+        lines << block.strip if block
+        lines << "" if block
       end
     end
 
-    def format_mx_bank_transfer(lines, t)
+    def format_mx_bank_transfer(t)
       details = extract_details(:mx_bank_transfer)
-      lines << "#{t.call(:clabe)}: #{details_or_default(details[:clabe])}"
-      lines << "#{t.call(:bank_name)}: #{details_or_default(details[:bank_name])}"
-      lines << "#{t.call(:bank_code)}: #{details_or_default(details[:bank_code])}"
+      <<~TEXT.strip
+        #{t.call(:clabe)}: #{details_or_default(details[:clabe])}
+        #{t.call(:bank_name)}: #{details_or_default(details[:bank_name])}
+        #{t.call(:bank_code)}: #{details_or_default(details[:bank_code])}
+      TEXT
     end
 
-    def format_jp_bank_transfer(lines, t)
+    def format_jp_bank_transfer(t)
       details = extract_details(:jp_bank_transfer)
-      lines << "#{t.call(:bank_code)}: #{details_or_default(details[:bank_code])}"
-      lines << "#{t.call(:bank_name)}: #{details_or_default(details[:bank_name])}"
-      lines << "#{t.call(:branch_code)}: #{details_or_default(details[:branch_code])}"
-      lines << "#{t.call(:branch_name)}: #{details_or_default(details[:branch_name])}"
-      lines << "#{t.call(:account_type)}: #{details_or_default(details[:account_type])}"
-      lines << "#{t.call(:account_number)}: #{details_or_default(details[:account_number])}"
-      lines << "#{t.call(:account_holder_name)}: #{details_or_default(details[:account_holder_name])}"
+      <<~TEXT.strip
+        #{t.call(:bank_code)}: #{details_or_default(details[:bank_code])}
+        #{t.call(:bank_name)}: #{details_or_default(details[:bank_name])}
+        #{t.call(:branch_code)}: #{details_or_default(details[:branch_code])}
+        #{t.call(:branch_name)}: #{details_or_default(details[:branch_name])}
+        #{t.call(:account_type)}: #{details_or_default(details[:account_type])}
+        #{t.call(:account_number)}: #{details_or_default(details[:account_number])}
+        #{t.call(:account_holder_name)}: #{details_or_default(details[:account_holder_name])}
+      TEXT
     end
 
-    def format_gb_bank_transfer(lines, t)
+    def format_gb_bank_transfer(t)
       details = extract_details(:sort_code)
-      lines << "#{t.call(:account_number)}: #{details_or_default(details[:account_number])}"
-      lines << "#{t.call(:sort_code)}: #{details_or_default(details[:sort_code])}"
-      lines << "#{t.call(:account_holder_name)}: #{details_or_default(details[:account_holder_name])}"
+      <<~TEXT.strip
+        #{t.call(:account_number)}: #{details_or_default(details[:account_number])}
+        #{t.call(:sort_code)}: #{details_or_default(details[:sort_code])}
+        #{t.call(:account_holder_name)}: #{details_or_default(details[:account_holder_name])}
+      TEXT
     end
 
-    def format_eu_bank_transfer(lines, t)
+    def format_eu_bank_transfer(t)
       details = extract_details(:iban)
-      lines << "#{t.call(:bic)}: #{details_or_default(details[:bic])}"
-      lines << "#{t.call(:iban)}: #{details_or_default(details[:iban])}"
-      lines << "#{t.call(:country)}: #{details_or_default(details[:country])}"
-      lines << "#{t.call(:account_holder_name)}: #{details_or_default(details[:account_holder_name])}"
+      <<~TEXT.strip
+        #{t.call(:bic)}: #{details_or_default(details[:bic])}
+        #{t.call(:iban)}: #{details_or_default(details[:iban])}
+        #{t.call(:country)}: #{details_or_default(details[:country])}
+        #{t.call(:account_holder_name)}: #{details_or_default(details[:account_holder_name])}
+      TEXT
     end
 
     def extract_details(key)
