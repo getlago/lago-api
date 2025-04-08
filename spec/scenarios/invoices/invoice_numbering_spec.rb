@@ -83,7 +83,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       expect(sequential_ids).to match_array([1, 1, 1])
       expect(organization_sequential_ids).to match_array([0, 0, 0])
-      expect(billing_entity_sequential_ids).to match_array([1, 2, 3])
+      expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
       expect(numbers).to match_array(%w[ORG-1-001-001 ORG-1-002-001 ORG-1-003-001])
     end
 
@@ -99,7 +99,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       expect(sequential_ids).to match_array([2, 2, 2])
       expect(organization_sequential_ids).to match_array([0, 0, 0])
-      expect(billing_entity_sequential_ids).to match_array([4, 5, 6])
+      expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
       expect(numbers).to match_array(%w[ORG-1-001-002 ORG-1-002-002 ORG-1-003-002])
     end
 
@@ -115,7 +115,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       expect(sequential_ids).to match_array([3, 3, 3])
       expect(organization_sequential_ids).to match_array([0, 0, 0])
-      expect(billing_entity_sequential_ids).to match_array([7, 8, 9])
+      expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
       expect(numbers).to match_array(%w[ORG-1-001-003 ORG-1-002-003 ORG-1-003-003])
     end
 
@@ -151,7 +151,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       expect(sequential_ids).to match_array([5, 5, 5])
       expect(organization_sequential_ids).to match_array([0, 0, 0])
-      expect(billing_entity_sequential_ids).to match_array([13, 14, 15])
+      expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
       expect(numbers).to match_array(%w[ORG-11-001-005 ORG-11-002-005 ORG-11-003-005])
     end
 
@@ -171,8 +171,8 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
       invoices = organization.reload.invoices.order(created_at: :desc)
 
       expect(invoices.first.sequential_id).to eq(6)
-      expect(invoices.first.organization_sequential_id).to eq(0)
-      expect(invoices.first.billing_entity_sequential_id).to eq(16)
+      expect(invoices.first.organization_sequential_id).to be_zero
+      expect(invoices.first.billing_entity_sequential_id).to be_nil
       expect(invoices.pluck(:number))
         .to match_array(
           %w[
@@ -271,7 +271,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(sequential_ids).to match_array([1, 1, 1])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
-        expect(billing_entity_sequential_ids).to match_array([1, 2, 3])
+        expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
         expect(numbers).to match_array(%w[ORG-1-001-001 ORG-1-002-001 ORG-1-003-001])
       end
 
@@ -287,7 +287,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(sequential_ids).to match_array([2, 2, 2])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
-        expect(billing_entity_sequential_ids).to match_array([4, 5, 6])
+        expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
         expect(numbers).to match_array(%w[ORG-1-001-002 ORG-1-002-002 ORG-1-003-002])
       end
 
@@ -303,7 +303,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(sequential_ids).to match_array([3, 3, 3])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
-        expect(billing_entity_sequential_ids).to match_array([7, 8, 9])
+        expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
         expect(numbers).to match_array(%w[ORG-1-001-003 ORG-1-002-003 ORG-1-003-003])
       end
 
@@ -374,7 +374,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(sequential_ids).to match_array([1, nil, 1])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
-        expect(billing_entity_sequential_ids).to match_array([1, nil, 2])
+        expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
         expect(numbers).to match_array(%w[ORG-1-001-001 ORG-1-DRAFT ORG-1-003-001])
       end
 
@@ -394,8 +394,8 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.reload.invoices.order(created_at: :desc)
 
         expect(invoices.first.sequential_id).to eq(2)
-        expect(invoices.first.organization_sequential_id).to eq(0)
-        expect(invoices.first.billing_entity_sequential_id).to eq(3)
+        expect(invoices.first.organization_sequential_id).to be_zero
+        expect(invoices.first.billing_entity_sequential_id).to be_nil
         expect(invoices.pluck(:number))
           .to match_array(
             %w[
@@ -423,7 +423,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.reload.invoices.order(created_at: :desc)
 
         expect(invoices.first.sequential_id).to be_nil
-        expect(invoices.first.organization_sequential_id).to eq(0)
+        expect(invoices.first.organization_sequential_id).to be_zero
         expect(invoices.first.billing_entity_sequential_id).to be_nil
         expect(invoices.pluck(:number))
           .to match_array(
@@ -487,7 +487,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(sequential_ids).to match_array([3, nil, 2])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
-        expect(billing_entity_sequential_ids).to match_array([6, nil, 7])
+        expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
         expect(numbers)
           .to match_array(
             %w[
@@ -515,7 +515,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(sequential_ids).to match_array([4, nil, 3])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
-        expect(billing_entity_sequential_ids).to match_array([8, nil, 9])
+        expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
         expect(numbers)
           .to match_array(
             %w[
@@ -545,9 +545,12 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         webhook_url: nil,
         document_numbering: "per_organization",
         timezone: "Europe/Paris",
-        email_settings: []
+        email_settings: [],
+        billing_entities: [billing_entity]
       )
     end
+
+    let(:billing_entity) { create(:billing_entity, document_numbering: "per_billing_entity") }
 
     it "creates invoice numbers correctly" do
       # NOTE: Jul 19th: create the subscription
@@ -637,7 +640,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
         invoices = organization.reload.invoices.order(created_at: :desc)
 
         expect(invoices.first.sequential_id).to be_nil
-        expect(invoices.first.organization_sequential_id).to eq(0)
+        expect(invoices.first.organization_sequential_id).to be_zero
         expect(invoices.first.billing_entity_sequential_id).to be_nil
         expect(invoices.pluck(:number))
           .to match_array(
@@ -821,7 +824,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(sequential_ids).to match_array([1, 1, 1])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
-        expect(billing_entity_sequential_ids).to match_array([1, 2, nil])
+        expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
         expect(numbers).to match_array(%w[ORG-1-001-001 ORG-1-002-001 ORG-1-003-001])
       end
 
@@ -837,7 +840,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(sequential_ids).to match_array([2, 2, 2])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
-        expect(billing_entity_sequential_ids).to match_array([3, 4, nil])
+        expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
         expect(numbers).to match_array(%w[ORG-1-001-002 ORG-1-002-002 ORG-1-003-002])
       end
 
@@ -853,7 +856,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(sequential_ids).to match_array([3, 3, 3])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
-        expect(billing_entity_sequential_ids).to match_array([5, 6, nil])
+        expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
         expect(numbers).to match_array(%w[ORG-1-001-003 ORG-1-002-003 ORG-1-003-003])
       end
 
@@ -889,7 +892,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(sequential_ids).to match_array([5, 5, 5])
         expect(organization_sequential_ids).to match_array([0, 0, 0])
-        expect(billing_entity_sequential_ids).to match_array([9, 10, nil])
+        expect(billing_entity_sequential_ids).to match_array([nil, nil, nil])
         expect(numbers).to match_array(%w[ORG-11-001-005 ORG-11-002-005 ORG-11-003-005])
       end
 
@@ -914,7 +917,9 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
   end
 
   context "with multiple billing entities" do
-    let(:billing_entity_second) { create(:billing_entity, organization:) }
+    let(:organization) { create(:organization, billing_entities: [billing_entity_first, billing_entity_second]) }
+    let(:billing_entity_first) { create(:billing_entity, document_numbering: "per_billing_entity") }
+    let(:billing_entity_second) { create(:billing_entity, document_numbering: "per_billing_entity") }
     let(:customer_fourth) { create(:customer, organization:, billing_entity: billing_entity_second) }
     let(:customer_fifth) { create(:customer, organization:, billing_entity: billing_entity_second) }
 
@@ -1016,7 +1021,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       # NOTE: October 19th: Switching to per_organization numbering and Bill subscriptions
       travel_to(DateTime.new(2023, 10, 19, 12, 12)) do
-        organization.update!(document_numbering: "per_organization", document_number_prefix: "ORG-11")
+        update_organization(document_numbering: "per_organization", document_number_prefix: "ORG-11")
 
         perform_billing
 
@@ -1034,7 +1039,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
       # NOTE: November 19th: Switching to per_customer numbering and Bill subscriptions
       travel_to(DateTime.new(2023, 11, 19, 12, 12)) do
-        organization.update!(document_numbering: "per_customer")
+        update_organization(document_numbering: "per_customer")
 
         perform_billing
 
@@ -1046,13 +1051,13 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
 
         expect(sequential_ids).to match_array([5, 5, 5, 5, 5])
         expect(organization_sequential_ids).to match_array([0, 0, 0, 0, 0])
-        expect(billing_entity_sequential_ids).to match_array([13, 14, 15, 9, 10])
+        expect(billing_entity_sequential_ids).to match_array([nil, nil, nil, 9, 10])
         expect(numbers).to match_array(%w[ORG-11-001-005 ORG-11-002-005 ORG-11-003-005 ORG-11-004-005 ORG-11-005-005])
       end
 
       # NOTE: December 19th: Switching to per_organization numbering and Bill subscriptions
       travel_to(DateTime.new(2023, 12, 19, 12, 12)) do
-        organization.update!(document_numbering: "per_organization")
+        update_organization(document_numbering: "per_organization")
 
         perform_billing
 
