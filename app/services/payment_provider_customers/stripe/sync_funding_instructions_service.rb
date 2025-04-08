@@ -98,14 +98,6 @@ module PaymentProviderCustomers
 
       def customer_currency
         currency = customer.currency || customer.organization.default_currency
-
-        if currency.blank?
-          return result.service_failure!(
-            code: "missing_currency",
-            message: "No currency found for customer or organization"
-          )
-        end
-
         currency.downcase
       end
 
