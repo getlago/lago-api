@@ -28,6 +28,13 @@ module Integrations
                 integration_customer:,
                 subsidiary_id:
               )
+            when "Integrations::AvalaraIntegration"
+              Integrations::Aggregator::Contacts::Payloads::Avalara.new(
+                integration:,
+                customer:,
+                integration_customer:,
+                subsidiary_id:
+              )
             when "Integrations::HubspotIntegration"
               Integrations::Aggregator::Contacts::Payloads::Hubspot.new(
                 integration:,

@@ -261,6 +261,15 @@ type Authorize {
   url: String!
 }
 
+type AvalaraCustomer {
+  externalCustomerId: String
+  id: ID!
+  integrationCode: String
+  integrationId: ID
+  integrationType: IntegrationTypeEnum
+  syncWithProvider: Boolean
+}
+
 type AvalaraIntegration {
   accountId: String!
   code: String!
@@ -3417,6 +3426,7 @@ type Customer {
   appliedAddOns: [AppliedAddOn!]
   appliedCoupons: [AppliedCoupon!]
   appliedDunningCampaign: DunningCampaign
+  avalaraCustomer: AvalaraCustomer
   billingConfiguration: CustomerBillingConfiguration
   billingEntity: BillingEntity!
 

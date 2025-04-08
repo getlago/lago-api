@@ -12,6 +12,8 @@ module IntegrationCustomers
         IntegrationCustomers::NetsuiteService
       when "Integrations::AnrokIntegration"
         IntegrationCustomers::AnrokService
+      when "Integrations::AvalaraIntegration"
+        IntegrationCustomers::AvalaraService
       when "Integrations::XeroIntegration"
         IntegrationCustomers::XeroService
       when "Integrations::HubspotIntegration"
