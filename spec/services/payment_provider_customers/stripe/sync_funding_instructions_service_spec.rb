@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviderCustomers::Stripe::SyncFundingInstructionsService do
-  subject(:update_service) { described_class.new(stripe_customer) }
+  subject(:sync_funding_service) { described_class.new(stripe_customer) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, currency: "USD") }
@@ -15,34 +15,35 @@ RSpec.describe PaymentProviderCustomers::Stripe::SyncFundingInstructionsService 
     context "when customer is not eligible" do
       let(:provider_payment_methods) { %w[card] }
 
-      it "returns a successful result without doing anything" do
-        expect(::Stripe::Customer).not_to receive(:create_funding_instructions)
-        result = update_service.call
-        expect(result).to be_success
+      before do
+        allow(::Stripe::Customer).to receive(:create_funding_instructions)
+      end
+
+      it "does not fetch Stripe funding instructions" do
+        sync_funding_service.call
+        expect(::Stripe::Customer).not_to have_received(:create_funding_instructions)
       end
     end
 
     context "when customer is eligible and everything is valid and section does not yet exist" do
-      let(:funding_instructions) do
-        double("FundingInstructions", bank_transfer: double(to_hash: {some: "details"}))
-      end
+      let(:bank_transfer_data) { instance_double("BankTransfer", to_hash: {some: "details"}) }
+      let(:funding_instructions) { instance_double("FundingInstructions", bank_transfer: bank_transfer_data) }
 
-      let(:formatter_service_result) { double(details: "formatted bank details") }
+      let(:formatter_service_result) { instance_double("FormatterResult", details: "formatted bank details") }
       let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
 
       before do
-        allow(stripe_customer.payment_provider).to receive(:secret_key).and_return("sk_test_123")
-        allow(::Stripe::Customer).to receive(:create_funding_instructions)
-          .and_return(funding_instructions)
+        allow(sync_funding_service).to receive(:stripe_api_key).and_return("sk_test_123")
+        allow(::Stripe::Customer).to receive(:create_funding_instructions).and_return(funding_instructions)
         allow(InvoiceCustomSections::FundingInstructionsFormatterService).to receive(:call)
-           .and_return(formatter_service_result)
+          .and_return(formatter_service_result)
         allow(InvoiceCustomSections::CreateService).to receive(:call)
-           .and_return(double(invoice_custom_section: invoice_custom_section))
+          .and_return(instance_double("CreateResult", invoice_custom_section: invoice_custom_section))
         allow(Customers::ManageInvoiceCustomSectionsService).to receive(:call)
       end
 
       it "creates the section and returns success" do
-        result = update_service.call
+        result = sync_funding_service.call
 
         expect(result).to be_success
         expect(::Stripe::Customer).to have_received(:create_funding_instructions)
