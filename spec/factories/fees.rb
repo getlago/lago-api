@@ -7,10 +7,11 @@ FactoryBot.define do
     add_on { nil }
     fee_type { "subscription" }
     subscription
+    organization { invoice&.organization || association(:organization) }
+    billing_entity { invoice&.billing_entity || association(:billing_entity) }
 
     after(:create) do |fee, context|
       fee.organization = fee.invoice&.organization || fee.subscription&.organization
-      fee.billing_entity = fee.invoice&.billing_entity || fee.subscription&.billing_entity
     end
 
     amount_cents { 200 }

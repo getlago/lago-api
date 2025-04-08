@@ -5502,6 +5502,15 @@ ALTER TABLE ONLY public.groups
 ALTER TABLE ONLY public.inbound_webhooks
     ADD CONSTRAINT fk_rails_36cda06530 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
+
+--
+-- Name: customers_taxes fk_rails_3708a65be3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customers_taxes
+    ADD CONSTRAINT fk_rails_3708a65be3 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
 --
 -- Name: fees fk_rails_38047eb662; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
