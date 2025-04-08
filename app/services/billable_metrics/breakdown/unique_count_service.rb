@@ -18,7 +18,7 @@ module BillableMetrics
               datetime = rows.last["timestamp"] unless operation_type == "add_and_removed"
             end
 
-            OpenStruct.new(
+            Item.new(
               date: datetime.in_time_zone(customer.applicable_timezone).to_date,
               action: operation_type,
               amount: row["prorated_value"].ceil,
