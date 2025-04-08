@@ -44,7 +44,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Avalara do
 
     context "when name, firstname and lastname are present" do
       let(:firstname) { "John" }
-      let(:lastname) { "Doe"}
+      let(:lastname) { "Doe" }
       let(:customer_name) { "Mark Doe" }
       let(:name) { customer.name }
 
