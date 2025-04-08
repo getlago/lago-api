@@ -32,7 +32,7 @@ module PaymentProviderCustomers
         Customers::ManageInvoiceCustomSectionsService.call(
           customer: customer,
           skip_invoice_custom_sections: false,
-          section_ids: [section_ids]
+          section_ids: section_ids
         )
       end
 
