@@ -175,6 +175,59 @@ RSpec.describe Customers::ManageInvoiceCustomSectionsService do
       end
     end
 
+    context "when assigning section_ids and customer has system_generated sections" do
+      let(:section_ids) { [invoice_custom_sections[0].id] }
+
+      let!(:system_generated_section) do
+        create(:invoice_custom_section, organization: customer.organization, section_type: :system_generated)
+      end
+
+      before do
+        customer.system_generated_invoice_custom_sections << system_generated_section
+      end
+
+      it "keeps system_generated sections and adds selected manual ones" do
+        service.call
+        expect(customer.selected_invoice_custom_sections).to match_array([invoice_custom_sections[0], system_generated_section])
+      end
+    end
+
+    context "when assigning section_codes and customer has system_generated sections" do
+      let(:section_codes) { [invoice_custom_sections[1].code] }
+
+      let!(:system_generated_section) do
+        create(:invoice_custom_section, organization: customer.organization, section_type: :system_generated)
+      end
+
+      before do
+        customer.system_generated_invoice_custom_sections << system_generated_section
+      end
+
+      it "keeps system_generated sections and adds selected manual ones" do
+        service.call
+        expect(customer.selected_invoice_custom_sections).to match_array([invoice_custom_sections[1], system_generated_section])
+      end
+    end
+
+    context "when clearing all manual sections but customer has system_generated" do
+      let(:section_ids) { [] }
+
+      let!(:system_generated_section) do
+        create(:invoice_custom_section, organization: customer.organization, section_type: :system_generated)
+      end
+
+      before do
+        customer.selected_invoice_custom_sections << invoice_custom_sections[1]
+        customer.system_generated_invoice_custom_sections << system_generated_section
+      end
+
+      it "removes manual but keeps system_generated sections" do
+        service.call
+        expect(customer.reload.manual_selected_invoice_custom_sections).to be_empty
+        expect(customer.reload.selected_invoice_custom_sections).to match_array([system_generated_section])
+      end
+    end
+
     context "when an ActiveRecord::RecordInvalid error is raised" do
       let(:section_ids) { invoice_custom_sections[1..2].map(&:id) }
 

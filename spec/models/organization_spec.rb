@@ -31,6 +31,8 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:daily_usages) }
   it { is_expected.to have_many(:invoice_custom_sections) }
   it { is_expected.to have_many(:invoice_custom_section_selections) }
+  it { is_expected.to have_many(:manual_invoice_custom_sections) }
+  it { is_expected.to have_many(:system_generated_invoice_custom_sections) }
   it { is_expected.to have_many(:selected_invoice_custom_sections) }
 
   it { is_expected.to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true) }
@@ -408,6 +410,22 @@ RSpec.describe Organization, type: :model do
 
     it "returns the count of failed tax invoices" do
       expect(failed_tax_invoices_count).to eq(2)
+    end
+  end
+
+  describe "scoped invoice_custom_sections" do
+    let(:organization) { create(:organization) }
+    let(:manual_section) { create(:invoice_custom_section, organization:, section_type: :manual) }
+    let(:system_generated_section) { create(:invoice_custom_section, organization:, section_type: :system_generated) }
+
+    before do
+      manual_section
+      system_generated_section
+    end
+
+    it "returns the correct invoice custom sections for each scope" do
+      expect(organization.manual_invoice_custom_sections).to contain_exactly(manual_section)
+      expect(organization.system_generated_invoice_custom_sections).to contain_exactly(system_generated_section)
     end
   end
 end

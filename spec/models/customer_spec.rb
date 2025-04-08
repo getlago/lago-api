@@ -436,7 +436,98 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe "scoped selected_invoice_custom_sections" do
+    let(:organization) { customer.organization }
+    let(:manual_section) { create(:invoice_custom_section, organization:, section_type: :manual) }
+    let(:system_generated_section) { create(:invoice_custom_section, organization:, section_type: :system_generated) }
+
+    before do
+      customer.selected_invoice_custom_sections << manual_section
+      customer.selected_invoice_custom_sections << system_generated_section
+    end
+
+    it "returns the correct sections for each scoped association" do
+      expect(customer.manual_selected_invoice_custom_sections).to contain_exactly(manual_section)
+      expect(customer.system_generated_invoice_custom_sections).to contain_exactly(system_generated_section)
+    end
+  end
+
   describe "#applicable_invoice_custom_sections" do
+    let(:organization) { customer.organization }
+
+    let(:manual_customer_section) do
+      create(:invoice_custom_section, organization:, section_type: :manual, name: "Customer Section")
+    end
+
+    let(:manual_organization_section) do
+      create(:invoice_custom_section, organization:, section_type: :manual, name: "Organization Section")
+    end
+
+    let(:system_generated_section) do
+      create(:invoice_custom_section, organization:, section_type: :system_generated, name: "System Section")
+    end
+
+    context "when skip_invoice_custom_sections is true and there are system sections" do
+      before do
+        customer.update!(skip_invoice_custom_sections: true)
+        customer.system_generated_invoice_custom_sections << system_generated_section
+      end
+
+      it "returns only system generated sections" do
+        expect(customer.applicable_invoice_custom_sections).to contain_exactly(system_generated_section)
+      end
+    end
+
+    context "when customer has manual and system sections" do
+      before do
+        customer.manual_selected_invoice_custom_sections << manual_customer_section
+        customer.system_generated_invoice_custom_sections << system_generated_section
+      end
+
+      it "returns both manual and system generated sections" do
+        expect(customer.applicable_invoice_custom_sections).to match_array([manual_customer_section, system_generated_section])
+      end
+    end
+
+    context "when customer has no manual, but organization has manual, and customer has system" do
+      before do
+        organization.selected_invoice_custom_sections << manual_organization_section
+        customer.system_generated_invoice_custom_sections << system_generated_section
+      end
+
+      it "returns organization manual + system sections" do
+        expect(customer.applicable_invoice_custom_sections).to match_array([manual_organization_section, system_generated_section])
+      end
+    end
+
+    context "when only organization has manual sections and no system sections" do
+      before do
+        organization.selected_invoice_custom_sections << manual_organization_section
+      end
+
+      it "returns only organization manual sections" do
+        expect(customer.applicable_invoice_custom_sections).to match_array([manual_organization_section])
+      end
+    end
+
+    context "when only system_generated sections exist" do
+      before do
+        customer.system_generated_invoice_custom_sections << system_generated_section
+      end
+
+      it "returns only system_generated sections" do
+        expect(customer.applicable_invoice_custom_sections).to match_array([system_generated_section])
+      end
+    end
+
+    context "when no manual or system_generated sections are selected" do
+      it "returns an empty array" do
+        expect(customer.applicable_invoice_custom_sections).to eq([])
+      end
+    end
+  end
+
+  describe "#configurable_invoice_custom_sections" do
     let(:organization) { customer.organization }
     let(:organization_section) { create(:invoice_custom_section, organization: organization) }
     let(:customer_section) { create(:invoice_custom_section, organization: organization) }
