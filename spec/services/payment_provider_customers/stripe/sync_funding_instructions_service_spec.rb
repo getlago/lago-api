@@ -8,7 +8,11 @@ RSpec.describe PaymentProviderCustomers::Stripe::SyncFundingInstructionsService 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, currency: "USD") }
   let(:provider_customer_id) { "cus_Rw5Qso78STEap3" }
-  let(:stripe_customer) { create(:stripe_customer, customer:, provider_payment_methods:) }
+  let(:stripe_customer) {
+    create(:stripe_customer, customer:, provider_payment_methods:,
+      provider_customer_id:, payment_provider:)
+  }
+  let(:payment_provider) { create(:stripe_provider, organization:) }
   let(:provider_payment_methods) { %w[customer_balance] }
 
   describe "#call" do
@@ -33,13 +37,13 @@ RSpec.describe PaymentProviderCustomers::Stripe::SyncFundingInstructionsService 
       let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
 
       before do
-        allow(sync_funding_service).to receive(:stripe_api_key).and_return("sk_test_123")
         allow(::Stripe::Customer).to receive(:create_funding_instructions).and_return(funding_instructions)
         allow(InvoiceCustomSections::FundingInstructionsFormatterService).to receive(:call)
           .and_return(formatter_service_result)
         allow(InvoiceCustomSections::CreateService).to receive(:call)
           .and_return(instance_double("CreateResult", invoice_custom_section: invoice_custom_section))
         allow(Customers::ManageInvoiceCustomSectionsService).to receive(:call)
+        allow(payment_provider).to receive(:secret_key).and_return("sk_test_123")
       end
 
       it "creates the section and returns success" do
