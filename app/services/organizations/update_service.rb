@@ -25,7 +25,6 @@ module Organizations
       organization.state = params[:state] if params.key?(:state)
       organization.country = params[:country]&.upcase if params.key?(:country)
       organization.default_currency = params[:default_currency]&.upcase if params.key?(:default_currency)
-      organization.document_numbering = params[:document_numbering] if params.key?(:document_numbering)
       organization.document_number_prefix = params[:document_number_prefix] if params.key?(:document_number_prefix)
       organization.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)
 
@@ -54,6 +53,13 @@ module Organizations
           Organizations::UpdateInvoicePaymentDueDateService.call(
             organization:,
             net_payment_term: params[:net_payment_term]
+          )
+        end
+
+        if params.key?(:document_numbering)
+          Organizations::UpdateInvoiceNumberingService.call(
+            organization:,
+            document_numbering: params[:document_numbering]
           )
         end
 

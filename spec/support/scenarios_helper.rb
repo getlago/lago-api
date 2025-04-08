@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
 module ScenariosHelper
+  ### Organizations
+
+  def update_organization(params)
+    put_with_token(organization, "/api/v1/organizations", {organization: params})
+  end
+
   ### Billable metrics
 
   def create_metric(params)
