@@ -14195,7 +14195,7 @@
             },
             {
               "name": "configurableInvoiceCustomSections",
-              "description": "Invoice custom sections manually configured by the customer",
+              "description": "Invoice custom sections manually configured for the customer",
               "type": {
                 "kind": "LIST",
                 "name": null,

@@ -3422,7 +3422,7 @@ type Customer {
   city: String
 
   """
-  Invoice custom sections manually configured by the customer
+  Invoice custom sections manually configured for the customer
   """
   configurableInvoiceCustomSections: [InvoiceCustomSection!]
   country: CountryCode
