@@ -65,7 +65,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob, type: :job do
         expect(invoice_service).to have_received(:call)
 
         expect(described_class).to have_been_enqueued
-          .with(charge:, event:, timestamp:, invoice: result_invoice)
+          .with(charge:, event:, timestamp:, invoice: nil)
       end
     end
 

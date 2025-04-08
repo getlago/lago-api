@@ -2,6 +2,8 @@
 
 module Invoices
   class CreatePayInAdvanceChargeService < BaseService
+    Result = BaseResult[:invoice, :fees_taxes, :invoice_id]
+
     def initialize(charge:, event:, timestamp:, invoice: nil)
       @charge = charge
       @event = Events::CommonFactory.new_instance(source: event)
@@ -18,12 +20,11 @@ module Invoices
     def call
       fee_result = generate_fees
       fees = fee_result.fees
-      return Result.new if fees.none?
-
-      create_generating_invoice unless invoice
-      result.invoice = invoice
+      return result if fees.none?
 
       ActiveRecord::Base.transaction do
+        create_generating_invoice unless invoice
+        result.invoice = invoice
         fees.each { |f| f.update!(invoice:) }
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
