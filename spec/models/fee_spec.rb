@@ -53,7 +53,7 @@ RSpec.describe Fee, type: :model do
     subject(:fee_invoice_name) { fee.invoice_name }
 
     context "when invoice display name is present" do
-      let(:fee) { build_stubbed(:fee) }
+      let(:fee) { build(:fee) }
 
       it "returns fee invoice display name" do
         expect(fee_invoice_name).to eq(fee.invoice_display_name)
@@ -64,7 +64,7 @@ RSpec.describe Fee, type: :model do
       let(:invoice_display_name) { [nil, ""].sample }
 
       context "when it is a subscription fee" do
-        let(:fee) { build_stubbed(:fee, subscription:, fee_type: "subscription", invoice_display_name:) }
+        let(:fee) { build(:fee, subscription:, fee_type: "subscription", invoice_display_name:) }
         let(:subscription) { create(:subscription) }
 
         it "returns related subscription name" do
@@ -73,7 +73,7 @@ RSpec.describe Fee, type: :model do
       end
 
       context "when it is a charge fee" do
-        let(:fee) { build_stubbed(:fee, charge:, fee_type: "charge", invoice_display_name:) }
+        let(:fee) { build(:fee, charge:, fee_type: "charge", invoice_display_name:) }
         let(:charge) { create(:standard_charge, invoice_display_name: charge_invoice_display_name) }
 
         context "when charge has invoice display name present" do
@@ -94,7 +94,7 @@ RSpec.describe Fee, type: :model do
       end
 
       context "when it is a add-on fee" do
-        let(:fee) { build_stubbed(:fee, applied_add_on:, fee_type: "add_on", invoice_display_name:) }
+        let(:fee) { build(:fee, applied_add_on:, fee_type: "add_on", invoice_display_name:) }
         let(:applied_add_on) { create(:applied_add_on) }
 
         it "returns add on name" do
@@ -103,7 +103,7 @@ RSpec.describe Fee, type: :model do
       end
 
       context "when it is a credit fee" do
-        let(:fee) { build_stubbed(:fee, fee_type: "credit", invoice_display_name:) }
+        let(:fee) { build(:fee, fee_type: "credit", invoice_display_name:) }
 
         it "returns add on name" do
           expect(fee_invoice_name).to eq("credit")
@@ -111,7 +111,7 @@ RSpec.describe Fee, type: :model do
       end
 
       context "when it is an pay_in_advance charge fee" do
-        let(:fee) { build_stubbed(:fee, charge:, fee_type: "charge", invoice_display_name:) }
+        let(:fee) { build(:fee, charge:, fee_type: "charge", invoice_display_name:) }
         let(:charge) { create(:standard_charge, :pay_in_advance, invoice_display_name: charge_invoice_display_name) }
 
         context "when charge has invoice display name present" do

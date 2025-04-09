@@ -7,11 +7,8 @@ FactoryBot.define do
     add_on { nil }
     fee_type { "subscription" }
     subscription
-
-    after(:create) do |fee, context|
-      fee.organization = fee.invoice&.organization || fee.subscription&.organization
-      fee.billing_entity = fee.invoice&.billing_entity || fee.subscription&.billing_entity
-    end
+    organization { invoice&.organization || subscription&.organization || association(:organization) }
+    billing_entity_id { invoice&.billing_entity_id || subscription&.customer&.billing_entity_id || association(:billing_entity).id }
 
     amount_cents { 200 }
     precise_amount_cents { 200.0000000001 }
@@ -71,6 +68,9 @@ FactoryBot.define do
     fee_type { "add_on" }
     subscription { nil }
 
+    organization { invoice&.organization || association(:organization) }
+    billing_entity_id { invoice&.billing_entity_id || association(:billing_entity).id }
+
     amount_cents { 200 }
     amount_currency { "EUR" }
     taxes_amount_cents { 2 }
@@ -85,6 +85,9 @@ FactoryBot.define do
     fee_type { "add_on" }
     subscription { nil }
 
+    organization { invoice&.organization || association(:organization) }
+    billing_entity_id { invoice&.billing_entity_id || association(:billing_entity).id }
+
     amount_cents { 200 }
     amount_currency { "EUR" }
     taxes_amount_cents { 2 }
@@ -97,6 +100,9 @@ FactoryBot.define do
     invoice
     fee_type { "commitment" }
     subscription
+
+    organization { invoice&.organization || subscription&.organization || association(:organization) }
+    billing_entity_id { invoice&.billing_entity_id || subscription&.customer&.billing_entity_id || association(:billing_entity).id }
 
     amount_cents { 200 }
     amount_currency { "EUR" }

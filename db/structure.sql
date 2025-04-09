@@ -139,6 +139,7 @@ ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXIST
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_0d349e632f;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_0d2be3d72c;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_0bb6dcc01f;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_0934890b24;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_08dfe87131;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_085d1cc97b;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_07b21049f2;
@@ -1631,7 +1632,7 @@ CREATE TABLE public.fees (
     taxes_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
     taxes_base_rate double precision DEFAULT 1.0 NOT NULL,
     organization_id uuid,
-    billing_entity_id uuid
+    billing_entity_id uuid NOT NULL
 );
 
 
@@ -5239,6 +5240,14 @@ ALTER TABLE ONLY public.add_ons_taxes
 
 
 --
+-- Name: fees fk_rails_0934890b24; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_0934890b24 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
+
+
+--
 -- Name: coupon_targets fk_rails_0bb6dcc01f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6288,6 +6297,10 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250407202459'),
 ('20250403110833'),
 ('20250403093628'),
+('20250402152230'),
+('20250402152200'),
+('20250402152130'),
+('20250402152100'),
 ('20250402152030'),
 ('20250402152000'),
 ('20250402151930'),
