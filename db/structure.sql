@@ -141,6 +141,7 @@ ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_08dfe87131;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_085d1cc97b;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_07b21049f2;
+ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_06b7046ec3;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
 CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
@@ -1932,7 +1933,7 @@ CREATE TABLE public.invoices (
     total_paid_amount_cents bigint DEFAULT 0 NOT NULL,
     self_billed boolean DEFAULT false NOT NULL,
     applied_grace_period integer,
-    billing_entity_id uuid,
+    billing_entity_id uuid NOT NULL,
     billing_entity_sequential_id integer DEFAULT 0,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -5205,6 +5206,14 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 --
+-- Name: invoices fk_rails_06b7046ec3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoices
+    ADD CONSTRAINT fk_rails_06b7046ec3 FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
+
+
+--
 -- Name: billing_entities_taxes fk_rails_07b21049f2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6270,6 +6279,10 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250407202459'),
 ('20250403110833'),
 ('20250403093628'),
+('20250402151747'),
+('20250402151113'),
+('20250402150959'),
+('20250402150920'),
 ('20250402135038'),
 ('20250402113844'),
 ('20250325162648'),

@@ -510,7 +510,7 @@ end
 #  voided_at                               :datetime
 #  created_at                              :datetime         not null
 #  updated_at                              :datetime         not null
-#  billing_entity_id                       :uuid
+#  billing_entity_id                       :uuid             not null
 #  billing_entity_sequential_id            :integer          default(0)
 #  customer_id                             :uuid
 #  organization_id                         :uuid             not null
@@ -535,6 +535,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #
