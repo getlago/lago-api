@@ -1631,7 +1631,7 @@ CREATE TABLE public.fees (
     precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
     taxes_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
     taxes_base_rate double precision DEFAULT 1.0 NOT NULL,
-    organization_id uuid,
+    organization_id uuid NOT NULL,
     billing_entity_id uuid NOT NULL
 );
 
@@ -6294,6 +6294,8 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250409140720'),
+('20250409140652'),
 ('20250407202459'),
 ('20250403110833'),
 ('20250403093628'),

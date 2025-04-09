@@ -254,7 +254,7 @@ end
 #  group_id                            :uuid
 #  invoice_id                          :uuid
 #  invoiceable_id                      :uuid
-#  organization_id                     :uuid
+#  organization_id                     :uuid             not null
 #  pay_in_advance_event_id             :uuid
 #  pay_in_advance_event_transaction_id :string
 #  subscription_id                     :uuid
