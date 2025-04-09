@@ -114,6 +114,7 @@ module AdjustedFees
 
       Fee.create!(
         organization:,
+        billing_entity_id: invoice.billing_entity_id,
         invoice:,
         subscription:,
         invoiceable: charge,
