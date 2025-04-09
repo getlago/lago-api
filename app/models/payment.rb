@@ -58,8 +58,16 @@ class Payment < ApplicationRecord
     payment_provider&.payment_type
   end
 
-  # TODO: a placeholder for the future implementation of the payment method
   def payment_method
+    type = provider_payment_method_data["type"]
+    brand = provider_payment_method_data["brand"]
+    last4 = provider_payment_method_data["last4"]
+
+    if type == "card"
+      "#{brand.to_s.upcase} **** #{last4}"
+    else
+      type
+    end
   end
 
   private
