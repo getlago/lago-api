@@ -264,6 +264,7 @@ type Authorize {
 type AvalaraIntegration {
   accountId: String!
   code: String!
+  companyCode: String!
   failedInvoicesCount: Int
   hasMappingsConfigured: Boolean
   id: ID!
@@ -2017,6 +2018,7 @@ input CreateAvalaraIntegrationInput {
   """
   clientMutationId: String
   code: String!
+  companyCode: String!
   connectionId: String!
   licenseKey: String!
   name: String!
@@ -9000,6 +9002,7 @@ input UpdateAvalaraIntegrationInput {
   """
   clientMutationId: String
   code: String
+  companyCode: String
   id: ID
   licenseKey: String
   name: String

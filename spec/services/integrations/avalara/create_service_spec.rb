@@ -18,6 +18,7 @@ RSpec.describe Integrations::Avalara::CreateService, type: :service do
         organization_id: organization.id,
         connection_id: "conn1",
         account_id: "account-id1",
+        company_code: "company-code1",
         license_key: "123456789"
       }
     end
@@ -69,6 +70,7 @@ RSpec.describe Integrations::Avalara::CreateService, type: :service do
             expect(result.integration.code).to eq("anrok1")
             expect(result.integration.organization).to eq(organization)
             expect(result.integration.connection_id).to eq("conn1")
+            expect(result.integration.company_code).to eq("company-code1")
             expect(result.integration.account_id).to eq("account-id1")
             expect(result.integration.license_key).to eq("123456789")
           end

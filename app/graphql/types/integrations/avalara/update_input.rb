@@ -9,6 +9,7 @@ module Types
         argument :id, ID, required: false
 
         argument :code, String, required: false
+        argument :company_code, String, required: false
         argument :name, String, required: false
 
         argument :account_id, String, required: false

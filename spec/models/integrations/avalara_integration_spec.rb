@@ -8,6 +8,7 @@ RSpec.describe Integrations::AvalaraIntegration, type: :model do
   it { is_expected.to validate_presence_of(:name) }
   it { is_expected.to validate_presence_of(:connection_id) }
   it { is_expected.to validate_presence_of(:account_id) }
+  it { is_expected.to validate_presence_of(:company_code) }
   it { is_expected.to validate_presence_of(:license_key) }
   it { is_expected.to have_many(:error_details) }
 
@@ -18,7 +19,7 @@ RSpec.describe Integrations::AvalaraIntegration, type: :model do
   end
 
   describe ".license_key" do
-    it "assigns and retrieve an license_key" do
+    it "assigns and retrieve an secret pair" do
       avalara_integration.license_key = "123abc456"
       expect(avalara_integration.license_key).to eq("123abc456")
     end
@@ -32,9 +33,16 @@ RSpec.describe Integrations::AvalaraIntegration, type: :model do
   end
 
   describe ".account_id" do
-    it "assigns and retrieve a secret pair" do
+    it "assigns and retrieve a settings pair" do
       avalara_integration.account_id = "account_id"
       expect(avalara_integration.account_id).to eq("account_id")
+    end
+  end
+
+  describe ".company_code" do
+    it "assigns and retrieve a settings pair" do
+      avalara_integration.company_code = "company_code"
+      expect(avalara_integration.company_code).to eq("company_code")
     end
   end
 end

@@ -6,9 +6,9 @@ module Integrations
       primary_key: :organization_id,
       foreign_key: :organization_id
 
-    validates :connection_id, :account_id, :license_key, presence: true
+    validates :company_code, :connection_id, :account_id, :license_key, presence: true
 
-    settings_accessors :account_id
+    settings_accessors :account_id, :company_code
     secrets_accessors :connection_id, :license_key
   end
 end

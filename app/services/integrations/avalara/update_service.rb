@@ -21,8 +21,6 @@ module Integrations
 
         integration.name = params[:name] if params.key?(:name)
         integration.code = params[:code] if params.key?(:code)
-        integration.account_id = params[:account_id] if params.key?(:account_id)
-        integration.license_key = params[:license_key] if params.key?(:license_key)
 
         integration.save!
 
