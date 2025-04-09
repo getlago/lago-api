@@ -517,6 +517,7 @@ end
 #  currency                                :string
 #  fees_amount_cents                       :bigint           default(0), not null
 #  file                                    :string
+#  finalized_at                            :datetime
 #  invoice_type                            :integer          default("subscription"), not null
 #  issuing_date                            :date
 #  net_payment_term                        :integer          default(0), not null
