@@ -3791,7 +3791,7 @@ type DataApiRevenueStreamCustomer {
   amountCurrency: CurrencyEnum!
   customerDeletedAt: ISO8601DateTime
   customerId: ID!
-  customerName: String!
+  customerName: String
   externalCustomerId: String!
   grossRevenueAmountCents: BigInt!
   grossRevenueShare: Float!
