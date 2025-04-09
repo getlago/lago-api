@@ -187,7 +187,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
     end
 
     context "when customer does not exists in API context" do
-      let(:customer) { Customer.new(organization:, external_id: SecureRandom.uuid) }
+      let(:customer) { Customer.new(organization:, external_id: SecureRandom.uuid, billing_entity: organization.default_billing_entity) }
 
       before { CurrentContext.source = "api" }
 

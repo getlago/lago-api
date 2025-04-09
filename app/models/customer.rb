@@ -303,7 +303,7 @@ end
 #  created_at                       :datetime         not null
 #  updated_at                       :datetime         not null
 #  applied_dunning_campaign_id      :uuid
-#  billing_entity_id                :uuid
+#  billing_entity_id                :uuid             not null
 #  external_id                      :string           not null
 #  external_salesforce_id           :string
 #  organization_id                  :uuid             not null
@@ -321,5 +321,6 @@ end
 # Foreign Keys
 #
 #  fk_rails_...  (applied_dunning_campaign_id => dunning_campaigns.id)
+#  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #
