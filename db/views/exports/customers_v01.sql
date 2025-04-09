@@ -1,6 +1,7 @@
 SELECT
+  c.organization_id,
   c.id AS lago_id,
-  be.code AS billing_entity_code,
+  c.billing_entity_id,
   c.external_id,
   c.account_type::text,
   c.name,
@@ -82,8 +83,6 @@ SELECT
   ) AS taxes
 FROM customers c
 LEFT JOIN organizations o ON o.id = c.organization_id
-LEFT JOIN billing_entities be ON be.id = c.billing_entity_id
-  AND be.deleted_at IS NULL
 LEFT JOIN payment_provider_customers ppc ON ppc.customer_id = c.id 
   AND ppc.deleted_at IS NULL
-WHERE c.deleted_at IS NULL 
+WHERE c.deleted_at IS NULL;
