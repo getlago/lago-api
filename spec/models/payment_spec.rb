@@ -357,8 +357,38 @@ RSpec.describe Payment, type: :model do
   describe "#payment_method" do
     subject(:payment_method) { payment.payment_method }
 
-    it "returns nil" do
-      expect(payment_method).to be_nil
+    context "when provider_payment_method_data is empty" do
+      let(:payment) { build(:payment, provider_payment_method_data: {}) }
+
+      it "returns nil" do
+        expect(payment_method).to be_nil
+      end
+    end
+
+    context "when provider_payment_method_data contains card details" do
+      let(:payment) do
+        build(:payment, provider_payment_method_data: {
+          "type" => "card",
+          "brand" => "visa",
+          "last4" => "1234"
+        })
+      end
+
+      it "returns formatted card details" do
+        expect(payment_method).to eq("VISA **** 1234")
+      end
+    end
+
+    context "when provider_payment_method_data contains non-card details" do
+      let(:payment) do
+        build(:payment, provider_payment_method_data: {
+          "type" => "bank_transfer"
+        })
+      end
+
+      it "returns the payment method type" do
+        expect(payment_method).to eq("bank_transfer")
+      end
     end
   end
 
