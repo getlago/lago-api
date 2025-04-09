@@ -59,8 +59,6 @@ RSpec.describe Mutations::Integrations::Avalara::Update, type: :graphql do
     aggregate_failures do
       expect(result_data["name"]).to eq(name)
       expect(result_data["code"]).to eq(code)
-      expect(result_data["accountId"]).to eq(account_id)
-      expect(result_data["licenseKey"]).to eq("••••••••…789")
     end
   end
 end

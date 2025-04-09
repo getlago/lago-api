@@ -16,7 +16,8 @@ RSpec.describe Mutations::Integrations::Avalara::Create, type: :graphql do
           code,
           name,
           accountId,
-          licenseKey
+          licenseKey,
+          companyCode
         }
       }
     GQL
@@ -42,7 +43,8 @@ RSpec.describe Mutations::Integrations::Avalara::Create, type: :graphql do
           name:,
           accountId: "account-id1",
           licenseKey: "license-key12",
-          connectionId: "this-is-random-uuid"
+          connectionId: "this-is-random-uuid",
+          companyCode: "company-code1"
         }
       }
     )
@@ -55,6 +57,7 @@ RSpec.describe Mutations::Integrations::Avalara::Create, type: :graphql do
       expect(result_data["name"]).to eq(name)
       expect(result_data["licenseKey"]).to eq("••••••••…y12")
       expect(result_data["accountId"]).to eq("account-id1")
+      expect(result_data["companyCode"]).to eq("company-code1")
       expect(Integrations::AvalaraIntegration.order(:created_at).last.connection_id).to eq("this-is-random-uuid")
     end
   end
