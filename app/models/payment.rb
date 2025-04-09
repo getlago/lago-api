@@ -66,9 +66,9 @@ class Payment < ApplicationRecord
     last4 = provider_payment_method_data["last4"]
 
     if type == "card"
-      "#{brand.to_s.upcase} **** #{last4}"
+      "#{brand.to_s.titleize} **** #{last4}"
     else
-      type
+      type.to_s.titleize
     end
   end
 
