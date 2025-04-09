@@ -10,7 +10,8 @@ class BillingEntity < ApplicationRecord
 
   EMAIL_SETTINGS = [
     "invoice.finalized",
-    "credit_note.created"
+    "credit_note.created",
+    "payment_receipt.created"
   ]
 
   belongs_to :organization

@@ -419,6 +419,11 @@ enum BillingEntityEmailSettingsEnum {
   invoice.finalized
   """
   invoice_finalized
+
+  """
+  payment_receipt.created
+  """
+  payment_receipt_created
 }
 
 enum BillingTimeEnum {

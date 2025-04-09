@@ -3315,6 +3315,12 @@
               "description": "credit_note.created",
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "payment_receipt_created",
+              "description": "payment_receipt.created",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
