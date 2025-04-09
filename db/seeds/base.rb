@@ -10,7 +10,7 @@ user = User.create_with(password: "ILoveLago")
 organization = Organization.find_or_create_by!(name: "Hooli")
 organization.premium_integrations = Organization::PREMIUM_INTEGRATIONS
 organization.save!
-BillingEntity.find_or_create_by!(organization: organization, name: "Hooli", code: "hooli")
+billing_entity = BillingEntity.find_or_create_by!(organization: organization, name: "Hooli", code: "hooli")
 ApiKey.find_or_create_by!(organization:)
 Membership.find_or_create_by!(user:, organization:, role: :admin)
 
@@ -83,6 +83,7 @@ Charge.create_with(
     currency: "EUR"
   ).find_or_create_by!(
     organization:,
+    billing_entity:,
     external_id: "cust_#{i + 1}"
   )
 
