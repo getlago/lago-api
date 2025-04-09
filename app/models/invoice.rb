@@ -15,6 +15,7 @@ class Invoice < ApplicationRecord
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
   before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
+  before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -503,6 +504,12 @@ class Invoice < ApplicationRecord
       status_changed?(from: "open", to: "finalized") ||
       status_changed?(from: "failed", to: "finalized") ||
       status_changed?(from: "pending", to: "finalized")
+  end
+
+  def set_finalized_at
+    return unless status_changed_to_finalized?
+
+    self.finalized_at = Time.current
   end
 end
 
