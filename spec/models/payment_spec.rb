@@ -375,7 +375,7 @@ RSpec.describe Payment, type: :model do
       end
 
       it "returns formatted card details" do
-        expect(payment_method).to eq("VISA **** 1234")
+        expect(payment_method).to eq("Visa **** 1234")
       end
     end
 
@@ -387,7 +387,7 @@ RSpec.describe Payment, type: :model do
       end
 
       it "returns the payment method type" do
-        expect(payment_method).to eq("bank_transfer")
+        expect(payment_method).to eq("Bank Transfer")
       end
     end
   end
