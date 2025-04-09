@@ -357,8 +357,8 @@ RSpec.describe Payment, type: :model do
   describe "#payment_method" do
     subject(:payment_method) { payment.payment_method }
 
-    context "when provider_payment_method_data is nil" do
-      let(:payment) { build(:payment, provider_payment_method_data: nil) }
+    context "when provider_payment_method_data is empty" do
+      let(:payment) { build(:payment, provider_payment_method_data: {}) }
 
       it "returns nil" do
         expect(payment_method).to be_nil

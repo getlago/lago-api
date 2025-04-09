@@ -59,6 +59,8 @@ class Payment < ApplicationRecord
   end
 
   def payment_method
+    return nil if provider_payment_method_data.blank?
+
     type = provider_payment_method_data["type"]
     brand = provider_payment_method_data["brand"]
     last4 = provider_payment_method_data["last4"]
