@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-  class ValidateAddNonNullToFeesOrganizationId < ActiveRecord::Migration[7.2]
+class ValidateAddNonNullToFeesOrganizationId < ActiveRecord::Migration[7.2]
   def up
     validate_check_constraint :fees, name: "fees_organization_id_null"
     change_column_null :fees, :organization_id, false
