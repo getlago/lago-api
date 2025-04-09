@@ -509,7 +509,7 @@ class Invoice < ApplicationRecord
   def set_finalized_at
     return unless status_changed_to_finalized?
 
-    self.finalized_at = Time.current
+    self.finalized_at ||= Time.current
   end
 end
 
