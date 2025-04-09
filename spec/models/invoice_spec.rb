@@ -50,6 +50,18 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe "finalized_at" do
+    let(:invoice) { create(:invoice, :draft) }
+
+    it "is set when the invoice is finalized" do
+      freeze_time do
+        invoice.finalized!
+
+        expect(invoice.finalized_at).to eq(Time.current)
+      end
+    end
+  end
+
   describe "sequential_id" do
     let(:customer) { create(:customer, organization:) }
     let(:billing_entity) { customer.billing_entity }
