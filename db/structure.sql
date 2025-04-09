@@ -1937,6 +1937,7 @@ CREATE TABLE public.invoices (
     applied_grace_period integer,
     billing_entity_id uuid NOT NULL,
     billing_entity_sequential_id integer,
+    finalized_at timestamp without time zone,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -6298,6 +6299,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250409140652'),
 ('20250407202459'),
 ('20250403110833'),
+('20250409100421'),
 ('20250408121522'),
 ('20250403093628'),
 ('20250402152230'),
