@@ -1,8 +1,9 @@
 SELECT
+  p.organization_id,
   p.id AS lago_id,
   p.name,
   p.invoice_display_name,
-  p.created_at,
+  p.created_at::timestampz::text AS created_at,
   p.code,
   CASE p.interval
     WHEN 0 then 'weekly',

@@ -35,20 +35,11 @@ SELECT
   c.payment_provider,
   c.payment_provider_code,
   c.invoice_grace_period,
+  c.vat_rate,
   COALESCE(c.invoice_grace_period, o.invoice_grace_period) AS applicable_invoice_grace_period,
   c.document_locale,
   ppc.provider_customer_id,
-  CASE
-    WHEN c.payment_provider = 'stripe' THEN ppc.settings->>'provider_payment_methods'
-    ELSE NULL
-  END AS provider_payment_methods,
   ppc.settings AS provider_settings,
-  c.shipping_address_line1,
-  c.shipping_address_line2, 
-  c.shipping_city,
-  c.shipping_zipcode,
-  c.shipping_state,
-  c.shipping_country,
   COALESCE(
     (
       SELECT json_agg(
@@ -62,25 +53,8 @@ SELECT
       FROM customer_metadata cm
       WHERE cm.customer_id = c.id
     ),
-    '{}'::json
-  ) AS metadata,
-  COALESCE(
-    (
-      SELECT json_agg(
-        json_build_object(
-          'tax_id', t.id,
-          'code', t.code,
-          'name', t.name,
-          'rate', t.rate,
-          'description', t.description
-        )
-      )
-      FROM customers_taxes ct
-      JOIN taxes t ON t.id = ct.tax_id
-      WHERE ct.customer_id = c.id
-    ),
-    '{}'::json
-  ) AS taxes
+    '[]'::json
+  ) AS metadata
 FROM customers c
 LEFT JOIN organizations o ON o.id = c.organization_id
 LEFT JOIN payment_provider_customers ppc ON ppc.customer_id = c.id 
