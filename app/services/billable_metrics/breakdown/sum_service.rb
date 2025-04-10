@@ -37,7 +37,7 @@ module BillableMetrics
         return [] if persisted_sum.zero?
 
         [
-          OpenStruct.new(
+          Item.new(
             date: from_date_in_customer_timezone,
             action: persisted_sum.negative? ? "remove" : "add",
             amount: persisted_sum,
@@ -49,7 +49,7 @@ module BillableMetrics
 
       def period_breakdown
         event_store.sum_date_breakdown.map do |aggregation|
-          OpenStruct.new(
+          Item.new(
             date: aggregation[:date],
             action: aggregation[:value].negative? ? "remove" : "add",
             amount: aggregation[:value],
