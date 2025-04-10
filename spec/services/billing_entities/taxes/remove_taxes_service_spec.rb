@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe BillingEntities::Taxes::ApplyTaxesService do
+RSpec.describe BillingEntities::Taxes::RemoveTaxesService do
   subject(:service) { described_class.new(billing_entity:, tax_codes:) }
 
   let(:organization) { create(:organization) }
@@ -15,22 +15,31 @@ RSpec.describe BillingEntities::Taxes::ApplyTaxesService do
       let(:tax2) { create(:tax, organization:, code: 'TAX_CODE_2') }
 
       before do
-        tax1
-        tax2
+        billing_entity.applied_taxes.create!(tax: tax1)
+        billing_entity.applied_taxes.create!(tax: tax2)
       end
 
-      it 'creates applied taxes for the billing entity' do
-        expect { service.call }.to change(billing_entity.applied_taxes, :count).by(2)
-        expect(billing_entity.applied_taxes.pluck(:tax_id)).to match_array([tax1.id, tax2.id])
+      it 'removes the specified taxes from the billing entity' do
+        expect { service.call }.to change(billing_entity.applied_taxes, :count).by(-2)
       end
 
-      context "when billing_entity already have taxes applied" do
+      it 'returns a successful result' do
+        result = service.call
+        expect(result.success?).to be_truthy
+      end
+
+      context 'when some taxes are not applied to the billing entity' do
         before do
-          billing_entity.applied_taxes.create!(tax: tax1)
+          billing_entity.applied_taxes.where(tax: tax2).destroy_all
         end
 
-        it 'does not create duplicate applied taxes' do
-          expect { service.call }.to change(billing_entity.applied_taxes, :count).by(1)
+        it 'removes only the applied taxes' do
+          expect { service.call }.to change(billing_entity.applied_taxes, :count).by(-1)
+        end
+
+        it 'returns a successful result' do
+          result = service.call
+          expect(result.success?).to be_truthy
         end
       end
     end
@@ -46,21 +55,20 @@ RSpec.describe BillingEntities::Taxes::ApplyTaxesService do
         expect(result.error.message).to eq('tax_not_found')
       end
 
-      it 'does not create any applied taxes' do
-        service.call
-        expect(billing_entity.applied_taxes.pluck(:tax_id)).to eq([])
+      it 'does not remove any applied taxes' do
+        expect { service.call }.not_to change(billing_entity.applied_taxes, :count)
       end
     end
 
     context 'when tax_codes is empty' do
       let(:tax_codes) { [] }
 
-      it 'returns a successful result with no applied taxes' do
+      it 'returns a successful result' do
         result = service.call
         expect(result.success?).to be_truthy
       end
 
-      it 'does not create any applied taxes' do
+      it 'does not remove any applied taxes' do
         expect { service.call }.not_to change(billing_entity.applied_taxes, :count)
       end
     end
@@ -68,14 +76,14 @@ RSpec.describe BillingEntities::Taxes::ApplyTaxesService do
     context 'when tax_codes is nil' do
       let(:tax_codes) { nil }
 
-      it 'returns a successful result with no applied taxes' do
+      it 'returns a successful result' do
         result = service.call
         expect(result.success?).to be_truthy
       end
 
-      it 'does not create any applied taxes' do
+      it 'does not remove any applied taxes' do
         expect { service.call }.not_to change(billing_entity.applied_taxes, :count)
       end
     end
   end
-end
+end 

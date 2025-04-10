@@ -2,8 +2,8 @@
 
 module BillingEntities
   module Taxes
-    class ApplyTaxesService < BaseService
-      Result = BaseResult[:applied_taxes, :taxes_to_apply]
+    class RemoveTaxesService < BaseService
+      Result = BaseResult[:taxes_to_remove]
 
       def initialize(billing_entity:, tax_codes:)
         @billing_entity = billing_entity
@@ -15,12 +15,10 @@ module BillingEntities
       def call
         return result if tax_codes.blank?
 
-        find_taxes_on_organization
+        find_taxes_to_remove
         return result if result.failure?
 
-        result.applied_taxes = result.taxes_to_apply.map do |tax|
-          billing_entity.applied_taxes.find_or_create_by!(tax:)
-        end
+        billing_entity.applied_taxes.where(tax: result.taxes_to_remove).destroy_all
 
         result
       end
@@ -31,12 +29,15 @@ module BillingEntities
 
       delegate :organization, to: :billing_entity
 
-      def find_taxes_on_organization
-        result.taxes_to_apply = organization.taxes.where(code: tax_codes)
-
-        if result.taxes_to_apply.count != tax_codes.count
+      def find_taxes_to_remove
+        result.taxes_to_remove = organization.taxes.where(code: tax_codes)
+        if result.taxes_to_remove.count != tax_codes.count
           result.not_found_failure!(resource: "tax")
         end
+      end
+
+      def remove_taxes
+        @billing_entity.applied_taxes.where(tax: @taxes).destroy_all
       end
     end
   end
