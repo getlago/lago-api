@@ -54,7 +54,12 @@ SELECT
       WHERE cm.customer_id = c.id
     ),
     '[]'::json
-  ) AS metadata
+  ) AS metadata,
+  json_agg(
+    SELECT ct.tax_id AS lago_tax_id
+    FROM customers_taxes AS ct
+    WHERE ct.customer_id = c.id
+  ) AS lago_taxes_ids
 FROM customers c
 LEFT JOIN organizations o ON o.id = c.organization_id
 LEFT JOIN payment_provider_customers ppc ON ppc.customer_id = c.id 
