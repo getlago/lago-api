@@ -43,6 +43,12 @@ module Fees
     def update_payment_status(payment_status)
       fee.payment_status = payment_status
 
+      # NOTE: A fee can go from pending to failed to pending to succeeded.
+      #       We only want the timestamp associated with the current status to be set.
+      fee.succeeded_at = nil
+      fee.failed_at = nil
+      fee.refunded_at = nil
+
       case payment_status.to_sym
       when :succeeded
         fee.succeeded_at = Time.current

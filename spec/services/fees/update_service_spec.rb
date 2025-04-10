@@ -6,7 +6,8 @@ RSpec.describe Fees::UpdateService, type: :service do
   subject(:update_service) { described_class.new(fee:, params:) }
 
   let(:charge) { create(:standard_charge, invoiceable: false) }
-  let(:fee) { create(:charge_fee, fee_type: "charge", pay_in_advance: true, invoice: nil, charge:) }
+  let(:old_date) { Time.current - 3.days }
+  let(:fee) { create(:charge_fee, fee_type: "charge", pay_in_advance: true, invoice: nil, charge:, failed_at: old_date, succeeded_at: old_date, refunded_at: old_date) }
 
   let(:params) { {payment_status:} }
   let(:payment_status) { "succeeded" }
@@ -19,7 +20,9 @@ RSpec.describe Fees::UpdateService, type: :service do
         expect(result).to be_success
 
         expect(result.fee.payment_status).to eq("succeeded")
-        expect(result.fee.succeeded_at).to be_present
+        expect(result.fee.succeeded_at).to be_within(1.minute).of(Time.current)
+        expect(result.fee.failed_at).to be_nil
+        expect(result.fee.refunded_at).to be_nil
       end
     end
 
@@ -75,7 +78,9 @@ RSpec.describe Fees::UpdateService, type: :service do
           expect(result).to be_success
 
           expect(result.fee.payment_status).to eq("failed")
-          expect(result.fee.failed_at).to be_present
+          expect(result.fee.failed_at).to be_within(1.minute).of(Time.current)
+          expect(result.fee.refunded_at).to be_nil
+          expect(result.fee.succeeded_at).to be_nil
         end
       end
     end
@@ -90,7 +95,9 @@ RSpec.describe Fees::UpdateService, type: :service do
           expect(result).to be_success
 
           expect(result.fee.payment_status).to eq("refunded")
-          expect(result.fee.refunded_at).to be_present
+          expect(result.fee.refunded_at).to be_within(1.minute).of(Time.current)
+          expect(result.fee.succeeded_at).to be_nil
+          expect(result.fee.failed_at).to be_nil
         end
       end
     end
