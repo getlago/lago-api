@@ -9461,7 +9461,7 @@ input UpdatePlanInput {
   clientMutationId: String
   code: String!
   description: String
-  id: String!
+  id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
   minimumCommitment: CommitmentInput
