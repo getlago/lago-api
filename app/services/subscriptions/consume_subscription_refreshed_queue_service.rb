@@ -7,7 +7,7 @@ module Subscriptions
     PROCESSING_TIMEOUT = 1.minute
 
     def call
-      return if ENV["LAGO_REDIS_STORE_URL"].blank?
+      return result if ENV["LAGO_REDIS_STORE_URL"].blank?
 
       start_time = Time.current
 

@@ -10,6 +10,8 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
   let(:values) { ["#{SecureRandom.uuid}:#{SecureRandom.uuid}", "#{SecureRandom.uuid}:#{SecureRandom.uuid}"] }
   let(:loop_values) { [values, []] }
 
+  let(:redis_url) { "localhost:6379" }
+
   before do
     allow(Redis).to receive(:new).and_return(redis_client)
     allow(redis_client).to receive(:srandmember)
@@ -17,6 +19,9 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
       .and_return(*loop_values)
 
     allow(redis_client).to receive(:srem)
+
+    allow(ENV).to receive(:[]).and_call_original
+    allow(ENV).to receive(:[]).with("LAGO_REDIS_STORE_URL").and_return(redis_url)
   end
 
   describe "#call" do
@@ -60,6 +65,17 @@ RSpec.describe Subscriptions::ConsumeSubscriptionRefreshedQueueService do
       end
 
       it "flags all subscriptions as refreshed" do
+        result = flag_service.call
+
+        expect(result).to be_success
+        expect(Subscriptions::FlagRefreshedJob).not_to have_been_enqueued
+      end
+    end
+
+    context "when the redis env var is not present" do
+      let(:redis_url) { nil }
+
+      it "does not flag any subscriptions as refreshed" do
         result = flag_service.call
 
         expect(result).to be_success
