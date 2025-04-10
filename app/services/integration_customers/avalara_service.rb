@@ -2,6 +2,8 @@
 
 module IntegrationCustomers
   class AvalaraService < ::BaseService
+    Result = BaseResult[:integration_customer]
+
     def initialize(integration:, customer:, subsidiary_id:, **params)
       @customer = customer
       @subsidiary_id = subsidiary_id
