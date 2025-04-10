@@ -5,9 +5,7 @@ SELECT
     f.charge_filter_id AS lago_charge_filter_id,
     f.invoice_id AS lago_invoice_id,
     f.subscription_id AS lago_subscription_id,
-    s.external_id AS external_subscription_id,
     c.id AS lago_customer_id,
-    c.external_id AS external_customer_id,
     -- item
     json_build_object(    
         'type', CASE f.fee_type
@@ -75,13 +73,16 @@ SELECT
     f.amount_cents,
     f.amount_currency,
     f.taxes_amount_cents,
+    f.taxes_precise_amount_cents,
     f.taxes_rate,
     f.amount_cents + f.taxes_amount_cents AS total_amount_cents,
     f.currency,
     f.units,
     f.description,
+    f.precise_amount_cents,
     f.precise_unit_amount,
     f.precise_coupons_amount_cents,
+    f.precise_amount_cents + f.taxes_precise_amount_cents AS precise_total_amount_cents,
     f.events_count,
     -- payment-status
     CASE f.payment_status
@@ -91,19 +92,27 @@ SELECT
         WHEN 3 THEN 'refunded'   -- Assuming 3 maps to :refunded
         ELSE 'unknown'
     END AS payment_status,
-    f.created_at,
-    f.succeeded_at,
-    f.failed_at,
-    f.refunded_at,
+    f.created_at::timestampz::text AS created_at,
+    f.succeeded_at::timestampz::text AS succeeded_at,
+    f.failed_at::timestampz::text AS failed_at,
+    f.refunded_at::timestampz::text AS refunded_at,
     f.amount_details,
-    f.self_billed
+    f.self_billed,
+    CASE f.fee_type
+        WHEN 0 THEN f.properties->>'charges_from_datetime'
+        ELSE f.properties->>'from_datetime'
+        END
+    END::timestampz::text as from_date,
+    CASE f.fee_type
+        WHEN 0 THEN f.properties->>'charges_to_datetime'
+        ELSE f.properties->>'to_datetime'
+    END::timestampz::text as to_date
 FROM
     fees AS f
 LEFT JOIN subscriptions AS s ON f.subscription_id = s.id
 LEFT JOIN customers AS c ON s.customer_id = c.id
 LEFT JOIN billable_metrics AS bm ON f.billable_metric_id = bm.id
 LEFT JOIN add_ons AS ao ON f.add_on_id = ao.id
-LEFT JOIN wallets AS wt ON f.wallet_id = wt.id
 LEFT JOIN plans AS p ON s.plan_id = p.id
 LEFT JOIN charges AS ch ON f.charge_id = ch.id
 LEFT JOIN charge_filters AS cf ON f.charge_filter_id = cf.id

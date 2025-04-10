@@ -1,4 +1,5 @@
-SELECT 
+SELECT
+  bm.organization_id,
   bm.id AS lago_id,
   bm.name,
   bm.code,
@@ -17,10 +18,9 @@ SELECT
   bm.recurring,
   bm.rounding_function,
   bm.rounding_precision,
-  bm.created_at,
+  bm.created_at::timestampz::text AS created_at,
   bm.field_name,
   bm.expression,
-  bm.organization_id,
   COALESCE(
     (
       SELECT json_agg(
