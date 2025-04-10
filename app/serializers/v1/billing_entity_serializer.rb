@@ -29,7 +29,9 @@ module V1
         invoice_footer: model.invoice_footer,
         invoice_grace_period: model.invoice_grace_period,
         document_locale: model.document_locale,
-        is_default: model.organization.default_billing_entity&.id == model.id
+        is_default: model.organization.default_billing_entity&.id == model.id,
+        eu_tax_management: model.eu_tax_management,
+        logo_url: model.logo_url,
       }
     end
   end
