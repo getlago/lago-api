@@ -1,4 +1,4 @@
-name: Rubocop
+name: Linters
 on: [pull_request]
 
 jobs:
@@ -6,6 +6,10 @@ jobs:
     name: Linters
     runs-on: ubuntu-latest
     if: ${{ github.actor != 'dependabot[bot]' }}
+    env:
+      RAILS_ENV: production
+      RAILS_MASTER_KEY: N+XcWoGDzKjuoxrU8BIPN5D0/GSuqx9s
+      SECRET_KEY_BASE: cvIAI6ycC0OnVDRAjT5hmbRxnjCxl4YB
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,3 +34,7 @@ jobs:
             echo "Linting Ruby files"
             bundle exec rubocop $FILES
           fi
+      - name: Generate RSA keys
+        run: ./scripts/generate.rsa.sh
+      - name: Zeitwerk check
+        run: bin/rails zeitwerk:check
