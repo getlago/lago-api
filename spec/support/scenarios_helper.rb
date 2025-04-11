@@ -115,6 +115,17 @@ module ScenariosHelper
     post_with_token(organization, "/api/v1/taxes", {tax: params})
   end
 
+  # The mock always return a valid response,
+  # To get an invalid response, simply use a invalid format (like YY123)
+  def mock_vies_check!(vat_number)
+    valvat = instance_double(Valvat)
+    allow(Valvat).to receive(:new).with(vat_number).and_return(valvat)
+    allow(valvat).to receive(:exists?).with(detail: true).and_return({
+      countryCode: vat_number[0..1].upcase,
+      vatNumber: vat_number.upcase
+    })
+  end
+
   ### Wallets
 
   def create_wallet(params)

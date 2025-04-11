@@ -3,13 +3,11 @@
 require "rails_helper"
 
 describe "Dunning Campaign v1", :scenarios, type: :request do
-  let(:webhook_url) { "https://test.co/lago" }
   let(:organization) do
     create(:organization,
       name: "JC AI",
       premium_integrations: %w[auto_dunning],
-      email_settings: [],
-      webhook_url:)
+      email_settings: [])
   end
 
   let(:dunning_campaign) do
@@ -97,6 +95,8 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
     end
   end
 
+  include_context "with webhook tracking"
+
   # TODO: make it a test metadata `:scenarios, type: :request, premium: true`
   around { |test| lago_premium!(&test) }
 
@@ -104,11 +104,6 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
     stub_pdf_generation
     stripe_customer
     dunning_campaign_threshold
-
-    stub_request(:post, webhook_url).with do |req|
-      webhooks_sent << JSON.parse(req.body)
-      true
-    end.and_return(status: 200)
 
     stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_customer.provider_customer_id}")
       .and_return(status: 200, body: stripe_customer_response)
