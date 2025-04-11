@@ -23,6 +23,17 @@ FactoryBot.define do
     end
   end
 
+  factory :avalara_customer, class: "IntegrationCustomers::AvalaraCustomer" do
+    association :integration, factory: :avalara_integration
+    customer
+    type { "IntegrationCustomers::AvalaraCustomer" }
+    external_customer_id { SecureRandom.uuid }
+
+    settings do
+      {sync_with_provider: true}
+    end
+  end
+
   factory :xero_customer, class: "IntegrationCustomers::XeroCustomer" do
     association :integration, factory: :xero_integration
     customer

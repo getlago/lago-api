@@ -49,6 +49,7 @@ module Types
       field :subscriptions, [Types::Subscriptions::Object], resolver: Resolvers::Customers::SubscriptionsResolver
 
       field :anrok_customer, Types::IntegrationCustomers::Anrok, null: true
+      field :avalara_customer, Types::IntegrationCustomers::Avalara, null: true
       field :hubspot_customer, Types::IntegrationCustomers::Hubspot, null: true
       field :netsuite_customer, Types::IntegrationCustomers::Netsuite, null: true
       field :salesforce_customer, Types::IntegrationCustomers::Salesforce, null: true

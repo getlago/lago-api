@@ -49,6 +49,7 @@ RSpec.describe Types::Customers::Object do
     expect(subject).to have_field(:shipping_address).of_type("CustomerAddress")
 
     expect(subject).to have_field(:anrok_customer).of_type("AnrokCustomer")
+    expect(subject).to have_field(:avalara_customer).of_type("AvalaraCustomer")
     expect(subject).to have_field(:hubspot_customer).of_type("HubspotCustomer")
     expect(subject).to have_field(:netsuite_customer).of_type("NetsuiteCustomer")
     expect(subject).to have_field(:salesforce_customer).of_type("SalesforceCustomer")

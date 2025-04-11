@@ -34,6 +34,8 @@ module IntegrationCustomers
         "IntegrationCustomers::OktaCustomer"
       when "anrok"
         "IntegrationCustomers::AnrokCustomer"
+      when "avalara"
+        "IntegrationCustomers::AvalaraCustomer"
       when "xero"
         "IntegrationCustomers::XeroCustomer"
       when "hubspot"
