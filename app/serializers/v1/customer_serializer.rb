@@ -94,13 +94,8 @@ module V1
     end
 
     def vies_check
-      vies_value = options.fetch(:vies_check)
-
       {
-        vies_check: vies_value.is_a?(Hash) ? vies_value : {
-          valid: false,
-          valid_format: ::Valvat::Syntax.validate(model.tax_identification_number)
-        }
+        vies_check: options.fetch(:vies_check)
       }
     end
 

@@ -108,6 +108,29 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
     end
   end
 
+  context "when VIES returns an error" do
+    it "does not change taxes but send the webhook" do
+      enable_eu_tax_management!
+
+      create_or_update_customer(french_attributes.merge(external_id: "user_fr_123"))
+      expect(Customer.find_by(external_id: "user_fr_123").taxes.sole.code).to eq "lago_eu_fr_standard"
+
+      webhooks_sent.clear
+      vat_number = "FR12345678901"
+      allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
+        .and_raise(::Valvat::RateLimitError.new("rate limit exceeded", Valvat::Lookup::VIES))
+
+      create_or_update_customer(external_id: "user_fr_123", tax_identification_number: vat_number)
+
+      expect(Customer.find_by(external_id: "user_fr_123").taxes.reload.sole.code).to eq "lago_eu_fr_standard"
+      expect(webhooks_sent.first { _1["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
+        "valid" => false,
+        "valid_format" => true,
+        "error" => "The VIES web service returned the error: rate limit exceeded"
+      })
+    end
+  end
+
   context "when customer are created before the feature was enabled" do
     it "does not create taxes until the customer is updated" do
       create_or_update_customer(american_attributes.merge(external_id: "user_usa_123"))
