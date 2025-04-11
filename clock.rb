@@ -39,6 +39,15 @@ module Clockwork
     end
   end
 
+  subscription_usage_refresh_interval = ENV["LAGO_SUBSCRIPTION_USAGE_REFRESH_INTERVAL_SECONDS"].presence || 5.minutes
+  every(subscription_usage_refresh_interval.to_i.seconds, "schedule:refresh_subscription_usages") do
+    unless ENV["LAGO_DISABLE_SUBSCRIPTION_USAGE_REFRESH"] == "true"
+      Clock::RefreshSubscriptionUsagesJob
+        .set(sentry: {"slug" => "lago_refresh_subscription_usages", "cron" => "#{subscription_usage_refresh_interval} interval"})
+        .perform_later
+    end
+  end
+
   if ENV["LAGO_MEMCACHE_SERVERS"].present? || ENV["LAGO_REDIS_CACHE_URL"].present?
     every(5.minutes, "schedule:refresh_wallets_ongoing_balance") do
       unless ENV["LAGO_DISABLE_WALLET_REFRESH"] == "true"
