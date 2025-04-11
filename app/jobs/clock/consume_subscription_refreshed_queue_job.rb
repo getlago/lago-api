@@ -1,14 +1,6 @@
 # frozen_string_literal: true
 
-class Clock::ConsumeSubscriptionRefreshedQueueJob < ApplicationJob
-  queue_as do
-    if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_CLOCK"])
-      :clock_worker
-    else
-      :clock
-    end
-  end
-
+class Clock::ConsumeSubscriptionRefreshedQueueJob < ClockJob
   unique :until_executed, on_conflict: :log
 
   def perform
