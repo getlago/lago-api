@@ -32,6 +32,7 @@ ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_c71f4b2026;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_bff25bb1bb;
+ALTER TABLE IF EXISTS ONLY public.subscription_usage_activities DROP CONSTRAINT IF EXISTS fk_rails_bfce3b45b9;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
@@ -91,6 +92,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS fk_rails_5c21eece29;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
+ALTER TABLE IF EXISTS ONLY public.subscription_usage_activities DROP CONSTRAINT IF EXISTS fk_rails_573b7c69d6;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
 ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS fk_rails_526379cd99;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_521b5240ed;
@@ -186,6 +188,8 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_
 DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_external_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
+DROP INDEX IF EXISTS public.index_subscription_usage_activities_on_subscription_id;
+DROP INDEX IF EXISTS public.index_subscription_usage_activities_on_organization_id;
 DROP INDEX IF EXISTS public.index_search_quantified_events;
 DROP INDEX IF EXISTS public.index_refunds_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_refunds_on_payment_provider_customer_id;
@@ -448,6 +452,7 @@ ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS usage_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_pkey;
+ALTER TABLE IF EXISTS ONLY public.subscription_usage_activities DROP CONSTRAINT IF EXISTS subscription_usage_activities_pkey;
 ALTER TABLE IF EXISTS ONLY public.schema_migrations DROP CONSTRAINT IF EXISTS schema_migrations_pkey;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS refunds_pkey;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS recurring_transaction_rules_pkey;
@@ -532,6 +537,7 @@ DROP TABLE IF EXISTS public.users;
 DROP TABLE IF EXISTS public.usage_thresholds;
 DROP TABLE IF EXISTS public.taxes;
 DROP TABLE IF EXISTS public.subscriptions;
+DROP TABLE IF EXISTS public.subscription_usage_activities;
 DROP TABLE IF EXISTS public.schema_migrations;
 DROP TABLE IF EXISTS public.refunds;
 DROP TABLE IF EXISTS public.recurring_transaction_rules;
@@ -2307,6 +2313,20 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: subscription_usage_activities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscription_usage_activities (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    subscription_id uuid NOT NULL,
+    recalculate_current_usage boolean DEFAULT false NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3095,6 +3115,14 @@ ALTER TABLE ONLY public.refunds
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: subscription_usage_activities subscription_usage_activities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_usage_activities
+    ADD CONSTRAINT subscription_usage_activities_pkey PRIMARY KEY (id);
 
 
 --
@@ -4941,6 +4969,20 @@ CREATE INDEX index_search_quantified_events ON public.quantified_events USING bt
 
 
 --
+-- Name: index_subscription_usage_activities_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscription_usage_activities_on_organization_id ON public.subscription_usage_activities USING btree (organization_id);
+
+
+--
+-- Name: index_subscription_usage_activities_on_subscription_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_subscription_usage_activities_on_subscription_id ON public.subscription_usage_activities USING btree (subscription_id);
+
+
+--
 -- Name: index_subscriptions_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5600,6 +5642,14 @@ ALTER TABLE ONLY public.applied_usage_thresholds
 
 
 --
+-- Name: subscription_usage_activities fk_rails_573b7c69d6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_usage_activities
+    ADD CONSTRAINT fk_rails_573b7c69d6 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: customers fk_rails_58234c715e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6072,6 +6122,14 @@ ALTER TABLE ONLY public.charge_filter_values
 
 
 --
+-- Name: subscription_usage_activities fk_rails_bfce3b45b9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscription_usage_activities
+    ADD CONSTRAINT fk_rails_bfce3b45b9 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+
+
+--
 -- Name: customers fk_rails_bff25bb1bb; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6265,6 +6323,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250411112117'),
 ('20250411110934'),
 ('20250411110825'),
+('20250411082540'),
 ('20250411074202'),
 ('20250409140720'),
 ('20250409140652'),
