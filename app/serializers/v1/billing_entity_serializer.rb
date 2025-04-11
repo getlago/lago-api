@@ -31,7 +31,7 @@ module V1
         document_locale: model.document_locale,
         is_default: model.organization.default_billing_entity&.id == model.id,
         eu_tax_management: model.eu_tax_management,
-        logo_url: model.logo_url,
+        logo_url: model.logo_url
       }
     end
   end
