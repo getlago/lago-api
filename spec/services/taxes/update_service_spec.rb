@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Taxes::UpdateService, type: :service do
   subject(:update_service) { described_class.new(tax:, params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:organization) { create(:organization) }
+  let(:billing_entity) { organization.default_billing_entity }
   let(:tax) { create(:tax, organization:) }
 
   let(:customer) { create(:customer, organization:) }
@@ -49,6 +49,34 @@ RSpec.describe Taxes::UpdateService, type: :service do
 
         expect { update_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
       end
+
+      context "when default billing entity already have this tax applied" do
+        let(:applied_tax) { create(:billing_entity_applied_tax, billing_entity:, tax:) }
+
+        before { applied_tax }
+
+        it "removes the applied tax" do
+          expect { update_service.call }.to change { billing_entity.applied_taxes.count }.by(-1)
+        end
+
+        context "when organization has multiple billing entities" do
+          let(:billing_entity2) { create(:billing_entity, organization:) }
+          let(:applied_tax2) { create(:billing_entity_applied_tax, billing_entity: billing_entity2, tax:) }
+
+          before { applied_tax2 }
+
+          it "removes the applied tax only from the default billing entity" do
+            expect { update_service.call }.not_to change { billing_entity2.applied_taxes.count }
+            expect(billing_entity.applied_taxes).to be_empty
+          end
+        end
+      end
+
+      context "when there are no applied taxes on the default billing entity" do
+        it "does not remove any applied tax" do
+          expect { update_service.call }.not_to change { billing_entity.applied_taxes.count }
+        end
+      end
     end
 
     context "when applied_to_organization is updated to true" do
@@ -61,6 +89,33 @@ RSpec.describe Taxes::UpdateService, type: :service do
         draft_invoice = create(:invoice, :draft, organization:, customer:)
 
         expect { update_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
+      end
+
+      it "creates applied tax for the default billing entity" do
+        expect { update_service.call }.to change { billing_entity.applied_taxes.count }.by(1)
+        expect(billing_entity.applied_taxes.last.tax).to eq(tax)
+      end
+
+      context "when default billing entity already have this tax applied" do
+        let(:applied_tax) { create(:billing_entity_applied_tax, billing_entity:, tax:) }
+
+        before { applied_tax }
+
+        it "does not create a new applied tax" do
+          expect { update_service.call }.not_to change { billing_entity.applied_taxes.count }
+        end
+      end
+
+      context "when organization has multiple billing entities" do
+        let(:billing_entity2) { create(:billing_entity, organization:) }
+
+        before { billing_entity2 }
+
+        it "creates applied tax only for the default billing entity" do
+          expect { update_service.call }.to change { billing_entity.applied_taxes.count }.by(1).and not_change { billing_entity2.applied_taxes.count }
+          expect(billing_entity.applied_taxes.last.tax).to eq(tax)
+          expect(billing_entity2.applied_taxes).to be_empty
+        end
       end
     end
 
