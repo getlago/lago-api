@@ -29,7 +29,7 @@ RSpec.describe Api::V1::FeesController, type: :request do
           units: fee.units.to_s,
           events_count: fee.events_count,
           applied_taxes: [],
-          self_billed: nil
+          self_billed: false
         )
         expect(json[:fee][:item]).to include(
           type: fee.fee_type,

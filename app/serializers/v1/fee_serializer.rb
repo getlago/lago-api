@@ -50,7 +50,7 @@ module V1
         failed_at: model.failed_at&.iso8601,
         refunded_at: model.refunded_at&.iso8601,
         amount_details: model.amount_details,
-        self_billed: model.invoice&.self_billed
+        self_billed: model.invoice&.self_billed || false
       }
 
       payload.merge!(date_boundaries) if model.charge? || model.subscription?

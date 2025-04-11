@@ -15,11 +15,11 @@ class Fee < ApplicationRecord
   belongs_to :group, -> { with_discarded }, optional: true
   belongs_to :invoiceable, polymorphic: true, optional: true
   belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
+  belongs_to :organization
+  belongs_to :billing_entity
 
   has_one :adjusted_fee, dependent: :nullify
   has_one :customer, through: :subscription
-  has_one :organization, through: :invoice
-  has_one :billing_entity, through: :invoice
   has_one :billable_metric, -> { with_discarded }, through: :charge
   has_one :true_up_fee, class_name: "Fee", foreign_key: :true_up_parent_fee_id, dependent: :destroy
 
@@ -254,7 +254,7 @@ end
 #  group_id                            :uuid
 #  invoice_id                          :uuid
 #  invoiceable_id                      :uuid
-#  organization_id                     :uuid
+#  organization_id                     :uuid             not null
 #  pay_in_advance_event_id             :uuid
 #  pay_in_advance_event_transaction_id :string
 #  subscription_id                     :uuid
