@@ -32,7 +32,7 @@ module BillingEntities
         # TODO: remove when we do not support document_numbering per organization
         document_numbering = (params[:document_numbering] == "per_customer") ? "per_customer" : "per_billing_entity"
 
-        BillingEntities::UpdateInvoiceNumberingService.call(
+        BillingEntities::ChangeInvoiceNumberingService.call(
           billing_entity:,
           document_numbering:
         )

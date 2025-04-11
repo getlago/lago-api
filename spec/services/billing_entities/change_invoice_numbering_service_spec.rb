@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe BillingEntities::UpdateInvoiceNumberingService, type: :service do
+RSpec.describe BillingEntities::ChangeInvoiceNumberingService, type: :service do
   subject(:result) { described_class.call(billing_entity:, document_numbering:) }
 
   let(:billing_entity) { create(:billing_entity, document_numbering: "per_customer") }
