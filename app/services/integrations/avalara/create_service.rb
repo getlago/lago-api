@@ -22,6 +22,7 @@ module Integrations
           organization:,
           name: params[:name],
           code: params[:code],
+          company_code: params[:company_code],
           connection_id: params[:connection_id],
           account_id: params[:account_id],
           license_key: params[:license_key]

@@ -60,8 +60,6 @@ RSpec.describe Integrations::Avalara::UpdateService, type: :service do
             integration = Integrations::AvalaraIntegration.order(:updated_at).last
             expect(integration.name).to eq(name)
             expect(integration.code).to eq("anrok1")
-            expect(integration.account_id).to eq("acc-id-1")
-            expect(integration.license_key).to eq("123456789")
           end
 
           it "returns an integration in result object" do

@@ -10,6 +10,7 @@ module Types
         argument :name, String, required: true
 
         argument :account_id, String, required: true
+        argument :company_code, String, required: true
         argument :connection_id, String, required: true
         argument :license_key, String, required: true
       end

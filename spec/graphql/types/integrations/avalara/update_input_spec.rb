@@ -8,6 +8,7 @@ RSpec.describe Types::Integrations::Avalara::UpdateInput do
   it do
     expect(subject).to accept_argument(:id).of_type("ID")
     expect(subject).to accept_argument(:code).of_type("String")
+    expect(subject).to accept_argument(:company_code).of_type("String")
     expect(subject).to accept_argument(:name).of_type("String")
     expect(subject).to accept_argument(:account_id).of_type("String")
     expect(subject).to accept_argument(:license_key).of_type("String")

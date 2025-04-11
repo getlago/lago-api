@@ -49,7 +49,7 @@ FactoryBot.define do
     name { "Avalara Integration" }
 
     settings do
-      {account_id: SecureRandom.uuid}
+      {account_id: SecureRandom.uuid, company_code: "DEFAULT"}
     end
 
     secrets do
