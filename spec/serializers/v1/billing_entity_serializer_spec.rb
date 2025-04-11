@@ -36,5 +36,7 @@ RSpec.describe V1::BillingEntitySerializer, type: :serializer do
     expect(billing_entity_serialized.fetch("invoice_grace_period")).to eq(billing_entity.invoice_grace_period)
     expect(billing_entity_serialized.fetch("document_locale")).to eq(billing_entity.document_locale)
     expect(billing_entity_serialized.fetch("is_default")).to eq(billing_entity.organization.default_billing_entity.id == billing_entity.id)
+    expect(billing_entity_serialized.fetch("eu_tax_management")).to eq(billing_entity.eu_tax_management)
+    expect(billing_entity_serialized.fetch("logo_url")).to eq(billing_entity.logo_url)
   end
 end
