@@ -21,6 +21,8 @@ module Taxes
       tax.applied_to_organization = params[:applied_to_organization] if params.key?(:applied_to_organization)
       tax.save!
 
+      manage_taxes_on_billing_entity if params.key?(:applied_to_organization)
+
       customer_ids = (customer_ids + tax.reload.applicable_customers.select(:id)).uniq
       draft_invoices = tax.organization.invoices.where(customer_id: customer_ids).draft
       draft_invoices.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
@@ -34,5 +36,14 @@ module Taxes
     private
 
     attr_reader :tax, :params
+
+    def manage_taxes_on_billing_entity
+      billing_entity = tax.organization.default_billing_entity
+      if tax.applied_to_organization
+        BillingEntities::Taxes::ApplyTaxesService.call(billing_entity:, tax_codes: [tax.code])
+      else
+        BillingEntities::Taxes::RemoveTaxesService.call(billing_entity:, tax_codes: [tax.code])
+      end
+    end
   end
 end

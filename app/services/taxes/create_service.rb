@@ -20,6 +20,8 @@ module Taxes
       tax.applied_to_organization = params[:applied_to_organization] if params.key?(:applied_to_organization)
       tax.save!
 
+      apply_taxes_on_billing_entity if params[:applied_to_organization]
+
       result.tax = tax
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -29,5 +31,12 @@ module Taxes
     private
 
     attr_reader :organization, :params
+
+    def apply_taxes_on_billing_entity
+      billing_entity = organization.default_billing_entity
+      if params[:applied_to_organization]
+        BillingEntities::Taxes::ApplyTaxesService.call(billing_entity:, tax_codes: [params[:code]])
+      end
+    end
   end
 end
