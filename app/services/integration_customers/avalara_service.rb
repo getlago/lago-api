@@ -20,12 +20,12 @@ module IntegrationCustomers
         subsidiary_id: nil
       )
 
-      return create_result if create_result.error
+      return create_result if create_result.error || create_result.contact_id.nil?
 
       new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
         integration:,
         customer:,
-        external_customer_id: customer.id,
+        external_customer_id: create_result.contact_id,
         type: "IntegrationCustomers::AvalaraCustomer",
         sync_with_provider: true
       )

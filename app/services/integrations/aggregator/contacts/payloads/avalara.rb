@@ -23,7 +23,7 @@ module Integrations
           def update_body
             [
               {
-                "external_id" => integration_customer.external_customer_id,
+                "external_id" => customer.id,
                 "name" => name,
                 "address_line_1" => customer.shipping_address_line1 || customer.address_line1,
                 "city" => customer.shipping_city || customer.city,

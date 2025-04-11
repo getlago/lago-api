@@ -11,8 +11,11 @@ RSpec.describe IntegrationCustomers::AvalaraService, type: :service do
   describe "#create" do
     subject(:service_call) { described_class.new(integration:, customer:, subsidiary_id: nil).create }
 
+    let(:contact_id) { SecureRandom.uuid }
     let(:create_result) do
-      BaseService::Result.new
+      result = BaseService::Result.new
+      result.contact_id = contact_id
+      result
     end
     let(:aggregator_contacts_create_service) do
       instance_double(Integrations::Aggregator::Contacts::CreateService)
@@ -31,7 +34,7 @@ RSpec.describe IntegrationCustomers::AvalaraService, type: :service do
       aggregate_failures do
         expect(aggregator_contacts_create_service).to have_received(:call)
         expect(result).to be_success
-        expect(result.integration_customer.external_customer_id).to eq(customer.id)
+        expect(result.integration_customer.external_customer_id).to eq(contact_id)
         expect(result.integration_customer.integration_id).to eq(integration.id)
         expect(result.integration_customer.customer_id).to eq(customer.id)
         expect(result.integration_customer.type).to eq("IntegrationCustomers::AvalaraCustomer")
