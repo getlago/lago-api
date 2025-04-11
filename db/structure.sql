@@ -310,16 +310,12 @@ DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
-DROP INDEX IF EXISTS public.index_events_on_subscription_id_and_code_and_timestamp;
-DROP INDEX IF EXISTS public.index_events_on_subscription_id;
 DROP INDEX IF EXISTS public.index_events_on_properties;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
-DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code_and_created_at;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_events_on_external_subscription_id_with_included;
 DROP INDEX IF EXISTS public.index_events_on_external_subscription_id_precise_amount;
-DROP INDEX IF EXISTS public.index_events_on_external_subscription_id_and_code_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_deleted_at;
 DROP INDEX IF EXISTS public.index_events_on_customer_id;
 DROP INDEX IF EXISTS public.index_error_details_on_owner;
@@ -4035,13 +4031,6 @@ CREATE INDEX index_events_on_deleted_at ON public.events USING btree (deleted_at
 
 
 --
--- Name: index_events_on_external_subscription_id_and_code_and_timestamp; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_events_on_external_subscription_id_and_code_and_timestamp ON public.events USING btree (organization_id, external_subscription_id, code, "timestamp") WHERE (deleted_at IS NULL);
-
-
---
 -- Name: index_events_on_external_subscription_id_precise_amount; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4070,13 +4059,6 @@ CREATE INDEX index_events_on_organization_id_and_code ON public.events USING btr
 
 
 --
--- Name: index_events_on_organization_id_and_code_and_created_at; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_events_on_organization_id_and_code_and_created_at ON public.events USING btree (organization_id, code, created_at) WHERE (deleted_at IS NULL);
-
-
---
 -- Name: index_events_on_organization_id_and_timestamp; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4088,20 +4070,6 @@ CREATE INDEX index_events_on_organization_id_and_timestamp ON public.events USIN
 --
 
 CREATE INDEX index_events_on_properties ON public.events USING gin (properties jsonb_path_ops);
-
-
---
--- Name: index_events_on_subscription_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_events_on_subscription_id ON public.events USING btree (subscription_id);
-
-
---
--- Name: index_events_on_subscription_id_and_code_and_timestamp; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_events_on_subscription_id_and_code_and_timestamp ON public.events USING btree (subscription_id, code, "timestamp") WHERE (deleted_at IS NULL);
 
 
 --
@@ -6294,6 +6262,10 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250411112117'),
+('20250411110934'),
+('20250411110825'),
+('20250411074202'),
 ('20250409140720'),
 ('20250409140652'),
 ('20250407202459'),
