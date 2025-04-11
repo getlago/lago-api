@@ -4,6 +4,7 @@ require "rails_helper"
 
 describe "Add customer-specific taxes", :scenarios, type: :request do
   let(:organization) { create(:organization, country: "FR", eu_tax_management: false, billing_entities: [create(:billing_entity, country: "FR")]) }
+  let(:plan) { create(:plan, organization:, pay_in_advance: true, amount_cents: 149_00) }
 
   let(:american_attributes) do
     {
@@ -149,6 +150,29 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
 
       # The customer tax is unaffected
       expect(customer.taxes.sole.code).to eq "lago_eu_it_standard"
+    end
+  end
+
+  context "when organization has a default tax" do
+    it "does not affect the customer taxes" do
+      enable_eu_tax_management!
+      organization.taxes.where(code: "lago_eu_fr_standard").update!(applied_to_organization: true)
+
+      mock_vies_check!("IT12345678901")
+      create_or_update_customer(italian_attributes.merge(
+        external_id: "user_it_123", tax_identification_number: "IT12345678901"
+      ))
+      customer = Customer.find_by(external_id: "user_it_123")
+      expect(customer.taxes.reload.sole.code).to eq "lago_eu_reverse_charge"
+
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: "sub_#{customer.external_id}",
+        plan_code: plan.code
+      })
+
+      # The default organization tax is not applied
+      expect(customer.invoices.sole.taxes.sole.code).to eq "lago_eu_reverse_charge"
     end
   end
 end
