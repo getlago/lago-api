@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "rails_helper"
-require "valvat"
 
 RSpec.describe Customers::EuAutoTaxesService, type: :service do
   subject(:eu_tax_service) { described_class.new(customer:, new_record:, tax_attributes_changed:) }

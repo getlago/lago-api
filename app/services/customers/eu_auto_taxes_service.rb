@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "valvat"
-
 module Customers
   class EuAutoTaxesService < BaseService
     Result = BaseResult[:tax_code]
