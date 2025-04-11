@@ -3,6 +3,7 @@
 require_relative "boot"
 
 require "rails/all"
+require "ostruct"
 
 Bundler.require(*Rails.groups)
 
