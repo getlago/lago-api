@@ -54,17 +54,8 @@ class Fee < ApplicationRecord
 
   # NOTE: pay_in_advance fees are not be linked to any invoice, but add_on fees does not have any subscriptions
   #       so we need a bit of logic to find the fee in the right organization scope
-  scope :from_organization,
-    lambda { |organization|
-      union = [from_organization_invoice(organization), from_organization_pay_in_advance(organization)]
-        .map(&:to_sql)
-        .join(") UNION (")
-      unionized_sql = "((#{union})) #{table_name}"
-      from(unionized_sql)
-    }
-
-  scope :from_organization_invoice, ->(org) { joins(:invoice).where(invoice: {organization: org}) }
-  scope :from_organization_pay_in_advance, ->(org) { joins(subscription: :customer).where("customers.organization_id = ?", org.id).where(invoice_id: nil) }
+  scope :from_organization, ->(org) { where(organization_id: org.id) }
+  scope :from_organization_pay_in_advance, ->(org) { from_organization(org).where(invoice_id: nil) }
 
   scope :from_customer,
     lambda { |org, external_customer_id|
@@ -76,12 +67,12 @@ class Fee < ApplicationRecord
     }
 
   scope :from_customer_invoice, ->(org, external_customer_id) do
-    from_organization_invoice(org)
+    from_organization(org)
       .joins(invoice: :customer)
       .where(customer: {external_id: external_customer_id})
   end
   scope :from_customer_pay_in_advance, ->(org, external_customer_id) do
-    from_organization_pay_in_advance(org).where("customers.external_id = ?", external_customer_id)
+    from_organization_pay_in_advance(org).joins(subscription: :customer).where("customers.external_id = ?", external_customer_id)
   end
 
   def item_key
