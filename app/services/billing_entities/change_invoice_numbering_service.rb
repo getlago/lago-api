@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module BillingEntities
-  class UpdateInvoiceNumberingService < BaseService
+  class ChangeInvoiceNumberingService < BaseService
     Result = BaseResult[:billing_entity]
 
     def initialize(billing_entity:, document_numbering:)
