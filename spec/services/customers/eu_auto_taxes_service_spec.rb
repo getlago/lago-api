@@ -9,17 +9,15 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
   let(:customer) { create(:customer, organization:, tax_identification_number:, zipcode: nil) }
   let(:new_record) { true }
   let(:tax_attributes_changed) { true }
-  let(:tax_identification_number) { Faker::Number.number(digits: 10) }
+  let(:tax_identification_number) { "IT12345678901" }
 
   describe ".call" do
-    context "with B2B organization" do
-      let(:vies_service) { instance_double(Valvat) }
-      let(:vies_response) { {} }
+    before do
+      allow_any_instance_of(Valvat).to receive(:exists?).and_return(vies_response) # rubocop:disable RSpec/AnyInstance
+    end
 
-      before do
-        allow(Valvat).to receive(:new).and_return(vies_service)
-        allow(vies_service).to receive(:exists?).and_return(vies_response)
-      end
+    context "with B2B organization" do
+      let(:vies_response) { {} }
 
       context "when tax_identification_number is blank" do
         let(:tax_identification_number) { nil }
@@ -30,12 +28,16 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
           result = eu_tax_service.call
 
           expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(SendWebhookJob).not_to have_been_enqueued
         end
       end
 
-      context "when VIES check raises an error" do
+      context "when vat number is invalid" do
+        let(:tax_identification_number) { "invalid_vat_number" }
+
         before do
-          allow(vies_service).to receive(:exists?).and_raise(Valvat::RateLimitError.new(nil, nil))
+          # No call to the API is made when the format is invalid
+          allow_any_instance_of(Valvat).to receive(:exists?).and_call_original # rubocop:disable RSpec/AnyInstance
           customer.update!(country: "DE")
         end
 
@@ -43,6 +45,29 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
           result = eu_tax_service.call
 
           expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
+            valid: false,
+            valid_format: false
+          }).once
+        end
+      end
+
+      context "when VIES check raises an error" do
+        before do
+          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/ AnyInstance
+            .and_raise(Valvat::RateLimitError.new("rate limit reached", nil))
+          customer.update!(country: "DE")
+        end
+
+        it "returns the default tax code" do
+          result = eu_tax_service.call
+
+          expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
+            valid: false,
+            valid_format: true,
+            error: "The  web service returned the error: rate limit reached"
+          }).once
         end
       end
 
@@ -111,6 +136,7 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
 
           expect(SendWebhookJob).to have_been_enqueued
             .with("customer.vies_check", customer, vies_check: vies_response)
+            .once
         end
       end
 

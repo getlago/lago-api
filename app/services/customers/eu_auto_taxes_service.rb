@@ -16,10 +16,10 @@ module Customers
     def call
       return result.not_allowed_failure!(code: "eu_tax_not_applicable") unless should_apply_eu_taxes?
 
-      customer_vies = vies_check
+      vies_api_response = check_vies
 
-      result.tax_code = if customer_vies.present?
-        process_vies_tax(customer_vies)
+      result.tax_code = if vies_api_response.present?
+        process_vies_tax(vies_api_response)
       else
         process_not_vies_tax
       end
@@ -31,15 +31,28 @@ module Customers
 
     attr_reader :customer, :organization_country_code, :tax_attributes_changed, :new_record
 
-    def vies_check
+    def check_vies
       return nil if customer.tax_identification_number.blank?
 
-      vies_check = Valvat.new(customer.tax_identification_number).exists?(detail: true)
-      after_commit { SendWebhookJob.perform_later("customer.vies_check", customer, vies_check:) }
+      response = Valvat.new(customer.tax_identification_number).exists?(detail: true)
 
-      vies_check
-    rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester => _e
+      after_commit { SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: response.presence || error_vies_check) }
+
+      response
+    rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester => e
+      after_commit { SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: error_vies_check.merge(error: e.message)) }
       nil
+    end
+
+    def error_vies_check
+      {
+        valid: false,
+        valid_format: is_valid_vat_number?(customer.tax_identification_number)
+      }
+    end
+
+    def is_valid_vat_number?(vat_number)
+      ::Valvat::Syntax.validate(vat_number)
     end
 
     def process_vies_tax(customer_vies)

@@ -84,15 +84,12 @@ RSpec.describe ::V1::CustomerSerializer do
   end
 
   context "with a VIES check" do
-    subject(:serializer) { described_class.new(customer, root_name: "customer", includes: %i[vies_check], vies_check: false) }
+    subject(:serializer) { described_class.new(customer, root_name: "customer", includes: %i[vies_check], vies_check: {custom_hash: "yes"}) }
 
     let(:customer) { create(:customer, :with_salesforce_integration, tax_identification_number: "IT12345678901") }
 
     it "adds vies_check to customer" do
-      expect(result["customer"]["vies_check"]).to eq({
-        "valid" => false,
-        "valid_format" => true
-      })
+      expect(result["customer"]["vies_check"]).to eq({"custom_hash" => "yes"})
     end
   end
 end
