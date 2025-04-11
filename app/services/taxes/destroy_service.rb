@@ -15,6 +15,7 @@ module Taxes
       #       as we need the applied_tax relation
       draft_invoice_ids
 
+      destroy_applied_taxes
       tax.destroy!
 
       Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
@@ -32,6 +33,11 @@ module Taxes
         .where(customer_id: tax.applicable_customers.select(:id))
         .draft
         .pluck(:id)
+    end
+
+    def destroy_applied_taxes
+      billing_entity = tax.organization.default_billing_entity
+      BillingEntities::Taxes::RemoveTaxesService.call(billing_entity:, tax_codes: [tax.code])
     end
   end
 end
