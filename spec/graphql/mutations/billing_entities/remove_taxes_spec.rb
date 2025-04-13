@@ -8,12 +8,12 @@ RSpec.describe Mutations::BillingEntities::RemoveTaxes, type: :graphql do
   let(:organization) { membership.organization }
   let(:billing_entity) { organization.default_billing_entity }
   let(:tax_codes) { ["TAX_CODE_1", "TAX_CODE_2"] }
-  
+
   let(:mutation) do
     <<~GQL
       mutation($input: RemoveTaxesInput!) {
         billingEntityRemoveTaxes(input: $input) {
-          appliedTaxes {
+          removedTaxes {
             id
             code
           }
@@ -52,11 +52,11 @@ RSpec.describe Mutations::BillingEntities::RemoveTaxes, type: :graphql do
           }
         }
       )
-      
+
       result_data = result["data"]["billingEntityRemoveTaxes"]
-      expect(result_data["appliedTaxes"].length).to eq(2)
-      expect(result_data["appliedTaxes"].map { |at| at["code"] }).to match_array(tax_codes)
-      
+      expect(result_data["removedTaxes"].length).to eq(2)
+      expect(result_data["removedTaxes"].map { |at| at["code"] }).to match_array(tax_codes)
+
       expect(BillingEntities::Taxes::RemoveTaxesService).to have_received(:call).with(
         billing_entity: billing_entity,
         tax_codes: tax_codes
@@ -105,7 +105,7 @@ RSpec.describe Mutations::BillingEntities::RemoveTaxes, type: :graphql do
       )
 
       result_data = result["data"]["billingEntityRemoveTaxes"]
-      expect(result_data["appliedTaxes"]).to be_empty
+      expect(result_data["removedTaxes"]).to be_empty
     end
   end
-end 
+end

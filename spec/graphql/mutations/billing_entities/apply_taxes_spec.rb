@@ -3,12 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Mutations::BillingEntities::ApplyTaxes, type: :graphql do
-  let(:required_permission) { "billing_entities:update" }  
+  let(:required_permission) { "billing_entities:update" }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:billing_entity) { organization.default_billing_entity }
   let(:tax_codes) { ["TAX_CODE_1", "TAX_CODE_2"] }
-  
+
   let(:mutation) do
     <<~GQL
       mutation($input: ApplyTaxesInput!) {
@@ -52,11 +52,11 @@ RSpec.describe Mutations::BillingEntities::ApplyTaxes, type: :graphql do
           }
         }
       )
-      
+
       result_data = result["data"]["billingEntityApplyTaxes"]
       expect(result_data["appliedTaxes"].length).to eq(2)
       expect(result_data["appliedTaxes"].map { |at| at["code"] }).to match_array(tax_codes)
-      
+
       expect(::BillingEntities::Taxes::ApplyTaxesService).to have_received(:call).with(
         billing_entity: billing_entity,
         tax_codes: tax_codes
@@ -108,4 +108,4 @@ RSpec.describe Mutations::BillingEntities::ApplyTaxes, type: :graphql do
       expect(result_data["appliedTaxes"]).to be_empty
     end
   end
-end 
+end

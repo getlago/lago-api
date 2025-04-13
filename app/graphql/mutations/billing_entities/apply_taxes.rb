@@ -5,7 +5,6 @@ module Mutations
     class ApplyTaxes < ::Mutations::BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
-      graphql_name "ApplyTaxes"
 
       REQUIRED_PERMISSION = "billing_entities:update"
 
@@ -18,7 +17,7 @@ module Mutations
         billing_entity = current_organization.billing_entities.find(billing_entity_id)
         result = ::BillingEntities::Taxes::ApplyTaxesService.call(billing_entity:, tax_codes:)
 
-        result.success? ? { applied_taxes: result.taxes_to_apply || [] } : result_error(result)
+        result.success? ? {applied_taxes: result.taxes_to_apply || []} : result_error(result)
       end
     end
   end
