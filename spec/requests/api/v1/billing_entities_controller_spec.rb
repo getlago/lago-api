@@ -88,4 +88,48 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
       end
     end
   end
+
+  describe "POST /api/v1/billing_entities/:code/manage_taxes" do
+    let(:tax1) { create(:tax, organization:, code: "TAX_CODE_1") }
+    let(:tax2) { create(:tax, organization:, code: "TAX_CODE_2") }
+
+    subject do
+      post_with_token(organization, "/api/v1/billing_entities/#{billing_entity_code}/manage_taxes", tax_codes: tax_codes)
+    end
+
+    context "when the billing entity is found" do
+      let(:billing_entity_code) { billing_entity1.code }
+      let(:tax_codes) { [tax1.code, tax2.code] }
+
+      before do
+        allow(BillingEntities::Taxes::ManageTaxesService).to receive(:call).and_call_original
+      end
+
+      it "returns a 200" do
+        subject
+        expect(response).to be_successful
+      end
+
+      it "updates the taxes" do
+        subject
+        expect(billing_entity1.taxes.count).to eq(2)
+        expect(billing_entity1.taxes.map(&:code)).to include("TAX_CODE_1", "TAX_CODE_2")
+      end
+
+      it "calls the manage taxes service" do
+        subject
+        expect(BillingEntities::Taxes::ManageTaxesService).to have_received(:call).with(billing_entity: billing_entity1, tax_codes: tax_codes)
+      end
+    end
+
+    context "when the billing entity is not found" do
+      let(:billing_entity_code) { "NON_EXISTING_CODE" }
+      let(:tax_codes) { ["TAX_CODE_1", "TAX_CODE_2"] }
+
+      it "returns a 404" do
+        subject
+        expect(response).to be_not_found
+      end
+    end
+  end
 end
