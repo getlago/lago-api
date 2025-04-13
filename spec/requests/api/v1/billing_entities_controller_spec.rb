@@ -120,6 +120,15 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
         subject
         expect(BillingEntities::Taxes::ManageTaxesService).to have_received(:call).with(billing_entity: billing_entity1, tax_codes: tax_codes)
       end
+
+      context "when the tax codes are not found" do
+        let(:tax_codes) { ["TAX_CODE_1", "TAX_CODE_3"] }
+
+        it "returns a 404" do
+          subject
+          expect(response).to be_not_found
+        end
+      end
     end
 
     context "when the billing entity is not found" do
