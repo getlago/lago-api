@@ -36,10 +36,6 @@ module Types
       def plans_count
         object.plans.count
       end
-
-      def applied_to_organization
-        object.organization.default_billing_entity.applied_taxes.where(tax_id: object.id).present?
-      end
     end
   end
 end
