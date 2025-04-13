@@ -7,20 +7,18 @@ module Mutations
       include RequiredOrganization
       graphql_name "ApplyTaxes"
 
+      REQUIRED_PERMISSION = "billing_entities:update"
+
       argument :billing_entity_id, ID, required: true
       argument :tax_codes, [String], required: true
 
       field :applied_taxes, [Types::Taxes::Object], null: false
 
-      # todo: change it to use service
       def resolve(billing_entity_id:, tax_codes:)
         billing_entity = current_organization.billing_entities.find(billing_entity_id)
-        tax_codes.each do |tax_code|
-          tax = current_organization.taxes.find_by(code: tax_code)
-          billing_entity.applied_taxes.create(tax:)
-        end
+        result = ::BillingEntities::Taxes::ApplyTaxesService.call(billing_entity:, tax_codes:)
 
-        billing_entity.taxes
+        result.success? ? { applied_taxes: result.taxes_to_apply || [] } : result_error(result)
       end
     end
   end

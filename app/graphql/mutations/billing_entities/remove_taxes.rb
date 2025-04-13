@@ -7,6 +7,8 @@ module Mutations
       include RequiredOrganization
       graphql_name "RemoveTaxes"
 
+      REQUIRED_PERMISSION = "billing_entities:update"
+
       argument :billing_entity_id, ID, required: true
       argument :tax_codes, [String], required: true
 
@@ -14,9 +16,9 @@ module Mutations
 
       def resolve(billing_entity_id:, tax_codes:)
         billing_entity = current_organization.billing_entities.find(billing_entity_id)
-        taxes_to_delete = billing_entity.taxes.where(code: tax_codes)
-        billing_entity.applied_taxes.where(tax_id: taxes_to_delete.ids).destroy_all
-        billing_entity.taxes.reload
+        result = ::BillingEntities::Taxes::RemoveTaxesService.call(billing_entity:, tax_codes:)
+
+        result.success? ? { applied_taxes: result.taxes_to_remove || [] } : result_error(result)
       end
     end
   end
