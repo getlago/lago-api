@@ -90,12 +90,12 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
   end
 
   describe "POST /api/v1/billing_entities/:code/manage_taxes" do
-    let(:tax1) { create(:tax, organization:, code: "TAX_CODE_1") }
-    let(:tax2) { create(:tax, organization:, code: "TAX_CODE_2") }
-
     subject do
       post_with_token(organization, "/api/v1/billing_entities/#{billing_entity_code}/manage_taxes", tax_codes: tax_codes)
     end
+
+    let(:tax1) { create(:tax, organization:, code: "TAX_CODE_1") }
+    let(:tax2) { create(:tax, organization:, code: "TAX_CODE_2") }
 
     context "when the billing entity is found" do
       let(:billing_entity_code) { billing_entity1.code }
