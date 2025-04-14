@@ -14,6 +14,7 @@ namespace :signup do
       user = User.create_with(password: ENV["LAGO_ORG_USER_PASSWORD"])
         .find_or_create_by!(email: ENV["LAGO_ORG_USER_EMAIL"])
       organization = Organization.find_or_create_by!(name: ENV["LAGO_ORG_NAME"])
+      billing_entity = BillingEntity.find_or_create_by!(organization:, name: ENV["LAGO_ORG_NAME"], code: ENV["LAGO_ORG_NAME"].parameterize)
       Membership.find_or_create_by!(user:, organization:, role: :admin)
 
       if ENV["LAGO_ORG_API_KEY"].present?
