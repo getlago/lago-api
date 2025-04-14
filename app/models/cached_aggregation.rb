@@ -36,14 +36,13 @@ end
 #
 # Indexes
 #
+#  idx_aggregation_lookup                                 (external_subscription_id,charge_id,timestamp)
 #  idx_on_timestamp_charge_id_external_subscription_id    (timestamp,charge_id,external_subscription_id)
 #  index_cached_aggregations_on_charge_id                 (charge_id)
 #  index_cached_aggregations_on_event_id                  (event_id)
 #  index_cached_aggregations_on_event_transaction_id      (organization_id,event_transaction_id)
 #  index_cached_aggregations_on_external_subscription_id  (external_subscription_id)
 #  index_cached_aggregations_on_organization_id           (organization_id)
-#  index_timestamp_filter_lookup                          (organization_id,timestamp,charge_id,charge_filter_id)
-#  index_timestamp_lookup                                 (organization_id,timestamp,charge_id)
 #
 # Foreign Keys
 #
