@@ -2,6 +2,8 @@
 
 module Subscriptions
   class FlagUsageActivityService < BaseService
+    Result = BaseResult[:usage_activity]
+
     def initialize(subscription:)
       @subscription = subscription
       super

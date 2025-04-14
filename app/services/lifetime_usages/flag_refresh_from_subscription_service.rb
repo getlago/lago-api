@@ -2,6 +2,8 @@
 
 module LifetimeUsages
   class FlagRefreshFromSubscriptionService < BaseService
+    Result = BaseResult[:lifetime_usage]
+
     def initialize(subscription:)
       @subscription = subscription
       super
