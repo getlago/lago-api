@@ -29,7 +29,11 @@ SELECT
   COALESCE(c.timezone, o.timezone, 'UTC') AS applicable_timezone,
   c.net_payment_term,
   c.external_salesforce_id,
-  c.finalize_zero_amount_invoice,
+  case c.finalize_zero_amount_invoice
+    WHEN 0 then 'inherit'
+    WHEN 1 then 'skip'
+    WHEN 2 then 'finalize'
+  END as finalize_zero_amount_invoice,
   c.skip_invoice_custom_sections,
   c.payment_provider,
   c.payment_provider_code,
@@ -54,10 +58,12 @@ SELECT
     ),
     '[]'::json
   ) AS metadata,
-  ARRAY(
-    SELECT ct.tax_id AS lago_tax_id
-    FROM customers_taxes AS ct
-    WHERE ct.customer_id = c.id
+  to_json(
+    ARRAY(
+      SELECT ct.tax_id AS lago_tax_id
+      FROM customers_taxes AS ct
+      WHERE ct.customer_id = c.id
+    )
   ) AS lago_taxes_ids
 FROM customers c
 LEFT JOIN organizations o ON o.id = c.organization_id

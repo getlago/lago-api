@@ -14,9 +14,9 @@ SELECT
     WHEN 7 THEN 'custom_agg'
     ELSE 'unknown'
   END AS aggregation_type,
-  bm.weighted_interval,
+  bm.weighted_interval::text,
   bm.recurring,
-  bm.rounding_function,
+  bm.rounding_function::text,
   bm.rounding_precision,
   bm.created_at,
   bm.updated_at,

@@ -11,7 +11,7 @@ SELECT
     WHEN 1 then 'monthly'
     WHEN 2 then 'yearly'
     WHEN 3 then 'quarterly'
-  END AS interval,
+  END AS plan_interval,
   p.description,
   p.amount_cents,
   p.amount_currency,
@@ -19,10 +19,17 @@ SELECT
   p.pay_in_advance,
   p.bill_charges_monthly,
   p.parent_id,
-  ARRAY(
-    SELECT pt.tax_id AS lago_tax_id
-    FROM plans_taxes AS pt
-    WHERE pt.plan_id = p.id
+  to_json (
+    ARRAY(
+      SELECT
+        pt.tax_id AS lago_tax_id
+      FROM
+        plans_taxes AS pt
+      WHERE
+        pt.plan_id = p.id
+    )
   ) AS lago_taxes_ids
-FROM plans AS p
-WHERE p.deleted_at IS NULL;
+FROM
+  plans AS p
+WHERE
+  p.deleted_at IS NULL;

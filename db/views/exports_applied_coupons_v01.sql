@@ -12,11 +12,11 @@ SELECT
         WHEN 0 THEN null
         WHEN 1 THEN null
         ELSE
-            CASE 
+            CASE
                 WHEN cp.coupon_type = 1 THEN NULL -- coupon is percentage
                 ELSE
                     ac.amount_cents - (
-                        SELECT SUM(cr.amount_cents)
+                        SELECT SUM(cr.amount_cents)::bigint
                         FROM credits AS cr
                         WHERE cr.applied_coupon_id = ac.id
                     )
