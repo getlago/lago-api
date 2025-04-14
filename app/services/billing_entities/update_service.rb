@@ -110,7 +110,7 @@ module BillingEntities
 
       # NOTE: autogenerate service generates taxes.Taxes still belong to organization, but are applied on the billing_entities,
       # so we need to generate taxes for the organization
-      Taxes::AutoGenerateService.new(organization: billing_entity.organization).call if eu_tax_management
+      ::Taxes::AutoGenerateService.new(organization: billing_entity.organization).call if eu_tax_management
 
       billing_entity.eu_tax_management = eu_tax_management
     end
