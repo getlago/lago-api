@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+class Organization < ApplicationRecord; end
+
 class MigrateAppliedTaxesToBillingEntities < ActiveRecord::Migration[7.2]
   def up
     Organization.find_each do |organization|
