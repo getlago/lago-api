@@ -27,6 +27,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       multi_entities_pro
       multi_entities_enterprise
       analytics_dashboards
+      alerting_total_usage
     ]
   end
 

@@ -23788,6 +23788,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "alerting_total_usage",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -35115,6 +35121,12 @@
             },
             {
               "name": "analytics_dashboards",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "alerting_total_usage",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
