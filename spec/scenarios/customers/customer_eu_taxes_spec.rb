@@ -198,4 +198,38 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
       expect(customer.invoices.sole.taxes.sole.code).to eq "lago_eu_reverse_charge"
     end
   end
+
+  context "when charge has a dedicated tax" do
+    it "does not affect the customer taxes" do
+      enable_eu_tax_management!
+      billable_metric = create(:billable_metric, organization:, field_name: "item_id")
+      create(:standard_charge, :pay_in_advance, billable_metric:, plan:, taxes: [Tax.find_by(code: "lago_eu_fr_standard")])
+
+      mock_vies_check!("IT12345678901")
+      create_or_update_customer(italian_attributes.merge(
+        external_id: "user_it_123", tax_identification_number: "IT12345678901"
+      ))
+      customer = Customer.find_by(external_id: "user_it_123")
+      expect(customer.taxes.reload.sole.code).to eq "lago_eu_reverse_charge"
+
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: "sub_#{customer.external_id}",
+        plan_code: plan.code
+      })
+      expect(customer.invoices.sole.taxes.sole.code).to eq "lago_eu_reverse_charge"
+
+      create_event({
+        code: billable_metric.code,
+        transaction_id: SecureRandom.uuid,
+        external_subscription_id: "sub_#{customer.external_id}"
+      })
+
+      # The Advance fee charge has the charge taxes even if the customer has a different tax
+      advance_fee_invoice = customer.invoices.order(created_at: :desc).first
+      expect(advance_fee_invoice.taxes.sole.code).to eq "lago_eu_fr_standard"
+      expect(advance_fee_invoice.fees.charge.sole.taxes.sole.code).to eq "lago_eu_fr_standard"
+      expect(customer.taxes.reload.sole.code).to eq "lago_eu_reverse_charge"
+    end
+  end
 end
