@@ -21,7 +21,6 @@ SELECT
   c.city,
   c.url,
   c.phone,
-  c.logo_url,
   c.legal_name,
   c.legal_number,
   c.currency,
@@ -44,9 +43,9 @@ SELECT
     (
       SELECT json_agg(
         json_build_object(
-          'id', cm.id, 
-          'key', cm.key, 
-          'value', cm.value, 
+          'id', cm.id,
+          'key', cm.key,
+          'value', cm.value,
           'display_in_invoice', cm.display_in_invoice
         )
       )
@@ -62,6 +61,6 @@ SELECT
   ) AS lago_taxes_ids
 FROM customers c
 LEFT JOIN organizations o ON o.id = c.organization_id
-LEFT JOIN payment_provider_customers ppc ON ppc.customer_id = c.id 
+LEFT JOIN payment_provider_customers ppc ON ppc.customer_id = c.id
   AND ppc.deleted_at IS NULL
 WHERE c.deleted_at IS NULL;
