@@ -45,4 +45,11 @@ RSpec.describe Integrations::AvalaraIntegration, type: :model do
       expect(avalara_integration.company_code).to eq("company_code")
     end
   end
+
+  describe ".company_id" do
+    it "assigns and retrieve a settings pair" do
+      avalara_integration.company_id = "company_id"
+      expect(avalara_integration.company_id).to eq("company_id")
+    end
+  end
 end

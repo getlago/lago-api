@@ -55,6 +55,7 @@ RSpec.describe Integrations::Avalara::CreateService, type: :service do
       context "when avalara premium integration is present" do
         before do
           organization.update!(premium_integrations: ["avalara"])
+          allow(Integrations::Avalara::FetchCompanyIdJob).to receive(:perform_later)
         end
 
         context "without validation errors" do
@@ -73,6 +74,13 @@ RSpec.describe Integrations::Avalara::CreateService, type: :service do
             expect(result.integration.company_code).to eq("company-code1")
             expect(result.integration.account_id).to eq("account-id1")
             expect(result.integration.license_key).to eq("123456789")
+          end
+
+          it "enqueues the jobs to fetch company id" do
+            service_call
+
+            integration = Integrations::AvalaraIntegration.order(:created_at).last
+            expect(Integrations::Avalara::FetchCompanyIdJob).to have_received(:perform_later).with(integration:)
           end
         end
 
