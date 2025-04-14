@@ -4,8 +4,8 @@ SELECT
     i.sequential_id,
     i.customer_id,
     i.number,
-    i.issuing_date::timestamptz::text AS issuing_date,
-    i.payment_due_date::timestamptz::text AS payment_due_date,
+    i.issuing_date::timestamptz AS issuing_date,
+    i.payment_due_date::timestamptz AS payment_due_date,
     i.net_payment_term,
     CASE i.invoice_type
         WHEN 0 THEN 'subscription'
@@ -30,7 +30,7 @@ SELECT
         WHEN 1 THEN 'succeeded'
         WHEN 2 THEN 'failed'
     END AS payment_status,
-    i.payment_dispute_lost_at::timestamptz::text AS payment_dispute_lost_at,
+    i.payment_dispute_lost_at::timestamptz AS payment_dispute_lost_at,
     i.payment_overdue,
     i.currency,
     i.fees_amount_cents,
@@ -67,7 +67,7 @@ SELECT
                 'details', ed.details
             )
         )
-        FROM error_details AS ed    
+        FROM error_details AS ed
         WHERE ed.owner_id = i.id
     ) AS error_details
 FROM invoices AS i
