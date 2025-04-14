@@ -4,8 +4,8 @@ SELECT
     i.sequential_id,
     i.customer_id,
     i.number,
-    i.issuing_date::timestampz::text AS issuing_date,
-    i.payment_due_date::timestampz::text AS payment_due_date,
+    i.issuing_date::timestamptz::text AS issuing_date,
+    i.payment_due_date::timestamptz::text AS payment_due_date,
     i.net_payment_term,
     CASE i.invoice_type
         WHEN 0 THEN 'subscription'
@@ -30,7 +30,7 @@ SELECT
         WHEN 1 THEN 'succeeded'
         WHEN 2 THEN 'failed'
     END AS payment_status,
-    i.payment_dispute_lost_at::timestampz::text AS payment_dispute_lost_at,
+    i.payment_dispute_lost_at::timestamptz::text AS payment_dispute_lost_at,
     i.payment_overdue,
     i.currency,
     i.fees_amount_cents,
@@ -44,24 +44,28 @@ SELECT
     i.total_amount_cents - i.total_paid_amount_cents AS total_due_amount_cents,
     i.prepaid_credit_amount_cents,
     i.version_number,
-    i.created_at::timestampz::text AS created_at,
-    i.updated_at::timestampz::text AS updated_at,
-    i.voided_at::timestampz::text AS voided_at,
-    json_agg(
-        SELECT json_build_object(
-            'lago_id', m.id,
-            'key', m.key,
-            'value', m.value,
-            'created_at', m.created_at::timestampz::text
+    i.created_at::timestamptz::text AS created_at,
+    i.updated_at::timestamptz::text AS updated_at,
+    i.voided_at::timestamptz::text AS voided_at,
+    (
+        SELECT json_agg(
+            json_build_object(
+                'lago_id', m.id,
+                'key', m.key,
+                'value', m.value,
+                'created_at', m.created_at::timestamptz::text
+            )
         )
         FROM invoice_metadata AS m
         WHERE m.invoice_id = i.id
-    ) AS metadata
-    json_agg(
-        SELECT json_build_object(
-            'lago_id', ed.id,
-            'error_code', ed.error_code,
-            'details', ed.details,
+    ) AS metadata,
+    (
+        SELECT json_agg(
+            json_build_object(
+                'lago_id', ed.id,
+                'error_code', ed.error_code,
+                'details', ed.details
+            )
         )
         FROM error_details AS ed    
         WHERE ed.owner_id = i.id

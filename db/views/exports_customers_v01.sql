@@ -55,7 +55,7 @@ SELECT
     ),
     '[]'::json
   ) AS metadata,
-  json_agg(
+  ARRAY(
     SELECT ct.tax_id AS lago_tax_id
     FROM customers_taxes AS ct
     WHERE ct.customer_id = c.id

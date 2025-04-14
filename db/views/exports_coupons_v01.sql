@@ -16,20 +16,20 @@ SELECT
     cp.reusable,
     cp.limited_plans,
     cp.limited_billable_metrics,
-    json_agg(
+    ARRAY(
         SELECT cpt.plan_id
         FROM coupon_targets AS cpt
         WHERE cpt.coupon_id = cp.id
         AND cpt.plan_id IS NOT NULL
     ) AS lago_plan_ids,
-    json_agg(
+    ARRAY(
         SELECT cpt.billable_metric_id
         FROM coupon_targets AS cpt
         WHERE cpt.coupon_id = cp.id
         AND cpt.billable_metric_id IS NOT NULL
     ) AS lago_billable_metrics_ids,
-    cp.created_at::timestampz::text AS created_at,
-    cp.expiration::timestampz::text AS expiration,
-    cp.expiration_at::timestampz::text AS expiration_at,
-    cp.terminated_at::timestampz::text AS terminated_at
+    cp.created_at::timestamptz::text AS created_at,
+    cp.expiration,
+    cp.expiration_at::timestamptz::text AS expiration_at,
+    cp.terminated_at::timestamptz::text AS terminated_at
 FROM coupons AS cp;

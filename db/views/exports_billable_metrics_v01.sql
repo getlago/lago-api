@@ -18,7 +18,7 @@ SELECT
   bm.recurring,
   bm.rounding_function,
   bm.rounding_precision,
-  bm.created_at::timestampz::text AS created_at,
+  bm.created_at::timestamptz::text AS created_at,
   bm.field_name,
   bm.expression,
   COALESCE(
@@ -33,7 +33,7 @@ SELECT
       WHERE bmf.billable_metric_id = bm.id
         AND bmf.deleted_at IS NULL
     ),
-    '{}'::json
+    '[]'::json
   ) AS filters
 FROM billable_metrics AS bm
 WHERE bm.deleted_at IS NULL;

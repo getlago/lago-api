@@ -41,18 +41,22 @@ SELECT
                     ch.invoice_display_name,
                     bm.name
                 ) -- 0 is charge
-                WHEN 1 THEN ao.invoice_name -- 1 is add_on
+                WHEN 1 THEN COALESCE(ao.invoice_display_name, ao.name) -- 1 is add_on
                 WHEN 3 THEN 'credit' -- 3 is credit
                 ELSE p.invoice_display_name -- everything else is subscription
             END
         ),
-        'filters', json_agg(
-            json_build_object(
-                'id', cf.id,
-                'charge_id', cf.charge_id,
-                'properties', cf.properties,
-                'invoice_display_name', cf.invoice_display_name
+        'filters', (
+            SELECT json_agg(
+                json_build_object(
+                    'id', cf.id,
+                    'charge_id', cf.charge_id,
+                    'properties', cf.properties,
+                    'invoice_display_name', cf.invoice_display_name
+                )
             )
+            FROM charge_filters AS cf
+            WHERE cf.charge_id = f.charge_id
         ),
         'lago_item_id', CASE f.fee_type
             WHEN 0 THEN bm.id -- 0 is charge
@@ -65,18 +69,17 @@ SELECT
             WHEN 1 THEN 'add_on' -- 1 is add_on
             WHEN 3 THEN 'wallet_transaction' -- 3 is credit
             ELSE 'subscription' -- everything else is subscription
-        END
+        END,
         'grouped_by', f.grouped_by
     ) AS item,
     f.pay_in_advance,
-    f.invoiceable,
     f.amount_cents,
-    f.amount_currency,
+    ch.invoiceable AS invoiceable,
     f.taxes_amount_cents,
     f.taxes_precise_amount_cents,
     f.taxes_rate,
     f.amount_cents + f.taxes_amount_cents AS total_amount_cents,
-    f.currency,
+    f.amount_currency AS currency,
     f.units,
     f.description,
     f.precise_amount_cents,
@@ -92,28 +95,23 @@ SELECT
         WHEN 3 THEN 'refunded'   -- Assuming 3 maps to :refunded
         ELSE 'unknown'
     END AS payment_status,
-    f.created_at::timestampz::text AS created_at,
-    f.succeeded_at::timestampz::text AS succeeded_at,
-    f.failed_at::timestampz::text AS failed_at,
-    f.refunded_at::timestampz::text AS refunded_at,
+    f.created_at::timestamptz::text AS created_at,
+    f.succeeded_at::timestamptz::text AS succeeded_at,
+    f.failed_at::timestamptz::text AS failed_at,
+    f.refunded_at::timestamptz::text AS refunded_at,
     f.amount_details,
-    f.self_billed,
     CASE f.fee_type
-        WHEN 0 THEN f.properties->>'charges_from_datetime'
-        ELSE f.properties->>'from_datetime'
-        END
-    END::timestampz::text as from_date,
+        WHEN 0 THEN (f.properties->>'charges_from_datetime')::timestamptz::text
+        ELSE (f.properties->>'from_datetime')::timestamptz::text
+    END AS from_date,
     CASE f.fee_type
-        WHEN 0 THEN f.properties->>'charges_to_datetime'
-        ELSE f.properties->>'to_datetime'
-    END::timestampz::text as to_date
-FROM
-    fees AS f
+        WHEN 0 THEN (f.properties->>'charges_to_datetime')::timestamptz::text
+        ELSE (f.properties->>'to_datetime')::timestamptz::text
+    END AS to_date
+FROM fees AS f
 LEFT JOIN subscriptions AS s ON f.subscription_id = s.id
 LEFT JOIN customers AS c ON s.customer_id = c.id
-LEFT JOIN billable_metrics AS bm ON f.billable_metric_id = bm.id
+LEFT JOIN charges AS ch ON f.charge_id = ch.id
+LEFT JOIN billable_metrics AS bm ON ch.billable_metric_id = bm.id
 LEFT JOIN add_ons AS ao ON f.add_on_id = ao.id
 LEFT JOIN plans AS p ON s.plan_id = p.id
-LEFT JOIN charges AS ch ON f.charge_id = ch.id
-LEFT JOIN charge_filters AS cf ON f.charge_filter_id = cf.id
-    AND cf.deleted_at IS NULL;

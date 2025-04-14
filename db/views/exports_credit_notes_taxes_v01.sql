@@ -10,7 +10,7 @@ SELECT
     cnt.base_amount_cents,
     cnt.amount_cents,
     cnt.amount_currency,
-    cnt.created_at::timestampz::text AS created_at
-FROM credit_note_taxes AS cnt
-LEFT JOIN credit_notes AS cn ON cn.id = credit_note_taxes.credit_note_id
+    cnt.created_at::timestamptz::text AS created_at
+FROM credit_notes_taxes AS cnt
+LEFT JOIN credit_notes AS cn ON cn.id = cnt.credit_note_id
 LEFT JOIN customers AS c ON c.id = cn.customer_id;

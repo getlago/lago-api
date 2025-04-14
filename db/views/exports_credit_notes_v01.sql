@@ -4,7 +4,7 @@ SELECT
     cn.sequential_id,
     cn.number,
     cn.invoice_id AS lago_invoice_id,
-    cn.issuing_date::timestampz::text AS issuing_date,
+    cn.issuing_date::timestamptz::text AS issuing_date,
     CASE cn.credit_status
         WHEN 0 THEN 'available'
         WHEN 1 THEN 'consumed'
@@ -32,27 +32,27 @@ SELECT
     cn.refund_amount_cents,
     cn.coupons_adjustment_amount_cents,
     cn.taxes_rate,
-    cn.created_at::timestampz::text AS created_at,
-    cn.updated_at::timestampz::text AS updated_at,
-    cn.file_url,
-    cn.self_billed,
-    json_agg(
-        SELECT json_build_object(
-            'lago_id', ci.id,
-            'amount_cents', ci.amount_cents,
-            'amount_currency', ci.amount_currency,
-            'lago_fee_id', ci.fee_id
-            
+    cn.created_at::timestamptz::text AS created_at,
+    cn.updated_at::timestamptz::text AS updated_at,
+    (
+        SELECT json_agg(
+            json_build_object(
+                'lago_id', ci.id,
+                'amount_cents', ci.amount_cents,
+                'amount_currency', ci.amount_currency,
+                'lago_fee_id', ci.fee_id
+            )
         )
         FROM credit_note_items AS ci
         WHERE ci.credit_note_id = cn.id
-        ORDER BY ci.created_at ASC
     ) AS items,
-    json_agg(
-        SELECT json_build_object(
-            'lago_id', ed.id,
-            'error_code', ed.error_code,
-            'details', ed.details
+    (
+        SELECT json_agg(
+            json_build_object(
+                'lago_id', ed.id,
+                'error_code', ed.error_code,
+                'details', ed.details
+            )
         )
         FROM error_details AS ed
         WHERE ed.owner_id = cn.id

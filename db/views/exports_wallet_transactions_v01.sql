@@ -1,5 +1,5 @@
 SELECT
-    w.organization_id,
+    c.organization_id,
     wt.id AS lago_id,
     wt.wallet_id AS lago_wallet_id,
     CASE wt.status
@@ -15,7 +15,7 @@ SELECT
     CASE wt.transaction_status
         WHEN 0 THEN 'purchased'
         WHEN 1 THEN 'granted'
-        WHEN 2 THEN 'voided',
+        WHEN 2 THEN 'voided'
         WHEN 3 THEN 'invoiced'
     END AS  transaction_status,
     CASE wt.transaction_type
@@ -24,10 +24,11 @@ SELECT
     END AS transaction_type,
     wt.amount,
     wt.credit_amount,
-    wt.settled_at::timestampz::text AS settled_at,
-    wt.failed_at::timestampz::text AS failed_at,
-    wt.created_at::timestampz::text AS created_at,
+    wt.settled_at::timestamptz::text AS settled_at,
+    wt.failed_at::timestamptz::text AS failed_at,
+    wt.created_at::timestamptz::text AS created_at,
     wt.invoice_requires_successful_payment,
     wt.metadata
 FROM wallet_transactions AS wt
-LEFT JOIN wallets AS w ON wt.wallet_id = w.id;
+LEFT JOIN wallets AS w ON wt.wallet_id = w.id
+LEFT JOIN customers AS c ON c.id = w.customer_id;

@@ -524,35 +524,24 @@ ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF 
 ALTER TABLE IF EXISTS public.versions ALTER COLUMN id DROP DEFAULT;
 DROP TABLE IF EXISTS public.webhooks;
 DROP TABLE IF EXISTS public.webhook_endpoints;
-DROP TABLE IF EXISTS public.wallets;
-DROP TABLE IF EXISTS public.wallet_transactions;
 DROP SEQUENCE IF EXISTS public.versions_id_seq;
 DROP TABLE IF EXISTS public.versions;
 DROP TABLE IF EXISTS public.users;
 DROP TABLE IF EXISTS public.usage_thresholds;
-DROP TABLE IF EXISTS public.taxes;
-DROP TABLE IF EXISTS public.subscriptions;
 DROP TABLE IF EXISTS public.schema_migrations;
 DROP TABLE IF EXISTS public.refunds;
 DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.quantified_events;
-DROP TABLE IF EXISTS public.plans_taxes;
-DROP TABLE IF EXISTS public.plans;
 DROP TABLE IF EXISTS public.payments;
 DROP TABLE IF EXISTS public.payment_requests;
 DROP TABLE IF EXISTS public.payment_receipts;
 DROP TABLE IF EXISTS public.payment_providers;
-DROP TABLE IF EXISTS public.payment_provider_customers;
 DROP TABLE IF EXISTS public.password_resets;
-DROP TABLE IF EXISTS public.organizations;
 DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
-DROP TABLE IF EXISTS public.invoices_taxes;
 DROP TABLE IF EXISTS public.invoices_payment_requests;
-DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.invoice_subscriptions;
-DROP TABLE IF EXISTS public.invoice_metadata;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
@@ -565,8 +554,35 @@ DROP TABLE IF EXISTS public.integration_collection_mappings;
 DROP TABLE IF EXISTS public.inbound_webhooks;
 DROP TABLE IF EXISTS public.groups;
 DROP TABLE IF EXISTS public.group_properties;
+DROP VIEW IF EXISTS public.exports_wallets;
+DROP VIEW IF EXISTS public.exports_wallet_transactions;
+DROP TABLE IF EXISTS public.wallets;
+DROP TABLE IF EXISTS public.wallet_transactions;
+DROP VIEW IF EXISTS public.exports_taxes;
+DROP VIEW IF EXISTS public.exports_subscriptions;
+DROP VIEW IF EXISTS public.exports_plans;
+DROP TABLE IF EXISTS public.plans_taxes;
+DROP VIEW IF EXISTS public.exports_invoices_taxes;
+DROP TABLE IF EXISTS public.taxes;
+DROP TABLE IF EXISTS public.invoices_taxes;
+DROP VIEW IF EXISTS public.exports_invoices;
+DROP TABLE IF EXISTS public.invoices;
+DROP TABLE IF EXISTS public.invoice_metadata;
+DROP VIEW IF EXISTS public.exports_fees_taxes;
 DROP TABLE IF EXISTS public.fees_taxes;
+DROP VIEW IF EXISTS public.exports_fees;
+DROP TABLE IF EXISTS public.subscriptions;
 DROP TABLE IF EXISTS public.fees;
+DROP VIEW IF EXISTS public.exports_customers;
+DROP TABLE IF EXISTS public.payment_provider_customers;
+DROP TABLE IF EXISTS public.organizations;
+DROP VIEW IF EXISTS public.exports_credit_notes_taxes;
+DROP VIEW IF EXISTS public.exports_credit_notes;
+DROP VIEW IF EXISTS public.exports_coupons;
+DROP VIEW IF EXISTS public.exports_charges;
+DROP TABLE IF EXISTS public.plans;
+DROP VIEW IF EXISTS public.exports_billable_metrics;
+DROP VIEW IF EXISTS public.exports_applied_coupons;
 DROP TABLE IF EXISTS public.events;
 DROP TABLE IF EXISTS public.error_details;
 DROP TABLE IF EXISTS public.dunning_campaigns;
@@ -621,6 +637,14 @@ DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
+-- *not* dropping schema, since initdb creates it
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+-- *not* creating schema, since initdb creates it
+
+
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
@@ -1583,6 +1607,371 @@ WITH (autovacuum_vacuum_scale_factor='0.005');
 
 
 --
+-- Name: exports_applied_coupons; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_applied_coupons AS
+ SELECT cp.organization_id,
+    ac.id AS lago_id,
+    ac.coupon_id AS lago_coupon_id,
+    ac.customer_id AS lago_customer_id,
+        CASE ac.status
+            WHEN 0 THEN 'active'::text
+            WHEN 1 THEN 'terminated'::text
+            ELSE NULL::text
+        END AS status,
+    ac.amount_cents,
+        CASE ac.frequency
+            WHEN 0 THEN NULL::numeric
+            WHEN 1 THEN NULL::numeric
+            ELSE
+            CASE
+                WHEN (cp.coupon_type = 1) THEN NULL::numeric
+                ELSE ((ac.amount_cents)::numeric - ( SELECT sum(cr.amount_cents) AS sum
+                   FROM public.credits cr
+                  WHERE (cr.applied_coupon_id = ac.id)))
+            END
+        END AS amount_cents_remaining,
+    ac.amount_currency,
+    ac.percentage_rate,
+        CASE ac.frequency
+            WHEN 0 THEN 'once'::text
+            WHEN 1 THEN 'recurring'::text
+            WHEN 2 THEN 'forever'::text
+            ELSE NULL::text
+        END AS frequency,
+    ac.frequency_duration,
+    ac.frequency_duration_remaining,
+    ((ac.created_at)::timestamp with time zone)::text AS created_at,
+    ((ac.terminated_at)::timestamp with time zone)::text AS terminated_at,
+    ( SELECT json_agg(json_build_object('lago_id', cr.id, 'amount_cents', cr.amount_cents, 'amount_currency', cr.amount_currency, 'before_taxes', cr.before_taxes)) AS json_agg
+           FROM public.credits cr
+          WHERE (cr.applied_coupon_id = ac.id)) AS credits
+   FROM (public.applied_coupons ac
+     LEFT JOIN public.coupons cp ON ((cp.id = ac.coupon_id)));
+
+
+--
+-- Name: exports_billable_metrics; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_billable_metrics AS
+ SELECT bm.organization_id,
+    bm.id AS lago_id,
+    bm.name,
+    bm.code,
+    bm.description,
+        CASE bm.aggregation_type
+            WHEN 0 THEN 'count_agg'::text
+            WHEN 1 THEN 'sum_agg'::text
+            WHEN 2 THEN 'max_agg'::text
+            WHEN 3 THEN 'unique_count_agg'::text
+            WHEN 5 THEN 'weighted_sum_agg'::text
+            WHEN 6 THEN 'latest_agg'::text
+            WHEN 7 THEN 'custom_agg'::text
+            ELSE 'unknown'::text
+        END AS aggregation_type,
+    bm.weighted_interval,
+    bm.recurring,
+    bm.rounding_function,
+    bm.rounding_precision,
+    ((bm.created_at)::timestamp with time zone)::text AS created_at,
+    bm.field_name,
+    bm.expression,
+    COALESCE(( SELECT json_agg(json_build_object('key', bmf.key, 'values', bmf."values")) AS json_agg
+           FROM public.billable_metric_filters bmf
+          WHERE ((bmf.billable_metric_id = bm.id) AND (bmf.deleted_at IS NULL))), '[]'::json) AS filters
+   FROM public.billable_metrics bm
+  WHERE (bm.deleted_at IS NULL);
+
+
+--
+-- Name: plans; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.plans (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    name character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    code character varying NOT NULL,
+    "interval" integer NOT NULL,
+    description character varying,
+    amount_cents bigint NOT NULL,
+    amount_currency character varying NOT NULL,
+    trial_period double precision,
+    pay_in_advance boolean DEFAULT false NOT NULL,
+    bill_charges_monthly boolean,
+    parent_id uuid,
+    deleted_at timestamp(6) without time zone,
+    pending_deletion boolean DEFAULT false NOT NULL,
+    invoice_display_name character varying
+);
+
+
+--
+-- Name: exports_charges; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_charges AS
+ SELECT p.organization_id,
+    c.id AS lago_id,
+    c.billable_metric_id AS lago_billable_metric_id,
+    c.invoice_display_name,
+    ((c.created_at)::timestamp with time zone)::text AS created_at,
+        CASE c.charge_model
+            WHEN 0 THEN 'standard'::text
+            WHEN 1 THEN 'graduated'::text
+            WHEN 2 THEN 'package'::text
+            WHEN 3 THEN 'percentage'::text
+            WHEN 4 THEN 'volume'::text
+            WHEN 5 THEN 'graduated_percentage'::text
+            WHEN 6 THEN 'custom'::text
+            WHEN 7 THEN 'dynamic'::text
+            ELSE NULL::text
+        END AS charge_model,
+    c.invoiceable,
+    c.regroup_paid_fees,
+    c.pay_in_advance,
+    c.prorated,
+    c.min_amount_cents,
+    c.properties,
+    ( SELECT json_agg(json_build_object('invoice_display_name', cf.invoice_display_name, 'properties', cf.properties, 'values', ( SELECT json_agg(json_build_object(cfcv.billable_metric_filter_id, cfcv."values")) AS json_agg
+                   FROM public.charge_filter_values cfcv
+                  WHERE (cfcv.charge_filter_id = cf.id)))) AS json_agg
+           FROM public.charge_filters cf
+          WHERE (cf.charge_id = c.id)) AS charge_filters
+   FROM (public.charges c
+     LEFT JOIN public.plans p ON ((p.id = c.plan_id)));
+
+
+--
+-- Name: exports_coupons; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_coupons AS
+ SELECT cp.organization_id,
+    cp.id AS lago_id,
+    cp.name,
+    cp.code,
+    cp.description,
+        CASE cp.coupon_type
+            WHEN 0 THEN 'fixed_amount'::text
+            WHEN 1 THEN 'percentage'::text
+            ELSE NULL::text
+        END AS coupon_type,
+    cp.amount_cents,
+    cp.amount_currency,
+    cp.percentage_rate,
+    cp.frequency,
+    cp.frequency_duration,
+    cp.reusable,
+    cp.limited_plans,
+    cp.limited_billable_metrics,
+    ARRAY( SELECT cpt.plan_id
+           FROM public.coupon_targets cpt
+          WHERE ((cpt.coupon_id = cp.id) AND (cpt.plan_id IS NOT NULL))) AS lago_plan_ids,
+    ARRAY( SELECT cpt.billable_metric_id
+           FROM public.coupon_targets cpt
+          WHERE ((cpt.coupon_id = cp.id) AND (cpt.billable_metric_id IS NOT NULL))) AS lago_billable_metrics_ids,
+    ((cp.created_at)::timestamp with time zone)::text AS created_at,
+    cp.expiration,
+    ((cp.expiration_at)::timestamp with time zone)::text AS expiration_at,
+    ((cp.terminated_at)::timestamp with time zone)::text AS terminated_at
+   FROM public.coupons cp;
+
+
+--
+-- Name: exports_credit_notes; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_credit_notes AS
+ SELECT c.organization_id,
+    cn.id AS lago_id,
+    cn.sequential_id,
+    cn.number,
+    cn.invoice_id AS lago_invoice_id,
+    ((cn.issuing_date)::timestamp with time zone)::text AS issuing_date,
+        CASE cn.credit_status
+            WHEN 0 THEN 'available'::text
+            WHEN 1 THEN 'consumed'::text
+            WHEN 2 THEN 'voided'::text
+            ELSE NULL::text
+        END AS credit_status,
+        CASE cn.refund_status
+            WHEN 0 THEN 'pending'::text
+            WHEN 1 THEN 'succeeded'::text
+            WHEN 2 THEN 'failed'::text
+            ELSE NULL::text
+        END AS refund_status,
+    cn.reason,
+    cn.description,
+    cn.total_amount_currency AS currency,
+    cn.total_amount_cents,
+    cn.taxes_amount_cents,
+    round((( SELECT sum(ci.precise_amount_cents) AS sum
+           FROM public.credit_note_items ci
+          WHERE (ci.credit_note_id = cn.id)) - cn.precise_coupons_adjustment_amount_cents)) AS sub_total_excluding_taxes_amount_cents,
+    cn.balance_amount_cents,
+    cn.credit_amount_cents,
+    cn.refund_amount_cents,
+    cn.coupons_adjustment_amount_cents,
+    cn.taxes_rate,
+    ((cn.created_at)::timestamp with time zone)::text AS created_at,
+    ((cn.updated_at)::timestamp with time zone)::text AS updated_at,
+    ( SELECT json_agg(json_build_object('lago_id', ci.id, 'amount_cents', ci.amount_cents, 'amount_currency', ci.amount_currency, 'lago_fee_id', ci.fee_id)) AS json_agg
+           FROM public.credit_note_items ci
+          WHERE (ci.credit_note_id = cn.id)) AS items,
+    ( SELECT json_agg(json_build_object('lago_id', ed.id, 'error_code', ed.error_code, 'details', ed.details)) AS json_agg
+           FROM public.error_details ed
+          WHERE (ed.owner_id = cn.id)) AS error_details
+   FROM (public.credit_notes cn
+     LEFT JOIN public.customers c ON ((c.id = cn.customer_id)));
+
+
+--
+-- Name: exports_credit_notes_taxes; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_credit_notes_taxes AS
+ SELECT c.organization_id,
+    cn.id AS lago_id,
+    cnt.tax_id AS lago_tax_id,
+    cnt.credit_note_id AS lago_credit_note_id,
+    cnt.tax_name,
+    cnt.tax_code,
+    cnt.tax_rate,
+    cnt.tax_description,
+    cnt.base_amount_cents,
+    cnt.amount_cents,
+    cnt.amount_currency,
+    ((cnt.created_at)::timestamp with time zone)::text AS created_at
+   FROM ((public.credit_notes_taxes cnt
+     LEFT JOIN public.credit_notes cn ON ((cn.id = cnt.credit_note_id)))
+     LEFT JOIN public.customers c ON ((c.id = cn.customer_id)));
+
+
+--
+-- Name: organizations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.organizations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    api_key character varying,
+    webhook_url character varying,
+    vat_rate double precision DEFAULT 0.0 NOT NULL,
+    country character varying,
+    address_line1 character varying,
+    address_line2 character varying,
+    state character varying,
+    zipcode character varying,
+    email character varying,
+    city character varying,
+    logo character varying,
+    legal_name character varying,
+    legal_number character varying,
+    invoice_footer text,
+    invoice_grace_period integer DEFAULT 0 NOT NULL,
+    timezone character varying DEFAULT 'UTC'::character varying NOT NULL,
+    document_locale character varying DEFAULT 'en'::character varying NOT NULL,
+    email_settings character varying[] DEFAULT '{}'::character varying[] NOT NULL,
+    tax_identification_number character varying,
+    net_payment_term integer DEFAULT 0 NOT NULL,
+    default_currency character varying DEFAULT 'USD'::character varying NOT NULL,
+    document_numbering integer DEFAULT 0 NOT NULL,
+    document_number_prefix character varying,
+    eu_tax_management boolean DEFAULT false,
+    clickhouse_aggregation boolean DEFAULT false NOT NULL,
+    premium_integrations character varying[] DEFAULT '{}'::character varying[] NOT NULL,
+    custom_aggregation boolean DEFAULT false,
+    finalize_zero_amount_invoice boolean DEFAULT true NOT NULL,
+    clickhouse_events_store boolean DEFAULT false NOT NULL,
+    hmac_key character varying NOT NULL,
+    CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
+    CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
+);
+
+
+--
+-- Name: payment_provider_customers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_provider_customers (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    customer_id uuid NOT NULL,
+    payment_provider_id uuid,
+    type character varying NOT NULL,
+    provider_customer_id character varying,
+    settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    deleted_at timestamp(6) without time zone
+);
+
+
+--
+-- Name: exports_customers; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_customers AS
+ SELECT c.organization_id,
+    c.id AS lago_id,
+    c.billing_entity_id,
+    c.external_id,
+    (c.account_type)::text AS account_type,
+    c.name,
+    c.firstname,
+    c.lastname,
+    (c.customer_type)::text AS customer_type,
+    c.sequential_id,
+    c.slug,
+    c.created_at,
+    c.updated_at,
+    c.country,
+    c.address_line1,
+    c.address_line2,
+    c.state,
+    c.zipcode,
+    c.email,
+    c.city,
+    c.url,
+    c.phone,
+    c.logo_url,
+    c.legal_name,
+    c.legal_number,
+    c.currency,
+    c.tax_identification_number,
+    c.timezone,
+    COALESCE(c.timezone, o.timezone, 'UTC'::character varying) AS applicable_timezone,
+    c.net_payment_term,
+    c.external_salesforce_id,
+    c.finalize_zero_amount_invoice,
+    c.skip_invoice_custom_sections,
+    c.payment_provider,
+    c.payment_provider_code,
+    c.invoice_grace_period,
+    c.vat_rate,
+    COALESCE(c.invoice_grace_period, o.invoice_grace_period) AS applicable_invoice_grace_period,
+    c.document_locale,
+    ppc.provider_customer_id,
+    ppc.settings AS provider_settings,
+    COALESCE(( SELECT json_agg(json_build_object('id', cm.id, 'key', cm.key, 'value', cm.value, 'display_in_invoice', cm.display_in_invoice)) AS json_agg
+           FROM public.customer_metadata cm
+          WHERE (cm.customer_id = c.id)), '[]'::json) AS metadata,
+    ARRAY( SELECT ct.tax_id AS lago_tax_id
+           FROM public.customers_taxes ct
+          WHERE (ct.customer_id = c.id)) AS lago_taxes_ids
+   FROM ((public.customers c
+     LEFT JOIN public.organizations o ON ((o.id = c.organization_id)))
+     LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL))))
+  WHERE (c.deleted_at IS NULL);
+
+
+--
 -- Name: fees; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1633,6 +2022,133 @@ CREATE TABLE public.fees (
 
 
 --
+-- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subscriptions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    customer_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    status integer NOT NULL,
+    canceled_at timestamp without time zone,
+    terminated_at timestamp without time zone,
+    started_at timestamp without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    previous_subscription_id uuid,
+    name character varying,
+    external_id character varying NOT NULL,
+    billing_time integer DEFAULT 0 NOT NULL,
+    subscription_at timestamp(6) without time zone,
+    ending_at timestamp(6) without time zone,
+    trial_ended_at timestamp(6) without time zone
+);
+
+
+--
+-- Name: exports_fees; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_fees AS
+ SELECT f.organization_id,
+    f.id AS lago_id,
+    f.charge_id AS lago_charge_id,
+    f.charge_filter_id AS lago_charge_filter_id,
+    f.invoice_id AS lago_invoice_id,
+    f.subscription_id AS lago_subscription_id,
+    c.id AS lago_customer_id,
+    json_build_object('type',
+        CASE f.fee_type
+            WHEN 0 THEN 'charge'::text
+            WHEN 1 THEN 'add_on'::text
+            WHEN 2 THEN 'subscription'::text
+            WHEN 3 THEN 'credit'::text
+            WHEN 4 THEN 'commitment'::text
+            ELSE 'unknown'::text
+        END, 'code',
+        CASE f.fee_type
+            WHEN 0 THEN bm.code
+            WHEN 1 THEN ao.code
+            WHEN 3 THEN 'credit'::character varying
+            ELSE p.code
+        END, 'name',
+        CASE f.fee_type
+            WHEN 0 THEN bm.name
+            WHEN 1 THEN ao.name
+            WHEN 3 THEN 'credit'::character varying
+            ELSE p.name
+        END, 'description',
+        CASE f.fee_type
+            WHEN 0 THEN bm.description
+            WHEN 1 THEN ao.description
+            WHEN 3 THEN 'credit'::character varying
+            ELSE p.description
+        END, 'invoice_display_name', COALESCE(f.invoice_display_name,
+        CASE f.fee_type
+            WHEN 0 THEN COALESCE(ch.invoice_display_name, bm.name)
+            WHEN 1 THEN COALESCE(ao.invoice_display_name, ao.name)
+            WHEN 3 THEN 'credit'::character varying
+            ELSE p.invoice_display_name
+        END), 'filters', ( SELECT json_agg(json_build_object('id', cf.id, 'charge_id', cf.charge_id, 'properties', cf.properties, 'invoice_display_name', cf.invoice_display_name)) AS json_agg
+           FROM public.charge_filters cf
+          WHERE (cf.charge_id = f.charge_id)), 'lago_item_id',
+        CASE f.fee_type
+            WHEN 0 THEN bm.id
+            WHEN 1 THEN ao.id
+            WHEN 3 THEN f.invoiceable_id
+            ELSE f.subscription_id
+        END, 'item_type',
+        CASE f.fee_type
+            WHEN 0 THEN 'billable_metric'::text
+            WHEN 1 THEN 'add_on'::text
+            WHEN 3 THEN 'wallet_transaction'::text
+            ELSE 'subscription'::text
+        END, 'grouped_by', f.grouped_by) AS item,
+    f.pay_in_advance,
+    f.amount_cents,
+    ch.invoiceable,
+    f.taxes_amount_cents,
+    f.taxes_precise_amount_cents,
+    f.taxes_rate,
+    (f.amount_cents + f.taxes_amount_cents) AS total_amount_cents,
+    f.amount_currency AS currency,
+    f.units,
+    f.description,
+    f.precise_amount_cents,
+    f.precise_unit_amount,
+    f.precise_coupons_amount_cents,
+    (f.precise_amount_cents + f.taxes_precise_amount_cents) AS precise_total_amount_cents,
+    f.events_count,
+        CASE f.payment_status
+            WHEN 0 THEN 'pending'::text
+            WHEN 1 THEN 'succeeded'::text
+            WHEN 2 THEN 'failed'::text
+            WHEN 3 THEN 'refunded'::text
+            ELSE 'unknown'::text
+        END AS payment_status,
+    ((f.created_at)::timestamp with time zone)::text AS created_at,
+    ((f.succeeded_at)::timestamp with time zone)::text AS succeeded_at,
+    ((f.failed_at)::timestamp with time zone)::text AS failed_at,
+    ((f.refunded_at)::timestamp with time zone)::text AS refunded_at,
+    f.amount_details,
+        CASE f.fee_type
+            WHEN 0 THEN (((f.properties ->> 'charges_from_datetime'::text))::timestamp with time zone)::text
+            ELSE (((f.properties ->> 'from_datetime'::text))::timestamp with time zone)::text
+        END AS from_date,
+        CASE f.fee_type
+            WHEN 0 THEN (((f.properties ->> 'charges_to_datetime'::text))::timestamp with time zone)::text
+            ELSE (((f.properties ->> 'to_datetime'::text))::timestamp with time zone)::text
+        END AS to_date
+   FROM ((((((public.fees f
+     LEFT JOIN public.subscriptions s ON ((f.subscription_id = s.id)))
+     LEFT JOIN public.customers c ON ((s.customer_id = c.id)))
+     LEFT JOIN public.charges ch ON ((f.charge_id = ch.id)))
+     LEFT JOIN public.billable_metrics bm ON ((ch.billable_metric_id = bm.id)))
+     LEFT JOIN public.add_ons ao ON ((f.add_on_id = ao.id)))
+     LEFT JOIN public.plans p ON ((s.plan_id = p.id)));
+
+
+--
 -- Name: fees_taxes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1650,6 +2166,453 @@ CREATE TABLE public.fees_taxes (
     updated_at timestamp(6) without time zone NOT NULL,
     precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL
 );
+
+
+--
+-- Name: exports_fees_taxes; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_fees_taxes AS
+ SELECT f.organization_id,
+    ft.id AS lago_id,
+    ft.fee_id AS lago_fee_id,
+    ft.tax_id AS lago_tax_id,
+    ft.tax_name,
+    ft.tax_code,
+    ft.tax_rate,
+    ft.tax_description,
+    ft.amount_cents,
+    ft.amount_currency,
+    ((ft.created_at)::timestamp with time zone)::text AS created_at
+   FROM (public.fees_taxes ft
+     LEFT JOIN public.fees f ON ((f.id = ft.fee_id)));
+
+
+--
+-- Name: invoice_metadata; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoice_metadata (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    invoice_id uuid NOT NULL,
+    key character varying NOT NULL,
+    value character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: invoices; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoices (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    issuing_date date,
+    taxes_amount_cents bigint DEFAULT 0 NOT NULL,
+    total_amount_cents bigint DEFAULT 0 NOT NULL,
+    invoice_type integer DEFAULT 0 NOT NULL,
+    payment_status integer DEFAULT 0 NOT NULL,
+    number character varying DEFAULT ''::character varying NOT NULL,
+    sequential_id integer,
+    file character varying,
+    customer_id uuid,
+    taxes_rate double precision DEFAULT 0.0 NOT NULL,
+    status integer DEFAULT 1 NOT NULL,
+    timezone character varying DEFAULT 'UTC'::character varying NOT NULL,
+    payment_attempts integer DEFAULT 0 NOT NULL,
+    ready_for_payment_processing boolean DEFAULT true NOT NULL,
+    organization_id uuid NOT NULL,
+    version_number integer DEFAULT 4 NOT NULL,
+    currency character varying,
+    fees_amount_cents bigint DEFAULT 0 NOT NULL,
+    coupons_amount_cents bigint DEFAULT 0 NOT NULL,
+    credit_notes_amount_cents bigint DEFAULT 0 NOT NULL,
+    prepaid_credit_amount_cents bigint DEFAULT 0 NOT NULL,
+    sub_total_excluding_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
+    sub_total_including_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
+    payment_due_date date,
+    net_payment_term integer DEFAULT 0 NOT NULL,
+    voided_at timestamp(6) without time zone,
+    organization_sequential_id integer DEFAULT 0 NOT NULL,
+    ready_to_be_refreshed boolean DEFAULT false NOT NULL,
+    payment_dispute_lost_at timestamp(6) without time zone DEFAULT NULL::timestamp without time zone,
+    skip_charges boolean DEFAULT false NOT NULL,
+    payment_overdue boolean DEFAULT false,
+    negative_amount_cents bigint DEFAULT 0 NOT NULL,
+    progressive_billing_credit_amount_cents bigint DEFAULT 0 NOT NULL,
+    tax_status public.tax_status,
+    total_paid_amount_cents bigint DEFAULT 0 NOT NULL,
+    self_billed boolean DEFAULT false NOT NULL,
+    applied_grace_period integer,
+    billing_entity_id uuid NOT NULL,
+    billing_entity_sequential_id integer,
+    finalized_at timestamp without time zone,
+    CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
+);
+
+
+--
+-- Name: exports_invoices; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_invoices AS
+ SELECT i.organization_id,
+    i.id AS lago_id,
+    i.sequential_id,
+    i.customer_id,
+    i.number,
+    ((i.issuing_date)::timestamp with time zone)::text AS issuing_date,
+    ((i.payment_due_date)::timestamp with time zone)::text AS payment_due_date,
+    i.net_payment_term,
+        CASE i.invoice_type
+            WHEN 0 THEN 'subscription'::text
+            WHEN 1 THEN 'add_on'::text
+            WHEN 2 THEN 'credit'::text
+            WHEN 3 THEN 'one_off'::text
+            WHEN 4 THEN 'advance_charges'::text
+            WHEN 5 THEN 'progressive_billing'::text
+            ELSE NULL::text
+        END AS invoice_type,
+        CASE i.status
+            WHEN 0 THEN 'draft'::text
+            WHEN 1 THEN 'finalized'::text
+            WHEN 2 THEN 'voided'::text
+            WHEN 3 THEN 'generating'::text
+            WHEN 4 THEN 'failed'::text
+            WHEN 5 THEN 'open'::text
+            WHEN 6 THEN 'close'::text
+            WHEN 7 THEN 'pending'::text
+            ELSE NULL::text
+        END AS status,
+        CASE i.payment_status
+            WHEN 0 THEN 'pending'::text
+            WHEN 1 THEN 'succeeded'::text
+            WHEN 2 THEN 'failed'::text
+            ELSE NULL::text
+        END AS payment_status,
+    ((i.payment_dispute_lost_at)::timestamp with time zone)::text AS payment_dispute_lost_at,
+    i.payment_overdue,
+    i.currency,
+    i.fees_amount_cents,
+    i.taxes_amount_cents,
+    i.progressive_billing_credit_amount_cents,
+    i.coupons_amount_cents,
+    i.credit_notes_amount_cents,
+    i.sub_total_excluding_taxes_amount_cents,
+    i.sub_total_including_taxes_amount_cents,
+    i.total_amount_cents,
+    (i.total_amount_cents - i.total_paid_amount_cents) AS total_due_amount_cents,
+    i.prepaid_credit_amount_cents,
+    i.version_number,
+    ((i.created_at)::timestamp with time zone)::text AS created_at,
+    ((i.updated_at)::timestamp with time zone)::text AS updated_at,
+    ((i.voided_at)::timestamp with time zone)::text AS voided_at,
+    ( SELECT json_agg(json_build_object('lago_id', m_1.id, 'key', m_1.key, 'value', m_1.value, 'created_at', ((m_1.created_at)::timestamp with time zone)::text)) AS json_agg
+           FROM public.invoice_metadata m_1
+          WHERE (m_1.invoice_id = i.id)) AS metadata,
+    ( SELECT json_agg(json_build_object('lago_id', ed.id, 'error_code', ed.error_code, 'details', ed.details)) AS json_agg
+           FROM public.error_details ed
+          WHERE (ed.owner_id = i.id)) AS error_details
+   FROM (public.invoices i
+     LEFT JOIN public.invoice_metadata m ON ((i.id = m.invoice_id)))
+  WHERE (i.status = ANY (ARRAY[0, 1, 2, 4, 7]));
+
+
+--
+-- Name: invoices_taxes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoices_taxes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    invoice_id uuid NOT NULL,
+    tax_id uuid,
+    tax_description character varying,
+    tax_code character varying NOT NULL,
+    tax_name character varying NOT NULL,
+    tax_rate double precision DEFAULT 0.0 NOT NULL,
+    amount_cents bigint DEFAULT 0 NOT NULL,
+    amount_currency character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    fees_amount_cents bigint DEFAULT 0 NOT NULL,
+    taxable_base_amount_cents bigint DEFAULT 0 NOT NULL
+);
+
+
+--
+-- Name: taxes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.taxes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    description character varying,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    rate double precision DEFAULT 0.0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    applied_to_organization boolean DEFAULT false NOT NULL,
+    auto_generated boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: exports_invoices_taxes; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_invoices_taxes AS
+ SELECT t.organization_id,
+    it.id AS lago_id,
+    it.invoice_id AS lago_invoice_id,
+    it.tax_id AS lago_tax_id,
+    it.tax_name,
+    it.tax_code,
+    it.tax_rate,
+    it.tax_description,
+    it.amount_cents,
+    it.amount_currency,
+    it.fees_amount_cents,
+    ((it.created_at)::timestamp with time zone)::text AS created_at
+   FROM (public.invoices_taxes it
+     LEFT JOIN public.taxes t ON ((it.tax_id = t.id)));
+
+
+--
+-- Name: plans_taxes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.plans_taxes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    plan_id uuid NOT NULL,
+    tax_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: exports_plans; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_plans AS
+ SELECT p.organization_id,
+    p.id AS lago_id,
+    p.name,
+    p.invoice_display_name,
+    ((p.created_at)::timestamp with time zone)::text AS created_at,
+    p.code,
+        CASE p."interval"
+            WHEN 0 THEN 'weekly'::text
+            WHEN 1 THEN 'monthly'::text
+            WHEN 2 THEN 'yearly'::text
+            WHEN 3 THEN 'quarterly'::text
+            ELSE NULL::text
+        END AS "interval",
+    p.description,
+    p.amount_cents,
+    p.amount_currency,
+    p.trial_period,
+    p.pay_in_advance,
+    p.bill_charges_monthly,
+    p.parent_id,
+    ARRAY( SELECT pt.tax_id AS lago_tax_id
+           FROM public.plans_taxes pt
+          WHERE (pt.plan_id = p.id)) AS lago_taxes_ids
+   FROM public.plans p
+  WHERE (p.deleted_at IS NULL);
+
+
+--
+-- Name: exports_subscriptions; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_subscriptions AS
+ SELECT c.organization_id,
+    s.id AS lago_id,
+    s.external_id,
+    s.customer_id AS lago_customer_id,
+    s.name,
+    s.plan_id AS lago_plan_id,
+        CASE s.status
+            WHEN 0 THEN 'pending'::text
+            WHEN 1 THEN 'active'::text
+            WHEN 2 THEN 'terminated'::text
+            WHEN 3 THEN 'canceled'::text
+            ELSE NULL::text
+        END AS status,
+        CASE s.billing_time
+            WHEN 0 THEN 'calendar'::text
+            WHEN 1 THEN 'anniversary'::text
+            ELSE NULL::text
+        END AS billing_time,
+    ((s.subscription_at)::timestamp with time zone)::text AS subscription_at,
+    ((s.started_at)::timestamp with time zone)::text AS started_at,
+    ((s.trial_ended_at)::timestamp with time zone)::text AS trial_ended_at,
+    ((s.ending_at)::timestamp with time zone)::text AS ending_at,
+    ((s.terminated_at)::timestamp with time zone)::text AS terminated_at,
+    ((s.canceled_at)::timestamp with time zone)::text AS canceled_at,
+    ((s.created_at)::timestamp with time zone)::text AS created_at,
+    ((s.updated_at)::timestamp with time zone)::text AS updated_at,
+    ARRAY( SELECT ns.id
+           FROM public.subscriptions ns
+          WHERE (ns.previous_subscription_id = s.id)) AS lago_next_subscriptions_id,
+    s.previous_subscription_id AS lago_previous_subscription_id
+   FROM (public.subscriptions s
+     LEFT JOIN public.customers c ON ((s.customer_id = c.id)));
+
+
+--
+-- Name: exports_taxes; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_taxes AS
+ SELECT tx.organization_id,
+    tx.id AS lago_id,
+    tx.name,
+    tx.code,
+    tx.rate,
+    tx.description,
+    tx.applied_to_organization,
+    ((tx.created_at)::timestamp with time zone)::text AS created_at
+   FROM public.taxes tx;
+
+
+--
+-- Name: wallet_transactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wallet_transactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    wallet_id uuid NOT NULL,
+    transaction_type integer NOT NULL,
+    status integer NOT NULL,
+    amount numeric(30,5) DEFAULT 0.0 NOT NULL,
+    credit_amount numeric(30,5) DEFAULT 0.0 NOT NULL,
+    settled_at timestamp without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    invoice_id uuid,
+    source integer DEFAULT 0 NOT NULL,
+    transaction_status integer DEFAULT 0 NOT NULL,
+    invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
+    metadata jsonb DEFAULT '[]'::jsonb,
+    credit_note_id uuid,
+    failed_at timestamp(6) without time zone
+);
+
+
+--
+-- Name: wallets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wallets (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    customer_id uuid NOT NULL,
+    status integer NOT NULL,
+    name character varying,
+    rate_amount numeric(30,5) DEFAULT 0.0 NOT NULL,
+    credits_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
+    consumed_credits numeric(30,5) DEFAULT 0.0 NOT NULL,
+    expiration_at timestamp without time zone,
+    last_balance_sync_at timestamp without time zone,
+    last_consumed_credit_at timestamp without time zone,
+    terminated_at timestamp without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    balance_cents bigint DEFAULT 0 NOT NULL,
+    balance_currency character varying NOT NULL,
+    consumed_amount_cents bigint DEFAULT 0 NOT NULL,
+    consumed_amount_currency character varying NOT NULL,
+    ongoing_balance_cents bigint DEFAULT 0 NOT NULL,
+    ongoing_usage_balance_cents bigint DEFAULT 0 NOT NULL,
+    credits_ongoing_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
+    credits_ongoing_usage_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
+    depleted_ongoing_balance boolean DEFAULT false NOT NULL,
+    invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
+    lock_version integer DEFAULT 0 NOT NULL,
+    ready_to_be_refreshed boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: exports_wallet_transactions; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_wallet_transactions AS
+ SELECT c.organization_id,
+    wt.id AS lago_id,
+    wt.wallet_id AS lago_wallet_id,
+        CASE wt.status
+            WHEN 0 THEN 'pending'::text
+            WHEN 1 THEN 'settled'::text
+            WHEN 2 THEN 'failed'::text
+            ELSE NULL::text
+        END AS status,
+        CASE wt.source
+            WHEN 0 THEN 'manual'::text
+            WHEN 1 THEN 'interval'::text
+            WHEN 2 THEN 'threshold'::text
+            ELSE NULL::text
+        END AS source,
+        CASE wt.transaction_status
+            WHEN 0 THEN 'purchased'::text
+            WHEN 1 THEN 'granted'::text
+            WHEN 2 THEN 'voided'::text
+            WHEN 3 THEN 'invoiced'::text
+            ELSE NULL::text
+        END AS transaction_status,
+        CASE wt.transaction_type
+            WHEN 0 THEN 'inbound'::text
+            WHEN 1 THEN 'outbound'::text
+            ELSE NULL::text
+        END AS transaction_type,
+    wt.amount,
+    wt.credit_amount,
+    ((wt.settled_at)::timestamp with time zone)::text AS settled_at,
+    ((wt.failed_at)::timestamp with time zone)::text AS failed_at,
+    ((wt.created_at)::timestamp with time zone)::text AS created_at,
+    wt.invoice_requires_successful_payment,
+    wt.metadata
+   FROM ((public.wallet_transactions wt
+     LEFT JOIN public.wallets w ON ((wt.wallet_id = w.id)))
+     LEFT JOIN public.customers c ON ((c.id = w.customer_id)));
+
+
+--
+-- Name: exports_wallets; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_wallets AS
+ SELECT c.organization_id,
+    w.id AS lago_id,
+    w.customer_id AS lago_customer_id,
+        CASE w.status
+            WHEN 0 THEN 'active'::text
+            WHEN 1 THEN 'terminated'::text
+            ELSE NULL::text
+        END AS status,
+    w.balance_currency AS currency,
+    w.name,
+    w.rate_amount,
+    w.credits_balance,
+    w.credits_ongoing_balance,
+    w.credits_ongoing_usage_balance,
+    w.balance_cents,
+    w.ongoing_balance_cents,
+    w.ongoing_usage_balance_cents,
+    w.consumed_credits,
+    ((w.created_at)::timestamp with time zone)::text AS created_at,
+    ((w.updated_at)::timestamp with time zone)::text AS updated_at,
+    ((w.terminated_at)::timestamp with time zone)::text AS terminated_at,
+    ((w.last_balance_sync_at)::timestamp with time zone)::text AS last_balance_sync_at,
+    ((w.last_consumed_credit_at)::timestamp with time zone)::text AS last_consumed_credit_at,
+    w.invoice_requires_successful_payment
+   FROM (public.wallets w
+     LEFT JOIN public.customers c ON ((c.id = w.customer_id)));
 
 
 --
@@ -1853,20 +2816,6 @@ CREATE TABLE public.invoice_custom_sections (
 
 
 --
--- Name: invoice_metadata; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoice_metadata (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_id uuid NOT NULL,
-    key character varying NOT NULL,
-    value character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
 -- Name: invoice_subscriptions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1887,58 +2836,6 @@ CREATE TABLE public.invoice_subscriptions (
 
 
 --
--- Name: invoices; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoices (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    issuing_date date,
-    taxes_amount_cents bigint DEFAULT 0 NOT NULL,
-    total_amount_cents bigint DEFAULT 0 NOT NULL,
-    invoice_type integer DEFAULT 0 NOT NULL,
-    payment_status integer DEFAULT 0 NOT NULL,
-    number character varying DEFAULT ''::character varying NOT NULL,
-    sequential_id integer,
-    file character varying,
-    customer_id uuid,
-    taxes_rate double precision DEFAULT 0.0 NOT NULL,
-    status integer DEFAULT 1 NOT NULL,
-    timezone character varying DEFAULT 'UTC'::character varying NOT NULL,
-    payment_attempts integer DEFAULT 0 NOT NULL,
-    ready_for_payment_processing boolean DEFAULT true NOT NULL,
-    organization_id uuid NOT NULL,
-    version_number integer DEFAULT 4 NOT NULL,
-    currency character varying,
-    fees_amount_cents bigint DEFAULT 0 NOT NULL,
-    coupons_amount_cents bigint DEFAULT 0 NOT NULL,
-    credit_notes_amount_cents bigint DEFAULT 0 NOT NULL,
-    prepaid_credit_amount_cents bigint DEFAULT 0 NOT NULL,
-    sub_total_excluding_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
-    sub_total_including_taxes_amount_cents bigint DEFAULT 0 NOT NULL,
-    payment_due_date date,
-    net_payment_term integer DEFAULT 0 NOT NULL,
-    voided_at timestamp(6) without time zone,
-    organization_sequential_id integer DEFAULT 0 NOT NULL,
-    ready_to_be_refreshed boolean DEFAULT false NOT NULL,
-    payment_dispute_lost_at timestamp(6) without time zone DEFAULT NULL::timestamp without time zone,
-    skip_charges boolean DEFAULT false NOT NULL,
-    payment_overdue boolean DEFAULT false,
-    negative_amount_cents bigint DEFAULT 0 NOT NULL,
-    progressive_billing_credit_amount_cents bigint DEFAULT 0 NOT NULL,
-    tax_status public.tax_status,
-    total_paid_amount_cents bigint DEFAULT 0 NOT NULL,
-    self_billed boolean DEFAULT false NOT NULL,
-    applied_grace_period integer,
-    billing_entity_id uuid NOT NULL,
-    billing_entity_sequential_id integer,
-    finalized_at timestamp without time zone,
-    CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
-);
-
-
---
 -- Name: invoices_payment_requests; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1948,27 +2845,6 @@ CREATE TABLE public.invoices_payment_requests (
     payment_request_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: invoices_taxes; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoices_taxes (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_id uuid NOT NULL,
-    tax_id uuid,
-    tax_description character varying,
-    tax_code character varying NOT NULL,
-    tax_name character varying NOT NULL,
-    tax_rate double precision DEFAULT 0.0 NOT NULL,
-    amount_cents bigint DEFAULT 0 NOT NULL,
-    amount_currency character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    fees_amount_cents bigint DEFAULT 0 NOT NULL,
-    taxable_base_amount_cents bigint DEFAULT 0 NOT NULL
 );
 
 
@@ -2042,50 +2918,6 @@ CREATE TABLE public.memberships (
 
 
 --
--- Name: organizations; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.organizations (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    name character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    api_key character varying,
-    webhook_url character varying,
-    vat_rate double precision DEFAULT 0.0 NOT NULL,
-    country character varying,
-    address_line1 character varying,
-    address_line2 character varying,
-    state character varying,
-    zipcode character varying,
-    email character varying,
-    city character varying,
-    logo character varying,
-    legal_name character varying,
-    legal_number character varying,
-    invoice_footer text,
-    invoice_grace_period integer DEFAULT 0 NOT NULL,
-    timezone character varying DEFAULT 'UTC'::character varying NOT NULL,
-    document_locale character varying DEFAULT 'en'::character varying NOT NULL,
-    email_settings character varying[] DEFAULT '{}'::character varying[] NOT NULL,
-    tax_identification_number character varying,
-    net_payment_term integer DEFAULT 0 NOT NULL,
-    default_currency character varying DEFAULT 'USD'::character varying NOT NULL,
-    document_numbering integer DEFAULT 0 NOT NULL,
-    document_number_prefix character varying,
-    eu_tax_management boolean DEFAULT false,
-    clickhouse_aggregation boolean DEFAULT false NOT NULL,
-    premium_integrations character varying[] DEFAULT '{}'::character varying[] NOT NULL,
-    custom_aggregation boolean DEFAULT false,
-    finalize_zero_amount_invoice boolean DEFAULT true NOT NULL,
-    clickhouse_events_store boolean DEFAULT false NOT NULL,
-    hmac_key character varying NOT NULL,
-    CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
-    CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
-);
-
-
---
 -- Name: password_resets; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2096,23 +2928,6 @@ CREATE TABLE public.password_resets (
     expire_at timestamp(6) without time zone NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
--- Name: payment_provider_customers; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.payment_provider_customers (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    customer_id uuid NOT NULL,
-    payment_provider_id uuid,
-    type character varying NOT NULL,
-    provider_customer_id character varying,
-    settings jsonb DEFAULT '{}'::jsonb NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    deleted_at timestamp(6) without time zone
 );
 
 
@@ -2195,44 +3010,6 @@ CREATE TABLE public.payments (
 
 
 --
--- Name: plans; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.plans (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    name character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    code character varying NOT NULL,
-    "interval" integer NOT NULL,
-    description character varying,
-    amount_cents bigint NOT NULL,
-    amount_currency character varying NOT NULL,
-    trial_period double precision,
-    pay_in_advance boolean DEFAULT false NOT NULL,
-    bill_charges_monthly boolean,
-    parent_id uuid,
-    deleted_at timestamp(6) without time zone,
-    pending_deletion boolean DEFAULT false NOT NULL,
-    invoice_display_name character varying
-);
-
-
---
--- Name: plans_taxes; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.plans_taxes (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    plan_id uuid NOT NULL,
-    tax_id uuid NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-
---
 -- Name: quantified_events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2308,48 +3085,6 @@ CREATE TABLE public.schema_migrations (
 
 
 --
--- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.subscriptions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    customer_id uuid NOT NULL,
-    plan_id uuid NOT NULL,
-    status integer NOT NULL,
-    canceled_at timestamp without time zone,
-    terminated_at timestamp without time zone,
-    started_at timestamp without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    previous_subscription_id uuid,
-    name character varying,
-    external_id character varying NOT NULL,
-    billing_time integer DEFAULT 0 NOT NULL,
-    subscription_at timestamp(6) without time zone,
-    ending_at timestamp(6) without time zone,
-    trial_ended_at timestamp(6) without time zone
-);
-
-
---
--- Name: taxes; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.taxes (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    description character varying,
-    code character varying NOT NULL,
-    name character varying NOT NULL,
-    rate double precision DEFAULT 0.0 NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    applied_to_organization boolean DEFAULT false NOT NULL,
-    auto_generated boolean DEFAULT false NOT NULL
-);
-
-
---
 -- Name: usage_thresholds; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2412,63 +3147,6 @@ CREATE SEQUENCE public.versions_id_seq
 --
 
 ALTER SEQUENCE public.versions_id_seq OWNED BY public.versions.id;
-
-
---
--- Name: wallet_transactions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.wallet_transactions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    wallet_id uuid NOT NULL,
-    transaction_type integer NOT NULL,
-    status integer NOT NULL,
-    amount numeric(30,5) DEFAULT 0.0 NOT NULL,
-    credit_amount numeric(30,5) DEFAULT 0.0 NOT NULL,
-    settled_at timestamp without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    invoice_id uuid,
-    source integer DEFAULT 0 NOT NULL,
-    transaction_status integer DEFAULT 0 NOT NULL,
-    invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
-    metadata jsonb DEFAULT '[]'::jsonb,
-    credit_note_id uuid,
-    failed_at timestamp(6) without time zone
-);
-
-
---
--- Name: wallets; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.wallets (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    customer_id uuid NOT NULL,
-    status integer NOT NULL,
-    name character varying,
-    rate_amount numeric(30,5) DEFAULT 0.0 NOT NULL,
-    credits_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
-    consumed_credits numeric(30,5) DEFAULT 0.0 NOT NULL,
-    expiration_at timestamp without time zone,
-    last_balance_sync_at timestamp without time zone,
-    last_consumed_credit_at timestamp without time zone,
-    terminated_at timestamp without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    balance_cents bigint DEFAULT 0 NOT NULL,
-    balance_currency character varying NOT NULL,
-    consumed_amount_cents bigint DEFAULT 0 NOT NULL,
-    consumed_amount_currency character varying NOT NULL,
-    ongoing_balance_cents bigint DEFAULT 0 NOT NULL,
-    ongoing_usage_balance_cents bigint DEFAULT 0 NOT NULL,
-    credits_ongoing_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
-    credits_ongoing_usage_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
-    depleted_ongoing_balance boolean DEFAULT false NOT NULL,
-    invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
-    lock_version integer DEFAULT 0 NOT NULL,
-    ready_to_be_refreshed boolean DEFAULT false NOT NULL
-);
 
 
 --
@@ -6272,6 +6950,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250409100421'),
 ('20250408121522'),
 ('20250407202459'),
+('20250407000001'),
 ('20250403110833'),
 ('20250403093628'),
 ('20250402152230'),

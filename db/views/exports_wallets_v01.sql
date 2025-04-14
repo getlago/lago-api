@@ -1,5 +1,5 @@
 SELECT
-    w.organization_id,
+    c.organization_id,
     w.id AS lago_id,
     w.customer_id AS lago_customer_id,
     CASE w.status
@@ -16,10 +16,11 @@ SELECT
     w.ongoing_balance_cents,
     w.ongoing_usage_balance_cents,
     w.consumed_credits,
-    w.created_at::timestampz::text AS created_at,
-    w.updated_at::timestampz::text AS updated_at,
-    w.terminated_at::timestampz::text AS terminated_at,
-    w.last_balance_sync_at::timestampz::text AS last_balance_sync_at,
-    w.last_consumed_credit_at::timestampz::text AS last_consumed_credit_at,
-    w.invoice_requires_successful_payment,
-FROM wallets AS w;
+    w.created_at::timestamptz::text AS created_at,
+    w.updated_at::timestamptz::text AS updated_at,
+    w.terminated_at::timestamptz::text AS terminated_at,
+    w.last_balance_sync_at::timestamptz::text AS last_balance_sync_at,
+    w.last_consumed_credit_at::timestamptz::text AS last_consumed_credit_at,
+    w.invoice_requires_successful_payment
+FROM wallets AS w
+LEFT JOIN customers AS c ON c.id = w.customer_id;
