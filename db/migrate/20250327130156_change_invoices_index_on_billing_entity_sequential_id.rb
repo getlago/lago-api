@@ -7,14 +7,14 @@ class ChangeInvoicesIndexOnBillingEntitySequentialId < ActiveRecord::Migration[7
     remove_index :invoices, [:organization_id, :billing_entity_sequential_id],
       order: {billing_entity_sequential_id: :desc},
       algorithm: :concurrently,
-      if_not_exists: true,
-      include: %i[self_billed]
+      include: %i[self_billed],
+      if_exists: true
 
     add_index :invoices, [:billing_entity_id, :billing_entity_sequential_id],
       order: {billing_entity_sequential_id: :desc},
       algorithm: :concurrently,
-      if_not_exists: true,
       include: %i[self_billed],
-      unique: true
+      unique: true,
+      if_not_exists: true
   end
 end
