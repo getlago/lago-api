@@ -1611,12 +1611,12 @@ CREATE VIEW public.exports_applied_coupons AS
         END AS status,
     ac.amount_cents,
         CASE ac.frequency
-            WHEN 0 THEN NULL::numeric
-            WHEN 1 THEN NULL::numeric
+            WHEN 0 THEN NULL::bigint
+            WHEN 1 THEN NULL::bigint
             ELSE
             CASE
-                WHEN (cp.coupon_type = 1) THEN NULL::numeric
-                ELSE ((ac.amount_cents)::numeric - ( SELECT sum(cr.amount_cents) AS sum
+                WHEN (cp.coupon_type = 1) THEN NULL::bigint
+                ELSE (ac.amount_cents - ( SELECT (sum(cr.amount_cents))::bigint AS sum
                    FROM public.credits cr
                   WHERE (cr.applied_coupon_id = ac.id)))
             END
@@ -1661,9 +1661,9 @@ CREATE VIEW public.exports_billable_metrics AS
             WHEN 7 THEN 'custom_agg'::text
             ELSE 'unknown'::text
         END AS aggregation_type,
-    bm.weighted_interval,
+    (bm.weighted_interval)::text AS weighted_interval,
     bm.recurring,
-    bm.rounding_function,
+    (bm.rounding_function)::text AS rounding_function,
     bm.rounding_precision,
     bm.created_at,
     bm.updated_at,
@@ -1724,7 +1724,10 @@ CREATE VIEW public.exports_charges AS
             ELSE NULL::text
         END AS charge_model,
     c.invoiceable,
-    c.regroup_paid_fees,
+        CASE c.regroup_paid_fees
+            WHEN 0 THEN 'invoice'::text
+            ELSE NULL::text
+        END AS regroup_paid_fees,
     c.pay_in_advance,
     c.prorated,
     c.min_amount_cents,
@@ -1756,19 +1759,28 @@ CREATE VIEW public.exports_coupons AS
     cp.amount_cents,
     cp.amount_currency,
     cp.percentage_rate,
-    cp.frequency,
+        CASE cp.frequency
+            WHEN 0 THEN 'once'::text
+            WHEN 1 THEN 'recurring'::text
+            WHEN 2 THEN 'forever'::text
+            ELSE NULL::text
+        END AS frequency,
     cp.frequency_duration,
     cp.reusable,
     cp.limited_plans,
     cp.limited_billable_metrics,
-    ARRAY( SELECT cpt.plan_id
+    to_json(ARRAY( SELECT cpt.plan_id
            FROM public.coupon_targets cpt
-          WHERE ((cpt.coupon_id = cp.id) AND (cpt.plan_id IS NOT NULL))) AS lago_plan_ids,
-    ARRAY( SELECT cpt.billable_metric_id
+          WHERE ((cpt.coupon_id = cp.id) AND (cpt.plan_id IS NOT NULL)))) AS lago_plan_ids,
+    to_json(ARRAY( SELECT cpt.billable_metric_id
            FROM public.coupon_targets cpt
-          WHERE ((cpt.coupon_id = cp.id) AND (cpt.billable_metric_id IS NOT NULL))) AS lago_billable_metrics_ids,
+          WHERE ((cpt.coupon_id = cp.id) AND (cpt.billable_metric_id IS NOT NULL)))) AS lago_billable_metrics_ids,
     cp.created_at,
-    cp.expiration,
+        CASE cp.expiration
+            WHEN 0 THEN 'no_expiration'::text
+            WHEN 1 THEN 'time_limit'::text
+            ELSE NULL::text
+        END AS expiration,
     cp.expiration_at,
     cp.terminated_at,
     cp.updated_at
@@ -1798,14 +1810,22 @@ CREATE VIEW public.exports_credit_notes AS
             WHEN 2 THEN 'failed'::text
             ELSE NULL::text
         END AS refund_status,
-    cn.reason,
+        CASE cn.reason
+            WHEN 0 THEN 'duplicated_charge'::text
+            WHEN 1 THEN 'product_unsatisfactory'::text
+            WHEN 2 THEN 'order_change'::text
+            WHEN 3 THEN 'order_cancellation'::text
+            WHEN 4 THEN 'fraudulent_charge'::text
+            WHEN 5 THEN 'other'::text
+            ELSE NULL::text
+        END AS reason,
     cn.description,
     cn.total_amount_currency AS currency,
     cn.total_amount_cents,
     cn.taxes_amount_cents,
-    round((( SELECT sum(ci.precise_amount_cents) AS sum
+    (round(((( SELECT (sum(ci.precise_amount_cents))::bigint AS sum
            FROM public.credit_note_items ci
-          WHERE (ci.credit_note_id = cn.id)) - cn.precise_coupons_adjustment_amount_cents)) AS sub_total_excluding_taxes_amount_cents,
+          WHERE (ci.credit_note_id = cn.id)))::numeric - cn.precise_coupons_adjustment_amount_cents)))::bigint AS sub_total_excluding_taxes_amount_cents,
     cn.balance_amount_cents,
     cn.credit_amount_cents,
     cn.refund_amount_cents,
@@ -1942,7 +1962,12 @@ CREATE VIEW public.exports_customers AS
     COALESCE(c.timezone, o.timezone, 'UTC'::character varying) AS applicable_timezone,
     c.net_payment_term,
     c.external_salesforce_id,
-    c.finalize_zero_amount_invoice,
+        CASE c.finalize_zero_amount_invoice
+            WHEN 0 THEN 'inherit'::text
+            WHEN 1 THEN 'skip'::text
+            WHEN 2 THEN 'finalize'::text
+            ELSE NULL::text
+        END AS finalize_zero_amount_invoice,
     c.skip_invoice_custom_sections,
     c.payment_provider,
     c.payment_provider_code,
@@ -1955,9 +1980,9 @@ CREATE VIEW public.exports_customers AS
     COALESCE(( SELECT json_agg(json_build_object('id', cm.id, 'key', cm.key, 'value', cm.value, 'display_in_invoice', cm.display_in_invoice)) AS json_agg
            FROM public.customer_metadata cm
           WHERE (cm.customer_id = c.id)), '[]'::json) AS metadata,
-    ARRAY( SELECT ct.tax_id AS lago_tax_id
+    to_json(ARRAY( SELECT ct.tax_id AS lago_tax_id
            FROM public.customers_taxes ct
-          WHERE (ct.customer_id = c.id)) AS lago_taxes_ids
+          WHERE (ct.customer_id = c.id))) AS lago_taxes_ids
    FROM ((public.customers c
      LEFT JOIN public.organizations o ON ((o.id = c.organization_id)))
      LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL))))
@@ -2408,7 +2433,7 @@ CREATE VIEW public.exports_plans AS
             WHEN 2 THEN 'yearly'::text
             WHEN 3 THEN 'quarterly'::text
             ELSE NULL::text
-        END AS "interval",
+        END AS plan_interval,
     p.description,
     p.amount_cents,
     p.amount_currency,
@@ -2416,9 +2441,9 @@ CREATE VIEW public.exports_plans AS
     p.pay_in_advance,
     p.bill_charges_monthly,
     p.parent_id,
-    ARRAY( SELECT pt.tax_id AS lago_tax_id
+    to_json(ARRAY( SELECT pt.tax_id AS lago_tax_id
            FROM public.plans_taxes pt
-          WHERE (pt.plan_id = p.id)) AS lago_taxes_ids
+          WHERE (pt.plan_id = p.id))) AS lago_taxes_ids
    FROM public.plans p
   WHERE (p.deleted_at IS NULL);
 
@@ -2454,9 +2479,9 @@ CREATE VIEW public.exports_subscriptions AS
     s.canceled_at,
     s.created_at,
     s.updated_at,
-    ARRAY( SELECT ns.id
+    to_json(ARRAY( SELECT ns.id
            FROM public.subscriptions ns
-          WHERE (ns.previous_subscription_id = s.id)) AS lago_next_subscriptions_id,
+          WHERE (ns.previous_subscription_id = s.id))) AS lago_next_subscriptions_id,
     s.previous_subscription_id AS lago_previous_subscription_id
    FROM (public.subscriptions s
      LEFT JOIN public.customers c ON ((s.customer_id = c.id)));
