@@ -4,15 +4,21 @@ module Payments
   class UpdatePaymentMethodDataService < BaseService
     Result = BaseResult[:payment]
 
-    def initialize(payment:, provider_payment_method_id:)
+    def initialize(payment:, provider_payment_method_id:, force: false)
       @payment = payment
       @payment_provider = payment.payment_provider
       @provider_payment_method_id = provider_payment_method_id
+      @force = force
 
       super
     end
 
     def call
+      if !force && payment.provider_payment_method_id == provider_payment_method_id
+        result.payment = payment
+        return result
+      end
+
       data = case payment_provider.type
       when PaymentProviders::StripeProvider.to_s
         retrieve_stripe_payment_method_data
@@ -29,7 +35,7 @@ module Payments
 
     private
 
-    attr_reader :payment, :payment_provider, :provider_payment_method_id
+    attr_reader :payment, :payment_provider, :provider_payment_method_id, :force
 
     def retrieve_stripe_payment_method_data
       pm = ::Stripe::PaymentMethod.retrieve(provider_payment_method_id, {
