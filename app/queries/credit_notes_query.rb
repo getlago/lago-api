@@ -2,6 +2,21 @@
 
 class CreditNotesQuery < BaseQuery
   Result = BaseResult[:credit_notes]
+  Filters = BaseFilters[
+    :billing_entity_ids,
+    :currency,
+    :customer_external_id,
+    :customer_id,
+    :invoice_number,
+    :issuing_date_from,
+    :issuing_date_to,
+    :amount_from,
+    :amount_to,
+    :self_billed,
+    :credit_status,
+    :reason,
+    :refund_status
+  ]
 
   def call
     credit_notes = base_scope.result

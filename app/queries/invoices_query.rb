@@ -2,6 +2,25 @@
 
 class InvoicesQuery < BaseQuery
   Result = BaseResult[:invoices]
+  Filters = BaseFilters[
+    :billing_entity_ids,
+    :currency,
+    :customer_external_id,
+    :customer_id,
+    :invoice_type,
+    :issuing_date_from,
+    :issuing_date_to,
+    :status,
+    :payment_status,
+    :payment_dispute_lost,
+    :payment_overdue,
+    :amount_from,
+    :amount_to,
+    :metadata,
+    :partially_paid,
+    :positive_due_amount,
+    :self_billed
+  ]
 
   def call
     invoices = base_scope.result.includes(:customer).includes(file_attachment: :blob)
