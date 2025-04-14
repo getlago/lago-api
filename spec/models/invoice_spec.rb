@@ -50,71 +50,102 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe "finalized_at" do
+    let(:invoice) { create(:invoice, :draft) }
+
+    it "is set when the invoice is finalized" do
+      freeze_time do
+        invoice.finalized!
+
+        expect(invoice.finalized_at).to eq(Time.current)
+      end
+    end
+  end
+
   describe "sequential_id" do
     let(:customer) { create(:customer, organization:) }
-    let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: 0, status: :generating) }
+    let(:billing_entity) { customer.billing_entity }
 
-    it "assigns a sequential id and organization sequential id to a new invoice" do
+    let(:invoice) do
+      build(:invoice, customer:, organization:, billing_entity:, billing_entity_sequential_id: nil, organization_sequential_id: 0, status: :generating)
+    end
+
+    it "assigns a sequential id, billing entity sequential id and organization sequential id to a new invoice" do
       invoice.save!
       invoice.finalized!
 
-      aggregate_failures do
-        expect(invoice).to be_valid
-        expect(invoice.sequential_id).to eq(1)
-        expect(invoice.organization_sequential_id).to eq(0)
-      end
+      expect(invoice).to be_valid
+      expect(invoice.sequential_id).to eq(1)
+      expect(invoice.billing_entity_sequential_id).to be_nil
+      expect(invoice.organization_sequential_id).to be_zero
     end
 
-    context "when sequential_id and organization_sequential_id are present" do
+    context "when sequential_id, billing_entity_sequential_id and organization_sequential_id are present" do
       before do
         invoice.sequential_id = 3
+        invoice.billing_entity_sequential_id = 2
         invoice.organization_sequential_id = 5
       end
 
-      it "does not replace the sequential_id and organization_sequential_id" do
+      it "does not replace the sequential_id, billing_entity_sequential_id and organization_sequential_id" do
         invoice.save!
         invoice.finalized!
 
-        aggregate_failures do
-          expect(invoice).to be_valid
-          expect(invoice.sequential_id).to eq(3)
-          expect(invoice.organization_sequential_id).to eq(5)
-        end
+        expect(invoice).to be_valid
+        expect(invoice.sequential_id).to eq(3)
+        expect(invoice.billing_entity_sequential_id).to eq(2)
+        expect(invoice.organization_sequential_id).to eq(5)
       end
     end
 
-    context "when invoices already exist" do
+    context "when customer already has invoices" do
       before do
-        create(:invoice, customer:, organization:, sequential_id: 4, organization_sequential_id: 14)
-        create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15)
+        create(:invoice, customer:, organization:, billing_entity:, sequential_id: 1, billing_entity_sequential_id: 1, organization_sequential_id: 0)
+        create(:invoice, customer:, organization:, billing_entity:, sequential_id: 2, billing_entity_sequential_id: 2, organization_sequential_id: 0)
       end
 
       it "takes the next available id" do
         invoice.save!
         invoice.finalized!
 
-        aggregate_failures do
-          expect(invoice).to be_valid
-          expect(invoice.sequential_id).to eq(6)
-          expect(invoice.organization_sequential_id).to eq(0)
-        end
+        expect(invoice).to be_valid
+        expect(invoice.sequential_id).to eq(3)
+        expect(invoice.billing_entity_sequential_id).to be_nil
+        expect(invoice.organization_sequential_id).to be_zero
+      end
+    end
+
+    context "with invoices in other billing entities" do
+      let(:billing_entity_2) { create(:billing_entity, organization:) }
+
+      before do
+        create(:invoice, organization:, billing_entity: billing_entity_2, sequential_id: 1, billing_entity_sequential_id: 1, organization_sequential_id: 0)
+        create(:invoice, organization:, billing_entity: billing_entity_2, sequential_id: 2, billing_entity_sequential_id: 2, organization_sequential_id: 0)
+      end
+
+      it "scopes the sequences to the billing entity" do
+        invoice.save!
+        invoice.finalized!
+
+        expect(invoice).to be_valid
+        expect(invoice.sequential_id).to eq(1)
+        expect(invoice.billing_entity_sequential_id).to be_nil
+        expect(invoice.organization_sequential_id).to be_zero
       end
     end
 
     context "with invoices on other organization" do
       before do
-        create(:invoice, sequential_id: 1, organization_sequential_id: 1)
+        create(:invoice, sequential_id: 1, organization_sequential_id: 0)
       end
 
       it "scopes the sequence to the organization" do
         invoice.save!
         invoice.finalized!
 
-        aggregate_failures do
-          expect(invoice).to be_valid
-          expect(invoice.sequential_id).to eq(1)
-          expect(invoice.organization_sequential_id).to eq(0)
-        end
+        expect(invoice).to be_valid
+        expect(invoice.sequential_id).to eq(1)
+        expect(invoice.organization_sequential_id).to be_zero
       end
     end
 
@@ -123,19 +154,19 @@ RSpec.describe Invoice, type: :model do
       let(:created_at) { Time.now.utc - 1.month }
 
       before do
-        create(:invoice, customer:, organization:, sequential_id: 4, organization_sequential_id: 14, created_at:)
-        create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15, created_at:)
+        organization.default_billing_entity.update!(document_numbering: "per_billing_entity")
+        create(:invoice, customer:, organization:, sequential_id: 1, billing_entity_sequential_id: 1, organization_sequential_id: 1, created_at:)
+        create(:invoice, customer:, organization:, sequential_id: 2, billing_entity_sequential_id: 2, organization_sequential_id: 2, created_at:)
       end
 
       it "scopes the organization_sequential_id to the organization and month" do
         invoice.save!
         invoice.finalized!
 
-        aggregate_failures do
-          expect(invoice).to be_valid
-          expect(invoice.sequential_id).to eq(6)
-          expect(invoice.organization_sequential_id).to eq(16)
-        end
+        expect(invoice).to be_valid
+        expect(invoice.sequential_id).to eq(3)
+        expect(invoice.billing_entity_sequential_id).to eq(3)
+        expect(invoice.organization_sequential_id).to eq(3)
       end
     end
   end
@@ -430,6 +461,14 @@ RSpec.describe Invoice, type: :model do
 
           it "returns true" do
             expect(method_call).to eq(true)
+          end
+
+          context "when invoice is self_billed" do
+            let(:invoice) { create(:invoice, customer:, organization:, status:, self_billed: true) }
+
+            it "returns false" do
+              expect(method_call).to eq(false)
+            end
           end
         end
 
