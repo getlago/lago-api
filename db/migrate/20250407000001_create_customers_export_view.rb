@@ -5,23 +5,19 @@ class CreateCustomersExportView < ActiveRecord::Migration[7.0]
     create_view :exports_customers, version: 1
     create_view :exports_billable_metrics, version: 1
     create_view :exports_plans, version: 1
-
-    create_view :customers_export_view, version: 1, materialized: true
-    add_index :customers_export_view, :lago_id, unique: true
-    add_index :customers_export_view, :external_id, unique: true
-
-    create_view :fees_export_view, version: 1
-  end
-
-  def down
-    drop_view :exports_billable_metrics, if_exists: true
-    drop_view :exports_customers, if_exists: true
-    drop_view :exports_plans, if_exists: true
-
-    drop_view :fees_export_view, revert_to_version: 1
-
-    remove_index :customers_export_view, :external_id
-    remove_index :customers_export_view, :lago_id
-    drop_view :customers_export_view, materialized: true, revert_to_version: 1
+    create_view :exports_applied_coupons, version: 1
+    create_view :exports_invoices, version: 1
+    create_view :exports_invoices_taxes, version: 1
+    create_view :exports_charges, version: 1
+    create_view :exports_wallets, version: 1
+    create_view :exports_wallet_transactions, version: 1
+    create_view :exports_coupons, version: 1
+    create_view :exports_taxes, version: 1
+    create_view :exports_credit_note_taxes, version: 1
+    create_view :exports_credit_notes, version: 1
+    create_view :exports_fee_taxes, version: 1
+    create_view :exports_fees, version: 1
+    create_view :exports_subscriptions, version: 1
+    create_view :exports_taxes, version: 1
   end
 end

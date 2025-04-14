@@ -17,6 +17,11 @@ SELECT
   p.trial_period,
   p.pay_in_advance,
   p.bill_charges_monthly,
-  p.parent_id
+  p.parent_id,
+  json_agg(
+    SELECT pt.tax_id AS lago_tax_id
+    FROM plans_taxes AS pt
+    WHERE pt.plan_id = p.id
+  ) AS lago_taxes_ids
 FROM plans AS p
 WHERE p.deleted_at IS NULL;

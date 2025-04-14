@@ -22,5 +22,4 @@ SELECT
     w.last_balance_sync_at::timestampz::text AS last_balance_sync_at,
     w.last_consumed_credit_at::timestampz::text AS last_consumed_credit_at,
     w.invoice_requires_successful_payment,
-FROM wallets AS w
-LEFT JOIN customers AS c ON w.customer_id = c.id;
+FROM wallets AS w;
