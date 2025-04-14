@@ -2,6 +2,7 @@
 
 class PaymentRequestsQuery < BaseQuery
   Result = BaseResult[:payment_requests]
+  Filters = BaseFilters[:external_customer_id]
 
   def call
     payment_requests = PaymentRequest.where(organization:)
