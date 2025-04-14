@@ -16,8 +16,8 @@ class ChangeInvoicesIndexOnBillingEntitySequentialId < ActiveRecord::Migration[7
     # Check if the index exists before trying to remove it
     # Include all options to match the exact index
     if index_exists?(:invoices, [:organization_id, :billing_entity_sequential_id],
-                     order: {billing_entity_sequential_id: :desc},
-                     include: %i[self_billed])
+      order: {billing_entity_sequential_id: :desc},
+      include: %i[self_billed])
       remove_index :invoices, [:organization_id, :billing_entity_sequential_id],
         order: {billing_entity_sequential_id: :desc},
         algorithm: :concurrently,
@@ -35,9 +35,9 @@ class ChangeInvoicesIndexOnBillingEntitySequentialId < ActiveRecord::Migration[7
 
   def down
     if index_exists?(:invoices, [:billing_entity_id, :billing_entity_sequential_id],
-                     order: {billing_entity_sequential_id: :desc},
-                     include: %i[self_billed],
-                     unique: true)
+      order: {billing_entity_sequential_id: :desc},
+      include: %i[self_billed],
+      unique: true)
       remove_index :invoices, [:billing_entity_id, :billing_entity_sequential_id],
         order: {billing_entity_sequential_id: :desc},
         algorithm: :concurrently,
