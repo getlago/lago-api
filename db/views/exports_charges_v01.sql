@@ -3,7 +3,8 @@ SELECT
     c.id AS lago_id,
     c.billable_metric_id AS lago_billable_metric_id,
     c.invoice_display_name,
-    c.created_at::timestamptz::text AS created_at,
+    c.created_at,
+    c.updated_at,
     CASE c.charge_model
         WHEN 0 THEN 'standard'
         WHEN 1 THEN 'graduated'

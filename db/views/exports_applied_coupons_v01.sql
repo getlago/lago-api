@@ -31,8 +31,9 @@ SELECT
     END AS frequency,
     ac.frequency_duration,
     ac.frequency_duration_remaining,
-    ac.created_at::timestamptz::text AS created_at,
-    ac.terminated_at::timestamptz::text AS terminated_at,
+    ac.created_at,
+    ac.terminated_at,
+    ac.updated_at,
     (
         SELECT json_agg(
             json_build_object(

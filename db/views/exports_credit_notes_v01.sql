@@ -4,7 +4,7 @@ SELECT
     cn.sequential_id,
     cn.number,
     cn.invoice_id AS lago_invoice_id,
-    cn.issuing_date::timestamptz::text AS issuing_date,
+    cn.issuing_date,
     CASE cn.credit_status
         WHEN 0 THEN 'available'
         WHEN 1 THEN 'consumed'
@@ -32,8 +32,8 @@ SELECT
     cn.refund_amount_cents,
     cn.coupons_adjustment_amount_cents,
     cn.taxes_rate,
-    cn.created_at::timestamptz::text AS created_at,
-    cn.updated_at::timestamptz::text AS updated_at,
+    cn.created_at,
+    cn.updated_at,
     (
         SELECT json_agg(
             json_build_object(

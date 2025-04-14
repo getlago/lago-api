@@ -6,7 +6,6 @@ SELECT
     f.invoice_id AS lago_invoice_id,
     f.subscription_id AS lago_subscription_id,
     c.id AS lago_customer_id,
-    -- item
     json_build_object(    
         'type', CASE f.fee_type
             WHEN 0 THEN 'charge'       -- Assuming 0 maps to :charge
@@ -95,11 +94,12 @@ SELECT
         WHEN 3 THEN 'refunded'   -- Assuming 3 maps to :refunded
         ELSE 'unknown'
     END AS payment_status,
-    f.created_at::timestamptz::text AS created_at,
-    f.succeeded_at::timestamptz::text AS succeeded_at,
-    f.failed_at::timestamptz::text AS failed_at,
-    f.refunded_at::timestamptz::text AS refunded_at,
+    f.created_at,
+    f.succeeded_at,
+    f.failed_at,
+    f.refunded_at,
     f.amount_details,
+    f.updated_at,
     CASE f.fee_type
         WHEN 0 THEN (f.properties->>'charges_from_datetime')::timestamptz::text
         ELSE (f.properties->>'from_datetime')::timestamptz::text

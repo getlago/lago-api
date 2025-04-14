@@ -24,9 +24,10 @@ SELECT
     END AS transaction_type,
     wt.amount,
     wt.credit_amount,
-    wt.settled_at::timestamptz::text AS settled_at,
-    wt.failed_at::timestamptz::text AS failed_at,
-    wt.created_at::timestamptz::text AS created_at,
+    wt.settled_at,
+    wt.failed_at,
+    wt.created_at,
+    wt.updated_at,
     wt.invoice_requires_successful_payment,
     wt.metadata
 FROM wallet_transactions AS wt

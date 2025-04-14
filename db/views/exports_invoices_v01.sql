@@ -44,16 +44,16 @@ SELECT
     i.total_amount_cents - i.total_paid_amount_cents AS total_due_amount_cents,
     i.prepaid_credit_amount_cents,
     i.version_number,
-    i.created_at::timestamptz::text AS created_at,
-    i.updated_at::timestamptz::text AS updated_at,
-    i.voided_at::timestamptz::text AS voided_at,
+    i.created_at,
+    i.updated_at,
+    i.voided_at,
     (
         SELECT json_agg(
             json_build_object(
                 'lago_id', m.id,
                 'key', m.key,
                 'value', m.value,
-                'created_at', m.created_at::timestamptz::text
+                'created_at', m.created_at
             )
         )
         FROM invoice_metadata AS m

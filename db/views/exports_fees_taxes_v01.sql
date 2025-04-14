@@ -9,7 +9,7 @@ SELECT
     ft.tax_description,
     ft.amount_cents,
     ft.amount_currency,
-    ft.created_at::timestamptz::text AS created_at
-
+    ft.created_at,
+    ft.updated_at
 FROM fees_taxes AS ft
 LEFT JOIN fees AS f ON f.id = ft.fee_id;

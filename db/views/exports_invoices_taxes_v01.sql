@@ -10,6 +10,7 @@ SELECT
     it.amount_cents,
     it.amount_currency,
     it.fees_amount_cents,
-    it.created_at::timestamptz::text AS created_at
+    it.created_at,
+    it.updated_at
 FROM invoices_taxes AS it
 LEFT JOIN taxes AS t ON it.tax_id = t.id;

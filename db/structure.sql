@@ -1634,8 +1634,9 @@ CREATE VIEW public.exports_applied_coupons AS
         END AS frequency,
     ac.frequency_duration,
     ac.frequency_duration_remaining,
-    ((ac.created_at)::timestamp with time zone)::text AS created_at,
-    ((ac.terminated_at)::timestamp with time zone)::text AS terminated_at,
+    ac.created_at,
+    ac.terminated_at,
+    ac.updated_at,
     ( SELECT json_agg(json_build_object('lago_id', cr.id, 'amount_cents', cr.amount_cents, 'amount_currency', cr.amount_currency, 'before_taxes', cr.before_taxes)) AS json_agg
            FROM public.credits cr
           WHERE (cr.applied_coupon_id = ac.id)) AS credits
@@ -1667,7 +1668,8 @@ CREATE VIEW public.exports_billable_metrics AS
     bm.recurring,
     bm.rounding_function,
     bm.rounding_precision,
-    ((bm.created_at)::timestamp with time zone)::text AS created_at,
+    bm.created_at,
+    bm.updated_at,
     bm.field_name,
     bm.expression,
     COALESCE(( SELECT json_agg(json_build_object('key', bmf.key, 'values', bmf."values")) AS json_agg
@@ -1711,7 +1713,8 @@ CREATE VIEW public.exports_charges AS
     c.id AS lago_id,
     c.billable_metric_id AS lago_billable_metric_id,
     c.invoice_display_name,
-    ((c.created_at)::timestamp with time zone)::text AS created_at,
+    c.created_at,
+    c.updated_at,
         CASE c.charge_model
             WHEN 0 THEN 'standard'::text
             WHEN 1 THEN 'graduated'::text
@@ -1767,10 +1770,11 @@ CREATE VIEW public.exports_coupons AS
     ARRAY( SELECT cpt.billable_metric_id
            FROM public.coupon_targets cpt
           WHERE ((cpt.coupon_id = cp.id) AND (cpt.billable_metric_id IS NOT NULL))) AS lago_billable_metrics_ids,
-    ((cp.created_at)::timestamp with time zone)::text AS created_at,
+    cp.created_at,
     cp.expiration,
-    ((cp.expiration_at)::timestamp with time zone)::text AS expiration_at,
-    ((cp.terminated_at)::timestamp with time zone)::text AS terminated_at
+    cp.expiration_at,
+    cp.terminated_at,
+    cp.updated_at
    FROM public.coupons cp;
 
 
@@ -1784,7 +1788,7 @@ CREATE VIEW public.exports_credit_notes AS
     cn.sequential_id,
     cn.number,
     cn.invoice_id AS lago_invoice_id,
-    ((cn.issuing_date)::timestamp with time zone)::text AS issuing_date,
+    cn.issuing_date,
         CASE cn.credit_status
             WHEN 0 THEN 'available'::text
             WHEN 1 THEN 'consumed'::text
@@ -1810,8 +1814,8 @@ CREATE VIEW public.exports_credit_notes AS
     cn.refund_amount_cents,
     cn.coupons_adjustment_amount_cents,
     cn.taxes_rate,
-    ((cn.created_at)::timestamp with time zone)::text AS created_at,
-    ((cn.updated_at)::timestamp with time zone)::text AS updated_at,
+    cn.created_at,
+    cn.updated_at,
     ( SELECT json_agg(json_build_object('lago_id', ci.id, 'amount_cents', ci.amount_cents, 'amount_currency', ci.amount_currency, 'lago_fee_id', ci.fee_id)) AS json_agg
            FROM public.credit_note_items ci
           WHERE (ci.credit_note_id = cn.id)) AS items,
@@ -1838,7 +1842,8 @@ CREATE VIEW public.exports_credit_notes_taxes AS
     cnt.base_amount_cents,
     cnt.amount_cents,
     cnt.amount_currency,
-    ((cnt.created_at)::timestamp with time zone)::text AS created_at
+    cnt.created_at,
+    cnt.updated_at
    FROM ((public.credit_notes_taxes cnt
      LEFT JOIN public.credit_notes cn ON ((cn.id = cnt.credit_note_id)))
      LEFT JOIN public.customers c ON ((c.id = cn.customer_id)));
@@ -2118,11 +2123,12 @@ CREATE VIEW public.exports_fees AS
             WHEN 3 THEN 'refunded'::text
             ELSE 'unknown'::text
         END AS payment_status,
-    ((f.created_at)::timestamp with time zone)::text AS created_at,
-    ((f.succeeded_at)::timestamp with time zone)::text AS succeeded_at,
-    ((f.failed_at)::timestamp with time zone)::text AS failed_at,
-    ((f.refunded_at)::timestamp with time zone)::text AS refunded_at,
+    f.created_at,
+    f.succeeded_at,
+    f.failed_at,
+    f.refunded_at,
     f.amount_details,
+    f.updated_at,
         CASE f.fee_type
             WHEN 0 THEN (((f.properties ->> 'charges_from_datetime'::text))::timestamp with time zone)::text
             ELSE (((f.properties ->> 'from_datetime'::text))::timestamp with time zone)::text
@@ -2175,7 +2181,8 @@ CREATE VIEW public.exports_fees_taxes AS
     ft.tax_description,
     ft.amount_cents,
     ft.amount_currency,
-    ((ft.created_at)::timestamp with time zone)::text AS created_at
+    ft.created_at,
+    ft.updated_at
    FROM (public.fees_taxes ft
      LEFT JOIN public.fees f ON ((f.id = ft.fee_id)));
 
@@ -2299,10 +2306,10 @@ CREATE VIEW public.exports_invoices AS
     (i.total_amount_cents - i.total_paid_amount_cents) AS total_due_amount_cents,
     i.prepaid_credit_amount_cents,
     i.version_number,
-    ((i.created_at)::timestamp with time zone)::text AS created_at,
-    ((i.updated_at)::timestamp with time zone)::text AS updated_at,
-    ((i.voided_at)::timestamp with time zone)::text AS voided_at,
-    ( SELECT json_agg(json_build_object('lago_id', m_1.id, 'key', m_1.key, 'value', m_1.value, 'created_at', ((m_1.created_at)::timestamp with time zone)::text)) AS json_agg
+    i.created_at,
+    i.updated_at,
+    i.voided_at,
+    ( SELECT json_agg(json_build_object('lago_id', m_1.id, 'key', m_1.key, 'value', m_1.value, 'created_at', m_1.created_at)) AS json_agg
            FROM public.invoice_metadata m_1
           WHERE (m_1.invoice_id = i.id)) AS metadata,
     ( SELECT json_agg(json_build_object('lago_id', ed.id, 'error_code', ed.error_code, 'details', ed.details)) AS json_agg
@@ -2368,7 +2375,8 @@ CREATE VIEW public.exports_invoices_taxes AS
     it.amount_cents,
     it.amount_currency,
     it.fees_amount_cents,
-    ((it.created_at)::timestamp with time zone)::text AS created_at
+    it.created_at,
+    it.updated_at
    FROM (public.invoices_taxes it
      LEFT JOIN public.taxes t ON ((it.tax_id = t.id)));
 
@@ -2395,7 +2403,8 @@ CREATE VIEW public.exports_plans AS
     p.id AS lago_id,
     p.name,
     p.invoice_display_name,
-    ((p.created_at)::timestamp with time zone)::text AS created_at,
+    p.created_at,
+    p.updated_at,
     p.code,
         CASE p."interval"
             WHEN 0 THEN 'weekly'::text
@@ -2441,14 +2450,14 @@ CREATE VIEW public.exports_subscriptions AS
             WHEN 1 THEN 'anniversary'::text
             ELSE NULL::text
         END AS billing_time,
-    ((s.subscription_at)::timestamp with time zone)::text AS subscription_at,
-    ((s.started_at)::timestamp with time zone)::text AS started_at,
-    ((s.trial_ended_at)::timestamp with time zone)::text AS trial_ended_at,
-    ((s.ending_at)::timestamp with time zone)::text AS ending_at,
-    ((s.terminated_at)::timestamp with time zone)::text AS terminated_at,
-    ((s.canceled_at)::timestamp with time zone)::text AS canceled_at,
-    ((s.created_at)::timestamp with time zone)::text AS created_at,
-    ((s.updated_at)::timestamp with time zone)::text AS updated_at,
+    s.subscription_at,
+    s.started_at,
+    s.trial_ended_at,
+    s.ending_at,
+    s.terminated_at,
+    s.canceled_at,
+    s.created_at,
+    s.updated_at,
     ARRAY( SELECT ns.id
            FROM public.subscriptions ns
           WHERE (ns.previous_subscription_id = s.id)) AS lago_next_subscriptions_id,
@@ -2469,7 +2478,8 @@ CREATE VIEW public.exports_taxes AS
     tx.rate,
     tx.description,
     tx.applied_to_organization,
-    ((tx.created_at)::timestamp with time zone)::text AS created_at
+    tx.created_at,
+    tx.updated_at
    FROM public.taxes tx;
 
 
@@ -2564,9 +2574,10 @@ CREATE VIEW public.exports_wallet_transactions AS
         END AS transaction_type,
     wt.amount,
     wt.credit_amount,
-    ((wt.settled_at)::timestamp with time zone)::text AS settled_at,
-    ((wt.failed_at)::timestamp with time zone)::text AS failed_at,
-    ((wt.created_at)::timestamp with time zone)::text AS created_at,
+    wt.settled_at,
+    wt.failed_at,
+    wt.created_at,
+    wt.updated_at,
     wt.invoice_requires_successful_payment,
     wt.metadata
    FROM ((public.wallet_transactions wt
@@ -2597,11 +2608,11 @@ CREATE VIEW public.exports_wallets AS
     w.ongoing_balance_cents,
     w.ongoing_usage_balance_cents,
     w.consumed_credits,
-    ((w.created_at)::timestamp with time zone)::text AS created_at,
-    ((w.updated_at)::timestamp with time zone)::text AS updated_at,
-    ((w.terminated_at)::timestamp with time zone)::text AS terminated_at,
-    ((w.last_balance_sync_at)::timestamp with time zone)::text AS last_balance_sync_at,
-    ((w.last_consumed_credit_at)::timestamp with time zone)::text AS last_consumed_credit_at,
+    w.created_at,
+    w.updated_at,
+    w.terminated_at,
+    w.last_balance_sync_at,
+    w.last_consumed_credit_at,
     w.invoice_requires_successful_payment
    FROM (public.wallets w
      LEFT JOIN public.customers c ON ((c.id = w.customer_id)));

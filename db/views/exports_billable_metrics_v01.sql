@@ -18,7 +18,8 @@ SELECT
   bm.recurring,
   bm.rounding_function,
   bm.rounding_precision,
-  bm.created_at::timestamptz::text AS created_at,
+  bm.created_at,
+  bm.updated_at,
   bm.field_name,
   bm.expression,
   COALESCE(

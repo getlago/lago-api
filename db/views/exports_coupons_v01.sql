@@ -28,8 +28,9 @@ SELECT
         WHERE cpt.coupon_id = cp.id
         AND cpt.billable_metric_id IS NOT NULL
     ) AS lago_billable_metrics_ids,
-    cp.created_at::timestamptz::text AS created_at,
+    cp.created_at,
     cp.expiration,
-    cp.expiration_at::timestamptz::text AS expiration_at,
-    cp.terminated_at::timestamptz::text AS terminated_at
+    cp.expiration_at,
+    cp.terminated_at,
+    cp.updated_at
 FROM coupons AS cp;

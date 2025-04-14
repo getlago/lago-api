@@ -6,5 +6,6 @@ SELECT
     tx.rate,
     tx.description,
     tx.applied_to_organization,
-    tx.created_at::timestamptz::text AS created_at
+    tx.created_at,
+    tx.updated_at
 FROM taxes AS tx;
