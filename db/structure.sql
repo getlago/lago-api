@@ -175,7 +175,6 @@ DROP INDEX IF EXISTS public.index_unique_terminating_subscription_invoice;
 DROP INDEX IF EXISTS public.index_unique_starting_subscription_invoice;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
 DROP INDEX IF EXISTS public.index_timestamp_lookup;
-DROP INDEX IF EXISTS public.index_timestamp_group_lookup;
 DROP INDEX IF EXISTS public.index_timestamp_filter_lookup;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_taxes_on_code_and_organization_id;
@@ -382,7 +381,6 @@ DROP INDEX IF EXISTS public.index_charge_filter_values_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_billable_metric_filter_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_organization_id;
-DROP INDEX IF EXISTS public.index_cached_aggregations_on_group_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_external_subscription_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_transaction_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_id;
@@ -3563,13 +3561,6 @@ CREATE INDEX index_cached_aggregations_on_external_subscription_id ON public.cac
 
 
 --
--- Name: index_cached_aggregations_on_group_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_cached_aggregations_on_group_id ON public.cached_aggregations USING btree (group_id);
-
-
---
 -- Name: index_cached_aggregations_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5012,13 +5003,6 @@ CREATE INDEX index_timestamp_filter_lookup ON public.cached_aggregations USING b
 
 
 --
--- Name: index_timestamp_group_lookup; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_timestamp_group_lookup ON public.cached_aggregations USING btree (organization_id, "timestamp", charge_id, group_id);
-
-
---
 -- Name: index_timestamp_lookup; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6263,6 +6247,7 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250414121455'),
 ('20250411112117'),
 ('20250411110934'),
 ('20250411110825'),
