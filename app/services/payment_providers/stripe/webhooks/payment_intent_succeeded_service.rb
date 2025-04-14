@@ -12,8 +12,6 @@ module PaymentProviders
               payment: result.payment,
               provider_payment_method_id: event.data.object.payment_method
             )
-
-            PaymentReceipts::CreateJob.perform_later(result.payment) if result.payment.customer.organization.issue_receipts_enabled?
           end
 
           result
