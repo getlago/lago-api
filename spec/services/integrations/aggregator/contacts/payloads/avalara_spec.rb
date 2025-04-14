@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Integrations::Aggregator::Contacts::Payloads::Avalara do
-  let(:integration) { integration_customer.integration }
-  let(:integration_customer) { create(:avalara_customer, customer:, external_customer_id: customer.id) }
+  let(:integration) { create(:avalara_integration, company_id: 'comp-12345') }
+  let(:integration_customer) { create(:avalara_customer, customer:, integration:, external_customer_id: 'abc-12345') }
   let(:payload) { described_class.new(integration:, customer:, integration_customer:) }
   let(:name) { "#{firstname} #{lastname}" }
   let(:customer_name) { nil }
@@ -30,6 +30,7 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Avalara do
     let(:payload_body) do
       [
         {
+          "company_id" => integration.company_id,
           "external_id" => customer.id,
           "name" => name,
           "address_line_1" => customer.shipping_address_line1,
@@ -89,7 +90,8 @@ RSpec.describe Integrations::Aggregator::Contacts::Payloads::Avalara do
     let(:payload_body) do
       [
         {
-          "external_id" => integration_customer.external_customer_id,
+          "company_id" => integration.company_id,
+          "external_id" => customer.id,
           "name" => name,
           "address_line_1" => customer.shipping_address_line1,
           "city" => customer.city,
