@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Organization < ApplicationRecord
+class Organization
   attribute :document_numbering, :string
 end
 
