@@ -12,24 +12,6 @@ class BaseService
 
       super(message)
     end
-
-    def original_error_details
-      if original_error.is_a?(::Stripe::StripeError)
-        stripe_error_details(original_error)
-      end
-    end
-
-    private
-
-    def stripe_error_details(err)
-      {
-        code: err.code,
-        message: err.message,
-        request_id: err.request_id,
-        http_status: err.http_status,
-        http_body: JSON.parse(err.http_body || "{}")
-      }
-    end
   end
 
   class ThrottlingError < StandardError; end
