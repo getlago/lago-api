@@ -7,20 +7,21 @@ module BillingEntities
     def initialize(organization:, params:)
       @organization = organization
       @params = params
+      @billing_entity = organization.billing_entities.new
       super
     end
 
     def call
       return result.forbidden_failure! unless organization.can_create_billing_entity?
 
-      billing_entity = organization.billing_entities.new(create_attributes)
       ActiveRecord::Base.transaction do
+        billing_entity.assign_attributes(create_attributes)
         billing_entity.id = params[:id] if params[:id]
         billing_entity.invoice_footer = billing_config[:invoice_footer]
         billing_entity.document_locale = billing_config[:document_locale] if billing_config[:document_locale]
 
-        handle_eu_tax_management(billing_entity)
-        handle_base64_logo(billing_entity)
+        handle_eu_tax_management
+        handle_base64_logo
 
         if License.premium?
           billing_entity.invoice_grace_period = billing_config[:invoice_grace_period] if billing_config[:invoice_grace_period]
@@ -31,7 +32,7 @@ module BillingEntities
         billing_entity.save!
       end
 
-      track_billing_entity_created(billing_entity)
+      track_billing_entity_created
 
       result.billing_entity = billing_entity
       result
@@ -43,7 +44,7 @@ module BillingEntities
 
     private
 
-    attr_reader :organization, :params
+    attr_reader :organization, :params, :billing_entity
 
     def create_attributes
       @create_attributes ||= params.slice(
@@ -74,7 +75,7 @@ module BillingEntities
       @billing_config ||= params[:billing_configuration]&.to_h || {}
     end
 
-    def handle_base64_logo(billing_entity)
+    def handle_base64_logo
       return if params[:logo].blank?
 
       base64_data = params[:logo].split(",")
@@ -91,20 +92,14 @@ module BillingEntities
       )
     end
 
-    def handle_eu_tax_management(billing_entity)
-      return if params[:eu_tax_management].blank?
-
-      unless billing_entity.eu_vat_eligible?
-        result.single_validation_failure!(error_code: "billing_entity_must_be_in_eu", field: :eu_tax_management)
-          .raise_if_error!
-      end
-
-      ::Taxes::AutoGenerateService.call(organization:)
-
-      billing_entity.eu_tax_management = params[:eu_tax_management]
+    def handle_eu_tax_management
+      ChangeEuTaxManagementService.call!(
+        billing_entity:,
+        eu_tax_management: params[:eu_tax_management]
+      )
     end
 
-    def track_billing_entity_created(billing_entity)
+    def track_billing_entity_created
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
         event: "billing_entity_created",
