@@ -3,7 +3,13 @@
 module PaymentProviders
   module Stripe
     class HandleEventJob < ApplicationJob
-      queue_as "providers"
+      queue_as do
+        if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_PAYMENTS"])
+          :payments
+        else
+          :providers
+        end
+      end
 
       # NOTE: Sometimes, the stripe webhook is received before the DB update of the impacted resource
       retry_on BaseService::NotFoundFailure

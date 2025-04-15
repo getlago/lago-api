@@ -3,7 +3,13 @@
 module PaymentRequests
   module Payments
     class CreateJob < ApplicationJob
-      queue_as "providers"
+      queue_as do
+        if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_PAYMENTS"])
+          :payments
+        else
+          :providers
+        end
+      end
 
       unique :until_executed, on_conflict: :log
 
