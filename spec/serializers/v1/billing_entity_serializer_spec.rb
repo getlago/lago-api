@@ -3,13 +3,15 @@
 require "rails_helper"
 
 RSpec.describe V1::BillingEntitySerializer, type: :serializer do
-  subject(:serializer) { described_class.new(billing_entity, root_name: "billing_entity") }
+  subject(:serializer) { described_class.new(billing_entity, root_name: "billing_entity", includes: includes_options) }
 
   let(:billing_entity) { create(:billing_entity) }
   let(:result) { JSON.parse(serializer.to_json) }
+  let(:includes_options) { nil }
 
   it "serializes the billing entity" do
     billing_entity_serialized = result["billing_entity"]
+
     expect(billing_entity_serialized.fetch("lago_id")).to eq(billing_entity.id)
     expect(billing_entity_serialized.fetch("code")).to eq(billing_entity.code)
     expect(billing_entity_serialized.fetch("name")).to eq(billing_entity.name)
@@ -38,5 +40,35 @@ RSpec.describe V1::BillingEntitySerializer, type: :serializer do
     expect(billing_entity_serialized.fetch("is_default")).to eq(billing_entity.organization.default_billing_entity.id == billing_entity.id)
     expect(billing_entity_serialized.fetch("eu_tax_management")).to eq(billing_entity.eu_tax_management)
     expect(billing_entity_serialized.fetch("logo_url")).to eq(billing_entity.logo_url)
+    expect(billing_entity_serialized["taxes"]).to be_nil
+  end
+
+  context "when including taxes" do
+    let(:includes_options) { [:taxes] }
+
+    it "serializes the taxes" do
+      billing_entity_serialized = result["billing_entity"]
+      expect(billing_entity_serialized.fetch("taxes")).to be_empty
+    end
+
+    context "when billing entity has applied taxes" do
+      let(:tax) { create(:tax) }
+      let(:applied_tax) { create(:billing_entity_applied_tax, billing_entity:, tax:) }
+
+      before { applied_tax }
+
+      it "serializes the applied taxes" do
+        billing_entity_serialized = result["billing_entity"]
+        expect(billing_entity_serialized.fetch("taxes").count).to eq(1)
+
+        serialized_tax = billing_entity_serialized.fetch("taxes").first
+        expect(serialized_tax.fetch("lago_id")).to eq(tax.id)
+        expect(serialized_tax.fetch("code")).to eq(tax.code)
+        expect(serialized_tax.fetch("name")).to eq(tax.name)
+        expect(serialized_tax.fetch("rate")).to eq(tax.rate)
+        expect(serialized_tax.fetch("description")).to eq(tax.description)
+        expect(serialized_tax.fetch("created_at")).to eq(tax.created_at.iso8601)
+      end
+    end
   end
 end
