@@ -285,6 +285,8 @@ DROP INDEX IF EXISTS public.index_int_collection_mappings_on_mapping_type_and_in
 DROP INDEX IF EXISTS public.index_inbound_webhooks_on_status_and_processing_at;
 DROP INDEX IF EXISTS public.index_inbound_webhooks_on_status_and_created_at;
 DROP INDEX IF EXISTS public.index_inbound_webhooks_on_organization_id;
+DROP INDEX IF EXISTS public.index_idempotency_records_on_resource_type_and_resource_id;
+DROP INDEX IF EXISTS public.index_idempotency_records_on_idempotency_key;
 DROP INDEX IF EXISTS public.index_groups_on_parent_group_id;
 DROP INDEX IF EXISTS public.index_groups_on_deleted_at;
 DROP INDEX IF EXISTS public.index_groups_on_billable_metric_id_and_parent_group_id;
@@ -478,6 +480,7 @@ ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS in
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS integration_customers_pkey;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS integration_collection_mappings_pkey;
 ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS inbound_webhooks_pkey;
+ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS idempotency_records_pkey;
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS groups_pkey;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS group_properties_pkey;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fees_taxes_pkey;
@@ -563,6 +566,7 @@ DROP TABLE IF EXISTS public.integration_items;
 DROP TABLE IF EXISTS public.integration_customers;
 DROP TABLE IF EXISTS public.integration_collection_mappings;
 DROP TABLE IF EXISTS public.inbound_webhooks;
+DROP TABLE IF EXISTS public.idempotency_records;
 DROP TABLE IF EXISTS public.groups;
 DROP TABLE IF EXISTS public.group_properties;
 DROP TABLE IF EXISTS public.fees_taxes;
@@ -1681,6 +1685,20 @@ CREATE TABLE public.groups (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone
+);
+
+
+--
+-- Name: idempotency_records; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.idempotency_records (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    idempotency_key bytea NOT NULL,
+    resource_id uuid,
+    resource_type character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -2856,6 +2874,14 @@ ALTER TABLE ONLY public.group_properties
 
 ALTER TABLE ONLY public.groups
     ADD CONSTRAINT groups_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idempotency_records idempotency_records_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.idempotency_records
+    ADD CONSTRAINT idempotency_records_pkey PRIMARY KEY (id);
 
 
 --
@@ -4246,6 +4272,20 @@ CREATE INDEX index_groups_on_deleted_at ON public.groups USING btree (deleted_at
 --
 
 CREATE INDEX index_groups_on_parent_group_id ON public.groups USING btree (parent_group_id);
+
+
+--
+-- Name: index_idempotency_records_on_idempotency_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_idempotency_records_on_idempotency_key ON public.idempotency_records USING btree (idempotency_key);
+
+
+--
+-- Name: index_idempotency_records_on_resource_type_and_resource_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_idempotency_records_on_resource_type_and_resource_id ON public.idempotency_records USING btree (resource_type, resource_id);
 
 
 --
@@ -6263,6 +6303,7 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250414091130'),
 ('20250411112117'),
 ('20250411110934'),
 ('20250411110825'),
