@@ -1,9 +1,5 @@
 # frozen_string_literal: true
 
-class Organization
-  attribute :document_numbering, :string
-end
-
 class MigrateAppliedTaxesToBillingEntities < ActiveRecord::Migration[7.2]
   def up
     Organization.find_each do |organization|
