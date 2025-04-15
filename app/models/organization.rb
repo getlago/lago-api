@@ -101,7 +101,6 @@ class Organization < ApplicationRecord
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 
-  attribute :document_numbering
   enum :document_numbering, DOCUMENT_NUMBERINGS
 
   validates :country, country_code: true, unless: -> { country.nil? }
