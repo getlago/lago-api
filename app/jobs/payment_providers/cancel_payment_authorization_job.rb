@@ -2,7 +2,13 @@
 
 module PaymentProviders
   class CancelPaymentAuthorizationJob < ApplicationJob
-    queue_as "providers"
+    queue_as do
+      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_PAYMENTS"])
+        :payments
+      else
+        :providers
+      end
+    end
 
     def perform(payment_provider:, id:)
       provider_name = payment_provider.payment_type.to_s

@@ -3,7 +3,13 @@
 module PaymentProviders
   module Gocardless
     class HandleEventJob < ApplicationJob
-      queue_as "providers"
+      queue_as do
+        if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_PAYMENTS"])
+          :payments
+        else
+          :providers
+        end
+      end
 
       def perform(organization: nil, events_json: nil, event_json: nil)
         # NOTE: temporary keeps both events_json and event_json to avoid errors during the deployment

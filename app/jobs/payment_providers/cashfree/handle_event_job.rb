@@ -3,7 +3,13 @@
 module PaymentProviders
   module Cashfree
     class HandleEventJob < ApplicationJob
-      queue_as "providers"
+      queue_as do
+        if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_PAYMENTS"])
+          :payments
+        else
+          :providers
+        end
+      end
 
       def perform(organization:, event:)
         PaymentProviders::Cashfree::HandleEventService.call!(
