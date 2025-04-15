@@ -208,7 +208,7 @@ RSpec.describe BillingEntities::UpdateService do
 
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages).to eq({eu_tax_management: ["org_must_be_in_eu"]})
+          expect(result.error.messages).to eq({eu_tax_management: ["billing_entity_must_be_in_eu"]})
           expect(tax_auto_generate_service).not_to have_received(:call)
         end
       end
