@@ -12,7 +12,7 @@ module IdempotencyRecords
     end
 
     def call
-      ActiveRecord::Base.transaction do
+      ApplicationRecord.transaction do
         idempotency_record = IdempotencyRecord.create!(
           idempotency_key: idempotency_key,
           resource: resource

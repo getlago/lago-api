@@ -4,12 +4,7 @@
 #
 # This class provides the database representation for idempotency tracking,
 # but direct usage is discouraged. Instead, use the higher-level API provided
-# by the IdempotencyService or similar interfaces that handle the complexities
-# of idempotency implementation.
-#
-# For most use cases, you should interact with the idempotency system through
-# these higher-level abstractions rather than manipulating IdempotencyRecord
-# instances directly.
+# by the Idempotency class
 class IdempotencyRecord < ApplicationRecord
   belongs_to :resource, polymorphic: true, optional: true
 end
