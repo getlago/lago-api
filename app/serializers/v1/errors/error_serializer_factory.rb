@@ -5,7 +5,7 @@ module V1
     class ErrorSerializerFactory
       def self.new_instance(error)
         if error.is_a?(::Stripe::StripeError)
-          V1::StripeErrorSerializer.new(error)
+          V1::Errors::StripeErrorSerializer.new(error)
         else
           raise NotImplementedError
         end
