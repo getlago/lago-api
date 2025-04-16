@@ -9,6 +9,7 @@ module Types
 
     field :current_user, resolver: Resolvers::CurrentUserResolver
 
+    field :activity_logs, resolver: Resolvers::ActivityLogsResolver
     field :add_on, resolver: Resolvers::AddOnResolver
     field :add_ons, resolver: Resolvers::AddOnsResolver
     field :api_key, resolver: Resolvers::ApiKeyResolver
@@ -81,7 +82,6 @@ module Types
     field :webhook_endpoint, resolver: Resolvers::WebhookEndpointResolver
     field :webhook_endpoints, resolver: Resolvers::WebhookEndpointsResolver
     field :webhooks, resolver: Resolvers::WebhooksResolver
-    field :activity_logs, resolver: Resolvers::ActivityLogsResolver
 
     field :data_api_mrrs, resolver: Resolvers::DataApi::MrrsResolver
     field :data_api_mrrs_plans, resolver: Resolvers::DataApi::Mrrs::PlansResolver
