@@ -96,7 +96,7 @@ Charge.create_with(
     billing_time: :calendar
   ).find_or_create_by!(
     customer:,
-    external_id: SecureRandom.uuid,
+    external_id: "cust_#{SecureRandom.hex}",
     plan:
   )
 
@@ -111,7 +111,7 @@ Charge.create_with(
         external_customer_id: customer.external_id,
         external_subscription_id: sub.external_id,
         organization_id: organization.id,
-        transaction_id: SecureRandom.uuid,
+        transaction_id: "tr-#{SecureRandom.hex}",
         timestamp: time - rand(0..12).seconds,
         created_at: time,
         code: sum_metric.code,
@@ -132,7 +132,7 @@ Charge.create_with(
         external_customer_id: customer.external_id,
         external_subscription_id: sub.external_id,
         organization_id: organization.id,
-        transaction_id: SecureRandom.uuid,
+        transaction_id: "tr-#{SecureRandom.hex}",
         timestamp: time - rand(0..12).seconds,
         created_at: time,
         code: count_metric.code,
@@ -152,7 +152,7 @@ Charge.create_with(
       external_customer_id: customer.external_id,
       external_subscription_id: sub.external_id,
       organization_id: organization.id,
-      transaction_id: SecureRandom.uuid,
+      transaction_id: "tr-#{SecureRandom.hex}",
       timestamp: time - 120.seconds,
       created_at: time,
       code: sum_metric.code,
@@ -172,7 +172,7 @@ Charge.create_with(
       external_customer_id: customer.external_id,
       external_subscription_id: sub.external_id,
       organization_id: organization.id,
-      transaction_id: SecureRandom.uuid,
+      transaction_id: "tr-#{SecureRandom.hex}",
       timestamp: time - 120.seconds,
       created_at: time,
       code: "foo",
@@ -238,7 +238,7 @@ organization.customers.find_each do |customer|
       external_customer_id: customer.external_id,
       external_subscription_id: customer.active_subscriptions&.first&.external_id,
       organization_id: organization.id,
-      transaction_id: SecureRandom.uuid,
+      transaction_id: "tr-#{SecureRandom.hex}",
       timestamp: time - rand(0..24).hours,
       created_at: time,
       code: sum_metric.code,
