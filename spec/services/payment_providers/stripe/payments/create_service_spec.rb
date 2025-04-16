@@ -147,6 +147,10 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
     end
 
     context "with card error on stripe" do
+      let(:payment_response) do
+        File.read(Rails.root.join("spec/fixtures/stripe/payment_intent_card_declined_response.json"))
+      end
+
       let(:customer) { create(:customer, organization:, payment_provider_code: code) }
 
       let(:subscription) do
@@ -160,8 +164,8 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       before do
         subscription
 
-        allow(Stripe::PaymentIntent).to receive(:create)
-          .and_raise(::Stripe::CardError.new("error", {}))
+        stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+          .to_return(status: 402, body: payment_response, headers: {})
       end
 
       it "returns a failed result" do
@@ -169,12 +173,13 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
 
         expect(result.error).to be_a(BaseService::ServiceFailure)
         expect(result.error.code).to eq("stripe_error")
-        expect(result.error.error_message).to eq("error")
+        expect(result.error.error_message).to eq("Your card was declined.")
 
-        expect(result.error_message).to eq("error")
-        expect(result.error_code).to be_nil
+        expect(result.error_message).to eq("Your card was declined.")
+        expect(result.error_code).to eq("card_declined")
         expect(result.payment.status).to eq("failed")
         expect(result.payment.payable_payment_status).to eq("failed")
+        expect(payment.reload.provider_payment_id).to eq("pi_3RECBrEODpjARzFD0ML00Ti8")
       end
     end
 
