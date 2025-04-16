@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-# frozen_string_literal: true
-
 RSpec.describe PaymentIntents::FetchService do
   describe ".call" do
     subject(:result) { described_class.call(invoice:) }
@@ -28,6 +26,7 @@ RSpec.describe PaymentIntents::FetchService do
 
         allow(payment_provider_service)
           .to receive(:generate_payment_url)
+          .with(instance_of(PaymentIntent))
           .and_return(BaseService::Result.new.tap { |r| r.payment_url = payment_url })
       end
 
@@ -44,8 +43,9 @@ RSpec.describe PaymentIntents::FetchService do
       context "when payment intent exists but has no payment URL" do
         let!(:payment_intent) { create(:payment_intent, invoice:, payment_url: nil) }
 
-        it "generates a new payment URL" do
+        it "returns intent with generated payment URL" do
           expect(result).to be_success
+          expect(result.payment_intent).to eq(payment_intent)
           expect(result.payment_intent.payment_url).to eq(payment_url)
           expect(payment_provider_service).to have_received(:generate_payment_url)
         end

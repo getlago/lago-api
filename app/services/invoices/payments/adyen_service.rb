@@ -41,8 +41,12 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url
-        res = client.checkout.payment_links_api.payment_links(Lago::Adyen::Params.new(payment_url_params).to_h)
+      def generate_payment_url(payment_intent)
+        res = client.checkout.payment_links_api.payment_links(
+          Lago::Adyen::Params.new(payment_url_params(payment_intent)).to_h,
+          headers: {"Idempotency-Key" => payment_intent.id}
+        )
+
         adyen_success, adyen_error = handle_adyen_response(res)
         result.service_failure!(code: adyen_error.code, message: adyen_error.msg) unless adyen_success
 
@@ -142,7 +146,7 @@ module Invoices
         prms
       end
 
-      def payment_url_params
+      def payment_url_params(payment_intent)
         prms = {
           reference: invoice.number,
           amount: {
@@ -154,7 +158,7 @@ module Invoices
           shopperReference: customer.external_id,
           storePaymentMethodMode: "enabled",
           recurringProcessingModel: "UnscheduledCardOnFile",
-          expiresAt: Time.current + 1.day,
+          expiresAt: payment_intent.expires_at.iso8601,
           metadata: {
             lago_customer_id: customer.id,
             lago_invoice_id: invoice.id,

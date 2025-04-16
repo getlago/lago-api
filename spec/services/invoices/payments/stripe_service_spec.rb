@@ -26,6 +26,8 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
   let(:total_paid_amount_cents) { 0 }
 
   describe "#generate_payment_url" do
+    let(:payment_intent) { create(:payment_intent) }
+
     before do
       stripe_payment_provider
       stripe_customer
@@ -35,13 +37,14 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
     end
 
     it "generates payment url" do
-      stripe_service.generate_payment_url
+      stripe_service.generate_payment_url(payment_intent)
 
       expect(::Stripe::Checkout::Session).to have_received(:create)
     end
 
     context "with #payment_url_payload" do
-      let(:payment_url_payload) { stripe_service.__send__(:payment_url_payload) }
+      let(:payment_url_payload) { stripe_service.__send__(:payment_url_payload, payment_intent) }
+
       let(:payload) do
         {
           line_items: [
@@ -60,6 +63,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
           success_url: stripe_service.__send__(:success_redirect_url),
           customer: customer.stripe_customer.provider_customer_id,
           payment_method_types: customer.stripe_customer.provider_payment_methods,
+          expires_at: payment_intent.expires_at.to_i,
           payment_intent_data: {
             description: stripe_service.__send__(:description),
             setup_future_usage: "off_session",
@@ -96,7 +100,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
       end
 
       it "returns a failed result" do
-        result = stripe_service.generate_payment_url
+        result = stripe_service.generate_payment_url(payment_intent)
 
         expect(result).not_to be_success
 
