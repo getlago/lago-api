@@ -1,18 +1,22 @@
 # frozen_string_literal: true
 
 class MigrateAppliedTaxesToBillingEntities < ActiveRecord::Migration[7.2]
-  class Organization < ApplicationRecord
-    attribute :document_numbering, :string
-  end
-
   def up
-    Organization.find_each do |organization|
-      Tax.where(organization_id: organization.id, applied_to_organization: true).find_each do |tax|
-        BillingEntity::AppliedTax.find_or_create_by!(
-          billing_entity_id: organization.id,
-          tax_id: tax.id
-        )
-      end
+    applicable_taxes = Tax.where(applied_to_organization: true).pluck(:id, :organization_id)
+
+    timestamp = Time.current
+    rows = applicable_taxes.map do |tax_id, organization_id|
+      {
+        billing_entity_id: organization_id,
+        tax_id: tax_id,
+        created_at: timestamp,
+        updated_at: timestamp
+      }
     end
+
+    BillingEntity::AppliedTax.insert_all(
+      rows,
+      unique_by: :index_billing_entities_taxes_on_billing_entity_id_and_tax_id
+    )
   end
 end
