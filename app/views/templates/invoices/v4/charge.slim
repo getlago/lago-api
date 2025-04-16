@@ -371,8 +371,8 @@ html
     .wrapper
       .mb-24
         h1.invoice-title = document_invoice_name
-        - if organization.logo.present?
-          img.header-logo src="data:#{organization.logo.content_type};base64,#{organization.base64_logo}"
+        - if billing_entity.logo.present?
+          img.header-logo src="data:#{billing_entity.logo.content_type};base64,#{billing_entity.base64_logo}"
 
       .mb-24.overflow-auto
         .invoice-information-column
@@ -398,28 +398,28 @@ html
         .billing-information-column
           .body-1 = I18n.t('invoice.bill_from')
           .body-2
-            - if organization.legal_name.present?
-              | #{organization.legal_name}
+            - if billing_entity.legal_name.present?
+              | #{billing_entity.legal_name}
             - else
-              | #{organization.name}
-          - if organization.legal_number.present?
-            .body-2 #{organization.legal_number}
-          .body-2 = organization.address_line1
-          .body-2 = organization.address_line2
+              | #{billing_entity.name}
+          - if billing_entity.legal_number.present?
+            .body-2 #{billing_entity.legal_number}
+          .body-2 = billing_entity.address_line1
+          .body-2 = billing_entity.address_line2
           .body-2
             span
-              = organization.zipcode
-            - if organization.zipcode.present? && organization.city.present?
+              = billing_entity.zipcode
+            - if billing_entity.zipcode.present? && billing_entity.city.present?
               span
                 | , &nbsp;
             span
-              = organization.city
-          - if organization.state.present?
-            .body-2 = organization.state
-          .body-2 = ISO3166::Country.new(organization.country)&.common_name
-          .body-2 = organization.email
-          - if organization.tax_identification_number.present?
-            .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: organization.tax_identification_number)
+              = billing_entity.city
+          - if billing_entity.state.present?
+            .body-2 = billing_entity.state
+          .body-2 = ISO3166::Country.new(billing_entity.country)&.common_name
+          .body-2 = billing_entity.email
+          - if billing_entity.tax_identification_number.present?
+            .body-2 = I18n.t('invoice.tax_identification_number', tax_identification_number: billing_entity.tax_identification_number)
         .billing-information-column
           .body-1 = I18n.t('invoice.bill_to')
           .body-2 = customer.display_name
@@ -453,6 +453,6 @@ html
       - if applied_invoice_custom_sections.present?
         == SlimHelper.render('templates/invoices/v4/_custom_sections', self)
 
-      p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
+      p.body-3.mb-24 = LineBreakHelper.break_lines(billing_entity.invoice_footer)
 
       == SlimHelper.render('templates/invoices/v4/_powered_by_logo', self)
