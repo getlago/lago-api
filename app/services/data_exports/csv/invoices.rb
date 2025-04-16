@@ -41,6 +41,7 @@ module DataExports
           payment_due_date
           payment_dispute_lost_at
           payment_overdue
+          usage_already_billed_cents
         ]
       end
 
@@ -53,7 +54,7 @@ module DataExports
           .new(invoice, includes: %i[customer])
           .serialize
 
-        csv << [
+        row = [
           serialized_invoice[:lago_id],
           serialized_invoice[:sequential_id],
           serialized_invoice[:self_billed],
@@ -80,10 +81,17 @@ module DataExports
           serialized_invoice[:payment_dispute_lost_at],
           serialized_invoice[:payment_overdue]
         ]
+
+        row << serialized_invoice[:progressive_billing_credit_amount_cents] if progressive_billing_enabled?
+        csv << row
       end
 
       def collection
         Invoice.find(data_export_part.object_ids)
+      end
+
+      def progressive_billing_enabled?
+        data_export_part.data_export.organization&.progressive_billing_enabled?
       end
     end
   end
