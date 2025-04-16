@@ -160,7 +160,9 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
   end
 
   describe "#payment_url_params" do
-    subject(:payment_url_params) { adyen_service.__send__(:payment_url_params) }
+    subject(:payment_url_params) { adyen_service.send(:payment_url_params, payment_intent) }
+
+    let(:payment_intent) { create(:payment_intent) }
 
     let(:expected_params) do
       {
@@ -174,7 +176,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
         shopperReference: customer.external_id,
         storePaymentMethodMode: "enabled",
         recurringProcessingModel: "UnscheduledCardOnFile",
-        expiresAt: (Time.current + 1.day),
+        expiresAt: payment_intent.expires_at.iso8601,
         metadata: {
           lago_customer_id: customer.id,
           lago_invoice_id: invoice.id,
@@ -227,6 +229,8 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
   end
 
   describe "#generate_payment_url" do
+    let(:payment_intent) { create(:payment_intent) }
+
     before do
       adyen_payment_provider
       adyen_customer
@@ -242,7 +246,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
     end
 
     it "generates payment url" do
-      adyen_service.generate_payment_url
+      adyen_service.generate_payment_url(payment_intent)
 
       expect(payment_links_api).to have_received(:payment_links)
     end
@@ -254,7 +258,7 @@ RSpec.describe Invoices::Payments::AdyenService, type: :service do
       end
 
       it "returns a failed result" do
-        result = adyen_service.generate_payment_url
+        result = adyen_service.generate_payment_url(payment_intent)
 
         expect(result).not_to be_success
 

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module PaymentIntents
   class FetchService < BaseService
     Result = BaseResult[:payment_intent]
@@ -15,8 +17,8 @@ module PaymentIntents
 
       if payment_intent.payment_url.blank?
         payment_url_result = Invoices::Payments::PaymentProviders::Factory
-                               .new_instance(invoice:)
-                               .generate_payment_url(payment_intent)
+          .new_instance(invoice:)
+          .generate_payment_url(payment_intent)
 
         payment_url_result.raise_if_error!
 

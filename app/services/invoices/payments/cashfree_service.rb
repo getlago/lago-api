@@ -40,8 +40,12 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url
-        payment_link_response = create_payment_link(payment_url_params)
+      def generate_payment_url(payment_intent)
+        payment_link_response = create_payment_link(
+          payment_url_params(payment_intent),
+          payment_intent.id
+        )
+
         result.payment_url = JSON.parse(payment_link_response.body)["link_url"]
 
         result
@@ -78,13 +82,14 @@ module Invoices
         @client ||= LagoHttpClient::Client.new(::PaymentProviders::CashfreeProvider::BASE_URL)
       end
 
-      def create_payment_link(body)
+      def create_payment_link(body, idempotency_key)
         client.post_with_response(body, {
           "accept" => "application/json",
           "content-type" => "application/json",
           "x-client-id" => cashfree_payment_provider.client_id,
           "x-client-secret" => cashfree_payment_provider.client_secret,
-          "x-api-version" => ::PaymentProviders::CashfreeProvider::API_VERSION
+          "x-api-version" => ::PaymentProviders::CashfreeProvider::API_VERSION,
+          "x-idempotency-key" => idempotency_key
         })
       end
 
@@ -96,7 +101,7 @@ module Invoices
         @cashfree_payment_provider ||= payment_provider(customer)
       end
 
-      def payment_url_params
+      def payment_url_params(payment_intent)
         {
           customer_details: {
             customer_phone: customer.phone || "9999999999",
@@ -121,7 +126,7 @@ module Invoices
           link_amount: invoice.total_due_amount_cents / 100.to_f,
           link_currency: invoice.currency.upcase,
           link_purpose: invoice.id,
-          link_expiry_time: (Time.current + 10.minutes).iso8601,
+          link_expiry_time: payment_intent.expires_at.iso8601,
           link_partial_payments: false,
           link_auto_reminders: false
         }
