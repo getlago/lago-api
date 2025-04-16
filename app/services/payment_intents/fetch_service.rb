@@ -11,7 +11,7 @@ module PaymentIntents
       return result.not_found_failure!(resource: "invoice") unless invoice
 
       PaymentIntent.awaiting_expiration.find_by(invoice:)&.expired!
-      payment_intent = PaymentIntent.active.find_or_create_by!(invoice:)
+      payment_intent = PaymentIntent.non_expired.find_or_create_by!(invoice:)
 
       if payment_intent.payment_url.blank?
         payment_url_result = Invoices::Payments::PaymentProviders::Factory

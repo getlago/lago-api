@@ -9,5 +9,9 @@ FactoryBot.define do
       status { :expired }
       expires_at { generate(:past_date) }
     end
+
+    trait :awaiting_expiration do
+      expires_at { 1.hour.ago }
+    end
   end
 end
