@@ -52,11 +52,12 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url
+      def generate_payment_url(payment_intent)
         res = ::Stripe::Checkout::Session.create(
-          payment_url_payload,
+          payment_url_payload(payment_intent),
           {
-            api_key: stripe_api_key
+            api_key: stripe_api_key,
+            idempotency_key: "payment-intent-#{payment_intent.id}"
           }
         )
 
@@ -110,7 +111,7 @@ module Invoices
         stripe_payment_provider.secret_key
       end
 
-      def payment_url_payload
+      def payment_url_payload(payment_intent)
         {
           line_items: [
             {
@@ -128,6 +129,7 @@ module Invoices
           success_url: success_redirect_url,
           customer: customer.stripe_customer.provider_customer_id,
           payment_method_types: customer.stripe_customer.provider_payment_methods,
+          expires_at: payment_intent.expires_at.to_i,
           payment_intent_data: {
             description:,
             setup_future_usage: off_session? ? "off_session" : nil, # save payment method for future use
