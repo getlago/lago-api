@@ -14,7 +14,12 @@ module PaymentReceipts
       return result.not_found_failure!(resource: "payment") unless payment
       return result.forbidden_failure! unless organization.issue_receipts_enabled?
       return result if payment.payable.customer.partner_account?
-      return result if payment.payment_receipt || payment.payable_payment_status.to_s != "succeeded"
+      return result if payment.payable_payment_status.to_s != "succeeded"
+
+      if payment.payment_receipt
+        result.payment_receipt = payment.payment_receipt
+        return result
+      end
 
       result.payment_receipt = PaymentReceipt.create!(payment:, organization:)
 
