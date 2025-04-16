@@ -4,13 +4,22 @@ class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
   def change
     create_table :usage_monitoring_alerts, id: :uuid do |t|
       t.references :organization, type: :uuid, foreign_key: true, null: false, index: true
-      t.references :plan, type: :uuid, foreign_key: true, null: true, index: true
-      t.string :subscription_external_id, index: true
+      t.string :subscription_external_id, null: false, index: true
       t.references :billable_metric, type: :uuid, foreign_key: true, null: true, index: true # TODO: Is index needed?
       t.string :alert_type, null: false # Rails STI
+      t.numeric :previous_value, precision: 30, scale: 5, null: false, default: 0
       t.string :code
       t.datetime :deleted_at
       t.timestamps
+
+      t.index %w[subscription_external_id organization_id alert_type],
+        unique: true,
+        name: "index_alerts_unique_per_type_per_customer",
+        where: "(billable_metric_id IS NULL AND deleted_at IS NULL)"
+      t.index %w[subscription_external_id organization_id alert_type billable_metric_id],
+        unique: true,
+        name: "index_alerts_unique_per_type_per_customer_with_bm",
+        where: "(billable_metric_id IS NOT NULL AND deleted_at IS NULL)"
     end
 
     create_table :usage_monitoring_alert_thresholds, id: :uuid do |t|
