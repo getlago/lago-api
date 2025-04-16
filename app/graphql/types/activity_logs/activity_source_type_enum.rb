@@ -6,7 +6,7 @@ module Types
       graphql_name "ActivitySourceTypeEnum"
       description "Activity Logs source type enums"
 
-      Clickhouse::ActivityLog::SOURCES.each do |type|
+      [:api, :front, :system].each do |type|
         value type
       end
     end

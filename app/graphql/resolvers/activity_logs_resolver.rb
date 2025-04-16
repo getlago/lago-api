@@ -23,7 +23,7 @@ module Resolvers
     argument :resource_type, String, required: false
     argument :user_emails, [String], required: false
 
-    type Types::Taxes::Object, null: true
+    type Types::ActivityLogs::Object, null: true
 
     def resolve(id: nil)
       current_organization.activity_logs.find(id)

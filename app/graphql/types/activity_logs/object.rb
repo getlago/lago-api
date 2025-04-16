@@ -17,7 +17,7 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       # should we add field :api_key_id ???
       field :external_customer_id, String
-      field :external_customer_id, String
+      field :external_subscription_id, String
       field :user, Types::UserType
     end
   end
