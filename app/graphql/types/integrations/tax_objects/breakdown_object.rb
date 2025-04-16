@@ -2,9 +2,9 @@
 
 module Types
   module Integrations
-    module AnrokObjects
+    module TaxObjects
       class BreakdownObject < Types::BaseObject
-        graphql_name "AnrokBreakdownObject"
+        graphql_name "TaxBreakdownObject"
 
         # we need to show how this tax will behave when invoice is generated - will it be applied
         # on whole invoice specific rule or just a normal tax
