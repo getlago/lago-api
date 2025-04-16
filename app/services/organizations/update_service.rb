@@ -33,7 +33,6 @@ module Organizations
       organization.document_locale = billing[:document_locale] if billing.key?(:document_locale)
 
       ActiveRecord::Base.transaction do
-        # NOTE: handle eu tax management for organization
         handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
 
         if params.key?(:webhook_url)
@@ -113,16 +112,15 @@ module Organizations
     end
 
     def handle_eu_tax_management(eu_tax_management)
-      trying_to_enable_eu_tax_management = params[:eu_tax_management] && !organization.eu_tax_management
-      if !organization.eu_vat_eligible? && trying_to_enable_eu_tax_management
+      # Note: Actual EU tax management is handled in the billing_entity update service
+      organization.eu_tax_management = eu_tax_management
+
+      return unless eu_tax_management
+
+      unless organization.eu_vat_eligible?
         result.single_validation_failure!(error_code: "org_must_be_in_eu", field: :eu_tax_management)
           .raise_if_error!
       end
-
-      # NOTE: even if the organization had eu tax management, we call this service again, it uses an upsert for taxes.
-      Taxes::AutoGenerateService.new(organization:).call if eu_tax_management
-
-      organization.eu_tax_management = eu_tax_management
     end
   end
 end

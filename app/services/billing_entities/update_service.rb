@@ -45,8 +45,7 @@ module BillingEntities
       billing_entity.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
       billing_entity.document_locale = billing[:document_locale] if billing.key?(:document_locale)
 
-      # NOTE: handle eu tax management for billing_entity
-      handle_eu_tax_management(params[:eu_tax_management]) if params.key?(:eu_tax_management)
+      handle_eu_tax_management if params.key?(:eu_tax_management)
 
       if License.premium? && billing.key?(:invoice_grace_period)
         # for now we won't update related invoices to the billing_entity from this service
@@ -107,18 +106,11 @@ module BillingEntities
       )
     end
 
-    def handle_eu_tax_management(eu_tax_management)
-      trying_to_enable_eu_tax_management = params[:eu_tax_management] && !billing_entity.eu_tax_management
-      if !billing_entity.eu_vat_eligible? && trying_to_enable_eu_tax_management
-        result.single_validation_failure!(error_code: "org_must_be_in_eu", field: :eu_tax_management)
-          .raise_if_error!
-      end
-
-      # NOTE: autogenerate service generates taxes.Taxes still belong to organization, but are applied on the billing_entities,
-      # so we need to generate taxes for the organization
-      ::Taxes::AutoGenerateService.new(organization: billing_entity.organization).call if eu_tax_management
-
-      billing_entity.eu_tax_management = eu_tax_management
+    def handle_eu_tax_management
+      ChangeEuTaxManagementService.call!(
+        billing_entity:,
+        eu_tax_management: params[:eu_tax_management]
+      )
     end
   end
 end
