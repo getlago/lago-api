@@ -17,6 +17,7 @@ class Organization < ApplicationRecord
     enterprise: Float::INFINITY
   }.freeze
 
+  has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
   has_many :api_keys
   has_many :billing_entities, -> { active }
   has_many :all_billing_entities, class_name: "BillingEntity"
