@@ -179,28 +179,26 @@ RSpec.describe BillingEntities::UpdateService do
     context "with eu tax management" do
       context "with org within the EU" do
         let(:params) { {eu_tax_management: true, country: "fr"} }
-        let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
 
         before do
-          allow(Taxes::AutoGenerateService).to receive(:new).and_return(tax_auto_generate_service)
-          allow(tax_auto_generate_service).to receive(:call)
+          allow(BillingEntities::ChangeEuTaxManagementService).to receive(:call).and_call_original
         end
 
         it "calls the taxes auto generate service" do
           result = update_service.call
 
           expect(result).to be_success
-          expect(tax_auto_generate_service).to have_received(:call)
+          expect(BillingEntities::ChangeEuTaxManagementService)
+            .to have_received(:call)
+            .with(billing_entity:, eu_tax_management: true)
         end
       end
 
       context "with org outside the EU" do
         let(:params) { {eu_tax_management: true, country: "us"} }
-        let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
 
         before do
-          allow(Taxes::AutoGenerateService).to receive(:new).and_return(tax_auto_generate_service)
-          allow(tax_auto_generate_service).to receive(:call)
+          allow(BillingEntities::ChangeEuTaxManagementService).to receive(:call).and_call_original
         end
 
         it "calls the taxes auto generate service" do
@@ -209,26 +207,27 @@ RSpec.describe BillingEntities::UpdateService do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages).to eq({eu_tax_management: ["billing_entity_must_be_in_eu"]})
-          expect(tax_auto_generate_service).not_to have_received(:call)
+          expect(BillingEntities::ChangeEuTaxManagementService)
+            .to have_received(:call)
+            .with(billing_entity:, eu_tax_management: true)
         end
       end
 
       context "with org is outside the EU but feature is already enabled" do
         let(:params) { {eu_tax_management: false} }
-        let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
 
         before do
           billing_entity.country = "us"
           billing_entity.eu_tax_management = true
-          allow(Taxes::AutoGenerateService).to receive(:new).and_return(tax_auto_generate_service)
-          allow(tax_auto_generate_service).to receive(:call)
+          allow(BillingEntities::ChangeEuTaxManagementService).to receive(:call).and_call_original
         end
 
         it "can disable eu_tax_management" do
           result = update_service.call
 
           expect(result).to be_success
-          expect(tax_auto_generate_service).not_to have_received(:call)
+          expect(BillingEntities::ChangeEuTaxManagementService)
+          .to have_received(:call)
         end
       end
     end
