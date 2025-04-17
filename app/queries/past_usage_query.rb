@@ -3,13 +3,15 @@
 class PastUsageQuery < BaseQuery
   Result = BaseResult[:usage_periods, :current_page, :next_page, :prev_page, :total_pages, :total_count]
 
+  UsagePeriods = Data.define(:invoice_subscription, :fees)
+
   def call
     validate_filters
     return result if result.error.present?
 
     query_result = apply_consistent_ordering(query)
     result.usage_periods = query_result.map do |invoice_subscription|
-      OpenStruct.new(
+      UsagePeriods.new(
         invoice_subscription:,
         fees: fees_query(invoice_subscription.invoice)
       )

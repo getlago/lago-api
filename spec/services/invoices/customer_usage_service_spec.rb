@@ -211,8 +211,6 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
         result = usage_service.call
 
         expect(result).to be_success
-
-        expect(result.usage.id).to be_nil
         expect(result.usage.from_datetime).to eq(subscription.started_at.iso8601)
       end
     end

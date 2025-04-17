@@ -6,7 +6,7 @@ RSpec.describe ::V1::Customers::UsageSerializer do
   subject(:serializer) { described_class.new(usage, root_name: "customer_usage", includes: [:charges_usage]) }
 
   let(:usage) do
-    OpenStruct.new(
+    SubscriptionUsage.new(
       from_datetime: Time.current.beginning_of_month.iso8601,
       to_datetime: Time.current.end_of_month.iso8601,
       issuing_date: Time.current.end_of_month.iso8601,
