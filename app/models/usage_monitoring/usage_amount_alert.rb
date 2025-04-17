@@ -3,7 +3,14 @@
 module UsageMonitoring
   class UsageAmountAlert < Alert
     def formatted_thresholds
-      thresholds.pluck(:value).map(&:to_i).sort
+      super.map(&:to_i)
+    end
+
+    def formatted_crossed_thresholds(crossed_threshold_values)
+      super.map do |h|
+        h[:value] = h[:value].to_i
+        h
+      end
     end
 
     def get_current_value
@@ -13,6 +20,7 @@ module UsageMonitoring
         apply_taxes: false, # Never use taxes for alerting
         with_cache: true
       )
+      pp result.usage.fees.first
       result.usage.amount_cents
     end
 

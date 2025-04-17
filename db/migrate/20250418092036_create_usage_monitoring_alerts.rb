@@ -24,10 +24,23 @@ class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
     end
 
     create_table :usage_monitoring_alert_thresholds, id: :uuid do |t|
-      t.references :usage_monitoring_alerts, type: :uuid, foreign_key: true, null: false, index: true
       t.references :organization, type: :uuid, foreign_key: true, null: false, index: true
+      t.references :usage_monitoring_alert, type: :uuid, foreign_key: true, null: false, index: true
       t.numeric :value, precision: 30, scale: 5, null: false
       t.string :code
+      t.timestamps
+    end
+
+    create_table :usage_monitoring_triggered_alerts, id: :uuid do |t|
+      t.references :organization, type: :uuid, foreign_key: true, null: false, index: true
+      t.references :usage_monitoring_alert, type: :uuid, foreign_key: true, null: false, index: true
+      t.references :subscription, type: :uuid, foreign_key: true, null: false, index: true
+
+      t.numeric :current_value, precision: 30, scale: 5, null: false
+      t.numeric :previous_value, precision: 30, scale: 5, null: false
+      t.jsonb :crossed_thresholds, default: {}
+
+      t.datetime :triggered_at, null: false
       t.timestamps
     end
   end

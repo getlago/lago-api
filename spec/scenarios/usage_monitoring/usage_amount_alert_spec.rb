@@ -48,9 +48,19 @@ describe "Subscriptions Termination Scenario", :scenarios, type: :request do
     })
     alert
 
+    send_event! 2
+
+    UsageMonitoring::ProcessActivityService.call(organization: organization, subscription_external_id:)
+
+    expect(UsageMonitoring::TriggeredAlert.where(alert:).count).to eq(0)
+
     send_event! 20
 
     UsageMonitoring::ProcessActivityService.call(organization: organization, subscription_external_id:)
+
+    triggered_alert = UsageMonitoring::TriggeredAlert.where(alert:).sole
+
+    pp triggered_alert.crossed_thresholds, triggered_alert.previous_value
   end
 
   context "with deleted_at"

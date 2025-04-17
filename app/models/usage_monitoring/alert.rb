@@ -15,11 +15,12 @@ module UsageMonitoring
     belongs_to :billable_metric, optional: true
 
     has_many :thresholds,
-      foreign_key: :usage_monitoring_alerts_id,
+      foreign_key: :usage_monitoring_alert_id,
       class_name: "UsageMonitoring::AlertThreshold",
       dependent: :delete_all
 
     # QUESTION: todo only one with active.first?
+    # Question: Should we store the actual primary key and migrate alerts when we have upgrade/downgrade ?
     # has_many :subscription,
     #   primary_key: :subscription_external_id,
     #   foreign_key: :external_id,
@@ -33,11 +34,10 @@ module UsageMonitoring
       STI_MAPPING.invert.fetch(name)
     end
 
-    # Question: Should we store the actual primary key and migrate alerts when we have upgrade/downgrade ?
     def subscription
       # What if we stored the customer_id in the Alert table :think:
       # customer.subscriptions instead of organization.subscriptions
-      organization
+      @subscription ||= organization
         .subscriptions
         .active
         .order(started_at: :desc)
@@ -51,6 +51,17 @@ module UsageMonitoring
     # TODO: Better name?
     def find_thresholds_crossed
       raise NotImplementedError
+    end
+
+    def formatted_thresholds
+      thresholds.pluck(:value).uniq.sort
+    end
+
+    def formatted_crossed_thresholds(crossed_threshold_values)
+      thresholds
+        .where(value: crossed_threshold_values)
+        .select(:code, :value)
+        .map { |t| {code: t.code, value: t.value} }
     end
   end
 end
