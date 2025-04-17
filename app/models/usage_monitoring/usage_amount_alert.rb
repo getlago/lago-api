@@ -6,6 +6,16 @@ module UsageMonitoring
       thresholds.pluck(:value).map(&:to_i).sort
     end
 
+    def get_current_value
+      result = ::Invoices::CustomerUsageService.call(
+        customer: subscription.customer,
+        subscription:,
+        apply_taxes: false, # Never use taxes for alerting
+        with_cache: true
+      )
+      result.usage.amount_cents
+    end
+
     def find_thresholds_crossed(current)
       formatted_thresholds.filter { |t| t.between?(previous_value, current) }
     end
@@ -20,6 +30,7 @@ end
 #  alert_type               :string           not null
 #  code                     :string
 #  deleted_at               :datetime
+#  last_processed_at        :datetime
 #  previous_value           :decimal(30, 5)   default(0.0), not null
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null

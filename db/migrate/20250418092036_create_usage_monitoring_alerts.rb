@@ -8,6 +8,7 @@ class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
       t.references :billable_metric, type: :uuid, foreign_key: true, null: true, index: true # TODO: Is index needed?
       t.string :alert_type, null: false # Rails STI
       t.numeric :previous_value, precision: 30, scale: 5, null: false, default: 0
+      t.datetime :last_processed_at
       t.string :code
       t.datetime :deleted_at
       t.timestamps

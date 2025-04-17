@@ -33,9 +33,20 @@ module UsageMonitoring
       STI_MAPPING.invert.fetch(name)
     end
 
-    # def subscription
-    #   Subscription.active.order(started_at: :desc).find_by(external_id: subscription_external_id)
-    # end
+    # Question: Should we store the actual primary key and migrate alerts when we have upgrade/downgrade ?
+    def subscription
+      # What if we stored the customer_id in the Alert table :think:
+      # customer.subscriptions instead of organization.subscriptions
+      organization
+        .subscriptions
+        .active
+        .order(started_at: :desc)
+        .find_by(external_id: subscription_external_id)
+    end
+
+    def get_current_value
+      raise NotImplementedError
+    end
 
     # TODO: Better name?
     def find_thresholds_crossed
@@ -52,6 +63,7 @@ end
 #  alert_type               :string           not null
 #  code                     :string
 #  deleted_at               :datetime
+#  last_processed_at        :datetime
 #  previous_value           :decimal(30, 5)   default(0.0), not null
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null

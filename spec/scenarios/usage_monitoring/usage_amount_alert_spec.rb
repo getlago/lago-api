@@ -50,9 +50,6 @@ describe "Subscriptions Termination Scenario", :scenarios, type: :request do
 
     send_event! 20
 
-    # result = ::Invoices::CustomerUsageService.call(customer:, subscription: customer.subscriptions.sole, apply_taxes: false, with_cache: false)
-    # pp result.usage.to_h
-
     UsageMonitoring::ProcessActivityService.call(organization: organization, subscription_external_id:)
   end
 
