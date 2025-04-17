@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Payments
-  class UpdatePaymentMethodDataService < BaseService
+  class SetPaymentMethodDataService < BaseService
     Result = BaseResult[:payment]
 
     def initialize(payment:, provider_payment_method_id:)
@@ -13,6 +13,11 @@ module Payments
     end
 
     def call
+      if payment.provider_payment_method_id == provider_payment_method_id
+        result.payment = payment
+        return result
+      end
+
       data = case payment_provider.type
       when PaymentProviders::StripeProvider.to_s
         retrieve_stripe_payment_method_data

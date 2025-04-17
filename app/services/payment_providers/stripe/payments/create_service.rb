@@ -200,7 +200,8 @@ module PaymentProviders
           result.error_code = error.code
           result.reraise = reraise
 
-          payment.update!(status: :failed, payable_payment_status:)
+          # stripe may return us a Stripe::CardError error if payment_intent was created, but it's processing failed, in this case error would contain payment_intent id
+          payment.update!(status: :failed, payable_payment_status:, provider_payment_id: error.error&.payment_intent&.id)
 
           result.service_failure!(code: "stripe_error", message: error.message)
         end

@@ -42,6 +42,18 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
       expect(json[:billing_entity][:lago_id]).to eq(billing_entity1.id)
     end
 
+    context "when the billing entity has applied taxes" do
+      let(:tax) { create(:tax) }
+      let(:applied_tax) { create(:billing_entity_applied_tax, billing_entity: billing_entity1, tax:) }
+
+      before { applied_tax }
+
+      it "returns the billing entity with the applied taxes" do
+        subject
+        expect(json[:billing_entity][:taxes].count).to eq(1)
+      end
+    end
+
     context "when the billing entity from another organization is requested" do
       subject do
         get_with_token(organization, "/api/v1/billing_entities/#{billing_entity3.code}")

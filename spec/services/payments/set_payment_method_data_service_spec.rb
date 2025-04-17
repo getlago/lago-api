@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Payments::UpdatePaymentMethodDataService, type: :service do
+RSpec.describe Payments::SetPaymentMethodDataService, type: :service do
   subject(:service) { described_class.new(payment:, provider_payment_method_id:) }
 
   let(:provider_payment_method_id) { "pm_1R2DFsQ8iJWBZFaMw3LLbR0r" }
@@ -24,6 +24,18 @@ RSpec.describe Payments::UpdatePaymentMethodDataService, type: :service do
           "brand" => "visa",
           "last4" => "4242"
         })
+      end
+
+      context "when the payment method id is already set" do
+        it "does not call stripe" do
+          payment.update!(
+            provider_payment_method_id: provider_payment_method_id,
+            provider_payment_method_data: {existing: "data"}
+          )
+          result = service.call
+          expect(result.payment.provider_payment_method_id).to eq provider_payment_method_id
+          expect(result.payment.provider_payment_method_data).to eq({"existing" => "data"})
+        end
       end
     end
 

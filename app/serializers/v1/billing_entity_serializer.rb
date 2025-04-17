@@ -3,7 +3,7 @@
 module V1
   class BillingEntitySerializer < ModelSerializer
     def serialize
-      {
+      payload = {
         lago_id: model.id,
         code: model.code,
         name: model.name,
@@ -33,6 +33,20 @@ module V1
         eu_tax_management: model.eu_tax_management,
         logo_url: model.logo_url
       }
+
+      payload = payload.merge(taxes) if include?(:taxes)
+
+      payload
+    end
+
+    private
+
+    def taxes
+      ::CollectionSerializer.new(
+        model.taxes,
+        ::V1::TaxSerializer,
+        collection_name: "taxes"
+      ).serialize
     end
   end
 end

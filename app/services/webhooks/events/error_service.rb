@@ -3,6 +3,8 @@
 module Webhooks
   module Events
     class ErrorService < Webhooks::BaseService
+      EventError = Data.define(:error, :event)
+
       private
 
       def current_organization
@@ -11,7 +13,7 @@ module Webhooks
 
       def object_serializer
         ::V1::EventErrorSerializer.new(
-          OpenStruct.new(
+          EventError.new(
             error: options[:error],
             event: object
           ),

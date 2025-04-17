@@ -48,12 +48,10 @@ ActiveJob::Uniqueness.test_mode!
 
 Dir[Rails.root.join("spec/support/**/*.rb")].sort.each { |f| require f }
 
-# Checks for pending migrations
 begin
   ActiveRecord::Migration.check_all_pending!
-rescue ActiveRecord::PendingMigrationError => e
-  puts e.to_s.strip
-  exit 1
+rescue ActiveRecord::PendingMigrationError
+  FileUtils.cd(Rails.root) { system("bin/rails db:migrate:primary RAILS_ENV=test") }
 end
 
 RSpec.configure do |config|

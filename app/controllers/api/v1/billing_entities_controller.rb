@@ -19,7 +19,7 @@ module Api
         return not_found_error(resource: "billing_entity") if entity.blank?
 
         render(
-          json: ::V1::BillingEntitySerializer.new(entity, root_name: "billing_entity")
+          json: ::V1::BillingEntitySerializer.new(entity, root_name: "billing_entity", includes: [:taxes])
         )
       end
     end
