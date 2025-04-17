@@ -15,7 +15,6 @@ module Types
       field :resource_changes, String
       field :resource_id, String, null: false
       field :resource_type, String, null: false
-      # TODO: should we add field :api_key_id ???
       field :external_customer_id, String
       field :external_subscription_id, String
       field :user, Types::UserType

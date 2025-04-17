@@ -5,7 +5,7 @@ module Resolvers
     include AuthenticableApiUser
     include RequiredOrganization
 
-    REQUIRED_PERMISSION = "activity_logs:view"
+    REQUIRED_PERMISSION = "audit_logs:view"
 
     description "Query activity logs of an organization"
 
@@ -23,7 +23,7 @@ module Resolvers
     argument :to_date, GraphQL::Types::ISO8601Date, required: false
     argument :user_emails, [String], required: false
 
-    type Types::ActivityLogs::Object, null: true
+    type Types::ActivityLogs::Object.collection_type, null: true
 
     def resolve(**args)
       # TODO: Still need to define the query for the ActivityLogs.
