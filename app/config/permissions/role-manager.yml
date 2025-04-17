@@ -1,4 +1,6 @@
 ---
+audit_logs:
+  view: false
 analytics:
   overdue_balances:
     view: true
