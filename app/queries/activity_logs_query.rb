@@ -10,8 +10,8 @@ class ActivityLogsQuery < BaseQuery
     :user_emails,
     :external_customer_id,
     :external_subscription_id,
-    :resource_id,
-    :resource_type
+    :resource_ids,
+    :resource_types
   ]
 
   MAX_AGE = 30.days
@@ -27,8 +27,8 @@ class ActivityLogsQuery < BaseQuery
     activity_logs = with_user_emails(activity_logs) if filters.user_emails.present?
     activity_logs = with_external_customer_id(activity_logs) if filters.external_customer_id.present?
     activity_logs = with_external_subscription_id(activity_logs) if filters.external_subscription_id.present?
-    activity_logs = with_resource_id(activity_logs) if filters.resource_id.present?
-    activity_logs = with_resource_type(activity_logs) if filters.resource_type.present?
+    activity_logs = with_resource_ids(activity_logs) if filters.resource_ids.present?
+    activity_logs = with_resource_types(activity_logs) if filters.resource_types.present?
 
     result.activity_logs = activity_logs
     result
@@ -63,12 +63,12 @@ class ActivityLogsQuery < BaseQuery
     scope.where(external_subscription_id: filters.external_subscription_id)
   end
 
-  def with_resource_id(scope)
-    scope.where(resource_id: filters.resource_id)
+  def with_resource_ids(scope)
+    scope.where(resource_id: filters.resource_ids)
   end
 
-  def with_resource_type(scope)
-    scope.where(resource_type: filters.resource_type)
+  def with_resource_types(scope)
+    scope.where(resource_type: filters.resource_types)
   end
 
   def from_date

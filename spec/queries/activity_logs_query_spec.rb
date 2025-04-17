@@ -114,22 +114,22 @@ RSpec.describe ActivityLogsQuery, type: :query, clickhouse: true do
     end
   end
 
-  context "with resource_id filter" do
+  context "with resource_ids filter" do
     it "returns expected activity logs" do
-      filters = {resource_id: activity_log.resource_id}
+      filters = {resource_ids: [activity_log.resource_id]}
       expect(described_class.call(organization:, pagination:, filters:).activity_logs.first.activity_id).to eq(activity_log.activity_id)
 
-      filters = {resource_id: "other"}
+      filters = {resource_ids: ["other"]}
       expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
     end
   end
 
-  context "with resource_type filter" do
+  context "with resource_types filter" do
     it "returns expected activity logs" do
-      filters = {resource_type: activity_log.resource_type}
+      filters = {resource_types: [activity_log.resource_type]}
       expect(described_class.call(organization:, pagination:, filters:).activity_logs.first.activity_id).to eq(activity_log.activity_id)
 
-      filters = {resource_type: "other"}
+      filters = {resource_types: ["other"]}
       expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
     end
   end
