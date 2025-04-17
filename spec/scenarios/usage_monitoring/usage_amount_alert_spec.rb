@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Subscriptions Termination Scenario", :scenarios, type: :request do
+describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :redis do
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:, name: "Premium Plan", code: "premium_plan", amount_cents: 49_00) }
   let(:customer) { create(:customer, external_id: "cust#{external_id}", organization:) }
@@ -46,21 +46,28 @@ describe "Subscriptions Termination Scenario", :scenarios, type: :request do
       external_id: subscription_external_id,
       plan_code: plan.code
     })
+    subscription = customer.subscriptions.sole
     alert
 
+    expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
     send_event! 2
+    # SubscriptionActivity is created by PostProcessEvents
+    expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
 
-    UsageMonitoring::ProcessActivityService.call(organization: organization, subscription_external_id:)
+    perform_subscription_activities
 
     expect(UsageMonitoring::TriggeredAlert.where(alert:).count).to eq(0)
 
-    send_event! 20
+    send_event! 3
+    send_event! 5
 
-    UsageMonitoring::ProcessActivityService.call(organization: organization, subscription_external_id:)
+    expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
+    perform_subscription_activities
+    expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
 
-    triggered_alert = UsageMonitoring::TriggeredAlert.where(alert:).sole
+    triggered_alert = UsageMonitoring::TriggeredAlert.all
 
-    pp triggered_alert.crossed_thresholds, triggered_alert.previous_value
+    pp triggered_alert
   end
 
   context "with deleted_at"

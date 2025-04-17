@@ -43,5 +43,13 @@ class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
       t.datetime :triggered_at, null: false
       t.timestamps
     end
+
+    create_table :usage_monitoring_subscription_activities, id: :uuid do |t| # rubocop:disable Rails/CreateTableWithTimestamps
+      t.references :organization, type: :uuid, foreign_key: true, null: false, index: true
+      t.references :subscription, type: :uuid, foreign_key: true, null: false, index: {
+        unique: true, name: :idx_subscription_unique
+      }
+      t.datetime :at, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    end
   end
 end
