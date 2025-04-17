@@ -16,7 +16,6 @@ module DataExports
         tempfile.write(export_service.headers.join(","))
         tempfile.write("\n")
 
-
         # Note the order here, this is crucial to make sure the data is in the expected order
         ids = ordered_parts.ids
         # This is not the most optimal and will do N+1 queries, but the whole point is to not load the entire CSV in memory
