@@ -26,7 +26,22 @@ module Resolvers
     type Types::ActivityLogs::Object.collection_type, null: true
 
     def resolve(**args)
-      # TODO: Still need to define the query for the ActivityLogs.
+      result = ActivityLogsQuery.call(
+        organization: current_organization,
+        filters: {
+          from_date: args[:from_date],
+          to_date: args[:to_date],
+          activity_types: args[:activity_types],
+          activity_sources: args[:activity_sources],
+          user_emails: args[:user_emails]
+        },
+        pagination: {
+          page: args[:page],
+          limit: args[:limit]
+        }
+      )
+
+      result.activity_logs
     end
   end
 end
