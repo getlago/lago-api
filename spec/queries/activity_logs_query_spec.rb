@@ -78,4 +78,47 @@ RSpec.describe ActivityLogsQuery, type: :query, clickhouse: true do
       expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
     end
   end
+<<<<<<< HEAD
+=======
+
+  context "with external_customer_id filter" do
+    it "returns expected activity logs" do
+      filters = {external_customer_id: activity_log.external_customer_id}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs.first.activity_id).to eq(activity_log.activity_id)
+
+      filters = {external_customer_id: "other"}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
+    end
+  end
+
+  context "with external_subscription_id filter" do
+    it "returns expected activity logs" do
+      filters = {external_subscription_id: activity_log.external_subscription_id}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs.first.activity_id).to eq(activity_log.activity_id)
+
+      filters = {external_subscription_id: "other"}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
+    end
+  end
+
+  context "with resource_id filter" do
+    it "returns expected activity logs" do
+      filters = {resource_id: activity_log.resource_id}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs.first.activity_id).to eq(activity_log.activity_id)
+
+      filters = {resource_id: "other"}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
+    end
+  end
+
+  context "with resource_type filter" do
+    it "returns expected activity logs" do
+      filters = {resource_type: activity_log.resource_type}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs.first.activity_id).to eq(activity_log.activity_id)
+
+      filters = {resource_type: "other"}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
+    end
+  end
+>>>>>>> 7412052fd (feat(audit_logs): Add ActivityLogsQuery)
 end

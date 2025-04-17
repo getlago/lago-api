@@ -12,6 +12,13 @@ class ActivityLogsQuery < BaseQuery
     activity_logs = with_activity_types(activity_logs) if filters.activity_types.present?
     activity_logs = with_activity_sources(activity_logs) if filters.activity_sources.present?
     activity_logs = with_user_emails(activity_logs) if filters.user_emails.present?
+<<<<<<< HEAD
+=======
+    activity_logs = with_external_customer_id(activity_logs) if filters.external_customer_id.present?
+    activity_logs = with_external_subscription_id(activity_logs) if filters.external_subscription_id.present?
+    activity_logs = with_resource_id(activity_logs) if filters.resource_id.present?
+    activity_logs = with_resource_type(activity_logs) if filters.resource_type.present?
+>>>>>>> 7412052fd (feat(audit_logs): Add ActivityLogsQuery)
 
     result.activity_logs = activity_logs
     result
@@ -38,6 +45,25 @@ class ActivityLogsQuery < BaseQuery
     scope.where(user_id: user_ids)
   end
 
+<<<<<<< HEAD
+=======
+  def with_external_customer_id(scope)
+    scope.where(external_customer_id: filters.external_customer_id)
+  end
+
+  def with_external_subscription_id(scope)
+    scope.where(external_subscription_id: filters.external_subscription_id)
+  end
+
+  def with_resource_id(scope)
+    scope.where(resource_id: filters.resource_id)
+  end
+
+  def with_resource_type(scope)
+    scope.where(resource_type: filters.resource_type)
+  end
+
+>>>>>>> 7412052fd (feat(audit_logs): Add ActivityLogsQuery)
   def from_date
     @from_date ||= parse_datetime_filter(:from_date)
   end
