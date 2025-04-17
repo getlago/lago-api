@@ -16,7 +16,7 @@ FactoryBot.define do
     external_subscription_id { subscription.external_id }
     resource_id { metric.id }
     resource_type { metric.class.name }
-    activity_type { "create" }
+    activity_type { "billable_metric.created" }
     activity_source { "api" }
     logged_at { Time.current }
     resource { {"foo" => "bar", "baz" => "qux"} }
