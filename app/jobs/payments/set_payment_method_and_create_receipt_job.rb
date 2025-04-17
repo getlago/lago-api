@@ -6,7 +6,7 @@ module Payments
 
     # NOTE: Even if the service is protected against running multiple time, this job must be unique.
     #       https://github.com/getlago/lago-api/pull/3490
-    unique :until_executed
+    unique :until_executed, on_conflict: :log
 
     retry_on ::Stripe::RateLimitError, wait: :polynomially_longer, attempts: 5
 
