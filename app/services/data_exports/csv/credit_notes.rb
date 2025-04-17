@@ -14,7 +14,7 @@ module DataExports
         super
       end
 
-      def self.headers
+      def self.base_headers
         %w[
           lago_id
           sequential_id
@@ -42,6 +42,10 @@ module DataExports
           refund_amount_cents
           file_url
         ]
+      end
+
+      def headers
+        self.class.base_headers.dup
       end
 
       private

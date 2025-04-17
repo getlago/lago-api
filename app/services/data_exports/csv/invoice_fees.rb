@@ -16,10 +16,11 @@ module DataExports
         @data_export_part = data_export_part
         @invoice_serializer_klass = invoice_serializer_klass
         @fee_serializer_klass = fee_serializer_klass
+        @progressive_billing_enabled = data_export_part.data_export.organization&.progressive_billing_enabled?
         super
       end
 
-      def self.headers
+      def self.base_headers
         %w[
           invoice_lago_id
           invoice_number
@@ -44,9 +45,15 @@ module DataExports
         ]
       end
 
+      def headers
+        base = self.class.base_headers.dup
+        base << "progressive_billing_credit_amount_cents" if progressive_billing_enabled
+        base
+      end
+
       private
 
-      attr_reader :data_export_part, :invoice_serializer_klass, :fee_serializer_klass
+      attr_reader :data_export_part, :invoice_serializer_klass, :fee_serializer_klass, :progressive_billing_enabled
 
       def serialize_item(invoice, csv)
         serialized_invoice = invoice_serializer_klass.new(invoice).serialize
@@ -72,7 +79,7 @@ module DataExports
             plan_code: fee.subscription&.plan&.code
           }
 
-          csv << [
+          row = [
             serialized_invoice[:lago_id],
             serialized_invoice[:number],
             serialized_invoice[:issuing_date],
@@ -94,6 +101,9 @@ module DataExports
             serialized_fee[:taxes_amount_cents],
             serialized_fee[:total_amount_cents]
           ]
+
+          row << serialized_invoice[:progressive_billing_credit_amount_cents] if progressive_billing_enabled
+          csv << row
         end
       end
 

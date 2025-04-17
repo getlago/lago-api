@@ -4,27 +4,28 @@ module DataExports
   class CombinePartsService < BaseService
     def initialize(data_export:)
       @data_export = data_export
-
       super
     end
 
     def call
       result.data_export = data_export
+      ordered_parts = data_export.data_export_parts.order(index: :asc)
 
       Tempfile.create([data_export.resource_type, ".#{data_export.format}"]) do |tempfile|
-        tempfile.write(data_export.export_class.headers.join(","))
+        export_service = data_export.export_class.new(data_export_part: ordered_parts.first)
+        tempfile.write(export_service.headers.join(","))
         tempfile.write("\n")
 
         # Note the order here, this is crucial to make sure the data is in the expected order
-        ids = data_export.data_export_parts.order(index: :asc).ids
         # This is not the most optimal and will do N+1 queries, but the whole point is to not load the entire CSV in memory
         # we're trading speed for reliability here.
-        ids.each do |id|
-          tempfile.write(data_export.data_export_parts.find(id).csv_lines)
+        ordered_parts.each do |part|
+          tempfile.write(part.csv_lines)
         end
 
         tempfile.rewind
 
+        pp tempfile.readlines
         data_export.file.attach(
           io: tempfile,
           filename: data_export.filename,
