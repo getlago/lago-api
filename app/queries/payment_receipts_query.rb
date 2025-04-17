@@ -2,6 +2,7 @@
 
 class PaymentReceiptsQuery < BaseQuery
   Result = BaseResult[:payment_receipts]
+  Filters = BaseFilters[:invoice_id]
 
   def call
     return result unless validate_filters.success?

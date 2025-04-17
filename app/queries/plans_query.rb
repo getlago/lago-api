@@ -2,6 +2,7 @@
 
 class PlansQuery < BaseQuery
   Result = BaseResult[:plans]
+  Filters = BaseFilters[:with_deleted, :include_pending_deletion]
 
   def call
     plans = base_scope.result

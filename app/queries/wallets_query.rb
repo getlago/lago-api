@@ -2,6 +2,7 @@
 
 class WalletsQuery < BaseQuery
   Result = BaseResult[:wallets]
+  Filters = BaseFilters[:external_customer_id]
 
   def call
     validate_filters

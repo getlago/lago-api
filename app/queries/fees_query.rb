@@ -2,6 +2,23 @@
 
 class FeesQuery < BaseQuery
   Result = BaseResult[:fees]
+  Filters = BaseFilters[
+    :external_subscription_id,
+    :external_customer_id,
+    :currency,
+    :billable_metric_code,
+    :fee_type,
+    :payment_status,
+    :event_transaction_id,
+    :created_at_from,
+    :created_at_to,
+    :succeeded_at_from,
+    :succeeded_at_to,
+    :failed_at_from,
+    :failed_at_to,
+    :refunded_at_from,
+    :refunded_at_to
+  ]
 
   def call
     base_scope = if filters.external_customer_id

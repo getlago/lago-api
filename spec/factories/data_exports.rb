@@ -7,7 +7,7 @@ FactoryBot.define do
 
     format { "csv" }
     resource_type { "invoices" }
-    resource_query { {filters: {currency: "EUR"}} }
+    resource_query { {currency: "EUR"} }
     status { "pending" }
     file { nil }
 

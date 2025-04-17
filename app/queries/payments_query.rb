@@ -2,6 +2,7 @@
 
 class PaymentsQuery < BaseQuery
   Result = BaseResult[:payments]
+  Filters = BaseFilters[:invoice_id, :external_customer_id]
 
   def call
     return result unless validate_filters.success?

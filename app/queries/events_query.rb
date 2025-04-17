@@ -2,6 +2,12 @@
 
 class EventsQuery < BaseQuery
   Result = BaseResult[:events]
+  Filters = BaseFilters[
+    :code,
+    :external_subscription_id,
+    :timestamp_from,
+    :timestamp_to
+  ]
 
   def call
     events = organization.clickhouse_events_store? ? Clickhouse::EventsRaw : Event

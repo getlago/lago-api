@@ -2,6 +2,7 @@
 
 class DunningCampaignsQuery < BaseQuery
   Result = BaseResult[:dunning_campaigns]
+  Filters = BaseFilters[:currency, :applied_to_organization]
 
   DEFAULT_ORDER = "name"
 

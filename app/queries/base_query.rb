@@ -6,13 +6,12 @@ class BaseQuery < BaseService
   DEFAULT_ORDER = {created_at: :desc}
 
   Pagination = Struct.new(:page, :limit, keyword_init: true)
-
-  class Filters < OpenStruct; end
+  Filters = BaseFilters
 
   def initialize(organization:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
     @organization = organization
     @pagination_params = pagination
-    @filters = Filters.new(filters)
+    @filters = self.class::Filters.new(**(filters || {}))
     @search_term = search_term
     @order = order
 

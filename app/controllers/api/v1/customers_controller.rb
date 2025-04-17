@@ -44,7 +44,7 @@ module Api
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
           },
-          filters: params.slice(:account_type).merge(billing_entity_ids: billing_entities&.ids)
+          filters: params.slice(:account_type).merge(billing_entity_ids: billing_entities&.ids).permit!
         )
 
         if result.success?
