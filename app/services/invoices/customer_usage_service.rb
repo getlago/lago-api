@@ -174,7 +174,7 @@ module Invoices
     end
 
     def format_usage
-      OpenStruct.new(
+      SubscriptionUsage.new(
         from_datetime: boundaries[:charges_from_datetime].iso8601,
         to_datetime: boundaries[:charges_to_datetime].iso8601,
         issuing_date: invoice.issuing_date.iso8601,
