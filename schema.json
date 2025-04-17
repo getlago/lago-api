@@ -264,6 +264,57 @@
           "enumValues": null
         },
         {
+          "kind": "OBJECT",
+          "name": "ActivityLogCollection",
+          "description": "ActivityLogCollection type",
+          "interfaces": [],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "collection",
+              "description": "A collection of paginated ActivityLogCollection",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "ActivityLog",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "metadata",
+              "description": "Pagination Metadata for navigating the Pagination",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CollectionMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
           "kind": "ENUM",
           "name": "ActivitySourceTypeEnum",
           "description": "Activity Logs source type enums",
@@ -35993,7 +36044,7 @@
               "description": "Query activity logs of an organization",
               "type": {
                 "kind": "OBJECT",
-                "name": "ActivityLog",
+                "name": "ActivityLogCollection",
                 "ofType": null
               },
               "isDeprecated": false,
