@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe DataExports::Csv::Invoices do
-  let(:data_export) { create :data_export, :processing, resource_query: }
+  let(:data_export) { create :data_export, :processing, resource_query:, organization: }
 
   let(:data_export_part) { data_export.data_export_parts.create(object_ids: [invoice.id], index: 1) }
 
@@ -41,8 +41,8 @@ RSpec.describe DataExports::Csv::Invoices do
   let(:invoice_serializer) do
     instance_double("V1::InvoiceSerializer", serialize: serialized_invoice)
   end
-
-  let(:invoice) { create :invoice }
+  let(:organization) { create(:organization, premium_integrations: ["progressive_billing"]) }
+  let(:invoice) { create :invoice, organization: }
   let(:serialized_invoice) do
     {
       lago_id: "invoice-lago-id-123",
@@ -71,9 +71,12 @@ RSpec.describe DataExports::Csv::Invoices do
       total_amount_cents: 77511,
       payment_due_date: "2023-02-01",
       payment_dispute_lost_at: "2023-12-22",
-      payment_overdue: false
+      payment_overdue: false,
+      progressive_billing_credit_amount_cents: 999
     }
   end
+
+  around { |test| lago_premium!(&test) }
 
   before do
     invoice
@@ -90,7 +93,7 @@ RSpec.describe DataExports::Csv::Invoices do
 
     it "generates the correct CSV output" do
       expected_csv = <<~CSV
-        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false
+        invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,999
       CSV
 
       expect(result).to be_success

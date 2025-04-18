@@ -14,7 +14,7 @@ module DataExports
         super
       end
 
-      def self.headers
+      def self.base_headers
         %w[
           credit_note_lago_id
           credit_note_number
@@ -25,6 +25,10 @@ module DataExports
           credit_note_item_currency
           credit_note_item_amount_cents
         ]
+      end
+
+      def headers
+        self.class.base_headers.dup
       end
 
       private

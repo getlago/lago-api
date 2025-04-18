@@ -19,7 +19,7 @@ module DataExports
         super
       end
 
-      def self.headers
+      def self.base_headers
         %w[
           invoice_lago_id
           invoice_number
@@ -42,6 +42,10 @@ module DataExports
           fee_taxes_amount_cents
           fee_total_amount_cents
         ]
+      end
+
+      def headers
+        self.class.base_headers.dup
       end
 
       private
