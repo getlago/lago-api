@@ -230,10 +230,7 @@ module ScenariosHelper
 
   # UsageMonitoring
   def perform_subscription_activities
-    # UsageMonitoring::ProcessAllSubscriptionActivitiesService.call
-    UsageMonitoring::SubscriptionActivity.find_each do |subscription_activity|
-      UsageMonitoring::ProcessSubscriptionActivityService.call(subscription_activity:)
-    end
+    UsageMonitoring::ProcessAllSubscriptionActivitiesJob.perform_later
     perform_all_enqueued_jobs
   end
 end

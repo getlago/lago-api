@@ -11,6 +11,8 @@ module UsageMonitoring
       "usage_amount" => "UsageMonitoring::UsageAmountAlert"
     }
 
+    CURRENT_USAGE_TYPES = %w[usage_amount]
+
     belongs_to :organization
     belongs_to :billable_metric, optional: true
 
@@ -44,10 +46,6 @@ module UsageMonitoring
         .find_by(external_id: subscription_external_id)
     end
 
-    def get_current_value
-      raise NotImplementedError
-    end
-
     # TODO: Better name?
     def find_thresholds_crossed
       raise NotImplementedError
@@ -59,8 +57,7 @@ module UsageMonitoring
 
     def formatted_crossed_thresholds(crossed_threshold_values)
       thresholds
-        .where(value: crossed_threshold_values)
-        .select(:code, :value)
+        .filter { crossed_threshold_values.include?(_1.value) }
         .map { |t| {code: t.code, value: t.value} }
     end
   end

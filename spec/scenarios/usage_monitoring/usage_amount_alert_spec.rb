@@ -21,6 +21,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     alert.thresholds.create!(value: 15_00, code: :warn, organization:)
     alert.thresholds.create!(value: 30_00, code: :warn, organization:)
     alert.thresholds.create!(value: 50_00, code: :alert, organization:)
+    alert.thresholds.create!(value: 1230_00, code: :block, organization:)
     alert.reload
   end
 
@@ -65,9 +66,15 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     perform_subscription_activities
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
 
-    triggered_alert = UsageMonitoring::TriggeredAlert.all
-
-    pp triggered_alert
+    ta = UsageMonitoring::TriggeredAlert.sole
+    expect(ta.current_value).to eq(5000)
+    expect(ta.previous_value).to eq(1000)
+    expect(ta.usage_monitoring_alert_id).to eq(alert.id)
+    expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
+      {code: "warn", value: 1500},
+      {code: "warn", value: 3000},
+      {code: "alert", value: 5000}
+    ])
   end
 
   context "with deleted_at"

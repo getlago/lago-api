@@ -2,6 +2,10 @@
 
 module UsageMonitoring
   class UsageAmountAlert < Alert
+    def find_value(thing_that_has_values_in_it)
+      thing_that_has_values_in_it.amount_cents
+    end
+
     def formatted_thresholds
       super.map(&:to_i)
     end
@@ -13,18 +17,8 @@ module UsageMonitoring
       end
     end
 
-    def get_current_value
-      result = ::Invoices::CustomerUsageService.call(
-        customer: subscription.customer,
-        subscription:,
-        apply_taxes: false, # Never use taxes for alerting
-        with_cache: true
-      )
-      pp result.usage.fees.first
-      result.usage.amount_cents
-    end
-
     def find_thresholds_crossed(current)
+      # TODO: optimize this for the beauty of it
       formatted_thresholds.filter { |t| t.between?(previous_value, current) }
     end
   end
