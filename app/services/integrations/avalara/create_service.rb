@@ -30,6 +30,8 @@ module Integrations
 
         integration.save!
 
+        Integrations::Avalara::FetchCompanyIdJob.perform_later(integration:)
+
         result.integration = integration
         result
       rescue ActiveRecord::RecordInvalid => e

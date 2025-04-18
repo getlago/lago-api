@@ -8,7 +8,7 @@ module Integrations
 
     validates :company_code, :connection_id, :account_id, :license_key, presence: true
 
-    settings_accessors :account_id, :company_code
+    settings_accessors :account_id, :company_code, :company_id
     secrets_accessors :connection_id, :license_key
   end
 end

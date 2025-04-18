@@ -46,6 +46,12 @@ Throttling.limits = {
       limit: 9,
       period: 1
     }
+  },
+  avalara: { # Rate limit: 10 requests per second
+    secondly: {
+      limit: 10,
+      period: 1
+    }
   }
 }
 

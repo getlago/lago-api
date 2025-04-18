@@ -33,6 +33,8 @@ module Integrations
           "xero"
         when "Integrations::AnrokIntegration"
           "anrok"
+        when "Integrations::AvalaraIntegration"
+          "avalara"
         when "Integrations::HubspotIntegration"
           "hubspot"
         end
@@ -46,6 +48,8 @@ module Integrations
           "xero"
         when "Integrations::AnrokIntegration"
           "anrok"
+        when "Integrations::AvalaraIntegration"
+          Rails.env.production? ? "avalara" : "avalara-sandbox"
         when "Integrations::HubspotIntegration"
           "hubspot"
         end

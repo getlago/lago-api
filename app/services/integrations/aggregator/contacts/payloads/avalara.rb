@@ -8,6 +8,7 @@ module Integrations
           def create_body
             [
               {
+                "company_id" => integration.company_id&.to_i,
                 "external_id" => customer.id,
                 "name" => name,
                 "address_line_1" => customer.shipping_address_line1 || customer.address_line1,
@@ -23,6 +24,7 @@ module Integrations
           def update_body
             [
               {
+                "company_id" => integration.company_id&.to_i,
                 "external_id" => customer.id,
                 "name" => name,
                 "address_line_1" => customer.shipping_address_line1 || customer.address_line1,
