@@ -35,7 +35,7 @@ module Integrations
           private
 
           def payload
-            payload_body = Integrations::Aggregator::Taxes::Invoices::Payload.new(
+            payload_body = Integrations::Aggregator::Taxes::Invoices::Payloads::Factory.new_instance(
               integration:,
               invoice:,
               customer:,
