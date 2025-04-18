@@ -17,10 +17,8 @@ RSpec.describe V1::Errors::ErrorSerializerFactory do
     context "when error is not a Stripe error" do
       let(:error) { StandardError.new }
 
-      it "raises NotImplementedError" do
-        expect {
-          serializer
-        }.to raise_error(NotImplementedError)
+      it "returns a base ErrorSerializer instance" do
+        expect(serializer).to be_a(ErrorSerializer)
       end
     end
   end

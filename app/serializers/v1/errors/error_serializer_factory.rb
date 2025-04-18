@@ -7,7 +7,7 @@ module V1
         if error.is_a?(::Stripe::StripeError)
           V1::Errors::StripeErrorSerializer.new(error)
         else
-          raise NotImplementedError
+          ErrorSerializer.new(error)
         end
       end
     end
