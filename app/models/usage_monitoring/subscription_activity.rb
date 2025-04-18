@@ -11,7 +11,7 @@ end
 #
 # Table name: usage_monitoring_subscription_activities
 #
-#  id              :uuid             not null, primary key
+#  id              :bigint           not null, primary key
 #  at              :datetime         not null
 #  organization_id :uuid             not null
 #  subscription_id :uuid             not null

@@ -44,7 +44,8 @@ class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
       t.timestamps
     end
 
-    create_table :usage_monitoring_subscription_activities, id: :uuid do |t| # rubocop:disable Rails/CreateTableWithTimestamps
+    # NOTICE THE PRIMARY KEY IS BIGSERIAL 😎
+    create_table :usage_monitoring_subscription_activities, id: :bigserial do |t| # rubocop:disable Rails/CreateTableWithTimestamps
       t.references :organization, type: :uuid, foreign_key: true, null: false, index: true
       t.references :subscription, type: :uuid, foreign_key: true, null: false, index: {
         unique: true, name: :idx_subscription_unique
