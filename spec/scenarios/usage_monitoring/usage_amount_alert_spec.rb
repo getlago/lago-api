@@ -46,7 +46,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     charge_2
   end
 
-  it "works" do
+  it "monitors activity and trigger alerts" do
     create_subscription({
       external_customer_id: customer.external_id,
       external_id: subscription_external_id,

@@ -50,7 +50,8 @@ class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
       t.references :subscription, type: :uuid, foreign_key: true, null: false, index: {
         unique: true, name: :idx_subscription_unique
       }
-      t.datetime :at, default: -> { "CURRENT_TIMESTAMP" }, null: false
+      t.datetime :inserted_at, default: -> { "CURRENT_TIMESTAMP" }, null: false
+      t.boolean :enqueued, default: false, null: false
     end
   end
 end

@@ -103,7 +103,7 @@ module Events
         activities << {organization_id: s.organization.id, subscription_id: s.id}
       end
 
-      UsageMonitoring::SubscriptionActivity.insert_all(activities, unique_by: :idx_subscription_unique)
+      UsageMonitoring::SubscriptionActivity.insert_all(activities, unique_by: :idx_subscription_unique) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def handle_pay_in_advance
