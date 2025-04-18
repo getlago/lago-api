@@ -12,6 +12,8 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
+      resources :activity_logs, only: %i[index]
+
       namespace :analytics do
         get :gross_revenue, to: "gross_revenues#index", as: :gross_revenue
         get :invoiced_usage, to: "invoiced_usages#index", as: :invoiced_usage
