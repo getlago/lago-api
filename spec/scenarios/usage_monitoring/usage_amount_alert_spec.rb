@@ -25,15 +25,20 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     alert.reload
   end
 
+  let(:alert_on_charge) do
+    alert = UsageMonitoring::ChargeUsageAmountAlert.create!(organization:, subscription_external_id:, code: :metric, charge: charge_2)
+    alert.thresholds.create!(value: 399_00, code: :warn, organization:)
+    alert.thresholds.create!(value: 1000_00, code: :alert, organization:)
+    alert.reload
+  end
+
   include_context "with webhook tracking"
 
-  def send_event!(ops_count)
+  def send_event!(params)
     create_event({
-      code: billable_metric.code,
       transaction_id: "tr_#{SecureRandom.hex(16)}",
-      external_subscription_id: subscription_external_id,
-      properties: {"ops_count" => ops_count}
-    })
+      external_subscription_id: subscription_external_id
+    }.merge(params))
   end
 
   before do
@@ -49,9 +54,10 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     })
     subscription = customer.subscriptions.sole
     alert
+    alert_on_charge
 
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
-    send_event! 2
+    send_event!(code: billable_metric.code, properties: {ops_count: 2})
     # SubscriptionActivity is created by PostProcessEvents
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
 
@@ -59,32 +65,40 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
 
     expect(UsageMonitoring::TriggeredAlert.where(alert:).count).to eq(0)
 
-    send_event! 3
-    send_event! 2
+    send_event!(code: billable_metric.code, properties: {ops_count: 2})
+    send_event!(code: billable_metric.code, properties: {ops_count: 2})
 
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
     perform_subscription_activities
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
 
     ta = alert.triggered_alerts.sole
-    expect(ta.current_value).to eq(3500)
+    expect(ta.current_value).to eq(3000)
     expect(ta.previous_value).to eq(1000)
     expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
       {code: "warn", value: "1500.0"},
       {code: "warn", value: "3000.0"}
     ])
+
+    # WITH EVENTS ON CHARGE WITH SPECIAL ALERT
+    # max value: 9,223,372,036,854,775,807
+    send_event!(code: bm_2.code, properties: {api_count: 4})
+    expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
+    perform_subscription_activities
+    expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
+
+    expect(alert.triggered_alerts.count).to eq 2
+    expect(alert_on_charge.triggered_alerts.count).to eq 1
   end
 
-  context "with deleted_at"
-  it "maybe works" do
-    alert = UsageMonitoring::UsageAmountAlert.create!(organization:, subscription_external_id:)
-    expect(alert.deleted_at).to be_nil
-    alert.discard!
-    expect(alert.deleted_at).not_to be_nil
-    alert.reload
-    expect(alert.deleted_at).not_to be_nil
-
-    new_alert = UsageMonitoring::UsageAmountAlert.create!(organization:, subscription_external_id:)
-    pps new_alert
+  context "with deleted_at" do
+    it "maybe works" do
+      alert = UsageMonitoring::UsageAmountAlert.create!(organization:, subscription_external_id:)
+      expect(alert.deleted_at).to be_nil
+      alert.discard!
+      expect(alert.deleted_at).not_to be_nil
+      alert.reload
+      expect(alert.deleted_at).not_to be_nil
+    end
   end
 end

@@ -8,10 +8,11 @@ module UsageMonitoring
     self.inheritance_column = :alert_type
 
     STI_MAPPING = {
-      "usage_amount" => "UsageMonitoring::UsageAmountAlert"
+      "usage_amount" => "UsageMonitoring::UsageAmountAlert",
+      "charge_usage_amount" => "UsageMonitoring::ChargeUsageAmountAlert"
     }
 
-    CURRENT_USAGE_TYPES = %w[usage_amount]
+    CURRENT_USAGE_TYPES = %w[usage_amount charge_usage_amount]
 
     belongs_to :organization
     belongs_to :charge, optional: true
