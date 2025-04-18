@@ -21,6 +21,10 @@ module UsageMonitoring
       class_name: "UsageMonitoring::AlertThreshold",
       dependent: :delete_all
 
+    has_many :triggered_alerts,
+      foreign_key: :usage_monitoring_alert_id,
+      class_name: "UsageMonitoring::TriggeredAlert"
+
     # QUESTION: todo only one with active.first?
     # Question: Should we store the actual primary key and migrate alerts when we have upgrade/downgrade ?
     # has_many :subscription,

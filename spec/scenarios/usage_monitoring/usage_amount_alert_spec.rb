@@ -60,20 +60,18 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     expect(UsageMonitoring::TriggeredAlert.where(alert:).count).to eq(0)
 
     send_event! 3
-    send_event! 5
+    send_event! 2
 
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
     perform_subscription_activities
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
 
-    ta = UsageMonitoring::TriggeredAlert.sole
-    expect(ta.current_value).to eq(5000)
+    ta = alert.triggered_alerts.sole
+    expect(ta.current_value).to eq(3500)
     expect(ta.previous_value).to eq(1000)
-    expect(ta.usage_monitoring_alert_id).to eq(alert.id)
     expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
       {code: "warn", value: 1500},
-      {code: "warn", value: 3000},
-      {code: "alert", value: 5000}
+      {code: "warn", value: 3000}
     ])
   end
 
