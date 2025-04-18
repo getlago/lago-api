@@ -32,58 +32,14 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
   let(:stripe_customer_response) do
     File.read("spec/fixtures/stripe/customer_retrieve_response.json")
   end
-  # TODO: this is part of another PR coming soon https://github.com/getlago/lago-api/pull/3345
   let(:stripe_payment_method_response) do
-    {
+    JSON.parse(
+      File.read("spec/fixtures/stripe/retrieve_payment_method.json"),
+      symbolize_names: true
+    ).merge!({
       id: stripe_pm_id,
-      object: "payment_method",
-      allow_redisplay: "always",
-      billing_details: {
-        address: {
-          city: nil,
-          country: "FR",
-          line1: nil,
-          line2: nil,
-          postal_code: nil,
-          state: nil
-        },
-        email: "awdawd@desf.com",
-        name: "Testing Stripe",
-        phone: nil
-      },
-      card: {
-        brand: "visa",
-        checks: {
-          address_line1_check: nil,
-          address_postal_code_check: nil,
-          cvc_check: "pass"
-        },
-        country: "US",
-        display_brand: "visa",
-        exp_month: 12,
-        exp_year: 2028,
-        fingerprint: "8TOiB4cGytYxCweY",
-        funding: "credit",
-        generated_from: nil,
-        last4: "4242",
-        networks: {
-          available: [
-            "visa"
-          ],
-          preferred: nil
-        },
-        regulated_status: "unregulated",
-        three_d_secure_usage: {
-          supported: true
-        },
-        wallet: nil
-      },
-      created: 1741878064,
-      customer: stripe_cus_id,
-      livemode: false,
-      metadata: {},
-      type: "card"
-    }
+      customer: stripe_cus_id
+    })
   end
   let(:stripe_payment_intent_response) do
     File.read("spec/fixtures/stripe/payment_intent_failed_card_declined.json")

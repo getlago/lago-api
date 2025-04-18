@@ -202,10 +202,10 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
 
       before do
         allow(provider_service).to receive(:call!)
-          .and_raise(BaseService::ServiceFailure.new(result, code: "code", error_message: "error"))
+          .and_raise(BaseService::ServiceFailure.new(result, code: "code", error_message: "error", original_error: ::Stripe::StripeError.new("card declined")))
       end
 
-      it "re-reaise the error and delivers an error webhook" do
+      it "re-raise the error and delivers an error webhook" do
         expect { create_service.call }
           .to raise_error(BaseService::ServiceFailure)
           .and enqueue_job(SendWebhookJob)
@@ -216,7 +216,8 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
             provider_error: {
               message: "error",
               error_code: "code"
-            }
+            },
+            error_details: Hash
           ).on_queue(webhook_queue)
       end
 
@@ -262,7 +263,8 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
               provider_error: {
                 message: "error",
                 error_code: "code"
-              }
+              },
+              error_details: Hash
             )
         end
       end
