@@ -70,8 +70,8 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     expect(ta.current_value).to eq(3500)
     expect(ta.previous_value).to eq(1000)
     expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
-      {code: "warn", value: 1500},
-      {code: "warn", value: 3000}
+      {code: "warn", value: "1500.0"},
+      {code: "warn", value: "3000.0"}
     ])
   end
 

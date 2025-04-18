@@ -5,22 +5,6 @@ module UsageMonitoring
     def find_value(thing_that_has_values_in_it)
       thing_that_has_values_in_it.amount_cents
     end
-
-    def formatted_thresholds
-      super.map(&:to_i)
-    end
-
-    def formatted_crossed_thresholds(crossed_threshold_values)
-      super.map do |h|
-        h[:value] = h[:value].to_i
-        h
-      end
-    end
-
-    def find_thresholds_crossed(current)
-      # TODO: optimize this for the beauty of it
-      formatted_thresholds.filter { |t| t.between?(previous_value, current) }
-    end
   end
 end
 
