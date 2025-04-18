@@ -118,7 +118,11 @@ module PaymentProviders
         def enriched_metadata
           metadata.merge(
             {
-              lago_payment_id: payment.id
+              lago_payment_id: payment.id,
+              lago_payable_id: payment.payable_id,
+              lago_payable_type: payment.payable_type,
+              lago_customer_id: payment.payable.customer_id,
+              lago_organization_id: payment.payable.organization_id
             }
           )
         end

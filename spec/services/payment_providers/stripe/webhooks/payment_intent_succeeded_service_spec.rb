@@ -21,6 +21,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
   ["2020-08-27", "2022-11-15", "2024-09-30.acacia"].each do |fixtures_version|
     context "when payment intent event (api_version: #{fixtures_version})" do
       let(:fixtures_version) { fixtures_version }
+      let(:invoice) { create(:invoice, organization:) }
 
       it "updates the payment status and save the payment method" do
         expect_any_instance_of(Invoices::Payments::StripeService).to receive(:update_payment_status) # rubocop:disable RSpec/AnyInstance
@@ -39,7 +40,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
             )
           ).and_call_original
 
-        payment = create(:payment, provider_payment_id: event.data.object.id)
+        payment = create(:payment, provider_payment_id: event.data.object.id, payable: invoice)
 
         stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
           status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/retrieve_payment_method.json"))
@@ -154,6 +155,31 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         "brand" => "visa",
         "last4" => "4242"
       })
+    end
+
+    context "when payment belongs to a payment_request from another organization" do
+      let(:payment_request_other_organization) do
+        create(:payment_request, organization: create(:organization))
+      end
+
+      let(:payment) do
+        create(:payment, payable: payment_request_other_organization, provider_payment_id: event.data.object.id)
+      end
+
+      it "returns an empty result", :aggregate_failures do
+        result = event_service.call
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+      end
+
+      it "does not update the payment_status of the payment" do
+        expect { event_service.call }
+          .to not_change { payment.reload.status }
+      end
+
+      it "does not enqueue a payment receipt job" do
+        expect { event_service.call }.not_to have_enqueued_job(Payments::SetPaymentMethodAndCreateReceiptJob)
+      end
     end
   end
 

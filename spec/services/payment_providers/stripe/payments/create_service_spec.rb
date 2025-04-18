@@ -18,7 +18,10 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       lago_invoice_id: invoice.id,
       lago_payment_id: payment.id,
       invoice_issuing_date: invoice.issuing_date.iso8601,
-      invoice_type: invoice.invoice_type
+      invoice_type: invoice.invoice_type,
+      lago_payable_id: payment.payable_id,
+      lago_payable_type: payment.payable_type,
+      lago_organization_id: payment.payable.organization_id
     }
   end
 
