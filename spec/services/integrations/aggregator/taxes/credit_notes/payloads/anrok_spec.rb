@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payload do
+RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Anrok do
   subject(:service_call) { payload.body }
 
   let(:payload) { described_class.new(integration:, customer:, integration_customer:, credit_note:) }
