@@ -173,7 +173,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
       end
 
       it "does not update the payment_status of the payment" do
-        expect {  event_service.call }
+        expect { event_service.call }
           .to not_change { payment.reload.status }
       end
 
@@ -181,7 +181,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         expect { event_service.call }.not_to have_enqueued_job(Payments::SetPaymentMethodAndCreateReceiptJob)
       end
     end
-end
+  end
 
   context "when payment intent event with an invalid payable type" do
     let(:event_json) do

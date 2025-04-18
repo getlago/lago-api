@@ -31,7 +31,7 @@ module PaymentRequests
 
       def update_payment_status(organization_id:, status:, stripe_payment:)
         payment = Payment.find_by(provider_payment_id: stripe_payment.id)
-        return result if payment && payment.payable&.organization_id && payment.payable.organization_id != organization_id
+        return result if payment&.payable&.organization_id.present? && payment.payable.organization_id != organization_id
 
         if !payment && stripe_payment.metadata[:payment_type] == "one-time"
           payment = create_payment(stripe_payment)
