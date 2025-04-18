@@ -52,7 +52,7 @@ module UsageMonitoring
     end
 
     def formatted_thresholds
-      thresholds.pluck(:value).uniq.sort
+      thresholds.all.pluck(:value).uniq.sort
     end
 
     def formatted_crossed_thresholds(crossed_threshold_values)
