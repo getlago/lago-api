@@ -34,10 +34,10 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
 
   include_context "with webhook tracking"
 
-  def send_event!(params)
+  def send_event!(params,
+    external_subscription_id:)
     create_event({
-      transaction_id: "tr_#{SecureRandom.hex(16)}",
-      external_subscription_id: subscription_external_id
+      transaction_id: "tr_#{SecureRandom.hex(16)}"
     }.merge(params))
   end
 
@@ -57,7 +57,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     alert_on_charge
 
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
-    send_event!(code: billable_metric.code, properties: {ops_count: 2})
+    send_event!(code: billable_metric.code, properties: {ops_count: 2}, external_subscription_id:)
     # SubscriptionActivity is created by PostProcessEvents
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
 
@@ -65,8 +65,8 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
 
     expect(UsageMonitoring::TriggeredAlert.where(alert:).count).to eq(0)
 
-    send_event!(code: billable_metric.code, properties: {ops_count: 2})
-    send_event!(code: billable_metric.code, properties: {ops_count: 2})
+    send_event!(code: billable_metric.code, properties: {ops_count: 2}, external_subscription_id:)
+    send_event!(code: billable_metric.code, properties: {ops_count: 2}, external_subscription_id:)
 
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
     perform_subscription_activities
@@ -82,13 +82,33 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
 
     # WITH EVENTS ON CHARGE WITH SPECIAL ALERT
     # max value: 9,223,372,036,854,775,807
-    send_event!(code: bm_2.code, properties: {api_count: 4})
+    send_event!(code: bm_2.code, properties: {api_count: 4}, external_subscription_id:)
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
     perform_subscription_activities
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
 
     expect(alert.triggered_alerts.count).to eq 2
     expect(alert_on_charge.triggered_alerts.count).to eq 1
+  end
+
+  context "with multiple subscriptions" do
+    it "is a unit test, not in this scenario" do
+      subs = create_list(:subscription, 10, organization:)
+      UsageMonitoring::SubscriptionActivity.create!(organization:, subscription: subs.first)
+      UsageMonitoring::SubscriptionActivity.create!(organization:, subscription: subs.second, enqueued: true)
+      expect(UsageMonitoring::SubscriptionActivity.where(organization:).count).to eq 2
+
+      activities = subs.map do |sub|
+        {organization_id: organization.id, subscription_id: sub.id}
+      end
+      10.times do
+        UsageMonitoring::SubscriptionActivity.insert_all( # rubocop:disable Rails/SkipsModelValidations
+          activities, unique_by: :idx_subscription_unique
+        )
+      end
+
+      expect(UsageMonitoring::SubscriptionActivity.where(organization:).count).to eq 10
+    end
   end
 
   context "with deleted_at" do
