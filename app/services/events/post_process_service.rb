@@ -96,7 +96,14 @@ module Events
     end
 
     def flag_refresh_from_subscription
-      subscriptions.select(&:active?).each { |s| LifetimeUsages::FlagRefreshFromSubscriptionService.new(subscription: s).call }
+      activities = []
+      subscriptions.select(&:active?).each do |s|
+        LifetimeUsages::FlagRefreshFromSubscriptionService.new(subscription: s).call
+        # UsageMonitoring::FlagSubscriptionActivityService.call(subscription: s)
+        activities << {organization_id: s.organization.id, subscription_id: s.id}
+      end
+
+      UsageMonitoring::SubscriptionActivity.insert_all(activities, unique_by: :idx_subscription_unique)
     end
 
     def handle_pay_in_advance

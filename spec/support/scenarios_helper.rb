@@ -227,4 +227,10 @@ module ScenariosHelper
     Clock::ProcessDunningCampaignsJob.perform_later
     perform_all_enqueued_jobs
   end
+
+  # UsageMonitoring
+  def perform_subscription_activities
+    UsageMonitoring::ProcessAllSubscriptionActivitiesJob.perform_later
+    perform_all_enqueued_jobs
+  end
 end
