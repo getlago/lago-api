@@ -6,7 +6,8 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
   subject(:compute_service) { described_class.new(subscription:, timestamp:) }
 
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:customer) { create(:customer, organization:, billing_entity:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:plan) { create(:plan, organization:) }
@@ -90,8 +91,10 @@ RSpec.describe DailyUsages::ComputeService, type: :service do
           expect(result.daily_usage).to eq(existing_daily_usage)
         end
 
-        context "when the organization has a timezone" do
-          let(:organization) { create(:organization, timezone: "America/Sao_Paulo") }
+        context "when the billing_entity has a timezone" do
+          let(:billing_entity) do
+            create(:billing_entity, organization:, timezone: "America/Sao_Paulo")
+          end
 
           let(:existing_daily_usage) do
             create(:daily_usage, subscription:, organization:, customer:, usage_date: usage_date - 4.hours)
