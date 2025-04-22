@@ -150,8 +150,8 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
     end
 
-    context "when organization does not have right email settings" do
-      before { invoice.organization.update!(email_settings: []) }
+    context "when billing_entity does not have right email settings" do
+      before { invoice.billing_entity.update!(email_settings: []) }
 
       it "does not enqueue an SendEmailJob" do
         expect do
