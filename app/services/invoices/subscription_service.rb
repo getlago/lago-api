@@ -26,11 +26,7 @@ module Invoices
       create_generating_invoice unless invoice
       result.invoice = invoice
 
-      fee_result = Idempotency.idempotent_transaction do
-        invoice.invoice_subscriptions.each do |iv|
-          Idempotency.add()
-
-        end
+      fee_result = ActiveRecord::Base.transaction do
         context = grace_period? ? :draft : :finalize
         fee_result = Invoices::CalculateFeesService.call(
           invoice:,
@@ -114,8 +110,6 @@ module Invoices
     end
 
     def create_generating_invoice
-
-
       invoice_result = Invoices::CreateGeneratingService.call(
         customer:,
         invoice_type: :subscription,
@@ -123,16 +117,9 @@ module Invoices
         datetime: Time.zone.at(timestamp),
         skip_charges:
       ) do |invoice|
-
-
-
-          Invoices::CreateInvoiceSubscriptionService
-            .call(invoice:, subscriptions:, timestamp:, invoicing_reason:)
-            .raise_if_error!
-
-        end
-      end
-
+        Invoices::CreateInvoiceSubscriptionService
+          .call(invoice:, subscriptions:, timestamp:, invoicing_reason:)
+          .raise_if_error!
       end
 
       invoice_result.raise_if_error!
@@ -177,6 +164,5 @@ module Invoices
 
       DailyUsages::FillFromInvoiceJob.perform_later(invoice:, subscriptions: subscriptions)
     end
-    end
-    end
+  end
 end
