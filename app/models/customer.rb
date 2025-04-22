@@ -134,7 +134,7 @@ class Customer < ApplicationRecord
   def applicable_timezone
     return timezone if timezone.present?
 
-    organization.timezone || "UTC"
+    billing_entity.timezone || "UTC"
   end
 
   def applicable_invoice_grace_period

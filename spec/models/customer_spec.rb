@@ -6,6 +6,7 @@ RSpec.describe Customer, type: :model do
   subject(:customer) { create(:customer) }
 
   let(:organization) { create(:organization) }
+  let(:billing_entity) { create(:billing_entity, organization:) }
 
   it_behaves_like "paper_trail traceable"
 
@@ -376,7 +377,7 @@ RSpec.describe Customer, type: :model do
 
   describe "#applicable_timezone" do
     subject(:customer) do
-      described_class.new(organization:, timezone: "Europe/Paris")
+      described_class.new(billing_entity:, timezone: "Europe/Paris")
     end
 
     it "returns the customer timezone" do
@@ -384,19 +385,19 @@ RSpec.describe Customer, type: :model do
     end
 
     context "when customer does not have a timezone" do
-      let(:organization_timezone) { "Europe/London" }
+      let(:billing_entity_timezone) { "Europe/London" }
 
       before do
         customer.timezone = nil
-        organization.timezone = organization_timezone
+        billing_entity.timezone = billing_entity_timezone 
       end
 
-      it "returns the organization timezone" do
+      it "returns the billing entity timezone" do
         expect(customer.applicable_timezone).to eq("Europe/London")
       end
 
-      context "when organization timezone is nil" do
-        let(:organization_timezone) { nil }
+      context "when billing entity timezone is nil" do
+        let(:billing_entity_timezone) { nil }
 
         it "returns the default timezone" do
           expect(customer.applicable_timezone).to eq("UTC")
