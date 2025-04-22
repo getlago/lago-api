@@ -11,7 +11,7 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService, type: :service do
   let(:provider) { "stripe" }
   let(:code) { "stripe_1" }
   let(:payment_provider) { create(:stripe_provider, code:, organization:) }
-  let(:provider_customer) { create(:stripe_customer, payment_provider:, customer:) }
+  let!(:provider_customer) { create(:stripe_customer, payment_provider:, customer:) }
 
   describe ".call" do
     context "when payment provider is linked" do
@@ -119,10 +119,10 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService, type: :service do
 
       let(:payment_provider_service) { instance_double(Invoices::Payments::CashfreeService) }
       let(:payment_provider) { create(:cashfree_provider, code:, organization:) }
-      let(:provider_customer) { create(:cashfree_customer, payment_provider:, customer:) }
+      let!(:provider_customer) { create(:cashfree_customer, payment_provider:, customer:) }
 
       let(:error_result) do
-        BaseService::Result.new.tap do |result|
+        described_class::Result.new.tap do |result|
           result.fail_with_error!(
             BaseService::ThirdPartyFailure.new(
               result,
@@ -168,7 +168,7 @@ RSpec.describe Invoices::Payments::GeneratePaymentUrlService, type: :service do
       let(:payment_provider_service) { instance_double(Invoices::Payments::StripeService) }
 
       let(:error_result) do
-        BaseService::Result.new.tap do |result|
+        described_class::Result.new.tap do |result|
           result.fail_with_error!(
             BaseService::ServiceFailure.new(
               result,
