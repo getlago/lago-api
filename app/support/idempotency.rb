@@ -3,15 +3,11 @@
 # Usage:
 #
 #   # Execute an operation idempotently
-#   Idempotency.idempotent_transaction do
-#     Idempotency.add(invoice.date)
-#     Idempotency.add(invoice.customer_id)
-#
+#   Idempotency.transaction do
+#     Idempotency.unique!(invoice, invoice.date, invoice.customer_id)
+
 #     # Perform your business logic here
 #     result = perform_operation
-#
-#     # The idempotency_record is automatically created at the end of the transaction
-#     Idempotency.resource = result
 #   end
 class Idempotency
   # Thread-local storage for the current transaction
@@ -19,21 +15,30 @@ class Idempotency
 
   # Represents a transaction context for an idempotent operation
   class Transaction
-    attr_accessor :components, :resource
+    attr_accessor :idempotent_resources
 
     def initialize
-      @components = []
-      @resource = nil
+      @idempotent_resources = Hash.new { |k, v| k[v] = [] }
     end
 
-    # Generates a unique idempotency key from the collected components
-    def idempotency_key
-      Digest::SHA256.hexdigest(components.map(&:to_s).join("|"))
+    def ensure_idempotent!
+      idempotent_resources.each do |resource, values|
+        # generate idempotency key for this resource
+        idempotency_key = IdempotencyRecords::KeyService.call!(*values).idempotency_key
+
+        # try and generate a resource
+        result = IdempotencyRecords::CreateService.call(
+          idempotency_key:,
+          resource:
+        )
+        # raise in case the create service fails
+        raise IdempotencyError.new("Failed to create idempotency record") unless result.success?
+      end
     end
 
     # Validates that at least one component has been added
     def valid?
-      components.present?
+      !idempotent_resources.empty?
     end
   end
 
@@ -48,11 +53,11 @@ class Idempotency
   # @return [Object] The result of the block or the existing resource if the operation is idempotent
   # @raise [Exception] If an error occurs during the block execution
   # @raise [ArgumentError] If no components are added to generate an idempotency key
-  def self.idempotent_transaction
+  def self.transaction
     # Create a new transaction context
     self.current_transaction = Transaction.new
 
-    raise ArgumentError, "An idempotent_transaction cannot be created if we're already in a transaction" if ApplicationRecord.connection.open_transactions > 0
+    raise ArgumentError, "An idempotent_transaction cannot be created when already in a transaction" if ApplicationRecord.connection.open_transactions > 0
 
     # Ensure the transaction context is cleaned up even if an exception occurs
     ApplicationRecord.transaction do
@@ -64,17 +69,7 @@ class Idempotency
         raise ArgumentError, "At least one component must be added with Idempotency.add"
       end
 
-      # Get the idempotency key based on components
-      idempotency_key = current_transaction.idempotency_key
-
-      # Try to create the idempotency record
-      result = IdempotencyRecords::CreateService.call(
-        idempotency_key:,
-        resource: current_transaction.resource
-      )
-
-      # we're not idempotent, rollback
-      raise ActiveRecord::Rollback unless result.success?
+      current_transaction.ensure_idempotent!
 
       original_return
     ensure
@@ -83,26 +78,15 @@ class Idempotency
     end
   end
 
-  # Adds a component to the idempotency key generation.
-  # This method can only be called within an idempotent_transaction block.
+  # Adds a resource to the idempotency key generation.
+  # This method can only be called within an Idempotency.transaction block.
   #
-  # @param component [Object] A value that contributes to the idempotency key
-  # @raise [ArgumentError] If called outside of an idempotent_transaction block
-  def self.add(component)
-    raise ArgumentError, "Idempotency.add can only be called within an idempotent_transaction block" unless current_transaction
+  # @param resource [Object] Which resource we're guaranteeing uniqueness for
+  # @raise [ArgumentError] If called outside of a transaction block
+  def self.unique!(resource, *values)
+    raise ArgumentError, "Idempotency.unique! can only be called within an idempotent_transaction block" unless current_transaction
 
-    current_transaction.components << component
+    current_transaction.idempotent_resources[resource] << values
     nil
-  end
-
-  # Sets the resource for the current transaction.
-  # This method can only be called within an idempotent_transaction block.
-  #
-  # @param resource [Object] The resource to associate with this idempotent operation
-  # @raise [ArgumentError] If called outside of an idempotent_transaction block
-  def self.resource=(resource)
-    raise ArgumentError, "Idempotency.resource= can only be called within an idempotent_transaction block" unless current_transaction
-
-    current_transaction.resource = resource
   end
 end
