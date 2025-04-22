@@ -457,5 +457,28 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
         end
       end
     end
+
+    context "when payment belongs to a payment_request from another company" do
+      let(:payment_request_other_organization) do
+        create(:payment_request, organization: create(:organization))
+      end
+
+      let(:payment) do
+        create(:payment, payable: payment_request_other_organization, provider_payment_id: "ch_123456")
+      end
+
+      it "returns an empty result", :aggregate_failures do
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+      end
+
+      it "does not update the payment_status of payment_request, invoice and payment" do
+        expect { result }
+          .to not_change { payment_request.reload.payment_status }
+          .and not_change { invoice_1.reload.payment_status }
+          .and not_change { invoice_2.reload.payment_status }
+          .and not_change { payment.reload.status }
+      end
+    end
   end
 end

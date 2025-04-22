@@ -346,5 +346,22 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
         end
       end
     end
+
+    context "when payment's payable belongs to another organization" do
+      let(:invoice) { create(:invoice) }
+
+      it "does not update the payment status" do
+        result = stripe_service.update_payment_status(
+          organization_id: organization.id,
+          status: "succeeded",
+          stripe_payment:
+        )
+
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+        expect(invoice.reload.payment_status).to eq("pending")
+        expect(payment.reload.status).to eq("pending")
+      end
+    end
   end
 end
