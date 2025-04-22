@@ -389,7 +389,7 @@ RSpec.describe Customer, type: :model do
 
       before do
         customer.timezone = nil
-        billing_entity.timezone = billing_entity_timezone 
+        billing_entity.timezone = billing_entity_timezone
       end
 
       it "returns the billing entity timezone" do
