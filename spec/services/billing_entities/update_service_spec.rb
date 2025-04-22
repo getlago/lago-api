@@ -227,7 +227,7 @@ RSpec.describe BillingEntities::UpdateService do
 
           expect(result).to be_success
           expect(BillingEntities::ChangeEuTaxManagementService)
-          .to have_received(:call)
+            .to have_received(:call)
         end
       end
     end
