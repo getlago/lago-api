@@ -3,6 +3,19 @@
 module Charges
   module ChargeModels
     class BaseService < ::BaseService
+      Result = BaseResult[
+        :units, # Result of the aggregation
+        :current_usage_units, # Number of units for current usage (manly used for prorated or in advance charges)
+        :full_units_number, # Total number of aggregated units ingoring proration
+        :count, # Total number of events used for the aggregation
+        :amount, # Amount result of the charge model applied on the units
+        :unit_amount, # Amount per unit
+        :amount_details, # Details of the amount calculation. Depends on the charge model.
+        :total_aggregated_units, # Total number of aggregated units in the case of a weighted sum aggregation
+        :grouped_by, # Groups applied on event properties for the aggregation
+        :grouped_results # Array containing the result for compatibility with grouped aggregation
+      ]
+
       def self.apply(...)
         new(...).apply
       end
@@ -27,6 +40,7 @@ module Charges
           result.total_aggregated_units = aggregation_result.total_aggregated_units
         end
 
+        result.grouped_results = [result]
         result
       end
 
