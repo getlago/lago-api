@@ -183,7 +183,7 @@ module CreditNotes
 
     def deliver_email
       # NOTE: We already check the premium state for the credit note creation
-      return unless credit_note.organization.email_settings.include?("credit_note.created")
+      return unless credit_note.billing_entity.email_settings.include?("credit_note.created")
 
       CreditNoteMailer.with(credit_note:)
         .created.deliver_later(wait: 3.seconds)
