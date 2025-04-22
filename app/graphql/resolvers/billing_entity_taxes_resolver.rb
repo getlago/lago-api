@@ -13,6 +13,8 @@ module Resolvers
     def resolve(billing_entity_id:)
       billing_entity = current_organization.billing_entities.find(billing_entity_id)
       billing_entity.taxes
+    rescue ActiveRecord::RecordNotFound
+      not_found_error(resource: "billing_entity")
     end
   end
 end
