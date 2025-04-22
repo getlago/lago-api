@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::ActivityLogsController, type: :request, clickhouse: true do
+  let(:organization) { activity_log.organization }
+  let(:params) { {} }
+
   describe "GET /api/v1/activity_logs" do
     subject { get_with_token(organization, "/api/v1/activity_logs", params) }
 
@@ -20,8 +23,6 @@ RSpec.describe Api::V1::ActivityLogsController, type: :request, clickhouse: true
         logged_at: 1.day.ago
       )
     end
-    let(:organization) { activity_log.organization }
-    let(:params) { {} }
 
     before do
       activity_log
@@ -169,6 +170,24 @@ RSpec.describe Api::V1::ActivityLogsController, type: :request, clickhouse: true
         expect(json[:meta][:total_pages]).to eq(2)
         expect(json[:meta][:total_count]).to eq(2)
       end
+    end
+  end
+
+  describe "GET /api/v1/activity_logs/:activity_id" do
+    subject { get_with_token(organization, "/api/v1/activity_logs/#{activity_log.activity_id}", params) }
+
+    let(:activity_log) { create(:clickhouse_activity_log) }
+
+    include_examples "requires API permission", "activity_log", "read"
+
+    it "returns activity logs" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:activity_log][:activity_id]).to eq(activity_log.activity_id)
+      expect(json[:activity_log][:activity_source]).to eq(activity_log.activity_source)
+      expect(json[:activity_log][:resource_type]).to eq(activity_log.resource_type)
+      expect(json[:activity_log][:external_customer_id]).to eq(activity_log.external_customer_id)
     end
   end
 end
