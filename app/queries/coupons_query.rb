@@ -2,6 +2,7 @@
 
 class CouponsQuery < BaseQuery
   Result = BaseResult[:coupons]
+  Filters = BaseFilters[:organization_id, :status]
 
   def call
     coupons = base_scope.result

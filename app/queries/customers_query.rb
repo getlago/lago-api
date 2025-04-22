@@ -2,6 +2,7 @@
 
 class CustomersQuery < BaseQuery
   Result = BaseResult[:customers]
+  Filters = BaseFilters[:organization_id, :account_type, :billing_entity_ids, :with_deleted]
 
   def call
     return result unless validate_filters.success?

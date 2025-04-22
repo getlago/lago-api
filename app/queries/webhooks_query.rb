@@ -2,6 +2,7 @@
 
 class WebhooksQuery < BaseQuery
   Result = BaseResult[:webhooks]
+  Filters = BaseFilters[:status]
 
   def initialize(webhook_endpoint:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
     @webhook_endpoint = webhook_endpoint

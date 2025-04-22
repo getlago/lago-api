@@ -2,6 +2,7 @@
 
 class WalletTransactionsQuery < BaseQuery
   Result = BaseResult[:wallet_transactions]
+  Filters = BaseFilters[:transaction_type, :status]
 
   def initialize(organization:, wallet_id:, pagination: DEFAULT_PAGINATION_PARAMS, filters: {}, search_term: nil, order: nil)
     @wallet = organization.wallets.find_by(id: wallet_id)

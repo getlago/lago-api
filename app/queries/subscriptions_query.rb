@@ -2,6 +2,7 @@
 
 class SubscriptionsQuery < BaseQuery
   Result = BaseResult[:subscriptions]
+  Filters = BaseFilters[:external_customer_id, :plan_code, :status]
 
   def call
     subscriptions = paginate(organization.subscriptions)

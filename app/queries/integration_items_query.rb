@@ -2,6 +2,7 @@
 
 class IntegrationItemsQuery < BaseQuery
   Result = BaseResult[:integration_items]
+  Filters = BaseFilters[:integration_id, :item_type]
 
   def call
     integration_items = base_scope.result

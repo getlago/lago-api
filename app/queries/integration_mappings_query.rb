@@ -2,6 +2,7 @@
 
 class IntegrationMappingsQuery < BaseQuery
   Result = BaseResult[:integration_mappings]
+  Filters = BaseFilters[:integration_id, :mappable_type]
 
   def call
     integration_mappings = paginate(base_scope)

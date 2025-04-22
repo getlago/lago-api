@@ -2,6 +2,7 @@
 
 class TaxesQuery < BaseQuery
   Result = BaseResult[:taxes]
+  Filters = BaseFilters[:auto_generated, :applied_to_organization]
 
   DEFAULT_ORDER = "name"
 

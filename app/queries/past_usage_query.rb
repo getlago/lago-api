@@ -2,6 +2,7 @@
 
 class PastUsageQuery < BaseQuery
   Result = BaseResult[:usage_periods, :current_page, :next_page, :prev_page, :total_pages, :total_count]
+  Filters = BaseFilters[:external_customer_id, :external_subscription_id, :periods_count, :billable_metric_code]
 
   UsagePeriods = Data.define(:invoice_subscription, :fees)
 

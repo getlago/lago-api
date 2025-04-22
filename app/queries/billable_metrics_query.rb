@@ -2,6 +2,7 @@
 
 class BillableMetricsQuery < BaseQuery
   Result = BaseResult[:billable_metrics]
+  Filters = BaseFilters[:organization_id, :recurring, :aggregation_types]
 
   def call
     return result unless validate_filters.success?

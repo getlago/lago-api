@@ -2,6 +2,7 @@
 
 class AppliedCouponsQuery < BaseQuery
   Result = BaseResult[:applied_coupons]
+  Filters = BaseFilters[:external_customer_id, :status]
 
   def call
     applied_coupons = paginate(base_scope)
