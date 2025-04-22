@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Idempotency do
+RSpec.describe Idempotency, transaction: false do
   describe ".transaction" do
     let(:customer) { create(:customer) }
     let(:invoice) { create(:invoice) }
@@ -50,7 +50,7 @@ RSpec.describe Idempotency do
       it "calls the key service with the correct values" do
         date = Time.current
         invoice_id = 123
-        
+
         expect(IdempotencyRecords::KeyService).to receive(:call!).with([invoice_id, date]).and_return(OpenStruct.new(idempotency_key: "generated-key"))
 
         described_class.transaction do
@@ -72,12 +72,12 @@ RSpec.describe Idempotency do
       it "supports multiple resources in the same transaction" do
         expect(IdempotencyRecords::KeyService).to receive(:call!).with([invoice.id, invoice.date]).and_return(OpenStruct.new(idempotency_key: "invoice-key"))
         expect(IdempotencyRecords::KeyService).to receive(:call!).with([customer.id]).and_return(OpenStruct.new(idempotency_key: "customer-key"))
-        
+
         expect(IdempotencyRecords::CreateService).to receive(:call).with(
           idempotency_key: "invoice-key",
           resource: invoice
         ).and_return(OpenStruct.new(success?: true))
-        
+
         expect(IdempotencyRecords::CreateService).to receive(:call).with(
           idempotency_key: "customer-key",
           resource: customer
@@ -92,12 +92,12 @@ RSpec.describe Idempotency do
       it "supports multiple value arrays for the same resource" do
         expect(IdempotencyRecords::KeyService).to receive(:call!).with([invoice.id, invoice.date]).and_return(OpenStruct.new(idempotency_key: "key1"))
         expect(IdempotencyRecords::KeyService).to receive(:call!).with([invoice.customer_id]).and_return(OpenStruct.new(idempotency_key: "key2"))
-        
+
         expect(IdempotencyRecords::CreateService).to receive(:call).with(
           idempotency_key: "key1",
           resource: invoice
         ).and_return(OpenStruct.new(success?: true))
-        
+
         expect(IdempotencyRecords::CreateService).to receive(:call).with(
           idempotency_key: "key2",
           resource: invoice
@@ -148,7 +148,7 @@ RSpec.describe Idempotency do
             described_class.unique!(invoice, invoice.id)
             raise "Test error"
           end
-        rescue StandardError
+        rescue
           # Ignore the error
         end
 
@@ -213,7 +213,7 @@ RSpec.describe Idempotency do
 
   describe "Transaction" do
     let(:transaction) { described_class::Transaction.new }
-    let(:invoice) { double('invoice') }
+    let(:invoice) { double("invoice") }
 
     describe "#ensure_idempotent!" do
       it "calls the key service and create service for each resource and values set" do
