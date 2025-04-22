@@ -4,7 +4,8 @@ require "rails_helper"
 
 describe "Recurring Non Invoiceable Fees", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: "http://fees.test/wh") }
-  let(:customer) { create(:customer, organization:) }
+  let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:customer) { create(:customer, organization:, billing_entity:) }
   let(:billable_metric) { create(:unique_count_billable_metric, :recurring, organization:, code: "seats") }
   let(:plan) { create(:plan, organization:, amount_cents: 49.99, pay_in_advance: true) }
   let(:external_subscription_id) { SecureRandom.uuid }
@@ -179,7 +180,8 @@ describe "Recurring Non Invoiceable Fees", :scenarios, type: :request do
       end
 
       context "with grace period" do
-        let(:organization) { create(:organization, webhook_url: "http://fees.test/wh", invoice_grace_period: 3) }
+        let(:organization) { create(:organization, webhook_url: "http://fees.test/wh") }
+        let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 3) }
         let(:grouped_by) { ["item_id"] }
 
         it "creates the recurring fees without the grace period" do
