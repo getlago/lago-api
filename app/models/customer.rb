@@ -140,7 +140,7 @@ class Customer < ApplicationRecord
   def applicable_invoice_grace_period
     return invoice_grace_period if invoice_grace_period.present?
 
-    organization.invoice_grace_period
+    billing_entity.invoice_grace_period || 0
   end
 
   def applicable_net_payment_term

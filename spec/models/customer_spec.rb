@@ -408,7 +408,7 @@ RSpec.describe Customer, type: :model do
 
   describe "#applicable_invoice_grace_period" do
     subject(:customer) do
-      described_class.new(organization:, invoice_grace_period: 3)
+      described_class.new(billing_entity:, invoice_grace_period: 3)
     end
 
     it "returns the customer invoice_grace_period" do
@@ -416,19 +416,19 @@ RSpec.describe Customer, type: :model do
     end
 
     context "when customer does not have an invoice grace period" do
-      let(:organization_invoice_grace_period) { 5 }
+      let(:billing_entity_invoice_grace_period) { 5 }
 
       before do
         customer.invoice_grace_period = nil
-        organization.invoice_grace_period = organization_invoice_grace_period
+        billing_entity.invoice_grace_period = billing_entity_invoice_grace_period
       end
 
-      it "returns the organization invoice_grace_period" do
+      it "returns the billing entity invoice_grace_period" do
         expect(customer.applicable_invoice_grace_period).to eq(5)
       end
 
-      context "when organization invoice_grace_period is nil" do
-        let(:organization_invoice_grace_period) { 0 }
+      context "when billing entity invoice_grace_period is nil" do
+        let(:billing_entity_invoice_grace_period) { nil }
 
         it "returns the default invoice_grace_period" do
           expect(customer.applicable_invoice_grace_period).to eq(0)
