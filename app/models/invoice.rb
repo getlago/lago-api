@@ -104,7 +104,7 @@ class Invoice < ApplicationRecord
     end
 
     event :void do
-      transitions from: :finalized, to: :voided, guard: :voidable?, after: :void_invoice!
+      transitions from: :finalized, to: :voided, after: :void_invoice!
     end
   end
 
