@@ -13,7 +13,7 @@ RSpec.describe Idempotency, transaction: false do
           described_class.transaction do
             # No components added
           end
-        end.to raise_error(ArgumentError, "At least one component must be added with Idempotency.add")
+        end.to raise_error(ArgumentError, "At least one resource must be added")
       end
     end
 

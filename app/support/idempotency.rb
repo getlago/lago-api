@@ -13,6 +13,8 @@ class Idempotency
   # Thread-local storage for the current transaction
   thread_mattr_accessor :current_transaction
 
+  class IdempotencyError < StandardError; end
+
   # Represents a transaction context for an idempotent operation
   class Transaction
     attr_accessor :idempotent_resources
@@ -32,7 +34,7 @@ class Idempotency
           resource:
         )
         # raise in case the create service fails
-        raise IdempotencyError.new("Failed to create idempotency record") unless result.success?
+        raise IdempotencyError.new("Idempotency error!") unless result.success?
       end
     end
 
@@ -66,7 +68,7 @@ class Idempotency
 
       # Validate that at least one component was added
       unless current_transaction.valid?
-        raise ArgumentError, "At least one component must be added with Idempotency.add"
+        raise ArgumentError, "At least one resource must be added"
       end
 
       current_transaction.ensure_idempotent!
@@ -86,7 +88,12 @@ class Idempotency
   def self.unique!(resource, *values)
     raise ArgumentError, "Idempotency.unique! can only be called within an idempotent_transaction block" unless current_transaction
 
+    current_transaction.idempotent_resources[resource] = values
+  end
+
+  def self.add(resource, *values)
+    raise ArgumentError, "Idempotency.add can only be called within an idempotent_transaction block" unless current_transaction
+
     current_transaction.idempotent_resources[resource] << values
-    nil
   end
 end
