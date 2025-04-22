@@ -367,8 +367,8 @@ html
     .wrapper
       .mb-24
         h1.invoice-title = document_invoice_name
-        - if organization.logo.present?
-          img.header-logo src="data:#{organization.logo.content_type};base64,#{organization.base64_logo}"
+        - if billing_entity.logo.present?
+          img.header-logo src="data:#{billing_entity.logo.content_type};base64,#{billing_entity.base64_logo}"
 
       .mb-24.overflow-auto
         .invoice-information-column
@@ -391,24 +391,24 @@ html
         .billing-information-column
           .body-1 = I18n.t('invoice.bill_from')
           .body-2
-            - if organization.legal_name.present?
-              | #{organization.legal_name}
+            - if billing_entity.legal_name.present?
+              | #{billing_entity.legal_name}
             - else
-              | #{organization.name}
-          .body-2 = organization.address_line1
-          .body-2 = organization.address_line2
+              | #{billing_entity.name}
+          .body-2 = billing_entity.address_line1
+          .body-2 = billing_entity.address_line2
           .body-2
             span
-              = organization.zipcode
-            - if organization.zipcode.present? && organization.city.present?
+              = billing_entity.zipcode
+            - if billing_entity.zipcode.present? && billing_entity.city.present?
               span
                 | , &nbsp;
             span
-              = organization.city
-          - if organization.state.present?
-            .body-2 = organization.state
-          .body-2 = ISO3166::Country.new(organization.country)&.common_name
-          .body-2 = organization.email
+              = billing_entity.city
+          - if billing_entity.state.present?
+            .body-2 = billing_entity.state
+          .body-2 = ISO3166::Country.new(billing_entity.country)&.common_name
+          .body-2 = billing_entity.email
         .billing-information-column
           .body-1 = I18n.t('invoice.bill_to')
           .body-2 = customer.display_name
@@ -478,7 +478,7 @@ html
             td.body-1 = I18n.t('invoice.total_due')
             td.body-1 = total_amount.format(format: I18n.t('money.format'), decimal_mark: I18n.t('money.decimal_mark'), thousands_separator: I18n.t('money.thousands_separator'))
 
-      p.body-3.mb-24 = LineBreakHelper.break_lines(organization.invoice_footer)
+      p.body-3.mb-24 = LineBreakHelper.break_lines(billing_entity.invoice_footer)
 
       .powered-by
         span.body-2
