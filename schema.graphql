@@ -4108,6 +4108,30 @@ type DataApiRevenueStreamsPlans {
   metadata: DataApiMetadata!
 }
 
+type DataApiUsage {
+  amountCents: BigInt!
+  amountCurrency: CurrencyEnum!
+  billableMetricCode: String!
+  endOfPeriodDt: ISO8601Date!
+  startOfPeriodDt: ISO8601Date!
+  units: Float!
+}
+
+"""
+DataApiUsageCollection type
+"""
+type DataApiUsageCollection {
+  """
+  A collection of paginated DataApiUsageCollection
+  """
+  collection: [DataApiUsage!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 type DataApiUsageInvoiced {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
@@ -7648,6 +7672,11 @@ type Query {
   Query revenue streams plans of an organization
   """
   dataApiRevenueStreamsPlans(currency: CurrencyEnum, limit: Int, orderBy: OrderByEnum, page: Int): DataApiRevenueStreamsPlans!
+
+  """
+  Query usages of an organization
+  """
+  dataApiUsages(currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageCollection!
 
   """
   Query invoiced usages of an organization
