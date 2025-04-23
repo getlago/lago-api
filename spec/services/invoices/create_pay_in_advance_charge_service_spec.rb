@@ -8,7 +8,8 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
   end
 
   let(:timestamp) { Time.zone.now.beginning_of_month }
-  let(:organization) { create(:organization, email_settings:) }
+  let(:organization) { create(:organization) }
+  let(:billing_entity) { customer.billing_entity }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
@@ -31,7 +32,10 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
     )
   end
 
-  before { create(:tax, organization:, applied_to_organization: true) }
+  before do
+    create(:tax, organization:, applied_to_organization: true)
+    billing_entity.update!(email_settings:)
+  end
 
   describe "call" do
     let(:aggregation_result) do

@@ -212,7 +212,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         end
 
         context "when organization does not have right email settings" do
-          before { invoice.organization.update!(email_settings: []) }
+          before { invoice.billing_entity.update!(email_settings: []) }
 
           it "enqueues GeneratePdfAndNotifyJob with email false" do
             expect do
