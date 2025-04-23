@@ -71,4 +71,22 @@ module Rails::ConsoleMethods
       puts "Invoice #{id} has been successfully deleted." # rubocop:disable Rails/Output
     end
   end
+
+  def create_organization(org_name:, email:)
+    organization = Organizations::CreateService
+      .call(name: org_name, document_numbering: "per_organization")
+      .raise_if_error!
+      .organization
+
+    result = Invites::CreateService.call(
+      current_organization: organization,
+      email: email,
+      role: :admin
+    )
+
+    url = "https://app.getlago.com/invitation/#{result.invite.token}"
+    puts "Organization `#{org_name}` created with admin invite: #{url}" # rubocop:disable Rails/Output
+
+    {organization:, invite_url: url}
+  end
 end
