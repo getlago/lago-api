@@ -34,6 +34,21 @@ type ActivityLog {
 }
 
 """
+ActivityLogCollection type
+"""
+type ActivityLogCollection {
+  """
+  A collection of paginated ActivityLogCollection
+  """
+  collection: [ActivityLog!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
+"""
 Activity Logs source type enums
 """
 enum ActivitySourceTypeEnum {
@@ -7181,6 +7196,11 @@ type Query {
     """
     activityId: ID!
   ): ActivityLog
+
+  """
+  Query activity logs of an organization
+  """
+  activityLogs(activitySources: [ActivitySourceTypeEnum!], activityTypes: [String!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, limit: Int, page: Int, resourceId: String, resourceType: String, toDate: ISO8601Date, userEmails: [String!]): ActivityLogCollection
 
   """
   Query a single add-on of an organization
