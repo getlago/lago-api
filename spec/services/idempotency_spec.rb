@@ -33,7 +33,7 @@ RSpec.describe Idempotency, transaction: false do
 
         described_class.transaction do
           block_executed = true
-          described_class.unique!(invoice, invoice.id, invoice.issuing_date)
+          described_class.unique!(invoice, id: invoice.id, issuing_date: invoice.issuing_date)
         end
 
         expect(block_executed).to be true
@@ -41,21 +41,21 @@ RSpec.describe Idempotency, transaction: false do
 
       it "creates an idempotency record with the correct key and resource" do
         described_class.transaction do
-          described_class.unique!(invoice, invoice.id, invoice.issuing_date)
+          described_class.unique!(invoice, id: invoice.id, issuing_date: invoice.issuing_date)
         end
       end
 
       it "supports multiple resources in the same transaction" do
         described_class.transaction do
-          described_class.unique!(invoice, invoice.id, invoice.issuing_date)
-          described_class.unique!(customer, customer.id)
+          described_class.unique!(invoice, id: invoice.id, issuing_date: invoice.issuing_date)
+          described_class.unique!(customer, id: customer.id)
         end
       end
 
       it "supports multiple value arrays for the same resource" do
         described_class.transaction do
-          described_class.unique!(invoice, invoice.id, invoice.issuing_date)
-          described_class.unique!(invoice, invoice.customer_id)
+          described_class.unique!(invoice, id: invoice.id, issuing_date: invoice.issuing_date)
+          described_class.unique!(invoice, id: invoice.customer_id)
         end
       end
 
@@ -63,7 +63,7 @@ RSpec.describe Idempotency, transaction: false do
         block_return_value = "expected return value"
 
         result = described_class.transaction do
-          described_class.unique!(invoice, invoice.id)
+          described_class.unique!(invoice, id: invoice.id)
           block_return_value
         end
 
@@ -75,13 +75,13 @@ RSpec.describe Idempotency, transaction: false do
       it "raises an IdempotencyError" do
         # Execute the transaction once
         described_class.transaction do
-          described_class.unique!(invoice, invoice.id)
+          described_class.unique!(invoice, id: invoice.id)
         end
 
         # This one should now fail!
         expect do
           described_class.transaction do
-            described_class.unique!(invoice, invoice.id)
+            described_class.unique!(invoice, id: invoice.id)
           end
         end.to raise_error(Idempotency::IdempotencyError)
       end
@@ -91,7 +91,7 @@ RSpec.describe Idempotency, transaction: false do
       it "cleans up the transaction context" do
         begin
           described_class.transaction do
-            described_class.unique!(invoice, invoice.id)
+            described_class.unique!(invoice, id: invoice.id)
             raise "Test error"
           end
         rescue
@@ -104,7 +104,7 @@ RSpec.describe Idempotency, transaction: false do
       it "propagates the exception" do
         expect do
           described_class.transaction do
-            described_class.unique!(invoice, invoice.id)
+            described_class.unique!(invoice, id: invoice.id)
             raise "Test error"
           end
         end.to raise_error("Test error")
@@ -116,7 +116,7 @@ RSpec.describe Idempotency, transaction: false do
     context "when called outside of a transaction" do
       it "raises an ArgumentError" do
         expect do
-          described_class.unique!("resource", "value")
+          described_class.unique!("resource", key: "value")
         end.to raise_error(ArgumentError, "Idempotency.unique! can only be called within an idempotent_transaction block")
       end
     end
@@ -127,24 +127,46 @@ RSpec.describe Idempotency, transaction: false do
         resource = create(:event)
 
         described_class.transaction do
-          described_class.unique!(resource, "value1", "value2")
+          described_class.unique!(resource, v1: "value1", v2: "value2")
           values_added = described_class.current_transaction.idempotent_resources[resource]
         end
 
-        expect(values_added).to eq(["value1", "value2"])
+        expect(values_added).to eq({v1: "value1", v2: "value2"})
       end
 
-      it "takes the final value for multiple calls for the same resource" do
+      it "merges multiple calls to unique for the same resource" do
         resource = create(:event)
         values_list = nil
 
         described_class.transaction do
-          described_class.unique!(resource, "value1")
-          described_class.unique!(resource, "value2", "value3")
+          described_class.unique!(resource, v1: "value1")
+          described_class.unique!(resource, v2: "value2", v3: "value3")
           values_list = described_class.current_transaction.idempotent_resources[resource]
         end
 
-        expect(values_list).to eq(["value2", "value3"])
+        expect(values_list).to eq({v1: "value1", v2: "value2", v3: "value3"})
+      end
+
+      it "merges multiple calls to unique for the same resource and uses the last key-value pair" do
+        resource = create(:event)
+        values_list = nil
+
+        described_class.transaction do
+          described_class.unique!(resource, v1: "value1")
+          described_class.unique!(resource, v1: "value2", v3: "value3")
+          values_list = described_class.current_transaction.idempotent_resources[resource]
+        end
+
+        expect(values_list).to eq({v1: "value2", v3: "value3"})
+      end
+
+      it "returns an error if no key-value pairs are provided" do
+        resource = create(:event)
+        expect do
+          described_class.transaction do
+            expect { described_class.unique!(resource) }.to raise_error(ArgumentError)
+          end
+        end.to raise_error(ArgumentError, "At least one resource must be added")
       end
     end
   end
@@ -157,8 +179,8 @@ RSpec.describe Idempotency, transaction: false do
       it "creates idempotency records for each resource" do
         resource1 = create(:event)
         resource2 = create(:event)
-        values1 = [["a", "b"], ["c"]]
-        values2 = [["d"]]
+        values1 = {c1: "a", c2: "D"}
+        values2 = {c2: "d"}
 
         transaction.idempotent_resources[resource1] = values1
         transaction.idempotent_resources[resource2] = values2

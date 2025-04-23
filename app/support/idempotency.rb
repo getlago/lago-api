@@ -20,13 +20,13 @@ class Idempotency
     attr_accessor :idempotent_resources
 
     def initialize
-      @idempotent_resources = Hash.new { |k, v| k[v] = [] }
+      @idempotent_resources = Hash.new { |k, v| k[v] = {} }
     end
 
     def ensure_idempotent!
       idempotent_resources.each do |resource, values|
         # generate idempotency key for this resource
-        idempotency_key = IdempotencyRecords::KeyService.call!(*values).idempotency_key
+        idempotency_key = IdempotencyRecords::KeyService.call!(**values).idempotency_key
 
         # try and generate a resource
         result = IdempotencyRecords::CreateService.call(
@@ -84,15 +84,10 @@ class Idempotency
   #
   # @param resource [Object] Which resource we're guaranteeing uniqueness for
   # @raise [ArgumentError] If called outside of a transaction block
-  def self.unique!(resource, *values)
+  def self.unique!(resource, **values)
     raise ArgumentError, "Idempotency.unique! can only be called within an idempotent_transaction block" unless current_transaction
+    raise ArgumentError, "Idempotency.unique! expects keyword arguments" if values.empty?
 
-    current_transaction.idempotent_resources[resource] = values
-  end
-
-  def self.add(resource, *values)
-    raise ArgumentError, "Idempotency.add can only be called within an idempotent_transaction block" unless current_transaction
-
-    current_transaction.idempotent_resources[resource] << values
+    current_transaction.idempotent_resources[resource].merge!(values)
   end
 end
