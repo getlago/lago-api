@@ -18,6 +18,7 @@ class Organization < ApplicationRecord
   }.freeze
 
   has_many :api_keys
+  # has_many :alerts, class_name: "UsageMonitoring::Alert"
   has_many :billing_entities, -> { active }
   has_many :all_billing_entities, class_name: "BillingEntity"
   has_many :memberships
