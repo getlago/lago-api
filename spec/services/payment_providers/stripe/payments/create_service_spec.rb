@@ -21,7 +21,8 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
       invoice_type: invoice.invoice_type,
       lago_payable_id: payment.payable_id,
       lago_payable_type: payment.payable_type,
-      lago_organization_id: payment.payable.organization_id
+      lago_organization_id: payment.payable.organization_id,
+      lago_billing_entity_id: payment.payable.billing_entity.id
     }
   end
 

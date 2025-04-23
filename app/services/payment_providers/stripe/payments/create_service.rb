@@ -123,7 +123,7 @@ module PaymentProviders
               lago_payable_type: payment.payable_type,
               lago_customer_id: payment.payable.customer_id,
               lago_organization_id: payment.payable.organization_id,
-              lago_billing_entity_id: payment.payable.billing_entity.id,
+              lago_billing_entity_id: payment.payable.billing_entity.id
             }
           )
         end

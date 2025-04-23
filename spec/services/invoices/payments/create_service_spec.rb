@@ -30,7 +30,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
         .to receive(:new)
         .with(
           payment: an_instance_of(Payment),
-          reference: "#{invoice.organization.name} - Invoice #{invoice.number}",
+          reference: "#{invoice.billing_entity.name} - Invoice #{invoice.number}",
           metadata: {
             lago_invoice_id: invoice.id,
             lago_customer_id: customer.id,
