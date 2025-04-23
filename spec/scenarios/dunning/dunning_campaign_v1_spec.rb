@@ -4,10 +4,11 @@ require "rails_helper"
 
 describe "Dunning Campaign v1", :scenarios, type: :request do
   let(:organization) do
-    create(:organization,
-      name: "JC AI",
-      premium_integrations: %w[auto_dunning],
-      email_settings: [])
+    create(:organization, name: "JC AI", premium_integrations: %w[auto_dunning])
+  end
+
+  let(:billing_entity) do
+    create(:billing_entity, organization:, name: "ACME Corp", email_settings: [])
   end
 
   let(:dunning_campaign) do
@@ -21,7 +22,18 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
   let(:stripe_pm_id) { "pm_123456" }
 
   let(:stripe_provider) { create(:stripe_provider, organization:) }
-  let(:customer) { create(:customer, organization:, payment_provider: :stripe, payment_provider_code: stripe_provider.code, net_payment_term: 2) }
+
+  let(:customer) do
+    create(
+      :customer,
+      organization:,
+      billing_entity:,
+      payment_provider: :stripe,
+      payment_provider_code: stripe_provider.code,
+      net_payment_term: 2
+    )
+  end
+
   let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider, provider_customer_id: stripe_cus_id) }
 
   let(:external_subscription_id) { "sub_overdue-dunning-campaign-v1" }
