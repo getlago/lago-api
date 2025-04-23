@@ -180,7 +180,7 @@ class Customer < ApplicationRecord
   def preferred_document_locale
     return document_locale.to_sym if document_locale?
 
-    organization.document_locale.to_sym
+    billing_entity.document_locale.to_sym
   end
 
   def provider_customer

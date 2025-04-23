@@ -271,24 +271,27 @@ RSpec.describe Customer, type: :model do
   end
 
   describe "preferred_document_locale" do
-    subject(:customer) do
+    subject(:preferred_document_locale) { customer.preferred_document_locale }
+
+    let(:customer) do
       described_class.new(
         organization:,
+        billing_entity:,
         document_locale: "en"
       )
     end
 
     it "returns the customer document_locale" do
-      expect(customer.preferred_document_locale).to eq(:en)
+      expect(preferred_document_locale).to eq(:en)
     end
 
     context "when customer does not have a document_locale" do
       before do
         customer.document_locale = nil
-        customer.organization.document_locale = "fr"
+        billing_entity.document_locale = "fr"
       end
 
-      it "returns the organization document_locale" do
+      it "returns the billing_entity document_locale" do
         expect(customer.preferred_document_locale).to eq(:fr)
       end
     end
