@@ -34,7 +34,7 @@ class Idempotency
           resource:
         )
         # raise in case the create service fails
-        raise IdempotencyError.new("Idempotency error!") unless result.success?
+        raise IdempotencyError.new("resource #{resource} is not unique") unless result.success?
       end
     end
 
@@ -45,8 +45,7 @@ class Idempotency
   end
 
   # Executes a block within an idempotent transaction.
-  # Any calls to Idempotency.add within the block will contribute
-  # to the idempotency key generation.
+  # use Idempotency.unique! to mark resources as unique
   #
   # This method wraps the execution in a database transaction to ensure
   # atomicity of the operations performed within the block.

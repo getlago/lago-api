@@ -33,37 +33,28 @@ RSpec.describe Idempotency, transaction: false do
 
         described_class.transaction do
           block_executed = true
-          described_class.unique!(invoice, invoice.id, invoice.date)
+          described_class.unique!(invoice, invoice.id, invoice.issuing_date)
         end
 
         expect(block_executed).to be true
       end
 
-      it "calls the key service with the correct values" do
-        date = Time.current
-        invoice_id = 123
-
-        described_class.transaction do
-          described_class.unique!(invoice, invoice_id, date)
-        end
-      end
-
       it "creates an idempotency record with the correct key and resource" do
         described_class.transaction do
-          described_class.unique!(invoice, invoice.id, invoice.date)
+          described_class.unique!(invoice, invoice.id, invoice.issuing_date)
         end
       end
 
       it "supports multiple resources in the same transaction" do
         described_class.transaction do
-          described_class.unique!(invoice, invoice.id, invoice.date)
+          described_class.unique!(invoice, invoice.id, invoice.issuing_date)
           described_class.unique!(customer, customer.id)
         end
       end
 
       it "supports multiple value arrays for the same resource" do
         described_class.transaction do
-          described_class.unique!(invoice, invoice.id, invoice.date)
+          described_class.unique!(invoice, invoice.id, invoice.issuing_date)
           described_class.unique!(invoice, invoice.customer_id)
         end
       end
@@ -82,11 +73,17 @@ RSpec.describe Idempotency, transaction: false do
 
     context "when an idempotency error occurs" do
       it "raises an IdempotencyError" do
+        # Execute the transaction once
+        described_class.transaction do
+          described_class.unique!(invoice, invoice.id)
+        end
+
+        # This one should now fail!
         expect do
           described_class.transaction do
             described_class.unique!(invoice, invoice.id)
           end
-        end.to raise_error(Idempotency::IdempotencyError, "Failed to create idempotency record")
+        end.to raise_error(Idempotency::IdempotencyError)
       end
     end
 
@@ -157,7 +154,7 @@ RSpec.describe Idempotency, transaction: false do
     let(:invoice) { create(:invoice) }
 
     describe "#ensure_idempotent!" do
-      it "calls the key service and create service for each resource and values set" do
+      it "creates idempotency records for each resource" do
         resource1 = create(:event)
         resource2 = create(:event)
         values1 = [["a", "b"], ["c"]]
@@ -166,19 +163,14 @@ RSpec.describe Idempotency, transaction: false do
         transaction.idempotent_resources[resource1] = values1
         transaction.idempotent_resources[resource2] = values2
 
-        transaction.ensure_idempotent!
-      end
-
-      it "raises IdempotencyError if create service fails" do
-        transaction.idempotent_resources["resource"] = [["value"]]
-
-        expect { transaction.ensure_idempotent! }.to raise_error(IdempotencyError, "Failed to create idempotency record")
+        expect { transaction.ensure_idempotent! }.to change(IdempotencyRecord, :count).by(2)
       end
     end
 
     describe "#valid?" do
       it "returns true when resources are present" do
-        transaction.idempotent_resources["resource"] = [["value"]]
+        resource = create(:event)
+        transaction.idempotent_resources[resource] = [["value"]]
         expect(transaction.valid?).to be true
       end
 
