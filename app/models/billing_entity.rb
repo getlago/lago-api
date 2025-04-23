@@ -95,6 +95,12 @@ class BillingEntity < ApplicationRecord
     country && LagoEuVat::Rate.country_codes.include?(country)
   end
 
+  def from_email_address
+    return email if organization.from_email_enabled?
+
+    ENV["LAGO_FROM_EMAIL"]
+  end
+
   private
 
   def generate_document_number_prefix
