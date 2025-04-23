@@ -84,9 +84,7 @@ module Rails::ConsoleMethods
       role: :admin
     )
 
-    url = "https://app.getlago.com/invitation/#{result.invite.token}"
-    puts "Organization `#{org_name}` created with admin invite: #{url}" # rubocop:disable Rails/Output
-
-    {organization:, invite_url: url}
+    puts "Organization `#{org_name}` created with admin invite: #{result.invite_url}" # rubocop:disable Rails/Output
+    {organization:, invite_url: result.invite_url}
   end
 end
