@@ -87,7 +87,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end
 
       context "when organization does not have right email settings" do
-        before { customer.organization.update!(email_settings: []) }
+        before { customer.billing_entity.update!(email_settings: []) }
 
         it "does not enqueue an SendEmailJob" do
           expect do

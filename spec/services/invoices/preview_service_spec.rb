@@ -7,8 +7,9 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
 
   describe "#call" do
     let(:organization) { create(:organization) }
+    let(:billing_entity) { create(:billing_entity, organization:) }
     let(:tax) { create(:tax, rate: 50.0, organization:) }
-    let(:customer) { build(:customer, organization:) }
+    let(:customer) { build(:customer, organization:, billing_entity:) }
     let(:timestamp) { Time.zone.parse("30 Mar 2024") }
     let(:plan) { create(:plan, organization:, interval: "monthly") }
     let(:billing_time) { "calendar" }
@@ -64,7 +65,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
       end
 
       context "when currencies do not match" do
-        let(:customer) { build(:customer, organization:, currency: "USD") }
+        let(:customer) { build(:customer, organization:, billing_entity:, currency: "USD") }
 
         it "returns an error" do
           result = preview_service.call
@@ -75,7 +76,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
       end
 
       context "when billing periods do not match" do
-        let(:customer) { create(:customer, organization:) }
+        let(:customer) { create(:customer, organization:, billing_entity:) }
         let(:plan1) { create(:plan, organization:, interval: "monthly") }
         let(:plan2) { create(:plan, organization:, interval: "monthly") }
         let(:subscriptions) { [subscription1, subscription2] }
@@ -119,7 +120,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
 
         context "with one persisted subscription" do
-          let(:customer) { create(:customer, organization:) }
+          let(:customer) { create(:customer, organization:, billing_entity:) }
           let(:subscription) do
             create(
               :subscription,
@@ -389,7 +390,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
 
         context "with in advance billing in the future" do
-          let(:organization) { create(:organization, invoice_grace_period: 2) }
+          let(:organization) { create(:organization) }
+          let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 2) }
           let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
           let(:subscription) do
             build(
@@ -424,7 +426,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
 
         context "with in advance billing with persisted subscription" do
-          let(:customer) { create(:customer, organization:) }
+          let(:customer) { create(:customer, organization:, billing_entity:) }
           let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
           let(:subscription) do
             create(
@@ -656,7 +658,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
 
           context "with customer that is persisted" do
-            let(:customer) { create(:customer, organization:) }
+            let(:customer) { create(:customer, organization:, billing_entity:) }
             let(:wallet) { create(:wallet, customer:, balance: "0.03", credits_balance: "0.03") }
 
             it "applies credits" do
@@ -809,7 +811,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
 
         context "with one persisted subscriptions" do
-          let(:customer) { create(:customer, organization:) }
+          let(:customer) { create(:customer, organization:, billing_entity:) }
           let(:subscription) do
             create(
               :subscription,

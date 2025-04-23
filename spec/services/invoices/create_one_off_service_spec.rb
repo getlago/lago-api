@@ -252,7 +252,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
 
       context "when organization does not have right email settings" do
-        before { customer.organization.update!(email_settings: []) }
+        before { customer.billing_entity.update!(email_settings: []) }
 
         it "enqueues GeneratePdfAndNotifyJob with email false" do
           expect do

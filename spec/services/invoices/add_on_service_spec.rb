@@ -70,7 +70,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
       end
 
       context "when organization does not have right email settings" do
-        before { applied_add_on.customer.organization.update!(email_settings: []) }
+        before { applied_add_on.customer.billing_entity.update!(email_settings: []) }
 
         it "enqueue an GeneratePdfAndNotifyJob with email false" do
           expect do

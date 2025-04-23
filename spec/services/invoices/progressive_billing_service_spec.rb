@@ -198,7 +198,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
       end
 
       context "when organization does not have right email settings" do
-        before { subscription.organization.update!(email_settings: []) }
+        before { subscription.billing_entity.update!(email_settings: []) }
 
         it "enqueue an GeneratePdfAndNotifyJob with email false" do
           expect { create_service.call }

@@ -6,6 +6,7 @@ RSpec.describe Customer, type: :model do
   subject(:customer) { create(:customer) }
 
   let(:organization) { create(:organization) }
+  let(:billing_entity) { create(:billing_entity, organization:) }
 
   it_behaves_like "paper_trail traceable"
 
@@ -270,24 +271,27 @@ RSpec.describe Customer, type: :model do
   end
 
   describe "preferred_document_locale" do
-    subject(:customer) do
+    subject(:preferred_document_locale) { customer.preferred_document_locale }
+
+    let(:customer) do
       described_class.new(
         organization:,
+        billing_entity:,
         document_locale: "en"
       )
     end
 
     it "returns the customer document_locale" do
-      expect(customer.preferred_document_locale).to eq(:en)
+      expect(preferred_document_locale).to eq(:en)
     end
 
     context "when customer does not have a document_locale" do
       before do
         customer.document_locale = nil
-        customer.organization.document_locale = "fr"
+        billing_entity.document_locale = "fr"
       end
 
-      it "returns the organization document_locale" do
+      it "returns the billing_entity document_locale" do
         expect(customer.preferred_document_locale).to eq(:fr)
       end
     end
@@ -376,7 +380,7 @@ RSpec.describe Customer, type: :model do
 
   describe "#applicable_timezone" do
     subject(:customer) do
-      described_class.new(organization:, timezone: "Europe/Paris")
+      described_class.new(billing_entity:, timezone: "Europe/Paris")
     end
 
     it "returns the customer timezone" do
@@ -384,19 +388,19 @@ RSpec.describe Customer, type: :model do
     end
 
     context "when customer does not have a timezone" do
-      let(:organization_timezone) { "Europe/London" }
+      let(:billing_entity_timezone) { "Europe/London" }
 
       before do
         customer.timezone = nil
-        organization.timezone = organization_timezone
+        billing_entity.timezone = billing_entity_timezone
       end
 
-      it "returns the organization timezone" do
+      it "returns the billing entity timezone" do
         expect(customer.applicable_timezone).to eq("Europe/London")
       end
 
-      context "when organization timezone is nil" do
-        let(:organization_timezone) { nil }
+      context "when billing entity timezone is nil" do
+        let(:billing_entity_timezone) { nil }
 
         it "returns the default timezone" do
           expect(customer.applicable_timezone).to eq("UTC")
@@ -407,7 +411,7 @@ RSpec.describe Customer, type: :model do
 
   describe "#applicable_invoice_grace_period" do
     subject(:customer) do
-      described_class.new(organization:, invoice_grace_period: 3)
+      described_class.new(billing_entity:, invoice_grace_period: 3)
     end
 
     it "returns the customer invoice_grace_period" do
@@ -415,23 +419,54 @@ RSpec.describe Customer, type: :model do
     end
 
     context "when customer does not have an invoice grace period" do
-      let(:organization_invoice_grace_period) { 5 }
+      let(:billing_entity_invoice_grace_period) { 5 }
 
       before do
         customer.invoice_grace_period = nil
-        organization.invoice_grace_period = organization_invoice_grace_period
+        billing_entity.invoice_grace_period = billing_entity_invoice_grace_period
       end
 
-      it "returns the organization invoice_grace_period" do
+      it "returns the billing entity invoice_grace_period" do
         expect(customer.applicable_invoice_grace_period).to eq(5)
       end
 
-      context "when organization invoice_grace_period is nil" do
-        let(:organization_invoice_grace_period) { 0 }
+      context "when billing entity invoice_grace_period is nil" do
+        let(:billing_entity_invoice_grace_period) { nil }
 
         it "returns the default invoice_grace_period" do
           expect(customer.applicable_invoice_grace_period).to eq(0)
         end
+      end
+    end
+  end
+
+  describe "#applicable_net_payment_term" do
+    subject(:applicable_net_payment_term) { customer.applicable_net_payment_term }
+
+    let(:customer) do
+      described_class.new(organization:, billing_entity:, net_payment_term: 15)
+    end
+
+    it "returns the customer net_payment_term" do
+      expect(applicable_net_payment_term).to eq(15)
+    end
+
+    context "when customer does not have a net payment term" do
+      let(:billing_entity_net_payment_term) { 30 }
+
+      before do
+        customer.net_payment_term = nil
+        billing_entity.net_payment_term = billing_entity_net_payment_term
+      end
+
+      it "returns the billing entity net payment term" do
+        expect(applicable_net_payment_term).to eq(billing_entity_net_payment_term)
+      end
+
+      context "when billing entity net_payment_term is nil" do
+        let(:billing_entity_net_payment_term) { nil }
+
+        it { is_expected.to be_nil }
       end
     end
   end

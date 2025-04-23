@@ -58,8 +58,9 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:billing_entity) { create(:billing_entity, organization:, timezone: "America/New_York") }
   let(:customer) do
-    create(:customer, organization:, currency: "EUR", skip_invoice_custom_sections: false)
+    create(:customer, billing_entity:, organization:, currency: "EUR", skip_invoice_custom_sections: false)
   end
   let(:subscription) { create(:subscription, customer:) }
   let(:applied_add_on) { create(:applied_add_on, customer:) }
@@ -69,7 +70,6 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   let(:invoice_custom_sections) { create_list(:invoice_custom_section, 3, organization:) }
 
   before do
-    organization.update!(timezone: "America/New_York")
     create_list(:invoice, 2, customer:)
     applied_add_on
     applied_tax
@@ -96,23 +96,21 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
 
     customer_response = result["data"]["customer"]
 
-    aggregate_failures do
-      expect(customer_response["id"]).to eq(customer.id)
-      expect(customer_response["subscriptions"].count).to eq(1)
-      expect(customer_response["invoices"].count).to eq(2)
-      expect(customer_response["appliedAddOns"].count).to eq(1)
-      expect(customer_response["taxes"].count).to eq(1)
-      expect(customer_response["currency"]).to be_present
-      expect(customer_response["externalSalesforceId"]).to be_nil
-      expect(customer_response["timezone"]).to be_nil
-      expect(customer_response["applicableTimezone"]).to eq("TZ_AMERICA_NEW_YORK")
-      expect(customer_response["hasCreditNotes"]).to be true
-      expect(customer_response["creditNotesCreditsAvailableCount"]).to eq(1)
-      expect(customer_response["creditNotesBalanceAmountCents"]).to eq("120")
-      expect(customer_response["hasOverwrittenInvoiceCustomSectionsSelection"]).to be true
-      expect(customer_response["skipInvoiceCustomSections"]).to be false
-      expect(customer_response["configurableInvoiceCustomSections"].count).to eq(2)
-    end
+    expect(customer_response["id"]).to eq(customer.id)
+    expect(customer_response["subscriptions"].count).to eq(1)
+    expect(customer_response["invoices"].count).to eq(2)
+    expect(customer_response["appliedAddOns"].count).to eq(1)
+    expect(customer_response["taxes"].count).to eq(1)
+    expect(customer_response["currency"]).to be_present
+    expect(customer_response["externalSalesforceId"]).to be_nil
+    expect(customer_response["timezone"]).to be_nil
+    expect(customer_response["applicableTimezone"]).to eq("TZ_AMERICA_NEW_YORK")
+    expect(customer_response["hasCreditNotes"]).to be true
+    expect(customer_response["creditNotesCreditsAvailableCount"]).to eq(1)
+    expect(customer_response["creditNotesBalanceAmountCents"]).to eq("120")
+    expect(customer_response["hasOverwrittenInvoiceCustomSectionsSelection"]).to be true
+    expect(customer_response["skipInvoiceCustomSections"]).to be false
+    expect(customer_response["configurableInvoiceCustomSections"].count).to eq(2)
   end
 
   context "when customer has invoice_custom_sections selected on organization level" do

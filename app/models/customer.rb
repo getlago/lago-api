@@ -134,19 +134,19 @@ class Customer < ApplicationRecord
   def applicable_timezone
     return timezone if timezone.present?
 
-    organization.timezone || "UTC"
+    billing_entity.timezone || "UTC"
   end
 
   def applicable_invoice_grace_period
     return invoice_grace_period if invoice_grace_period.present?
 
-    organization.invoice_grace_period
+    billing_entity.invoice_grace_period || 0
   end
 
   def applicable_net_payment_term
     return net_payment_term if net_payment_term.present?
 
-    organization.net_payment_term
+    billing_entity.net_payment_term
   end
 
   # `applicable_invoice_custom_sections` includes:
@@ -160,6 +160,7 @@ class Customer < ApplicationRecord
     InvoiceCustomSection.where(id: manual_ids + system_ids)
   end
 
+  # TODO: migrate invoice custom sections to Billing Entities
   # `configurable_invoice_custom_sections` are manually selected sections:
   # - either directly configured on the customer
   # - or fallback to selections at the organization level if none on the customer
@@ -180,7 +181,7 @@ class Customer < ApplicationRecord
   def preferred_document_locale
     return document_locale.to_sym if document_locale?
 
-    organization.document_locale.to_sym
+    billing_entity.document_locale.to_sym
   end
 
   def provider_customer

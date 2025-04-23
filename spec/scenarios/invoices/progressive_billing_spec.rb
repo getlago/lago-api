@@ -4,10 +4,11 @@ require "rails_helper"
 
 describe "Progressive billing invoices", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: [], premium_integrations: ["progressive_billing"]) }
+  let(:billing_entity) { create(:billing_entity, organization:) }
   let(:plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 31_00, pay_in_advance: false) }
   let(:upgrade_plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 62_000, pay_in_advance: false) }
   let(:downgrade_plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 31, pay_in_advance: false) }
-  let(:customer) { create(:customer, organization: organization, invoice_grace_period:) }
+  let(:customer) { create(:customer, organization:, billing_entity:, invoice_grace_period:) }
   let(:billable_metric) { create(:billable_metric, organization: organization, field_name: "total", aggregation_type: "sum_agg") }
   let(:charge) { create(:charge, plan: plan, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "0.0002"}) }
   let(:usage_threshold) { create(:usage_threshold, plan: plan, amount_cents: 20000) }
@@ -169,7 +170,7 @@ describe "Progressive billing invoices", :scenarios, type: :request do
   end
 
   it "generates an invoice during the grace period and finalizes it at the end of the next month" do
-    organization.update!(invoice_grace_period: 30)
+    billing_entity.update!(invoice_grace_period: 30)
     time_0 = DateTime.new(2022, 12, 1)
     travel_to time_0 do
       create_subscription(

@@ -12,7 +12,8 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
   end
 
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:customer) { create(:customer, organization:, billing_entity:) }
   let(:tax) { create(:tax, organization:, rate: 20) }
 
   let(:invoicing_reason) { :subscription_periodic }
@@ -181,7 +182,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
 
       context "when organization does not have right email settings" do
-        before { subscription.customer.organization.update!(email_settings: []) }
+        before { customer.billing_entity.update!(email_settings: []) }
 
         it "enqueues GeneratePdfAndNotifyJob with email false" do
           expect do
@@ -305,10 +306,8 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
           expect(result.invoice.number).to include("DRAFT")
         end
 
-        context "when organization gas grace period" do
-          before do
-            organization.update!(invoice_grace_period: 30)
-          end
+        context "when billing entity has grace period" do
+          let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 30) }
 
           it "creates an invoice in :draft status" do
             result = invoice_service.call

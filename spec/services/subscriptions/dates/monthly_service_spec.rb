@@ -17,7 +17,8 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
     )
   end
 
-  let(:customer) { create(:customer, timezone:) }
+  let(:billing_entity) { create(:billing_entity) }
+  let(:customer) { create(:customer, timezone:, billing_entity:) }
   let(:plan) { create(:plan, interval: :monthly, pay_in_advance:) }
   let(:pay_in_advance) { false }
 
@@ -749,8 +750,9 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
   #
   #
   context "when customer changed timezone" do
-    let(:organization) { create(:organization, invoice_grace_period: 3) }
-    let(:customer) { create(:customer, timezone:, organization:) }
+    let(:organization) { create(:organization) }
+    let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 3) }
+    let(:customer) { create(:customer, timezone:, billing_entity:, organization:) }
     let(:plan) { create(:plan, interval: :monthly, pay_in_advance:, organization:) }
 
     let(:billing_time) { :calendar }
@@ -788,21 +790,17 @@ RSpec.describe Subscriptions::Dates::MonthlyService, type: :service do
 
       expect(result.invoice.status).to eq "draft"
       invoice_sub = result.invoice.invoice_subscriptions.first
-      aggregate_failures do
-        expect(invoice_sub.charges_from_datetime.to_s).to match_datetime("2022-01-31 15:00:00 UTC")
-        expect(invoice_sub.charges_to_datetime.to_s).to match_datetime("2022-02-28 14:59:59 UTC")
-      end
+      expect(invoice_sub.charges_from_datetime.to_s).to match_datetime("2022-01-31 15:00:00 UTC")
+      expect(invoice_sub.charges_to_datetime.to_s).to match_datetime("2022-02-28 14:59:59 UTC")
 
       subscription.customer.update!(timezone: new_timezone)
 
       finalized_result = Invoices::RefreshDraftAndFinalizeService.call(invoice: result.invoice.reload)
       invoice_sub = finalized_result.invoice.reload.invoice_subscriptions.first
 
-      aggregate_failures do
-        expect(invoice_sub.charges_from_datetime.to_s).to match_datetime("2022-01-31 15:00:00 UTC")
-        # "2022-02-28 23:59:59 America/Los_Angeles" which is "2022-03-01 07:59:59 UTC"
-        expect(invoice_sub.charges_to_datetime.to_s).to match_datetime("2022-03-01 07:59:59 UTC")
-      end
+      expect(invoice_sub.charges_from_datetime.to_s).to match_datetime("2022-01-31 15:00:00 UTC")
+      # "2022-02-28 23:59:59 America/Los_Angeles" which is "2022-03-01 07:59:59 UTC"
+      expect(invoice_sub.charges_to_datetime.to_s).to match_datetime("2022-03-01 07:59:59 UTC")
     end
   end
 end
