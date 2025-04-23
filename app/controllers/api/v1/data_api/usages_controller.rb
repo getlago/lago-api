@@ -5,10 +5,9 @@ module Api
     module DataApi
       class UsagesController < Api::V1::DataApi::BaseController
         def index
-          # @result = ::DataApi::UsagesService.call(current_organization, **filters)
+          @result = ::DataApi::UsagesService.call(current_organization, **filters)
 
-          # if @result.success?
-          if true
+          if @result.success?
             render_result(@result)
           else
             render_error_response(@result)
@@ -16,6 +15,10 @@ module Api
         end
 
         private
+
+        def render_result(result)
+          render(json: {"usages" => result.usages}.to_json)
+        end
 
         def filters
           {
@@ -31,7 +34,7 @@ module Api
             billable_metric_code: params[:billable_metric_code],
             grouped_by: params[:grouped_by],
             filter_values: params[:filter_values]
-          }
+          }.compact
         end
       end
     end

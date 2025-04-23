@@ -8,10 +8,16 @@ RSpec.describe Api::V1::DataApi::UsagesController, type: :request do # rubocop:d
 
     let(:customer) { create(:customer, organization:) }
     let(:organization) { create(:organization) }
-    let(:params) { {} }
+    let(:params) { {currency: "EUR"} }
+
+    let(:result) do
+      BaseService::Result.new.tap do |result|
+        result.usages = [{amount_currency: nil, amount_cents: nil}]
+      end
+    end
 
     before do
-      allow(DataApi::UsagesService).to receive(:call).and_call_original
+      allow(DataApi::UsagesService).to receive(:call).and_return(result)
     end
 
     context "when license is premium" do
@@ -24,9 +30,9 @@ RSpec.describe Api::V1::DataApi::UsagesController, type: :request do # rubocop:d
 
         expect(response).to have_http_status(:success)
 
-        expect(json[:usages].first[:currency]).to eq(nil)
+        expect(json[:usages].first[:amount_currency]).to eq(nil)
         expect(json[:usages].first[:amount_cents]).to eq(nil)
-        expect(DataApi::UsagesService).to have_received(:call).with(organization, currency: nil, months: nil)
+        expect(DataApi::UsagesService).to have_received(:call).with(organization, **params)
       end
     end
 
@@ -38,9 +44,9 @@ RSpec.describe Api::V1::DataApi::UsagesController, type: :request do # rubocop:d
 
         expect(response).to have_http_status(:success)
 
-        expect(json[:usages].first[:currency]).to eq(nil)
+        expect(json[:usages].first[:amount_currency]).to eq(nil)
         expect(json[:usages].first[:amount_cents]).to eq(nil)
-        expect(DataApi::UsagesService).to have_received(:call).with(organization, currency: nil, months: nil)
+        expect(DataApi::UsagesService).to have_received(:call).with(organization, **params)
       end
     end
   end

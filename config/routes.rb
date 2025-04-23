@@ -22,7 +22,7 @@ Rails.application.routes.draw do
         get :overdue_balance, to: "overdue_balances#index", as: :overdue_balance
       end
 
-	  get "analytics/usage", to: "data_api/usages#index", as: :usage
+      get "analytics/usage", to: "data_api/usages#index", as: :usage
 
       resources :billing_entities, param: :code, only: %i[index show] do
         post :manage_taxes, on: :member

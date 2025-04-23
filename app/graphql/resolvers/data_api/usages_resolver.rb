@@ -30,7 +30,7 @@ module Resolvers
 
       def resolve(**args)
         result = ::DataApi::UsagesService.call(current_organization, **args)
-        result.daily_usages
+        result.usages
       end
     end
   end
