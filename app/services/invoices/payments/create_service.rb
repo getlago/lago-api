@@ -46,7 +46,7 @@ module Invoices
         payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
           provider:,
           payment:,
-          reference: "#{invoice.organization.name} - Invoice #{invoice.number}",
+          reference: "#{invoice.billing_entity.name} - Invoice #{invoice.number}",
           metadata: {
             lago_invoice_id: invoice.id,
             lago_customer_id: invoice.customer_id,
