@@ -16,7 +16,9 @@ module Invoices
         create_fees
         create_applied_usage_thresholds
 
-        Idempotency.unique!(invoice, subscription_id: subscription.external_id,
+        Idempotency.unique!(invoice,
+          organization_id: lifetime_usage.organization_id,
+          external_subscription_id: subscription.external_id,
           invoiced_usage: lifetime_usage.invoiced_usage_amount_cents,
           threshold_amount: usage_thresholds.map(&:amount_cents).max)
 
