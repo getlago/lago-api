@@ -19,14 +19,16 @@ module Invoices
         flag_lifetime_usage_for_refresh
       end
 
-      invoice.coupons.each do |coupon|
-        res = CreditNotes::RecreditService.call(coupon:)
-        Rails.logger.warn("Recrediting coupon #{coupon.id} failed for invoice #{invoice.id}") unless res.success?
-      end
-
       invoice.credits.each do |credit|
-        res = CreditNotes::RecreditService.call(credit:)
-        Rails.logger.warn("Recrediting credit #{credit.id} failed for invoice #{invoice.id}") unless res.success?
+        if credit.credit_note_id.present?
+          res = CreditNotes::RecreditService.call(credit:)
+          Rails.logger.warn("Recrediting credit #{credit.id} failed for invoice #{invoice.id}") unless res.success?
+        end
+
+        if credit.applied_coupon_id.present?
+          res = Coupons::VoidAndRestoreAppliedCouponService.call(credit:)
+          Rails.logger.warn("Voiding applied coupon for credit #{credit.id} failed for invoice #{invoice.id}") unless res.success?
+        end
       end
 
       invoice.wallet_transactions.each do |wallet_transaction|
