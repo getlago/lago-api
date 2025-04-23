@@ -109,11 +109,6 @@ RSpec.configure do |config|
 
   config.before do |example|
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
-    DatabaseCleaner.strategy = :transaction
-
-    if example.metadata[:transaction] == false
-      DatabaseCleaner.strategy = :deletion
-    end
 
     if example.metadata[:scenarios]
       stub_pdf_generation
@@ -138,6 +133,12 @@ RSpec.configure do |config|
   end
 
   config.around do |example|
+    # Important to set the strategy in this block as otherwise the cleaning will always use the transaction strategy
+    DatabaseCleaner.strategy = if example.metadata[:transaction] == false
+      :deletion
+    else
+      :transaction
+    end
     DatabaseCleaner.cleaning do
       example.run
     end
