@@ -11,10 +11,14 @@ module Invoices
     end
 
     def call
-      ActiveRecord::Base.transaction do
+      Idempotency.transaction do
         create_generating_invoice
         create_fees
         create_applied_usage_thresholds
+
+        Idempotency.unique!(invoice, subscription_id: subscription.external_id,
+          invoiced_usage: lifetime_usage.invoiced_usage_amount_cents,
+          threshold_amount: usage_thresholds.map(&:amount_cents).max)
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
         invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
