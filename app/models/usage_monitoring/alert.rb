@@ -51,8 +51,6 @@ module UsageMonitoring
         .find_by(external_id: subscription_external_id)
     end
 
-    # TODO: Better name?
-
     def find_thresholds_crossed(current)
       # TODO: optimize this for the beauty of it
       thresholds_values.filter { |t| t.between?(previous_value, current) }

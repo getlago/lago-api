@@ -51,7 +51,7 @@ class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
         unique: true, name: :idx_subscription_unique
       }
       t.datetime :inserted_at, default: -> { "CURRENT_TIMESTAMP" }, null: false
-      t.boolean :enqueued, default: false, null: false
+      t.boolean :enqueued, default: false, null: false, index: true
     end
   end
 end

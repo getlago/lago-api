@@ -96,6 +96,8 @@ module Events
     end
 
     def flag_refresh_from_subscription
+      return unless organization.tracks_subscription_activity?
+
       activities = []
       subscriptions.select(&:active?).each do |s|
         LifetimeUsages::FlagRefreshFromSubscriptionService.new(subscription: s).call

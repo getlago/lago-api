@@ -100,6 +100,7 @@ class Organization < ApplicationRecord
     analytics_dashboards
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
+  INTEGRATIONS_TRACKING_ACTIVITY = %w[lifetime_usage]
 
   enum :document_numbering, DOCUMENT_NUMBERINGS
 
@@ -132,6 +133,12 @@ class Organization < ApplicationRecord
     define_method("#{premium_integration}_enabled?") do
       License.premium? && premium_integrations.include?(premium_integration)
     end
+  end
+
+  def tracks_subscription_activity?
+    return false unless License.premium?
+
+    (INTEGRATIONS_TRACKING_ACTIVITY & premium_integrations).any?
   end
 
   def admins

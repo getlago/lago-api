@@ -34,8 +34,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
 
   include_context "with webhook tracking"
 
-  def send_event!(params,
-    external_subscription_id:)
+  def send_event!(params)
     create_event({
       transaction_id: "tr_#{SecureRandom.hex(16)}"
     }.merge(params))
@@ -81,7 +80,6 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     ])
 
     # WITH EVENTS ON CHARGE WITH SPECIAL ALERT
-    # max value: 9,223,372,036,854,775,807
     send_event!(code: bm_2.code, properties: {api_count: 4}, external_subscription_id:)
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
     perform_subscription_activities
