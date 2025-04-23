@@ -160,6 +160,7 @@ class Customer < ApplicationRecord
     InvoiceCustomSection.where(id: manual_ids + system_ids)
   end
 
+  # TODO: migrate invoice custom sections to Billing Entities
   # `configurable_invoice_custom_sections` are manually selected sections:
   # - either directly configured on the customer
   # - or fallback to selections at the organization level if none on the customer
