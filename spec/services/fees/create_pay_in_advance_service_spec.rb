@@ -11,7 +11,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, customer:, plan:) }
-  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
 
   let(:charge_filter) { nil }
 

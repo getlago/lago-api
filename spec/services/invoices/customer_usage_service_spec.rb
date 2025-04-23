@@ -14,7 +14,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:customer) { create(:customer, organization:) }
   let(:customer_id) { customer&.id }
   let(:subscription_id) { subscription&.id }

@@ -125,7 +125,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
 
   context "with pay in advance charges and taxes" do
     let(:charge) { create(:charge, :pay_in_advance, plan: plan, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "1"}) }
-    let(:tax) { create(:tax, organization: organization, rate: 10) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization: organization, rate: 10, billing_entity:) }
 
     before do
       charge
@@ -204,7 +204,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
     let(:charge3) { create(:charge, plan: plan3, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "10"}) }
     let(:usage_threshold) { create(:usage_threshold, plan: plan3, amount_cents: 200_00, recurring: true) }
 
-    let(:tax) { create(:tax, organization: organization, rate: 10) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization: organization, rate: 10, billing_entity:) }
 
     before { [charge1, charge2, charge3, usage_threshold, tax] }
 
@@ -337,7 +337,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
     let(:usage_threshold2) { create(:usage_threshold, plan: plan, amount_cents: 500_00, recurring: false) }
     let(:usage_threshold3) { create(:usage_threshold, plan: plan, amount_cents: 200_00, recurring: true) }
 
-    let(:tax) { create(:tax, organization: organization, rate: 10) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization: organization, rate: 10, billing_entity:) }
 
     before { [charge, usage_threshold, usage_threshold2, usage_threshold3, tax] }
 

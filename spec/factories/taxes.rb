@@ -7,7 +7,19 @@ FactoryBot.define do
     description { "French Standard VAT" }
     name { "VAT" }
     rate { 20.0 }
-    applied_to_organization { true }
+    # NOTE: usage of applied_to_organization is deprecated. Please, use :applied_to_billing_entity trait instead
+    applied_to_organization { false }
     auto_generated { false }
+
+    trait :applied_to_billing_entity do
+      transient do
+        billing_entity { nil }
+      end
+
+      before(:create) do |tax, evaluator|
+        billing_entity = evaluator.billing_entity || tax.organization.default_billing_entity
+        billing_entity.taxes << tax
+      end
+    end
   end
 end

@@ -15,7 +15,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
 
   let(:timestamp) { Time.zone.parse(Date.current.strftime("%Y-%m-%d 10:00:00")) }
 
-  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:billable_metric) { create(:sum_billable_metric, organization:, field_name: "value") }
   let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "1"}) }
 

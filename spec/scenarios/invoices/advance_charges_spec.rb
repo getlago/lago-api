@@ -22,7 +22,7 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
   end
 
   before do
-    create(:tax, organization:, rate: tax_rate)
+    create(:tax, :applied_to_billing_entity, organization:, rate: tax_rate)
     create(:standard_charge, regroup_paid_fees: "invoice", pay_in_advance: true, invoiceable: false, prorated: true, billable_metric:, plan:, properties: {amount: bm_amount.to_s, grouped_by: nil})
   end
 

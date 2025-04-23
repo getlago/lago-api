@@ -15,8 +15,8 @@ RSpec.describe TaxesQuery, type: :query do
   let(:order) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:tax_first) { create(:tax, organization:, name: "defgh", code: "11", rate: 10) }
-  let(:tax_second) { create(:tax, organization:, name: "abcde", code: "22", rate: 5) }
+  let(:tax_first) { create(:tax, organization:, name: "defgh", code: "11", rate: 10, applied_to_organization: true) }
+  let(:tax_second) { create(:tax, organization:, name: "abcde", code: "22", rate: 5, applied_to_organization: true) }
 
   let(:tax_third) do
     create(
@@ -36,7 +36,8 @@ RSpec.describe TaxesQuery, type: :query do
       name: "auto_generated",
       code: "auto_generated",
       rate: 0.0,
-      auto_generated: true
+      auto_generated: true,
+      applied_to_organization: true
     )
   end
 
