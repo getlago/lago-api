@@ -48,6 +48,7 @@ class Organization < ApplicationRecord
   has_many :data_exports
   has_many :error_details
   has_many :dunning_campaigns
+  has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
 
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
 

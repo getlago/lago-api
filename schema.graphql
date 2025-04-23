@@ -16,6 +16,33 @@ input AcceptInviteInput {
 }
 
 """
+Base activity log
+"""
+type ActivityLog {
+  activityId: ID!
+  activitySource: ActivitySourceTypeEnum!
+  activityType: String!
+  createdAt: ISO8601DateTime!
+  externalCustomerId: String
+  externalSubscriptionId: String
+  loggedAt: ISO8601DateTime!
+  organization: Organization
+  resourceChanges: String
+  resourceId: String!
+  resourceType: String!
+  user: User
+}
+
+"""
+Activity Logs source type enums
+"""
+enum ActivitySourceTypeEnum {
+  api
+  front
+  system
+}
+
+"""
 Adyen input arguments
 """
 input AddAdyenPaymentProviderInput {
@@ -7145,6 +7172,16 @@ enum ProviderTypeEnum {
 }
 
 type Query {
+  """
+  Query a single activity log of an organization
+  """
+  activityLog(
+    """
+    Uniq ID of the activity log
+    """
+    activityId: ID!
+  ): ActivityLog
+
   """
   Query a single add-on of an organization
   """

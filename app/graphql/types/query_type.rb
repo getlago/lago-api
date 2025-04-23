@@ -9,6 +9,7 @@ module Types
 
     field :current_user, resolver: Resolvers::CurrentUserResolver
 
+    field :activity_log, resolver: Resolvers::ActivityLogResolver
     field :add_on, resolver: Resolvers::AddOnResolver
     field :add_ons, resolver: Resolvers::AddOnsResolver
     field :api_key, resolver: Resolvers::ApiKeyResolver
