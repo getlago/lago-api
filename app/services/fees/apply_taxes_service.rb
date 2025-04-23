@@ -61,6 +61,7 @@ module Fees
     end
 
     def applicable_taxes
+      # organization.taxes - are all taxes created on the organization
       return customer.organization.taxes.where(code: tax_codes) if tax_codes
       return fee.add_on.taxes if fee.add_on? && fee.add_on.taxes.any?
       return fee.charge.taxes if fee.charge? && fee.charge.taxes.any?
@@ -70,7 +71,8 @@ module Fees
       end
       return customer.taxes if customer.taxes.any?
 
-      customer.organization.taxes.applied_to_organization
+      # billing_entity.taxes - are the default taxes applied on the billing entity
+      customer.billing_entity.taxes
     end
   end
 end

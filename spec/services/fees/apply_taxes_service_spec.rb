@@ -7,6 +7,7 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
+  let(:billing_entity) { customer.billing_entity }
 
   let(:invoice) { create(:invoice, organization:, customer:) }
 
@@ -21,6 +22,7 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
     tax1
     tax2
     tax3
+    billing_entity.taxes << tax3
   end
 
   describe "call" do
@@ -303,33 +305,30 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
       end
     end
 
-    it "creates applied_taxes based on the organization taxes" do
+    it "creates applied_taxes based on the billing entity taxes" do
       result = apply_service.call
+      expect(result).to be_success
 
-      aggregate_failures do
-        expect(result).to be_success
+      applied_taxes = result.applied_taxes
+      expect(applied_taxes.count).to eq(1)
 
-        applied_taxes = result.applied_taxes
-        expect(applied_taxes.count).to eq(1)
+      expect(applied_taxes[0]).to have_attributes(
+        fee:,
+        tax: tax3,
+        tax_description: tax3.description,
+        tax_code: tax3.code,
+        tax_name: tax3.name,
+        tax_rate: 5,
+        amount_currency: fee.currency,
+        amount_cents: 50,
+        precise_amount_cents: 50.0
+      )
 
-        expect(applied_taxes[0]).to have_attributes(
-          fee:,
-          tax: tax3,
-          tax_description: tax3.description,
-          tax_code: tax3.code,
-          tax_name: tax3.name,
-          tax_rate: 5,
-          amount_currency: fee.currency,
-          amount_cents: 50,
-          precise_amount_cents: 50.0
-        )
-
-        expect(fee).to have_attributes(
-          taxes_amount_cents: 50,
-          taxes_precise_amount_cents: 50.0,
-          taxes_rate: 5
-        )
-      end
+      expect(fee).to have_attributes(
+        taxes_amount_cents: 50,
+        taxes_precise_amount_cents: 50.0,
+        taxes_rate: 5
+      )
     end
 
     context "when fee already have taxes" do
