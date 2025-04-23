@@ -17,6 +17,7 @@ module Invites
         role: args[:role]
       )
 
+      result.invite_url = build_invite_url(result.invite.token)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -36,6 +37,11 @@ module Invites
 
     def valid?(args)
       Invites::ValidateService.new(result, **args).valid?
+    end
+
+    def build_invite_url(token)
+      frontend_url = ENV.fetch("LAGO_FRONT_URL", "http://localhost:3000")
+      "#{frontend_url}/invitation/#{token}"
     end
   end
 end
