@@ -62,7 +62,7 @@ RSpec.describe InvoiceMailer, type: :mailer do
       end
     end
 
-    context "when organization email is nil" do
+    context "when billing_entity email is nil" do
       let(:billing_entity_email) { nil }
 
       it "returns a mailer with nil values" do
