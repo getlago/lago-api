@@ -14,7 +14,7 @@ module Integrations
 
         provider_result = Integrations::Aggregator::Taxes::Avalara::FetchCompanyIdService.call(integration:)
 
-        integration.update!(company_id: provider_result.company.id) if provider_result.success?
+        integration.update!(company_id: provider_result.company["id"]) if provider_result.success?
 
         provider_result
       rescue ActiveRecord::RecordInvalid => e

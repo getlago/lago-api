@@ -26,7 +26,7 @@ module Integrations
               return result.service_failure!(code:, message:)
             end
 
-            result.company = OpenStruct.new(received_company)
+            result.company = received_company
 
             result
           rescue LagoHttpClient::HttpError => e

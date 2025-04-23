@@ -8,7 +8,11 @@ RSpec.describe Integrations::Avalara::FetchCompanyIdService do
     let(:company_id) { "abc-12345" }
     let(:integration) { create(:avalara_integration, company_id: nil) }
     let(:result) { BaseService::Result.new }
-    let(:company) { OpenStruct.new(id: company_id) }
+    let(:company) do
+      {
+        "id" => company_id
+      }
+    end
 
     before do
       result.company = company

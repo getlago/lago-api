@@ -49,7 +49,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Avalara::FetchCompanyIdService d
 
           aggregate_failures do
             expect(result).to be_success
-            expect(result.company.id).to eq("DEFAULT-12345")
+            expect(result.company["id"]).to eq("DEFAULT-12345")
           end
         end
       end
