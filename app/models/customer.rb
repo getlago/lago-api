@@ -146,7 +146,7 @@ class Customer < ApplicationRecord
   def applicable_net_payment_term
     return net_payment_term if net_payment_term.present?
 
-    organization.net_payment_term
+    billing_entity.net_payment_term
   end
 
   # `applicable_invoice_custom_sections` includes:

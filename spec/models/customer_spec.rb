@@ -437,6 +437,37 @@ RSpec.describe Customer, type: :model do
     end
   end
 
+  describe "#applicable_net_payment_term" do
+    subject(:applicable_net_payment_term) { customer.applicable_net_payment_term }
+
+    let(:customer) do
+      described_class.new(organization:, billing_entity:, net_payment_term: 15)
+    end
+
+    it "returns the customer net_payment_term" do
+      expect(applicable_net_payment_term).to eq(15)
+    end
+
+    context "when customer does not have a net payment term" do
+      let(:billing_entity_net_payment_term) { 30 }
+
+      before do
+        customer.net_payment_term = nil
+        billing_entity.net_payment_term = billing_entity_net_payment_term
+      end
+
+      it "returns the billing entity net payment term" do
+        expect(applicable_net_payment_term).to eq(billing_entity_net_payment_term)
+      end
+
+      context "when billing entity net_payment_term is nil" do
+        let(:billing_entity_net_payment_term) { nil }
+
+        it { is_expected.to be_nil }
+      end
+    end
+  end
+
   describe "scoped selected_invoice_custom_sections" do
     let(:organization) { customer.organization }
     let(:manual_section) { create(:invoice_custom_section, organization:, section_type: :manual) }
