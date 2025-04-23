@@ -36056,6 +36056,35 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "activityLog",
+              "description": "Query a single activity log of an organization",
+              "type": {
+                "kind": "OBJECT",
+                "name": "ActivityLog",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "activityId",
+                  "description": "Uniq ID of the activity log",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "activityLogs",
               "description": "Query activity logs of an organization",
               "type": {

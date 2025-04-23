@@ -7152,6 +7152,16 @@ enum ProviderTypeEnum {
 
 type Query {
   """
+  Query a single activity log of an organization
+  """
+  activityLog(
+    """
+    Uniq ID of the activity log
+    """
+    activityId: ID!
+  ): ActivityLog
+
+  """
   Query activity logs of an organization
   """
   activityLogs(activitySources: [ActivitySourceTypeEnum!], activityTypes: [String!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, limit: Int, page: Int, resourceId: String, resourceType: String, toDate: ISO8601Date, userEmails: [String!]): ActivityLogCollection

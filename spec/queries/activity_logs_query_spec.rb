@@ -78,8 +78,6 @@ RSpec.describe ActivityLogsQuery, type: :query, clickhouse: true do
       expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
     end
   end
-<<<<<<< HEAD
-=======
 
   context "with external_customer_id filter" do
     it "returns expected activity logs" do
@@ -120,5 +118,4 @@ RSpec.describe ActivityLogsQuery, type: :query, clickhouse: true do
       expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
     end
   end
->>>>>>> 7412052fd (feat(audit_logs): Add ActivityLogsQuery)
 end

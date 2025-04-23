@@ -33,7 +33,11 @@ module Resolvers
           to_date: args[:to_date],
           activity_types: args[:activity_types],
           activity_sources: args[:activity_sources],
-          user_emails: args[:user_emails]
+          user_emails: args[:user_emails],
+          external_customer_id: args[:external_customer_id],
+          external_subscription_id: args[:external_subscription_id],
+          resource_id: args[:resource_id],
+          resource_type: args[:resource_type]
         },
         pagination: {
           page: args[:page],
