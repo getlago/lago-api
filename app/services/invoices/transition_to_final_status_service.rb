@@ -5,7 +5,7 @@ module Invoices
     def initialize(invoice:)
       @invoice = invoice
       @customer = @invoice.customer
-      @organization = @customer.organization
+      @billing_entity = @customer.billing_entity
       super
     end
 
@@ -23,7 +23,7 @@ module Invoices
       return true unless invoice.fees_amount_cents.zero?
       customer_setting = customer.finalize_zero_amount_invoice
       if customer_setting == "inherit"
-        organization.finalize_zero_amount_invoice
+        billing_entity.finalize_zero_amount_invoice
       else
         customer_setting == "finalize"
       end
@@ -31,6 +31,6 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :customer, :organization
+    attr_reader :invoice, :customer, :billing_entity
   end
 end
