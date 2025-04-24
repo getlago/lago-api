@@ -132,9 +132,9 @@ RSpec.describe BillingEntities::UpdateService do
           }
         end
 
-        # before do
-        # allow(BillingEntities::UpdateInvoicePaymentDueDateService).to receive(:call).and_call_original
-        # end
+        before do
+          allow(BillingEntities::UpdateInvoicePaymentDueDateService).to receive(:call).and_call_original
+        end
 
         it "updates the corresponding draft invoices" do
           current_date = DateTime.parse("22 Jun 2022")
@@ -144,7 +144,7 @@ RSpec.describe BillingEntities::UpdateService do
             expect(result).to be_success
 
             expect(result.billing_entity.net_payment_term).to eq(2)
-            # expect(BillingEntities::UpdateInvoicePaymentDueDateService).to have_received(:call).with(billing_entity:, net_payment_term: 2)
+            expect(BillingEntities::UpdateInvoicePaymentDueDateService).to have_received(:call).with(billing_entity:, net_payment_term: 2)
           end
         end
       end
