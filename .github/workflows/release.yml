@@ -9,7 +9,7 @@ on:
         required: true
 env:
   REGISTRY_IMAGE: getlago/api
-
+permissions: { }
 jobs:
   build-images:
     strategy:
