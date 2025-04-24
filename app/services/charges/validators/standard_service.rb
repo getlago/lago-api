@@ -26,6 +26,7 @@ module Charges
         add_error(field: :amount, error_code: "invalid_amount")
       end
 
+      # TODO: move it to the charge model
       def validate_grouped_by
         return if grouped_by.nil? || grouped_by.is_a?(Array) && grouped_by.blank?
         return if grouped_by.is_a?(Array) && grouped_by.all? { |f| f.is_a?(String) } && grouped_by.all?(&:present?)
