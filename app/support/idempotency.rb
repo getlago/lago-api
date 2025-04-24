@@ -4,7 +4,7 @@
 #
 #   # Execute an operation idempotently
 #   Idempotency.transaction do
-#     Idempotency.unique!(invoice, invoice.date, invoice.customer_id)
+#     Idempotency.unique!(invoice, date: invoice.date, customer_id: invoice.customer_id)
 
 #     # Perform your business logic here
 #     result = perform_operation
@@ -34,7 +34,7 @@ class Idempotency
           resource:
         )
         # raise in case the create service fails
-        raise IdempotencyError.new("resource #{resource} is not unique") unless result.success?
+        raise IdempotencyError.new("resource #{resource.inspect} is not unique") unless result.success?
       end
     end
 
