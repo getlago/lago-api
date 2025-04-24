@@ -17,6 +17,7 @@ class Subscription < ApplicationRecord
   has_many :fees
   has_many :daily_usages
   has_one :lifetime_usage, autosave: true
+  has_one :subscription_activity, class_name: "UsageMonitoring::SubscriptionActivity"
 
   validates :external_id, :billing_time, presence: true
   validate :validate_external_id, on: :create

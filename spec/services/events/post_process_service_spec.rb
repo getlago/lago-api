@@ -38,15 +38,6 @@ RSpec.describe Events::PostProcessService, type: :service do
       end
     end
 
-    it "flags the lifetime usage for refresh" do
-      create(:usage_threshold, plan:)
-
-      process_service.call
-
-      expect(subscription.reload.lifetime_usage).to be_present
-      expect(subscription.lifetime_usage.recalculate_current_usage).to be(true)
-    end
-
     it "flags wallets for refresh" do
       wallet = create(:wallet, customer:)
 
@@ -70,6 +61,19 @@ RSpec.describe Events::PostProcessService, type: :service do
         allow(event).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(event))
 
         expect { process_service.call }.to have_enqueued_job(SendWebhookJob)
+      end
+    end
+
+    context "when the organization has an integration tracking activity" do
+      around { |test| lago_premium!(&test) }
+
+      it "inserts SubscriptionActivity" do
+        organization.update!(premium_integrations: Organization::INTEGRATIONS_TRACKING_ACTIVITY)
+
+        process_service.call
+
+        expect(subscription.subscription_activity.organization_id).to eq organization.id
+        expect(subscription.subscription_activity.enqueued).to eq false
       end
     end
   end

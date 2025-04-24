@@ -24,7 +24,7 @@ module Events
       event.save!
 
       expire_cached_charges(subscriptions)
-      flag_refresh_from_subscription
+      track_subscription_activity!
       customer&.flag_wallets_for_refresh
 
       handle_pay_in_advance
@@ -95,8 +95,15 @@ module Events
       end
     end
 
-    def flag_refresh_from_subscription
-      subscriptions.select(&:active?).each { |s| LifetimeUsages::FlagRefreshFromSubscriptionService.new(subscription: s).call }
+    def track_subscription_activity!
+      return unless organization.tracks_subscription_activity?
+
+      activities = []
+      subscriptions.select(&:active?).each do |s|
+        activities << {organization_id: organization.id, subscription_id: s.id}
+      end
+
+      UsageMonitoring::SubscriptionActivity.insert_all(activities, unique_by: :idx_subscription_unique) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def handle_pay_in_advance
