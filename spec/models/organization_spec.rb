@@ -209,6 +209,31 @@ RSpec.describe Organization, type: :model do
     end
   end
 
+  describe ".with_any_premium_integrations" do
+    it do
+      create(:organization, premium_integrations: %w[okta xero anrok])
+      create(:organization, premium_integrations: %w[okta])
+      create(:organization, premium_integrations: %w[salesforce anrok])
+      create(:organization, premium_integrations: %w[salesforce])
+
+      expect(described_class.with_any_premium_integrations([]).count).to eq(0)
+      expect(described_class.with_any_premium_integrations("okta").count).to eq(2)
+      expect(described_class.with_any_premium_integrations(%w[okta anrok]).count).to eq(3)
+      expect(described_class.with_any_premium_integrations(%w[okta salesforce]).count).to eq(4)
+    end
+  end
+
+  describe ".with_activity_tracking" do
+    it do
+      create(:organization, premium_integrations: %w[okta xero anrok])
+      create(:organization, premium_integrations: described_class::INTEGRATIONS_TRACKING_ACTIVITY)
+      create(:organization, premium_integrations: %w[lifetime_usage])
+      create(:organization, premium_integrations: %w[salesforce])
+
+      expect(described_class.with_activity_tracking.count).to eq(2)
+    end
+  end
+
   describe "Premium integrations scopes" do
     it "returns the organization if the premium integration is enabled" do
       Organization::PREMIUM_INTEGRATIONS.each do |integration|
@@ -301,6 +326,33 @@ RSpec.describe Organization, type: :model do
         end
 
         it { is_expected.to eq(true) }
+      end
+    end
+  end
+
+  describe "#tracks_subscription_activity?" do
+    context "when instance is not premium" do
+      it "returns false" do
+        expect(organization.tracks_subscription_activity?).to eq(false)
+      end
+    end
+
+    context "when instance is premium" do
+      around { |test| lago_premium!(&test) }
+
+      it "returns true if it has a premium integration tracking activity" do
+        test_cases = [
+          {premium_integrations: ["lifetime_usage"], expected: true},
+          {premium_integrations: ["xero"], expected: false},
+          {premium_integrations: ["xero", "netsuite"], expected: false},
+          {premium_integrations: ["xero", "lifetime_usage"], expected: true},
+          {premium_integrations: [], expected: false}
+        ]
+
+        test_cases.each do |test_case|
+          organization.premium_integrations = test_case[:premium_integrations]
+          expect(organization.tracks_subscription_activity?).to eq(test_case[:expected]), "Failed for premium_integrations: #{test_case[:premium_integrations]}"
+        end
       end
     end
   end

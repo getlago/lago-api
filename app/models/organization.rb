@@ -100,6 +100,7 @@ class Organization < ApplicationRecord
     analytics_dashboards
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
+  INTEGRATIONS_TRACKING_ACTIVITY = %w[lifetime_usage progressive_billing].freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS
 
@@ -126,12 +127,21 @@ class Organization < ApplicationRecord
   before_create :set_hmac_key
   after_create :generate_document_number_prefix
 
+  scope :with_any_premium_integrations, ->(names) { where("premium_integrations && ARRAY[?]::varchar[]", Array.wrap(names)) }
+  scope :with_activity_tracking, -> { with_any_premium_integrations(INTEGRATIONS_TRACKING_ACTIVITY) }
+
   PREMIUM_INTEGRATIONS.each do |premium_integration|
     scope "with_#{premium_integration}_support", -> { where("? = ANY(premium_integrations)", premium_integration) }
 
     define_method("#{premium_integration}_enabled?") do
       License.premium? && premium_integrations.include?(premium_integration)
     end
+  end
+
+  def tracks_subscription_activity?
+    return false unless License.premium?
+
+    (INTEGRATIONS_TRACKING_ACTIVITY & premium_integrations).any?
   end
 
   def admins
