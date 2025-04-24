@@ -3,6 +3,8 @@
 module Charges
   module ChargeModels
     class GroupedService < BaseService
+      Result = BaseResult[:grouped_results]
+
       def initialize(charge_model:, charge:, aggregation_result:, properties:)
         super(charge:, aggregation_result:, properties:)
 

@@ -90,9 +90,7 @@ module Fees
           return []
         end
 
-        (charge_model_result.grouped_results || [charge_model_result]).map do |amount_result|
-          init_fee(amount_result, properties:, charge_filter:)
-        end
+        charge_model_result.grouped_results.map { |amount_result| init_fee(amount_result, properties:, charge_filter:) }
       end
 
       result.fees.concat(fees.compact)
