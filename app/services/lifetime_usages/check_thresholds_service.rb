@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module LifetimeUsages
-  class RecalculateAndCheckService < BaseService
+  class CheckThresholdsService < BaseService
     Result = BaseResult[:invoice]
 
     def initialize(lifetime_usage:)
@@ -11,8 +11,8 @@ module LifetimeUsages
     end
 
     def call
-      LifetimeUsages::CalculateService.call!(lifetime_usage:)
       usage_thresholds = LifetimeUsages::UsageThresholds::CheckService.call!(lifetime_usage:, progressive_billed_amount:).passed_thresholds
+
       if usage_thresholds.any?
         usage_thresholds.each do |usage_threshold|
           SendWebhookJob.perform_later("subscription.usage_threshold_reached", subscription, usage_threshold:)

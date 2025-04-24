@@ -2,12 +2,11 @@
 
 require "rails_helper"
 
-RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
+RSpec.describe LifetimeUsages::CheckThresholdsService, type: :service do
   subject(:service) { described_class.new(lifetime_usage:) }
 
-  let(:lifetime_usage) { create(:lifetime_usage, subscription:, recalculate_current_usage:, recalculate_invoiced_usage:) }
-  let(:recalculate_current_usage) { true }
-  let(:recalculate_invoiced_usage) { true }
+  let(:lifetime_usage) { create(:lifetime_usage, subscription:, recalculate_current_usage: true, recalculate_invoiced_usage: true, current_usage_amount_cents:) }
+  let(:current_usage_amount_cents) { 0 }
   let(:subscription) { create(:subscription, customer_id: customer.id) }
   let(:organization) { subscription.organization }
   let(:customer) { create(:customer) }
@@ -15,18 +14,6 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
   let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
   let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "10"}) }
   let(:timestamp) { Time.current }
-
-  let(:events) do
-    create_list(
-      :event,
-      2,
-      organization:,
-      subscription:,
-      customer:,
-      code: billable_metric.code,
-      timestamp:
-    )
-  end
 
   def create_thresholds(subscription, amounts:, recurring: nil)
     amounts.each do |amount|
@@ -38,20 +25,18 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
   end
 
   context "when we pass a threshold" do
+    let(:current_usage_amount_cents) { 20 }
     let(:usage_threshold) { create(:usage_threshold, plan: subscription.plan, amount_cents: 10) }
 
     before do
       usage_threshold
-      events
       charge
     end
 
-    it "clears the recalculate_invoiced_usage flag" do
-      expect { service.call }.to change(lifetime_usage, :recalculate_invoiced_usage).from(true).to(false)
-    end
-
-    it "clears the recalculate_current_usage flag" do
-      expect { service.call }.to change(lifetime_usage, :recalculate_current_usage).from(true).to(false)
+    it "ignores the flags" do
+      service.call
+      expect(lifetime_usage.recalculate_invoiced_usage).to eq true
+      expect(lifetime_usage.recalculate_current_usage).to eq true
     end
 
     it "sends a webhook for that threshold" do
@@ -81,22 +66,20 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
   end
 
   context "when we pass multiple thresholds" do
+    let(:current_usage_amount_cents) { 401 }
     let(:usage_threshold) { create(:usage_threshold, plan: subscription.plan, amount_cents: 10) }
     let(:usage_threshold2) { create(:usage_threshold, plan: subscription.plan, amount_cents: 400) }
 
     before do
       usage_threshold
       usage_threshold2
-      events
       charge
     end
 
-    it "clears the recalculate_invoiced_usage flag" do
-      expect { service.call }.to change(lifetime_usage, :recalculate_invoiced_usage).from(true).to(false)
-    end
-
-    it "clears the recalculate_current_usage flag" do
-      expect { service.call }.to change(lifetime_usage, :recalculate_current_usage).from(true).to(false)
+    it "ignores the flags" do
+      service.call
+      expect(lifetime_usage.recalculate_invoiced_usage).to eq true
+      expect(lifetime_usage.recalculate_current_usage).to eq true
     end
 
     it "sends a webhook for the first threshold" do
@@ -123,6 +106,7 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
   end
 
   context "when we pass a threshold with already progressive_billing invoices present" do
+    let(:current_usage_amount_cents) { 401 }
     let(:usage_threshold) { create(:usage_threshold, plan: subscription.plan, amount_cents: 10) }
     let(:usage_threshold2) { create(:usage_threshold, plan: subscription.plan, amount_cents: 400) }
     let(:progressive_billing_invoice) do
@@ -142,16 +126,14 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
       usage_threshold
       usage_threshold2
       progressive_billing_fee
-      events
       charge
+      lifetime_usage.update! invoiced_usage_amount_cents: progressive_billing_fee.amount_cents
     end
 
-    it "clears the recalculate_invoiced_usage flag" do
-      expect { service.call }.to change(lifetime_usage, :recalculate_invoiced_usage).from(true).to(false)
-    end
-
-    it "clears the recalculate_current_usage flag" do
-      expect { service.call }.to change(lifetime_usage, :recalculate_current_usage).from(true).to(false)
+    it "ignores the flags" do
+      service.call
+      expect(lifetime_usage.recalculate_invoiced_usage).to eq true
+      expect(lifetime_usage.recalculate_current_usage).to eq true
     end
 
     it "sends a webhook for the last threshold" do
@@ -173,16 +155,13 @@ RSpec.describe LifetimeUsages::RecalculateAndCheckService, type: :service do
 
     before do
       usage_threshold
-      events
       charge
     end
 
-    it "clears the recalculate_invoiced_usage flag" do
-      expect { service.call }.to change(lifetime_usage, :recalculate_invoiced_usage).from(true).to(false)
-    end
-
-    it "clears the recalculate_current_usage flag" do
-      expect { service.call }.to change(lifetime_usage, :recalculate_current_usage).from(true).to(false)
+    it "ignores the flags" do
+      service.call
+      expect(lifetime_usage.recalculate_invoiced_usage).to eq true
+      expect(lifetime_usage.recalculate_current_usage).to eq true
     end
 
     it "does not send a webhook for the threshold" do

@@ -13,7 +13,8 @@ module LifetimeUsages
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
     def perform(lifetime_usage)
-      LifetimeUsages::RecalculateAndCheckService.call(lifetime_usage:)
+      LifetimeUsages::CalculateService.call!(lifetime_usage:)
+      LifetimeUsages::CheckThresholdsService.call(lifetime_usage:)
     end
   end
 end
