@@ -33,6 +33,26 @@ RSpec.describe BillingEntities::Taxes::ApplyTaxesService do
           expect { service.call }.to change(billing_entity.applied_taxes, :count).by(1)
         end
       end
+
+      context "when organization have invoices in multiple billing_entities" do
+        let(:other_billing_entity) { create(:billing_entity, organization:) }
+        let(:invoice1) { create(:invoice, organization:, billing_entity:) }
+        let(:invoice2) { create(:invoice, :draft, organization:, billing_entity:) }
+        let(:invoice3) { create(:invoice, :draft, organization:, billing_entity: other_billing_entity) }
+
+        before do
+          invoice1
+          invoice2
+          invoice3
+        end
+
+        it "sets to refresh draft invoice of this billing entity" do
+          service.call
+          expect(invoice1.reload.ready_to_be_refreshed).to be_falsey
+          expect(invoice2.reload.ready_to_be_refreshed).to be_truthy
+          expect(invoice3.reload.ready_to_be_refreshed).to be_falsey
+        end
+      end
     end
 
     context "when some tax codes do not exist in the organization" do
@@ -62,6 +82,26 @@ RSpec.describe BillingEntities::Taxes::ApplyTaxesService do
 
       it "does not create any applied taxes" do
         expect { service.call }.not_to change(billing_entity.applied_taxes, :count)
+      end
+
+      context "when organization have invoices in multiple billing_entities" do
+        let(:other_billing_entity) { create(:billing_entity, organization:) }
+        let(:invoice1) { create(:invoice, organization:, billing_entity:) }
+        let(:invoice2) { create(:invoice, :draft, organization:, billing_entity:) }
+        let(:invoice3) { create(:invoice, :draft, organization:, billing_entity: other_billing_entity) }
+
+        before do
+          invoice1
+          invoice2
+          invoice3
+        end
+
+        it "does not set any draft invoices to ready to be refreshed" do
+          service.call
+          expect(invoice1.reload.ready_to_be_refreshed).to be_falsey
+          expect(invoice2.reload.ready_to_be_refreshed).to be_falsey
+          expect(invoice3.reload.ready_to_be_refreshed).to be_falsey
+        end
       end
     end
 

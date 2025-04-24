@@ -19,6 +19,7 @@ module BillingEntities
         return result if result.failure?
 
         billing_entity.applied_taxes.where(tax: result.taxes_to_remove).destroy_all
+        refresh_draft_invoices
 
         result
       end

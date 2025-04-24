@@ -15,6 +15,7 @@ module BillingEntities
         return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
         manage_taxes
+        refresh_draft_invoices
         result
       end
 
