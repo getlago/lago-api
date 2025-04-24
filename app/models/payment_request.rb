@@ -11,6 +11,8 @@ class PaymentRequest < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
   belongs_to :dunning_campaign, -> { with_discarded }, optional: true
 
+  delegate :billing_entity, to: :customer
+
   validates :amount_cents, presence: true
   validates :amount_currency, presence: true
 
