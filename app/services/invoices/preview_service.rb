@@ -217,7 +217,7 @@ module Invoices
     end
 
     def create_credit_note_credits
-      terminated_subscription = subscriptions.find(&:terminated?)
+      terminated_subscription = subscriptions.none?(&:downgraded?) ? subscriptions.find(&:terminated?) : nil
       credits = Preview::CreditsService.call!(invoice:, terminated_subscription:).credits
 
       invoice.credits << credits
