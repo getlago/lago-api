@@ -409,21 +409,21 @@ class Invoice < ApplicationRecord
   end
 
   def ensure_number
-    self.number = "#{organization.document_number_prefix}-DRAFT" if number.blank? && !status_changed_to_finalized?
+    self.number = "#{billing_entity.document_number_prefix}-DRAFT" if number.blank? && !status_changed_to_finalized?
 
     return unless status_changed_to_finalized?
 
-    if organization.per_customer? || self_billed
+    if billing_entity.per_customer? || self_billed
       # NOTE: Example of expected customer slug format is ORG_PREFIX-005
-      customer_slug = "#{organization.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
+      customer_slug = "#{billing_entity.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
       formatted_sequential_id = format("%03d", sequential_id)
 
       self.number = "#{customer_slug}-#{formatted_sequential_id}"
     else
-      org_formatted_sequential_id = format("%03d", organization_sequential_id)
-      formatted_year_and_month = Time.now.in_time_zone(organization.timezone || "UTC").strftime("%Y%m")
+      billing_entity_formatted_sequential_id = format("%03d", billing_entity_sequential_id)
+      formatted_year_and_month = Time.now.in_time_zone(billing_entity.timezone || "UTC").strftime("%Y%m")
 
-      self.number = "#{organization.document_number_prefix}-#{formatted_year_and_month}-#{org_formatted_sequential_id}"
+      self.number = "#{billing_entity.document_number_prefix}-#{formatted_year_and_month}-#{billing_entity_formatted_sequential_id}"
     end
   end
 
