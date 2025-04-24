@@ -465,7 +465,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               Rails.cache.clear
             end
 
-            it "creates preview invoice for 1 day" do
+            it "creates preview invoice" do
               # only charges from March (3 days), full April billed by new plan
 
               travel_to(Time.zone.parse("30 Mar 2024 05:00")) do
