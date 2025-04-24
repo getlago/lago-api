@@ -11,9 +11,11 @@ module Coupons
     def call
       return result.not_found_failure!(resource: "applied_coupon") if applied_coupon.nil?
       return result if unlimited_usage?
-      return result if applied_coupon.voided?
 
-      ActiveRecord::Base.transaction do
+      applied_coupon.lock do
+        return result.not_allowed_failure!(code: "already_voided") if applied_coupon.voided?
+        return result if expired?
+
         applied_coupon.mark_as_voided!
         result.restored_applied_coupon = create_new_applied_coupon!
       end
@@ -43,6 +45,10 @@ module Coupons
 
     def unlimited_usage?
       applied_coupon.frequency.to_sym == :forever
+    end
+
+    def expired?
+      applied_coupon.terminated? || (applied_coupon.terminated_at&.< Time.current)
     end
   end
 end

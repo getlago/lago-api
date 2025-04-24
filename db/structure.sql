@@ -1020,6 +1020,7 @@ CREATE TABLE public.applied_coupons (
     frequency integer DEFAULT 0 NOT NULL,
     frequency_duration integer,
     frequency_duration_remaining integer,
+    voided_at timestamp(6) without time zone,
     organization_id uuid
 );
 
@@ -7509,6 +7510,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250424140537'),
 ('20250424140359'),
 ('20250424135624'),
+('20250423123705'),
 ('20250416125600'),
 ('20250415143607'),
 ('20250414122904'),
