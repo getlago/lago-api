@@ -11,6 +11,7 @@ module Coupons
     def call
       return result.not_found_failure!(resource: "applied_coupon") if applied_coupon.nil?
       return result if unlimited_usage?
+      return result if applied_coupon.voided?
 
       ActiveRecord::Base.transaction do
         applied_coupon.mark_as_voided!
