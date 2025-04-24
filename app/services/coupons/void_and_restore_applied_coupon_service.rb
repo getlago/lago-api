@@ -19,8 +19,8 @@ module Coupons
       end
 
       result
-    rescue => e
-      result.error!(message: "Failed to void and restore coupon: #{e.message}")
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
     end
 
     private
