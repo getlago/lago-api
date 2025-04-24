@@ -7,7 +7,8 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
 
   describe "#call" do
     let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:customer) { create(:customer, organization:, billing_entity:) }
 
     let(:invoice) do
       create(
@@ -15,6 +16,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         :pending,
         :with_tax_error,
         customer:,
+        billing_entity:,
         organization:,
         subscriptions: [subscription],
         currency: "EUR",
@@ -160,12 +162,12 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       end
 
       it "generates invoice number" do
-        customer_slug = "#{organization.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
+        customer_slug = "#{billing_entity.document_number_prefix}-#{format("%03d", customer.sequential_id)}"
         sequential_id = customer.invoices.where.not(id: invoice.id).order(created_at: :desc).first&.sequential_id || 0
 
         expect { pull_taxes_service.call }
           .to change { invoice.reload.number }
-          .from("#{organization.document_number_prefix}-DRAFT")
+          .from("#{billing_entity.document_number_prefix}-DRAFT")
           .to("#{customer_slug}-#{format("%03d", sequential_id + 1)}")
       end
 
@@ -211,7 +213,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
           end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
         end
 
-        context "when organization does not have right email settings" do
+        context "when billing entity does not have right email settings" do
           before { invoice.billing_entity.update!(email_settings: []) }
 
           it "enqueues GeneratePdfAndNotifyJob with email false" do
@@ -308,7 +310,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         it "does not generate invoice number" do
           expect { pull_taxes_service.call }
             .not_to change { invoice.reload.number }
-            .from("#{organization.document_number_prefix}-DRAFT")
+            .from("#{billing_entity.document_number_prefix}-DRAFT")
         end
 
         it "generates expected invoice totals" do
