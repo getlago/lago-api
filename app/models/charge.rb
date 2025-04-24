@@ -60,9 +60,9 @@ class Charge < ApplicationRecord
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
 
-  def supports_grouped_by?
-    standard? || dynamic?
-  end
+  # def supports_grouped_by?
+  #   standard? || dynamic? ## Percentage | graduated percentage?? per_event_aggregation
+  # end
 
   def equal_properties?(charge)
     charge_model == charge.charge_model && properties == charge.properties
