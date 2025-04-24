@@ -12,11 +12,6 @@ RSpec.describe BillingEntities::UpdateInvoicePaymentDueDateService, type: :servi
   let(:net_payment_term) { 30 }
 
   describe "#call" do
-    it "updates invoice payment_due_date" do
-      result = update_service.call
-      expect(result.billing_entity.net_payment_term).to eq(30)
-    end
-
     let(:draft_invoice) do
       create(:invoice, status: :draft, customer:, organization:, issuing_date: DateTime.parse("21 Jun 2022"), billing_entity:)
     end
@@ -25,6 +20,11 @@ RSpec.describe BillingEntities::UpdateInvoicePaymentDueDateService, type: :servi
     before do
       draft_invoice
       finalized_invoice
+    end
+
+    it "updates invoice payment_due_date" do
+      result = update_service.call
+      expect(result.billing_entity.net_payment_term).to eq(30)
     end
 
     it "updates only draft invoice payment_due_date" do
