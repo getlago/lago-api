@@ -2,6 +2,8 @@
 
 module Invoices
   class ProgressiveBillingService < BaseService
+    Result = BaseResult[:invoice]
+
     def initialize(sorted_usage_thresholds:, lifetime_usage:, timestamp: Time.current)
       @sorted_usage_thresholds = sorted_usage_thresholds
       @lifetime_usage = lifetime_usage

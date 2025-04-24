@@ -34,7 +34,7 @@ class Idempotency
           resource:
         )
         # raise in case the create service fails
-        raise IdempotencyError.new("resource #{resource} is not unique") unless result.success?
+        raise IdempotencyError.new("resource #{resource.inspect} is not unique") unless result.success?
       end
     end
 

@@ -68,6 +68,14 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
         .to eq(lifetime_usage.total_amount_cents)
     end
 
+    it "makes sure that only 1 invoice is generated for a given threshold" do
+      result = create_service.call
+      expect(result).to be_success
+
+      result2 = create_service.call
+      expect(result2).not_to be_success
+    end
+
     context "when there is tax provider integration" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
