@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Progressive Billing enablement", :scenarios, type: :request do
+describe "Progressive Billing enablement", :scenarios, type: :request, transaction: false do
   let(:timezone) { "UTC" }
   let(:organization) { create(:organization, webhook_url: nil, premium_integrations: ["progressive_billing"]) }
   let(:billable_metric) { create(:sum_billable_metric, organization:) }

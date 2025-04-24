@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Use wallet's credits and recalculate balances", :scenarios, type: :request do
+describe "Use wallet's credits and recalculate balances", :scenarios, type: :request, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: [], premium_integrations: ["progressive_billing"]) }
   let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 10) }
   let(:plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 1_00, pay_in_advance: false) }

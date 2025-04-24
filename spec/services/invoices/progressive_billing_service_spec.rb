@@ -2,10 +2,10 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::ProgressiveBillingService, type: :service do
-  subject(:create_service) { described_class.new(usage_thresholds:, lifetime_usage:, timestamp:) }
+RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction: false do
+  subject(:create_service) { described_class.new(sorted_usage_thresholds:, lifetime_usage:, timestamp:) }
 
-  let(:usage_thresholds) { [create(:usage_threshold, plan:)] }
+  let(:sorted_usage_thresholds) { [create(:usage_threshold, plan:)] }
   let(:plan) { create(:plan) }
   let(:organization) { plan.organization }
 
@@ -68,6 +68,14 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
         .to eq(lifetime_usage.total_amount_cents)
     end
 
+    it "makes sure that only 1 invoice is generated for a given threshold" do
+      result = create_service.call
+      expect(result).to be_success
+
+      result2 = create_service.call
+      expect(result2).not_to be_success
+    end
+
     context "when there is tax provider integration" do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
@@ -94,7 +102,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service do
     end
 
     context "with multiple thresholds" do
-      let(:usage_thresholds) do
+      let(:sorted_usage_thresholds) do
         [
           create(:usage_threshold, plan:, amount_cents: 1000),
           create(:usage_threshold, plan:, amount_cents: 2500)
