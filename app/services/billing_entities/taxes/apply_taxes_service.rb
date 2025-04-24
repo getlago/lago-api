@@ -21,6 +21,7 @@ module BillingEntities
         result.applied_taxes = result.taxes_to_apply.map do |tax|
           billing_entity.applied_taxes.find_or_create_by!(tax:)
         end
+        refresh_draft_invoices
 
         result
       end

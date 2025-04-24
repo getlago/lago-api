@@ -47,6 +47,22 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
 
           expect(billing_entity.taxes).to eq([tax1, tax2])
         end
+
+        context "when there are draft invoices in this billing_entity" do
+          let(:invoice1) { create(:invoice, :draft, organization:, billing_entity:) }
+          let(:invoice2) { create(:invoice, organization:, billing_entity:) }
+
+          before do
+            invoice1
+            invoice2
+          end
+
+          it "sets to refresh draft invoice of this billing entity" do
+            service.call
+            expect(invoice1.reload.ready_to_be_refreshed).to be_truthy
+            expect(invoice2.reload.ready_to_be_refreshed).to be_falsey
+          end
+        end
       end
 
       context "when tax codes contain duplicates" do
