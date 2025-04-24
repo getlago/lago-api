@@ -96,6 +96,7 @@ ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_521b5240ed;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_51ac39a0c6;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_50d46d3679;
+ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_4934f27a06;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_4117574b51;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_3ff27d7624;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_3f7be5debc;
@@ -373,6 +374,7 @@ DROP INDEX IF EXISTS public.index_charges_taxes_on_charge_id;
 DROP INDEX IF EXISTS public.index_charges_pay_in_advance;
 DROP INDEX IF EXISTS public.index_charges_on_plan_id;
 DROP INDEX IF EXISTS public.index_charges_on_parent_id;
+DROP INDEX IF EXISTS public.index_charges_on_organization_id;
 DROP INDEX IF EXISTS public.index_charges_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charges_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_charge_filters_on_deleted_at;
@@ -1199,7 +1201,8 @@ CREATE TABLE public.charges (
     prorated boolean DEFAULT false NOT NULL,
     invoice_display_name character varying,
     regroup_paid_fees integer,
-    parent_id uuid
+    parent_id uuid,
+    organization_id uuid
 );
 
 
@@ -4354,6 +4357,13 @@ CREATE INDEX index_charges_on_deleted_at ON public.charges USING btree (deleted_
 
 
 --
+-- Name: index_charges_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_charges_on_organization_id ON public.charges USING btree (organization_id);
+
+
+--
 -- Name: index_charges_on_parent_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6282,6 +6292,14 @@ ALTER TABLE ONLY public.credit_notes
 
 
 --
+-- Name: charges fk_rails_4934f27a06; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.charges
+    ADD CONSTRAINT fk_rails_4934f27a06 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: payment_provider_customers fk_rails_50d46d3679; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6984,6 +7002,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250424140537'),
+('20250424140359'),
+('20250424135624'),
 ('20250415143607'),
 ('20250414122904'),
 ('20250414122643'),

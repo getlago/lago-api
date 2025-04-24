@@ -179,6 +179,7 @@ RSpec.describe Plans::CreateService, type: :service do
       graduated_charge = plan.charges.graduated.first
 
       expect(standard_charge).to have_attributes(
+        organization_id: organization.id,
         pay_in_advance: false,
         prorated: false,
         min_amount_cents: 0,
@@ -195,7 +196,12 @@ RSpec.describe Plans::CreateService, type: :service do
         values: ["card"]
       )
 
-      expect(graduated_charge).to have_attributes(pay_in_advance: true, invoiceable: true, prorated: false)
+      expect(graduated_charge).to have_attributes(
+        organization_id: organization.id,
+        pay_in_advance: true,
+        invoiceable: true,
+        prorated: false
+      )
     end
 
     it "calls SegmentTrackJob" do
@@ -273,6 +279,7 @@ RSpec.describe Plans::CreateService, type: :service do
 
         expect(plan.charges.standard.first).to have_attributes(
           {
+            organization_id: organization.id,
             pay_in_advance: false,
             min_amount_cents: 100,
             invoiceable: true
@@ -281,6 +288,7 @@ RSpec.describe Plans::CreateService, type: :service do
 
         expect(plan.charges.graduated_percentage.first).to have_attributes(
           {
+            organization_id: organization.id,
             pay_in_advance: true,
             invoiceable: false,
             regroup_paid_fees: "invoice",

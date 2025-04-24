@@ -72,6 +72,7 @@ RSpec.describe Charges::CreateService, type: :service do
 
           expect(plan.reload.charges.graduated_percentage.first).to have_attributes(
             {
+              organization_id: organization.id,
               pay_in_advance: false,
               invoiceable: true,
               charge_model: "graduated_percentage"
@@ -120,6 +121,7 @@ RSpec.describe Charges::CreateService, type: :service do
           stored_charge = plan.reload.charges.first
 
           expect(stored_charge.reload).to have_attributes(
+            organization_id: organization.id,
             prorated: true,
             pay_in_advance: false,
             parent_id: parent_charge.id,
@@ -152,7 +154,11 @@ RSpec.describe Charges::CreateService, type: :service do
 
             stored_charge = plan.reload.charges.first
 
-            expect(stored_charge).to have_attributes(invoiceable: false, min_amount_cents: 10)
+            expect(stored_charge).to have_attributes(
+              organization_id: organization.id,
+              invoiceable: false,
+              min_amount_cents: 10
+            )
           end
         end
       end
