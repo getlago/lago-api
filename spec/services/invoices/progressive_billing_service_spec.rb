@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction: false do
-  subject(:create_service) { described_class.new(usage_thresholds:, lifetime_usage:, timestamp:) }
+  subject(:create_service) { described_class.new(sorted_usage_thresholds:, lifetime_usage:, timestamp:) }
 
-  let(:usage_thresholds) { [create(:usage_threshold, plan:)] }
+  let(:sorted_usage_thresholds) { [create(:usage_threshold, plan:)] }
   let(:plan) { create(:plan) }
   let(:organization) { plan.organization }
 
@@ -94,7 +94,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
     end
 
     context "with multiple thresholds" do
-      let(:usage_thresholds) do
+      let(:sorted_usage_thresholds) do
         [
           create(:usage_threshold, plan:, amount_cents: 1000),
           create(:usage_threshold, plan:, amount_cents: 2500)
