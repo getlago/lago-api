@@ -13,9 +13,8 @@ module DatabaseMigrations
         .limit(BATCH_SIZE)
 
       if batch.exists?
-        # rubocop:disable Rails/SkipsModelValidations
+
         batch.update_all("organization_id = (SELECT organization_id FROM plans WHERE plans.id = charges.plan_id)")
-        # rubocop:enable Rails/SkipsModelValidations
 
         # Queue the next batch
         self.class.perform_later(batch_number + 1)

@@ -21,7 +21,7 @@ module BillableMetrics
 
         discard_filters
 
-        Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+        Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true)
       end
 
       # NOTE: Discard all related events asynchronously.

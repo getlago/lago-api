@@ -7,7 +7,7 @@ class AddTotalPaidAmountCentsToInvoices < ActiveRecord::Migration[7.1]
     add_column :invoices, :total_paid_amount_cents, :bigint, null: true
     # Backfill
     Invoice.in_batches(of: 10_000).each do |batch|
-      batch.update_all(total_paid_amount_cents: 0) # rubocop:disable Rails/SkipsModelValidations
+      batch.update_all(total_paid_amount_cents: 0)
     end
 
     safety_assured do

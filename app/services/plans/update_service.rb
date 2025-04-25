@@ -60,7 +60,7 @@ module Plans
 
       cascade_subscription_fee_update(old_amount_cents)
 
-      plan.invoices.draft.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+      plan.invoices.draft.update_all(ready_to_be_refreshed: true)
 
       result.plan = plan.reload
       result

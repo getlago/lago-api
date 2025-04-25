@@ -33,7 +33,7 @@ module PaymentProviders
       cashfree_provider.save!
 
       if payment_provider_code_changed?(cashfree_provider, old_code, args)
-        cashfree_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
+        cashfree_provider.customers.update_all(payment_provider_code: args[:code])
       end
 
       result.cashfree_provider = cashfree_provider

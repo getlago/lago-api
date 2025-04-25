@@ -15,7 +15,7 @@ module BillableMetrics
         subscription_id: Charge.with_discarded
           .where(billable_metric_id: metric.id)
           .joins(plan: :subscriptions).pluck("subscriptions.id")
-      ).update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
+      ).update_all(deleted_at:)
 
       # Delete events using the new `external_subscription_id`
       Event.where(
@@ -24,7 +24,7 @@ module BillableMetrics
         external_subscription_id: Charge.with_discarded
           .where(billable_metric_id: metric.id)
           .joins(plan: :subscriptions).pluck("subscriptions.external_id")
-      ).update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
+      ).update_all(deleted_at:)
 
       # Delete events_raw & events_enriched on clickhouse using `external_subscription_id`
       if ENV["LAGO_CLICKHOUSE_ENABLED"].present?

@@ -44,7 +44,7 @@ module PaymentProviders
       moneyhash_provider.save(validate: false)
 
       if payment_provider_code_changed?(moneyhash_provider, old_code, args)
-        moneyhash_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
+        moneyhash_provider.customers.update_all(payment_provider_code: args[:code])
       end
 
       result.moneyhash_provider = moneyhash_provider

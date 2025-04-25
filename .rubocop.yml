@@ -80,6 +80,9 @@ RSpec/NestedGroups:
 RSpec/NamedSubject:
   Enabled: false
 
+Rails/SkipsModelValidations:
+  Enabled: false
+
 # GraphQL
 
 GraphQL/ArgumentDescription:

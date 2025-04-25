@@ -74,7 +74,7 @@ class AddParentToChargesFromPlanParent < ActiveRecord::Migration[7.1]
     end
 
     # write only once for all children charges
-    Charge.where(id: full_match_ids.concat(partial_match_ids)).update_all(parent_id: parent_charge.id) # rubocop:disable Rails/SkipsModelValidations
+    Charge.where(id: full_match_ids.concat(partial_match_ids)).update_all(parent_id: parent_charge.id)
   end
 
   def charge_has_copy?(parent_charge, parent_plan, mode)

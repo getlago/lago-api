@@ -11,9 +11,8 @@ module DatabaseMigrations
       batch = Fee.unscoped.where(billing_entity_id: nil).limit(BATCH_SIZE)
 
       if batch.exists?
-        # rubocop:disable Rails/SkipsModelValidations
+
         batch.update_all("billing_entity_id = organization_id")
-        # rubocop:enable Rails/SkipsModelValidations
 
         # Queue the next batch
         self.class.perform_later(batch_number + 1)

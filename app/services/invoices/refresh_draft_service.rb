@@ -72,7 +72,7 @@ module Invoices
         end
 
         # NOTE: In case of a refresh the same day of the termination.
-        invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
+        invoice.fees.update_all(created_at: invoice.created_at)
 
         return result if tax_error?(calculate_result.error)
 
@@ -117,7 +117,7 @@ module Invoices
     end
 
     def reset_invoice_values
-      invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil) } # rubocop:disable Rails/SkipsModelValidations
+      invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil) }
       invoice.fees.destroy_all
       invoice_subscriptions.destroy_all
       invoice.applied_taxes.destroy_all

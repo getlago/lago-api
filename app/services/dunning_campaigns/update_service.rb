@@ -100,11 +100,11 @@ module DunningCampaigns
       organization
         .dunning_campaigns
         .applied_to_organization
-        .update_all(applied_to_organization: false) # rubocop:disable Rails/SkipsModelValidations
+        .update_all(applied_to_organization: false)
 
       organization.reset_customers_last_dunning_campaign_attempt
 
-      customers_fallback_campaign.update_all( # rubocop:disable Rails/SkipsModelValidations
+      customers_fallback_campaign.update_all(
         last_dunning_campaign_attempt_at: nil,
         last_dunning_campaign_attempt: 0
       )

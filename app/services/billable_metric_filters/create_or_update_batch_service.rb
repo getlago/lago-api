@@ -92,7 +92,7 @@ module BillableMetricFilters
         .where(billable_metrics: {id: billable_metric.id})
         .distinct
 
-      draft_invoices.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+      draft_invoices.update_all(ready_to_be_refreshed: true)
     end
   end
 end

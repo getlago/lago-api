@@ -18,7 +18,7 @@ module Taxes
       destroy_applied_taxes
       tax.destroy!
 
-      Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+      Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true)
 
       result.tax = tax
       result

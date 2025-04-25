@@ -35,7 +35,7 @@ module PaymentProviders
       end
 
       if payment_provider_code_changed?(stripe_provider, old_code, args)
-        stripe_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
+        stripe_provider.customers.update_all(payment_provider_code: args[:code])
       end
 
       result.stripe_provider = stripe_provider

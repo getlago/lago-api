@@ -37,7 +37,7 @@ class BackfillInvoicesAndPayments < ActiveRecord::Migration[7.1]
 
   def update_invoices
     Invoice.where(payment_status: Invoice::PAYMENT_STATUS[:succeeded])
-      .update_all("total_paid_amount_cents = total_amount_cents") # rubocop:disable Rails/SkipsModelValidations
+      .update_all("total_paid_amount_cents = total_amount_cents")
   end
 
   def update_payments
@@ -76,6 +76,6 @@ class BackfillInvoicesAndPayments < ActiveRecord::Migration[7.1]
     Payment.left_joins(:payment_provider)
       .where("payment_providers.type = ? OR payment_providers.id IS NULL", provider_type)
       .where(payable_payment_status: nil, status: statuses)
-      .update_all(payable_payment_status: new_status) # rubocop:disable Rails/SkipsModelValidations
+      .update_all(payable_payment_status: new_status)
   end
 end

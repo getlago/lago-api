@@ -82,7 +82,7 @@ module Invoices
           is.subscription.fees
             .where(invoice: nil, payment_status: :succeeded)
             .where("succeeded_at <= ?", is.timestamp)
-            .update_all(invoice_id: invoice.id) # rubocop:disable Rails/SkipsModelValidations
+            .update_all(invoice_id: invoice.id)
         end
 
         if invoice.fees.empty?

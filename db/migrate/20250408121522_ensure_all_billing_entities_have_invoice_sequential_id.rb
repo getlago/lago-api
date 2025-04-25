@@ -9,7 +9,7 @@ class EnsureAllBillingEntitiesHaveInvoiceSequentialId < ActiveRecord::Migration[
       next if last_billing_entity_sequential_id == invoices_count
 
       last_invoice = billing_entity.invoices.non_self_billed.with_generated_number.where(billing_entity_sequential_id: nil).order(created_at: :desc).limit(1)
-      last_invoice.update_all(billing_entity_sequential_id: invoices_count) # rubocop:disable Rails/SkipsModelValidations
+      last_invoice.update_all(billing_entity_sequential_id: invoices_count)
     end
   end
 end

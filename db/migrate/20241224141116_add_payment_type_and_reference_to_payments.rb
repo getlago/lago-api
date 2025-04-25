@@ -14,7 +14,7 @@ class AddPaymentTypeAndReferenceToPayments < ActiveRecord::Migration[7.1]
     end
 
     # Backfill existing records
-    Payment.in_batches(of: 10_000).update_all(payment_type: "provider") # rubocop:disable Rails/SkipsModelValidations
+    Payment.in_batches(of: 10_000).update_all(payment_type: "provider")
 
     safety_assured do
       execute <<~SQL

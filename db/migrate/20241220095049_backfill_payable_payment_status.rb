@@ -35,7 +35,7 @@ class BackfillPayablePaymentStatus < ActiveRecord::Migration[7.1]
       # Update all other duplicate_statuses payments for this `payable_id` to "failed"
       Payment.where(status: duplicate_statuses, payable_id: payable_id)
         .where.not(id: latest_pending_payment.id)
-        .update_all(status: "failed") # rubocop:disable Rails/SkipsModelValidations
+        .update_all(status: "failed")
     end
 
     provider_types = PaymentProviders::BaseProvider.distinct.pluck(:type)
@@ -44,15 +44,15 @@ class BackfillPayablePaymentStatus < ActiveRecord::Migration[7.1]
 
       payments = Payment.joins(:payment_provider)
         .where(payment_providers: {type: provider_type}, status: provider_class::PROCESSING_STATUSES)
-      payments.update_all(payable_payment_status: :pending) # rubocop:disable Rails/SkipsModelValidations
+      payments.update_all(payable_payment_status: :pending)
 
       payments = Payment.joins(:payment_provider)
         .where(payment_providers: {type: provider_type}, status: provider_class::SUCCESS_STATUSES)
-      payments.update_all(payable_payment_status: :succeeded) # rubocop:disable Rails/SkipsModelValidations
+      payments.update_all(payable_payment_status: :succeeded)
 
       payments = Payment.joins(:payment_provider)
         .where(payment_providers: {type: provider_type}, status: provider_class::FAILED_STATUSES)
-      payments.update_all(payable_payment_status: :failed) # rubocop:disable Rails/SkipsModelValidations
+      payments.update_all(payable_payment_status: :failed)
     end
   end
 end

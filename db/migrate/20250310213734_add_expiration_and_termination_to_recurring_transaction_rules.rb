@@ -13,7 +13,7 @@ class AddExpirationAndTerminationToRecurringTransactionRules < ActiveRecord::Mig
     end
 
     safety_assured do
-      RecurringTransactionRule.in_batches.update_all(status: 0) # rubocop:disable Rails/SkipsModelValidations
+      RecurringTransactionRule.in_batches.update_all(status: 0)
     end
 
     change_column_default :recurring_transaction_rules, :status, 0

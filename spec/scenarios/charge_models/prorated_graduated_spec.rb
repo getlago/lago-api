@@ -18,7 +18,7 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
 
     describe "three ranges and one overflow case" do
       it "returns the expected invoice and usage amounts" do
-        Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
+        Organization.update_all(webhook_url: nil)
         WebhookEndpoint.destroy_all
 
         travel_to(DateTime.new(2023, 9, 1)) do
@@ -199,7 +199,7 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
 
       context "when there are old events before first invoice" do
         it "returns expected invoice and usage amounts" do
-          Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
+          Organization.update_all(webhook_url: nil)
           WebhookEndpoint.destroy_all
 
           travel_to(DateTime.new(2023, 12, 1)) do
@@ -303,7 +303,7 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
 
       context "when there are old events before first invoice and subscription is terminated" do
         it "returns expected invoice and usage amounts" do
-          Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
+          Organization.update_all(webhook_url: nil)
           WebhookEndpoint.destroy_all
 
           travel_to(DateTime.new(2023, 10, 1)) do
@@ -410,7 +410,7 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
         let(:plan_new) { create(:plan, organization:, amount_cents: 100) }
 
         it "returns expected invoice and usage amounts" do
-          Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
+          Organization.update_all(webhook_url: nil)
           WebhookEndpoint.destroy_all
 
           travel_to(DateTime.new(2023, 9, 1)) do
@@ -638,7 +638,7 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
 
     describe "two ranges" do
       it "returns the expected invoice and usage amounts" do
-        Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
+        Organization.update_all(webhook_url: nil)
         WebhookEndpoint.destroy_all
 
         travel_to(DateTime.new(2023, 9, 1)) do
@@ -809,7 +809,7 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
 
     context "with multiple events on the same day" do
       it "returns the expected invoice and usage amounts" do
-        Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
+        Organization.update_all(webhook_url: nil)
         WebhookEndpoint.destroy_all
 
         travel_to(DateTime.new(2023, 9, 1)) do
@@ -963,7 +963,7 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
 
       context "when there are old events before first invoice and subscription is terminated" do
         it "returns expected invoice and usage amounts" do
-          Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
+          Organization.update_all(webhook_url: nil)
           WebhookEndpoint.destroy_all
 
           travel_to(DateTime.new(2023, 10, 1)) do

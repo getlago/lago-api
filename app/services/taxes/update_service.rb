@@ -25,7 +25,7 @@ module Taxes
 
       customer_ids = (customer_ids + tax.reload.applicable_customers.select(:id)).uniq
       draft_invoices = tax.organization.invoices.where(customer_id: customer_ids).draft
-      draft_invoices.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+      draft_invoices.update_all(ready_to_be_refreshed: true)
 
       result.tax = tax
       result

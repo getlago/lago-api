@@ -3,6 +3,6 @@
 class BackfillFailedPayablePaymentStatus < ActiveRecord::Migration[7.1]
   def change
     Payment.where(status: "failed", payable_payment_status: nil)
-      .update_all(payable_payment_status: "failed") # rubocop:disable Rails/SkipsModelValidations
+      .update_all(payable_payment_status: "failed")
   end
 end

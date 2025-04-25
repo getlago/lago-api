@@ -49,7 +49,7 @@ RSpec.describe Resolvers::WebhooksResolver, type: :graphql do
   context "when the webhook payload is json-serialized in the database" do
     it "returns a list of webhooks" do
       Webhook.all.find_each do |w|
-        w.update_column(:payload, {"foo" => "bar"}.to_json) # rubocop:disable Rails/SkipsModelValidations
+        w.update_column(:payload, {"foo" => "bar"}.to_json)
       end
 
       result = execute_graphql(

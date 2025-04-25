@@ -126,7 +126,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
 
   context "when organization has no active billing entity" do
     before do
-      organization.billing_entities.update_all(archived_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      organization.billing_entities.update_all(archived_at: Time.current)
     end
 
     it "return a failed result" do

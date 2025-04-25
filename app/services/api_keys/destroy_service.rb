@@ -16,7 +16,7 @@ module ApiKeys
         return result.single_validation_failure!(error_code: "last_non_expiring_api_key")
       end
 
-      api_key.touch(:expires_at) # rubocop:disable Rails/SkipsModelValidations
+      api_key.touch(:expires_at)
 
       ApiKeyMailer.with(api_key:).destroyed.deliver_later
       ApiKeys::CacheService.expire_cache(api_key.value)

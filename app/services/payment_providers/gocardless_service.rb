@@ -35,7 +35,7 @@ module PaymentProviders
       gocardless_provider.save!
 
       if payment_provider_code_changed?(gocardless_provider, old_code, args)
-        gocardless_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
+        gocardless_provider.customers.update_all(payment_provider_code: args[:code])
       end
 
       result.gocardless_provider = gocardless_provider

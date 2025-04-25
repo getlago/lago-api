@@ -29,7 +29,7 @@ namespace :subscriptions do
     invoice = result.invoice
 
     invoice.update!(created_at: Time.zone.at(args[:timestamp].to_i))
-    invoice.fees.update_all(created_at: invoice.created_at + 1.second) # rubocop:disable Rails/SkipsModelValidations
+    invoice.fees.update_all(created_at: invoice.created_at + 1.second)
 
     # NOTE: Do not generate the PDF file if invoice is draft.
     Invoices::GeneratePdfService.call(invoice:) if invoice.finalized?

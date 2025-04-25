@@ -14,11 +14,9 @@ class MigrateAppliedTaxesToBillingEntities < ActiveRecord::Migration[7.2]
       }
     end
 
-    # rubocop:disable Rails/SkipsModelValidations
     BillingEntity::AppliedTax.insert_all(
       rows,
       unique_by: :index_billing_entities_taxes_on_billing_entity_id_and_tax_id
     )
-    # rubocop:enable Rails/SkipsModelValidations
   end
 end

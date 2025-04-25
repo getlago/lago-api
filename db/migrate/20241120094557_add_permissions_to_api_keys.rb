@@ -4,7 +4,7 @@ class AddPermissionsToApiKeys < ActiveRecord::Migration[7.1]
   def up
     add_column :api_keys, :permissions, :jsonb, null: false, default: {}
 
-    ApiKey.update_all(permissions: ApiKey.default_permissions) # rubocop:disable Rails/SkipsModelValidations
+    ApiKey.update_all(permissions: ApiKey.default_permissions)
 
     change_column_default :api_keys, :permissions, nil
   end

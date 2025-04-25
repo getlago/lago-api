@@ -26,7 +26,7 @@ module Subscriptions
         .active
         .joins(:customer)
         .where(customers: {id: Subscription.where(id: subscription_id).select(:customer_id)})
-        .update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+        .update_all(ready_to_be_refreshed: true)
     end
 
     def flag_lifetime_usage_for_refresh

@@ -43,7 +43,7 @@ module ChargeFilters
             end
 
             if parent_filter.blank? || parent_filter_properties(parent_filter) != filter.properties
-              filter.touch # rubocop:disable Rails/SkipsModelValidations
+              filter.touch
               result.filters << filter
 
               next
@@ -59,7 +59,7 @@ module ChargeFilters
           ).properties
           if filter.save! && touch && !filter.changed?
             # NOTE: Make sure update_at is touched even if not changed to keep the right order
-            filter.touch # rubocop:disable Rails/SkipsModelValidations
+            filter.touch
           end
 
           # NOTE: Create or update the filter values
@@ -73,7 +73,7 @@ module ChargeFilters
             filter_value.values = values
             if filter_value.save! && touch && !filter_value.changed?
               # NOTE: Make sure update_at is touched even if not changed to keep the right order
-              filter_value.touch # rubocop:disable Rails/SkipsModelValidations
+              filter_value.touch
             end
           end
 
