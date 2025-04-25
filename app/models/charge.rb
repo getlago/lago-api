@@ -6,6 +6,7 @@ class Charge < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
+  belongs_to :organization, optional: true
   belongs_to :plan, -> { with_discarded }, touch: true
   belongs_to :billable_metric, -> { with_discarded }
   belongs_to :parent, class_name: "Charge", optional: true
@@ -184,6 +185,7 @@ end
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  billable_metric_id   :uuid
+#  organization_id      :uuid
 #  parent_id            :uuid
 #  plan_id              :uuid
 #
@@ -191,6 +193,7 @@ end
 #
 #  index_charges_on_billable_metric_id  (billable_metric_id) WHERE (deleted_at IS NULL)
 #  index_charges_on_deleted_at          (deleted_at)
+#  index_charges_on_organization_id     (organization_id)
 #  index_charges_on_parent_id           (parent_id)
 #  index_charges_on_plan_id             (plan_id)
 #  index_charges_pay_in_advance         (billable_metric_id) WHERE ((deleted_at IS NULL) AND (pay_in_advance = true))
@@ -198,6 +201,7 @@ end
 # Foreign Keys
 #
 #  fk_rails_...  (billable_metric_id => billable_metrics.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (parent_id => charges.id)
 #  fk_rails_...  (plan_id => plans.id)
 #
