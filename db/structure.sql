@@ -108,6 +108,7 @@ ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_3a303bf667;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_3926855f12;
 ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS fk_rails_36cda06530;
+ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_364213cc3e;
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_34b5ee1894;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_34ab152115;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_348acbd245;
@@ -182,6 +183,7 @@ DROP INDEX IF EXISTS public.index_subscriptions_on_started_at_and_ending_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_started_at;
 DROP INDEX IF EXISTS public.index_subscriptions_on_previous_subscription_id_and_status;
 DROP INDEX IF EXISTS public.index_subscriptions_on_plan_id;
+DROP INDEX IF EXISTS public.index_subscriptions_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_external_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_customer_id;
 DROP INDEX IF EXISTS public.index_search_quantified_events;
@@ -2071,7 +2073,8 @@ CREATE TABLE public.subscriptions (
     billing_time integer DEFAULT 0 NOT NULL,
     subscription_at timestamp(6) without time zone,
     ending_at timestamp(6) without time zone,
-    trial_ended_at timestamp(6) without time zone
+    trial_ended_at timestamp(6) without time zone,
+    organization_id uuid
 );
 
 
@@ -5758,6 +5761,13 @@ CREATE INDEX index_subscriptions_on_external_id ON public.subscriptions USING bt
 
 
 --
+-- Name: index_subscriptions_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_on_organization_id ON public.subscriptions USING btree (organization_id);
+
+
+--
 -- Name: index_subscriptions_on_plan_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6251,6 +6261,14 @@ ALTER TABLE ONLY public.fees
 
 ALTER TABLE ONLY public.groups
     ADD CONSTRAINT fk_rails_34b5ee1894 FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id) ON DELETE CASCADE;
+
+
+--
+-- Name: subscriptions fk_rails_364213cc3e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subscriptions
+    ADD CONSTRAINT fk_rails_364213cc3e FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7052,6 +7070,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250425122705'),
+('20250425122641'),
+('20250425122510'),
 ('20250424140537'),
 ('20250424140359'),
 ('20250424135624'),

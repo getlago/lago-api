@@ -55,6 +55,7 @@ module Subscriptions
 
     def new_subscription_with_overrides
       Subscription.new(
+        organization_id: current_subscription.customer.organization_id,
         customer: current_subscription.customer,
         plan: params.key?(:plan_overrides) ? override_plan : plan,
         name:,

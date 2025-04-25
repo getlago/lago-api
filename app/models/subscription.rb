@@ -235,6 +235,7 @@ end
 #  updated_at               :datetime         not null
 #  customer_id              :uuid             not null
 #  external_id              :string           not null
+#  organization_id          :uuid
 #  plan_id                  :uuid             not null
 #  previous_subscription_id :uuid
 #
@@ -242,6 +243,7 @@ end
 #
 #  index_subscriptions_on_customer_id                          (customer_id)
 #  index_subscriptions_on_external_id                          (external_id)
+#  index_subscriptions_on_organization_id                      (organization_id)
 #  index_subscriptions_on_plan_id                              (plan_id)
 #  index_subscriptions_on_previous_subscription_id_and_status  (previous_subscription_id,status)
 #  index_subscriptions_on_started_at                           (started_at)
@@ -251,5 +253,6 @@ end
 # Foreign Keys
 #
 #  fk_rails_...  (customer_id => customers.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (plan_id => plans.id)
 #
