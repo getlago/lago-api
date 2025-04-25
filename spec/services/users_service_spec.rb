@@ -109,15 +109,109 @@ RSpec.describe UsersService, type: :service do
   end
 
   describe "login" do
-    let(:membership) { create(:membership) }
+    subject(:result) { described_class.new.login(email, password) }
 
-    it "calls SegmentIdentifyJob" do
-      allow(SegmentIdentifyJob).to receive(:perform_later)
-      result = user_service.login(membership.user.email, membership.user.password)
+    let!(:membership) { create(:membership, :revoked) }
+    let(:user) { membership.user }
 
-      expect(SegmentIdentifyJob).to have_received(:perform_later).with(
-        membership_id: "membership/#{result.user.memberships.first.id}"
-      )
+    context "when user with given email exists" do
+      let(:email) { user.email }
+
+      context "when password is correct" do
+        let(:password) { user.password }
+
+        context "when user has active membership" do
+          let!(:active_membership) { create(:membership, user:, organization: membership.organization) }
+
+          it "returns success result" do
+            expect(result).to be_success
+            expect(result.user).to eq user
+            expect(result.token).to be_present
+          end
+
+          it "calls SegmentIdentifyJob with user's first active membership" do
+            allow(SegmentIdentifyJob).to receive(:perform_later)
+            subject
+
+            expect(SegmentIdentifyJob).to have_received(:perform_later).with(
+              membership_id: "membership/#{active_membership.id}"
+            )
+          end
+        end
+
+        context "when user has no active membership" do
+          it "fails with incorrect credentials error" do
+            expect(result).to be_failure
+            expect(result.user).to eq user
+            expect(result.token).to be nil
+            expect(result.error.messages).to match(base: ["incorrect_login_or_password"])
+          end
+
+          it "does not call SegmentIdentifyJob" do
+            allow(SegmentIdentifyJob).to receive(:perform_later)
+            subject
+
+            expect(SegmentIdentifyJob).not_to have_received(:perform_later)
+          end
+        end
+      end
+
+      context "when password is incorrect" do
+        let(:password) { "invalid-password" }
+
+        context "when user has active membership" do
+          before { create(:membership, user:, organization: membership.organization) }
+
+          it "fails with incorrect credentials error" do
+            expect(result).to be_failure
+            expect(result.user).to be false
+            expect(result.token).to be nil
+            expect(result.error.messages).to match(base: ["incorrect_login_or_password"])
+          end
+
+          it "does not call SegmentIdentifyJob" do
+            allow(SegmentIdentifyJob).to receive(:perform_later)
+            subject
+
+            expect(SegmentIdentifyJob).not_to have_received(:perform_later)
+          end
+        end
+
+        context "when user has no active membership" do
+          it "fails with incorrect credentials error" do
+            expect(result).to be_failure
+            expect(result.user).to be false
+            expect(result.token).to be nil
+            expect(result.error.messages).to match(base: ["incorrect_login_or_password"])
+          end
+
+          it "does not call SegmentIdentifyJob" do
+            allow(SegmentIdentifyJob).to receive(:perform_later)
+            subject
+
+            expect(SegmentIdentifyJob).not_to have_received(:perform_later)
+          end
+        end
+      end
+    end
+
+    context "when user with given does not email exist" do
+      let(:email) { "non-existing-user@email.com" }
+      let(:password) { "invalid-password" }
+
+      it "fails with incorrect credentials error" do
+        expect(result).to be_failure
+        expect(result.user).to be nil
+        expect(result.token).to be nil
+        expect(result.error.messages).to match(base: ["incorrect_login_or_password"])
+      end
+
+      it "does not call SegmentIdentifyJob" do
+        allow(SegmentIdentifyJob).to receive(:perform_later)
+        subject
+
+        expect(SegmentIdentifyJob).not_to have_received(:perform_later)
+      end
     end
   end
 
