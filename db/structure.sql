@@ -63,6 +63,7 @@ ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_89e1020aca;
+ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_885dc100ef;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_88349fc20a;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_86676be631;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_84f4587409;
@@ -435,6 +436,7 @@ DROP INDEX IF EXISTS public.index_applied_add_ons_on_add_on_id;
 DROP INDEX IF EXISTS public.index_api_keys_on_value;
 DROP INDEX IF EXISTS public.index_api_keys_on_organization_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_subscription_id;
+DROP INDEX IF EXISTS public.index_adjusted_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_invoice_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_group_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_fee_id;
@@ -950,7 +952,8 @@ CREATE TABLE public.adjusted_fees (
     group_id uuid,
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     charge_filter_id uuid,
-    unit_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL
+    unit_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4249,6 +4252,13 @@ CREATE INDEX index_adjusted_fees_on_invoice_id ON public.adjusted_fees USING btr
 
 
 --
+-- Name: index_adjusted_fees_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_adjusted_fees_on_organization_id ON public.adjusted_fees USING btree (organization_id);
+
+
+--
 -- Name: index_adjusted_fees_on_subscription_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6888,6 +6898,14 @@ ALTER TABLE ONLY public.invoice_subscriptions
 
 
 --
+-- Name: adjusted_fees fk_rails_885dc100ef; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.adjusted_fees
+    ADD CONSTRAINT fk_rails_885dc100ef FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: add_ons_taxes fk_rails_89e1020aca; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7355,6 +7373,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250425124942'),
 ('20250425124826'),
 ('20250425124804'),
+('20250425124305'),
+('20250425124100'),
+('20250425123733'),
 ('20250425122705'),
 ('20250425122641'),
 ('20250425122510'),
