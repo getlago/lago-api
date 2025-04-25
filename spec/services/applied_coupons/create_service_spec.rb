@@ -81,6 +81,7 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
 
         expect(create_result.applied_coupon.customer).to eq(customer)
         expect(create_result.applied_coupon.coupon).to eq(coupon)
+        expect(create_result.applied_coupon.organization).to eq(organization)
         expect(create_result.applied_coupon.amount_cents).to eq(coupon.amount_cents)
         expect(create_result.applied_coupon.amount_currency).to eq(coupon.amount_currency)
       end

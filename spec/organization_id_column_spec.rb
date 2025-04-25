@@ -24,7 +24,6 @@ Rspec.describe "All tables must have an organization_id" do
     %w[
       add_ons_taxes
       applied_add_ons
-      applied_coupons
       applied_invoice_custom_sections
       applied_usage_thresholds
       billable_metric_filters

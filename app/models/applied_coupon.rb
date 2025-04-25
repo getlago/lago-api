@@ -6,6 +6,7 @@ class AppliedCoupon < ApplicationRecord
 
   belongs_to :coupon
   belongs_to :customer
+  belongs_to :organization, optional: true
 
   has_many :credits
 
@@ -58,9 +59,15 @@ end
 #  updated_at                   :datetime         not null
 #  coupon_id                    :uuid             not null
 #  customer_id                  :uuid             not null
+#  organization_id              :uuid
 #
 # Indexes
 #
-#  index_applied_coupons_on_coupon_id    (coupon_id)
-#  index_applied_coupons_on_customer_id  (customer_id)
+#  index_applied_coupons_on_coupon_id        (coupon_id)
+#  index_applied_coupons_on_customer_id      (customer_id)
+#  index_applied_coupons_on_organization_id  (organization_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (organization_id => organizations.id)
 #
