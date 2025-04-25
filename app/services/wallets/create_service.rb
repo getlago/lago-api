@@ -11,6 +11,7 @@ module Wallets
       return result unless valid?
 
       attributes = {
+        organization_id: result.current_customer.organization_id,
         customer_id: result.current_customer.id,
         name: params[:name],
         rate_amount: params[:rate_amount],
