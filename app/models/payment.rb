@@ -5,6 +5,7 @@ class Payment < ApplicationRecord
 
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
+  belongs_to :organization, optional: true
   belongs_to :payable, polymorphic: true
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
@@ -114,6 +115,7 @@ end
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
 #  invoice_id                   :uuid
+#  organization_id              :uuid
 #  payable_id                   :uuid
 #  payment_provider_customer_id :uuid
 #  payment_provider_id          :uuid
@@ -123,6 +125,7 @@ end
 # Indexes
 #
 #  index_payments_on_invoice_id                                   (invoice_id)
+#  index_payments_on_organization_id                              (organization_id)
 #  index_payments_on_payable_id_and_payable_type                  (payable_id,payable_type) UNIQUE WHERE ((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))
 #  index_payments_on_payable_type_and_payable_id                  (payable_type,payable_id)
 #  index_payments_on_payment_provider_customer_id                 (payment_provider_customer_id)
@@ -133,5 +136,6 @@ end
 # Foreign Keys
 #
 #  fk_rails_...  (invoice_id => invoices.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_provider_id => payment_providers.id)
 #

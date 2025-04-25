@@ -106,6 +106,7 @@ ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAIN
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_3cfe1d68d7;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_3c7c3920c0;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_3acf9e789c;
+ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_3ab959bfc4;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_3a303bf667;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_3926855f12;
 ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS fk_rails_36cda06530;
@@ -218,6 +219,7 @@ DROP INDEX IF EXISTS public.index_payments_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_customer_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_type_and_payable_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type;
+DROP INDEX IF EXISTS public.index_payments_on_organization_id;
 DROP INDEX IF EXISTS public.index_payments_on_invoice_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
@@ -3080,7 +3082,8 @@ CREATE TABLE public.payments (
     payment_type public.payment_type DEFAULT 'provider'::public.payment_type NOT NULL,
     reference character varying,
     provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
-    provider_payment_method_id character varying
+    provider_payment_method_id character varying,
+    organization_id uuid
 );
 
 
@@ -5557,6 +5560,13 @@ CREATE INDEX index_payments_on_invoice_id ON public.payments USING btree (invoic
 
 
 --
+-- Name: index_payments_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payments_on_organization_id ON public.payments USING btree (organization_id);
+
+
+--
 -- Name: index_payments_on_payable_id_and_payable_type; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6321,6 +6331,14 @@ ALTER TABLE ONLY public.quantified_events
 
 ALTER TABLE ONLY public.invoices
     ADD CONSTRAINT fk_rails_3a303bf667 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: payments fk_rails_3ab959bfc4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payments
+    ADD CONSTRAINT fk_rails_3ab959bfc4 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7107,6 +7125,9 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250428111042'),
+('20250425132821'),
+('20250425132757'),
+('20250425132724'),
 ('20250425130412'),
 ('20250425130345'),
 ('20250425130332'),
