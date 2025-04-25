@@ -4,14 +4,15 @@ class UsersService < BaseService
   def login(email, password)
     result.user = User.find_by(email:)&.authenticate(password)
 
-    unless result.user.present? && result.user.memberships&.active&.any?
+    unless result.user.present? && result.user.memberships.active.any?
       return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
     result.token = generate_token if result.user
 
     # NOTE: We're tracking the first membership linked to the user.
-    SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.user.memberships.first.id}")
+    membership = result.user.memberships.active.first
+    SegmentIdentifyJob.perform_later(membership_id: "membership/#{membership.id}")
 
     result
   end
