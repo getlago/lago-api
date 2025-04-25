@@ -14,7 +14,7 @@ module Charges
       def valid?
         # NOTE: override and add validation rules
 
-        validate_grouped_by
+        validate_pricing_group_keys
 
         if errors?
           result.validation_failure!(errors:)
@@ -30,15 +30,25 @@ module Charges
 
       attr_reader :charge
 
-      def grouped_by
-        properties["grouped_by"]
+      def pricing_group_keys
+        @pricing_group_keys ||= properties[grouped_key]
       end
 
-      def validate_grouped_by
-        return if grouped_by.nil? || grouped_by.is_a?(Array) && grouped_by.blank?
-        return if grouped_by.is_a?(Array) && grouped_by.all? { |f| f.is_a?(String) } && grouped_by.all?(&:present?)
+      # NOTE: keep accepting grouped_by until the end of the deprecation period
+      def grouped_key
+        return "pricing_group_keys" unless properties["pricing_group_keys"].nil?
 
-        add_error(field: :grouped_by, error_code: "invalid_type")
+        "grouped_by"
+      end
+
+      def validate_pricing_group_keys
+        return if pricing_group_keys.nil? || pricing_group_keys.is_a?(Array) && pricing_group_keys.blank?
+
+        if pricing_group_keys.is_a?(Array)
+          return if pricing_group_keys.all? { it.is_a?(String) } && pricing_group_keys.all?(&:present?)
+        end
+
+        add_error(field: grouped_key, error_code: "invalid_type")
       end
     end
   end

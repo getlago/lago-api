@@ -3,21 +3,47 @@
 require "rails_helper"
 
 RSpec.describe Charges::Validators::VolumeService, type: :service do
-  subject(:volume_service) { described_class.new(charge:) }
+  subject(:validation_service) { described_class.new(charge:) }
 
-  let(:charge) { build(:volume_charge, properties: {volume_ranges: ranges}) }
+  let(:charge) { build(:volume_charge, properties:) }
 
+  let(:properties) { {volume_ranges: ranges} }
   let(:ranges) do
-    []
+    [
+      {
+        from_value: 0,
+        to_value: 10,
+        per_unit_amount: "0",
+        flat_amount: "0"
+      },
+      {
+        from_value: 11,
+        to_value: 20,
+        per_unit_amount: "10",
+        flat_amount: "20"
+      },
+      {
+        from_value: 21,
+        to_value: nil,
+        per_unit_amount: "15",
+        flat_amount: "30"
+      }
+    ]
   end
 
   describe ".validate" do
-    it "is invalid" do
-      aggregate_failures do
-        expect(volume_service).not_to be_valid
-        expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-        expect(volume_service.result.error.messages.keys).to include(:volume_ranges)
-        expect(volume_service.result.error.messages[:volume_ranges]).to include("missing_volume_ranges")
+    it { expect(validation_service).to be_valid }
+
+    context "with empty ranges" do
+      let(:ranges) { [] }
+
+      it "is invalid" do
+        aggregate_failures do
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:volume_ranges)
+          expect(validation_service.result.error.messages[:volume_ranges]).to include("missing_volume_ranges")
+        end
       end
     end
 
@@ -28,10 +54,10 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
 
       it "is invalid" do
         aggregate_failures do
-          expect(volume_service).not_to be_valid
-          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:volume_ranges)
-          expect(volume_service.result.error.messages[:volume_ranges]).to include("invalid_volume_ranges")
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:volume_ranges)
+          expect(validation_service.result.error.messages[:volume_ranges]).to include("invalid_volume_ranges")
         end
       end
     end
@@ -43,10 +69,10 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
 
       it "is invalid" do
         aggregate_failures do
-          expect(volume_service).not_to be_valid
-          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:volume_ranges)
-          expect(volume_service.result.error.messages[:volume_ranges]).to include("invalid_volume_ranges")
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:volume_ranges)
+          expect(validation_service.result.error.messages[:volume_ranges]).to include("invalid_volume_ranges")
         end
       end
     end
@@ -61,10 +87,10 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
 
       it "is invalid" do
         aggregate_failures do
-          expect(volume_service).not_to be_valid
-          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:volume_ranges)
-          expect(volume_service.result.error.messages[:volume_ranges]).to include("invalid_volume_ranges")
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:volume_ranges)
+          expect(validation_service.result.error.messages[:volume_ranges]).to include("invalid_volume_ranges")
         end
       end
     end
@@ -79,10 +105,10 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
 
       it "is invalid" do
         aggregate_failures do
-          expect(volume_service).not_to be_valid
-          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:volume_ranges)
-          expect(volume_service.result.error.messages[:volume_ranges]).to include("invalid_volume_ranges")
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:volume_ranges)
+          expect(validation_service.result.error.messages[:volume_ranges]).to include("invalid_volume_ranges")
         end
       end
     end
@@ -94,10 +120,10 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
 
       it "is invalid" do
         aggregate_failures do
-          expect(volume_service).not_to be_valid
-          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:per_unit_amount)
-          expect(volume_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:per_unit_amount)
+          expect(validation_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
         end
       end
     end
@@ -109,10 +135,10 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
 
       it "is invalid" do
         aggregate_failures do
-          expect(volume_service).not_to be_valid
-          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:per_unit_amount)
-          expect(volume_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:per_unit_amount)
+          expect(validation_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
         end
       end
     end
@@ -124,10 +150,10 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
 
       it "is invalid" do
         aggregate_failures do
-          expect(volume_service).not_to be_valid
-          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:per_unit_amount)
-          expect(volume_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:per_unit_amount)
+          expect(validation_service.result.error.messages[:per_unit_amount]).to include("invalid_amount")
         end
       end
     end
@@ -139,10 +165,10 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
 
       it "is invalid" do
         aggregate_failures do
-          expect(volume_service).not_to be_valid
-          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:flat_amount)
-          expect(volume_service.result.error.messages[:flat_amount]).to include("invalid_amount")
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:flat_amount)
+          expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
         end
       end
     end
@@ -154,10 +180,10 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
 
       it "is invalid" do
         aggregate_failures do
-          expect(volume_service).not_to be_valid
-          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:flat_amount)
-          expect(volume_service.result.error.messages[:flat_amount]).to include("invalid_amount")
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:flat_amount)
+          expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
         end
       end
     end
@@ -169,39 +195,16 @@ RSpec.describe Charges::Validators::VolumeService, type: :service do
 
       it "is invalid" do
         aggregate_failures do
-          expect(volume_service).not_to be_valid
-          expect(volume_service.result.error).to be_a(BaseService::ValidationFailure)
-          expect(volume_service.result.error.messages.keys).to include(:flat_amount)
-          expect(volume_service.result.error.messages[:flat_amount]).to include("invalid_amount")
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:flat_amount)
+          expect(validation_service.result.error.messages[:flat_amount]).to include("invalid_amount")
         end
       end
     end
 
-    context "with applicable ranges" do
-      let(:ranges) do
-        [
-          {
-            from_value: 0,
-            to_value: 10,
-            per_unit_amount: "0",
-            flat_amount: "0"
-          },
-          {
-            from_value: 11,
-            to_value: 20,
-            per_unit_amount: "10",
-            flat_amount: "20"
-          },
-          {
-            from_value: 21,
-            to_value: nil,
-            per_unit_amount: "15",
-            flat_amount: "30"
-          }
-        ]
-      end
-
-      it { expect(volume_service).to be_valid }
+    it_behaves_like "pricing_group_keys property validation" do
+      let(:properties) { {"volume_ranges" => ranges}.merge(grouping_properties) }
     end
   end
 end

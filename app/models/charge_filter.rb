@@ -13,6 +13,8 @@ class ChargeFilter < ApplicationRecord
   has_many :billable_metric_filters, through: :values
   has_many :fees
 
+  has_one :billable_metric, through: :charge
+
   validate :validate_properties
 
   # NOTE: Ensure filters are keeping the initial ordering
