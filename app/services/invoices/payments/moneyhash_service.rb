@@ -136,7 +136,7 @@ module Invoices
           customer: invoice.customer.moneyhash_customer.provider_customer_id,
           webhook_url: moneyhash_payment_provider.webhook_end_point,
           merchant_initiated: false,
-          expires_after_seconds: payment_intent.expires_at.to_i,
+          expires_after_seconds: (payment_intent.expires_at - Time.current).to_i,
           custom_fields: {
             # payable
             lago_payable_id: invoice.id,
