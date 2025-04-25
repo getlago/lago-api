@@ -47,6 +47,7 @@ RSpec.describe Invoices::Payments::MoneyhashService do
     let(:response) { instance_double(Net::HTTPOK) }
     let(:lago_client) { instance_double(LagoHttpClient::Client) }
     let(:endpoint) { "#{PaymentProviders::MoneyhashProvider.api_base_url}/api/v1.1/payments/intent/" }
+    let(:payment_intent) { create(:payment_intent) }
 
     before do
       allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
@@ -58,7 +59,7 @@ RSpec.describe Invoices::Payments::MoneyhashService do
     end
 
     it "generates the payment url" do
-      result = moneyhash_service.generate_payment_url
+      result = moneyhash_service.generate_payment_url(payment_intent)
       expect(result).to be_success
       expect(result.payment_url).to eq("#{payment_url_response.dig("data", "embed_url")}?lago_request=generate_payment_url")
     end

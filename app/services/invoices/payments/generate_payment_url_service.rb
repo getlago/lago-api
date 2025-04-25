@@ -3,6 +3,8 @@
 module Invoices
   module Payments
     class GeneratePaymentUrlService < BaseService
+      Result = BaseResult[:payment_url]
+
       include Customers::PaymentProviderFinder
 
       def initialize(invoice:)
@@ -30,14 +32,10 @@ module Invoices
           return result.single_validation_failure!(error_code: "missing_payment_provider_customer")
         end
 
-        payment_url_result = Invoices::Payments::PaymentProviders::Factory.new_instance(invoice:).generate_payment_url
-        payment_url_result.raise_if_error!
+        payment_intent = PaymentIntents::FetchService.call!(invoice:).payment_intent
 
-        if payment_url_result.payment_url.blank?
-          return result.single_validation_failure!(error_code: "payment_provider_error")
-        end
-
-        payment_url_result
+        result.payment_url = payment_intent.payment_url
+        result
       rescue BaseService::ThirdPartyFailure => e
         deliver_error_webhook(e)
 

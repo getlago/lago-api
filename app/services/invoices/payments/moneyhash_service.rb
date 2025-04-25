@@ -37,9 +37,13 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url
+      def generate_payment_url(payment_intent)
         return result unless should_process_payment?
-        response = client.post_with_response(payment_url_params, headers)
+
+        response = client.post_with_response(
+          payment_url_params(payment_intent),
+          headers.merge!("X-Idempotency-Key" => payment_intent.id)
+        )
         moneyhash_result = JSON.parse(response.body)
 
         return result unless moneyhash_result
@@ -123,7 +127,7 @@ module Invoices
         @moneyhash_payment_provider ||= payment_provider(customer)
       end
 
-      def payment_url_params
+      def payment_url_params(payment_intent)
         params = {
           amount: invoice.total_due_amount_cents.div(100).to_f,
           amount_currency: invoice.currency.upcase,
@@ -132,6 +136,7 @@ module Invoices
           customer: invoice.customer.moneyhash_customer.provider_customer_id,
           webhook_url: moneyhash_payment_provider.webhook_end_point,
           merchant_initiated: false,
+          expires_after_seconds: (payment_intent.expires_at - Time.current).to_i,
           custom_fields: {
             # payable
             lago_payable_id: invoice.id,
