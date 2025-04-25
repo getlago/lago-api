@@ -96,14 +96,10 @@ module Events
     end
 
     def track_subscription_activity!
-      return unless organization.tracks_subscription_activity?
-
-      activities = []
-      subscriptions.select(&:active?).each do |s|
-        activities << {organization_id: organization.id, subscription_id: s.id}
-      end
-
-      UsageMonitoring::SubscriptionActivity.insert_all(activities, unique_by: :idx_subscription_unique) # rubocop:disable Rails/SkipsModelValidations
+      UsageMonitoring::TrackSubscriptionActivityService.call(
+        organization:,
+        subscription_ids: subscriptions.select(&:active?).pluck(:id)
+      )
     end
 
     def handle_pay_in_advance
