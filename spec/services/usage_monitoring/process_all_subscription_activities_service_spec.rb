@@ -29,7 +29,7 @@ RSpec.describe UsageMonitoring::ProcessAllSubscriptionActivitiesService, type: :
 
         service.call
 
-        expect(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob).not_to receive(:perform_later)
+        expect(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob).not_to have_received(:perform_later)
       end
     end
   end

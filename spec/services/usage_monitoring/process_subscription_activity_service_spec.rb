@@ -24,15 +24,15 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
     let(:premium_integrations) { Organization::INTEGRATIONS_TRACKING_ACTIVITY }
 
     it "calls both services and deletes subscription_activity" do
-      expect(LifetimeUsages::CalculateService).to receive(:call!).with(
+      result = service.call
+
+      expect(LifetimeUsages::CalculateService).to have_received(:call!).with(
         lifetime_usage: subscription.lifetime_usage || an_instance_of(LifetimeUsage),
         current_usage: mocked_current_usage
       )
-      expect(LifetimeUsages::CheckThresholdsService).to receive(:call).with(
+      expect(LifetimeUsages::CheckThresholdsService).to have_received(:call).with(
         lifetime_usage: subscription.lifetime_usage || an_instance_of(LifetimeUsage)
       )
-
-      result = service.call
 
       expect(result).to be_success
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
@@ -43,10 +43,10 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
     let(:premium_integrations) { ["salesforce"] }
 
     it "calculates and checks thresholds are not called" do
-      expect(LifetimeUsages::CalculateService).not_to receive(:call!)
-      expect(LifetimeUsages::CheckThresholdsService).not_to receive(:call)
-
       result = service.call
+
+      expect(LifetimeUsages::CalculateService).not_to have_received(:call!)
+      expect(LifetimeUsages::CheckThresholdsService).not_to have_received(:call)
 
       expect(result).to be_success
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound) # deleted
@@ -62,13 +62,13 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
     let(:premium_integrations) { ["lifetime_usage"] }
 
     it "calls calculate service and deletes subscription_activity" do
-      expect(LifetimeUsages::CalculateService).to receive(:call!).with(
+      result = service.call
+
+      expect(LifetimeUsages::CalculateService).to have_received(:call!).with(
         lifetime_usage: subscription.lifetime_usage || an_instance_of(LifetimeUsage),
         current_usage: mocked_current_usage
       )
-      expect(LifetimeUsages::CheckThresholdsService).not_to receive(:call)
-
-      result = service.call
+      expect(LifetimeUsages::CheckThresholdsService).not_to have_received(:call)
 
       expect(result).to be_success
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
@@ -79,15 +79,15 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
     let(:premium_integrations) { ["progressive_billing"] }
 
     it "calls both calculate and check thresholds services and deletes subscription_activity" do
-      expect(LifetimeUsages::CalculateService).to receive(:call!).with(
+      result = service.call
+
+      expect(LifetimeUsages::CalculateService).to have_received(:call!).with(
         lifetime_usage: subscription.lifetime_usage || an_instance_of(LifetimeUsage),
         current_usage: mocked_current_usage
       )
-      expect(LifetimeUsages::CheckThresholdsService).to receive(:call).with(
+      expect(LifetimeUsages::CheckThresholdsService).to have_received(:call).with(
         lifetime_usage: subscription.lifetime_usage || an_instance_of(LifetimeUsage)
       )
-
-      result = service.call
 
       expect(result).to be_success
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)

@@ -5,17 +5,21 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService, type: :service do
   describe "#call" do
     let(:organization) { create(:organization) }
-    let(:service) { described_class.new(organization: organization) }
+    let(:service) { described_class.new(organization:) }
+
+    before do
+      allow(ActiveJob).to receive(:perform_all_later)
+    end
 
     it "enqueues jobs for subscription activities that are not yet enqueued" do
-      create_list(:subscription_activity, 3, organization: organization, enqueued: false)
-      create_list(:subscription_activity, 2, organization: organization, enqueued: true)
-
-      expect(ActiveJob).to receive(:perform_all_later).once do |jobs|
-        expect(jobs).to all(be_a(UsageMonitoring::ProcessSubscriptionActivityJob))
-      end
+      create_list(:subscription_activity, 3, organization:, enqueued: false)
+      create_list(:subscription_activity, 2, organization:, enqueued: true)
 
       result = service.call
+
+      expect(ActiveJob).to have_received(:perform_all_later).once do |jobs|
+        expect(jobs).to all(be_a(UsageMonitoring::ProcessSubscriptionActivityJob))
+      end
 
       expect(result).to be_success
       expect(result.nb_jobs_enqueued).to eq(3)
@@ -26,9 +30,9 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService
 
     context "when there are no subscription activities to enqueue" do
       it "returns 0 for number of jobs enqueued and does not enqueue any job" do
-        create_list(:subscription_activity, 2, organization: organization, enqueued: true)
+        create_list(:subscription_activity, 2, organization:, enqueued: true)
 
-        expect(ActiveJob).not_to receive(:perform_all_later)
+        expect(ActiveJob).not_to have_received(:perform_all_later)
 
         result = service.call
 
@@ -45,12 +49,11 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService
       end
 
       it "processes activities in batches" do
-        create_list(:subscription_activity, batch_size + 1, organization: organization, enqueued: false)
-
-        expect(ActiveJob).to receive(:perform_all_later).twice
+        create_list(:subscription_activity, batch_size + 1, organization:, enqueued: false)
 
         result = service.call
 
+        expect(ActiveJob).to have_received(:perform_all_later).twice
         expect(result.nb_jobs_enqueued).to eq(batch_size + 1)
       end
     end

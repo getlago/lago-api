@@ -20,7 +20,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityJob, type: :job do
       let(:subscription_activity_id) { 9_999_999_999_999 }
 
       it "does not call the ProcessSubscriptionActivityService" do
-        expect(UsageMonitoring::ProcessSubscriptionActivityService).not_to receive(:call!)
+        expect(UsageMonitoring::ProcessSubscriptionActivityService).not_to have_received(:call!)
         described_class.perform_now(subscription_activity_id)
       end
     end
