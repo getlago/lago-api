@@ -223,6 +223,9 @@ DROP INDEX IF EXISTS public.index_payment_providers_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_provider_customer_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_customer_id_and_type;
+DROP INDEX IF EXISTS public.index_payment_intents_on_organization_id;
+DROP INDEX IF EXISTS public.index_payment_intents_on_invoice_id_and_status;
+DROP INDEX IF EXISTS public.index_payment_intents_on_invoice_id;
 DROP INDEX IF EXISTS public.index_password_resets_on_user_id;
 DROP INDEX IF EXISTS public.index_password_resets_on_token;
 DROP INDEX IF EXISTS public.index_organizations_on_hmac_key;
@@ -460,6 +463,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS pay
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS payment_receipts_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_providers DROP CONSTRAINT IF EXISTS payment_providers_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS payment_provider_customers_pkey;
+ALTER TABLE IF EXISTS ONLY public.payment_intents DROP CONSTRAINT IF EXISTS payment_intents_pkey;
 ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS password_resets_pkey;
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_pkey;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS memberships_pkey;
@@ -538,6 +542,7 @@ DROP TABLE IF EXISTS public.payments;
 DROP TABLE IF EXISTS public.payment_requests;
 DROP TABLE IF EXISTS public.payment_receipts;
 DROP TABLE IF EXISTS public.payment_providers;
+DROP TABLE IF EXISTS public.payment_intents;
 DROP TABLE IF EXISTS public.password_resets;
 DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.lifetime_usages;
@@ -2977,6 +2982,22 @@ CREATE TABLE public.password_resets (
 
 
 --
+-- Name: payment_intents; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_intents (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    invoice_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
+    payment_url character varying,
+    status integer DEFAULT 0 NOT NULL,
+    expires_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: payment_providers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3739,6 +3760,14 @@ ALTER TABLE ONLY public.organizations
 
 ALTER TABLE ONLY public.password_resets
     ADD CONSTRAINT password_resets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payment_intents payment_intents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_intents
+    ADD CONSTRAINT payment_intents_pkey PRIMARY KEY (id);
 
 
 --
@@ -5421,6 +5450,27 @@ CREATE INDEX index_password_resets_on_user_id ON public.password_resets USING bt
 
 
 --
+-- Name: index_payment_intents_on_invoice_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_intents_on_invoice_id ON public.payment_intents USING btree (invoice_id);
+
+
+--
+-- Name: index_payment_intents_on_invoice_id_and_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_payment_intents_on_invoice_id_and_status ON public.payment_intents USING btree (invoice_id, status) WHERE (status = 0);
+
+
+--
+-- Name: index_payment_intents_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_intents_on_organization_id ON public.payment_intents USING btree (organization_id);
+
+
+--
 -- Name: index_payment_provider_customers_on_customer_id_and_type; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7005,6 +7055,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250424140537'),
 ('20250424140359'),
 ('20250424135624'),
+('20250416125600'),
 ('20250415143607'),
 ('20250414122904'),
 ('20250414122643'),

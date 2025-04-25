@@ -40,8 +40,8 @@ module Invoices
         result.fail_with_error!(e)
       end
 
-      def generate_payment_url
-        payment_link_response = create_payment_link(payment_url_params)
+      def generate_payment_url(payment_intent)
+        payment_link_response = create_payment_link(payment_url_params(payment_intent))
         result.payment_url = JSON.parse(payment_link_response.body)["link_url"]
 
         result
@@ -96,7 +96,7 @@ module Invoices
         @cashfree_payment_provider ||= payment_provider(customer)
       end
 
-      def payment_url_params
+      def payment_url_params(payment_intent)
         {
           customer_details: {
             customer_phone: customer.phone || "9999999999",
@@ -121,7 +121,7 @@ module Invoices
           link_amount: invoice.total_due_amount_cents / 100.to_f,
           link_currency: invoice.currency.upcase,
           link_purpose: invoice.id,
-          link_expiry_time: (Time.current + 10.minutes).iso8601,
+          link_expiry_time: payment_intent.expires_at.iso8601,
           link_partial_payments: false,
           link_auto_reminders: false
         }

@@ -175,6 +175,10 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
   end
 
   describe "#payment_url_params" do
+    subject { cashfree_service.send(:payment_url_params, payment_intent) }
+
+    let(:payment_intent) { create(:payment_intent, invoice:) }
+
     let(:expected_params) do
       {
         customer_details: {
@@ -200,7 +204,7 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
         link_amount: invoice.total_due_amount_cents / 100.to_f,
         link_currency: invoice.currency.upcase,
         link_purpose: invoice.id,
-        link_expiry_time: (Time.current + 10.minutes).iso8601,
+        link_expiry_time: payment_intent.expires_at.iso8601,
         link_partial_payments: false,
         link_auto_reminders: false
       }
@@ -216,20 +220,23 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
       let(:total_paid_amount_cents) { 1 }
 
       it "return the payload" do
-        expect(cashfree_service.send(:payment_url_params)).to eq(expected_params)
+        expect(subject).to eq(expected_params)
       end
     end
 
     context "when paid amount is zero" do
       it "returns the payload" do
-        expect(cashfree_service.send(:payment_url_params)).to eq(expected_params)
+        expect(subject).to eq(expected_params)
       end
     end
   end
 
   describe ".generate_payment_url" do
+    subject(:result) { cashfree_service.generate_payment_url(payment_intent) }
+
     let(:payment_links_response) { Net::HTTPResponse.new("1.0", "200", "OK") }
     let(:payment_links_body) { {link_url: "https://payments-test.cashfree.com/links//U1mgll3c0e9g"}.to_json }
+    let(:payment_intent) { create(:payment_intent) }
 
     before do
       cashfree_payment_provider
@@ -244,8 +251,7 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
     end
 
     it "generates payment url" do
-      result = cashfree_service.generate_payment_url
-
+      expect(result).to be_success
       expect(result.payment_url).to be_present
     end
 
@@ -270,8 +276,6 @@ RSpec.describe Invoices::Payments::CashfreeService, type: :service do
       end
 
       it "returns a third party error" do
-        result = cashfree_service.generate_payment_url
-
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ThirdPartyFailure)
         expect(result.error.third_party).to eq("Cashfree")
