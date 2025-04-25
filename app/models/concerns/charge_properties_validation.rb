@@ -21,6 +21,6 @@ module ChargePropertiesValidation
     instance = validator.new(charge: self)
     return if instance.valid?
 
-    instance.result.error.messages.values.flatten.each { errors.add(:properties, _1) }
+    instance.result.error.messages.values.flatten.each { errors.add(:properties, it) }
   end
 end
