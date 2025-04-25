@@ -30,10 +30,9 @@ module Api
             :external_customer_id,
             :customer_country,
             :external_subscription_id,
+            :is_billable_metric_recurring,
             :plan_code,
-            :billable_metric_code,
-            :grouped_by,
-            filter_values: []
+            :billable_metric_code
           ).to_h.compact
         end
       end

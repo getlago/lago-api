@@ -19,6 +19,7 @@ module Resolvers
       argument :from_date, GraphQL::Types::ISO8601Date, required: false
       argument :to_date, GraphQL::Types::ISO8601Date, required: false
 
+      argument :is_billable_metric_recurring, Boolean, required: false
       argument :time_granularity, Types::DataApi::TimeGranularityEnum, required: false
 
       argument :external_customer_id, String, required: false
