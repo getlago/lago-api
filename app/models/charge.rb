@@ -3,6 +3,7 @@
 class Charge < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
+  include ChargePropertiesValidation
   include Discard::Model
   self.discard_column = :deleted_at
 
@@ -37,14 +38,8 @@ class Charge < ApplicationRecord
   attribute :regroup_paid_fees, :integer
   enum :regroup_paid_fees, REGROUPING_PAID_FEES_OPTIONS
 
-  validate :validate_amount, if: -> { standard? }
-  validate :validate_graduated, if: -> { graduated? }
-  validate :validate_package, if: -> { package? }
-  validate :validate_percentage, if: -> { percentage? }
-  validate :validate_volume, if: -> { volume? }
-  validate :validate_graduated_percentage, if: -> { graduated_percentage? }
+  validate :validate_properties
   validate :validate_dynamic, if: -> { dynamic? }
-
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :charge_model, presence: true
 
@@ -82,28 +77,8 @@ class Charge < ApplicationRecord
 
   private
 
-  def validate_amount
-    validate_charge_model(Charges::Validators::StandardService)
-  end
-
-  def validate_graduated
-    validate_charge_model(Charges::Validators::GraduatedService)
-  end
-
-  def validate_package
-    validate_charge_model(Charges::Validators::PackageService)
-  end
-
-  def validate_percentage
-    validate_charge_model(Charges::Validators::PercentageService)
-  end
-
-  def validate_volume
-    validate_charge_model(Charges::Validators::VolumeService)
-  end
-
-  def validate_graduated_percentage
-    validate_charge_model(Charges::Validators::GraduatedPercentageService)
+  def validate_properties
+    validate_charge_model_properties(charge_model)
   end
 
   def validate_dynamic
@@ -111,15 +86,6 @@ class Charge < ApplicationRecord
     return if billable_metric.sum_agg?
 
     errors.add(:charge_model, :invalid_aggregation_type_or_charge_model)
-  end
-
-  def validate_charge_model(validator)
-    instance = validator.new(charge: self)
-    return if instance.valid?
-
-    instance.result.error.messages.map { |_, codes| codes }
-      .flatten
-      .each { |code| errors.add(:properties, code) }
   end
 
   def validate_pay_in_advance
