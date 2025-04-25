@@ -6,6 +6,7 @@ RSpec.describe PaymentIntent, type: :model do
   it { is_expected.to define_enum_for(:status).with_values(described_class::STATUSES) }
 
   it { is_expected.to belong_to(:invoice) }
+  it { is_expected.to belong_to(:organization) }
 
   it { is_expected.to validate_presence_of(:status) }
   it { is_expected.to validate_presence_of(:expires_at) }

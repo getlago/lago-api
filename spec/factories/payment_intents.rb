@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :payment_intent do
     invoice { association(:invoice) }
+    organization { invoice.organization }
     payment_url { Faker::Internet.url }
 
     trait :expired do
