@@ -20,7 +20,7 @@ module AddOns
       ).destroy_all
 
       result.applied_taxes = tax_codes.map do |tax_code|
-        add_on.applied_taxes.find_or_create_by!(tax: taxes.find_by(code: tax_code))
+        add_on.applied_taxes.find_or_create_by!(tax: taxes.find_by(code: tax_code), organization: add_on.organization)
       end
 
       result
