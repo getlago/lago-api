@@ -13,7 +13,6 @@ module Charges
 
       def valid?
         # NOTE: override and add validation rules
-
         validate_grouped_by
 
         if errors?
