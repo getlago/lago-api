@@ -54,8 +54,8 @@ RSpec.describe Resolvers::ActivityLogsResolver, type: :graphql, clickhouse: true
         user_emails: nil,
         external_customer_id: nil,
         external_subscription_id: nil,
-        resource_id: nil,
-        resource_type: nil
+        resource_ids: nil,
+        resource_types: nil
       }
     end
 

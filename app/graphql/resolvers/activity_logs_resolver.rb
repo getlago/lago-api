@@ -18,8 +18,8 @@ module Resolvers
     argument :external_customer_id, String, required: false
     argument :external_subscription_id, String, required: false
     argument :from_date, GraphQL::Types::ISO8601Date, required: false
-    argument :resource_id, String, required: false
-    argument :resource_type, String, required: false
+    argument :resource_ids, [String], required: false
+    argument :resource_types, [String], required: false
     argument :to_date, GraphQL::Types::ISO8601Date, required: false
     argument :user_emails, [String], required: false
 
@@ -36,8 +36,8 @@ module Resolvers
           user_emails: args[:user_emails],
           external_customer_id: args[:external_customer_id],
           external_subscription_id: args[:external_subscription_id],
-          resource_id: args[:resource_id],
-          resource_type: args[:resource_type]
+          resource_ids: args[:resource_ids],
+          resource_types: args[:resource_types]
         },
         pagination: {
           page: args[:page],
