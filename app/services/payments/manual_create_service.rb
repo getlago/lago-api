@@ -16,6 +16,7 @@ module Payments
 
       ActiveRecord::Base.transaction do
         payment = invoice.payments.create!(
+          organization_id: invoice.organization_id,
           amount_cents:,
           reference: params[:reference],
           amount_currency: invoice.currency,

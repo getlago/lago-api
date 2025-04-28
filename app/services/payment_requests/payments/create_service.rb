@@ -34,6 +34,7 @@ module PaymentRequests
         payable.increment_payment_attempts!
 
         payment ||= Payment.create_with(
+          organization_id: payable.organization_id,
           payment_provider_id: current_payment_provider.id,
           payment_provider_customer_id: current_payment_provider_customer.id,
           amount_cents: payable.total_amount_cents,

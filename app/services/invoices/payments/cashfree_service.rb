@@ -61,6 +61,7 @@ module Invoices
         increment_payment_attempts
 
         Payment.new(
+          organization_id: @invoice.organization_id,
           payable: @invoice,
           payment_provider_id: cashfree_payment_provider.id,
           payment_provider_customer_id: customer.cashfree_customer.id,
