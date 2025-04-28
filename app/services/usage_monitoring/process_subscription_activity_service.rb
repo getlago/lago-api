@@ -44,11 +44,7 @@ module UsageMonitoring
     end
 
     def find_or_create_lifetime_usage
-      subscription.lifetime_usage || begin
-        ltu = subscription.build_lifetime_usage(organization:)
-        ltu.save!
-        ltu
-      end
+      subscription.lifetime_usage || subscription.create_lifetime_usage!(organization:)
     end
   end
 end

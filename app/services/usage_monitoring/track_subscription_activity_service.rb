@@ -9,7 +9,7 @@ module UsageMonitoring
     def initialize(subscription:, organization: nil)
       @subscription = subscription
       @organization = organization
-      super()
+      super
     end
 
     def call
