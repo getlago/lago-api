@@ -11,19 +11,45 @@ module UsageMonitoring
     end
 
     def call
+      exception_to_raise = nil
       lifetime_usage = find_or_create_lifetime_usage
 
-      if organization.lifetime_usage_enabled? || organization.progressive_billing_enabled?
-        LifetimeUsages::CalculateService.call!(lifetime_usage:, current_usage:)
+      # NOTE: We would typically have one jobs for progressive billing and one job for Alerting
+      #       but in order to reduce calls to `current_usage`, we do both in the same job.
+      #       A simple rescue is added so ensure we process alert even if progressive billing breaks
+      #       The subscription_activity is deleted if something raise.
+      #       We believe it's a good tradeoff because they should rarely raise but this can change in the future
+
+      begin
+        if organization.lifetime_usage_enabled? || organization.progressive_billing_enabled?
+          LifetimeUsages::CalculateService.call!(lifetime_usage:, current_usage:)
+        end
+
+        if organization.progressive_billing_enabled?
+          LifetimeUsages::CheckThresholdsService.call(lifetime_usage:)
+        end
+      rescue => e
+        exception_to_raise = e
       end
 
-      if organization.progressive_billing_enabled?
-        LifetimeUsages::CheckThresholdsService.call(lifetime_usage:)
+      begin
+        Alert.where(
+          subscription_external_id: subscription.external_id,
+          organization_id: subscription_activity.organization_id,
+          alert_type: Alert::CURRENT_USAGE_TYPES
+        ).includes(:thresholds).find_each do |alert|
+          ProcessAlertService.call(alert:, subscription:, current_metrics: current_usage)
+        end
+      rescue => e
+        # If progressive billing already raised, we don't override the first error
+        exception_to_raise = e if exception_to_raise.nil?
       end
-
-      # TODO: Add Alerting here
 
       subscription_activity.delete
+
+      if exception_to_raise
+        raise exception_to_raise
+      end
 
       result
     end
