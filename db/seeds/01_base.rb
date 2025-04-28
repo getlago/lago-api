@@ -221,6 +221,7 @@ Wallet.create!(
 
 3.times do
   WalletTransaction.create!(
+    organization_id: organization.id,
     wallet:,
     transaction_type: :outbound,
     status: :settled,
