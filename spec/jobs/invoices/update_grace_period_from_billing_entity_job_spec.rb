@@ -8,9 +8,14 @@ RSpec.describe Invoices::UpdateGracePeriodFromBillingEntityJob, type: :job do
   let(:invoice) { create(:invoice) }
   let(:old_grace_period) { 1 }
 
-  it "calls the service" do
-    allow(Invoices::UpdateGracePeriodFromBillingEntityService).to receive(:call).with(invoice:, old_grace_period:).and_call_original
+  before do
+    allow(Invoices::UpdateGracePeriodFromBillingEntityService)
+      .to receive(:call)
+      .with(invoice:, old_grace_period:)
+      .and_call_original
+  end
 
+  it "calls the service" do
     subject
 
     expect(Invoices::UpdateGracePeriodFromBillingEntityService).to have_received(:call)
