@@ -5,7 +5,7 @@ module Types
     class Avalara < Types::BaseObject
       graphql_name "AvalaraIntegration"
 
-      field :account_id, String, null: false
+      field :account_id, String, null: true
       field :code, String, null: false
       field :company_code, String, null: false
       field :failed_invoices_count, Integer, null: true

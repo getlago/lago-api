@@ -9,7 +9,7 @@ RSpec.describe Types::Integrations::Avalara do
     expect(subject).to have_field(:id).of_type("ID!")
 
     expect(subject).to have_field(:license_key).of_type("ObfuscatedString!")
-    expect(subject).to have_field(:account_id).of_type("String!")
+    expect(subject).to have_field(:account_id).of_type("String")
     expect(subject).to have_field(:code).of_type("String!")
     expect(subject).to have_field(:company_code).of_type("String!")
     expect(subject).to have_field(:failed_invoices_count).of_type("Int")
