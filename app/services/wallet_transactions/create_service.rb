@@ -21,6 +21,7 @@ module WalletTransactions
 
     def call
       result.wallet_transaction = wallet.wallet_transactions.create!(
+        organization_id: wallet.organization_id,
         amount:,
         status:,
         credit_amount:,

@@ -70,6 +70,7 @@ ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS fk_rails_7aab96f30e;
 ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS fk_rails_7a0704ce72;
 ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS fk_rails_7995206484;
+ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_78f6642ddf;
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_7886e1bc34;
 ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rails_755d734f25;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
@@ -169,6 +170,7 @@ DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
 DROP INDEX IF EXISTS public.index_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_wallet_id;
+DROP INDEX IF EXISTS public.index_wallet_transactions_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_versions_on_item_type_and_item_id;
@@ -2541,7 +2543,8 @@ CREATE TABLE public.wallet_transactions (
     invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
     metadata jsonb DEFAULT '[]'::jsonb,
     credit_note_id uuid,
-    failed_at timestamp(6) without time zone
+    failed_at timestamp(6) without time zone,
+    organization_id uuid
 );
 
 
@@ -5883,6 +5886,13 @@ CREATE INDEX index_wallet_transactions_on_invoice_id ON public.wallet_transactio
 
 
 --
+-- Name: index_wallet_transactions_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_transactions_on_organization_id ON public.wallet_transactions USING btree (organization_id);
+
+
+--
 -- Name: index_wallet_transactions_on_wallet_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6594,6 +6604,14 @@ ALTER TABLE ONLY public.groups
 
 
 --
+-- Name: wallet_transactions fk_rails_78f6642ddf; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transactions
+    ADD CONSTRAINT fk_rails_78f6642ddf FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: applied_add_ons fk_rails_7995206484; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7088,6 +7106,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250425130412'),
+('20250425130345'),
+('20250425130332'),
 ('20250425124942'),
 ('20250425124826'),
 ('20250425124804'),
