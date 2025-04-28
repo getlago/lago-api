@@ -296,7 +296,7 @@ type AvalaraCustomer {
 }
 
 type AvalaraIntegration {
-  accountId: String!
+  accountId: String
   code: String!
   companyCode: String!
   failedInvoicesCount: Int
