@@ -40,11 +40,12 @@ module Organizations
           webhook_endpoint.update!(webhook_url: params[:webhook_url])
         end
 
+        # TODO: only updates the organization grace period,
+        #       it does not update related invoices payment due date, etc
+        #       this is handled at the billing_entity level.
+        #       Remove it when fully migrated to billing_entity.
         if License.premium? && billing.key?(:invoice_grace_period)
-          Organizations::UpdateInvoiceGracePeriodService.call(
-            organization:,
-            grace_period: billing[:invoice_grace_period]
-          )
+          organization.invoice_grace_period = billing[:invoice_grace_period]
         end
 
         if params.key?(:net_payment_term)
