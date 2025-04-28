@@ -49,6 +49,7 @@ module Webhooks
 
     def create_webhook(webhook_endpoint, payload)
       webhook = Webhook.new(webhook_endpoint:)
+      webhook.organization_id = current_organization&.id
       webhook.webhook_type = webhook_type
       webhook.endpoint = webhook_endpoint.webhook_url
       # Question: When can this be a hash?

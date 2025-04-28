@@ -5,6 +5,7 @@ class Webhook < ApplicationRecord
 
   STATUS = %i[pending succeeded failed].freeze
 
+  belongs_to :organization, optional: true
   belongs_to :webhook_endpoint
   belongs_to :object, polymorphic: true, optional: true
 
@@ -82,13 +83,16 @@ end
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #  object_id           :uuid
+#  organization_id     :uuid
 #  webhook_endpoint_id :uuid
 #
 # Indexes
 #
+#  index_webhooks_on_organization_id      (organization_id)
 #  index_webhooks_on_webhook_endpoint_id  (webhook_endpoint_id)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (webhook_endpoint_id => webhook_endpoints.id)
 #
