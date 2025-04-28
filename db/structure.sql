@@ -119,6 +119,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_2ea4db3a4c;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_2dc6171f57;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_2b35eef34b;
+ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_28077d4aa2;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_27b55b8574;
 ALTER TABLE IF EXISTS ONLY public.payment_providers DROP CONSTRAINT IF EXISTS fk_rails_26be2f764d;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_268c288aaa;
@@ -165,6 +166,7 @@ DROP INDEX IF EXISTS public.index_webhooks_on_webhook_endpoint_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organization_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
+DROP INDEX IF EXISTS public.index_wallets_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_customer_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_invoice_id;
@@ -2572,7 +2574,8 @@ CREATE TABLE public.wallets (
     depleted_ongoing_balance boolean DEFAULT false NOT NULL,
     invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
     lock_version integer DEFAULT 0 NOT NULL,
-    ready_to_be_refreshed boolean DEFAULT false NOT NULL
+    ready_to_be_refreshed boolean DEFAULT false NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5894,6 +5897,13 @@ CREATE INDEX index_wallets_on_customer_id ON public.wallets USING btree (custome
 
 
 --
+-- Name: index_wallets_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallets_on_organization_id ON public.wallets USING btree (organization_id);
+
+
+--
 -- Name: index_wallets_on_ready_to_be_refreshed; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6181,6 +6191,14 @@ ALTER TABLE ONLY public.payment_providers
 
 ALTER TABLE ONLY public.charge_filters
     ADD CONSTRAINT fk_rails_27b55b8574 FOREIGN KEY (charge_id) REFERENCES public.charges(id);
+
+
+--
+-- Name: wallets fk_rails_28077d4aa2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallets
+    ADD CONSTRAINT fk_rails_28077d4aa2 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7070,6 +7088,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250425124942'),
+('20250425124826'),
+('20250425124804'),
 ('20250425122705'),
 ('20250425122641'),
 ('20250425122510'),
