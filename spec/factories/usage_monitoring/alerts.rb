@@ -6,5 +6,31 @@ FactoryBot.define do
     subscription_external_id { create(:subscription).external_id }
     code { "Alert" }
     alert_type { "usage_amount" }
+
+    transient do
+      thresholds { nil }
+    end
+
+    after(:create) do |alert, evaluator|
+      if evaluator.thresholds
+        thresholds_attributes = evaluator.thresholds.map do |v|
+          {value: v, code: "warn#{v}", organization_id: alert.organization_id}
+        end
+        alert.thresholds.create! thresholds_attributes
+      end
+    end
+  end
+
+  factory :usage_amount_alert,
+    class: "UsageMonitoring::UsageAmountAlert",
+    parent: :alert do
+    alert_type { "usage_amount" }
+  end
+
+  factory :billable_metric_usage_amount_alert,
+    class: "UsageMonitoring::BillableMetricUsageAmountAlert",
+    parent: :alert do
+    alert_type { "billable_metric_usage_amount" }
+    association :billable_metric
   end
 end

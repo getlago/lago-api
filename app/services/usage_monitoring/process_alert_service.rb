@@ -16,7 +16,6 @@ module UsageMonitoring
       current = alert.find_value(current_metrics)
       crossed_threshold_values = alert.find_thresholds_crossed(current)
 
-      # TODO: Loop with error management
       ActiveRecord::Base.transaction do
         if crossed_threshold_values.present?
           triggered_alert = TriggeredAlert.create!(
