@@ -188,6 +188,7 @@ end
 first_customer = organization.customers.first
 
 wallet = Wallet.create!(
+  organization_id: organization.id,
   customer: first_customer,
   name: "My Active Wallet",
   status: :active,
@@ -202,6 +203,7 @@ wallet = Wallet.create!(
 )
 
 Wallet.create!(
+  organization_id: organization.id,
   customer: first_customer,
   name: "My Terminated Wallet",
   status: :terminated,

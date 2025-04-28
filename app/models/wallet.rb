@@ -72,13 +72,16 @@ end
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
 #  customer_id                         :uuid             not null
+#  organization_id                     :uuid
 #
 # Indexes
 #
 #  index_wallets_on_customer_id            (customer_id)
+#  index_wallets_on_organization_id        (organization_id)
 #  index_wallets_on_ready_to_be_refreshed  (ready_to_be_refreshed) WHERE ready_to_be_refreshed
 #
 # Foreign Keys
 #
 #  fk_rails_...  (customer_id => customers.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #
