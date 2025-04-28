@@ -45,7 +45,9 @@ module DataExports
       end
 
       def headers
-        self.class.base_headers.dup
+        base = self.class.base_headers.dup
+        base << "billing_entity_code" if org_has_multiple_billing_entities?
+        base
       end
 
       private
@@ -55,7 +57,7 @@ module DataExports
       def serialize_item(credit_note, csv)
         serialized_note = serializer_klass.new(credit_note, includes: %i[customer]).serialize
 
-        csv << [
+        row = [
           serialized_note[:lago_id],
           serialized_note[:sequential_id],
           serialized_note[:self_billed],
@@ -82,10 +84,22 @@ module DataExports
           serialized_note[:refund_amount_cents],
           serialized_note[:file_url]
         ]
+        row << serialized_note[:billing_entity_code] if org_has_multiple_billing_entities?
+        csv << row
       end
 
       def collection
         CreditNote.includes(:customer).find(data_export_part.object_ids)
+      end
+
+      def organization
+        @organization ||= data_export_part.data_export.organization
+      end
+
+      def org_has_multiple_billing_entities?
+        return false unless organization
+
+        organization.billing_entities.count > 1
       end
     end
   end
