@@ -25,8 +25,8 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     alert.reload
   end
 
-  let(:alert_on_charge) do
-    alert = UsageMonitoring::ChargeUsageAmountAlert.create!(organization:, subscription_external_id:, code: :metric, charge: charge_2)
+  let(:alert_on_bm) do
+    alert = UsageMonitoring::BillableMetricUsageAmountAlert.create!(organization:, subscription_external_id:, code: :metric, billable_metric: bm_2)
     alert.thresholds.create!(value: 399_00, code: :warn, organization:)
     alert.thresholds.create!(value: 1000_00, code: :alert, organization:)
     alert.reload
@@ -55,7 +55,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     })
     subscription = customer.subscriptions.sole
     alert
-    alert_on_charge
+    alert_on_bm
 
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
     send_event!(code: billable_metric.code, properties: {ops_count: 2}, external_subscription_id: subscription_external_id)
@@ -98,9 +98,9 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
 
     expect(alert.triggered_alerts.count).to eq 2
-    expect(alert_on_charge.triggered_alerts.count).to eq 1
+    expect(alert_on_bm.triggered_alerts.count).to eq 1
     expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "usage_amount" }).to eq 2
-    expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "charge_usage_amount" }).to eq 1
+    expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "billable_metric_usage_amount" }).to eq 1
   end
 
   context "with multiple subscriptions" do
