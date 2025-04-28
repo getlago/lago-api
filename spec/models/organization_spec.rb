@@ -330,10 +330,10 @@ RSpec.describe Organization, type: :model do
     end
   end
 
-  describe "#tracks_subscription_activity?" do
+  describe "#relies_on_lifetime_usage?" do
     context "when instance is not premium" do
       it "returns false" do
-        expect(organization.tracks_subscription_activity?).to eq(false)
+        expect(organization.relies_on_lifetime_usage?).to eq(false)
       end
     end
 
@@ -351,7 +351,7 @@ RSpec.describe Organization, type: :model do
 
         test_cases.each do |test_case|
           organization.premium_integrations = test_case[:premium_integrations]
-          expect(organization.tracks_subscription_activity?).to eq(test_case[:expected]), "Failed for premium_integrations: #{test_case[:premium_integrations]}"
+          expect(organization.relies_on_lifetime_usage?).to eq(test_case[:expected]), "Failed for premium_integrations: #{test_case[:premium_integrations]}"
         end
       end
     end

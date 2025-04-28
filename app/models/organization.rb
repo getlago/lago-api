@@ -102,7 +102,7 @@ class Organization < ApplicationRecord
     analytics_dashboards
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
-  INTEGRATIONS_TRACKING_ACTIVITY = %w[lifetime_usage progressive_billing].freeze
+  INTEGRATIONS_USING_LIFETIME_USAGE = %w[lifetime_usage progressive_billing].freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS
 
@@ -140,10 +140,10 @@ class Organization < ApplicationRecord
     end
   end
 
-  def tracks_subscription_activity?
+  def relies_on_lifetime_usage?
     return false unless License.premium?
 
-    (INTEGRATIONS_TRACKING_ACTIVITY & premium_integrations).any?
+    (INTEGRATIONS_USING_LIFETIME_USAGE & premium_integrations).any?
   end
 
   def admins
