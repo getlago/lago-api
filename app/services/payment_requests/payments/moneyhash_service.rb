@@ -29,6 +29,7 @@ module PaymentRequests
         mh_status = moneyhash_result.dig("data", "status")
 
         payment = Payment.new(
+          organization_id: payable.organization_id,
           payable: payable,
           payment_provider_id: moneyhash_payment_provider.id,
           payment_provider_customer_id: customer.moneyhash_customer.id,
@@ -108,6 +109,7 @@ module PaymentRequests
         payable.increment_payment_attempts!
 
         Payment.new(
+          organization_id: payable.organization_id,
           payable:,
           payment_provider_id: moneyhash_payment_provider.id,
           payment_provider_customer_id: customer.moneyhash_customer.id,

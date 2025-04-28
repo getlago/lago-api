@@ -175,6 +175,7 @@ module PaymentRequests
         @payable.increment_payment_attempts!
 
         Payment.new(
+          organization_id: @payable.organization_id,
           payable: @payable,
           payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,

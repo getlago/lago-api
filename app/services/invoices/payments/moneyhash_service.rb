@@ -96,6 +96,7 @@ module Invoices
         end
         increment_payment_attempts
         Payment.new(
+          organization_id: @invoice.organization_id,
           payable: invoice,
           payment_provider_id: moneyhash_payment_provider.id,
           payment_provider_customer_id: customer.moneyhash_customer.id,

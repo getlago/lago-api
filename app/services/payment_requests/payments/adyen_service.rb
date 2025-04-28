@@ -142,6 +142,7 @@ module PaymentRequests
         payable.increment_payment_attempts!
 
         Payment.new(
+          organization_id: payable.organization_id,
           payable:,
           payment_provider_id: adyen_payment_provider.id,
           payment_provider_customer_id: customer.adyen_customer.id,
