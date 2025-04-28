@@ -197,6 +197,18 @@ class Organization < ApplicationRecord
     invoices.where(status: :failed).joins(:error_details).where(error_details: {error_code: "tax_error"}).count
   end
 
+  # This field used to be on organization, but as we're migrating this data to the billing entity, it should be taken from the billing_entity
+  def default_currency
+    return super if new_record?
+    default_billing_entity ? default_billing_entity&.default_currency : super
+  end
+
+  # This field used to be on organization, but as we're migrating this data to the billing entity, it should be taken from the billing_entity
+  def timezone
+    return super if new_record?
+    default_billing_entity ? default_billing_entity&.timezone : super
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
