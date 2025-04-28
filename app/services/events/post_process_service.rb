@@ -24,7 +24,7 @@ module Events
       event.save!
 
       expire_cached_charges(subscriptions)
-      track_subscription_activity!
+      track_subscription_activity
       customer&.flag_wallets_for_refresh
 
       handle_pay_in_advance
@@ -95,11 +95,12 @@ module Events
       end
     end
 
-    def track_subscription_activity!
-      UsageMonitoring::TrackSubscriptionActivityService.call(
-        organization:,
-        subscription_ids: subscriptions.select(&:active?).pluck(:id)
-      )
+    def track_subscription_activity
+      # NOTE: We don't eager load usage_thresholds or alerts here so it could be considered an N+1 query
+      #       But there should be only one active subscription here, so it's better to not re-requery to eager load
+      subscriptions.select(&:active?).each do |subscription|
+        UsageMonitoring::TrackSubscriptionActivityService.call(organization:, subscription:)
+      end
     end
 
     def handle_pay_in_advance

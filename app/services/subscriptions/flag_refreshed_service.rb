@@ -11,7 +11,7 @@ module Subscriptions
 
     def call
       flag_wallets_for_refresh
-      track_subscription_activity!
+      track_subscription_activity
 
       result.subscription_id = subscription_id
       result
@@ -29,10 +29,9 @@ module Subscriptions
         .update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
     end
 
-    def track_subscription_activity!
+    def track_subscription_activity
       UsageMonitoring::TrackSubscriptionActivityService.call(
-        organization: Subscription.find(subscription_id).customer.organization, # any better query?
-        subscription_ids: [subscription_id]
+        subscription: Subscription.find(subscription_id)
       )
     end
   end

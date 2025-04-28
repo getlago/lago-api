@@ -15,19 +15,19 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob, ty
     around { |test| lago_premium!(&test) }
 
     it "calls the service with the organization" do
-      described_class.perform_now(organization)
+      described_class.perform_now(organization.id)
       expect(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService).to have_received(:call!).with(organization:)
     end
 
     it "logs the number of jobs enqueued" do
-      described_class.perform_now(organization)
+      described_class.perform_now(organization.id)
       expect(Rails.logger).to have_received(:info).with("[#{organization.id}] ProcessOrganizationSubscriptionActivitiesService enqueued 5 jobs")
     end
   end
 
   context "when license is not premium" do
     it "does not call the service or log" do
-      described_class.perform_now(organization)
+      described_class.perform_now(organization.id)
       expect(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService).not_to have_received(:call!)
       expect(Rails.logger).not_to have_received(:info)
     end

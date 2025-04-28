@@ -102,7 +102,6 @@ class Organization < ApplicationRecord
     analytics_dashboards
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
-  INTEGRATIONS_USING_LIFETIME_USAGE = %w[lifetime_usage progressive_billing].freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS
 
@@ -130,7 +129,6 @@ class Organization < ApplicationRecord
   after_create :generate_document_number_prefix
 
   scope :with_any_premium_integrations, ->(names) { where("premium_integrations && ARRAY[?]::varchar[]", Array.wrap(names)) }
-  scope :with_activity_tracking, -> { with_any_premium_integrations(INTEGRATIONS_TRACKING_ACTIVITY) }
 
   PREMIUM_INTEGRATIONS.each do |premium_integration|
     scope "with_#{premium_integration}_support", -> { where("? = ANY(premium_integrations)", premium_integration) }
@@ -138,12 +136,6 @@ class Organization < ApplicationRecord
     define_method("#{premium_integration}_enabled?") do
       License.premium? && premium_integrations.include?(premium_integration)
     end
-  end
-
-  def relies_on_lifetime_usage?
-    return false unless License.premium?
-
-    (INTEGRATIONS_USING_LIFETIME_USAGE & premium_integrations).any?
   end
 
   def admins

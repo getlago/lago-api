@@ -21,7 +21,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
   around { |test| lago_premium!(&test) }
 
   context "when both lifetime_usage and progressive_billing are enabled" do
-    let(:premium_integrations) { Organization::INTEGRATIONS_TRACKING_ACTIVITY }
+    let(:premium_integrations) { %w[lifetime_usage progressive_billing] }
 
     it "calls both services and deletes subscription_activity" do
       result = service.call
@@ -95,7 +95,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
   end
 
   context "when lifetime_usage already exists" do
-    let(:premium_integrations) { Organization::INTEGRATIONS_TRACKING_ACTIVITY }
+    let(:premium_integrations) { %w[progressive_billing] }
 
     it "does not create a new lifetime usage" do
       create(:lifetime_usage, subscription: subscription, organization: organization)

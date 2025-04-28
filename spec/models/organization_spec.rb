@@ -223,17 +223,6 @@ RSpec.describe Organization, type: :model do
     end
   end
 
-  describe ".with_activity_tracking" do
-    it do
-      create(:organization, premium_integrations: %w[okta xero anrok])
-      create(:organization, premium_integrations: described_class::INTEGRATIONS_TRACKING_ACTIVITY)
-      create(:organization, premium_integrations: %w[lifetime_usage])
-      create(:organization, premium_integrations: %w[salesforce])
-
-      expect(described_class.with_activity_tracking.count).to eq(2)
-    end
-  end
-
   describe "Premium integrations scopes" do
     it "returns the organization if the premium integration is enabled" do
       Organization::PREMIUM_INTEGRATIONS.each do |integration|
@@ -326,33 +315,6 @@ RSpec.describe Organization, type: :model do
         end
 
         it { is_expected.to eq(true) }
-      end
-    end
-  end
-
-  describe "#relies_on_lifetime_usage?" do
-    context "when instance is not premium" do
-      it "returns false" do
-        expect(organization.relies_on_lifetime_usage?).to eq(false)
-      end
-    end
-
-    context "when instance is premium" do
-      around { |test| lago_premium!(&test) }
-
-      it "returns true if it has a premium integration tracking activity" do
-        test_cases = [
-          {premium_integrations: ["lifetime_usage"], expected: true},
-          {premium_integrations: ["xero"], expected: false},
-          {premium_integrations: ["xero", "netsuite"], expected: false},
-          {premium_integrations: ["xero", "lifetime_usage"], expected: true},
-          {premium_integrations: [], expected: false}
-        ]
-
-        test_cases.each do |test_case|
-          organization.premium_integrations = test_case[:premium_integrations]
-          expect(organization.relies_on_lifetime_usage?).to eq(test_case[:expected]), "Failed for premium_integrations: #{test_case[:premium_integrations]}"
-        end
       end
     end
   end

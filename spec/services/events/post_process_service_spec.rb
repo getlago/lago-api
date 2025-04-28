@@ -44,6 +44,15 @@ RSpec.describe Events::PostProcessService, type: :service do
       expect { process_service.call }.to change { wallet.reload.ready_to_be_refreshed }.from(false).to(true)
     end
 
+    it "tracks subscription activity" do
+      allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call)
+
+      process_service.call
+
+      expect(UsageMonitoring::TrackSubscriptionActivityService).to have_received(:call)
+        .with(subscription:, organization:)
+    end
+
     context "when event matches an pay_in_advance charge" do
       let(:charge) { create(:standard_charge, :pay_in_advance, plan:, billable_metric:, invoiceable: false) }
       let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "item_id") }
@@ -61,19 +70,6 @@ RSpec.describe Events::PostProcessService, type: :service do
         allow(event).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(event))
 
         expect { process_service.call }.to have_enqueued_job(SendWebhookJob)
-      end
-    end
-
-    context "when the organization has an integration tracking activity" do
-      around { |test| lago_premium!(&test) }
-
-      it "inserts SubscriptionActivity" do
-        organization.update!(premium_integrations: Organization::INTEGRATIONS_TRACKING_ACTIVITY)
-
-        process_service.call
-
-        expect(subscription.subscription_activity.organization_id).to eq organization.id
-        expect(subscription.subscription_activity.enqueued).to eq false
       end
     end
   end
