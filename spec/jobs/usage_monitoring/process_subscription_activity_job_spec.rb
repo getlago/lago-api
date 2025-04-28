@@ -24,5 +24,28 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityJob, type: :job do
         described_class.perform_now(subscription_activity_id)
       end
     end
+
+    context "when ProcessSubscriptionActivityService raises" do
+      before do
+        allow(described_class).to receive(:perform_later)
+        allow(UsageMonitoring::ProcessSubscriptionActivityService).to receive(:call!).and_raise(BaseService::ThrottlingError)
+      end
+
+      it "re-enqueues the job" do
+        described_class.perform_now(subscription_activity_id)
+        expect(described_class).to have_received(:perform_later).with(subscription_activity_id, 2)
+      end
+
+      context "when the max retries is reached" do
+        it "removes the SubscriptionActivity" do
+          begin
+            described_class.perform_now(subscription_activity_id, 4)
+          rescue BaseService::ThrottlingError => _e
+          end
+          expect(described_class).not_to have_received(:perform_later)
+          expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
+        end
+      end
+    end
   end
 end
