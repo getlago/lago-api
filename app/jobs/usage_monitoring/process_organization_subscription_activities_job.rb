@@ -10,9 +10,11 @@ module UsageMonitoring
       organization = Organization.find(organization_id)
       result = UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService.call!(organization:)
 
-      Rails.logger.info(
-        "[#{organization.id}] ProcessOrganizationSubscriptionActivitiesService enqueued #{result.nb_jobs_enqueued} jobs"
-      )
+      if result.nb_jobs_enqueued > 0
+        Rails.logger.info(
+          "[#{organization.id}] ProcessOrganizationSubscriptionActivitiesService enqueued #{result.nb_jobs_enqueued} jobs"
+        )
+      end
     end
   end
 end
