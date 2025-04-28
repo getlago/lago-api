@@ -48,6 +48,7 @@ module Invoices
 
       def new_subscription
         @new_subscription ||= Subscription.new(
+          organization_id: organization.id,
           customer:,
           plan: target_plan,
           name: target_plan.name,

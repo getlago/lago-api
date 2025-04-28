@@ -27,6 +27,7 @@ module Invoices
 
       def build_subscription
         Subscription.new(
+          organization_id: organization.id,
           customer:,
           plan:,
           subscription_at: params[:subscription_at].presence || Time.current,
