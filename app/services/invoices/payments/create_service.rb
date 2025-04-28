@@ -67,7 +67,7 @@ module Invoices
 
         if e.result.payment.payable_payment_status&.to_sym != :pending
           # Avoid notification for amount_too_small errors
-          deliver_error_webhook(e.result)
+          deliver_error_webhook(e)
         end
 
         update_invoice_payment_status(payment_status: e.result.payment.payable_payment_status)
@@ -133,13 +133,16 @@ module Invoices
         )
       end
 
-      def deliver_error_webhook(payment_result)
+      def deliver_error_webhook(e)
+        payment_result = e.result
+
         DeliverErrorWebhookService.call_async(invoice, {
           provider_customer_id: current_payment_provider_customer.provider_customer_id,
           provider_error: {
             message: payment_result.error_message,
             error_code: payment_result.error_code
-          }
+          },
+          error_details: V1::Errors::ErrorSerializerFactory.new_instance(e.original_error).serialize
         })
       end
 
