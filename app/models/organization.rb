@@ -59,6 +59,7 @@ class Organization < ApplicationRecord
   has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
+  has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
 
   has_many :invoice_custom_sections
   has_many :invoice_custom_section_selections
@@ -135,10 +136,6 @@ class Organization < ApplicationRecord
 
   def admins
     users.joins(:memberships).merge!(memberships.admin)
-  end
-
-  def default_billing_entity
-    billing_entities.active.order(created_at: :asc).first
   end
 
   def logo_url

@@ -551,7 +551,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
       )
     end
 
-    let(:billing_entity) { create(:billing_entity, document_numbering: "per_billing_entity", timezone: "Europe/Paris",) }
+    let(:billing_entity) { create(:billing_entity, document_numbering: "per_billing_entity", timezone: "Europe/Paris") }
 
     it "creates invoice numbers correctly" do
       # NOTE: Jul 19th: create the subscription
