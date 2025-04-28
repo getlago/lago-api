@@ -3799,16 +3799,16 @@ type DataApiMrrsPlans {
 
 type DataApiPrepaidCredit {
   amountCurrency: CurrencyEnum!
-  consumedAmount: BigInt!
-  consumedCreditsQuantity: BigInt!
+  consumedAmount: Float!
+  consumedCreditsQuantity: Float!
   endOfPeriodDt: ISO8601Date!
-  offeredAmount: BigInt!
-  offeredCreditsQuantity: BigInt!
-  purchasedAmount: BigInt!
-  purchasedCreditsQuantity: BigInt!
+  offeredAmount: Float!
+  offeredCreditsQuantity: Float!
+  purchasedAmount: Float!
+  purchasedCreditsQuantity: Float!
   startOfPeriodDt: ISO8601Date!
-  voidedAmount: BigInt!
-  voidedCreditsQuantity: BigInt!
+  voidedAmount: Float!
+  voidedCreditsQuantity: Float!
 }
 
 """
