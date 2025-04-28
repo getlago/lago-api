@@ -59,7 +59,6 @@ class Organization < ApplicationRecord
   has_one :salesforce_integration, class_name: "Integrations::SalesforceIntegration"
 
   has_one :applied_dunning_campaign, -> { where(applied_to_organization: true) }, class_name: "DunningCampaign"
-  has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
 
   has_many :invoice_custom_sections
   has_many :invoice_custom_section_selections
@@ -138,6 +137,10 @@ class Organization < ApplicationRecord
     users.joins(:memberships).merge!(memberships.admin)
   end
 
+  def default_billing_entity
+    billing_entities.active.order(created_at: :asc).first
+  end
+
   def logo_url
     return if logo.blank?
 
@@ -195,6 +198,18 @@ class Organization < ApplicationRecord
 
   def failed_tax_invoices_count
     invoices.where(status: :failed).joins(:error_details).where(error_details: {error_code: "tax_error"}).count
+  end
+
+  # This field used to be on organization, but as we're migrating this data to the billing entity, it should be taken from the billing_entity
+  def default_currency
+    return super if new_record?
+    default_billing_entity ? default_billing_entity&.default_currency : super
+  end
+
+  # This field used to be on organization, but as we're migrating this data to the billing entity, it should be taken from the billing_entity
+  def timezone
+    return super if new_record?
+    default_billing_entity ? default_billing_entity&.timezone : super
   end
 
   private

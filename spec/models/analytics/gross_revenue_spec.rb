@@ -109,6 +109,41 @@ RSpec.describe Analytics::GrossRevenue, type: :model do
           "amount_cents" => 3000.0
         })])
       end
+
+      context "when an organization has multiple billing entities with different currencies" do
+        let(:invoices) {
+          [
+            create(:invoice, organization:, total_amount_cents: 1000, issuing_date: 1.month.ago, billing_entity: billing_entity1, currency: "USD"),
+            create(:invoice, organization:, total_amount_cents: 2000, issuing_date: 1.month.ago, billing_entity: billing_entity2, currency: "EUR"),
+            create(:invoice, organization:, total_amount_cents: 3000, issuing_date: 2.months.ago, billing_entity: billing_entity1, currency: "USD"),
+            create(:invoice, organization:, total_amount_cents: 4000, issuing_date: 2.months.ago, billing_entity: billing_entity2, currency: "EUR")
+          ]
+        }
+
+        it "returns gross revenues grouped by currencies" do
+          expect(gross_revenues).to match_array([hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "currency" => "USD",
+            "invoices_count" => 1,
+            "amount_cents" => 1000.0
+          }), hash_including({
+            "month" => Time.current.beginning_of_month - 1.month,
+            "currency" => "EUR",
+            "invoices_count" => 1,
+            "amount_cents" => 2000.0
+          }), hash_including({
+            "month" => Time.current.beginning_of_month - 2.months,
+            "currency" => "USD",
+            "invoices_count" => 1,
+            "amount_cents" => 3000.0
+          }), hash_including({
+            "month" => Time.current.beginning_of_month - 2.months,
+            "currency" => "EUR",
+            "invoices_count" => 1,
+            "amount_cents" => 4000.0
+          })])
+        end
+      end
     end
 
     context "when filtering by billing_entity_id" do
