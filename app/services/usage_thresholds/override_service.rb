@@ -13,6 +13,7 @@ module UsageThresholds
       ActiveRecord::Base.transaction do
         usage_thresholds_params.each do |params|
           usage_threshold = new_plan.usage_thresholds.new(
+            organization_id: new_plan.organization_id,
             plan_id: new_plan.id,
             threshold_display_name: params[:threshold_display_name],
             amount_cents: params[:amount_cents],
