@@ -98,6 +98,7 @@ ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_521
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_51ac39a0c6;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_50d46d3679;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_4934f27a06;
+ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_49212d501e;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_4117574b51;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_3ff27d7624;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_3f7be5debc;
@@ -165,6 +166,7 @@ SELECT
     NULL::json AS filters,
     NULL::jsonb AS filters_grouped_by;
 DROP INDEX IF EXISTS public.index_webhooks_on_webhook_endpoint_id;
+DROP INDEX IF EXISTS public.index_webhooks_on_organization_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_webhook_url_and_organization_id;
 DROP INDEX IF EXISTS public.index_webhook_endpoints_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallets_on_ready_to_be_refreshed;
@@ -3259,7 +3261,8 @@ CREATE TABLE public.webhooks (
     last_retried_at timestamp without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    webhook_endpoint_id uuid
+    webhook_endpoint_id uuid,
+    organization_id uuid
 );
 
 
@@ -5945,6 +5948,13 @@ CREATE UNIQUE INDEX index_webhook_endpoints_on_webhook_url_and_organization_id O
 
 
 --
+-- Name: index_webhooks_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhooks_on_organization_id ON public.webhooks USING btree (organization_id);
+
+
+--
 -- Name: index_webhooks_on_webhook_endpoint_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6403,6 +6413,14 @@ ALTER TABLE ONLY public.charges_taxes
 
 ALTER TABLE ONLY public.credit_notes
     ADD CONSTRAINT fk_rails_4117574b51 FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
+
+
+--
+-- Name: webhooks fk_rails_49212d501e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhooks
+    ADD CONSTRAINT fk_rails_49212d501e FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7124,6 +7142,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250428130148'),
+('20250428130129'),
+('20250428130107'),
 ('20250428111042'),
 ('20250425132821'),
 ('20250425132757'),
