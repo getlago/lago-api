@@ -81,6 +81,16 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
       {code: "warn", value: "3000.0"}
     ])
 
+    webhooks_sent.find { |w| w[:webhook_type] == "alert.triggered" }.tap do |webhook|
+      expect(webhook[:object_type]).to eq("triggered_alert")
+      expect(webhook[:triggered_alert]).to include({
+        lago_id: ta.id,
+        current_value: "3000.0",
+        previous_value: "1000.0",
+        triggered_at: String
+      })
+    end
+
     # WITH EVENTS ON CHARGE WITH SPECIAL ALERT
     send_event!(code: bm_2.code, properties: {api_count: 4}, external_subscription_id: subscription_external_id)
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 1
@@ -89,6 +99,8 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
 
     expect(alert.triggered_alerts.count).to eq 2
     expect(alert_on_charge.triggered_alerts.count).to eq 1
+    expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "usage_amount" }).to eq 2
+    expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "charge_usage_amount" }).to eq 1
   end
 
   context "with multiple subscriptions" do

@@ -29,7 +29,7 @@ module UsageMonitoring
             triggered_at: now
           )
 
-          after_commit { pp PROCESS_TRIGGERED_ALERT: triggered_alert } # TODO: Job to trigger action (webhook)
+          after_commit { SendWebhookJob.perform_later("alert.triggered", triggered_alert) }
         end
 
         alert.previous_value = current
