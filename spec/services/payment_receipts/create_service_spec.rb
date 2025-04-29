@@ -7,6 +7,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
 
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 10000, status: :finalized) }
   let(:organization) { create(:organization) }
+  let(:billing_entity) { organization.default_billing_entity }
   let(:customer) { create(:customer, organization:) }
   let(:payment) { create(:payment, payable: invoice) }
 
@@ -93,8 +94,8 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
 
               it "enqueues the generate pdf job" do
                 expect do
-                  organization.email_settings << "payment_receipt.created"
-                  organization.save!
+                  billing_entity.email_settings << "payment_receipt.created"
+                  billing_entity.save!
                   service.call
                 end.to have_enqueued_job(PaymentReceipts::GeneratePdfAndNotifyJob).with(payment_receipt:, email: true)
               end

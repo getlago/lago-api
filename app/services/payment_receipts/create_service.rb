@@ -7,6 +7,7 @@ module PaymentReceipts
     def initialize(payment:)
       @payment = payment
       @organization = payment&.payable&.organization
+      @billing_entity = payment&.payable&.billing_entity
       super
     end
 
@@ -33,10 +34,10 @@ module PaymentReceipts
 
     private
 
-    attr_reader :payment, :organization
+    attr_reader :payment, :organization, :billing_entity
 
     def should_deliver_email?
-      License.premium? && organization.email_settings.include?("payment_receipt.created")
+      License.premium? && billing_entity.email_settings.include?("payment_receipt.created")
     end
   end
 end

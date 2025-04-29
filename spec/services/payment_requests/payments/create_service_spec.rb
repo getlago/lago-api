@@ -6,6 +6,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
   subject(:create_service) { described_class.new(payable: payment_request, payment_provider: provider) }
 
   let(:organization) { create(:organization) }
+  let(:billing_entity) { organization.default_billing_entity }
   let(:customer) { create(:customer, organization:, payment_provider: provider, payment_provider_code:) }
   let(:provider) { "stripe" }
   let(:payment_provider_code) { "stripe_1" }
@@ -62,7 +63,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
         .to receive(:new)
         .with(
           payment: an_instance_of(Payment),
-          reference: "#{organization.name} - Overdue invoices",
+          reference: "#{billing_entity.name} - Overdue invoices",
           metadata: {
             lago_customer_id: customer.id,
             lago_payable_id: payment_request.id,
