@@ -18,6 +18,7 @@ module Invoices
         tax_rate = tax.rate.to_f * 100
 
         applied_tax = invoice.applied_taxes.new(
+          organization: invoice.organization,
           tax_description: tax.type,
           tax_code: tax.name.parameterize(separator: "_"),
           tax_name: tax.name,

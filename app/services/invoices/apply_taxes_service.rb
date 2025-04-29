@@ -15,6 +15,7 @@ module Invoices
 
       applicable_taxes.each do |tax|
         applied_tax = invoice.applied_taxes.new(
+          organization:,
           tax:,
           tax_description: tax.description,
           tax_code: tax.code,
