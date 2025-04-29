@@ -17,8 +17,7 @@ module BillingEntities
         billing_entity.invoice_grace_period = grace_period
         billing_entity.save!
 
-        # TODO: uncomment when billing_entity is the source of truth
-        # Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityJob.perform_later(billing_entity, old_grace_period)
+        Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityJob.perform_later(billing_entity, old_grace_period)
       end
 
       result.billing_entity = billing_entity

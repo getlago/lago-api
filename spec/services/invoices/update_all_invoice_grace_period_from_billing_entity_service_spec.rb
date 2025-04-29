@@ -9,31 +9,33 @@ RSpec.describe Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityService do
   let(:organization) { billing_entity.organization }
   let(:old_grace_period) { 12 }
 
-  context "without draft invoices" do
+  context "when billing entity does not have invoices" do
     it "enqueues zero jobs" do
-      expect { subject.call }.not_to enqueue_job(Invoices::UpdateGracePeriodFromBillingEntityJob)
+      expect { subject.call }
+        .not_to enqueue_job(Invoices::UpdateGracePeriodFromBillingEntityJob)
     end
   end
 
-  context "with draft invoice present" do
+  context "when billing entity has draft invoices" do
     let(:draft_invoice) { create(:invoice, :draft, organization:) }
 
     before { draft_invoice }
 
     it "enqueues 1 job for the draft invoice" do
-      expect { subject.call }.to enqueue_job(Invoices::UpdateGracePeriodFromBillingEntityJob)
+      expect { subject.call }
+        .to enqueue_job(Invoices::UpdateGracePeriodFromBillingEntityJob)
         .with(draft_invoice, old_grace_period)
     end
+  end
 
-    context "with finalized invoice present" do
-      let(:finalized_invoice) { create(:invoice, :finalized, organization:) }
+  context "when billing entity has finalized invoices" do
+    let(:finalized_invoice) { create(:invoice, :finalized, organization:) }
 
-      before { finalized_invoice }
+    before { finalized_invoice }
 
-      it "enqueues only 1 job for the draft invoice" do
-        expect { subject.call }.to enqueue_job(Invoices::UpdateGracePeriodFromBillingEntityJob)
-          .with(draft_invoice, old_grace_period)
-      end
+    it "enqueues zero jobs" do
+      expect { subject.call }
+        .not_to enqueue_job(Invoices::UpdateGracePeriodFromBillingEntityJob)
     end
   end
 end
