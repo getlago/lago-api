@@ -160,6 +160,9 @@ RSpec.describe Organizations::UpdateService do
         end
       end
 
+      # Despite we do not use net_payment_term from org anymore, we need this test to ensure that update on billing_entity is
+      # triggered and correctly handled
+      # TODO: delete when cleaning up org from billing-entity specific data
       context "when updating net_payment_term" do
         let(:customer) { create(:customer, organization:) }
 
@@ -175,7 +178,7 @@ RSpec.describe Organizations::UpdateService do
 
         before do
           draft_invoice
-          allow(Organizations::UpdateInvoicePaymentDueDateService).to receive(:call).and_call_original
+          allow(BillingEntities::UpdateInvoicePaymentDueDateService).to receive(:call).and_call_original
         end
 
         it "updates the corresponding draft invoices" do
@@ -185,10 +188,8 @@ RSpec.describe Organizations::UpdateService do
             result = update_service.call
             expect(result).to be_success
 
-            aggregate_failures do
-              expect(result.organization.net_payment_term).to eq(2)
-              expect(Organizations::UpdateInvoicePaymentDueDateService).to have_received(:call).with(organization:, net_payment_term: 2)
-            end
+            expect(result.organization.net_payment_term).to eq(2)
+            expect(BillingEntities::UpdateInvoicePaymentDueDateService).to have_received(:call).with(billing_entity: organization.default_billing_entity, net_payment_term: 2)
           end
         end
       end

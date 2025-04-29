@@ -40,6 +40,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
   end
 
   before do
+    organization.default_billing_entity.update(timezone: "Europe/Paris")
     organization.webhook_endpoints.destroy_all
     organization.update!(document_number_prefix: "ORG-1")
   end
@@ -550,7 +551,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
       )
     end
 
-    let(:billing_entity) { create(:billing_entity, document_numbering: "per_billing_entity") }
+    let(:billing_entity) { create(:billing_entity, document_numbering: "per_billing_entity", timezone: "Europe/Paris") }
 
     it "creates invoice numbers correctly" do
       # NOTE: Jul 19th: create the subscription
