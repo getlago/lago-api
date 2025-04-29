@@ -5,7 +5,9 @@ module Types
     class UpdateInput < BaseInputObject
       description "Update Billing Entity input arguments"
 
-      argument :code, String, required: true
+      argument :id, ID, required: true
+
+      argument :code, String, required: false
       argument :name, String, required: false
 
       argument :default_currency, Types::CurrencyEnum, required: false
