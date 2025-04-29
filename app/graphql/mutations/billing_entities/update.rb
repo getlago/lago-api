@@ -16,8 +16,10 @@ module Mutations
       type Types::BillingEntities::Object
 
       # We're not allowing now to update billing entities
-      def resolve(_args)
-        current_organization.default_billing_entity
+      def resolve(args)
+        billing_entity = current_organization.billing_entities.find_by(code: args[:code])
+        ::BillingEntities::UpdateService.call(billing_entity:, params: args)
+        billing_entity
       end
     end
   end
