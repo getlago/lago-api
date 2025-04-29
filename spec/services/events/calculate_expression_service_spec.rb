@@ -7,7 +7,7 @@ RSpec.describe Events::CalculateExpressionService, type: :service do
     subject(:service_call) { described_class.new(organization: organization, event: event).call }
 
     let(:organization) { create(:organization) }
-    let(:event) { create(:event, organization: organization, timestamp: Time.current.to_i, code: code, properties: properties) }
+    let(:event) { create(:event, organization: organization, timestamp: Time.current, code: code, properties: properties) }
     let(:code) { "test_code" }
     let(:properties) { {"left" => "1", "right" => "2"} }
     let(:expression) { nil }
