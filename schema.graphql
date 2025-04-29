@@ -157,14 +157,6 @@ enum AggregationTypeEnum {
   weighted_sum_agg
 }
 
-type AnrokBreakdownObject {
-  enumedTaxCode: InvoiceAppliedTaxOnWholeInvoiceCodeEnum
-  name: String
-  rate: Float
-  taxAmount: BigInt
-  type: String
-}
-
 type AnrokCustomer {
   externalAccountId: String
   externalCustomerId: String
@@ -173,29 +165,6 @@ type AnrokCustomer {
   integrationId: ID
   integrationType: IntegrationTypeEnum
   syncWithProvider: Boolean
-}
-
-type AnrokFeeObject {
-  amountCents: BigInt
-  itemCode: String
-  itemId: String
-  taxAmountCents: BigInt
-  taxBreakdown: [AnrokBreakdownObject!]
-}
-
-"""
-AnrokFeeObjectCollection type
-"""
-type AnrokFeeObjectCollection {
-  """
-  A collection of paginated AnrokFeeObjectCollection
-  """
-  collection: [AnrokFeeObject!]!
-
-  """
-  Pagination Metadata for navigating the Pagination
-  """
-  metadata: CollectionMetadata!
 }
 
 type AnrokIntegration {
@@ -5976,7 +5945,7 @@ type Mutation {
     Parameters for FetchDraftInvoiceTaxes
     """
     input: FetchDraftInvoiceTaxesInput!
-  ): AnrokFeeObjectCollection
+  ): TaxFeeObjectCollection
 
   """
   Fetch integration accounts
@@ -8262,6 +8231,14 @@ type Tax {
   updatedAt: ISO8601DateTime!
 }
 
+type TaxBreakdownObject {
+  enumedTaxCode: InvoiceAppliedTaxOnWholeInvoiceCodeEnum
+  name: String
+  rate: Float
+  taxAmount: BigInt
+  type: String
+}
+
 """
 TaxCollection type
 """
@@ -8289,6 +8266,29 @@ input TaxCreateInput {
   description: String
   name: String!
   rate: Float!
+}
+
+type TaxFeeObject {
+  amountCents: BigInt
+  itemCode: String
+  itemId: String
+  taxAmountCents: BigInt
+  taxBreakdown: [TaxBreakdownObject!]
+}
+
+"""
+TaxFeeObjectCollection type
+"""
+type TaxFeeObjectCollection {
+  """
+  A collection of paginated TaxFeeObjectCollection
+  """
+  collection: [TaxFeeObject!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
 }
 
 """
