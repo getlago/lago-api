@@ -21,7 +21,7 @@ Base activity log
 type ActivityLog {
   activityId: ID!
   activitySource: ActivitySourceTypeEnum!
-  activityType: String!
+  activityType: ActivityTypeTypeEnum!
   createdAt: ISO8601DateTime!
   externalCustomerId: String
   externalSubscriptionId: String
@@ -55,6 +55,211 @@ enum ActivitySourceTypeEnum {
   api
   front
   system
+}
+
+"""
+Activity Logs Types type enums
+"""
+enum ActivityTypeTypeEnum {
+  """
+  applied_coupon.created
+  """
+  applied_coupon_created
+
+  """
+  applied_coupon.deleted
+  """
+  applied_coupon_deleted
+
+  """
+  billable_metric.created
+  """
+  billable_metric_created
+
+  """
+  billable_metric.deleted
+  """
+  billable_metric_deleted
+
+  """
+  billable_metric.updated
+  """
+  billable_metric_updated
+
+  """
+  billing_entities.created
+  """
+  billing_entities_created
+
+  """
+  billing_entities.deleted
+  """
+  billing_entities_deleted
+
+  """
+  billing_entities.updated
+  """
+  billing_entities_updated
+
+  """
+  coupon.created
+  """
+  coupon_created
+
+  """
+  coupon.deleted
+  """
+  coupon_deleted
+
+  """
+  coupon.updated
+  """
+  coupon_updated
+
+  """
+  credit_note.created
+  """
+  credit_note_created
+
+  """
+  credit_note.generated
+  """
+  credit_note_generated
+
+  """
+  credit_note.refund_failure
+  """
+  credit_note_refund_failure
+
+  """
+  customer.created
+  """
+  customer_created
+
+  """
+  customer.deleted
+  """
+  customer_deleted
+
+  """
+  customer.updated
+  """
+  customer_updated
+
+  """
+  invoice.created
+  """
+  invoice_created
+
+  """
+  invoice.drafted
+  """
+  invoice_drafted
+
+  """
+  invoice.failed
+  """
+  invoice_failed
+
+  """
+  invoice.generated
+  """
+  invoice_generated
+
+  """
+  invoice.paid_credit_added
+  """
+  invoice_paid_credit_added
+
+  """
+  invoice.payment_failure
+  """
+  invoice_payment_failure
+
+  """
+  invoice.payment_overdue
+  """
+  invoice_payment_overdue
+
+  """
+  invoice.payment_status_updated
+  """
+  invoice_payment_status_updated
+
+  """
+  invoice.voided
+  """
+  invoice_voided
+
+  """
+  payment_receipt.created
+  """
+  payment_receipt_created
+
+  """
+  payment_receipt.generated
+  """
+  payment_receipt_generated
+
+  """
+  payment.recorded
+  """
+  payment_recorded
+
+  """
+  plan.created
+  """
+  plan_created
+
+  """
+  plan.deleted
+  """
+  plan_deleted
+
+  """
+  plan.updated
+  """
+  plan_updated
+
+  """
+  subscription.started
+  """
+  subscription_started
+
+  """
+  subscription.terminated
+  """
+  subscription_terminated
+
+  """
+  subscription.updated
+  """
+  subscription_updated
+
+  """
+  wallet.created
+  """
+  wallet_created
+
+  """
+  wallet_transaction.created
+  """
+  wallet_transaction_created
+
+  """
+  wallet_transaction.payment_failure
+  """
+  wallet_transaction_payment_failure
+
+  """
+  wallet_transaction.updated
+  """
+  wallet_transaction_updated
+
+  """
+  wallet.updated
+  """
+  wallet_updated
 }
 
 """
@@ -7200,7 +7405,7 @@ type Query {
   """
   Query activity logs of an organization
   """
-  activityLogs(activitySources: [ActivitySourceTypeEnum!], activityTypes: [String!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, limit: Int, page: Int, resourceId: String, resourceType: String, toDate: ISO8601Date, userEmails: [String!]): ActivityLogCollection
+  activityLogs(activitySources: [ActivitySourceTypeEnum!], activityTypes: [ActivityTypeTypeEnum!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, limit: Int, page: Int, resourceIds: [String!], resourceTypes: [String!], toDate: ISO8601Date, userEmails: [String!]): ActivityLogCollection
 
   """
   Query a single add-on of an organization

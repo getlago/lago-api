@@ -126,8 +126,8 @@
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
+                  "kind": "ENUM",
+                  "name": "ActivityTypeTypeEnum",
                   "ofType": null
                 }
               },
@@ -338,6 +338,257 @@
             {
               "name": "system",
               "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
+          "kind": "ENUM",
+          "name": "ActivityTypeTypeEnum",
+          "description": "Activity Logs Types type enums",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "billable_metric_created",
+              "description": "billable_metric.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billable_metric_updated",
+              "description": "billable_metric.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billable_metric_deleted",
+              "description": "billable_metric.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_created",
+              "description": "plan.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_updated",
+              "description": "plan.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_deleted",
+              "description": "plan.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "customer_created",
+              "description": "customer.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "customer_updated",
+              "description": "customer.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "customer_deleted",
+              "description": "customer.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_drafted",
+              "description": "invoice.drafted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_failed",
+              "description": "invoice.failed",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_created",
+              "description": "invoice.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_paid_credit_added",
+              "description": "invoice.paid_credit_added",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_generated",
+              "description": "invoice.generated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_payment_status_updated",
+              "description": "invoice.payment_status_updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_payment_overdue",
+              "description": "invoice.payment_overdue",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_voided",
+              "description": "invoice.voided",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_payment_failure",
+              "description": "invoice.payment_failure",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payment_receipt_created",
+              "description": "payment_receipt.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payment_receipt_generated",
+              "description": "payment_receipt.generated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "credit_note_created",
+              "description": "credit_note.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "credit_note_generated",
+              "description": "credit_note.generated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "credit_note_refund_failure",
+              "description": "credit_note.refund_failure",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entities_created",
+              "description": "billing_entities.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entities_updated",
+              "description": "billing_entities.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entities_deleted",
+              "description": "billing_entities.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscription_started",
+              "description": "subscription.started",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscription_terminated",
+              "description": "subscription.terminated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscription_updated",
+              "description": "subscription.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet_created",
+              "description": "wallet.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet_updated",
+              "description": "wallet.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet_transaction_payment_failure",
+              "description": "wallet_transaction.payment_failure",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet_transaction_created",
+              "description": "wallet_transaction.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet_transaction_updated",
+              "description": "wallet_transaction.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payment_recorded",
+              "description": "payment.recorded",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon_created",
+              "description": "coupon.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon_updated",
+              "description": "coupon.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon_deleted",
+              "description": "coupon.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "applied_coupon_created",
+              "description": "applied_coupon.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "applied_coupon_deleted",
+              "description": "applied_coupon.deleted",
               "isDeprecated": false,
               "deprecationReason": null
             }
@@ -36366,8 +36617,8 @@
                       "kind": "NON_NULL",
                       "name": null,
                       "ofType": {
-                        "kind": "SCALAR",
-                        "name": "String",
+                        "kind": "ENUM",
+                        "name": "ActivityTypeTypeEnum",
                         "ofType": null
                       }
                     }
@@ -36433,24 +36684,40 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "resourceId",
+                  "name": "resourceIds",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "String",
+                        "ofType": null
+                      }
+                    }
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
                   "deprecationReason": null
                 },
                 {
-                  "name": "resourceType",
+                  "name": "resourceTypes",
                   "description": null,
                   "type": {
-                    "kind": "SCALAR",
-                    "name": "String",
-                    "ofType": null
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "String",
+                        "ofType": null
+                      }
+                    }
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
