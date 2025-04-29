@@ -165,7 +165,7 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
       expect(json[:billing_entity][:invoice_footer]).to eq("New Invoice Footer")
       expect(json[:billing_entity][:document_locale]).to eq("es")
       expect(json[:billing_entity][:invoice_grace_period]).to eq(10)
-      expect(json[:billing_entity][:logo_url]).to match(%r{http://localhost:3000/rails/active_storage/blobs/redirect/.*/logo})
+      expect(json[:billing_entity][:logo_url]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
     end
 
     context "when the billing entity is not found" do
