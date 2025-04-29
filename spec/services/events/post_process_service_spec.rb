@@ -38,19 +38,19 @@ RSpec.describe Events::PostProcessService, type: :service do
       end
     end
 
-    it "flags the lifetime usage for refresh" do
-      create(:usage_threshold, plan:)
-
-      process_service.call
-
-      expect(subscription.reload.lifetime_usage).to be_present
-      expect(subscription.lifetime_usage.recalculate_current_usage).to be(true)
-    end
-
     it "flags wallets for refresh" do
       wallet = create(:wallet, customer:)
 
       expect { process_service.call }.to change { wallet.reload.ready_to_be_refreshed }.from(false).to(true)
+    end
+
+    it "tracks subscription activity" do
+      allow(UsageMonitoring::TrackSubscriptionActivityService).to receive(:call)
+
+      process_service.call
+
+      expect(UsageMonitoring::TrackSubscriptionActivityService).to have_received(:call)
+        .with(subscription:, organization:)
     end
 
     context "when event matches an pay_in_advance charge" do

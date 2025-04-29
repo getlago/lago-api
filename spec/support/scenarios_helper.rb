@@ -222,6 +222,7 @@ module ScenariosHelper
   def perform_usage_update
     Clock::ComputeAllDailyUsagesJob.perform_later
     Clock::RefreshLifetimeUsagesJob.perform_later
+    Clock::ProcessAllSubscriptionActivitiesJob.perform_later
     perform_all_enqueued_jobs
   end
 

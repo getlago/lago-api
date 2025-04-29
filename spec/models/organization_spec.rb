@@ -209,6 +209,20 @@ RSpec.describe Organization, type: :model do
     end
   end
 
+  describe ".with_any_premium_integrations" do
+    it do
+      create(:organization, premium_integrations: %w[okta xero anrok])
+      create(:organization, premium_integrations: %w[okta])
+      create(:organization, premium_integrations: %w[salesforce anrok])
+      create(:organization, premium_integrations: %w[salesforce])
+
+      expect(described_class.with_any_premium_integrations([]).count).to eq(0)
+      expect(described_class.with_any_premium_integrations("okta").count).to eq(2)
+      expect(described_class.with_any_premium_integrations(%w[okta anrok]).count).to eq(3)
+      expect(described_class.with_any_premium_integrations(%w[okta salesforce]).count).to eq(4)
+    end
+  end
+
   describe "Premium integrations scopes" do
     it "returns the organization if the premium integration is enabled" do
       Organization::PREMIUM_INTEGRATIONS.each do |integration|

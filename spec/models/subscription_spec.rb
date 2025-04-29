@@ -12,6 +12,7 @@ RSpec.describe Subscription, type: :model do
   it { is_expected.to have_many(:daily_usages) }
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_one(:lifetime_usage) }
+  it { is_expected.to have_many(:usage_thresholds).through(:plan) }
 
   describe "#upgraded?" do
     let(:previous_subscription) { nil }
