@@ -7,6 +7,13 @@ module ScenariosHelper
     put_with_token(organization, "/api/v1/organizations", {organization: params})
   end
 
+  ### Billing entities
+
+  def update_billing_entity(billing_entity, params)
+    # TODO: use the endpoint to update the billing entity instead when available
+    BillingEntities::UpdateService.call!(billing_entity: billing_entity.reload, params:)
+  end
+
   ### Billable metrics
 
   def create_metric(params)
