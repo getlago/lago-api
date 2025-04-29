@@ -31,8 +31,8 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
   end
 
   before do
-    create(:tax, organization:, rate: tax_rate_1, code: "tax-1", description: "VAT 1", name: "VAT")
-    create(:tax, organization:, rate: tax_rate_2, code: "tax-2", description: "VAT 2", name: "bug VAT")
+    create(:tax, :applied_to_billing_entity, organization:, rate: tax_rate_1, code: "tax-1", description: "VAT 1", name: "VAT")
+    create(:tax, :applied_to_billing_entity, organization:, rate: tax_rate_2, code: "tax-2", description: "VAT 2", name: "bug VAT")
     create(:standard_charge, billable_metric: billable_metric_cards, regroup_paid_fees: "invoice", pay_in_advance: true, invoiceable: false, prorated: true, plan:, properties: {amount: "30", grouped_by: nil})
     create(:standard_charge, billable_metric: billable_metric_transfer, regroup_paid_fees: "invoice", pay_in_advance: true, invoiceable: false, prorated: false, plan:, properties: {amount: "1", grouped_by: nil})
   end

@@ -6,7 +6,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
   let(:customer) { create(:customer, organization:) }
 
-  let(:tax) { create(:tax, organization:, rate: 10) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 10) }
 
   let(:plan1) do
     create(
@@ -343,7 +343,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
   context "when creating credit note with possible rounding issues" do
     context "when creating credit notes for small items with taxes, so sum of items with their taxes is bigger than invoice total amount" do
-      let(:tax) { create(:tax, organization:, rate: 20) }
+      let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
 
       context "when two similar items are refunded separately" do
         let(:add_ons) { create_list(:add_on, 2, organization:, amount_cents: 68_33) }
@@ -680,7 +680,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
     end
 
     context "when creating credit note with small items and applied coupons" do
-      let(:tax) { create(:tax, organization:, rate: 20) }
+      let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
       let(:plan_tax) { create(:tax, organization:, name: "Plan Tax", rate: 20, applied_to_organization: false) }
       let(:plan) do
         create(

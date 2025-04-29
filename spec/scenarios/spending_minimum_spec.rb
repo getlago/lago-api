@@ -5,7 +5,7 @@ require "rails_helper"
 describe "Spending Minimum Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
-  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 5000) }
   let(:metric) { create(:billable_metric, organization:) }
 

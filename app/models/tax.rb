@@ -41,11 +41,14 @@ class Tax < ApplicationRecord
   end
 
   def applicable_customers
-    return customers unless applied_to_organization
+    # return customers if the tax is not applied to any billing entity (tax is attached only to customers)
+    return customers if billing_entities.empty?
 
-    # NOTE: When applied to the organization
-    #       customer list = customer wihout tax + customer attached to the current tax
+    # NOTE: When applied to a billing_entity
+    #       customer list = customer without tax in billing_entities with this tax (tax used as default) +
+    #                       customer attached to the current tax
     customers_without_taxes_query = organization.customers.left_joins(:applied_taxes)
+      .where(billing_entity_id: billing_entities.select(:id))
       .group("customers.id")
       .having("COUNT(customers_taxes.id) = 0")
       .select(:id)

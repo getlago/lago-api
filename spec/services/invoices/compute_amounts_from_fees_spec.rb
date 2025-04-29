@@ -9,8 +9,8 @@ RSpec.describe Invoices::ComputeAmountsFromFees, type: :service do
   let(:customer) { create(:customer, organization:) }
   let(:invoice) { create(:invoice, organization:, customer:) }
 
-  let(:tax1) { create(:tax, organization:, rate: 10) }
-  let(:tax2) { create(:tax, organization:, rate: 20) }
+  let(:tax1) { create(:tax, :applied_to_billing_entity, organization:, rate: 10) }
+  let(:tax2) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
 
   let(:fee1) { create(:fee, invoice:, amount_cents: 151) }
   let(:fee2) { create(:fee, invoice:, amount_cents: 379, precise_coupons_amount_cents: 100) }

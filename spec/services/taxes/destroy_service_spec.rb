@@ -7,9 +7,8 @@ RSpec.describe Taxes::DestroyService, type: :service do
 
   let(:organization) { create(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
-  let(:tax) { create(:tax, organization:) }
-  let(:tax2) { create(:tax, organization:) }
-  let(:applied_tax2) { create(:billing_entity_applied_tax, billing_entity:, tax: tax2) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:) }
+  let(:tax2) { create(:tax, :applied_to_billing_entity, organization:) }
   let(:customer) { create(:customer, organization:) }
 
   describe "#call" do
@@ -25,16 +24,8 @@ RSpec.describe Taxes::DestroyService, type: :service do
       expect { destroy_service.call }.to change { draft_invoice.reload.ready_to_be_refreshed }.to(true)
     end
 
-    it "does not remove the tax from the default billing entity" do
-      expect { destroy_service.call }.not_to change { billing_entity.applied_taxes.count }
-    end
-
-    context "when tax is applied to the default billing entity" do
-      before { create(:billing_entity_applied_tax, billing_entity:, tax:) }
-
-      it "removes the tax from the default billing entity" do
-        expect { destroy_service.call }.to change { billing_entity.applied_taxes.count }.by(-1)
-      end
+    it "does not remove the other tax from the default billing entity" do
+      expect { destroy_service.call }.to change { billing_entity.applied_taxes.count }.by(-1)
     end
 
     context "when tax is not found" do

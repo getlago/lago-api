@@ -12,7 +12,7 @@ module Taxes
     def call
       return result.not_found_failure!(resource: "tax") unless tax
 
-      customer_ids = tax.applicable_customers.select(:id)
+      customer_ids = tax.applicable_customers.select(:id).to_a
 
       tax.name = params[:name] if params.key?(:name)
       tax.code = params[:code] if params.key?(:code)
