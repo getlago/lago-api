@@ -48,6 +48,8 @@ class Organization < ApplicationRecord
   has_many :error_details
   has_many :dunning_campaigns
 
+  has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
+
   has_many :stripe_payment_providers, class_name: "PaymentProviders::StripeProvider"
   has_many :gocardless_payment_providers, class_name: "PaymentProviders::GocardlessProvider"
   has_many :cashfree_payment_providers, class_name: "PaymentProviders::CashfreeProvider"
@@ -125,6 +127,8 @@ class Organization < ApplicationRecord
 
   before_create :set_hmac_key
   after_create :generate_document_number_prefix
+
+  scope :with_any_premium_integrations, ->(names) { where("premium_integrations && ARRAY[?]::varchar[]", Array.wrap(names)) }
 
   PREMIUM_INTEGRATIONS.each do |premium_integration|
     scope "with_#{premium_integration}_support", -> { where("? = ANY(premium_integrations)", premium_integration) }

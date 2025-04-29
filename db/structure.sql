@@ -34,11 +34,13 @@ ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF 
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_bff25bb1bb;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_bda048a8d9;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_ba128983c2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_b50dc82c1e;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_ac146c9541;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_ab16de0b32;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_aaa12f7d3e;
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
@@ -441,17 +443,20 @@ DROP INDEX IF EXISTS public.index_active_storage_attachments_on_blob_id;
 DROP INDEX IF EXISTS public.index_active_metric_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filter_values;
+DROP INDEX IF EXISTS public.idx_subscription_unique;
 DROP INDEX IF EXISTS public.idx_on_usage_threshold_id_invoice_id_cb82cdf163;
 DROP INDEX IF EXISTS public.idx_on_timestamp_charge_id_external_subscription_id;
 DROP INDEX IF EXISTS public.idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
 DROP INDEX IF EXISTS public.idx_on_organization_id_deleted_at_225e3f789d;
+DROP INDEX IF EXISTS public.idx_on_organization_id_376a587b04;
 DROP INDEX IF EXISTS public.idx_on_invoice_id_payment_request_id_aa550779a4;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_7edbcef7b5;
 DROP INDEX IF EXISTS public.idx_on_dunning_campaign_id_currency_fbf233b2ae;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655;
 DROP INDEX IF EXISTS public.idx_on_amount_cents_plan_id_recurring_888044d66b;
+DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
 DROP INDEX IF EXISTS public.idx_aggregation_lookup;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pkey;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
@@ -460,6 +465,7 @@ ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.versions DROP CONSTRAINT IF EXISTS versions_pkey;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS usage_thresholds_pkey;
+ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS usage_monitoring_subscription_activities_pkey;
 ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS subscriptions_pkey;
 ALTER TABLE IF EXISTS ONLY public.schema_migrations DROP CONSTRAINT IF EXISTS schema_migrations_pkey;
@@ -538,12 +544,15 @@ ALTER TABLE IF EXISTS ONLY public.active_storage_variant_records DROP CONSTRAINT
 ALTER TABLE IF EXISTS ONLY public.active_storage_blobs DROP CONSTRAINT IF EXISTS active_storage_blobs_pkey;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS active_storage_attachments_pkey;
 ALTER TABLE IF EXISTS public.versions ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.usage_monitoring_subscription_activities ALTER COLUMN id DROP DEFAULT;
 DROP TABLE IF EXISTS public.webhooks;
 DROP TABLE IF EXISTS public.webhook_endpoints;
 DROP SEQUENCE IF EXISTS public.versions_id_seq;
 DROP TABLE IF EXISTS public.versions;
 DROP TABLE IF EXISTS public.users;
 DROP TABLE IF EXISTS public.usage_thresholds;
+DROP SEQUENCE IF EXISTS public.usage_monitoring_subscription_activities_id_seq;
+DROP TABLE IF EXISTS public.usage_monitoring_subscription_activities;
 DROP TABLE IF EXISTS public.schema_migrations;
 DROP TABLE IF EXISTS public.refunds;
 DROP TABLE IF EXISTS public.recurring_transaction_rules;
@@ -3165,6 +3174,39 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: usage_monitoring_subscription_activities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usage_monitoring_subscription_activities (
+    id bigint NOT NULL,
+    organization_id uuid NOT NULL,
+    subscription_id uuid NOT NULL,
+    enqueued boolean DEFAULT false NOT NULL,
+    inserted_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    enqueued_at timestamp(6) without time zone
+);
+
+
+--
+-- Name: usage_monitoring_subscription_activities_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.usage_monitoring_subscription_activities_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: usage_monitoring_subscription_activities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.usage_monitoring_subscription_activities_id_seq OWNED BY public.usage_monitoring_subscription_activities.id;
+
+
+--
 -- Name: usage_thresholds; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3264,6 +3306,13 @@ CREATE TABLE public.webhooks (
     webhook_endpoint_id uuid,
     organization_id uuid
 );
+
+
+--
+-- Name: usage_monitoring_subscription_activities id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_subscription_activities ALTER COLUMN id SET DEFAULT nextval('public.usage_monitoring_subscription_activities_id_seq'::regclass);
 
 
 --
@@ -3890,6 +3939,14 @@ ALTER TABLE ONLY public.taxes
 
 
 --
+-- Name: usage_monitoring_subscription_activities usage_monitoring_subscription_activities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_subscription_activities
+    ADD CONSTRAINT usage_monitoring_subscription_activities_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: usage_thresholds usage_thresholds_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3953,6 +4010,13 @@ CREATE INDEX idx_aggregation_lookup ON public.cached_aggregations USING btree (e
 
 
 --
+-- Name: idx_enqueued_per_organization; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_enqueued_per_organization ON public.usage_monitoring_subscription_activities USING btree (organization_id, enqueued);
+
+
+--
 -- Name: idx_on_amount_cents_plan_id_recurring_888044d66b; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3985,6 +4049,13 @@ CREATE INDEX idx_on_invoice_custom_section_id_7edbcef7b5 ON public.invoice_custo
 --
 
 CREATE UNIQUE INDEX idx_on_invoice_id_payment_request_id_aa550779a4 ON public.invoices_payment_requests USING btree (invoice_id, payment_request_id);
+
+
+--
+-- Name: idx_on_organization_id_376a587b04; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_organization_id_376a587b04 ON public.usage_monitoring_subscription_activities USING btree (organization_id);
 
 
 --
@@ -4027,6 +4098,13 @@ CREATE INDEX idx_on_timestamp_charge_id_external_subscription_id ON public.cache
 --
 
 CREATE UNIQUE INDEX idx_on_usage_threshold_id_invoice_id_cb82cdf163 ON public.applied_usage_thresholds USING btree (usage_threshold_id, invoice_id);
+
+
+--
+-- Name: idx_subscription_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_subscription_unique ON public.usage_monitoring_subscription_activities USING btree (subscription_id);
 
 
 --
@@ -6896,6 +6974,14 @@ ALTER TABLE ONLY public.commitments_taxes
 
 
 --
+-- Name: usage_monitoring_subscription_activities fk_rails_ab16de0b32; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_subscription_activities
+    ADD CONSTRAINT fk_rails_ab16de0b32 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: charges_taxes fk_rails_ac146c9541; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6933,6 +7019,14 @@ ALTER TABLE ONLY public.lifetime_usages
 
 ALTER TABLE ONLY public.plans_taxes
     ADD CONSTRAINT fk_rails_bacde7a063 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
+
+
+--
+-- Name: usage_monitoring_subscription_activities fk_rails_bda048a8d9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_monitoring_subscription_activities
+    ADD CONSTRAINT fk_rails_bda048a8d9 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
 
 
 --
@@ -7142,6 +7236,7 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250429100148'),
 ('20250428130148'),
 ('20250428130129'),
 ('20250428130107'),

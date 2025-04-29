@@ -30,6 +30,13 @@ module Clockwork
       .perform_later
   end
 
+  subscription_activity_processing_interval = ENV["LAGO_SUBSCRIPTION_ACTIVITY_PROCESSING_INTERVAL_SECONDS"].presence || 5.minutes
+  every(subscription_activity_processing_interval.to_i.seconds, "schedule:process_subscription_activity") do
+    Clock::ProcessAllSubscriptionActivitiesJob
+      .set(sentry: {"slug" => "lago_process_subscription_activity", "cron" => "#{subscription_activity_processing_interval} interval"})
+      .perform_later
+  end
+
   lifetime_usage_refresh_interval = ENV["LAGO_LIFETIME_USAGE_REFRESH_INTERVAL_SECONDS"].presence || 5.minutes
   every(lifetime_usage_refresh_interval.to_i.seconds, "schedule:refresh_lifetime_usages") do
     unless ENV["LAGO_DISABLE_LIFETIME_USAGE_REFRESH"] == "true"
