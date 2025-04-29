@@ -83,11 +83,11 @@ RSpec.describe Mutations::BillingEntities::Update, type: :graphql do
     }
   end
 
+  around { |test| lago_premium!(&test) }
+
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "billing_entities:update"
-
-  around { |test| lago_premium!(&test) }
 
   it "updates the billing entity" do
     result = execute_graphql(
