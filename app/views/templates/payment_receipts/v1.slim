@@ -15,7 +15,7 @@ html
       .mb-24
         h1.invoice-title = I18n.t('payment_receipt.document_name')
         - if @billing_entity.logo.present?
-          img.header-logo src="data:#{@biling_entity.logo.content_type};base64,#{@biling_entity.base64_logo}"
+          img.header-logo src="data:#{@billing_entity.logo.content_type};base64,#{@billing_entity.base64_logo}"
 
       .mb-24.overflow-auto
         .invoice-information-column
