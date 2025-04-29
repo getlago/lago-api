@@ -28,6 +28,7 @@ module Invoices
         boundaries = termination_boundaries(subscription, subscription_boundaries)
 
         result.invoice_subscriptions << InvoiceSubscription.create!(
+          organization: subscription.organization,
           invoice:,
           subscription:,
           timestamp: boundaries[:timestamp],
