@@ -30,6 +30,13 @@ RSpec.describe Resolvers::BillingEntityResolver, type: :graphql do
           state
           country
           city
+          billingConfiguration {
+            id
+            invoiceFooter
+            documentLocale
+            invoiceGracePeriod
+          }
+          emailSettings
         }
       }
     GQL
@@ -37,7 +44,7 @@ RSpec.describe Resolvers::BillingEntityResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:billing_entity) { create(:billing_entity, organization:, invoice_footer: "test", email_settings: ["invoice.finalized"]) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
