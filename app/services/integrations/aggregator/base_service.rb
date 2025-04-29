@@ -137,6 +137,8 @@ module Integrations
         case provider
         when "hubspot"
           "customer.crm_provider_error"
+        when "avalara"
+          "customer.tax_provider_error"
         else
           "customer.accounting_provider_error"
         end
