@@ -27,7 +27,7 @@ ARG GOCARDLESS_CLIENT_ID
 ARG GOCARDLESS_CLIENT_SECRET
 
 RUN apt update && apt upgrade -y
-RUN apt install git libpq-dev curl -y
+RUN apt install git libpq-dev curl postgresql-client -y
 
 ENV SEGMENT_WRITE_KEY=$SEGMENT_WRITE_KEY
 ENV GOCARDLESS_CLIENT_ID=$GOCARDLESS_CLIENT_ID
