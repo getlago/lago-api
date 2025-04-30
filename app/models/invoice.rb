@@ -45,6 +45,8 @@ class Invoice < ApplicationRecord
   has_many :usage_thresholds, through: :applied_usage_thresholds
   has_many :applied_invoice_custom_sections
 
+  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
+
   has_one_attached :file
 
   monetize :coupons_amount_cents,

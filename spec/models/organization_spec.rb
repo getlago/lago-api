@@ -16,6 +16,10 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:gocardless_payment_providers) }
   it { is_expected.to have_many(:adyen_payment_providers) }
 
+  describe "Clickhouse associations", clickhouse: true do
+    it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
   it { is_expected.to have_many(:api_keys) }
   it { is_expected.to have_many(:billing_entities).conditions(archived_at: nil) }
   it { is_expected.to have_many(:all_billing_entities).class_name("BillingEntity") }

@@ -14,6 +14,10 @@ RSpec.describe Subscription, type: :model do
   it { is_expected.to have_one(:lifetime_usage) }
   it { is_expected.to have_many(:usage_thresholds).through(:plan) }
 
+  describe "Clickhouse associations", clickhouse: true do
+    it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
   describe "#upgraded?" do
     let(:previous_subscription) { nil }
     let(:subscription) do

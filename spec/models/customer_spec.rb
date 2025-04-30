@@ -26,6 +26,10 @@ RSpec.describe Customer, type: :model do
   it { is_expected.to have_many(:invoice_custom_section_selections) }
   it { is_expected.to have_many(:selected_invoice_custom_sections) }
 
+  describe "Clickhouse associations", clickhouse: true do
+    it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
   it "sets the default value to inherit" do
     expect(customer.finalize_zero_amount_invoice).to eq "inherit"
   end

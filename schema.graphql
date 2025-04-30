@@ -6890,6 +6890,7 @@ type Permissions {
   addonsView: Boolean!
   analyticsOverdueBalancesView: Boolean!
   analyticsView: Boolean!
+  auditLogsView: Boolean!
   billableMetricsCreate: Boolean!
   billableMetricsDelete: Boolean!
   billableMetricsUpdate: Boolean!

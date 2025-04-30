@@ -9,6 +9,10 @@ RSpec.describe BillableMetric, type: :model do
 
   it { is_expected.to belong_to(:organization) }
 
+  describe "Clickhouse associations", clickhouse: true do
+    it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
   it { is_expected.to have_many(:charges).dependent(:destroy) }
   it { is_expected.to have_many(:plans).through(:charges) }
   it { is_expected.to have_many(:fees).through(:charges) }

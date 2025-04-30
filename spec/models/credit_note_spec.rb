@@ -15,6 +15,10 @@ RSpec.describe CreditNote, type: :model do
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
 
+  describe "Clickhouse associations", clickhouse: true do
+    it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
   describe "sequential_id" do
     let(:invoice) { create(:invoice) }
     let(:customer) { invoice.customer }
