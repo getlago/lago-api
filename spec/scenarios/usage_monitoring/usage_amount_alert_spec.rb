@@ -16,22 +16,6 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
   let(:external_id) { "alerting-v1" }
   let(:subscription_external_id) { "sub_#{external_id}" }
 
-  let(:alert) do
-    alert = UsageMonitoring::UsageAmountAlert.create!(organization:, subscription_external_id:, code: :simple)
-    alert.thresholds.create!(value: 15_00, code: :warn, organization:)
-    alert.thresholds.create!(value: 30_00, code: :warn, organization:)
-    alert.thresholds.create!(value: 50_00, code: :alert, organization:)
-    alert.thresholds.create!(value: 1230_00, code: :block, organization:)
-    alert.reload
-  end
-
-  let(:alert_on_bm) do
-    alert = UsageMonitoring::BillableMetricUsageAmountAlert.create!(organization:, subscription_external_id:, code: :metric, billable_metric: bm_2)
-    alert.thresholds.create!(value: 399_00, code: :warn, organization:)
-    alert.thresholds.create!(value: 1000_00, code: :alert, organization:)
-    alert.reload
-  end
-
   include_context "with webhook tracking"
 
   around { |test| lago_premium!(&test) }
@@ -54,8 +38,25 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
       plan_code: plan.code
     })
     subscription = customer.subscriptions.sole
-    alert
-    alert_on_bm
+    alert = UsageMonitoring::CreateAlertService.call!(
+      organization:,
+      subscription:,
+      params: {alert_type: :usage_amount, code: :simple, thresholds: [
+        {value: 15_00, code: :warn},
+        {value: 30_00, code: :warn},
+        {value: 50_00, code: :alert},
+        {value: 1230_00, code: :block}
+      ]}
+    ).alert
+    alert_on_bm = UsageMonitoring::CreateAlertService.call!(
+      organization:,
+      subscription:,
+      billable_metric: bm_2,
+      params: {alert_type: :billable_metric_usage_amount, code: :bm, thresholds: [
+        {value: 399_00, code: :warn},
+        {value: 1000_00, code: :alert}
+      ]}
+    ).alert
 
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
     send_event!(code: billable_metric.code, properties: {ops_count: 2}, external_subscription_id: subscription_external_id)
@@ -120,17 +121,6 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
       end
 
       expect(UsageMonitoring::SubscriptionActivity.where(organization:).count).to eq 10
-    end
-  end
-
-  context "with deleted_at" do
-    it "maybe works" do
-      alert = UsageMonitoring::UsageAmountAlert.create!(organization:, subscription_external_id:)
-      expect(alert.deleted_at).to be_nil
-      alert.discard!
-      expect(alert.deleted_at).not_to be_nil
-      alert.reload
-      expect(alert.deleted_at).not_to be_nil
     end
   end
 end
