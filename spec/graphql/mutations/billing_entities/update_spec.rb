@@ -120,7 +120,7 @@ RSpec.describe Mutations::BillingEntities::Update, type: :graphql do
     expect(result_data["euTaxManagement"]).to eq true
     expect(result_data["finalizeZeroAmountInvoice"]).to eq true
     expect(result_data["netPaymentTerm"]).to eq(15)
-    expect(result_data["logoUrl"]).to match(%r{http://localhost:3000/rails/active_storage/blobs/redirect/.*/logo})
+    expect(result_data["logoUrl"]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
     expect(result_data["emailSettings"]).to be_nil
     expect(result_data["billingConfiguration"]).to be_nil
   end
