@@ -24,7 +24,7 @@ Rails.application.routes.draw do
 
       get "analytics/usage", to: "data_api/usages#index", as: :usage
 
-      resources :billing_entities, param: :code, only: %i[index show update] do
+      resources :billing_entities, param: :code, only: %i[index show update create] do
         post :manage_taxes, on: :member
       end
 
