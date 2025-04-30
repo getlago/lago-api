@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class UsageMonitoring::AlertThreshold < ApplicationRecord
+  SOFT_LIMIT = 20
+
   belongs_to :organization
   belongs_to :alert,
     foreign_key: "usage_monitoring_alert_id",

@@ -21,6 +21,10 @@ module UsageMonitoring
         return result.single_validation_failure!(field: :thresholds, error_code: "thresholds_must_be_present")
       end
 
+      if params[:thresholds].size > AlertThreshold::SOFT_LIMIT
+        return result.single_validation_failure!(field: :thresholds, error_code: "too_many_thresholds")
+      end
+
       ActiveRecord::Base.transaction do
         alert = Alert.create!(
           organization: organization,

@@ -76,5 +76,18 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         expect(result.error.message).to include("invalid_type")
       end
     end
+
+    context "with too many thresholds" do
+      let(:thresholds) do
+        21.times.map do |i|
+          {code: "warning#{i}", value: 10 + i}
+        end
+      end
+
+      it "returns a record validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.message).to include("too_many_thresholds")
+      end
+    end
   end
 end
