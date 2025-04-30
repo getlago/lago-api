@@ -89,6 +89,122 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
     end
   end
 
+  describe "POST /api/v1/billing_entities" do
+    subject do
+      post_with_token(organization, "/api/v1/billing_entities", create_params)
+    end
+
+    let(:organization) { create(:organization, premium_integrations: %w[multi_entities_enterprise]) }
+
+    let(:create_params) do
+      {
+        billing_entity: {
+          code: billing_entity_code,
+          name: "New Name",
+          email: "new@email.com",
+          legal_name: "New Legal Name",
+          legal_number: "1234567890",
+          tax_identification_number: "Tax-1234",
+          address_line1: "Calle de la Princesa 1",
+          address_line2: "Apt 1",
+          city: "Barcelona",
+          state: "Barcelona",
+          zipcode: "08001",
+          country: "ES",
+          default_currency: "EUR",
+          timezone: "Europe/Madrid",
+          document_numbering: "per_billing_entity",
+          document_number_prefix: "NEW-0001",
+          finalize_zero_amount_invoice: true,
+          net_payment_term: 10,
+          eu_tax_management: true,
+          logo:,
+          email_settings: ["invoice.finalized", "credit_note.created"],
+          billing_configuration: {
+            invoice_footer: "New Invoice Footer",
+            document_locale: "es",
+            invoice_grace_period: 10
+          }
+        }
+      }
+    end
+
+    let(:billing_entity_code) { "NEW-0001" }
+
+    let(:logo) do
+      logo_file = File.read(Rails.root.join("spec/factories/images/logo.png"))
+      base64_logo = Base64.encode64(logo_file)
+
+      "data:image/png;base64,#{base64_logo}"
+    end
+
+    around { |test| lago_premium!(&test) }
+
+    it "creates a billing entity" do
+      subject
+      expect(response).to be_successful
+      expect(json[:billing_entity][:lago_id]).to be_a(String)
+      expect(json[:billing_entity][:code]).to eq("NEW-0001")
+      expect(json[:billing_entity][:name]).to eq("New Name")
+      expect(json[:billing_entity][:email]).to eq("new@email.com")
+      expect(json[:billing_entity][:legal_name]).to eq("New Legal Name")
+      expect(json[:billing_entity][:legal_number]).to eq("1234567890")
+      expect(json[:billing_entity][:tax_identification_number]).to eq("Tax-1234")
+      expect(json[:billing_entity][:address_line1]).to eq("Calle de la Princesa 1")
+      expect(json[:billing_entity][:address_line2]).to eq("Apt 1")
+      expect(json[:billing_entity][:city]).to eq("Barcelona")
+      expect(json[:billing_entity][:state]).to eq("Barcelona")
+      expect(json[:billing_entity][:zipcode]).to eq("08001")
+      expect(json[:billing_entity][:country]).to eq("ES")
+      expect(json[:billing_entity][:default_currency]).to eq("EUR")
+      expect(json[:billing_entity][:timezone]).to eq("Europe/Madrid")
+      expect(json[:billing_entity][:document_numbering]).to eq("per_billing_entity")
+      expect(json[:billing_entity][:document_number_prefix]).to eq("NEW-0001")
+      expect(json[:billing_entity][:finalize_zero_amount_invoice]).to eq(true)
+      expect(json[:billing_entity][:net_payment_term]).to eq(10)
+      expect(json[:billing_entity][:eu_tax_management]).to eq(true)
+      expect(json[:billing_entity][:email_settings]).to eq(["invoice.finalized", "credit_note.created"])
+      expect(json[:billing_entity][:invoice_footer]).to eq("New Invoice Footer")
+      expect(json[:billing_entity][:document_locale]).to eq("es")
+      expect(json[:billing_entity][:invoice_grace_period]).to eq(10)
+      expect(json[:billing_entity][:logo_url]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
+    end
+
+    context "when the logo is not provided" do
+      let(:logo) { nil }
+
+      it "returns a 200" do
+        subject
+        expect(response).to be_successful
+        expect(json[:billing_entity][:logo_url]).to be_nil
+      end
+    end
+
+    context "when the code is already taken" do
+      let(:billing_entity_code) { organization.default_billing_entity.code }
+
+      it "returns a 422" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(json[:error]).to eq("Unprocessable Entity")
+        expect(json[:error_details]).to eq(code: ["value_already_exist"])
+      end
+    end
+
+    context "when the organization has no remaining billing entities" do
+      let(:organization) { create(:organization) }
+
+      it "returns a 403" do
+        subject
+
+        expect(response).to have_http_status(:forbidden)
+        expect(json[:error]).to eq("Forbidden")
+        expect(json[:code]).to eq("feature_unavailable")
+      end
+    end
+  end
+
   describe "PUT /api/v1/billing_entities/:code" do
     subject do
       put_with_token(organization, "/api/v1/billing_entities/#{billing_entity_code}", update_params)

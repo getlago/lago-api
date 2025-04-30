@@ -15,9 +15,13 @@ module Mutations
 
       type Types::BillingEntities::Object
 
-      # We're not allowing now to create a new billing entity, but this endpoint is needed for FE
-      def resolve(_args)
-        current_organization.default_billing_entity
+      def resolve(**args)
+        result = ::BillingEntities::CreateService.call(
+          organization: current_organization,
+          params: args
+        )
+
+        result.success? ? result.billing_entity : result_error(result)
       end
     end
   end
