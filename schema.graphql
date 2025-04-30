@@ -6369,7 +6369,7 @@ type Mutation {
   ): BillableMetric
 
   """
-  Updates a new Billing Entity
+  Updates a Billing Entity
   """
   updateBillingEntity(
     """
@@ -9162,7 +9162,7 @@ input UpdateBillingEntityInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  code: String!
+  code: String
   country: CountryCode
   defaultCurrency: CurrencyEnum
   documentNumberPrefix: String
@@ -9171,6 +9171,7 @@ input UpdateBillingEntityInput {
   emailSettings: [BillingEntityEmailSettingsEnum!]
   euTaxManagement: Boolean
   finalizeZeroAmountInvoice: Boolean
+  id: ID!
   legalName: String
   legalNumber: String
   logo: String
