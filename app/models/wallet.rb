@@ -11,6 +11,8 @@ class Wallet < ApplicationRecord
   has_many :wallet_transactions
   has_many :recurring_transaction_rules
 
+  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
+
   monetize :balance_cents
   monetize :consumed_amount_cents
   monetize :ongoing_balance_cents, :ongoing_usage_balance_cents, with_model_currency: :balance_currency
