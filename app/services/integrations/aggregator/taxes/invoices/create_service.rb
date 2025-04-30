@@ -45,6 +45,7 @@ module Integrations
 
             invoice_data = payload_body.first
             invoice_data["id"] = invoice.id
+            invoice_data["type"] = "salesInvoice" if integration.type.to_s == "Integrations::AvalaraIntegration"
 
             [invoice_data]
           end
