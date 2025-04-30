@@ -1,0 +1,96 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+Rspec.describe "All tables must have an organization_id" do
+  let(:internal_tables) do
+    %w[
+      active_storage_attachments
+      active_storage_blobs
+      active_storage_variant_records
+      ar_internal_metadata
+      schema_migrations
+    ]
+  end
+
+  let(:tables_to_skip) do
+    %w[
+      organizations
+      users
+    ]
+  end
+
+  let(:tables_to_migrate) do
+    %w[
+      add_ons_taxes
+      adjusted_fees
+      applied_add_ons
+      applied_coupons
+      applied_invoice_custom_sections
+      applied_usage_thresholds
+      billable_metric_filters
+      billing_entities_taxes
+      charge_filter_values
+      charge_filters
+      charges_taxes
+      commitments
+      commitments_taxes
+      coupon_targets
+      credit_note_items
+      credit_notes
+      credit_notes_taxes
+      credits
+      customer_metadata
+      customers_taxes
+      data_export_parts
+      dunning_campaign_thresholds
+      fees_taxes
+      group_properties
+      groups
+      idempotency_records
+      integration_collection_mappings
+      integration_customers
+      integration_items
+      integration_mappings
+      integration_resources
+      invoice_metadata
+      invoice_subscriptions
+      invoices_payment_requests
+      invoices_taxes
+      password_resets
+      payment_provider_customers
+      plans_taxes
+      recurring_transaction_rules
+      refunds
+      usage_thresholds
+      versions
+    ]
+  end
+
+  it do
+    query = <<~SQL
+      SELECT DISTINCT
+      	table_name
+      FROM
+      	information_schema.columns
+      WHERE
+      	table_schema = 'public'
+      	AND table_name NOT IN (
+      		SELECT
+      			table_name
+      		FROM
+      			information_schema.columns
+      		WHERE
+      			table_schema = 'public'
+      			AND column_name = 'organization_id'
+      	);
+    SQL
+
+    tables_without_organization_id = ActiveRecord::Base.connection.execute(query).to_a
+      .map { |r| r["table_name"] }
+      .reject { |table| internal_tables.include?(table) || tables_to_skip.include?(table) }
+      .sort
+
+    expect(tables_without_organization_id).to match_array(tables_to_migrate)
+  end
+end
