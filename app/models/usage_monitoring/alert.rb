@@ -13,6 +13,7 @@ module UsageMonitoring
     }
 
     CURRENT_USAGE_TYPES = %w[usage_amount billable_metric_usage_amount]
+    BILLABLE_METRIC_TYPES = %w[billable_metric_usage_amount]
 
     belongs_to :organization
     belongs_to :billable_metric, optional: true
@@ -25,6 +26,8 @@ module UsageMonitoring
     has_many :triggered_alerts,
       foreign_key: :usage_monitoring_alert_id,
       class_name: "UsageMonitoring::TriggeredAlert"
+
+    validate :billable_metric_when_required
 
     def self.find_sti_class(type_name)
       STI_MAPPING.fetch(type_name).constantize
@@ -60,6 +63,14 @@ module UsageMonitoring
     def find_value(current_metrics)
       raise NotImplementedError
     end
+
+    private
+
+    def billable_metric_when_required
+      if billable_metric_id.blank? && BILLABLE_METRIC_TYPES.include?(alert_type)
+        errors.add(:billable_metric_id, "is required for `#{alert_type}` alert type")
+      end
+    end
   end
 end
 
@@ -68,7 +79,7 @@ end
 # Table name: usage_monitoring_alerts
 #
 #  id                       :uuid             not null, primary key
-#  alert_type               :string           not null
+#  alert_type               :enum             not null
 #  code                     :string
 #  deleted_at               :datetime
 #  last_processed_at        :datetime

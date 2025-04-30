@@ -16,6 +16,16 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
     end
   end
 
+  describe "validations" do
+    context "when type requires billable_metric_id" do
+      it do
+        alert = build(:billable_metric_usage_amount_alert, billable_metric_id: nil)
+        expect(alert).to be_invalid
+        expect(alert.errors[:billable_metric_id]).to include("is required for `billable_metric_usage_amount` alert type")
+      end
+    end
+  end
+
   describe ".find_sti_class" do
     it "returns correct constant for known alert types" do
       expect(described_class.find_sti_class("usage_amount")).to eq(UsageMonitoring::UsageAmountAlert)

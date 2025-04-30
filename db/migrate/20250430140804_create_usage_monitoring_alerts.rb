@@ -2,11 +2,13 @@
 
 class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
   def change
+    create_enum :usage_monitoring_alert_types, %w[usage_amount billable_metric_usage_amount]
+
     create_table :usage_monitoring_alerts, id: :uuid do |t|
       t.references :organization, type: :uuid, foreign_key: true, null: false, index: true
       t.string :subscription_external_id, null: false, index: true
       t.references :billable_metric, type: :uuid, foreign_key: true, null: true, index: true
-      t.string :alert_type, null: false
+      t.enum :alert_type, enum_type: "usage_monitoring_alert_types", null: false
       t.numeric :previous_value, precision: 30, scale: 5, null: false, default: 0
       t.datetime :last_processed_at
       t.string :code

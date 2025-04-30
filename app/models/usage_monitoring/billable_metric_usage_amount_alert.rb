@@ -15,7 +15,7 @@ end
 # Table name: usage_monitoring_alerts
 #
 #  id                       :uuid             not null, primary key
-#  alert_type               :string           not null
+#  alert_type               :enum             not null
 #  code                     :string
 #  deleted_at               :datetime
 #  last_processed_at        :datetime
