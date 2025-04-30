@@ -7,7 +7,7 @@ module Mutations
         include AuthenticableApiUser
         include RequiredOrganization
 
-        REQUIRED_PERMISSION = "subscriptions:update" # TODO: confirm
+        REQUIRED_PERMISSION = "subscriptions:update"
 
         graphql_name "CreateSubscriptionAlert"
         description "Creates a new Alert for subscription"
@@ -16,7 +16,7 @@ module Mutations
         argument :billable_metric_id, ID, required: false
         argument :code, String, required: false
         argument :subscription_id, ID, required: true
-        argument :thresholds, [Types::UsageMonitoring::Alerts::ThresholdObject], required: true
+        argument :thresholds, [Types::UsageMonitoring::Alerts::ThresholdInput], required: true
 
         type Types::UsageMonitoring::Alerts::Object
 

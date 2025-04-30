@@ -10,8 +10,7 @@ module Types
 
         field :alert_type, AlertTypeEnum, null: false
         field :billable_metric, Types::BillableMetrics::Object
-        # field :organization, Types::Organizations::OrganizationType # TODO: needed?
-        field :subscription_external_id, String # TODO: subscriptoin?
+        field :subscription_external_id, String
 
         field :code, String, null: false
 

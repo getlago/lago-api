@@ -35,7 +35,7 @@ module UsageMonitoring
         )
 
         thresholds = params[:thresholds].map do |threshold|
-          threshold.merge(organization_id: organization.id)
+          threshold.to_h.merge(organization_id: organization.id)
         end
         alert.thresholds.create!(thresholds)
 

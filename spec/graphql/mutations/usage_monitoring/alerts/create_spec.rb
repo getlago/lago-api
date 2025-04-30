@@ -11,8 +11,8 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
   let(:mutation) do
     <<-GQL
     mutation ($input: CreateSubscriptionAlertInput!) {
-      CreateSubscriptionAlert(input: $input) {
-        subscriptionId
+      createSubscriptionAlert(input: $input) {
+        subscriptionExternalId
         alertType
         code
         thresholds {
@@ -41,32 +41,23 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
       variables: {
         input: {
           subscriptionId: subscription.id,
-          code: "gloabal",
+          code: "global",
           alertType: "usage_amount",
           thresholds: [
-            {
-              code: "warn",
-              value: "10"
-            },
-            {
-              code: "alert",
-              value: "50"
-            }
+            {code: "warn", value: "10"},
+            {code: "alert", value: "50"}
           ]
         }
       }
     )
 
-    pp result
-    result_data = result["data"]["createCustomerWalletTransaction"]
-    expect(result_data["collection"].map { |wt| wt["status"] })
-      .to contain_exactly("pending", "settled")
-    expect(result_data["collection"].map { |wt| wt["invoiceRequiresSuccessfulPayment"] }).to all be true
-    expect(result_data["collection"]).to all(include(
-      "metadata" => contain_exactly(
-        {"key" => "fixed", "value" => "0"},
-        {"key" => "test 2", "value" => "mew meta"}
-      )
-    ))
+    result_data = result["data"]["createSubscriptionAlert"]
+    expect(result_data["subscriptionExternalId"]).to eq subscription.external_id
+    expect(result_data["alertType"]).to eq "usage_amount"
+    expect(result_data["code"]).to eq "global"
+    expect(result_data["thresholds"]).to contain_exactly(
+      {"code" => "warn", "value" => "10.0"}, # Notice .0 since it's a BigDecimal
+      {"code" => "alert", "value" => "50.0"}
+    )
   end
 end
