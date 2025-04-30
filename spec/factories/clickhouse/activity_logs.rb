@@ -9,13 +9,12 @@ FactoryBot.define do
       metric { create(:billable_metric, organization: membership.organization) }
     end
 
-    organization_id { membership.organization_id }
+    organization { membership.organization }
+    resource { metric }
     user_id { membership.user_id }
     api_key_id { create(:api_key, organization: membership.organization).id }
     external_customer_id { customer.external_id }
     external_subscription_id { subscription.external_id }
-    resource_id { metric.id }
-    resource_type { metric.class.name }
     activity_type { "create" }
     activity_source { "api" }
     logged_at { Time.current }

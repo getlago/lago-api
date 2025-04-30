@@ -6,6 +6,9 @@ module Clickhouse
     self.primary_key = nil
 
     belongs_to :organization
+    belongs_to :resource, polymorphic: true
+
+    before_save :ensure_activity_id
 
     def user
       organization.users.find_by(id: user_id)
@@ -23,8 +26,10 @@ module Clickhouse
       organization.subscriptions.find_by(external_id: external_subscription_id)
     end
 
-    def resource
-      resource_type.constantize.find_by(id: resource_id)
+    private
+
+    def ensure_activity_id
+      self.activity_id = SecureRandom.uuid if activity_id.blank?
     end
   end
 end

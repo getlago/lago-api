@@ -8,6 +8,10 @@ RSpec.describe Plan, type: :model do
   it { is_expected.to have_one(:minimum_commitment) }
   it { is_expected.to have_many(:usage_thresholds) }
 
+  describe "Clickhouse associations", clickhouse: true do
+    it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
   it { is_expected.to validate_presence_of(:interval) }
   it { is_expected.to define_enum_for(:interval).with_values(Plan::INTERVALS) }
 
