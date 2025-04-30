@@ -46,6 +46,15 @@ module Types
       def is_default
         object.organization.default_billing_entity&.id == object.id
       end
+
+      def billing_configuration
+        {
+          id: "#{object&.id}-c1nf", # Each nested object needs ID so that appollo cache system can work properly
+          document_locale: object&.document_locale,
+          invoice_footer: object&.invoice_footer,
+          invoice_grace_period: object&.invoice_grace_period
+        }
+      end
     end
   end
 end
