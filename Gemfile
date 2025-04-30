@@ -72,10 +72,11 @@ gem "newrelic_rpm"
 gem "opentelemetry-exporter-otlp"
 gem "opentelemetry-instrumentation-all"
 gem "opentelemetry-sdk"
+
 gem "stackprof", require: false
-gem "sentry-rails", require: false
-gem "sentry-ruby", require: false
-gem "sentry-sidekiq", require: false
+gem "sentry-rails"
+gem "sentry-ruby"
+gem "sentry-sidekiq"
 
 # Storage
 gem "aws-sdk-s3", require: false
