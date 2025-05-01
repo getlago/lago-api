@@ -4,8 +4,9 @@ require "rails_helper"
 
 describe "Create partner and run billing Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil, document_numbering: "per_organization", premium_integrations: ["revenue_share"]) }
-  let(:partner) { create(:customer, organization:) }
-  let(:customers) { create_list(:customer, 2, organization:) }
+  let(:billing_entity) { organization.default_billing_entity }
+  let(:partner) { create(:customer, organization:, billing_entity:) }
+  let(:customers) { create_list(:customer, 2, organization:, billing_entity:) }
   let(:plan) { create(:plan, organization:) }
   let(:metric) { create(:latest_billable_metric, organization:) }
   let(:params) do
@@ -13,6 +14,10 @@ describe "Create partner and run billing Scenarios", :scenarios, type: :request 
   end
 
   around { |test| lago_premium!(&test) }
+
+  before do
+    billing_entity.update!(document_numbering: "per_billing_entity")
+  end
 
   it "allows to switch customer to partner before customer has assigned plans" do
     expect do
@@ -103,19 +108,23 @@ describe "Create partner and run billing Scenarios", :scenarios, type: :request 
     # May 1st: Billing run; check invoice numbering
     may1 = Time.zone.parse("2024-05-1")
     travel_to(may1) do
-      organization.update(created_at: 1.month.ago)
+      organization.update!(created_at: 1.month.ago)
       perform_billing
-      expect(organization.invoices.count).to eq(3)
+      expect(billing_entity.invoices.count).to eq(3)
+      expect(partner.invoices.count).to eq(1)
+
+      perform_billing
+      expect(billing_entity.invoices.count).to eq(3)
       expect(partner.invoices.count).to eq(1)
 
       partner_invoice = partner.invoices.first
       expect(partner_invoice.self_billed).to eq(true)
-      expect(partner_invoice.number).to eq("#{organization.document_number_prefix}-001-001")
+      expect(partner_invoice.number).to eq("#{billing_entity.document_number_prefix}-001-001")
 
       customers_invoices = customers.map(&:invoices).flatten
       expect(customers_invoices.map(&:self_billed)).not_to include(true)
       expect(customers_invoices.map do |inv|
-        inv.number.gsub("#{organization.document_number_prefix}-202405-", "")
+        inv.number.gsub("#{billing_entity.document_number_prefix}-202405-", "")
       end.uniq.sort).to eq(["001", "002"])
     end
 
@@ -123,17 +132,17 @@ describe "Create partner and run billing Scenarios", :scenarios, type: :request 
     june1 = Time.zone.parse("2024-06-1")
     travel_to(june1) do
       perform_billing
-      expect(organization.invoices.count).to eq(6)
+      expect(billing_entity.invoices.count).to eq(6)
       expect(partner.invoices.count).to eq(2)
 
       partner_invoice = partner.invoices.where(created_at: june1).first
       expect(partner_invoice.self_billed).to eq(true)
-      expect(partner_invoice.number).to eq("#{organization.document_number_prefix}-001-002")
+      expect(partner_invoice.number).to eq("#{billing_entity.document_number_prefix}-001-002")
 
       customers_invoices = customers.map { |c| c.invoices.where(created_at: june1) }.flatten
       expect(customers_invoices.map(&:self_billed).uniq).to eq([false])
       expect(customers_invoices.map do |inv|
-        inv.number.gsub("#{organization.document_number_prefix}-202406-", "")
+        inv.number.gsub("#{billing_entity.document_number_prefix}-202406-", "")
       end.uniq.sort).to eq(["003", "004"])
     end
     perform_overdue_balance_update
