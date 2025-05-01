@@ -465,10 +465,12 @@ class Invoice < ApplicationRecord
     return if organization_sequential_id.present? && organization_sequential_id.positive?
     return unless status_changed_to_finalized?
 
-    self.organization_sequential_id = generate_organization_sequential_id
+    organization_sequential_id, billing_entity_sequential_id = generate_sequential_ids
+    self.organization_sequential_id = organization_sequential_id
+    self.billing_entity_sequential_id = billing_entity_sequential_id if billing_entity&.per_billing_entity?
   end
 
-  def generate_organization_sequential_id
+  def generate_sequential_ids
     timezone = organization.timezone || "UTC"
     organization_sequence_scope = organization.invoices.with_generated_number.where(
       "date_trunc('month', created_at::timestamptz AT TIME ZONE ?)::date = ?",
@@ -492,6 +494,19 @@ class Invoice < ApplicationRecord
 
         break organization_sequential_id unless organization_sequence_scope.exists?(organization_sequential_id:)
       end
+
+      billing_entity_sequential_id = billing_entity
+        .invoices
+        .non_self_billed
+        .with_generated_number
+        .maximum(:billing_entity_sequential_id) || 0
+
+      loop do
+        billing_entity_sequential_id += 1
+        break billing_entity_sequential_id unless billing_entity.invoices.non_self_billed.with_generated_number.exists?(billing_entity_sequential_id:)
+      end
+
+      [organization_sequential_id, billing_entity_sequential_id]
     end
 
     # NOTE: If the application was unable to acquire the lock, the block returns false
