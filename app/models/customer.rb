@@ -248,6 +248,10 @@ class Customer < ApplicationRecord
     wallets.active.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
   end
 
+  def tax_customer
+    anrok_customer || avalara_customer
+  end
+
   private
 
   def ensure_slug

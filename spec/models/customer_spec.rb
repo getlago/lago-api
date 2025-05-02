@@ -855,4 +855,34 @@ RSpec.describe Customer, type: :model do
       }.from(false).to(true)
     end
   end
+
+  describe "#tax_customer" do
+    let(:customer) { create(:customer) }
+
+    context "with anrok attached" do
+      let(:anrok_customer) { create(:anrok_customer, customer:) }
+
+      before { anrok_customer}
+
+      it "returns anrok customer" do
+        expect(customer.tax_customer).to eq(anrok_customer)
+      end
+    end
+
+    context "with avalara attached" do
+      let(:avalara_customer) { create(:avalara_customer, customer:) }
+
+      before { avalara_customer}
+
+      it "returns avalara customer" do
+        expect(customer.tax_customer).to eq(avalara_customer)
+      end
+    end
+
+    context "without any tax integration" do
+      it "returns nil" do
+        expect(customer.tax_customer).to eq(nil)
+      end
+    end
+  end
 end
