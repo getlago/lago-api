@@ -31,29 +31,14 @@ module Charges
       charge = subscription.plan.charges.find_by(billable_metric:)
       return 0 unless charge
 
-      # For past dates, get the last active charge version
-      # For current/future dates, use the current charge
-      if date.to_time < Time.current
-        version = charge.versions.where("created_at <= ?", date.to_time).order(created_at: :desc).first
-        return 0 unless version
+      properties = charge.properties.presence || Charges::BuildDefaultPropertiesService.call(charge.charge_model)
 
-        object = if version.event == "create"
-          version.item
-        else
-          version.reify
-        end
-
-        properties = object.properties.presence || Charges::BuildDefaultPropertiesService.call(object.charge_model)
-      else
-        properties = charge.properties.presence || Charges::BuildDefaultPropertiesService.call(charge.charge_model)
-      end
-
-      properties = Charges::FilterChargeModelPropertiesService.call(charge:, properties:).properties
+      filtered_properties = Charges::FilterChargeModelPropertiesService.call(charge:, properties:).properties
 
       charge_model = ChargeModelFactory.new_instance(
         charge:,
         aggregation_result: build_aggregation_result,
-        properties:
+        properties: filtered_properties
       )
 
       charge_model.apply.amount
