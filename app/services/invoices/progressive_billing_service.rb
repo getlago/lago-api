@@ -36,7 +36,7 @@ module Invoices
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
 
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:)
-        return totals_result if !totals_result.success? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
+        next if !totals_result.success? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
 
         totals_result.raise_if_error!
 
@@ -47,12 +47,14 @@ module Invoices
         invoice.finalized!
       end
 
-      Utils::SegmentTrack.invoice_created(invoice)
-      SendWebhookJob.perform_later("invoice.created", invoice)
-      Invoices::GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
-      Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
-      Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
-      Invoices::Payments::CreateService.call_async(invoice:)
+      if invoice.finalized?
+        Utils::SegmentTrack.invoice_created(invoice)
+        SendWebhookJob.perform_later("invoice.created", invoice)
+        Invoices::GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
+        Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
+        Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
+        Invoices::Payments::CreateService.call_async(invoice:)
+      end
 
       result.invoice = invoice
       result
