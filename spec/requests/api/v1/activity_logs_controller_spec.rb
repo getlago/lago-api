@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::ActivityLogsController, type: :request, clickhouse: true do
+  let(:organization) { activity_log.organization }
+  let(:params) { {} }
+
   describe "GET /api/v1/activity_logs" do
     subject { get_with_token(organization, "/api/v1/activity_logs", params) }
 
@@ -20,8 +23,6 @@ RSpec.describe Api::V1::ActivityLogsController, type: :request, clickhouse: true
       )
     end
     let(:invoice) { create(:invoice, organization:) }
-    let(:organization) { activity_log.organization }
-    let(:params) { {} }
 
     before do
       activity_log
@@ -169,6 +170,25 @@ RSpec.describe Api::V1::ActivityLogsController, type: :request, clickhouse: true
         expect(json[:meta][:total_pages]).to eq(2)
         expect(json[:meta][:total_count]).to eq(2)
       end
+    end
+  end
+
+  describe "GET /api/v1/activity_logs/:activity_id" do
+    subject { get_with_token(organization, "/api/v1/activity_logs/#{activity_log.activity_id}", params) }
+
+    let(:activity_log) { create(:clickhouse_activity_log) }
+
+    include_examples "requires API permission", "activity_log", "read"
+
+    it "returns activity logs" do
+      subject
+
+      expect(response).to have_http_status(:success)
+      expect(json[:activity_log]).to include(
+        activity_id: activity_log.activity_id,
+        activity_source: activity_log.activity_source,
+        logged_at: activity_log.logged_at.iso8601
+      )
     end
   end
 end

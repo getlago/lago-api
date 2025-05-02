@@ -27,6 +27,21 @@ module Api
         end
       end
 
+      def show
+        activity_log = current_organization.activity_logs.find_by(
+          activity_id: params[:activity_id]
+        )
+
+        return not_found_error(resource: "activity_log") unless activity_log
+
+        render(
+          json: ::V1::ActivityLogSerializer.new(
+            activity_log,
+            root_name: "activity_log"
+          )
+        )
+      end
+
       private
 
       def resource_name
