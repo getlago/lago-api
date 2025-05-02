@@ -11,9 +11,9 @@ module Integrations
 
           def call
             return result unless integration
-            return result unless integration.type == "Integrations::AnrokIntegration"
+            return result unless ::Integrations::BaseIntegration::INTEGRATION_TAX_TYPES.include?(integration.type)
 
-            throttle!(:anrok)
+            throttle!(:anrok, :avalara)
 
             response = http_client.post_with_response(payload, headers)
             body = parse_response(response)

@@ -42,6 +42,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::Payloads::Avalara do
       invoice:,
       add_on:,
       units: 1,
+      amount_cents: 2035,
       created_at: current_time - 3.seconds
     )
   end
@@ -51,6 +52,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::Payloads::Avalara do
       invoice:,
       add_on: add_on_two,
       units: 1,
+      amount_cents: 2035,
       created_at: current_time - 2.seconds
     )
   end
@@ -95,14 +97,14 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::Payloads::Avalara do
               "item_id" => fee_add_on.id,
               "item_code" => "m1",
               "unit" => 1,
-              "amount_cents" => 200
+              "amount" => 20.35
             },
             {
               "item_key" => fee_add_on_two.item_key,
               "item_id" => fee_add_on_two.id,
               "item_code" => "1",
               "unit" => 1,
-              "amount_cents" => 200
+              "amount" => 20.35
             }
           ]
         }

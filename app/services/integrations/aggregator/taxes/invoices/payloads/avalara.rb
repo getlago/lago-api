@@ -61,7 +61,7 @@ module Integrations
                 "item_id" => fee.id || fee.item_id,
                 "item_code" => mapped_item.external_id,
                 "unit" => fee.units,
-                "amount_cents" => fee.sub_total_excluding_taxes_amount_cents&.to_i
+                "amount" => fee.sub_total_excluding_taxes_amount_cents&.to_i&.fdiv(fee.amount.currency.subunit_to_unit)
               }
             end
 
