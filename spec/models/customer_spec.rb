@@ -862,7 +862,7 @@ RSpec.describe Customer, type: :model do
     context "with anrok attached" do
       let(:anrok_customer) { create(:anrok_customer, customer:) }
 
-      before { anrok_customer}
+      before { anrok_customer }
 
       it "returns anrok customer" do
         expect(customer.tax_customer).to eq(anrok_customer)
@@ -872,7 +872,7 @@ RSpec.describe Customer, type: :model do
     context "with avalara attached" do
       let(:avalara_customer) { create(:avalara_customer, customer:) }
 
-      before { avalara_customer}
+      before { avalara_customer }
 
       it "returns avalara customer" do
         expect(customer.tax_customer).to eq(avalara_customer)
