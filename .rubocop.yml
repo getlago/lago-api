@@ -20,25 +20,25 @@ AllCops:
   NewCops: disable
   DisplayStyleGuide: true
   Exclude:
-    - 'bin/**/*'
-    - 'db/schema.rb'
-    - 'db/*_schema.rb'
-    - 'storage/**/*'
-    - 'tmp/**/*'
-    - 'coverage/**/*'
-    - 'log/**/*'
+    - "bin/**/*"
+    - "db/schema.rb"
+    - "db/*_schema.rb"
+    - "storage/**/*"
+    - "tmp/**/*"
+    - "coverage/**/*"
+    - "log/**/*"
 
 # TODO: Fix these services
 Lago/ServiceCall:
   Exclude:
-    - 'app/services/integration_mappings/create_service.rb'
-    - 'app/services/integrations/anrok/create_service.rb'
-    - 'app/services/integrations/okta/create_service.rb'
-    - 'app/services/integrations/xero/create_service.rb'
-    - 'app/services/invites/accept_service.rb'
-    - 'app/services/invoices/finalize_batch_service.rb'
-    - 'app/services/invoices/payments/retry_batch_service.rb'
-    - 'app/services/invoices/retry_batch_service.rb'
+    - "app/services/integration_mappings/create_service.rb"
+    - "app/services/integrations/anrok/create_service.rb"
+    - "app/services/integrations/okta/create_service.rb"
+    - "app/services/integrations/xero/create_service.rb"
+    - "app/services/invites/accept_service.rb"
+    - "app/services/invoices/finalize_batch_service.rb"
+    - "app/services/invoices/payments/retry_batch_service.rb"
+    - "app/services/invoices/retry_batch_service.rb"
 
 Style/FrozenStringLiteralComment:
   Enabled: true
@@ -49,26 +49,29 @@ Performance/CaseWhenSplat:
 
 Rails/ApplicationJob:
   Exclude:
-    - 'spec/support/jobs/**/*'
+    - "spec/support/jobs/**/*"
 
 Rails/InverseOf:
-  Description: 'Checks for associations where the inverse cannot be determined automatically.'
+  Description: "Checks for associations where the inverse cannot be determined automatically."
   Enabled: false
 
 Rails/HttpStatus:
-  Description: 'Enforces use of symbolic or numeric value to describe HTTP status.'
+  Description: "Enforces use of symbolic or numeric value to describe HTTP status."
   Enabled: false
 
 Rails/HasManyOrHasOneDependent:
   Description: 'Forces a "dependent" options for has_one and has_many rails relations.'
   Enabled: false
 
+Rails/TransactionExitStatement:
+  Enabled: true
+
 RSpec/ExampleLength:
-  Description: 'Checks for long examples.'
+  Description: "Checks for long examples."
   Enabled: false
 
 RSpec/MultipleExpectations:
-  Description: 'Checks if examples contain too many expect calls.'
+  Description: "Checks if examples contain too many expect calls."
   Enabled: false
 
 RSpec/MultipleMemoizedHelpers:
@@ -96,10 +99,10 @@ GraphQL/ExtractType:
 
 GraphQL/ExtractInputType:
   Exclude:
-    - 'app/graphql/mutations/applied_coupons/create.rb'
-    - 'app/graphql/mutations/credit_notes/create.rb'
-    - 'app/graphql/mutations/invites/accept.rb'
-    - 'app/graphql/mutations/plans/create.rb'
-    - 'app/graphql/mutations/plans/update.rb'
-    - 'app/graphql/mutations/register_user.rb'
-    - 'app/graphql/mutations/wallet_transactions/create.rb'
+    - "app/graphql/mutations/applied_coupons/create.rb"
+    - "app/graphql/mutations/credit_notes/create.rb"
+    - "app/graphql/mutations/invites/accept.rb"
+    - "app/graphql/mutations/plans/create.rb"
+    - "app/graphql/mutations/plans/update.rb"
+    - "app/graphql/mutations/register_user.rb"
+    - "app/graphql/mutations/wallet_transactions/create.rb"
