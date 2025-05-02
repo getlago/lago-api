@@ -15,7 +15,7 @@ FactoryBot.define do
     api_key_id { create(:api_key, organization: membership.organization).id }
     external_customer_id { customer.external_id }
     external_subscription_id { subscription.external_id }
-    activity_type { "create" }
+    activity_type { "billable_metric.created" }
     activity_source { "api" }
     logged_at { Time.current }
     activity_object { {"foo" => "bar", "baz" => "qux"} }
