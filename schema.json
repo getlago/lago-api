@@ -104,6 +104,30 @@
               "args": []
             },
             {
+              "name": "activityObject",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "JSON",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "activityObjectChanges",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "JSON",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "activitySource",
               "description": null,
               "type": {
@@ -111,7 +135,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "ActivitySourceTypeEnum",
+                  "name": "ActivitySourceEnum",
                   "ofType": null
                 }
               },
@@ -127,7 +151,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "ActivityTypeTypeEnum",
+                  "name": "ActivityTypeEnum",
                   "ofType": null
                 }
               },
@@ -204,18 +228,6 @@
               "args": []
             },
             {
-              "name": "resourceChanges",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
               "name": "resourceId",
               "description": null,
               "type": {
@@ -248,11 +260,11 @@
               "args": []
             },
             {
-              "name": "user",
+              "name": "userEmail",
               "description": null,
               "type": {
-                "kind": "OBJECT",
-                "name": "User",
+                "kind": "SCALAR",
+                "name": "String",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -316,8 +328,8 @@
         },
         {
           "kind": "ENUM",
-          "name": "ActivitySourceTypeEnum",
-          "description": "Activity Logs source type enums",
+          "name": "ActivitySourceEnum",
+          "description": "Activity Logs source enums",
           "interfaces": null,
           "possibleTypes": null,
           "fields": null,
@@ -345,8 +357,8 @@
         },
         {
           "kind": "ENUM",
-          "name": "ActivityTypeTypeEnum",
-          "description": "Activity Logs Types type enums",
+          "name": "ActivityTypeEnum",
+          "description": "Activity Logs type enums",
           "interfaces": null,
           "possibleTypes": null,
           "fields": null,
@@ -36598,7 +36610,7 @@
                       "name": null,
                       "ofType": {
                         "kind": "ENUM",
-                        "name": "ActivitySourceTypeEnum",
+                        "name": "ActivitySourceEnum",
                         "ofType": null
                       }
                     }
@@ -36618,7 +36630,7 @@
                       "name": null,
                       "ofType": {
                         "kind": "ENUM",
-                        "name": "ActivityTypeTypeEnum",
+                        "name": "ActivityTypeEnum",
                         "ofType": null
                       }
                     }

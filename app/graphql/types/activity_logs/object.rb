@@ -7,17 +7,22 @@ module Types
       description "Base activity log"
 
       field :activity_id, ID, null: false
-      field :activity_source, Types::ActivityLogs::ActivitySourceTypeEnum, null: false
-      field :activity_type, Types::ActivityLogs::ActivityTypeTypeEnum, null: false
+      field :activity_object, GraphQL::Types::JSON
+      field :activity_object_changes, GraphQL::Types::JSON
+      field :activity_source, Types::ActivityLogs::ActivitySourceEnum, null: false
+      field :activity_type, Types::ActivityLogs::ActivityTypeEnum, null: false
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :external_customer_id, String
       field :external_subscription_id, String
       field :logged_at, GraphQL::Types::ISO8601DateTime, null: false
       field :organization, Types::Organizations::OrganizationType
-      field :resource_changes, String
       field :resource_id, String, null: false
       field :resource_type, String, null: false
-      field :user, Types::UserType
+      field :user_email, String
+
+      def user_email
+        object.user.email
+      end
     end
   end
 end

@@ -12,8 +12,8 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
 
-    argument :activity_sources, [Types::ActivityLogs::ActivitySourceTypeEnum], required: false
-    argument :activity_types, [Types::ActivityLogs::ActivityTypeTypeEnum], required: false
+    argument :activity_sources, [Types::ActivityLogs::ActivitySourceEnum], required: false
+    argument :activity_types, [Types::ActivityLogs::ActivityTypeEnum], required: false
     argument :api_key_ids, [String], required: false
     argument :external_customer_id, String, required: false
     argument :external_subscription_id, String, required: false

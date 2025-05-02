@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Types::ActivityLogs::ActivityTypeTypeEnum do
+RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
   it "enumerates the correct values" do
     expect(described_class.values.keys).to match_array(
       %w[

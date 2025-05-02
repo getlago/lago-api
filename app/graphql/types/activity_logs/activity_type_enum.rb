@@ -2,8 +2,8 @@
 
 module Types
   module ActivityLogs
-    class ActivityTypeTypeEnum < Types::BaseEnum
-      description "Activity Logs Types type enums"
+    class ActivityTypeEnum < Types::BaseEnum
+      description "Activity Logs type enums"
 
       Clickhouse::ActivityLog::ACTIVITY_TYPES.each do |key, value|
         value key, value:, description: value

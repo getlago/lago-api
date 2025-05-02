@@ -20,17 +20,18 @@ Base activity log
 """
 type ActivityLog {
   activityId: ID!
-  activitySource: ActivitySourceTypeEnum!
-  activityType: ActivityTypeTypeEnum!
+  activityObject: JSON
+  activityObjectChanges: JSON
+  activitySource: ActivitySourceEnum!
+  activityType: ActivityTypeEnum!
   createdAt: ISO8601DateTime!
   externalCustomerId: String
   externalSubscriptionId: String
   loggedAt: ISO8601DateTime!
   organization: Organization
-  resourceChanges: String
   resourceId: String!
   resourceType: String!
-  user: User
+  userEmail: String
 }
 
 """
@@ -49,18 +50,18 @@ type ActivityLogCollection {
 }
 
 """
-Activity Logs source type enums
+Activity Logs source enums
 """
-enum ActivitySourceTypeEnum {
+enum ActivitySourceEnum {
   api
   front
   system
 }
 
 """
-Activity Logs Types type enums
+Activity Logs type enums
 """
-enum ActivityTypeTypeEnum {
+enum ActivityTypeEnum {
   """
   applied_coupon.created
   """
@@ -7405,7 +7406,7 @@ type Query {
   """
   Query activity logs of an organization
   """
-  activityLogs(activitySources: [ActivitySourceTypeEnum!], activityTypes: [ActivityTypeTypeEnum!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, limit: Int, page: Int, resourceIds: [String!], resourceTypes: [String!], toDate: ISO8601Date, userEmails: [String!]): ActivityLogCollection
+  activityLogs(activitySources: [ActivitySourceEnum!], activityTypes: [ActivityTypeEnum!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, limit: Int, page: Int, resourceIds: [String!], resourceTypes: [String!], toDate: ISO8601Date, userEmails: [String!]): ActivityLogCollection
 
   """
   Query a single add-on of an organization
