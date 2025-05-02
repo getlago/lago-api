@@ -81,6 +81,532 @@
           "enumValues": null
         },
         {
+          "kind": "OBJECT",
+          "name": "ActivityLog",
+          "description": "Base activity log",
+          "interfaces": [],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "activityId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "activityObject",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "JSON",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "activityObjectChanges",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "JSON",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "activitySource",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "ActivitySourceEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "activityType",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "ActivityTypeEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "createdAt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "externalCustomerId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "externalSubscriptionId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "loggedAt",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "organization",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "Organization",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "resourceId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "resourceType",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "userEmail",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "ActivityLogCollection",
+          "description": "ActivityLogCollection type",
+          "interfaces": [],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "collection",
+              "description": "A collection of paginated ActivityLogCollection",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "ActivityLog",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "metadata",
+              "description": "Pagination Metadata for navigating the Pagination",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CollectionMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "ActivitySourceEnum",
+          "description": "Activity Logs source enums",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "api",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "front",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "system",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
+          "kind": "ENUM",
+          "name": "ActivityTypeEnum",
+          "description": "Activity Logs type enums",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "billable_metric_created",
+              "description": "billable_metric.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billable_metric_updated",
+              "description": "billable_metric.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billable_metric_deleted",
+              "description": "billable_metric.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_created",
+              "description": "plan.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_updated",
+              "description": "plan.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan_deleted",
+              "description": "plan.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "customer_created",
+              "description": "customer.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "customer_updated",
+              "description": "customer.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "customer_deleted",
+              "description": "customer.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_drafted",
+              "description": "invoice.drafted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_failed",
+              "description": "invoice.failed",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_created",
+              "description": "invoice.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_paid_credit_added",
+              "description": "invoice.paid_credit_added",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_generated",
+              "description": "invoice.generated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_payment_status_updated",
+              "description": "invoice.payment_status_updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_payment_overdue",
+              "description": "invoice.payment_overdue",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_voided",
+              "description": "invoice.voided",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice_payment_failure",
+              "description": "invoice.payment_failure",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payment_receipt_created",
+              "description": "payment_receipt.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payment_receipt_generated",
+              "description": "payment_receipt.generated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "credit_note_created",
+              "description": "credit_note.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "credit_note_generated",
+              "description": "credit_note.generated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "credit_note_refund_failure",
+              "description": "credit_note.refund_failure",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entities_created",
+              "description": "billing_entities.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entities_updated",
+              "description": "billing_entities.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entities_deleted",
+              "description": "billing_entities.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscription_started",
+              "description": "subscription.started",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscription_terminated",
+              "description": "subscription.terminated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscription_updated",
+              "description": "subscription.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet_created",
+              "description": "wallet.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet_updated",
+              "description": "wallet.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet_transaction_payment_failure",
+              "description": "wallet_transaction.payment_failure",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet_transaction_created",
+              "description": "wallet_transaction.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet_transaction_updated",
+              "description": "wallet_transaction.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payment_recorded",
+              "description": "payment.recorded",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon_created",
+              "description": "coupon.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon_updated",
+              "description": "coupon.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon_deleted",
+              "description": "coupon.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "applied_coupon_created",
+              "description": "applied_coupon.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "applied_coupon_deleted",
+              "description": "applied_coupon.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
           "kind": "INPUT_OBJECT",
           "name": "AddAdyenPaymentProviderInput",
           "description": "Adyen input arguments",
@@ -36009,6 +36535,240 @@
           "interfaces": [],
           "possibleTypes": null,
           "fields": [
+            {
+              "name": "activityLog",
+              "description": "Query a single activity log of an organization",
+              "type": {
+                "kind": "OBJECT",
+                "name": "ActivityLog",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "activityId",
+                  "description": "Uniq ID of the activity log",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
+              "name": "activityLogs",
+              "description": "Query activity logs of an organization",
+              "type": {
+                "kind": "OBJECT",
+                "name": "ActivityLogCollection",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "limit",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "page",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "Int",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "activitySources",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "ENUM",
+                        "name": "ActivitySourceEnum",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "activityTypes",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "ENUM",
+                        "name": "ActivityTypeEnum",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "apiKeyIds",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "String",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "externalCustomerId",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "externalSubscriptionId",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "fromDate",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ISO8601Date",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "resourceIds",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "String",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "resourceTypes",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "String",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "toDate",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ISO8601Date",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "userEmails",
+                  "description": null,
+                  "type": {
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "SCALAR",
+                        "name": "String",
+                        "ofType": null
+                      }
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
             {
               "name": "addOn",
               "description": "Query a single add-on of an organization",
