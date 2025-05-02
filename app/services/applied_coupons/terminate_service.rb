@@ -2,6 +2,8 @@
 
 module AppliedCoupons
   class TerminateService < BaseService
+    Result = BaseResult[:applied_coupon]
+
     def initialize(applied_coupon:)
       @applied_coupon = applied_coupon
       super

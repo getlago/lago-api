@@ -2,6 +2,8 @@
 
 module AppliedCoupons
   class CreateService < BaseService
+    Result = BaseResult[:applied_coupon]
+
     def initialize(customer:, coupon:, params:)
       @customer = customer
       @coupon = coupon

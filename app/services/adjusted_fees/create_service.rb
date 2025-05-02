@@ -2,6 +2,8 @@
 
 module AdjustedFees
   class CreateService < BaseService
+    Result = BaseResult[:fee, :adjusted_fee]
+
     def initialize(invoice:, params:)
       @invoice = invoice
       @organization = invoice.organization
