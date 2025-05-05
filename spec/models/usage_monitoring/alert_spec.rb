@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe UsageMonitoring::Alert, type: :model do
-  let(:alert) { create(:alert, thresholds: [10, 30, 50]) }
+  let(:alert) { create(:alert, thresholds: [10, 30, 50], recurring_threshold: 100) }
 
   describe "associations" do
     it do
@@ -47,9 +47,9 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
     end
   end
 
-  describe "#thresholds_values" do
+  describe "#non_recurring_thresholds_values" do
     it "returns sorted unique threshold values" do
-      expect(alert.thresholds_values).to eq([10, 30, 50])
+      expect(alert.non_recurring_thresholds_values).to eq([10, 30, 50])
     end
   end
 
@@ -65,16 +65,36 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
       alert.previous_value = 30
       expect(alert.find_thresholds_crossed(29)).to be_empty
     end
+
+    it "returns recurring threshold if crossed" do
+      alert.previous_value = 33
+      expect(alert.find_thresholds_crossed(351)).to eq([50, 150, 250, 350])
+    end
   end
 
   describe "#formatted_crossed_thresholds" do
     it "returns formatted array of crossed thresholds matching given values" do
       result = alert.formatted_crossed_thresholds([10, 30])
-      expect(result).to contain_exactly({code: "warn10", value: 10}, {code: "warn30", value: 30})
+      expect(result).to contain_exactly(
+        {code: "warn10", value: 10, recurring: false},
+        {code: "warn30", value: 30, recurring: false}
+      )
     end
 
-    it "returns empty array if no thresholds match" do
-      expect(alert.formatted_crossed_thresholds([40])).to eq([])
+    context "when crossed thresholds isn't part of threshold values" do
+      it "assumes it's recurring" do
+        expect(alert.formatted_crossed_thresholds([40]))
+          .to eq([{code: "rec", recurring: true, value: 40}])
+      end
+    end
+
+    context "without recurring threshold" do
+      let(:alert) { create(:alert, thresholds: [10, 30, 50]) }
+
+      it "assumes it's recurring anyway and doesn't have code" do
+        expect(alert.formatted_crossed_thresholds([40]))
+          .to eq([{code: "", recurring: true, value: 40}])
+      end
     end
   end
 

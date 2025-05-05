@@ -9,6 +9,7 @@ FactoryBot.define do
 
     transient do
       thresholds { nil }
+      recurring_threshold { nil }
     end
 
     after(:create) do |alert, evaluator|
@@ -17,6 +18,11 @@ FactoryBot.define do
           {value: v, code: "warn#{v}", organization_id: alert.organization_id}
         end
         alert.thresholds.create! thresholds_attributes
+      end
+      if evaluator.recurring_threshold
+        alert.thresholds.create!({
+          value: evaluator.recurring_threshold, code: "rec", recurring: true, organization_id: alert.organization_id
+        })
       end
     end
   end

@@ -78,8 +78,8 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     expect(ta.current_value).to eq(3000)
     expect(ta.previous_value).to eq(1000)
     expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
-      {code: "warn", value: "1500.0"},
-      {code: "warn", value: "3000.0"}
+      {code: "warn", value: "1500.0", recurring: false},
+      {code: "warn", value: "3000.0", recurring: false}
     ])
 
     webhooks_sent.find { |w| w[:webhook_type] == "alert.triggered" }.tap do |webhook|
@@ -102,6 +102,50 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     expect(alert_on_bm.triggered_alerts.count).to eq 1
     expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "usage_amount" }).to eq 2
     expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "billable_metric_usage_amount" }).to eq 1
+  end
+
+  context "with recurring thresholds" do
+    it "sends alert forever" do
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: subscription_external_id,
+        plan_code: plan.code
+      })
+      subscription = customer.subscriptions.sole
+      alert = UsageMonitoring::CreateAlertService.call!(
+        organization:,
+        subscription:,
+        params: {alert_type: :usage_amount, code: :simple, thresholds: [
+          {value: 15_00, code: :warn},
+          {value: 30_00, code: :warn},
+          {value: 10_00, code: :alert, recurring: true}
+        ]}
+      ).alert
+
+      send_event!(code: billable_metric.code, properties: {ops_count: 7}, external_subscription_id: subscription_external_id)
+
+      perform_usage_update
+      expect(UsageMonitoring::TriggeredAlert.where(alert:).count).to eq(1)
+      expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
+
+      ta = alert.triggered_alerts.sole
+      expect(ta.current_value).to eq(3500)
+      expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
+        {code: "warn", value: "1500.0", recurring: false},
+        {code: "warn", value: "3000.0", recurring: false}
+      ])
+
+      send_event!(code: billable_metric.code, properties: {ops_count: 4}, external_subscription_id: subscription_external_id)
+
+      perform_usage_update
+      expect(UsageMonitoring::TriggeredAlert.where(alert:).count).to eq(2)
+      ta = alert.triggered_alerts.order(:created_at).last
+      expect(ta.current_value).to eq(5500)
+      expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
+        {code: "alert", value: "4000.0", recurring: true},
+        {code: "alert", value: "5000.0", recurring: true}
+      ])
+    end
   end
 
   context "with multiple subscriptions" do

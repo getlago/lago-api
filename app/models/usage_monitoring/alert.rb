@@ -46,18 +46,43 @@ module UsageMonitoring
     end
 
     def find_thresholds_crossed(current)
-      # TODO: optimize this for the beauty of it
-      thresholds_values.filter { |t| t.between?(previous_value, current) }
+      crossed = []
+      return crossed if current < previous_value
+      return crossed if current < non_recurring_thresholds_values.first
+
+      if previous_value < non_recurring_thresholds_values.last
+        crossed += non_recurring_thresholds_values.filter { |t| t.between?(previous_value, current) }
+      end
+
+      crossed += find_recurring_thresholds_crossed(
+        previous_value, current, recurring_threshold.value, non_recurring_thresholds_values.last
+      )
+
+      crossed.uniq.sort
     end
 
-    def thresholds_values
-      thresholds.all.pluck(:value).uniq.sort
+    def non_recurring_thresholds_values
+      thresholds.all.filter_map { _1.value unless _1.recurring }.uniq.sort
+    end
+
+    def recurring_threshold
+      thresholds.find { _1.recurring }
     end
 
     def formatted_crossed_thresholds(crossed_threshold_values)
-      thresholds
-        .filter { crossed_threshold_values.include?(_1.value) }
-        .map { |t| {code: t.code, value: t.value} }
+      regular_thresholds_values, other_thresholds_values = crossed_threshold_values.partition do |v|
+        non_recurring_thresholds_values.include?(v)
+      end
+
+      formatted_regular_thresholds = thresholds
+        .filter { regular_thresholds_values.include?(_1.value) }
+        .map { |t| {code: t.code, value: t.value, recurring: false} }
+
+      recurring_code = recurring_threshold&.code || ""
+      formatted_other_thresholds = other_thresholds_values
+        .map { |v| {code: recurring_code, value: v, recurring: true} }
+
+      formatted_regular_thresholds + formatted_other_thresholds
     end
 
     def find_value(current_metrics)
@@ -70,6 +95,18 @@ module UsageMonitoring
       if billable_metric_id.blank? && BILLABLE_METRIC_TYPES.include?(alert_type)
         errors.add(:billable_metric_id, "is required for `#{alert_type}` alert type")
       end
+    end
+
+    def find_recurring_thresholds_crossed(previous, current, step, initial)
+      previous_steps = ((previous - initial).to_f / step).ceil
+      previous_recurring = initial + previous_steps * step
+
+      current_steps = ((current - initial).to_f / step).floor
+      current_recurring = initial + current_steps * step
+
+      return [] if previous_recurring > current_recurring # Shouldn't happen
+
+      (previous_recurring..current_recurring).step(step).to_a
     end
   end
 end
@@ -84,7 +121,6 @@ end
 #  deleted_at               :datetime
 #  last_processed_at        :datetime
 #  previous_value           :decimal(30, 5)   default(0.0), not null
-#  recurring_threshold      :decimal(30, 5)
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
 #  billable_metric_id       :uuid

@@ -12,7 +12,6 @@ class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
       t.numeric :previous_value, precision: 30, scale: 5, null: false, default: 0
       t.datetime :last_processed_at
       t.string :code
-      t.numeric :recurring_threshold, precision: 30, scale: 5
       t.datetime :deleted_at
       t.timestamps
 
@@ -31,7 +30,10 @@ class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
       t.references :usage_monitoring_alert, type: :uuid, foreign_key: true, null: false, index: true
       t.numeric :value, precision: 30, scale: 5, null: false
       t.string :code
+      t.boolean :recurring, null: false, default: false
       t.timestamps
+
+      # TODO: Add unique index for recurring threshold
     end
 
     create_table :usage_monitoring_triggered_alerts, id: :uuid do |t|
