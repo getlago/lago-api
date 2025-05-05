@@ -8,5 +8,11 @@ FactoryBot.define do
     current_value { 3000 }
     previous_value { 1000 }
     triggered_at { Time.current }
+    crossed_thresholds do
+      [
+        {code: :warn, value: BigDecimal(2000), recurring: false},
+        {code: :default, value: BigDecimal(2500), recurring: true}
+      ]
+    end
   end
 end
