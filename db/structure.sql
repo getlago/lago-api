@@ -19,6 +19,7 @@ ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF E
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_eaca9421be;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ea80151038;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_e8bac9c5bb;
+ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_e88403f4b9;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_de6b3c3138;
@@ -215,6 +216,7 @@ DROP INDEX IF EXISTS public.index_quantified_events_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id;
+DROP INDEX IF EXISTS public.index_plans_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_plans_on_parent_id;
 DROP INDEX IF EXISTS public.index_plans_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_plans_on_organization_id;
@@ -2447,7 +2449,8 @@ CREATE TABLE public.plans_taxes (
     plan_id uuid NOT NULL,
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5738,6 +5741,13 @@ CREATE INDEX index_plans_on_parent_id ON public.plans USING btree (parent_id);
 
 
 --
+-- Name: index_plans_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plans_taxes_on_organization_id ON public.plans_taxes USING btree (organization_id);
+
+
+--
 -- Name: index_plans_taxes_on_plan_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7186,6 +7196,14 @@ ALTER TABLE ONLY public.customers_taxes
 
 
 --
+-- Name: plans_taxes fk_rails_e88403f4b9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.plans_taxes
+    ADD CONSTRAINT fk_rails_e88403f4b9 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: recurring_transaction_rules fk_rails_e8bac9c5bb; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7276,6 +7294,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250429100150'),
 ('20250429100149'),
 ('20250429100148'),
+('20250428154519'),
+('20250428154500'),
+('20250428154444'),
 ('20250428140148'),
 ('20250428140126'),
 ('20250428140111'),
