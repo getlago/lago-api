@@ -141,6 +141,7 @@ ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_216ac
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_20cc0de4c7;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_1db0057d9b;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
+ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_150139409e;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_1454058c96;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
@@ -268,6 +269,7 @@ DROP INDEX IF EXISTS public.index_invoices_on_customer_id_and_sequential_id;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_id;
 DROP INDEX IF EXISTS public.index_invoices_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_subscription_id;
+DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id_and_subscription_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_charges_from_and_to_datetime;
@@ -2905,7 +2907,8 @@ CREATE TABLE public.invoice_subscriptions (
     to_datetime timestamp(6) without time zone,
     charges_from_datetime timestamp(6) without time zone,
     charges_to_datetime timestamp(6) without time zone,
-    invoicing_reason public.subscription_invoicing_reason
+    invoicing_reason public.subscription_invoicing_reason,
+    organization_id uuid
 );
 
 
@@ -5350,6 +5353,13 @@ CREATE UNIQUE INDEX index_invoice_subscriptions_on_invoice_id_and_subscription_i
 
 
 --
+-- Name: index_invoice_subscriptions_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoice_subscriptions_on_organization_id ON public.invoice_subscriptions USING btree (organization_id);
+
+
+--
 -- Name: index_invoice_subscriptions_on_subscription_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6189,6 +6199,14 @@ ALTER TABLE ONLY public.daily_usages
 
 ALTER TABLE ONLY public.coupon_targets
     ADD CONSTRAINT fk_rails_1454058c96 FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
+
+
+--
+-- Name: invoice_subscriptions fk_rails_150139409e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoice_subscriptions
+    ADD CONSTRAINT fk_rails_150139409e FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7254,6 +7272,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250429100151'),
+('20250429100150'),
+('20250429100149'),
 ('20250429100148'),
 ('20250428140148'),
 ('20250428140126'),
