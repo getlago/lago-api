@@ -99,6 +99,8 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
 
       it "does not create a payment" do
+        allow(Invoices::Payments::CreateService).to receive(:call_async)
+
         create_service.call
 
         expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
