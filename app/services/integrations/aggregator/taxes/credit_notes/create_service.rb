@@ -41,7 +41,7 @@ module Integrations
           delegate :customer, to: :credit_note, allow_nil: true
 
           def payload
-            Integrations::Aggregator::Taxes::CreditNotes::Payload.new(
+            Integrations::Aggregator::Taxes::CreditNotes::Payloads::Factory.new_instance(
               integration:,
               customer:,
               integration_customer:,
