@@ -6,10 +6,7 @@ module PaymentProviders
       queue_as "providers"
 
       def perform(stripe_provider)
-        result = PaymentProviders::StripeService.new.refresh_webhook(
-          stripe_provider:
-        )
-        result.raise_if_error!
+        PaymentProviders::Stripe::RefreshWebhookService.call!(stripe_provider)
       end
     end
   end
