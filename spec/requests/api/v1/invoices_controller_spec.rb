@@ -92,7 +92,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when trigger_payment is false" do
+    context "when skip_payment is true" do
       let(:create_params) do
         {
           external_customer_id: customer_external_id,
