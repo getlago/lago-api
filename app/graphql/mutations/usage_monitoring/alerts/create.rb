@@ -12,11 +12,7 @@ module Mutations
         graphql_name "CreateSubscriptionAlert"
         description "Creates a new Alert for subscription"
 
-        argument :alert_type, Types::UsageMonitoring::Alerts::AlertTypeEnum, required: true
-        argument :billable_metric_id, ID, required: false
-        argument :code, String, required: false
-        argument :subscription_id, ID, required: true
-        argument :thresholds, [Types::UsageMonitoring::Alerts::ThresholdInput], required: true
+        input_object_class Types::UsageMonitoring::Alerts::CreateInput
 
         type Types::UsageMonitoring::Alerts::Object
 
