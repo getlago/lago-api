@@ -4,7 +4,6 @@ module Invoices
   class VoidService < BaseService
     def initialize(invoice:, params:)
       @invoice = invoice
-      @confirm_void = ActiveModel::Type::Boolean.new.cast(params[:confirm_void])
       @generate_credit_note = ActiveModel::Type::Boolean.new.cast(params[:generate_credit_note])
       @refund_amount = params[:refund_amount].to_i
       @credit_amount = params[:credit_amount].to_i
@@ -13,7 +12,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.nil?
-      return result.not_allowed_failure!(code: "not_voidable") if !invoice.voidable? && confirm_void
+      return result.not_allowed_failure!(code: "not_voidable") if !invoice.voidable? && !explicit_void_intent?
 
       result.invoice = invoice
 
@@ -55,7 +54,11 @@ module Invoices
 
     private
 
-    attr_reader :invoice, :confirm_void, :generate_credit_note, :refund_amount, :credit_amount
+    attr_reader :invoice, :generate_credit_note, :refund_amount, :credit_amount
+
+    def explicit_void_intent?
+      generate_credit_note || refund_amount.positive? || credit_amount.positive?
+    end
 
     def flag_lifetime_usage_for_refresh
       LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!

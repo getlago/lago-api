@@ -347,7 +347,7 @@ module Api
       end
 
       def void_params
-        params.permit(:confirm_void, :generate_credit_note, :refund_amount, :credit_amount)
+        params.permit(:generate_credit_note, :refund_amount, :credit_amount)
       end
 
       def render_invoice(invoice)
