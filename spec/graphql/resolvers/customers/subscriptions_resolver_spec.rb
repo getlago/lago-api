@@ -37,16 +37,16 @@ RSpec.describe Resolvers::Customers::SubscriptionsResolver, type: :graphql do
     let(:active_subscription) { create(:subscription, customer:, plan:, status: "active") }
     let(:terminated_subscription) { create(:subscription, customer:, plan:, status: "terminated") }
     let(:pending_subscription) { create(:subscription, customer:, plan:, status: "pending", started_at: 1.day.from_now) }
-    let(:downgraded_pending) { create(:subscription, customer:, plan:, status: "pending", next_subscriptions: [active_from_downgrade]) }
-    let(:active_from_downgrade) { create(:subscription, customer:, plan: plan2, status: "active") }
+    let(:downgraded_active_subscription) { create(:subscription, customer:, plan: plan2, status: "active") }
+    let(:pending_from_downgrade) { create(:subscription, customer:, plan:, status: "pending", previous_subscription: downgraded_active_subscription) }
     let(:plan2) { create(:plan, organization:, amount_cents: 1_000_000) }
 
     before do
       active_subscription
       terminated_subscription
       pending_subscription
-      downgraded_pending
-      active_from_downgrade
+      downgraded_active_subscription
+      pending_from_downgrade
     end
 
     it "returns all subscriptions except downgraded pending ones" do
@@ -60,11 +60,12 @@ RSpec.describe Resolvers::Customers::SubscriptionsResolver, type: :graphql do
 
       response = result["data"]["customer"]["subscriptions"]
 
-      expect(response.count).to eq(3)
+      expect(response.count).to eq(4)
       expect(response.map { |s| s["id"] }).to contain_exactly(
         active_subscription.id,
         terminated_subscription.id,
-        pending_subscription.id
+        pending_subscription.id,
+        downgraded_active_subscription.id
       )
     end
   end
