@@ -11,7 +11,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     let(:subscription) { create(:subscription, organization:) }
 
     context "when no thresholds are crossed" do
-      let(:current_metrics) { double(amount_cents: 5) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 5) }
 
       it "updates alert last_processed_at and previous_value" do
         expect(result).to be_success
@@ -24,7 +24,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     end
 
     context "when 2 thresholds are crossed" do
-      let(:current_metrics) { double(amount_cents: 22) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 22) }
 
       it "triggers the alert" do
         expect(result).to be_success
@@ -49,7 +49,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     end
 
     context "when recurring thresholds are crossed" do
-      let(:current_metrics) { double(amount_cents: 161) }
+      let(:current_metrics) { instance_double(SubscriptionUsage, amount_cents: 161) }
 
       it "triggers the alert" do
         expect(result).to be_success
@@ -83,7 +83,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
 
       it "does not update alert last_processed_at or previous_value" do
-        expect(SendWebhookJob).not_to receive(:perform_later)
+        expect(SendWebhookJob).not_to have_been_enqueued
         expect { service.call }.to raise_error(StandardError)
         expect(alert.reload.last_processed_at).to be_nil
         expect(alert.previous_value).to eq 4
