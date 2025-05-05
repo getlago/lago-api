@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
 module DatabaseMigrations
-  class PopulatePaymentProviderCustomersWithOrganizationJob < ApplicationJob
+  class PopulateInvoicesTaxesWithOrganizationJob < ApplicationJob
     queue_as :low_priority
     unique :until_executed
 
     BATCH_SIZE = 1000
 
     def perform(batch_number = 1)
-      batch = PaymentProviderCustomers::BaseCustomer
+      batch = Invoice::AppliedTax.unscoped
         .where(organization_id: nil)
         .limit(BATCH_SIZE)
 
       if batch.exists?
         # rubocop:disable Rails/SkipsModelValidations
-        batch.update_all("organization_id = (SELECT organization_id FROM customers WHERE customers.id = payment_provider_customers.customer_id)")
+        batch.update_all("organization_id = (SELECT organization_id FROM invoices WHERE invoices.id = invoices_taxes.invoice_id)")
         # rubocop:enable Rails/SkipsModelValidations
 
         # Queue the next batch
