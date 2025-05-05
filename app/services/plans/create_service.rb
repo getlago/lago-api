@@ -94,6 +94,7 @@ module Plans
 
     def create_usage_threshold(plan, args)
       usage_threshold = plan.usage_thresholds.new(
+        organization_id: plan.organization_id,
         threshold_display_name: args[:threshold_display_name],
         amount_cents: args[:amount_cents],
         recurring: args[:recurring] || false

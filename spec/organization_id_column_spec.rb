@@ -62,7 +62,6 @@ Rspec.describe "All tables must have an organization_id" do
       plans_taxes
       recurring_transaction_rules
       refunds
-      usage_thresholds
       versions
     ]
   end

@@ -58,6 +58,7 @@ ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_9
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_90d93bd016;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_8fa6f0d920;
+ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_89e1020aca;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_88349fc20a;
@@ -181,6 +182,7 @@ DROP INDEX IF EXISTS public.index_wallet_transactions_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_versions_on_item_type_and_item_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id_and_recurring;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id;
+DROP INDEX IF EXISTS public.index_usage_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_subscription_invoice;
 DROP INDEX IF EXISTS public.index_unique_starting_subscription_invoice;
@@ -3218,7 +3220,8 @@ CREATE TABLE public.usage_thresholds (
     recurring boolean DEFAULT false NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    deleted_at timestamp(6) without time zone
+    deleted_at timestamp(6) without time zone,
+    organization_id uuid
 );
 
 
@@ -5942,6 +5945,13 @@ CREATE UNIQUE INDEX index_unique_transaction_id ON public.events USING btree (or
 
 
 --
+-- Name: index_usage_thresholds_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_usage_thresholds_on_organization_id ON public.usage_thresholds USING btree (organization_id);
+
+
+--
 -- Name: index_usage_thresholds_on_plan_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6838,6 +6848,14 @@ ALTER TABLE ONLY public.invoice_metadata
 
 
 --
+-- Name: usage_thresholds fk_rails_8df9bf2b6c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usage_thresholds
+    ADD CONSTRAINT fk_rails_8df9bf2b6c FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: commitments_taxes fk_rails_8fa6f0d920; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7237,6 +7255,9 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250429100148'),
+('20250428140148'),
+('20250428140126'),
+('20250428140111'),
 ('20250428130148'),
 ('20250428130129'),
 ('20250428130107'),
