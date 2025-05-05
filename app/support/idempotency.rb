@@ -61,9 +61,17 @@ class Idempotency
     raise ArgumentError, "An idempotent_transaction cannot be created when already in a transaction" if ApplicationRecord.connection.open_transactions > 0
 
     # Ensure the transaction context is cleaned up even if an exception occurs
-    ApplicationRecord.transaction do
+    ActiveRecord::Base.transaction do
       # Execute the block first to collect components
-      original_return = yield
+      begin
+        original_return = yield
+        transaction_completed = true
+      rescue => e
+        transaction_completed = true
+        raise e
+      ensure
+        raise IdempotencyError.new("You've returned early from an Idempotency transaction, please use `next` instead") unless transaction_completed
+      end
 
       # Validate that at least one component was added
       unless current_transaction.valid?
