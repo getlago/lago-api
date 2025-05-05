@@ -18,6 +18,7 @@ module Types
         field :thresholds, [Types::UsageMonitoring::Alerts::ThresholdObject]
 
         field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+        field :deleted_at, GraphQL::Types::ISO8601DateTime, null: false
         field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       end
     end

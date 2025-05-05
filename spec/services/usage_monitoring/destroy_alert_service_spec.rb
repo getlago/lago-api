@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::DeleteAlertService do
+RSpec.describe UsageMonitoring::DestroyAlertService do
   describe ".call" do
     subject(:result) { described_class.call(alert:) }
 

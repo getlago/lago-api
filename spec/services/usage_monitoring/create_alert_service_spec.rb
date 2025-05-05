@@ -90,7 +90,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
     context "with too many thresholds" do
       let(:thresholds) do
-        21.times.map do |i|
+        Array.new(21) do |i|
           {code: "warning#{i}", value: 10 + i}
         end
       end

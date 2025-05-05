@@ -33,7 +33,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:update"
 
-  it "creates a wallet transaction" do
+  it "creates an alert" do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,

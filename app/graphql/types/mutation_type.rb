@@ -183,5 +183,7 @@ module Types
     field :update_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Update
 
     field :create_subscription_alert, mutation: Mutations::UsageMonitoring::Alerts::Create
+    field :destroy_subscription_alert, mutation: Mutations::UsageMonitoring::Alerts::Destroy
+    field :update_subscription_alert, mutation: Mutations::UsageMonitoring::Alerts::Update
   end
 end

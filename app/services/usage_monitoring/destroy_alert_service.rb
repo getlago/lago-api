@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module UsageMonitoring
-  class DeleteAlertService < BaseService
+  class DestroyAlertService < BaseService
     Result = BaseResult[:alert]
 
     def initialize(alert:)
