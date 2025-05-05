@@ -3,6 +3,8 @@
 module Admin
   module Organizations
     class UpdateService < ::BaseService
+      Result = BaseResult[:organization]
+
       def initialize(organization:, params:)
         @organization = organization
         @params = params
