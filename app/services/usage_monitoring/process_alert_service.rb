@@ -35,6 +35,9 @@ module UsageMonitoring
         alert.last_processed_at = now
         alert.save!
       end
+
+      result.alert = alert
+      result
     end
 
     private
