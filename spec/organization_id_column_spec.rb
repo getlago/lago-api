@@ -37,7 +37,6 @@ Rspec.describe "All tables must have an organization_id" do
       credit_note_items
       credit_notes
       credit_notes_taxes
-      credits
       customer_metadata
       customers_taxes
       data_export_parts

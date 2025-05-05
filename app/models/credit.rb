@@ -7,6 +7,7 @@ class Credit < ApplicationRecord
   belongs_to :applied_coupon, optional: true
   belongs_to :credit_note, optional: true
   belongs_to :progressive_billing_invoice, class_name: "Invoice", optional: true
+  belongs_to :organization, optional: true
 
   has_one :coupon, -> { with_discarded }, through: :applied_coupon
 
@@ -84,6 +85,7 @@ end
 #  applied_coupon_id              :uuid
 #  credit_note_id                 :uuid
 #  invoice_id                     :uuid
+#  organization_id                :uuid
 #  progressive_billing_invoice_id :uuid
 #
 # Indexes
@@ -91,6 +93,7 @@ end
 #  index_credits_on_applied_coupon_id               (applied_coupon_id)
 #  index_credits_on_credit_note_id                  (credit_note_id)
 #  index_credits_on_invoice_id                      (invoice_id)
+#  index_credits_on_organization_id                 (organization_id)
 #  index_credits_on_progressive_billing_invoice_id  (progressive_billing_invoice_id)
 #
 # Foreign Keys
@@ -98,5 +101,6 @@ end
 #  fk_rails_...  (applied_coupon_id => applied_coupons.id)
 #  fk_rails_...  (credit_note_id => credit_notes.id)
 #  fk_rails_...  (invoice_id => invoices.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (progressive_billing_invoice_id => invoices.id)
 #

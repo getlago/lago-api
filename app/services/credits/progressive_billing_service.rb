@@ -36,6 +36,7 @@ module Credits
 
         if amount_to_credit.positive?
           credit = Credit.create!(
+            organization_id: invoice.organization_id,
             invoice:,
             progressive_billing_invoice:,
             amount_cents: amount_to_credit,
