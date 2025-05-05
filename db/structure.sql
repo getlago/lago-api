@@ -16,6 +16,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_f510acb495;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_f228550fda;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_ed387e0992;
+ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_ecb466254b;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_eaca9421be;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ea80151038;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_e8bac9c5bb;
@@ -239,6 +240,7 @@ DROP INDEX IF EXISTS public.index_payment_providers_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_providers_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_provider_customer_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_payment_provider_id;
+DROP INDEX IF EXISTS public.index_payment_provider_customers_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_customer_id_and_type;
 DROP INDEX IF EXISTS public.index_payment_intents_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_intents_on_invoice_id_and_status;
@@ -1960,7 +1962,8 @@ CREATE TABLE public.payment_provider_customers (
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    deleted_at timestamp(6) without time zone
+    deleted_at timestamp(6) without time zone,
+    organization_id uuid
 );
 
 
@@ -5587,6 +5590,13 @@ CREATE UNIQUE INDEX index_payment_provider_customers_on_customer_id_and_type ON 
 
 
 --
+-- Name: index_payment_provider_customers_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_provider_customers_on_organization_id ON public.payment_provider_customers USING btree (organization_id);
+
+
+--
 -- Name: index_payment_provider_customers_on_payment_provider_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7228,6 +7238,14 @@ ALTER TABLE ONLY public.fees
 
 
 --
+-- Name: payment_provider_customers fk_rails_ecb466254b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_provider_customers
+    ADD CONSTRAINT fk_rails_ecb466254b FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: invoices_payment_requests fk_rails_ed387e0992; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7290,6 +7308,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250429100154'),
+('20250429100153'),
+('20250429100152'),
 ('20250429100151'),
 ('20250429100150'),
 ('20250429100149'),

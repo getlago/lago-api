@@ -12,6 +12,7 @@ module PaymentProviderCustomers
 
     belongs_to :customer
     belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
+    belongs_to :organization, optional: true
 
     has_many :payments
     has_many :refunds, foreign_key: :payment_provider_customer_id
@@ -47,17 +48,20 @@ end
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  customer_id          :uuid             not null
+#  organization_id      :uuid
 #  payment_provider_id  :uuid
 #  provider_customer_id :string
 #
 # Indexes
 #
 #  index_payment_provider_customers_on_customer_id_and_type  (customer_id,type) UNIQUE WHERE (deleted_at IS NULL)
+#  index_payment_provider_customers_on_organization_id       (organization_id)
 #  index_payment_provider_customers_on_payment_provider_id   (payment_provider_id)
 #  index_payment_provider_customers_on_provider_customer_id  (provider_customer_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (customer_id => customers.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_provider_id => payment_providers.id)
 #

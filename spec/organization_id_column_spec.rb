@@ -57,7 +57,6 @@ Rspec.describe "All tables must have an organization_id" do
       invoices_payment_requests
       invoices_taxes
       password_resets
-      payment_provider_customers
       recurring_transaction_rules
       refunds
       versions
