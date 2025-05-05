@@ -38,6 +38,7 @@ ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_bda048a8d9;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
+ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS fk_rails_bacb46d2a3;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_ba128983c2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_b50dc82c1e;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
@@ -428,6 +429,7 @@ DROP INDEX IF EXISTS public.index_billable_metric_filters_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_usage_threshold_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_invoice_id;
 DROP INDEX IF EXISTS public.index_applied_invoice_custom_sections_on_invoice_id;
+DROP INDEX IF EXISTS public.index_applied_coupons_on_organization_id;
 DROP INDEX IF EXISTS public.index_applied_coupons_on_customer_id;
 DROP INDEX IF EXISTS public.index_applied_coupons_on_coupon_id;
 DROP INDEX IF EXISTS public.index_applied_add_ons_on_customer_id;
@@ -1006,7 +1008,8 @@ CREATE TABLE public.applied_coupons (
     percentage_rate numeric(10,5),
     frequency integer DEFAULT 0 NOT NULL,
     frequency_duration integer,
-    frequency_duration_remaining integer
+    frequency_duration_remaining integer,
+    organization_id uuid
 );
 
 
@@ -4315,6 +4318,13 @@ CREATE INDEX index_applied_coupons_on_customer_id ON public.applied_coupons USIN
 
 
 --
+-- Name: index_applied_coupons_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_applied_coupons_on_organization_id ON public.applied_coupons USING btree (organization_id);
+
+
+--
 -- Name: index_applied_invoice_custom_sections_on_invoice_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7106,6 +7116,14 @@ ALTER TABLE ONLY public.lifetime_usages
 
 
 --
+-- Name: applied_coupons fk_rails_bacb46d2a3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_coupons
+    ADD CONSTRAINT fk_rails_bacb46d2a3 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: plans_taxes fk_rails_bacde7a063; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7364,9 +7382,12 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250428130129'),
 ('20250428130107'),
 ('20250428111042'),
+('20250425134911'),
+('20250425134826'),
 ('20250425132821'),
 ('20250425132757'),
 ('20250425132724'),
+('20250425132247'),
 ('20250425130412'),
 ('20250425130345'),
 ('20250425130332'),

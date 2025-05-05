@@ -101,6 +101,7 @@ module Invoices
           id: SecureRandom.uuid,
           coupon:,
           customer: result.customer,
+          organization:,
           amount_cents: coupon.amount_cents,
           amount_currency: coupon.amount_currency,
           percentage_rate: coupon.percentage_rate,
