@@ -145,6 +145,7 @@ ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_1db
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_150139409e;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_1454058c96;
+ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_142809fee1;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_0e464363cb;
@@ -257,6 +258,7 @@ DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_invoiced_usage;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_current_usage;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_invoices_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_payment_request_id;
@@ -2399,7 +2401,8 @@ CREATE TABLE public.invoices_taxes (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     fees_amount_cents bigint DEFAULT 0 NOT NULL,
-    taxable_base_amount_cents bigint DEFAULT 0 NOT NULL
+    taxable_base_amount_cents bigint DEFAULT 0 NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5478,6 +5481,13 @@ CREATE UNIQUE INDEX index_invoices_taxes_on_invoice_id_and_tax_id ON public.invo
 
 
 --
+-- Name: index_invoices_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_taxes_on_organization_id ON public.invoices_taxes USING btree (organization_id);
+
+
+--
 -- Name: index_invoices_taxes_on_tax_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6211,6 +6221,14 @@ ALTER TABLE ONLY public.applied_invoice_custom_sections
 
 ALTER TABLE ONLY public.daily_usages
     ADD CONSTRAINT fk_rails_12d29bc654 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+
+
+--
+-- Name: invoices_taxes fk_rails_142809fee1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoices_taxes
+    ADD CONSTRAINT fk_rails_142809fee1 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7308,6 +7326,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250429150146'),
+('20250429150128'),
+('20250429150114'),
 ('20250429100154'),
 ('20250429100153'),
 ('20250429100152'),
