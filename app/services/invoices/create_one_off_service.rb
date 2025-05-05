@@ -32,7 +32,10 @@ module Invoices
           invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
           invoice.failed!
 
+          # TODO: Refactor this return by using a next method
+          # rubocop:disable Rails/TransactionExitStatement
           return result
+          # rubocop:enable Rails/TransactionExitStatement
         end
 
         Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
