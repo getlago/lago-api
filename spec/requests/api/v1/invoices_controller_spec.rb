@@ -91,6 +91,28 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    context "when trigger_payment is false" do
+      let(:create_params) do
+        {
+          external_customer_id: customer_external_id,
+          currency: "EUR",
+          skip_payment: true,
+          fees: [
+            {
+              add_on_code: add_on_first.code,
+              unit_amount_cents: 1200,
+              units: 2
+            }
+          ]
+        }
+      end
+
+      it "returns a success" do
+        subject
+        expect(response).to have_http_status(:success)
+      end
+    end
   end
 
   describe "PUT /api/v1/invoices/:id" do

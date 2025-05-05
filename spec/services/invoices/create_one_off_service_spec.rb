@@ -93,6 +93,18 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       expect(Invoices::Payments::CreateService).to have_received(:call_async)
     end
 
+    context "when skip_payment is true" do
+      let(:create_service) do
+        described_class.new(customer:, timestamp: timestamp.to_i, fees:, currency:, skip_payment: true)
+      end
+
+      it "does not create a payment" do
+        create_service.call
+
+        expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
+      end
+    end
+
     it "enqueues a SendWebhookJob" do
       expect do
         create_service.call
