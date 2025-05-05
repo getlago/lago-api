@@ -4,5 +4,6 @@ FactoryBot.define do
   factory :add_on_applied_tax, class: "AddOn::AppliedTax" do
     add_on
     tax
+    organization
   end
 end

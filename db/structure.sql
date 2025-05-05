@@ -97,6 +97,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_5cb67dee79;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_5c2e0b6d34;
 ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS fk_rails_5c21eece29;
+ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_5ade8984b1;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
@@ -445,6 +446,7 @@ DROP INDEX IF EXISTS public.index_adjusted_fees_on_fee_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_charge_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_add_ons_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_add_ons_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_add_ons_taxes_on_add_on_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_add_ons_taxes_on_add_on_id;
 DROP INDEX IF EXISTS public.index_add_ons_on_organization_id_and_code;
@@ -928,7 +930,8 @@ CREATE TABLE public.add_ons_taxes (
     add_on_id uuid NOT NULL,
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4213,6 +4216,13 @@ CREATE UNIQUE INDEX index_add_ons_taxes_on_add_on_id_and_tax_id ON public.add_on
 
 
 --
+-- Name: index_add_ons_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_add_ons_taxes_on_organization_id ON public.add_ons_taxes USING btree (organization_id);
+
+
+--
 -- Name: index_add_ons_taxes_on_tax_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6652,6 +6662,14 @@ ALTER TABLE ONLY public.data_exports
 
 
 --
+-- Name: add_ons_taxes fk_rails_5ade8984b1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.add_ons_taxes
+    ADD CONSTRAINT fk_rails_5ade8984b1 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: error_details fk_rails_5c21eece29; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7400,6 +7418,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250425122705'),
 ('20250425122641'),
 ('20250425122510'),
+('20250425102555'),
+('20250425102447'),
+('20250425102306'),
 ('20250424140537'),
 ('20250424140359'),
 ('20250424135624'),
