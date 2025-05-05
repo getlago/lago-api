@@ -20,6 +20,7 @@ module UsageMonitoring
       end
 
       ActiveRecord::Base.transaction do
+        alert.name = params[:name] if params.key?(:name)
         alert.code = params[:code] if params.key?(:code)
         alert.recurring_threshold = params[:recurring_threshold] if params.key?(:recurring_threshold)
         alert.billable_metric = billable_metric if billable_metric

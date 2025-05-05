@@ -9,6 +9,8 @@ module V1
           lago_alert_id: model.alert.id,
           lago_subscription_id: model.subscription_id,
           lago_billable_metric_id: model.alert.billable_metric_id,
+          alert_name: model.alert.name,
+          alert_code: model.alert.code,
           alert_type: model.alert.alert_type,
           current_value: model.current_value,
           previous_value: model.previous_value,

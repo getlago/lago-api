@@ -8,7 +8,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
     let(:organization) { create(:organization) }
     let(:thresholds) { [{code: "warning", value: 80}, {code: "critical", value: 120}] }
-    let(:params) { {alert_type: "usage_amount", thresholds:, code: "first"} }
+    let(:params) { {alert_type: "usage_amount", name: "Main", thresholds:, code: "first"} }
     let(:subscription) { create(:subscription, organization:) }
     let(:billable_metric) { nil }
 
@@ -20,6 +20,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       expect(alert.subscription_external_id).to eq(subscription.external_id)
       expect(alert.billable_metric).to be_nil
       expect(alert.alert_type).to eq("usage_amount")
+      expect(alert.name).to eq("Main")
       expect(alert.code).to eq("first")
       expect(alert.recurring_threshold).to be_nil
 

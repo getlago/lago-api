@@ -21,6 +21,8 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
       expect(payload["lago_alert_id"]).to eq(triggered_alert.alert.id)
       expect(payload["lago_subscription_id"]).to eq(triggered_alert.subscription.id)
       expect(payload["lago_billable_metric_id"]).to be_nil
+      expect(payload["alert_name"]).to eq("General Alert")
+      expect(payload["alert_code"]).to eq("default")
       expect(payload["alert_type"]).to eq("usage_amount")
       expect(payload["current_value"]).to eq("3000.0")
       expect(payload["previous_value"]).to eq("1000.0")

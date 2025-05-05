@@ -47,7 +47,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Destroy, type: :graphql do
 
     result_data = result["data"]["destroySubscriptionAlert"]
     expect(result_data["alertType"]).to eq "usage_amount"
-    expect(result_data["code"]).to eq "Alert"
+    expect(result_data["code"]).to eq "default"
     expect(result_data["thresholds"]).to be_empty
     expect(result_data["deletedAt"]).to start_with Time.current.year.to_s
   end

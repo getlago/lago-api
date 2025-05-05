@@ -4,7 +4,8 @@ FactoryBot.define do
   factory :alert, class: "UsageMonitoring::Alert" do
     association :organization
     subscription_external_id { create(:subscription).external_id }
-    code { "Alert" }
+    name { "General Alert" }
+    code { "default" }
     alert_type { "usage_amount" }
 
     transient do

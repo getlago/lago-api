@@ -10,15 +10,16 @@ module Types
 
         field :alert_type, AlertTypeEnum, null: false
         field :billable_metric, Types::BillableMetrics::Object
-        field :subscription_external_id, String
+        field :subscription_external_id, String, null: false
 
-        field :code, String, null: false
+        field :code, String
+        field :name, String
 
         field :recurring_threshold, String
         field :thresholds, [Types::UsageMonitoring::Alerts::ThresholdObject]
 
         field :created_at, GraphQL::Types::ISO8601DateTime, null: false
-        field :deleted_at, GraphQL::Types::ISO8601DateTime, null: false
+        field :deleted_at, GraphQL::Types::ISO8601DateTime
         field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
       end
     end

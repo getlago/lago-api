@@ -8,6 +8,7 @@ module Types
 
         argument :billable_metric_id, ID, required: false
         argument :code, String, required: false
+        argument :name, String, required: false
         argument :subscription_id, ID, required: true
 
         argument :recurring_threshold, String, required: false
