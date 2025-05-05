@@ -15,7 +15,6 @@ module UsageMonitoring
       now = Time.current
       current = alert.find_value(current_metrics)
       crossed_threshold_values = alert.find_thresholds_crossed(current)
-      pp crossed_threshold_values
 
       ActiveRecord::Base.transaction do
         if crossed_threshold_values.present?

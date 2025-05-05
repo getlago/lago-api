@@ -115,10 +115,9 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
       alert = UsageMonitoring::CreateAlertService.call!(
         organization:,
         subscription:,
-        params: {alert_type: :usage_amount, code: :simple, thresholds: [
+        params: {alert_type: :usage_amount, code: "simple", recurring_threshold: 10_00, thresholds: [
           {value: 15_00, code: :warn},
-          {value: 30_00, code: :warn},
-          {value: 10_00, code: :alert, recurring: true}
+          {value: 30_00, code: :warn}
         ]}
       ).alert
 
@@ -142,8 +141,8 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
       ta = alert.triggered_alerts.order(:created_at).last
       expect(ta.current_value).to eq(5500)
       expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
-        {code: "alert", value: "4000.0", recurring: true},
-        {code: "alert", value: "5000.0", recurring: true}
+        {code: "simple", value: "4000.0", recurring: true},
+        {code: "simple", value: "5000.0", recurring: true}
       ])
     end
   end

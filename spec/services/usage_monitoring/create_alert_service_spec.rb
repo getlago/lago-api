@@ -21,10 +21,21 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       expect(alert.billable_metric).to be_nil
       expect(alert.alert_type).to eq("usage_amount")
       expect(alert.code).to eq("first")
+      expect(alert.recurring_threshold).to be_nil
 
       expect(alert.thresholds.map(&:code)).to eq %w[warning critical]
       expect(alert.thresholds.map(&:value)).to eq [80, 120]
       expect(alert.thresholds.size).to eq(2)
+    end
+
+    context "with recurring threshold" do
+      let(:params) { {alert_type: "usage_amount", thresholds:, recurring_threshold: 100} }
+
+      it "creates a new alert" do
+        expect(result).to be_success
+        expect(result.alert.recurring_threshold).to be_a(BigDecimal)
+        expect(result.alert.recurring_threshold).to eq(100)
+      end
     end
 
     context "with billable_metric_usage_amount type" do

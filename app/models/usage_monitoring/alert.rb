@@ -48,39 +48,34 @@ module UsageMonitoring
     def find_thresholds_crossed(current)
       crossed = []
       return crossed if current < previous_value
-      return crossed if current < non_recurring_thresholds_values.first
+      return crossed if current < thresholds_values.first
 
-      if previous_value < non_recurring_thresholds_values.last
-        crossed += non_recurring_thresholds_values.filter { |t| t.between?(previous_value, current) }
+      if previous_value < thresholds_values.last
+        crossed += thresholds_values.filter { |t| t.between?(previous_value, current) }
       end
 
       crossed += find_recurring_thresholds_crossed(
-        previous_value, current, recurring_threshold.value, non_recurring_thresholds_values.last
+        previous_value, current, recurring_threshold, thresholds_values.last
       )
 
       crossed.uniq.sort
     end
 
-    def non_recurring_thresholds_values
-      thresholds.all.filter_map { _1.value unless _1.recurring }.uniq.sort
-    end
-
-    def recurring_threshold
-      thresholds.find { _1.recurring }
+    def thresholds_values
+      thresholds.all.map(&:value).uniq.sort
     end
 
     def formatted_crossed_thresholds(crossed_threshold_values)
       regular_thresholds_values, other_thresholds_values = crossed_threshold_values.partition do |v|
-        non_recurring_thresholds_values.include?(v)
+        thresholds_values.include?(v)
       end
 
       formatted_regular_thresholds = thresholds
         .filter { regular_thresholds_values.include?(_1.value) }
         .map { |t| {code: t.code, value: t.value, recurring: false} }
 
-      recurring_code = recurring_threshold&.code || ""
       formatted_other_thresholds = other_thresholds_values
-        .map { |v| {code: recurring_code, value: v, recurring: true} }
+        .map { |v| {code:, value: v, recurring: true} }
 
       formatted_regular_thresholds + formatted_other_thresholds
     end
@@ -98,10 +93,12 @@ module UsageMonitoring
     end
 
     def find_recurring_thresholds_crossed(previous, current, step, initial)
-      previous_steps = ((previous - initial).to_f / step).ceil
-      previous_recurring = initial + previous_steps * step
+      return [] unless step
 
-      current_steps = ((current - initial).to_f / step).floor
+      previous_steps = ((previous - initial) / step).ceil
+      previous_recurring = initial + [previous_steps, 1].max * step
+
+      current_steps = ((current - initial) / step).floor
       current_recurring = initial + current_steps * step
 
       return [] if previous_recurring > current_recurring # Shouldn't happen
@@ -121,6 +118,7 @@ end
 #  deleted_at               :datetime
 #  last_processed_at        :datetime
 #  previous_value           :decimal(30, 5)   default(0.0), not null
+#  recurring_threshold      :decimal(30, 5)
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
 #  billable_metric_id       :uuid

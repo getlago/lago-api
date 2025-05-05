@@ -31,7 +31,8 @@ module UsageMonitoring
           subscription_external_id: subscription.external_id,
           billable_metric: billable_metric,
           alert_type: params[:alert_type].to_s,
-          code: params[:code]
+          code: params[:code],
+          recurring_threshold: params[:recurring_threshold]
         )
 
         thresholds = params[:thresholds].map do |threshold|

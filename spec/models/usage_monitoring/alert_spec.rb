@@ -47,9 +47,9 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
     end
   end
 
-  describe "#non_recurring_thresholds_values" do
+  describe "#thresholds_values" do
     it "returns sorted unique threshold values" do
-      expect(alert.non_recurring_thresholds_values).to eq([10, 30, 50])
+      expect(alert.thresholds_values).to eq([10, 30, 50])
     end
   end
 
@@ -83,17 +83,11 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
 
     context "when crossed thresholds isn't part of threshold values" do
       it "assumes it's recurring" do
-        expect(alert.formatted_crossed_thresholds([40]))
-          .to eq([{code: "rec", recurring: true, value: 40}])
-      end
-    end
-
-    context "without recurring threshold" do
-      let(:alert) { create(:alert, thresholds: [10, 30, 50]) }
-
-      it "assumes it's recurring anyway and doesn't have code" do
-        expect(alert.formatted_crossed_thresholds([40]))
-          .to eq([{code: "", recurring: true, value: 40}])
+        expect(alert.formatted_crossed_thresholds([40, 41, 42])).to eq([
+          {code: alert.code, recurring: true, value: 40},
+          {code: alert.code, recurring: true, value: 41},
+          {code: alert.code, recurring: true, value: 42}
+        ])
       end
     end
   end
