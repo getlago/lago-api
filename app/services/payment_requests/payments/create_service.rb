@@ -50,7 +50,7 @@ module PaymentRequests
         payment_result = ::PaymentProviders::CreatePaymentFactory.new_instance(
           provider:,
           payment:,
-          reference: "#{organization.name} - Overdue invoices",
+          reference: "#{payable.billing_entity.name} - Overdue invoices",
           metadata: {
             lago_customer_id: payable.customer_id,
             lago_payable_id: payable.id,
