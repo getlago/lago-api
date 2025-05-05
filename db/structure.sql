@@ -112,6 +112,7 @@ ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF 
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_4934f27a06;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_49212d501e;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_4117574b51;
+ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_41088c7d45;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_3ff27d7624;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_3f7be5debc;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_3ec3563cf3;
@@ -387,6 +388,7 @@ DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_tax_code;
 DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id_and_tax_code;
 DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id;
+DROP INDEX IF EXISTS public.index_credit_notes_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_customer_id;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_fee_id;
@@ -1393,7 +1395,8 @@ CREATE TABLE public.credit_notes (
     coupons_adjustment_amount_cents bigint DEFAULT 0 NOT NULL,
     precise_coupons_adjustment_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     precise_taxes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
-    taxes_rate double precision DEFAULT 0.0 NOT NULL
+    taxes_rate double precision DEFAULT 0.0 NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4704,6 +4707,13 @@ CREATE INDEX index_credit_notes_on_invoice_id ON public.credit_notes USING btree
 
 
 --
+-- Name: index_credit_notes_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_credit_notes_on_organization_id ON public.credit_notes USING btree (organization_id);
+
+
+--
 -- Name: index_credit_notes_taxes_on_credit_note_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6622,6 +6632,14 @@ ALTER TABLE ONLY public.charges_taxes
 
 
 --
+-- Name: credit_notes fk_rails_41088c7d45; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credit_notes
+    ADD CONSTRAINT fk_rails_41088c7d45 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: credit_notes fk_rails_4117574b51; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7454,6 +7472,9 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250507154910'),
 ('20250506170753'),
+('20250505161359'),
+('20250505161358'),
+('20250505161357'),
 ('20250505142221'),
 ('20250505142220'),
 ('20250505142219'),
