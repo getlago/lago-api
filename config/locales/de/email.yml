@@ -16,11 +16,11 @@ de:
       finalized:
         download: Rechnung herunterladen, um Details anzuzeigen
         due_date: Gesamtbetrag fällig am %{date}
-        invoice_from: Rechnung von %{organization_name}
+        invoice_from: Rechnung von %{billing_entity_name}
         invoice_number: Rechnungsnummer
         issue_date: Ausstellungsdatum
         issued_on: ausgestellt am %{date}
-        subject: 'Deine Rechnung von %{organization_name} #%{invoice_number}'
+        subject: 'Deine Rechnung von %{billing_entity_name} #%{invoice_number}'
     payment_receipt:
       created:
         payment_receipt_from: Zahlungsquittung von %{organization_name}

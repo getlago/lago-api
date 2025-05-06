@@ -16,11 +16,11 @@ fr:
       finalized:
         download: Télécharger la facture pour plus de détails
         due_date: Date d'émission le %{date}
-        invoice_from: Facture de %{organization_name}
+        invoice_from: Facture de %{billing_entity_name}
         invoice_number: Nº de facture
         issue_date: Date d'émission
         issued_on: émise le %{date}
-        subject: Votre facture nº %{invoice_number} de %{organization_name}
+        subject: Votre facture nº %{invoice_number} de %{billing_entity_name}
     payment_receipt:
       created:
         payment_receipt_from: Reçu de paiement de %{organization_name}
