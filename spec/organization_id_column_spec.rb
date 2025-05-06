@@ -20,6 +20,7 @@ Rspec.describe "All tables must have an organization_id" do
       applied_add_ons
       group_properties
       groups
+      password_resets
     ]
   end
 
@@ -30,7 +31,6 @@ Rspec.describe "All tables must have an organization_id" do
       billable_metric_filters
       billing_entities_taxes
       charge_filter_values
-      charge_filters
       charges_taxes
       commitments
       commitments_taxes
@@ -51,7 +51,6 @@ Rspec.describe "All tables must have an organization_id" do
       integration_resources
       invoice_metadata
       invoices_payment_requests
-      password_resets
       recurring_transaction_rules
       refunds
       versions

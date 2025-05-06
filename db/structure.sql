@@ -22,6 +22,7 @@ ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXIST
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_e8bac9c5bb;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_e88403f4b9;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
+ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_de6b3c3138;
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_dd7e076158;
@@ -407,6 +408,7 @@ DROP INDEX IF EXISTS public.index_charges_on_parent_id;
 DROP INDEX IF EXISTS public.index_charges_on_organization_id;
 DROP INDEX IF EXISTS public.index_charges_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charges_on_billable_metric_id;
+DROP INDEX IF EXISTS public.index_charge_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filters_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charge_filters_on_charge_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_deleted_at;
@@ -1222,7 +1224,8 @@ CREATE TABLE public.charge_filters (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    invoice_display_name character varying
+    invoice_display_name character varying,
+    organization_id uuid
 );
 
 
@@ -4513,6 +4516,13 @@ CREATE INDEX index_charge_filters_on_deleted_at ON public.charge_filters USING b
 
 
 --
+-- Name: index_charge_filters_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_charge_filters_on_organization_id ON public.charge_filters USING btree (organization_id);
+
+
+--
 -- Name: index_charges_on_billable_metric_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7288,6 +7298,14 @@ ALTER TABLE ONLY public.credit_note_items
 
 
 --
+-- Name: charge_filters fk_rails_e711e8089e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.charge_filters
+    ADD CONSTRAINT fk_rails_e711e8089e FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: customers_taxes fk_rails_e86903e081; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7398,6 +7416,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250505135821'),
+('20250505135820'),
+('20250505135819'),
 ('20250505125354'),
 ('20250505125335'),
 ('20250505125308'),
