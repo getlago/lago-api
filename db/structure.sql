@@ -95,6 +95,7 @@ ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails_64267aab58;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_63d3df128b;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_63ac282e70;
+ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_63683837a2;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62d18ea517;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
@@ -295,6 +296,7 @@ DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id_and_subscr
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_charges_from_and_to_datetime;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_boundaries;
+DROP INDEX IF EXISTS public.index_invoice_metadata_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoice_metadata_on_invoice_id_and_key;
 DROP INDEX IF EXISTS public.index_invoice_metadata_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoice_custom_sections_on_section_type;
@@ -2301,7 +2303,8 @@ CREATE TABLE public.invoice_metadata (
     key character varying NOT NULL,
     value character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5467,6 +5470,13 @@ CREATE UNIQUE INDEX index_invoice_metadata_on_invoice_id_and_key ON public.invoi
 
 
 --
+-- Name: index_invoice_metadata_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoice_metadata_on_organization_id ON public.invoice_metadata USING btree (organization_id);
+
+
+--
 -- Name: index_invoice_subscriptions_boundaries; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6884,6 +6894,14 @@ ALTER TABLE ONLY public.payments
 
 
 --
+-- Name: invoice_metadata fk_rails_63683837a2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoice_metadata
+    ADD CONSTRAINT fk_rails_63683837a2 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: applied_invoice_custom_sections fk_rails_63ac282e70; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7580,6 +7598,9 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250507154910'),
 ('20250506170753'),
+('20250506145851'),
+('20250506145850'),
+('20250506145849'),
 ('20250506144002'),
 ('20250506144001'),
 ('20250506144000'),
