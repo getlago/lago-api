@@ -152,6 +152,7 @@ ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_216ac8a975;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_20cc0de4c7;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_1db0057d9b;
+ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_1d112bf8a0;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_150139409e;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_1454058c96;
@@ -441,6 +442,7 @@ DROP INDEX IF EXISTS public.index_billable_metrics_on_deleted_at;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_deleted_at;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_usage_threshold_id;
+DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_invoice_id;
 DROP INDEX IF EXISTS public.index_applied_invoice_custom_sections_on_organization_id;
 DROP INDEX IF EXISTS public.index_applied_invoice_custom_sections_on_invoice_id;
@@ -1057,7 +1059,8 @@ CREATE TABLE public.applied_usage_thresholds (
     invoice_id uuid NOT NULL,
     lifetime_usage_amount_cents bigint DEFAULT 0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4377,6 +4380,13 @@ CREATE INDEX index_applied_usage_thresholds_on_invoice_id ON public.applied_usag
 
 
 --
+-- Name: index_applied_usage_thresholds_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_applied_usage_thresholds_on_organization_id ON public.applied_usage_thresholds USING btree (organization_id);
+
+
+--
 -- Name: index_applied_usage_thresholds_on_usage_threshold_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6356,6 +6366,14 @@ ALTER TABLE ONLY public.customer_metadata
 
 
 --
+-- Name: applied_usage_thresholds fk_rails_1d112bf8a0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_usage_thresholds
+    ADD CONSTRAINT fk_rails_1d112bf8a0 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: credits fk_rails_1db0057d9b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7511,6 +7529,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250506085760'),
 ('20250506085759'),
 ('20250506085758'),
+('20250506084829'),
+('20250506084828'),
+('20250506084827'),
 ('20250506084022'),
 ('20250506084021'),
 ('20250506084020'),
