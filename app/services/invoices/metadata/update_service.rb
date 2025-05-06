@@ -39,6 +39,7 @@ module Invoices
 
       def create_metadata(payload)
         invoice.metadata.create!(
+          organization_id: invoice.organization_id,
           key: payload[:key],
           value: payload[:value]
         )
