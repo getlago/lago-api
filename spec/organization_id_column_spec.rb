@@ -36,7 +36,6 @@ Rspec.describe "All tables must have an organization_id" do
       coupon_targets
       credit_note_items
       credit_notes_taxes
-      customer_metadata
       customers_taxes
       data_export_parts
       dunning_campaign_thresholds

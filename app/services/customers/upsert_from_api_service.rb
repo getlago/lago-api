@@ -175,6 +175,7 @@ module Customers
 
     def create_metadata(customer:, args:)
       customer.metadata.create!(
+        organization_id: organization.id,
         key: args[:key],
         value: args[:value],
         display_in_invoice: args[:display_in_invoice] || false

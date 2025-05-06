@@ -23,6 +23,7 @@ ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_e88403f4b9;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
+ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_de6b3c3138;
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_dd7e076158;
@@ -377,6 +378,7 @@ DROP INDEX IF EXISTS public.index_customers_on_deleted_at;
 DROP INDEX IF EXISTS public.index_customers_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_customers_on_applied_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_customers_on_account_type;
+DROP INDEX IF EXISTS public.index_customer_metadata_on_organization_id;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id_and_key;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id;
 DROP INDEX IF EXISTS public.index_credits_on_progressive_billing_invoice_id;
@@ -1450,7 +1452,8 @@ CREATE TABLE public.customer_metadata (
     value character varying NOT NULL,
     display_in_invoice boolean DEFAULT false NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4791,6 +4794,13 @@ CREATE UNIQUE INDEX index_customer_metadata_on_customer_id_and_key ON public.cus
 
 
 --
+-- Name: index_customer_metadata_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customer_metadata_on_organization_id ON public.customer_metadata USING btree (organization_id);
+
+
+--
 -- Name: index_customers_on_account_type; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7352,6 +7362,14 @@ ALTER TABLE ONLY public.credit_note_items
 
 
 --
+-- Name: customer_metadata fk_rails_dfac602b2c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customer_metadata
+    ADD CONSTRAINT fk_rails_dfac602b2c FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: charge_filters fk_rails_e711e8089e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7472,6 +7490,9 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250507154910'),
 ('20250506170753'),
+('20250506085760'),
+('20250506085759'),
+('20250506085758'),
 ('20250505161359'),
 ('20250505161358'),
 ('20250505161357'),
