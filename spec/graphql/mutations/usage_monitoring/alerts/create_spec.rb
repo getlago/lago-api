@@ -15,10 +15,10 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
         subscriptionExternalId
         alertType
         code
-        recurringThreshold
         thresholds {
           code
           value
+          recurring
         }
       }
     }
@@ -44,10 +44,10 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
           subscriptionId: subscription.id,
           code: "global",
           alertType: "usage_amount",
-          recurringThreshold: "100",
           thresholds: [
             {code: "warn", value: "10"},
-            {code: "alert", value: "50"}
+            {code: "alert", value: "50"},
+            {value: "20", recurring: true}
           ]
         }
       }
@@ -57,10 +57,10 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
     expect(result_data["subscriptionExternalId"]).to eq subscription.external_id
     expect(result_data["alertType"]).to eq "usage_amount"
     expect(result_data["code"]).to eq "global"
-    expect(result_data["recurringThreshold"]).to eq "100.0"
     expect(result_data["thresholds"]).to contain_exactly(
-      {"code" => "warn", "value" => "10.0"}, # Notice .0 since it's a BigDecimal
-      {"code" => "alert", "value" => "50.0"}
+      {"code" => "warn", "value" => "10.0", "recurring" => false}, # Notice .0 since it's a BigDecimal
+      {"code" => "alert", "value" => "50.0", "recurring" => false},
+      {"code" => nil, "value" => "20.0", "recurring" => true}
     )
   end
 end

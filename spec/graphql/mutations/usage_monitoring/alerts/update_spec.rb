@@ -16,11 +16,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Update, type: :graphql do
         id
         alertType
         code
-        recurringThreshold
-        thresholds {
-          code
-          value
-        }
+        thresholds { code value recurring }
         billableMetric { id code }
       }
     }
@@ -46,10 +42,9 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Update, type: :graphql do
         input: {
           id: alert.id,
           code: "new code",
-          recurringThreshold: "60",
           thresholds: [
             {code: "warn", value: "10"},
-            {code: "alert", value: "50"}
+            {code: "alert", value: "50", recurring: true}
           ]
         }
       }
@@ -60,10 +55,9 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Update, type: :graphql do
     expect(result_data["alertType"]).to eq "usage_amount"
     expect(result_data["code"]).to eq "new code"
     expect(result_data["billableMetric"]).to be_nil
-    expect(result_data["recurringThreshold"]).to eq "60.0"
     expect(result_data["thresholds"]).to contain_exactly(
-      {"code" => "warn", "value" => "10.0"},
-      {"code" => "alert", "value" => "50.0"}
+      {"code" => "warn", "value" => "10.0", "recurring" => false},
+      {"code" => "alert", "value" => "50.0", "recurring" => true}
     )
   end
 
@@ -82,7 +76,6 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Update, type: :graphql do
           input: {
             id: alert.id,
             code: "new code",
-            recurringThreshold: "60",
             billableMetricId: new_billable_metric.id
           }
         }
@@ -92,10 +85,10 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Update, type: :graphql do
       expect(result_data["id"]).to eq alert.id
       expect(result_data["alertType"]).to eq "billable_metric_usage_amount"
       expect(result_data["code"]).to eq "new code"
-      expect(result_data["recurringThreshold"]).to eq "60.0"
       expect(result_data["thresholds"]).to contain_exactly(
-        {"code" => "warn10", "value" => "10.0"},
-        {"code" => "warn12", "value" => "12.0"}
+        {"code" => "warn10", "value" => "10.0", "recurring" => false},
+        {"code" => "warn12", "value" => "12.0", "recurring" => false},
+        {"code" => "rec", "value" => "33.0", "recurring" => true}
       )
       expect(result_data["billableMetric"]["id"]).to eq new_billable_metric.id
       expect(result_data["billableMetric"]["code"]).to eq "new_bm"

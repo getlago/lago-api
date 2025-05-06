@@ -22,17 +22,12 @@ module UsageMonitoring
       ActiveRecord::Base.transaction do
         alert.name = params[:name] if params.key?(:name)
         alert.code = params[:code] if params.key?(:code)
-        alert.recurring_threshold = params[:recurring_threshold] if params.key?(:recurring_threshold)
         alert.billable_metric = billable_metric if billable_metric
         alert.save!
 
-        # Updating threshold is hard deleting them all and recreating them
         if params[:thresholds].present?
           alert.thresholds.delete_all
-          thresholds = params[:thresholds].map do |threshold|
-            threshold.to_h.merge(organization_id: alert.organization_id)
-          end
-          alert.thresholds.create!(thresholds)
+          alert.thresholds.create!(prepare_thresholds(params[:thresholds], alert.organization_id))
         end
       end
 

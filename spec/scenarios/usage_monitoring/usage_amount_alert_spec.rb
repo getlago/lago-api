@@ -115,9 +115,10 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
       alert = UsageMonitoring::CreateAlertService.call!(
         organization:,
         subscription:,
-        params: {alert_type: :usage_amount, code: "simple", recurring_threshold: 10_00, thresholds: [
+        params: {alert_type: :usage_amount, code: "simple", thresholds: [
           {value: 15_00, code: :warn},
-          {value: 30_00, code: :warn}
+          {value: 30_00, code: :warn},
+          {value: 10_00, code: :alert, recurring: true}
         ]}
       ).alert
 
@@ -141,29 +142,9 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
       ta = alert.triggered_alerts.order(:created_at).last
       expect(ta.current_value).to eq(5500)
       expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
-        {code: "simple", value: "4000.0", recurring: true},
-        {code: "simple", value: "5000.0", recurring: true}
+        {code: "alert", value: "4000.0", recurring: true},
+        {code: "alert", value: "5000.0", recurring: true}
       ])
-    end
-  end
-
-  context "with multiple subscriptions" do
-    it "is a unit test, not in this scenario" do
-      subs = create_list(:subscription, 10, organization:)
-      UsageMonitoring::SubscriptionActivity.create!(organization:, subscription: subs.first)
-      UsageMonitoring::SubscriptionActivity.create!(organization:, subscription: subs.second, enqueued: true)
-      expect(UsageMonitoring::SubscriptionActivity.where(organization:).count).to eq 2
-
-      activities = subs.map do |sub|
-        {organization_id: organization.id, subscription_id: sub.id}
-      end
-      10.times do
-        UsageMonitoring::SubscriptionActivity.insert_all( # rubocop:disable Rails/SkipsModelValidations
-          activities, unique_by: :idx_subscription_unique
-        )
-      end
-
-      expect(UsageMonitoring::SubscriptionActivity.where(organization:).count).to eq 10
     end
   end
 end

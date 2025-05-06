@@ -15,6 +15,7 @@ end
 #
 #  id                        :uuid             not null, primary key
 #  code                      :string
+#  recurring                 :boolean          default(FALSE), not null
 #  value                     :decimal(30, 5)   not null
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
@@ -24,6 +25,7 @@ end
 # Indexes
 #
 #  idx_on_usage_monitoring_alert_id_78eb24d06c                 (usage_monitoring_alert_id)
+#  idx_on_usage_monitoring_alert_id_recurring_756a2a370d       (usage_monitoring_alert_id,recurring) UNIQUE WHERE (recurring IS TRUE)
 #  index_usage_monitoring_alert_thresholds_on_organization_id  (organization_id)
 #
 # Foreign Keys

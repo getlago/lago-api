@@ -32,14 +32,10 @@ module UsageMonitoring
           billable_metric: billable_metric,
           alert_type: params[:alert_type].to_s,
           name: params[:name],
-          code: params[:code],
-          recurring_threshold: params[:recurring_threshold]
+          code: params[:code]
         )
 
-        thresholds = params[:thresholds].map do |threshold|
-          threshold.to_h.merge(organization_id: organization.id)
-        end
-        alert.thresholds.create!(thresholds)
+        alert.thresholds.create!(prepare_thresholds(params[:thresholds], organization.id))
 
         result.alert = alert
       end

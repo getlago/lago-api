@@ -67,10 +67,10 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
         expect(ta.crossed_thresholds.map(&:symbolize_keys)).to contain_exactly(
           {code: "warn10", value: "10.0", recurring: false},
           {code: "warn20", value: "20.0", recurring: false},
-          {code: "test", value: "55.0", recurring: true},
-          {code: "test", value: "90.0", recurring: true},
-          {code: "test", value: "125.0", recurring: true},
-          {code: "test", value: "160.0", recurring: true}
+          {code: "rec", value: "55.0", recurring: true},
+          {code: "rec", value: "90.0", recurring: true},
+          {code: "rec", value: "125.0", recurring: true},
+          {code: "rec", value: "160.0", recurring: true}
         )
 
         expect(SendWebhookJob).to have_been_enqueued.once.with("alert.triggered", ta)

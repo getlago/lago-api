@@ -10,7 +10,6 @@ module Types
         argument :code, String, required: false
         argument :name, String, required: false
 
-        argument :recurring_threshold, String, required: false
         argument :thresholds, [Types::UsageMonitoring::Alerts::ThresholdInput], required: false
       end
     end

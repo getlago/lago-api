@@ -48,36 +48,40 @@ module UsageMonitoring
     def find_thresholds_crossed(current)
       crossed = []
       return crossed if current < previous_value
-      return crossed if current < thresholds_values.first
+      return crossed if current < one_time_thresholds_values.first
 
-      if previous_value < thresholds_values.last
-        crossed += thresholds_values.filter { |t| t.between?(previous_value, current) }
+      if previous_value < one_time_thresholds_values.last
+        crossed += one_time_thresholds_values.filter { |t| t.between?(previous_value, current) }
       end
 
       crossed += find_recurring_thresholds_crossed(
-        previous_value, current, recurring_threshold, thresholds_values.last
+        previous_value, current, recurring_threshold&.value, one_time_thresholds_values.last
       )
 
       crossed.uniq.sort
     end
 
-    def thresholds_values
-      thresholds.all.map(&:value).uniq.sort
+    def recurring_threshold
+      @recurring_threshold ||= thresholds.find { |th| th.recurring }
+    end
+
+    def one_time_thresholds_values
+      @one_time_thresholds_values ||= thresholds.all.filter_map { |th| th.value unless th.recurring }.uniq.sort
     end
 
     def formatted_crossed_thresholds(crossed_threshold_values)
-      regular_thresholds_values, other_thresholds_values = crossed_threshold_values.partition do |v|
-        thresholds_values.include?(v)
+      regular_thresholds_values, recurring_thresholds_values = crossed_threshold_values.partition do |v|
+        one_time_thresholds_values.include?(v)
       end
 
       formatted_regular_thresholds = thresholds
         .filter { regular_thresholds_values.include?(_1.value) }
         .map { |t| {code: t.code, value: t.value, recurring: false} }
 
-      formatted_other_thresholds = other_thresholds_values
-        .map { |v| {code:, value: v, recurring: true} }
+      formatted_recurring_thresholds = recurring_thresholds_values
+        .map { |v| {code: recurring_threshold&.code, value: v, recurring: true} }
 
-      formatted_regular_thresholds + formatted_other_thresholds
+      formatted_regular_thresholds + formatted_recurring_thresholds
     end
 
     def find_value(current_metrics)
@@ -119,7 +123,6 @@ end
 #  last_processed_at        :datetime
 #  name                     :string
 #  previous_value           :decimal(30, 5)   default(0.0), not null
-#  recurring_threshold      :decimal(30, 5)
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
 #  billable_metric_id       :uuid

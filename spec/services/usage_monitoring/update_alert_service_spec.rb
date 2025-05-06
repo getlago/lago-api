@@ -11,8 +11,9 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
   describe "#call" do
     let(:params) do
       {code: "new_code", name: "Renamed", thresholds: [
+        {value: 40},
         {code: :warn, value: 100},
-        {code: :critical, value: 200}
+        {code: :critical, value: 200, recurring: true}
       ]}
     end
 
@@ -21,8 +22,8 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       expect(result.alert).to eq(alert)
       expect(alert.reload.name).to eq("Renamed")
       expect(alert.reload.code).to eq("new_code")
-      expect(alert.reload.thresholds.map(&:value)).to eq [100, 200]
-      expect(alert.reload.thresholds.map(&:code)).to eq ["warn", "critical"]
+      expect(alert.reload.thresholds.map(&:value)).to eq [40, 100, 200]
+      expect(alert.reload.thresholds.map(&:code)).to eq [nil, "warn", "critical"]
     end
 
     context "with a billable metric" do

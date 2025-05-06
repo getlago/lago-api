@@ -11,7 +11,6 @@ module Types
         argument :name, String, required: false
         argument :subscription_id, ID, required: true
 
-        argument :recurring_threshold, String, required: false
         argument :thresholds, [Types::UsageMonitoring::Alerts::ThresholdInput], required: true
       end
     end

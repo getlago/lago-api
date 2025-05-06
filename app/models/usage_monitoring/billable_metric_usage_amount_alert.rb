@@ -21,7 +21,6 @@ end
 #  last_processed_at        :datetime
 #  name                     :string
 #  previous_value           :decimal(30, 5)   default(0.0), not null
-#  recurring_threshold      :decimal(30, 5)
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
 #  billable_metric_id       :uuid

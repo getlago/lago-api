@@ -15,7 +15,6 @@ module Types
         field :code, String
         field :name, String
 
-        field :recurring_threshold, String
         field :thresholds, [Types::UsageMonitoring::Alerts::ThresholdObject]
 
         field :created_at, GraphQL::Types::ISO8601DateTime, null: false

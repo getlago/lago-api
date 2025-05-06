@@ -7,6 +7,7 @@ module Types
         graphql_name "AlertThreshold"
 
         field :code, String, null: true
+        field :recurring, Boolean, null: false
         field :value, String, null: false
       end
     end

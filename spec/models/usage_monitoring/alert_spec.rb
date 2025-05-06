@@ -47,9 +47,9 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
     end
   end
 
-  describe "#thresholds_values" do
+  describe "#one_time_thresholds_values" do
     it "returns sorted unique threshold values" do
-      expect(alert.thresholds_values).to eq([10, 30, 50])
+      expect(alert.one_time_thresholds_values).to eq([10, 30, 50])
     end
   end
 
