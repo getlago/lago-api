@@ -26,7 +26,6 @@ Rspec.describe "All tables must have an organization_id" do
 
   let(:tables_to_migrate) do
     %w[
-      billable_metric_filters
       billing_entities_taxes
       charge_filter_values
       commitments

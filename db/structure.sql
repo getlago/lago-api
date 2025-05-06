@@ -110,6 +110,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EX
 ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS fk_rails_526379cd99;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_521b5240ed;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_51ac39a0c6;
+ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS fk_rails_51077e7c0e;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_50d46d3679;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_4934f27a06;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_49212d501e;
@@ -439,6 +440,7 @@ DROP INDEX IF EXISTS public.index_billable_metrics_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_organization_id;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_org_id_and_code_and_expr;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_deleted_at;
+DROP INDEX IF EXISTS public.index_billable_metric_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_deleted_at;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_usage_threshold_id;
@@ -1087,7 +1089,8 @@ CREATE TABLE public.billable_metric_filters (
     "values" character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    deleted_at timestamp(6) without time zone
+    deleted_at timestamp(6) without time zone,
+    organization_id uuid
 );
 
 
@@ -4408,6 +4411,13 @@ CREATE INDEX index_billable_metric_filters_on_deleted_at ON public.billable_metr
 
 
 --
+-- Name: index_billable_metric_filters_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billable_metric_filters_on_organization_id ON public.billable_metric_filters USING btree (organization_id);
+
+
+--
 -- Name: index_billable_metrics_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6710,6 +6720,14 @@ ALTER TABLE ONLY public.payment_provider_customers
 
 
 --
+-- Name: billable_metric_filters fk_rails_51077e7c0e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billable_metric_filters
+    ADD CONSTRAINT fk_rails_51077e7c0e FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: commitments fk_rails_51ac39a0c6; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7526,6 +7544,9 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250507154910'),
 ('20250506170753'),
+('20250506115439'),
+('20250506115438'),
+('20250506115437'),
 ('20250506085760'),
 ('20250506085759'),
 ('20250506085758'),

@@ -20,7 +20,9 @@ module BillableMetricFilters
 
       ActiveRecord::Base.transaction do
         filters_params.each do |filter_param|
-          filter = billable_metric.filters.find_or_initialize_by(key: filter_param[:key])
+          filter = billable_metric.filters
+            .create_with(organization_id: billable_metric.organization_id)
+            .find_or_initialize_by(key: filter_param[:key])
           new_values = (filter_param[:values] || []).uniq
 
           if filter.persisted?
