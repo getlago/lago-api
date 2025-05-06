@@ -27,6 +27,7 @@ ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_dd7e076158;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_dd342449a6;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_d9ffb8b4a1;
+ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_cc318ad1ff;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf700aeb8;
@@ -312,6 +313,7 @@ DROP INDEX IF EXISTS public.index_inbound_webhooks_on_status_and_processing_at;
 DROP INDEX IF EXISTS public.index_inbound_webhooks_on_status_and_created_at;
 DROP INDEX IF EXISTS public.index_inbound_webhooks_on_organization_id;
 DROP INDEX IF EXISTS public.index_idempotency_records_on_resource_type_and_resource_id;
+DROP INDEX IF EXISTS public.index_idempotency_records_on_organization_id;
 DROP INDEX IF EXISTS public.index_idempotency_records_on_idempotency_key;
 DROP INDEX IF EXISTS public.index_groups_on_parent_group_id;
 DROP INDEX IF EXISTS public.index_groups_on_deleted_at;
@@ -2737,7 +2739,8 @@ CREATE TABLE public.idempotency_records (
     resource_id uuid,
     resource_type character varying,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5161,6 +5164,13 @@ CREATE UNIQUE INDEX index_idempotency_records_on_idempotency_key ON public.idemp
 
 
 --
+-- Name: index_idempotency_records_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_idempotency_records_on_organization_id ON public.idempotency_records USING btree (organization_id);
+
+
+--
 -- Name: index_idempotency_records_on_resource_type_and_resource_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7230,6 +7240,14 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 --
+-- Name: idempotency_records fk_rails_d4f02c82b2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.idempotency_records
+    ADD CONSTRAINT fk_rails_d4f02c82b2 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: fees fk_rails_d9ffb8b4a1; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7380,6 +7398,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250505125354'),
+('20250505125335'),
+('20250505125308'),
 ('20250429150146'),
 ('20250429150128'),
 ('20250429150114'),
