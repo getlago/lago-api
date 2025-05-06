@@ -94,6 +94,7 @@ ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXIST
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_66eb6b32c1;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails_64267aab58;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_63d3df128b;
+ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_63ac282e70;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62d18ea517;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
@@ -441,6 +442,7 @@ DROP INDEX IF EXISTS public.index_billable_metric_filters_on_deleted_at;
 DROP INDEX IF EXISTS public.index_billable_metric_filters_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_usage_threshold_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_invoice_id;
+DROP INDEX IF EXISTS public.index_applied_invoice_custom_sections_on_organization_id;
 DROP INDEX IF EXISTS public.index_applied_invoice_custom_sections_on_invoice_id;
 DROP INDEX IF EXISTS public.index_applied_coupons_on_organization_id;
 DROP INDEX IF EXISTS public.index_applied_coupons_on_customer_id;
@@ -1040,7 +1042,8 @@ CREATE TABLE public.applied_invoice_custom_sections (
     details character varying,
     invoice_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4360,6 +4363,13 @@ CREATE INDEX index_applied_invoice_custom_sections_on_invoice_id ON public.appli
 
 
 --
+-- Name: index_applied_invoice_custom_sections_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_applied_invoice_custom_sections_on_organization_id ON public.applied_invoice_custom_sections USING btree (organization_id);
+
+
+--
 -- Name: index_applied_usage_thresholds_on_invoice_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6802,6 +6812,14 @@ ALTER TABLE ONLY public.payments
 
 
 --
+-- Name: applied_invoice_custom_sections fk_rails_63ac282e70; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_invoice_custom_sections
+    ADD CONSTRAINT fk_rails_63ac282e70 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: subscriptions fk_rails_63d3df128b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7493,6 +7511,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250506085760'),
 ('20250506085759'),
 ('20250506085758'),
+('20250506084022'),
+('20250506084021'),
+('20250506084020'),
 ('20250505161359'),
 ('20250505161358'),
 ('20250505161357'),
