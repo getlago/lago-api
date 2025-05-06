@@ -11,7 +11,7 @@ FactoryBot.define do
     crossed_thresholds do
       [
         {code: :warn, value: BigDecimal(2000), recurring: false},
-        {code: :default, value: BigDecimal(2500), recurring: true}
+        {code: :repeat, value: BigDecimal(2500), recurring: true}
       ]
     end
   end

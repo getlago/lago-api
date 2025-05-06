@@ -41,9 +41,8 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver, type: :gr
     alerts = result["data"]["alerts"]["collection"]
 
     expect(alerts.pluck("id")).to eq [alert.id, alert_bm.id]
-    expect(alerts).to all(include({
-      "code" => "default", "name" => "General Alert", "deletedAt" => nil
-    }))
+    expect(alerts).to all(include({"name" => "General Alert", "deletedAt" => nil}))
+    expect(alerts.pluck("code")).to all(start_with("default"))
     expect(alerts.pluck("thresholds")).to all(contain_exactly(
       {"code" => "warn10", "value" => "10.0", "recurring" => false},
       {"code" => "warn20", "value" => "20.0", "recurring" => false},

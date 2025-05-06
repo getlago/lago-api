@@ -5,7 +5,7 @@ FactoryBot.define do
     association :organization
     subscription_external_id { create(:subscription).external_id }
     name { "General Alert" }
-    code { "default" }
+    sequence(:code) { |n| "default#{n}" }
     alert_type { "usage_amount" }
 
     transient do

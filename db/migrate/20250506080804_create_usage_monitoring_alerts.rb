@@ -18,12 +18,16 @@ class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
 
       t.index %w[subscription_external_id organization_id alert_type],
         unique: true,
-        name: "idx_alerts_unique_per_type_per_customer",
+        name: "idx_alerts_unique_per_type_per_subscriptions",
         where: "(billable_metric_id IS NULL AND deleted_at IS NULL)"
       t.index %w[subscription_external_id organization_id alert_type billable_metric_id],
         unique: true,
-        name: "idx_alerts_unique_per_type_per_customer_with_bm",
+        name: "idx_alerts_unique_per_type_per_subscriptions_with_bm",
         where: "(billable_metric_id IS NOT NULL AND deleted_at IS NULL)"
+      t.index %w[code subscription_external_id organization_id],
+        unique: true,
+        name: "idx_alerts_code_unique_per_subscriptions",
+        where: "(deleted_at IS NULL)"
     end
 
     create_table :usage_monitoring_alert_thresholds, id: :uuid do |t|

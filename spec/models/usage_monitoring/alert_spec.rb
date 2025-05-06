@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe UsageMonitoring::Alert, type: :model do
-  let(:alert) { create(:alert, thresholds: [10, 30, 50], recurring_threshold: 100) }
+  let(:alert) { create(:alert, code: "my-code", thresholds: [10, 30, 50], recurring_threshold: 100) }
 
   describe "associations" do
     it do
@@ -22,6 +22,14 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
         alert = build(:billable_metric_usage_amount_alert, billable_metric_id: nil)
         expect(alert).to be_invalid
         expect(alert.errors[:billable_metric_id]).to include("is required for `billable_metric_usage_amount` alert type")
+      end
+    end
+
+    context "when code is not unique for a subscription" do
+      it "raises an error" do
+        expect {
+          create(:billable_metric_usage_amount_alert, code: "my-code", subscription_external_id: alert.subscription_external_id, organization: alert.organization)
+        }.to raise_error(ActiveRecord::RecordNotUnique)
       end
     end
   end
@@ -84,9 +92,9 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
     context "when crossed thresholds isn't part of threshold values" do
       it "assumes it's recurring" do
         expect(alert.formatted_crossed_thresholds([40, 41, 42])).to eq([
-          {code: alert.code, recurring: true, value: 40},
-          {code: alert.code, recurring: true, value: 41},
-          {code: alert.code, recurring: true, value: 42}
+          {code: "rec", recurring: true, value: 40},
+          {code: "rec", recurring: true, value: 41},
+          {code: "rec", recurring: true, value: 42}
         ])
       end
     end

@@ -11,7 +11,7 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
   before { triggered_alert }
 
   context "with usage_amount alert" do
-    let(:alert) { create(:usage_amount_alert, subscription_external_id: "ext-id") }
+    let(:alert) { create(:usage_amount_alert, subscription_external_id: "ext-id", code: "first") }
 
     it "serializes the object" do
       result = JSON.parse(serializer.to_json)
@@ -22,13 +22,13 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
       expect(payload["lago_subscription_id"]).to eq(triggered_alert.subscription.id)
       expect(payload["lago_billable_metric_id"]).to be_nil
       expect(payload["alert_name"]).to eq("General Alert")
-      expect(payload["alert_code"]).to eq("default")
+      expect(payload["alert_code"]).to eq("first")
       expect(payload["alert_type"]).to eq("usage_amount")
       expect(payload["current_value"]).to eq("3000.0")
       expect(payload["previous_value"]).to eq("1000.0")
       expect(payload["crossed_thresholds"]).to eq([
         {"code" => "warn", "value" => "2000.0", "recurring" => false},
-        {"code" => "default", "value" => "2500.0", "recurring" => true}
+        {"code" => "repeat", "value" => "2500.0", "recurring" => true}
       ])
       expect(payload["triggered_at"]).to eq("2000-01-01T12:00:00Z")
     end

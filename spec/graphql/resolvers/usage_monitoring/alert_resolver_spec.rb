@@ -38,7 +38,7 @@ RSpec.describe Resolvers::UsageMonitoring::AlertResolver, type: :graphql do
     alert_response = result["data"]["alert"]
 
     expect(alert_response["id"]).to eq(alert.id)
-    expect(alert_response["code"]).to eq("default")
+    expect(alert_response["code"]).to start_with("default")
     expect(alert_response["name"]).to eq("General Alert")
     expect(alert_response["thresholds"].map(&:symbolize_keys)).to contain_exactly(
       {code: "warn10", value: "10.0", recurring: false},
