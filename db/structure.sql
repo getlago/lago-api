@@ -102,6 +102,7 @@ ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_5ade8984b1;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
+ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
 ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS fk_rails_526379cd99;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_521b5240ed;
@@ -400,6 +401,7 @@ DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id;
 DROP INDEX IF EXISTS public.index_commitments_on_plan_id;
 DROP INDEX IF EXISTS public.index_commitments_on_commitment_type_and_plan_id;
 DROP INDEX IF EXISTS public.index_charges_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_charges_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_charges_taxes_on_charge_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_charges_taxes_on_charge_id;
 DROP INDEX IF EXISTS public.index_charges_pay_in_advance;
@@ -1263,7 +1265,8 @@ CREATE TABLE public.charges_taxes (
     charge_id uuid NOT NULL,
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4579,6 +4582,13 @@ CREATE UNIQUE INDEX index_charges_taxes_on_charge_id_and_tax_id ON public.charge
 
 
 --
+-- Name: index_charges_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_charges_taxes_on_organization_id ON public.charges_taxes USING btree (organization_id);
+
+
+--
 -- Name: index_charges_taxes_on_tax_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6666,6 +6676,14 @@ ALTER TABLE ONLY public.applied_usage_thresholds
 
 
 --
+-- Name: charges_taxes fk_rails_56b7167125; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.charges_taxes
+    ADD CONSTRAINT fk_rails_56b7167125 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: customers fk_rails_58234c715e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7416,6 +7434,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250505140928'),
+('20250505140927'),
+('20250505140926'),
 ('20250505135821'),
 ('20250505135820'),
 ('20250505135819'),
