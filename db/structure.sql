@@ -7452,6 +7452,7 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250506170753'),
 ('20250505142221'),
 ('20250505142220'),
 ('20250505142219'),
