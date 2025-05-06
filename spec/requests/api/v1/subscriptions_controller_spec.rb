@@ -325,7 +325,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
             subject
 
             expect(response).to have_http_status(:bad_request)
-            expect(json[:error]).to eq "BadRequest: param is missing or the value is empty: amount_currency"
+            expect(json[:error]).to eq "BadRequest: param is missing or the value is empty or invalid: amount_currency"
           end
         end
 

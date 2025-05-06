@@ -2,7 +2,7 @@
 
 class RefreshCachedAggregations < ActiveRecord::Migration[7.0]
   class BillableMetric < ApplicationRecord
-    enum aggregation_type: {
+    enum :aggregation_type, {
       count_agg: 0,
       sum_agg: 1,
       max_agg: 2,

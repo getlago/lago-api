@@ -6,7 +6,7 @@ class AddRateToPercentageAmountDetails < ActiveRecord::Migration[7.0]
   end
 
   class Charge < ApplicationRecord
-    enum charge_model: %i[percentage graduated_percentage].freeze
+    enum :charge_model, %i[percentage graduated_percentage].freeze
   end
 
   def up
