@@ -5,7 +5,7 @@ on:
       - "main"
   pull_request:
     types: [opened, synchronize, reopened]
-permissions: { }
+permissions: {}
 jobs:
   run-migrations:
     name: Run migrations
@@ -45,7 +45,7 @@ jobs:
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.3.6"
+          ruby-version: "3.4.3"
           bundler-cache: true
       - name: Install pg 14
         uses: tj-actions/install-postgresql@v3
