@@ -40,6 +40,7 @@ module Customers
 
       def create_metadata(payload)
         customer.metadata.create!(
+          organization_id: customer.organization_id,
           key: payload[:key],
           value: payload[:value],
           display_in_invoice: payload[:display_in_invoice]
