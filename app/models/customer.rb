@@ -246,10 +246,6 @@ class Customer < ApplicationRecord
     wallets.active.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
   end
 
-  def eu_vat_eligible?
-    organization.eu_tax_management && billing_entity.eu_vat_eligible?
-  end
-
   private
 
   def ensure_slug

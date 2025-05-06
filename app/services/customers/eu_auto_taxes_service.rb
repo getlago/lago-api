@@ -88,7 +88,7 @@ module Customers
     end
 
     def should_apply_eu_taxes?
-      return false unless customer.eu_vat_eligible?
+      return false unless customer.billing_entity.eu_tax_management
       return true if new_record
 
       non_existing_eu_taxes = customer.taxes.where("code ILIKE ?", "lago_eu%").none?
