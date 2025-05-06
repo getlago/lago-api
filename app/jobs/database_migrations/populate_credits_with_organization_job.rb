@@ -1,21 +1,20 @@
 # frozen_string_literal: true
 
 module DatabaseMigrations
-  class PopulateIdempotencyRecordsWithOrganizationJob < ApplicationJob
+  class PopulateCreditsWithOrganizationJob < ApplicationJob
     queue_as :low_priority
     unique :until_executed
 
     BATCH_SIZE = 1000
 
     def perform(batch_number = 1)
-      batch = IdempotencyRecord.unscoped
+      batch = Credit.unscoped
         .where(organization_id: nil)
-        .where(resource_type: "Invoice")
         .limit(BATCH_SIZE)
 
       if batch.exists?
         # rubocop:disable Rails/SkipsModelValidations
-        batch.update_all("organization_id = (SELECT organization_id FROM invoices WHERE invoices.id = idempotency_records.resource_id)")
+        batch.update_all("organization_id = (SELECT organization_id FROM invoices WHERE invoices.id = credits.invoice_id)")
         # rubocop:enable Rails/SkipsModelValidations
 
         # Queue the next batch
