@@ -145,17 +145,21 @@ RSpec.describe Organizations::UpdateService do
         before do
           invoice_to_be_finalized
           invoice_to_not_be_finalized
-          allow(Invoices::UpdateAllInvoiceGracePeriodFromOrganizationJob).to receive(:perform_later)
+          allow(Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityJob).to receive(:perform_later)
         end
 
-        it "triggers async updates grace_period of invoices" do
+        it "triggers async updates grace_period of invoices on default billing entity" do
           current_date = DateTime.parse("22 Jun 2022")
+          old_invoice_grace_period = organization.invoice_grace_period
 
           travel_to(current_date) do
             result = update_service.call
 
             expect(result.organization.invoice_grace_period).to eq(2)
-            expect(Invoices::UpdateAllInvoiceGracePeriodFromOrganizationJob).not_to have_received(:perform_later).with(organization, invoice_grace_period)
+            expect(result.organization.default_billing_entity.invoice_grace_period).to eq(2)
+            expect(Invoices::UpdateAllInvoiceGracePeriodFromBillingEntityJob)
+              .to have_received(:perform_later)
+              .with(organization.default_billing_entity, old_invoice_grace_period)
           end
         end
       end
