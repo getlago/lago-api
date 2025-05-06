@@ -9,6 +9,7 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver, type: :gr
       query($subscriptionExternalId: String!) {
         alerts(subscriptionExternalId: $subscriptionExternalId) {
           collection { id name code deletedAt thresholds { code value recurring} }
+          metadata { currentPage, totalCount }
         }
       }
     GQL
@@ -19,6 +20,7 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver, type: :gr
   let(:subscription) { create(:subscription) }
   let(:alert) { create(:alert, organization:, subscription_external_id: subscription.external_id, recurring_threshold: 33, thresholds: [10, 20]) }
   let(:alert_bm) { create(:billable_metric_usage_amount_alert, organization:, subscription_external_id: subscription.external_id, recurring_threshold: 33, thresholds: [10, 20]) }
+  let(:another_alert) { create(:alert, organization:) }
 
   before do
     alert
@@ -40,7 +42,7 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver, type: :gr
 
     alerts = result["data"]["alerts"]["collection"]
 
-    expect(alerts.pluck("id")).to eq [alert.id, alert_bm.id]
+    expect(alerts.pluck("id")).to contain_exactly(alert.id, alert_bm.id)
     expect(alerts).to all(include({"name" => "General Alert", "deletedAt" => nil}))
     expect(alerts.pluck("code")).to all(start_with("default"))
     expect(alerts.pluck("thresholds")).to all(contain_exactly(
@@ -48,6 +50,10 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver, type: :gr
       {"code" => "warn20", "value" => "20.0", "recurring" => false},
       {"code" => "rec", "value" => "33.0", "recurring" => true}
     ))
+
+    metadata = result["data"]["alerts"]["metadata"]
+    expect(metadata["currentPage"]).to eq(1)
+    expect(metadata["totalCount"]).to eq(2)
   end
 
   context "when no alert is not found" do

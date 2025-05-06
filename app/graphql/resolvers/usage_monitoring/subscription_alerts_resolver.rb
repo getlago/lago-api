@@ -12,11 +12,24 @@ module Resolvers
 
       argument :subscription_external_id, String, required: true, description: "External id of a subscription"
 
-      type Types::UsageMonitoring::Alerts::Object.collection_type, null: true
+      argument :limit, Integer, required: false
+      argument :page, Integer, required: false
 
-      def resolve(subscription_external_id:)
-        alerts = current_organization.alerts.where(subscription_external_id:)
-        Kaminari.paginate_array(alerts)
+      type Types::UsageMonitoring::Alerts::Object.collection_type, null: false
+
+      def resolve(subscription_external_id:, limit: nil, page: nil)
+        result = ::UsageMonitoring::AlertsQuery.call(
+          organization: current_organization,
+          filters: {
+            subscription_external_id:
+          },
+          pagination: {
+            page:,
+            limit:
+          }
+        )
+
+        result.alerts
       end
     end
   end
