@@ -207,7 +207,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
           subscription:,
           recurring: true,
           invoicing_reason: invoicing_reason.to_s,
-          timestamp: timestamp.to_i,
+          timestamp: timestamp,
           from_datetime: date_service.from_datetime,
           to_datetime: date_service.to_datetime,
           charges_from_datetime: date_service.charges_from_datetime,

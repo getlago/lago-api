@@ -13,7 +13,7 @@ gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"
 gem "puma", "~> 6.5"
-gem "rails", "~> 7.2"
+gem "rails", "~> 8.0"
 gem "redis"
 gem "sidekiq"
 gem "sidekiq-throttled", "1.4.0" # '1.5.0' was losing some jobs
@@ -29,7 +29,7 @@ gem "rack-cors"
 
 # Database
 gem "after_commit_everywhere"
-gem "clickhouse-activerecord", "~> 1.2.0"
+gem "clickhouse-activerecord", "~> 1.3.0"
 gem "discard", "~> 1.2"
 gem "kaminari-activerecord"
 gem "paper_trail"
@@ -137,7 +137,7 @@ group :development do
   gem "graphiql-rails", git: "https://github.com/rmosolgo/graphiql-rails.git"
 
   gem "standard", require: false
-  gem "annotate"
+  gem "annotaterb"
 
   gem "sass-rails"
   gem "uglifier"
