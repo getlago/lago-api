@@ -26,6 +26,7 @@ RSpec.describe Api::BaseController, type: :controller do
     get :index
 
     expect(CurrentContext.source).to eq "api"
+    expect(CurrentContext.api_key_id).to eq api_key.id
   end
 
   describe "#authenticate" do
