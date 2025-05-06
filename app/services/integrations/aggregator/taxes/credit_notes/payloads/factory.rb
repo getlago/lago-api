@@ -15,6 +15,13 @@ module Integrations
                   integration_customer:,
                   credit_note:
                 )
+              when "Integrations::AvalaraIntegration"
+                Integrations::Aggregator::Taxes::CreditNotes::Payloads::Avalara.new(
+                  integration:,
+                  customer:,
+                  integration_customer:,
+                  credit_note:
+                )
               else
                 raise(NotImplementedError)
               end
