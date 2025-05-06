@@ -17,12 +17,14 @@ Rspec.describe "All tables must have an organization_id" do
     %w[
       organizations
       users
+      applied_add_ons
+      group_properties
+      groups
     ]
   end
 
   let(:tables_to_migrate) do
     %w[
-      applied_add_ons
       applied_invoice_custom_sections
       applied_usage_thresholds
       billable_metric_filters
@@ -42,9 +44,6 @@ Rspec.describe "All tables must have an organization_id" do
       data_export_parts
       dunning_campaign_thresholds
       fees_taxes
-      group_properties
-      groups
-      idempotency_records
       integration_collection_mappings
       integration_customers
       integration_items
