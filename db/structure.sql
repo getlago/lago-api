@@ -146,6 +146,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_257af2
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_2561c00887;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_25267b0e17;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_25232a0ec3;
+ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_2496c105ed;
 ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS fk_rails_23975f5a47;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_22af6c6d28;
 ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_21eb389927;
@@ -275,6 +276,7 @@ DROP INDEX IF EXISTS public.index_invoices_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_payment_request_id;
+DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_status;
 DROP INDEX IF EXISTS public.index_invoices_on_sequential_id;
@@ -2969,7 +2971,8 @@ CREATE TABLE public.invoices_payment_requests (
     invoice_id uuid NOT NULL,
     payment_request_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5590,6 +5593,13 @@ CREATE INDEX index_invoices_payment_requests_on_invoice_id ON public.invoices_pa
 
 
 --
+-- Name: index_invoices_payment_requests_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_payment_requests_on_organization_id ON public.invoices_payment_requests USING btree (organization_id);
+
+
+--
 -- Name: index_invoices_payment_requests_on_payment_request_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6455,6 +6465,14 @@ ALTER TABLE ONLY public.invoices_taxes
 
 ALTER TABLE ONLY public.taxes
     ADD CONSTRAINT fk_rails_23975f5a47 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: invoices_payment_requests fk_rails_2496c105ed; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoices_payment_requests
+    ADD CONSTRAINT fk_rails_2496c105ed FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7562,6 +7580,9 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250507154910'),
 ('20250506170753'),
+('20250506144002'),
+('20250506144001'),
+('20250506144000'),
 ('20250506121532'),
 ('20250506121531'),
 ('20250506121530'),
