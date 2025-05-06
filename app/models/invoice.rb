@@ -104,7 +104,7 @@ class Invoice < ApplicationRecord
     end
 
     event :void do
-      transitions from: :finalized, to: :voided, after: :void_invoice!
+      transitions from: :finalized, to: :voided, guard: :voidable?, after: :void_invoice!
     end
   end
 
@@ -396,6 +396,10 @@ class Invoice < ApplicationRecord
     should_finalize_invoice = Invoices::TransitionToFinalStatusService.new(invoice: self).should_finalize_invoice?
 
     fees.any? && should_finalize_invoice
+  end
+
+  def force_void!
+    update!(status: "voided", ready_for_payment_processing: false)
   end
 
   private

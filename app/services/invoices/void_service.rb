@@ -18,7 +18,11 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice.payment_overdue = false if invoice.payment_overdue?
-        invoice.void!
+        if invoice.may_void?
+          invoice.void!
+        else
+          invoice.force_void!
+        end
 
         flag_lifetime_usage_for_refresh
       end
@@ -57,7 +61,7 @@ module Invoices
     attr_reader :invoice, :generate_credit_note, :refund_amount, :credit_amount
 
     def explicit_void_intent?
-      generate_credit_note || refund_amount.positive? || credit_amount.positive?
+      generate_credit_note.present? || refund_amount.positive? || credit_amount.positive?
     end
 
     def flag_lifetime_usage_for_refresh
