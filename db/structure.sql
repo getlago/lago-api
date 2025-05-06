@@ -103,6 +103,7 @@ ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_5a43da571b;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
+ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_5628a713de;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
 ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS fk_rails_526379cd99;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_521b5240ed;
@@ -378,6 +379,7 @@ DROP INDEX IF EXISTS public.index_customers_on_account_type;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id_and_key;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id;
 DROP INDEX IF EXISTS public.index_credits_on_progressive_billing_invoice_id;
+DROP INDEX IF EXISTS public.index_credits_on_organization_id;
 DROP INDEX IF EXISTS public.index_credits_on_invoice_id;
 DROP INDEX IF EXISTS public.index_credits_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_credits_on_applied_coupon_id;
@@ -1429,7 +1431,8 @@ CREATE TABLE public.credits (
     credit_note_id uuid,
     before_taxes boolean DEFAULT false NOT NULL,
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    progressive_billing_invoice_id uuid
+    progressive_billing_invoice_id uuid,
+    organization_id uuid
 );
 
 
@@ -4750,6 +4753,13 @@ CREATE INDEX index_credits_on_invoice_id ON public.credits USING btree (invoice_
 
 
 --
+-- Name: index_credits_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_credits_on_organization_id ON public.credits USING btree (organization_id);
+
+
+--
 -- Name: index_credits_on_progressive_billing_invoice_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6676,6 +6686,14 @@ ALTER TABLE ONLY public.applied_usage_thresholds
 
 
 --
+-- Name: credits fk_rails_5628a713de; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credits
+    ADD CONSTRAINT fk_rails_5628a713de FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: charges_taxes fk_rails_56b7167125; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7434,6 +7452,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250505142221'),
+('20250505142220'),
+('20250505142219'),
 ('20250505140928'),
 ('20250505140927'),
 ('20250505140926'),
