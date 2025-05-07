@@ -24,8 +24,8 @@ module Utils
             resource_id: resource(object).id,
             resource_type: resource(object).class.name,
             organization_id: organization_id(object),
-            activity_object: activity_object(object),
-            activity_object_changes: activity_object_changes(object)
+            activity_object: activity_object(object, activity_type),
+            activity_object_changes: activity_object_changes(object, activity_type)
           }.to_json
         )
       end
@@ -45,12 +45,16 @@ module Utils
         Membership.find_by(id: CurrentContext.membership.split("/").last)&.user_id
       end
 
-      def activity_object(object)
+      def activity_object(object, activity_type)
+        return nil if activity_type.include?("deleted")
+
         "V1::#{object.class.name}Serializer".constantize.new(object).serialize
       end
 
       # TODO: Fetch previous changes for associated objects (e.g. billable_metric.filters)
-      def activity_object_changes(object)
+      def activity_object_changes(object, activity_type)
+        return nil if activity_type.include?("deleted")
+
         changes = object.previous_changes.except(*IGNORED_FIELDS).transform_values(&:to_s)
 
         return nil if changes.key?("id")
