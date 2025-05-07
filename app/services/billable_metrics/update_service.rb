@@ -50,6 +50,8 @@ module BillableMetrics
 
       billable_metric.save!
 
+      Utils::ActivityLog.produce(billable_metric, "billable_metric.updated")
+
       result.billable_metric = billable_metric
       result
     rescue ActiveRecord::RecordInvalid => e
