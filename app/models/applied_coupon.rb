@@ -12,7 +12,8 @@ class AppliedCoupon < ApplicationRecord
 
   STATUSES = [
     :active,
-    :terminated
+    :terminated,
+    :voided
   ].freeze
 
   FREQUENCIES = [
@@ -40,6 +41,13 @@ class AppliedCoupon < ApplicationRecord
     already_applied_amount = credits.sum(&:amount_cents)
     @remaining_amount = amount_cents - already_applied_amount
   end
+
+  def mark_as_voided!(timestamp: Time.current)
+    update!(
+      status: :voided,
+      voided_at: timestamp
+    )
+  end
 end
 
 # == Schema Information
@@ -55,6 +63,7 @@ end
 #  percentage_rate              :decimal(10, 5)
 #  status                       :integer          default("active"), not null
 #  terminated_at                :datetime
+#  voided_at                    :datetime
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
 #  coupon_id                    :uuid             not null
