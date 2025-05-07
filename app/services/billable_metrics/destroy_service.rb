@@ -30,6 +30,8 @@ module BillableMetrics
       BillableMetrics::DeleteEventsJob.perform_later(metric)
       BillableMetricFilters::DestroyAllJob.perform_later(metric.id)
 
+      Utils::ActivityLog.produce(metric, "billable_metric.deleted")
+
       result.billable_metric = metric
       result
     end
