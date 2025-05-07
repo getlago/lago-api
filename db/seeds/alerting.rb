@@ -32,14 +32,14 @@ def create_customer_with_sub(ext_id, plan:, organization:)
 end
 
 sub = create_customer_with_sub("alerting-custom-alerts", plan:, organization:)
-alert = UsageMonitoring::Alert.create_or_find_by!(alert_type: "usage_amount", organization:, subscription_external_id: sub.external_id)
+alert = UsageMonitoring::Alert.create_or_find_by!(alert_type: "usage_amount", organization:, subscription_external_id: sub.external_id, code: "default", name: "Default Alert")
 alert.thresholds.delete_all
 alert.thresholds.create!(value: 50_00, organization:)
 alert.thresholds.create!(code: "warn", value: 80_00, organization:)
 alert.thresholds.create!(code: "alert", value: 100_00, organization:)
 alert.thresholds.create!(code: "panic", value: 33_00, organization:, recurring: true)
 
-alert = UsageMonitoring::Alert.create_or_find_by!(alert_type: "usage_amount", organization:, billable_metric: ops_bm, subscription_external_id: sub.external_id)
+alert = UsageMonitoring::Alert.create_or_find_by!(alert_type: "usage_amount", organization:, billable_metric: ops_bm, subscription_external_id: sub.external_id, code: "default_bm", name: "BM Alert")
 alert.thresholds.delete_all
 alert.thresholds.create!(value: 30_00, organization:)
 alert.thresholds.create!(code: "alert", value: 90_00, organization:)

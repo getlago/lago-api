@@ -29,6 +29,11 @@ FactoryBot.define do
     end
   end
 
+  trait :processed do
+    previous_value { 8_00 }
+    last_processed_at { DateTime.new(2000, 1, 1, 12, 0, 0) }
+  end
+
   factory :usage_amount_alert,
     class: "UsageMonitoring::UsageAmountAlert",
     parent: :alert do
