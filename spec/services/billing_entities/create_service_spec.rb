@@ -38,6 +38,7 @@ RSpec.describe BillingEntities::CreateService, type: :service do
 
       it "sets eu_tax_management when explicitly provided" do
         params[:eu_tax_management] = true
+        params[:country] = "fr"
         expect(result).to be_success
         expect(result.billing_entity.eu_tax_management).to be true
       end
