@@ -66,9 +66,8 @@ RSpec.describe UsageMonitoring::CreateAlertService do
     context "when the subscription is not active" do
       let(:subscription) { create(:subscription, :terminated) }
 
-      it "returns a validation failure result" do
-        expect(result).to be_failure
-        expect(result.error.message).to include("subscription_must_be_active")
+      it do
+        expect(result).to be_success
       end
     end
 

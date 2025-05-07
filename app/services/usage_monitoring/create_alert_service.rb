@@ -13,10 +13,6 @@ module UsageMonitoring
     end
 
     def call
-      unless subscription.active?
-        return result.single_validation_failure!(field: :status, error_code: "subscription_must_be_active")
-      end
-
       if params[:thresholds].blank?
         return result.single_validation_failure!(field: :thresholds, error_code: "thresholds_must_be_present")
       end
