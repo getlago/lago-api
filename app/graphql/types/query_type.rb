@@ -13,6 +13,8 @@ module Types
     field :activity_logs, resolver: Resolvers::ActivityLogsResolver
     field :add_on, resolver: Resolvers::AddOnResolver
     field :add_ons, resolver: Resolvers::AddOnsResolver
+    field :alert, resolver: Resolvers::UsageMonitoring::AlertResolver
+    field :alerts, resolver: Resolvers::UsageMonitoring::SubscriptionAlertsResolver
     field :api_key, resolver: Resolvers::ApiKeyResolver
     field :api_keys, resolver: Resolvers::ApiKeysResolver
     field :billable_metric, resolver: Resolvers::BillableMetricResolver

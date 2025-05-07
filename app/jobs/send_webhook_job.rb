@@ -14,6 +14,7 @@ class SendWebhookJob < ApplicationJob
   retry_on ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 6
 
   WEBHOOK_SERVICES = {
+    "alert.triggered" => Webhooks::UsageMonitoring::AlertTriggeredService,
     "invoice.created" => Webhooks::Invoices::CreatedService,
     "invoice.one_off_created" => Webhooks::Invoices::OneOffCreatedService,
     "invoice.add_on_added" => Webhooks::Invoices::AddOnCreatedService,

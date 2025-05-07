@@ -21,7 +21,13 @@ module UsageMonitoring
         LifetimeUsages::CheckThresholdsService.call(lifetime_usage:)
       end
 
-      # TODO: Add Alerting here
+      Alert.where(
+        subscription_external_id: subscription.external_id,
+        organization_id: subscription_activity.organization_id,
+        alert_type: Alert::CURRENT_USAGE_TYPES
+      ).includes(:thresholds).find_each do |alert|
+        ProcessAlertService.call(alert:, subscription:, current_metrics: current_usage)
+      end
 
       subscription_activity.delete
 
