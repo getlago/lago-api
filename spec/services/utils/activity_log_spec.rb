@@ -56,6 +56,31 @@ RSpec.describe Utils::ActivityLog, type: :service do
           }.to_json
         )
       end
+
+      context "when the object is deleted" do
+        it "does not set activity_object and activity_object_changes" do
+          activity_log.produce(invoice, "invoice.deleted", activity_id: "activity-id")
+
+          expect(karafka_producer).to have_received(:produce_async).with(
+            topic: "activity_logs",
+            key: "#{organization.id}--activity-id",
+            payload: {
+              activity_source: "api",
+              api_key_id: api_key.id,
+              user_id: nil,
+              activity_type: "invoice.deleted",
+              activity_id: "activity-id",
+              logged_at: Time.current.iso8601[...-1],
+              created_at: Time.current.iso8601[...-1],
+              resource_id: invoice.id,
+              resource_type: "Invoice",
+              organization_id: organization.id,
+              activity_object: nil,
+              activity_object_changes: nil
+            }.to_json
+          )
+        end
+      end
     end
 
     context "when kafka is not configured" do
