@@ -7,7 +7,7 @@ module Types
         argument :alert_type, Types::UsageMonitoring::Alerts::AlertTypeEnum, required: true
 
         argument :billable_metric_id, ID, required: false
-        argument :code, String, required: false
+        argument :code, String, required: true
         argument :name, String, required: false
         argument :subscription_id, ID, required: true
 

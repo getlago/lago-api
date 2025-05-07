@@ -41,7 +41,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
     end
 
     context "with billable_metric_usage_amount type" do
-      let(:params) { {alert_type: "billable_metric_usage_amount", thresholds:} }
+      let(:params) { {alert_type: "billable_metric_usage_amount", thresholds:, code: "first"} }
       let(:billable_metric) { create(:billable_metric, organization:) }
 
       it do
@@ -53,7 +53,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
 
       context "when billable_metric is missing" do
-        let(:params) { {alert_type: "billable_metric_usage_amount", thresholds:} }
+        let(:params) { {alert_type: "billable_metric_usage_amount", thresholds:, code: "first"} }
         let(:billable_metric) { nil }
 
         it "returns a record validation failure result" do
@@ -81,8 +81,17 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
+    context "when code is missing" do
+      let(:params) { {alert_type: "usage_amount", thresholds:, code: nil} }
+
+      it "returns a record validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.message).to include("code_must_be_present")
+      end
+    end
+
     context "when alert_type is invalid" do
-      let(:params) { {alert_type: "yolo", thresholds:} }
+      let(:params) { {alert_type: "yolo", thresholds:, code: "first"} }
 
       it "returns a record validation failure result" do
         expect(result).to be_failure

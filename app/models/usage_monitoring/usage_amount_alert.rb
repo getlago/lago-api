@@ -14,7 +14,7 @@ end
 #
 #  id                       :uuid             not null, primary key
 #  alert_type               :enum             not null
-#  code                     :string
+#  code                     :string           not null
 #  deleted_at               :datetime
 #  last_processed_at        :datetime
 #  name                     :string

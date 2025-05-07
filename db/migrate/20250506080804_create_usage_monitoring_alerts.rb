@@ -12,7 +12,7 @@ class CreateUsageMonitoringAlerts < ActiveRecord::Migration[7.2]
       t.numeric :previous_value, precision: 30, scale: 5, null: false, default: 0
       t.datetime :last_processed_at
       t.string :name
-      t.string :code
+      t.string :code, null: false
       t.datetime :deleted_at
       t.timestamps
 

@@ -12,7 +12,7 @@ module Types
         field :billable_metric, Types::BillableMetrics::Object
         field :subscription_external_id, String, null: false
 
-        field :code, String
+        field :code, String, null: false
         field :name, String
 
         field :thresholds, [Types::UsageMonitoring::Alerts::ThresholdObject]

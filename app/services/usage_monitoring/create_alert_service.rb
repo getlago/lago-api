@@ -21,6 +21,10 @@ module UsageMonitoring
         return result.single_validation_failure!(field: :thresholds, error_code: "thresholds_must_be_present")
       end
 
+      if params[:code].blank?
+        return result.single_validation_failure!(field: :code, error_code: "code_must_be_present")
+      end
+
       if params[:thresholds].size > AlertThreshold::SOFT_LIMIT
         return result.single_validation_failure!(field: :thresholds, error_code: "too_many_thresholds")
       end
@@ -46,6 +50,9 @@ module UsageMonitoring
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+      result
+    rescue ActiveRecord::NotNullViolation => e
+      result.validation_failure!(errors: e.message)
       result
     end
 
