@@ -27,6 +27,8 @@ module BillableMetrics
       # NOTE: Discard all related events asynchronously.
       BillableMetrics::DeleteEventsJob.perform_later(metric)
 
+      Utils::ActivityLog.produce(metric, "billable_metric.deleted")
+
       result.billable_metric = metric
       result
     end
