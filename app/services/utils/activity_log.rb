@@ -40,6 +40,7 @@ module Utils
 
       def user_id
         return nil if CurrentContext.api_key_id.present?
+        return nil if CurrentContext.membership.blank?
 
         Membership.find_by(id: CurrentContext.membership.split("/").last)&.user_id
       end
