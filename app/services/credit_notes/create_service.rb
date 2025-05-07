@@ -26,6 +26,7 @@ module CreditNotes
 
       ActiveRecord::Base.transaction do
         result.credit_note = CreditNote.new(
+          organization_id: invoice.organization_id,
           customer: invoice.customer,
           invoice:,
           issuing_date:,
@@ -59,7 +60,7 @@ module CreditNotes
           balance_amount_cents: credit_note.credit_amount_cents
         )
 
-        return result if context == :preview
+        next if context == :preview
 
         credit_note.save!
 
@@ -68,6 +69,7 @@ module CreditNotes
             wallet_credit:, credit_note_id: credit_note.id)
         end
       end
+      return result if context == :preview
 
       if credit_note.finalized?
         after_commit do
