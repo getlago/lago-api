@@ -27,6 +27,7 @@ module Organizations
       organization.default_currency = params[:default_currency]&.upcase if params.key?(:default_currency)
       organization.document_number_prefix = params[:document_number_prefix] if params.key?(:document_number_prefix)
       organization.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)
+      organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
 
       billing = params[:billing_configuration]&.to_h || {}
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
@@ -44,14 +45,6 @@ module Organizations
           Organizations::UpdateInvoiceGracePeriodService.call(
             organization:,
             grace_period: billing[:invoice_grace_period]
-          )
-        end
-
-        if params.key?(:net_payment_term)
-          # note: this service only assigns new net_payment_term to the organization but doesn't save it
-          Organizations::UpdateInvoicePaymentDueDateService.call(
-            organization:,
-            net_payment_term: params[:net_payment_term]
           )
         end
 
