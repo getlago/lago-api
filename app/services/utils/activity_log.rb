@@ -49,6 +49,7 @@ module Utils
         "V1::#{object.class.name}Serializer".constantize.new(object).serialize
       end
 
+      # TODO: Fetch previous changes for associated objects (e.g. billable_metric.filters)
       def activity_object_changes(object)
         changes = object.previous_changes.except(*IGNORED_FIELDS).transform_values(&:to_s)
 
