@@ -26,7 +26,11 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
   let(:filters) { nil }
 
   describe "#call" do
-    it "updates the billable metric", aggregate_failures: true do
+    before do
+      allow(Utils::ActivityLog).to receive(:produce)
+    end
+
+    it "updates the billable metric" do
       result = update_service.call
       expect(result).to be_success
 
@@ -40,6 +44,11 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
         rounding_precision: 2,
         expression: "1 + 3"
       )
+    end
+
+    it "produces an activity log" do
+      expect(Utils::ActivityLog).to receive(:produce).with(billable_metric, "billable_metric.updated")
+      update_service.call
     end
 
     context "with filters arguments" do
@@ -70,11 +79,9 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       it "returns an error" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
       end
     end
 
@@ -84,11 +91,9 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       it "returns an error" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.error_code).to eq("billable_metric_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.error_code).to eq("billable_metric_not_found")
       end
     end
 
@@ -109,25 +114,23 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
 
       before { charge }
 
-      it "updates only name and description", aggregate_failures: true do
+      it "updates only name and description" do
         result = update_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.billable_metric).to have_attributes(
-            name: "New Metric",
-            description: "New metric description"
-          )
+        expect(result.billable_metric).to have_attributes(
+          name: "New Metric",
+          description: "New metric description"
+        )
 
-          expect(result.billable_metric).not_to have_attributes(
-            code: "new_metric",
-            aggregation_type: "sum_agg",
-            field_name: "field_value",
-            rounding_function: "ceil",
-            rounding_precision: 2
-          )
-        end
+        expect(result.billable_metric).not_to have_attributes(
+          code: "new_metric",
+          aggregation_type: "sum_agg",
+          field_name: "field_value",
+          rounding_function: "ceil",
+          rounding_precision: 2
+        )
       end
     end
   end
