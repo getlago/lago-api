@@ -61,7 +61,7 @@ module Integrations
                 "item_id" => fee.id || fee.item_id,
                 "item_code" => mapped_item.external_id,
                 "unit" => fee.units,
-                "amount" => fee.sub_total_excluding_taxes_amount_cents&.to_i&.fdiv(fee.amount.currency.subunit_to_unit)
+                "amount" => item_amount(fee)
               }
             end
 
@@ -71,6 +71,14 @@ module Integrations
 
             def empty_struct
               @empty_struct ||= OpenStruct.new
+            end
+
+            def item_amount(fee)
+              amount = fee.sub_total_excluding_taxes_amount_cents&.to_i&.fdiv(fee.amount.currency.subunit_to_unit)
+
+              amount = amount * -1 if invoice.voided?
+
+              amount
             end
           end
         end
