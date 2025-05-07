@@ -8,6 +8,7 @@ class UpdateNetPaymentTermOnBillingEntity < ActiveRecord::Migration[8.0]
 
   class BillingEntity < ApplicationRecord
     belongs_to :organization
+    scope :active, -> { where(archived_at: nil).order(created_at: :asc) }
   end
 
   def up
