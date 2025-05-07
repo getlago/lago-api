@@ -49,6 +49,14 @@ module Invoices
         end
       end
 
+      # Create credit note if requested
+      if generate_credit_note
+        create_credit_note_result = create_credit_note
+        unless create_credit_note_result.success?
+          Rails.logger.warn("Creating credit note for invoice #{invoice.id} failed: #{create_credit_note_result.error}")
+        end
+      end
+
       SendWebhookJob.perform_later("invoice.voided", result.invoice)
       Invoices::ProviderTaxes::VoidJob.perform_later(invoice:)
       Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice:) if invoice.should_update_hubspot_invoice?
@@ -68,6 +76,44 @@ module Invoices
 
     def flag_lifetime_usage_for_refresh
       LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
+    end
+
+    def create_credit_note
+      # Calculate valid amounts based on invoice limits
+      available_credit_amount = invoice.creditable_amount_cents
+      available_refund_amount = invoice.refundable_amount_cents
+
+      # Ensure amounts don't exceed available amounts
+      validated_credit_amount = [credit_amount, available_credit_amount].min
+      validated_refund_amount = [refund_amount, available_refund_amount].min
+
+      # Calculate remaining amount to be voided in wallet
+      total_invoice_amount = invoice.total_amount_cents
+      remaining_amount = total_invoice_amount - validated_credit_amount - validated_refund_amount
+
+      # Create credit note if there's any amount to credit or refund
+      credit_note_result = nil
+      if validated_credit_amount.positive? || validated_refund_amount.positive?
+        credit_note_result = CreditNotes::CreateService.call(
+          invoice: invoice,
+          reason: :other,
+          description: "Credit note created due to voided invoice",
+          credit_amount_cents: validated_credit_amount,
+          refund_amount_cents: validated_refund_amount
+        )
+      end
+
+      # Create voided wallet transaction for remaining amount if positive
+      if remaining_amount.positive?
+        create_voided_wallet_transaction(remaining_amount, credit_note_result&.credit_note)
+      end
+
+      # Return the credit note result or a success result if no credit note was created
+      credit_note_result || BaseService::Result.new
+    end
+
+    def create_voided_creedits(amount, credit_note)
+      # TODO fazer coisas aqui
     end
   end
 end
