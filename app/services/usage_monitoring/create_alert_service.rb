@@ -13,12 +13,10 @@ module UsageMonitoring
     end
 
     def call
-      if params[:thresholds].blank?
-        return result.single_validation_failure!(field: :thresholds, error_code: "thresholds_must_be_present")
-      end
-
-      if params[:code].blank?
-        return result.single_validation_failure!(field: :code, error_code: "code_must_be_present")
+      [:code, :alert_type, :thresholds].each do |field|
+        if params[field].blank?
+          return result.single_validation_failure!(field:, error_code: "#{field}_must_be_present")
+        end
       end
 
       if params[:thresholds].size > AlertThreshold::SOFT_LIMIT

@@ -10,6 +10,8 @@ module UsageMonitoring
     end
 
     def call
+      return result.not_found_failure!(resource: "alert") unless alert
+
       ActiveRecord::Base.transaction do
         alert.thresholds.delete_all
         alert.discard!
