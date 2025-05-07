@@ -47,8 +47,9 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
     end
 
     it "produces an activity log" do
-      expect(Utils::ActivityLog).to receive(:produce).with(billable_metric, "billable_metric.updated")
       update_service.call
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(billable_metric, "billable_metric.updated")
     end
 
     context "with filters arguments" do
