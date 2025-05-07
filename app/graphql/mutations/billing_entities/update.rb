@@ -9,15 +9,17 @@ module Mutations
       REQUIRED_PERMISSION = "billing_entities:update"
 
       graphql_name "UpdateBillingEntity"
-      description "Updates a new Billing Entity"
+      description "Updates a Billing Entity"
 
       input_object_class Types::BillingEntities::UpdateInput
 
       type Types::BillingEntities::Object
 
-      # We're not allowing now to update billing entities
-      def resolve(_args)
-        current_organization.default_billing_entity
+      def resolve(**args)
+        billing_entity = current_organization.billing_entities.find_by(id: args[:id])
+        result = ::BillingEntities::UpdateService.call(billing_entity:, params: args)
+
+        result.success? ? result.billing_entity : result_error(result)
       end
     end
   end
