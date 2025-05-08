@@ -466,6 +466,7 @@ class Invoice < ApplicationRecord
     return unless status_changed_to_finalized?
 
     self.organization_sequential_id = generate_organization_sequential_id
+    self.billing_entity_sequential_id = organization_sequential_id
   end
 
   def generate_organization_sequential_id
