@@ -76,7 +76,7 @@ module Integrations
             def item_amount(fee)
               amount = fee.sub_total_excluding_taxes_amount_cents&.to_i&.fdiv(fee.amount.currency.subunit_to_unit)
 
-              amount = amount * -1 if invoice.voided?
+              amount *= -1 if invoice.voided?
 
               amount
             end
