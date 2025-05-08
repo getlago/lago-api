@@ -217,6 +217,61 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
             expect(result.fees.first["tax_breakdown"].last["rate"]).to eq("0.00")
           end
         end
+
+        context "when invoice is voided" do
+          let(:params) do
+            [
+              {
+                "id" => invoice.id,
+                "type" => "returnInvoice",
+                "issuing_date" => invoice.issuing_date,
+                "currency" => invoice.currency,
+                "contact" => {
+                  "external_id" => "123",
+                  "name" => customer.name,
+                  "address_line_1" => customer.address_line1,
+                  "city" => customer.city,
+                  "zip" => customer.zipcode,
+                  "region" => customer.state,
+                  "country" => customer.country,
+                  "taxable" => false,
+                  "tax_number" => nil
+                },
+                "billing_entity" => {
+                  "address_line_1" => customer.billing_entity&.address_line1,
+                  "city" => customer.billing_entity&.city,
+                  "zip" => customer.billing_entity&.zipcode,
+                  "region" => customer.billing_entity&.state,
+                  "country" => customer.billing_entity&.country
+                },
+                "fees" => [
+                  {
+                    "item_key" => fee_add_on.item_key,
+                    "item_id" => fee_add_on.id,
+                    "item_code" => "m1",
+                    "unit" => 0.00,
+                    "amount" => -2.00
+                  },
+                  {
+                    "item_key" => fee_add_on_two.item_key,
+                    "item_id" => fee_add_on_two.id,
+                    "item_code" => "1",
+                    "unit" => 0.00,
+                    "amount" => -2.00
+                  }
+                ]
+              }
+            ]
+          end
+
+          before { invoice.voided! }
+
+          it "returns fees for valid request payload" do
+            result = service_call
+
+            expect(result).to be_success
+          end
+        end
       end
 
       context "when taxes are not successfully fetched for finalized invoice" do

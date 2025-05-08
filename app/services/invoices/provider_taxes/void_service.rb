@@ -11,7 +11,7 @@ module Invoices
 
       def call
         return result.not_found_failure!(resource: "invoice") if invoice.blank?
-        return result.not_allowed_failure!(code: "not_voided") unless invoice.voided?
+        return result.not_allowed_failure!(code: "status_not_voided") unless invoice.voided?
 
         invoice.error_details.tax_voiding_error.discard_all
 
@@ -23,7 +23,7 @@ module Invoices
           unless negate_result.success?
             return result.validation_failure!(errors: {tax_error: [negate_result.error.code]})
           end
-        elsif locked_transaction?
+        elsif locked_transaction?(tax_result)
           refund_result = perform_invoice_refund
 
           unless refund_result.success?

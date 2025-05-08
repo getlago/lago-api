@@ -109,6 +109,19 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
       end
     end
 
+    context "when invoice is not voided" do
+      before { invoice.finalized! }
+
+      it "returns an error" do
+        result = void_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.code).to eq("status_not_voided")
+        end
+      end
+    end
+
     context "when voided invoice is successfully synced" do
       it "returns successful result" do
         result = void_service.call
@@ -159,6 +172,45 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
     context "when failed result is returned from negate endpoint" do
       let(:body_void) do
         path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response_void.json")
+        File.read(path)
+      end
+      let(:body_negate) do
+        path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
+        File.read(path)
+      end
+
+      it "keeps invoice in voided status" do
+        result = void_service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
+          expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint)
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(invoice.reload.status).to eq("voided")
+        end
+      end
+
+      it "resolves old tax error and creates new one" do
+        old_error_id = invoice.reload.error_details.last.id
+
+        void_service.call
+
+        aggregate_failures do
+          expect(invoice.error_details.tax_voiding_error.last.id).not_to eql(old_error_id)
+          expect(invoice.error_details.tax_voiding_error.count).to be(1)
+          expect(invoice.error_details.tax_voiding_error.order(created_at: :asc).last.discarded?).to be(false)
+        end
+      end
+    end
+
+    context "when failed result is returned from refund endpoint for avalara customer" do
+      let(:integration) { create(:avalara_integration, organization:) }
+      let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
+      let(:void_endpoint) { "https://api.nango.dev/v1/avalara/void_invoices" }
+      let(:negate_endpoint) { "https://api.nango.dev/v1/avalara/finalized_invoices" }
+      let(:body_void) do
+        path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response_locked_void.json")
         File.read(path)
       end
       let(:body_negate) do
