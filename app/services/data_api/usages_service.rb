@@ -20,7 +20,9 @@ module DataApi
         {
           time_granularity: "daily",
           start_of_period_dt: Date.current - 30.days
-        }
+        }.tap do |filtered|
+          filtered[:billable_metric_code] = params[:billable_metric_code] if params[:billable_metric_code].present?
+        end
       end
     end
 
