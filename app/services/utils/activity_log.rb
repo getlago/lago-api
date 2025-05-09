@@ -65,11 +65,6 @@ module Utils
       def activity_object_changes(object, activity_type)
         return nil if activity_type.include?("deleted")
 
-
-        puts "------------------------------------------------------------"
-        puts object.inspect
-        puts object.previous_changes.inspect
-        puts "------------------------------------------------------------"
         changes = object.previous_changes.except(*IGNORED_FIELDS).transform_values(&:to_s)
 
         return nil if changes.key?("id")

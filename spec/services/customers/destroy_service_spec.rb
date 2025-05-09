@@ -9,7 +9,10 @@ RSpec.describe Customers::DestroyService, type: :service do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
 
-  before { customer }
+  before do
+    customer
+    allow(Utils::ActivityLog).to receive(:produce)
+  end
 
   describe "#call" do
     it "soft deletes the customer" do
@@ -17,6 +20,12 @@ RSpec.describe Customers::DestroyService, type: :service do
         expect { destroy_service.call }.to change(Customer, :count).by(-1)
           .and change { customer.reload.deleted_at }.from(nil).to(Time.current)
       end
+    end
+
+    it "calls Utils::ActivityLog with customer.deleted" do
+      destroy_service.call
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(customer, "customer.deleted")
     end
 
     it "enqueues a job to terminates the customer resources" do

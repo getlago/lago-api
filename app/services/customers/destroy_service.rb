@@ -13,6 +13,8 @@ module Customers
 
       customer.discard!
 
+      Utils::ActivityLog.produce(customer, "customer.deleted")
+
       Customers::TerminateRelationsJob.perform_later(customer_id: customer.id)
 
       result.customer = customer
