@@ -7698,7 +7698,7 @@ type Query {
   """
   Query usages of an organization
   """
-  dataApiUsages(currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, isBillableMetricRecurring: Boolean, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageCollection!
+  dataApiUsages(billableMetricCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, isBillableMetricRecurring: Boolean, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageCollection!
 
   """
   Query usages of an organization

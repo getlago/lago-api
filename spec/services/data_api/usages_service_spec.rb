@@ -65,12 +65,20 @@ RSpec.describe DataApi::UsagesService, type: :service do
 
     context "when licence is not premium" do
       context "when additional params are provided" do
-        let(:params) { {time_granularity: "daily", from_date: Date.current - 60.days, additional_param: "value"} }
+        let(:params) do
+          {
+            billable_metric_code: "code",
+            time_granularity: "weekly",
+            from_date: Date.current - 60.days,
+            additional_param: "value"
+          }
+        end
 
         it "returns default params with daily granularity and 30 days back start date" do
           expect(filtered_params).to eq(
             time_granularity: "daily",
-            start_of_period_dt: Date.current - 30.days
+            start_of_period_dt: Date.current - 30.days,
+            billable_metric_code: "code"
           )
         end
       end
