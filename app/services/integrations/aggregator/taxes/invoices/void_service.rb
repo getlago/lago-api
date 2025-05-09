@@ -11,7 +11,7 @@ module Integrations
 
           def call
             return result unless integration
-            return result unless integration.type == "Integrations::AnrokIntegration"
+            return result unless ::Integrations::BaseIntegration::INTEGRATION_TAX_TYPES.include?(integration.type)
 
             response = http_client.post_with_response(payload, headers)
             body = JSON.parse(response.body)
@@ -31,11 +31,21 @@ module Integrations
           private
 
           def payload
-            [
-              {
-                "id" => invoice.id
-              }
-            ]
+            case integration.type.to_s
+            when "Integrations::AvalaraIntegration"
+              [
+                {
+                  "company_code" => integration.company_code,
+                  "id" => invoice.id
+                }
+              ]
+            else
+              [
+                {
+                  "id" => invoice.id
+                }
+              ]
+            end
           end
         end
       end
