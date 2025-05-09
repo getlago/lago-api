@@ -7,6 +7,11 @@ module Plans
       super
     end
 
+    activity_loggable(
+      action: "plan.deleted",
+      record: -> { plan }
+    )
+
     def call
       return result.not_found_failure!(resource: "plan") unless plan
 
