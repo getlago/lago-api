@@ -72,6 +72,7 @@ module Plans
 
       result.plan = plan
       track_plan_created(plan)
+      Utils::ActivityLog.produce(plan, "plan.created")
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

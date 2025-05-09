@@ -59,13 +59,14 @@ RSpec.describe Utils::ActivityLog, type: :service do
 
       context "when the object is deleted" do
         it "does not set activity_object and activity_object_changes" do
+          allow(CurrentContext).to receive(:source).and_return(nil)
           activity_log.produce(invoice, "invoice.deleted", activity_id: "activity-id")
 
           expect(karafka_producer).to have_received(:produce_async).with(
             topic: "activity_logs",
             key: "#{organization.id}--activity-id",
             payload: {
-              activity_source: "api",
+              activity_source: "internal",
               api_key_id: api_key.id,
               user_id: nil,
               activity_type: "invoice.deleted",

@@ -62,6 +62,7 @@ module Plans
 
       plan.invoices.draft.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
+      Utils::ActivityLog.produce(plan, "plan.updated")
       result.plan = plan.reload
       result
     rescue ActiveRecord::RecordInvalid => e
