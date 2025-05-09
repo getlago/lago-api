@@ -44,6 +44,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
             activity_source: "api",
             api_key_id: api_key.id,
             user_id: nil,
+            external_customer_id: invoice.customer.external_id,
             activity_type: "invoice.created",
             activity_id: "activity-id",
             logged_at: Time.current.iso8601[...-1],
@@ -58,9 +59,11 @@ RSpec.describe Utils::ActivityLog, type: :service do
       end
 
       context "when the object is deleted" do
+        let(:customer) { create(:customer, organization:) }
+
         it "does not set activity_object and activity_object_changes" do
           allow(CurrentContext).to receive(:source).and_return(nil)
-          activity_log.produce(invoice, "invoice.deleted", activity_id: "activity-id")
+          activity_log.produce(customer, "customer.deleted", activity_id: "activity-id")
 
           expect(karafka_producer).to have_received(:produce_async).with(
             topic: "activity_logs",
@@ -69,12 +72,13 @@ RSpec.describe Utils::ActivityLog, type: :service do
               activity_source: "internal",
               api_key_id: api_key.id,
               user_id: nil,
-              activity_type: "invoice.deleted",
+              external_customer_id: customer.external_id,
+              activity_type: "customer.deleted",
               activity_id: "activity-id",
               logged_at: Time.current.iso8601[...-1],
               created_at: Time.current.iso8601[...-1],
-              resource_id: invoice.id,
-              resource_type: "Invoice",
+              resource_id: customer.id,
+              resource_type: "Customer",
               organization_id: organization.id,
               activity_object: nil,
               activity_object_changes: nil

@@ -92,6 +92,12 @@ module Customers
 
         customer.save!
 
+        if new_customer
+          Utils::ActivityLog.produce(customer, "customer.created")
+        else
+          Utils::ActivityLog.produce(customer, "customer.updated")
+        end
+
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: new_customer,

@@ -34,6 +34,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
 
   before do
     allow(SendWebhookJob).to receive(:perform_later)
+    allow(Utils::ActivityLog).to receive(:produce)
     allow(CurrentContext).to receive(:source).and_return("api")
   end
 
@@ -94,6 +95,12 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     customer = result.customer
 
     expect(SendWebhookJob).to have_received(:perform_later).with("customer.created", customer)
+  end
+
+  it "calls Utils::ActivityLog with customer.created" do
+    customer = result.customer
+
+    expect(Utils::ActivityLog).to have_received(:produce).with(customer, "customer.created")
   end
 
   context "when organization has multiple billing entities" do
@@ -467,6 +474,12 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       result
 
       expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", customer)
+    end
+
+    it "calls Utils::ActivityLog with customer.updated" do
+      result
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(customer, "customer.updated")
     end
 
     context "with provider customer" do

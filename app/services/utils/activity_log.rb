@@ -17,6 +17,7 @@ module Utils
             activity_source:,
             api_key_id: CurrentContext.api_key_id,
             user_id:,
+            external_customer_id: external_customer_id(object),
             activity_type:,
             activity_id:,
             logged_at: current_time,
@@ -45,6 +46,15 @@ module Utils
         Membership.find_by(id: CurrentContext.membership.split("/").last)&.user_id
       end
 
+      def external_customer_id(object)
+        case object.class.name
+        when "Customer"
+          object.external_id
+        else
+          return object.customer&.external_id if object.respond_to?(:customer)
+        end
+      end
+
       def activity_object(object, activity_type)
         return nil if activity_type.include?("deleted")
 
@@ -55,6 +65,11 @@ module Utils
       def activity_object_changes(object, activity_type)
         return nil if activity_type.include?("deleted")
 
+
+        puts "------------------------------------------------------------"
+        puts object.inspect
+        puts object.previous_changes.inspect
+        puts "------------------------------------------------------------"
         changes = object.previous_changes.except(*IGNORED_FIELDS).transform_values(&:to_s)
 
         return nil if changes.key?("id")
