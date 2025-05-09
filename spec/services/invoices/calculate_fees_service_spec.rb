@@ -13,7 +13,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:recurring) { false }
   let(:context) { nil }
 

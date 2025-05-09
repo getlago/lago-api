@@ -27,7 +27,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
     end
 
     let(:params) { {external_subscription_id: subscription.external_id} }
-    let(:tax) { create(:tax, organization:, rate: 20) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
     let(:metric) { create(:billable_metric, aggregation_type: "count_agg") }
 
     let(:charge) do

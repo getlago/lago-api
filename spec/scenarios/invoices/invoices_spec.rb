@@ -4,13 +4,13 @@ require "rails_helper"
 
 describe "Invoices Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil, email_settings: []) }
-  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
 
   before { tax }
 
   context "when pay in advance subscription with free trial used on several subscriptions" do
     let(:organization) { create(:organization, webhook_url: nil) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 3500, pay_in_advance: true, trial_period: 7) }
 
@@ -63,7 +63,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
 
   context "when timezone is negative and not the same day as UTC" do
     let(:organization) { create(:organization, webhook_url: nil) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: "America/Denver") } # UTC-6
     let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: "weekly") }
 
@@ -86,7 +86,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
 
   context "when timezone is negative but same day as UTC" do
     let(:organization) { create(:organization, webhook_url: nil) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: "America/Halifax") } # UTC-3
     let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: "weekly") }
 
@@ -109,7 +109,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
 
   context "when timezone is positive but same day as UTC" do
     let(:organization) { create(:organization, webhook_url: nil) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: "Europe/Paris") } # UTC+2
     let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: "weekly") }
 
@@ -132,7 +132,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
 
   context "when timezone is positive and not the same day as UTC" do
     let(:organization) { create(:organization, webhook_url: nil) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: "Asia/Karachi") } # UTC+5
     let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: "weekly") }
 
@@ -155,7 +155,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
 
   context "when invoice boundaries should cover leap month february" do
     let(:organization) { create(:organization, webhook_url: nil) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 700, pay_in_advance: true, interval: "monthly") }
 
@@ -653,7 +653,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 29_000, pay_in_advance: true) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:metric) do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
     end
@@ -740,7 +740,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: false) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 29_000, pay_in_advance: false) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:metric) do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
     end
@@ -825,7 +825,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 0, pay_in_advance: false) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 0, pay_in_advance: false) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:metric) do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: false, field_name: "amount")
     end
@@ -952,7 +952,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 29_000, pay_in_advance: true) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:metric) do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
     end
@@ -1025,7 +1025,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
   context "when pay in advance subscription is terminated on the same day" do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:metric) { create(:billable_metric, organization:) }
 
     it "bills fees correctly" do
@@ -1108,7 +1108,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
   context "when pay in advance subscription with grace period is terminated" do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:metric) do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
     end
@@ -1374,7 +1374,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: false) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 29_000, pay_in_advance: false) }
-    let(:tax) { create(:tax, organization:, rate: 0) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:metric) do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
     end

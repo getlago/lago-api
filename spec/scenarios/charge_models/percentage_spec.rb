@@ -5,7 +5,7 @@ require "rails_helper"
 describe "Charge Models - Percentage Scenarios", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
-  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
 
   let(:plan) { create(:plan, organization:, amount_cents: 1000) }
   let(:billable_metric) { create(:billable_metric, organization:, aggregation_type:, field_name:) }

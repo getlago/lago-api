@@ -14,7 +14,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
   let(:organization) { create(:organization) }
   let(:billing_entity) { create(:billing_entity, organization:) }
   let(:customer) { create(:customer, organization:, billing_entity:) }
-  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20, billing_entity:) }
 
   let(:invoicing_reason) { :subscription_periodic }
 
