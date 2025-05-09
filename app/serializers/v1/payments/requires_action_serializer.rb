@@ -5,6 +5,7 @@ module V1
     class RequiresActionSerializer < ModelSerializer
       def serialize
         {
+          lago_id: model.id,
           lago_payable_id: model.payable.id,
           lago_customer_id: model.payable.customer.id,
           status: model.status,
