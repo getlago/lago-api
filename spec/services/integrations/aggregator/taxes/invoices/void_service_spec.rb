@@ -71,10 +71,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         it "returns invoice_id" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice_id).to be_present
-          end
+          expect(result).to be_success
+          expect(result.invoice_id).to be_present
         end
       end
 
@@ -110,10 +108,8 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         it "returns invoice_id" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice_id).to be_present
-          end
+          expect(result).to be_success
+          expect(result.invoice_id).to be_present
         end
       end
 
@@ -126,11 +122,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         it "returns errors" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("taxDateTooFarInFuture")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("taxDateTooFarInFuture")
         end
 
         it "delivers an error webhook" do
@@ -167,12 +161,10 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.fees).to be(nil)
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("action_script_runtime_error")
-          end
+          expect(result).not_to be_success
+          expect(result.fees).to be(nil)
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("action_script_runtime_error")
         end
       end
     end

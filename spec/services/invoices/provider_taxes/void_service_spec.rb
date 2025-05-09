@@ -102,10 +102,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
       it "returns an error" do
         result = described_class.new(invoice: nil).call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("invoice_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("invoice_not_found")
       end
     end
 
@@ -115,10 +113,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
       it "returns an error" do
         result = void_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error.code).to eq("status_not_voided")
-        end
+        expect(result).not_to be_success
+        expect(result.error.code).to eq("status_not_voided")
       end
     end
 
@@ -126,10 +122,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
       it "returns successful result" do
         result = void_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
-          expect(result.invoice.id).to eq(invoice.id)
-        end
+        expect(result).to be_success
+        expect(result.invoice.id).to eq(invoice.id)
       end
 
       it "discards previous tax errors" do
@@ -147,13 +141,11 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
       it "keeps invoice in voided status" do
         result = void_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
-          expect(LagoHttpClient::Client).not_to have_received(:new).with(negate_endpoint)
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(invoice.reload.status).to eq("voided")
-        end
+        expect(result).not_to be_success
+        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
+        expect(LagoHttpClient::Client).not_to have_received(:new).with(negate_endpoint)
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(invoice.reload.status).to eq("voided")
       end
 
       it "resolves old tax error and creates new one" do
@@ -161,11 +153,9 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
 
         void_service.call
 
-        aggregate_failures do
-          expect(invoice.error_details.tax_voiding_error.last.id).not_to eql(old_error_id)
-          expect(invoice.error_details.tax_voiding_error.count).to be(1)
-          expect(invoice.error_details.tax_voiding_error.order(created_at: :asc).last.discarded?).to be(false)
-        end
+        expect(invoice.error_details.tax_voiding_error.last.id).not_to eql(old_error_id)
+        expect(invoice.error_details.tax_voiding_error.count).to be(1)
+        expect(invoice.error_details.tax_voiding_error.order(created_at: :asc).last).not_to be_discarded
       end
     end
 
@@ -182,13 +172,11 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
       it "keeps invoice in voided status" do
         result = void_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
-          expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint)
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(invoice.reload.status).to eq("voided")
-        end
+        expect(result).not_to be_success
+        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
+        expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint)
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(invoice.reload.status).to eq("voided")
       end
 
       it "resolves old tax error and creates new one" do
@@ -196,11 +184,9 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
 
         void_service.call
 
-        aggregate_failures do
-          expect(invoice.error_details.tax_voiding_error.last.id).not_to eql(old_error_id)
-          expect(invoice.error_details.tax_voiding_error.count).to be(1)
-          expect(invoice.error_details.tax_voiding_error.order(created_at: :asc).last.discarded?).to be(false)
-        end
+        expect(invoice.error_details.tax_voiding_error.last.id).not_to eql(old_error_id)
+        expect(invoice.error_details.tax_voiding_error.count).to be(1)
+        expect(invoice.error_details.tax_voiding_error.order(created_at: :asc).last).not_to be_discarded
       end
     end
 
@@ -221,13 +207,11 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
       it "keeps invoice in voided status" do
         result = void_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
-          expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint)
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(invoice.reload.status).to eq("voided")
-        end
+        expect(result).not_to be_success
+        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
+        expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint)
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(invoice.reload.status).to eq("voided")
       end
 
       it "resolves old tax error and creates new one" do
@@ -235,11 +219,9 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
 
         void_service.call
 
-        aggregate_failures do
-          expect(invoice.error_details.tax_voiding_error.last.id).not_to eql(old_error_id)
-          expect(invoice.error_details.tax_voiding_error.count).to be(1)
-          expect(invoice.error_details.tax_voiding_error.order(created_at: :asc).last.discarded?).to be(false)
-        end
+        expect(invoice.error_details.tax_voiding_error.last.id).not_to eql(old_error_id)
+        expect(invoice.error_details.tax_voiding_error.count).to be(1)
+        expect(invoice.error_details.tax_voiding_error.order(created_at: :asc).last).not_to be_discarded
       end
     end
   end
