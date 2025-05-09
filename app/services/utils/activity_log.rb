@@ -6,6 +6,22 @@ module Utils
       IGNORED_FIELDS = %w[updated_at].freeze
 
       def produce(object, activity_type, activity_id: SecureRandom.uuid)
+        before_attrs = object_serialized(object)
+        result = yield
+        after_attrs = object_serialized(object.reload)
+
+        changes = before_attrs.each_with_object({}) do |(key, before), result|
+          after = after_attrs[key]
+          result[key] = [before, after] if before != after
+        end
+
+        produce_with_diff(object, activity_type, object_changes: changes, activity_id:)
+        result
+      end
+
+      private
+
+      def produce_with_diff(object, activity_type, object_changes: {}, activity_id:)
         return if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
         return if ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"].blank?
 
@@ -25,17 +41,15 @@ module Utils
             resource_type: resource(object).class.name,
             organization_id: organization_id(object),
             activity_object: activity_object(object, activity_type),
-            activity_object_changes: activity_object_changes(object, activity_type)
+            activity_object_changes: activity_object_changes(object_changes, activity_type)
           }.to_json
         )
       end
 
-      private
-
       def activity_source
         return "front" if CurrentContext.source == "graphql"
 
-        CurrentContext.source
+        CurrentContext.source || "system"
       end
 
       def user_id
@@ -46,20 +60,20 @@ module Utils
       end
 
       def activity_object(object, activity_type)
-        return nil if activity_type.include?("deleted")
+        return {} if activity_type.include?("deleted")
 
+        object_serialized(object)
+      end
+
+      def object_serialized(object)
         "V1::#{object.class.name}Serializer".constantize.new(object).serialize
       end
 
-      # TODO: Fetch previous changes for associated objects (e.g. billable_metric.filters)
-      def activity_object_changes(object, activity_type)
-        return nil if activity_type.include?("deleted")
+      def activity_object_changes(object_changes, activity_type)
+        return {} if activity_type.include?("deleted")
+        return {} if object_changes.key?("id")
 
-        changes = object.previous_changes.except(*IGNORED_FIELDS).transform_values(&:to_s)
-
-        return nil if changes.key?("id")
-
-        changes
+        object_changes.transform_values(&:to_s)
       end
 
       def organization_id(activity_object)
