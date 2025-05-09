@@ -25,6 +25,7 @@ module Plans
       plan.pending_deletion = false
       plan.discard!
 
+      Utils::ActivityLog.produce(plan, "plan.deleted")
       result.plan = plan
       result
     end

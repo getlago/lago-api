@@ -35,7 +35,7 @@ module Utils
       def activity_source
         return "front" if CurrentContext.source == "graphql"
 
-        CurrentContext.source
+        CurrentContext.source || "internal"
       end
 
       def user_id
