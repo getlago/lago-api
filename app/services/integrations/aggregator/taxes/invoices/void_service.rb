@@ -31,16 +31,17 @@ module Integrations
           private
 
           def payload
-            if integration.type.to_s == "Integrations::AnrokIntegration"
+            case integration.type.to_s
+            when "Integrations::AvalaraIntegration"
               [
                 {
+                  "company_code" => integration.company_code,
                   "id" => invoice.id
                 }
               ]
             else
               [
                 {
-                  "company_code" => integration.company_code,
                   "id" => invoice.id
                 }
               ]

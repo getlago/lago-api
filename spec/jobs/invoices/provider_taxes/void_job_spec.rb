@@ -28,7 +28,20 @@ RSpec.describe Invoices::ProviderTaxes::VoidJob, type: :job do
     end
   end
 
-  context "when there is NOT anrok customer" do
+  context "when there is avalara customer" do
+    let(:integration) { create(:avalara_integration, organization:) }
+    let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
+
+    before { integration_customer }
+
+    it "calls successfully void service" do
+      described_class.perform_now(invoice:)
+
+      expect(Invoices::ProviderTaxes::VoidService).to have_received(:call)
+    end
+  end
+
+  context "when there is NOT tax customer" do
     it "does not call void service" do
       described_class.perform_now(invoice:)
 
