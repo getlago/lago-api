@@ -916,7 +916,6 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
     end
   end
 
-
   # TODO: before we fully switched to billing entities, the billing_entity_sequential_id follows the organization_sequential_id
   # context "with multiple billing entities" do
   #   let(:organization) { create(:organization, billing_entities: [billing_entity_first, billing_entity_second]) }
