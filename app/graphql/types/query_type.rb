@@ -91,6 +91,8 @@ module Types
     field :data_api_revenue_streams, resolver: Resolvers::DataApi::RevenueStreamsResolver
     field :data_api_revenue_streams_customers, resolver: Resolvers::DataApi::RevenueStreams::CustomersResolver
     field :data_api_revenue_streams_plans, resolver: Resolvers::DataApi::RevenueStreams::PlansResolver
+    field :data_api_usages, resolver: Resolvers::DataApi::UsagesResolver
+    field :data_api_usages_aggregated_amounts, resolver: Resolvers::DataApi::Usages::AggregatedAmountsResolver
     field :data_api_usages_invoiced, resolver: Resolvers::DataApi::Usages::InvoicedResolver
   end
 end
