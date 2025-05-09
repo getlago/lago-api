@@ -16,10 +16,12 @@ module DatabaseMigrations
         # rubocop:disable Rails/SkipsModelValidations
         batch.update_all("organization_id = (SELECT organization_id FROM invoices WHERE invoices.id = adjusted_fees.invoice_id)")
         # rubocop:enable Rails/SkipsModelValidations
-      end
 
-      # Queue the next batch
-      self.class.perform_later(batch_number + 1)
+        # Queue the next batch
+        self.class.perform_later(batch_number + 1)
+      else
+        Rails.logger.info("Finished the execution")
+      end
     end
 
     def lock_key_arguments

@@ -16,10 +16,12 @@ module DatabaseMigrations
         # rubocop:disable Rails/SkipsModelValidations
         batch.update_all("organization_id = (SELECT organization_id FROM customers WHERE customers.id = applied_coupons.customer_id)")
         # rubocop:enable Rails/SkipsModelValidations
-      end
 
-      # Queue the next batch
-      self.class.perform_later(batch_number + 1)
+        # Queue the next batch
+        self.class.perform_later(batch_number + 1)
+      else
+        Rails.logger.info("Finished the execution")
+      end
     end
 
     private
