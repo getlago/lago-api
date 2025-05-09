@@ -35,7 +35,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
       end
 
       it "produces the event on kafka" do
-        activity_log.produce(invoice, "invoice.created", activity_id: "activity-id")
+        activity_log.produce(invoice, "invoice.created", activity_id: "activity-id") { invoice }
 
         expect(karafka_producer).to have_received(:produce_async).with(
           topic: "activity_logs",
@@ -52,20 +52,23 @@ RSpec.describe Utils::ActivityLog, type: :service do
             resource_type: "Invoice",
             organization_id: organization.id,
             activity_object: V1::InvoiceSerializer.new(invoice).serialize,
-            activity_object_changes: nil
+            activity_object_changes: {}
           }.to_json
         )
       end
 
       context "when the object is deleted" do
         it "does not set activity_object and activity_object_changes" do
-          activity_log.produce(invoice, "invoice.deleted", activity_id: "activity-id")
+          allow(CurrentContext).to receive(:source).and_return(nil)
+          activity_log.produce(customer, "customer.deleted", activity_id: "activity-id") do
+            customer.discard!
+          end
 
           expect(karafka_producer).to have_received(:produce_async).with(
             topic: "activity_logs",
             key: "#{organization.id}--activity-id",
             payload: {
-              activity_source: "api",
+              activity_source: "system",
               api_key_id: api_key.id,
               user_id: nil,
               activity_type: "invoice.deleted",
@@ -75,8 +78,8 @@ RSpec.describe Utils::ActivityLog, type: :service do
               resource_id: invoice.id,
               resource_type: "Invoice",
               organization_id: organization.id,
-              activity_object: nil,
-              activity_object_changes: nil
+              activity_object: {},
+              activity_object_changes: {}
             }.to_json
           )
         end
@@ -90,7 +93,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
       end
 
       it "does not produce message" do
-        activity_log.produce(invoice, "invoice.created")
+        activity_log.produce(invoice, "invoice.created") { invoice }
         expect(karafka_producer).not_to have_received(:produce_async)
       end
     end
