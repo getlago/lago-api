@@ -39,7 +39,7 @@ module CreditNotes
           reason:,
           description:,
           credit_status: "available",
-          status: (invoice.status == "voided") ? "finalized" : invoice.status
+          status: (invoice.status == "voided") ? "finalized" : invoice.status # credit notes dont have void state
         )
 
         credit_note.save! if context != :preview
