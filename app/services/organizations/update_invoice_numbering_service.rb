@@ -20,7 +20,9 @@ module Organizations
 
         if last_invoice
           organization_invoices_count = organization.invoices.non_self_billed.with_generated_number.count
-          last_invoice.update!(organization_sequential_id: organization_invoices_count)
+          #  this service will be called only when we still have numbering defined on organization, so before billing_entity are used. that's why
+          #  we can safely set the billing_entity_sequential_id to the same value as organization_sequential_id
+          last_invoice.update!(organization_sequential_id: organization_invoices_count, billing_entity_sequential_id: organization_invoices_count)
         end
       end
 
