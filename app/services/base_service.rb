@@ -228,7 +228,10 @@ class BaseService
 
   def self.call(*, **, &)
     LagoTracer.in_span("#{name}#call") do
-      new(*, **).call(&)
+      instance = new(*, **)
+      return instance.call_with_audit_logs(&) if instance.audit_logs
+
+      instance.call(&)
     end
   end
 
@@ -247,7 +250,13 @@ class BaseService
     @source = CurrentContext&.source
   end
 
+  def audit_logs; false; end
+
   def call(**args, &block)
+    raise NotImplementedError
+  end
+
+  def call_with_audit_logs(**args, &block)
     raise NotImplementedError
   end
 
