@@ -5,7 +5,7 @@ on:
       - "main"
   pull_request:
     types: [opened, synchronize, reopened]
-permissions: { }
+permissions: {}
 jobs:
   run-spec:
     name: Run Spec
@@ -64,7 +64,7 @@ jobs:
       - name: Install Ruby and gems
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.3.6"
+          ruby-version: "3.4.3"
           bundler-cache: true
       - name: Start Clickhouse database
         run: |
