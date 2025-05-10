@@ -20,7 +20,7 @@ module BillingEntities
         billing_entity.invoice_footer = billing_config[:invoice_footer]
         billing_entity.document_locale = billing_config[:document_locale] if billing_config[:document_locale]
 
-        handle_eu_tax_management
+        handle_eu_tax_management if params[:eu_tax_management]
         handle_base64_logo
 
         if License.premium?
