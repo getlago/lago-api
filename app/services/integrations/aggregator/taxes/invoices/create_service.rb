@@ -11,9 +11,9 @@ module Integrations
 
           def call
             return result unless integration
-            return result unless integration.type == "Integrations::AnrokIntegration"
+            return result unless ::Integrations::BaseIntegration::INTEGRATION_TAX_TYPES.include?(integration.type)
 
-            throttle!(:anrok)
+            throttle!(:anrok, :avalara)
 
             response = http_client.post_with_response(payload, headers)
             body = parse_response(response)
@@ -45,6 +45,7 @@ module Integrations
 
             invoice_data = payload_body.first
             invoice_data["id"] = invoice.id
+            invoice_data["type"] = "salesInvoice" if integration.type.to_s == "Integrations::AvalaraIntegration"
 
             [invoice_data]
           end

@@ -16,6 +16,14 @@ module Integrations
                   integration_customer:,
                   fees:
                 )
+              when "Integrations::AvalaraIntegration"
+                Integrations::Aggregator::Taxes::Invoices::Payloads::Avalara.new(
+                  integration:,
+                  invoice:,
+                  customer:,
+                  integration_customer:,
+                  fees:
+                )
               else
                 raise(NotImplementedError)
               end

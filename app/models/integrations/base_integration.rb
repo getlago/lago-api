@@ -9,6 +9,7 @@ module Integrations
     self.table_name = "integrations"
 
     INTEGRATION_ACCOUNTING_TYPES = %w[Integrations::NetsuiteIntegration Integrations::XeroIntegration].freeze
+    INTEGRATION_TAX_TYPES = %w[Integrations::AnrokIntegration Integrations::AvalaraIntegration].freeze
 
     belongs_to :organization
 
