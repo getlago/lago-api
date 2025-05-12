@@ -9,11 +9,10 @@ module BillableMetrics
       super
     end
 
-    def audit_logs; true; end
-
-    def call_with_audit_logs
-      Utils::ActivityLog.produce(billable_metric, "billable_metric.updated") { call }
-    end
+    activity_loggable(
+      action: "billable_metric.updated",
+      record: -> { billable_metric }
+    )
 
     def call
       return result.not_found_failure!(resource: "billable_metric") unless billable_metric
