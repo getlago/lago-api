@@ -16,6 +16,8 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
             id
             code
           }
+          nextSubscriptionType
+          nextSubscriptionAt
         }
       }
     GQL
@@ -68,6 +70,25 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
       )
 
       expect_graphql_error(result:, message: "Resource not found")
+    end
+  end
+
+  context "when subscription was ugpraded" do
+    let(:subscription) { create(:subscription, :terminated, customer:, next_subscriptions: [next_subscription], terminated_at: 1.day.ago, external_id: next_subscription.external_id) }
+    let(:next_subscription) { create(:subscription, customer: customer, plan: create(:plan, amount_cents: 33000_00)) }
+
+    it do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {subscriptionId: subscription.id}
+      )
+
+      subscription_response = result["data"]["subscription"]
+      expect(subscription_response["nextSubscriptionType"]).to eq "upgrade"
+      expect(subscription_response["nextSubscriptionAt"]).to be_present
     end
   end
 end

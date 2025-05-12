@@ -32,6 +32,8 @@ RSpec.describe Types::Subscriptions::Object do
 
     expect(subject).to have_field(:next_plan).of_type("Plan")
     expect(subject).to have_field(:next_subscription).of_type("Subscription")
+    expect(subject).to have_field(:next_subscription_type).of_type("NextSubscriptionTypeEnum")
+    expect(subject).to have_field(:next_subscription_at).of_type("ISO8601DateTime")
 
     expect(subject).to have_field(:fees).of_type("[Fee!]")
 
