@@ -7,6 +7,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
 
   let(:customer) { create(:customer, payment_provider_code: code) }
   let(:organization) { customer.organization }
+  let(:billing_entity) { organization.default_billing_entity }
   let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
   let(:stripe_customer) {
     create(:stripe_customer, customer:, payment_method_id: stripe_payment_method_id)
@@ -80,7 +81,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
             customer: customer.stripe_customer.provider_customer_id,
             payment_method_types: customer.stripe_customer.provider_payment_methods,
             payment_intent_data: {
-              description: "#{organization.name} - Overdue invoices",
+              description: "#{billing_entity.name} - Overdue invoices",
               metadata: {
                 lago_customer_id: customer.id,
                 lago_payable_id: payment_request.id,

@@ -87,7 +87,7 @@ module PaymentRequests
       end
 
       def description
-        "#{organization.name} - Overdue invoices"
+        "#{customer.billing_entity.name} - Overdue invoices"
       end
 
       def update_payable_payment_status(payment_status:, deliver_webhook: true, processing: false)
