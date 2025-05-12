@@ -160,6 +160,7 @@ ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_142809fee1;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
+ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_103e187859;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_0e464363cb;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_0d349e632f;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_0d2be3d72c;
@@ -332,6 +333,7 @@ DROP INDEX IF EXISTS public.index_group_properties_on_deleted_at;
 DROP INDEX IF EXISTS public.index_group_properties_on_charge_id_and_group_id;
 DROP INDEX IF EXISTS public.index_group_properties_on_charge_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_fees_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id;
 DROP INDEX IF EXISTS public.index_fees_on_true_up_parent_fee_id;
@@ -2261,7 +2263,8 @@ CREATE TABLE public.fees_taxes (
     amount_currency character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL
+    precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5174,6 +5177,13 @@ CREATE UNIQUE INDEX index_fees_taxes_on_fee_id_and_tax_id ON public.fees_taxes U
 
 
 --
+-- Name: index_fees_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_taxes_on_organization_id ON public.fees_taxes USING btree (organization_id);
+
+
+--
 -- Name: index_fees_taxes_on_tax_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6325,6 +6335,14 @@ ALTER TABLE ONLY public.invoices
 
 ALTER TABLE ONLY public.integration_customers
     ADD CONSTRAINT fk_rails_0e464363cb FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
+-- Name: fees_taxes fk_rails_103e187859; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees_taxes
+    ADD CONSTRAINT fk_rails_103e187859 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7544,6 +7562,9 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250507154910'),
 ('20250506170753'),
+('20250506121532'),
+('20250506121531'),
+('20250506121530'),
 ('20250506115439'),
 ('20250506115438'),
 ('20250506115437'),
