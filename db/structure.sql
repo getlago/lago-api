@@ -2613,7 +2613,8 @@ CREATE TABLE public.wallet_transactions (
     metadata jsonb DEFAULT '[]'::jsonb,
     credit_note_id uuid,
     failed_at timestamp(6) without time zone,
-    organization_id uuid
+    organization_id uuid,
+    lock_version integer DEFAULT 0 NOT NULL
 );
 
 
@@ -7596,6 +7597,7 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250512081332'),
 ('20250507154910'),
 ('20250506170753'),
 ('20250506145851'),
