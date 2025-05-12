@@ -16,13 +16,9 @@ module BillingEntities
 
       return result unless billing_entity.document_numbering_changed?
 
-      # TODO: uncomment this. we want to havin invoices updated with organization_sequential_id and with
-      # billing_entity_sequential_id at the same place, so logic to update billing_entity_sequential_id
-      # currently exists in Organizations::UpdateInvoiceNumberingService
-      #
-      # if billing_entity.per_billing_entity? && last_invoice
-      #   last_invoice.update!(billing_entity_sequential_id: billing_entity_invoices_count)
-      # end
+      if billing_entity.per_billing_entity? && last_invoice
+        last_invoice.update!(billing_entity_sequential_id: billing_entity_invoices_count)
+      end
 
       result
     end
