@@ -153,7 +153,7 @@ RSpec.describe Invoice, type: :model do
       end
     end
 
-    context "with organization numbering and invoices in another month" do
+    context "with billing_entity numbering and invoices in another month" do
       let(:organization) { create(:organization, document_numbering: "per_organization") }
       let(:created_at) { Time.now.utc - 1.month }
 
@@ -163,14 +163,14 @@ RSpec.describe Invoice, type: :model do
         create(:invoice, customer:, organization:, sequential_id: 2, billing_entity_sequential_id: 2, organization_sequential_id: 2, created_at:)
       end
 
-      it "scopes the organization_sequential_id to the organization and month" do
+      it "scopes the billing_entity_sequential_id to the billing_entity and month" do
         invoice.save!
         invoice.finalized!
 
         expect(invoice).to be_valid
         expect(invoice.sequential_id).to eq(3)
-        # expect(invoice.billing_entity_sequential_id).to eq(3)
-        expect(invoice.organization_sequential_id).to eq(3)
+        expect(invoice.billing_entity_sequential_id).to eq(3)
+        # expect(invoice.organization_sequential_id).to eq(3)
       end
     end
   end
