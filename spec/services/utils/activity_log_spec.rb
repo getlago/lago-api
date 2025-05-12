@@ -35,7 +35,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
       end
 
       it "produces the event on kafka" do
-        activity_log.produce(invoice, "invoice.created", activity_id: "activity-id") { invoice }
+        activity_log.produce(invoice, "invoice.created", activity_id: "activity-id") { BaseService::Result.new }
 
         expect(karafka_producer).to have_received(:produce_async).with(
           topic: "activity_logs",
@@ -60,9 +60,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
       context "when the object is deleted" do
         it "does not set activity_object and activity_object_changes" do
           allow(CurrentContext).to receive(:source).and_return(nil)
-          activity_log.produce(customer, "customer.deleted", activity_id: "activity-id") do
-            customer.discard!
-          end
+          activity_log.produce(invoice, "invoice.deleted", activity_id: "activity-id") { BaseService::Result.new }
 
           expect(karafka_producer).to have_received(:produce_async).with(
             topic: "activity_logs",
@@ -84,6 +82,13 @@ RSpec.describe Utils::ActivityLog, type: :service do
           )
         end
       end
+
+      context "when the object is nil" do
+        it "does not produce the event" do
+          activity_log.produce(nil, "invoice.created") { BaseService::Result.new }
+          expect(karafka_producer).not_to have_received(:produce_async)
+        end
+      end
     end
 
     context "when kafka is not configured" do
@@ -93,7 +98,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
       end
 
       it "does not produce message" do
-        activity_log.produce(invoice, "invoice.created") { invoice }
+        activity_log.produce(invoice, "invoice.created") { BaseService::Result.new }
         expect(karafka_producer).not_to have_received(:produce_async)
       end
     end
