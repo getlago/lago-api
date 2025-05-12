@@ -95,7 +95,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
 
     context "when skip_payment is true" do
       let(:create_service) do
-        described_class.new(customer:, timestamp: timestamp.to_i, fees:, currency:, skip_payment: true)
+        described_class.new(customer:, timestamp: timestamp.to_i, fees:, currency:, skip_psp: true)
       end
 
       it "does not create a payment" do

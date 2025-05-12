@@ -2,12 +2,12 @@
 
 module Invoices
   class CreateOneOffService < BaseService
-    def initialize(customer:, currency:, fees:, timestamp:, skip_payment: false)
+    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false)
       @customer = customer
       @currency = currency || customer&.currency
       @fees = fees
       @timestamp = timestamp
-      @skip_payment = skip_payment
+      @skip_psp = skip_psp
 
       super(nil)
     end
@@ -51,7 +51,7 @@ module Invoices
         GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
-        Invoices::Payments::CreateService.call_async(invoice:) unless skip_payment
+        Invoices::Payments::CreateService.call_async(invoice:) unless skip_psp
       end
 
       result
@@ -67,7 +67,7 @@ module Invoices
 
     private
 
-    attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_payment
+    attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_psp
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(

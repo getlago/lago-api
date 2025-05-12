@@ -92,12 +92,12 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when skip_payment is true" do
+    context "when skip_psp is true" do
       let(:create_params) do
         {
           external_customer_id: customer_external_id,
           currency: "EUR",
-          skip_payment: true,
+          skip_psp: true,
           fees: [
             {
               add_on_code: add_on_first.code,

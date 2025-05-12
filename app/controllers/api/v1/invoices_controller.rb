@@ -9,7 +9,7 @@ module Api
           currency: create_params[:currency],
           fees: create_params[:fees],
           timestamp: Time.current.to_i,
-          skip_payment: create_params[:skip_payment]
+          skip_psp: create_params[:skip_psp]
         ).call
 
         if result.success?
@@ -269,7 +269,7 @@ module Api
             .permit(
               :external_customer_id,
               :currency,
-              :skip_payment,
+              :skip_psp,
               fees: [
                 :add_on_code,
                 :invoice_display_name,
