@@ -8,7 +8,7 @@ class CouponTarget < ApplicationRecord
   belongs_to :coupon
   belongs_to :plan, optional: true
   belongs_to :billable_metric, optional: true
-  belongs_to :organization_id, optional: true
+  belongs_to :organization, optional: true
 
   default_scope -> { kept }
 end
