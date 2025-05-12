@@ -31,6 +31,18 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         expect(result.billing_entity.code).to eq("billing-entity")
       end
 
+      it "does not set eu_tax_management when not provided" do
+        expect(result).to be_success
+        expect(result.billing_entity.eu_tax_management).to be false
+      end
+
+      it "sets eu_tax_management when explicitly provided" do
+        params[:eu_tax_management] = true
+        params[:country] = "fr"
+        expect(result).to be_success
+        expect(result.billing_entity.eu_tax_management).to be true
+      end
+
       it "does not set premium attributes" do
         params.merge!(
           {
