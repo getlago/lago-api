@@ -3,6 +3,7 @@
 class AppliedUsageThreshold < ApplicationRecord
   belongs_to :usage_threshold, -> { with_discarded }
   belongs_to :invoice
+  belongs_to :organization, optional: true
 
   validates :usage_threshold_id, uniqueness: {scope: :invoice_id}
 
@@ -31,16 +32,19 @@ end
 #  created_at                  :datetime         not null
 #  updated_at                  :datetime         not null
 #  invoice_id                  :uuid             not null
+#  organization_id             :uuid
 #  usage_threshold_id          :uuid             not null
 #
 # Indexes
 #
 #  idx_on_usage_threshold_id_invoice_id_cb82cdf163       (usage_threshold_id,invoice_id) UNIQUE
 #  index_applied_usage_thresholds_on_invoice_id          (invoice_id)
+#  index_applied_usage_thresholds_on_organization_id     (organization_id)
 #  index_applied_usage_thresholds_on_usage_threshold_id  (usage_threshold_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (invoice_id => invoices.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (usage_threshold_id => usage_thresholds.id)
 #
