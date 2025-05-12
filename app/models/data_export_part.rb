@@ -2,6 +2,7 @@
 
 class DataExportPart < ApplicationRecord
   belongs_to :data_export
+  belongs_to :organization, optional: true
 
   scope :completed, -> { where(completed: true) }
 end
@@ -10,20 +11,23 @@ end
 #
 # Table name: data_export_parts
 #
-#  id             :uuid             not null, primary key
-#  completed      :boolean          default(FALSE), not null
-#  csv_lines      :text
-#  index          :integer
-#  object_ids     :uuid             not null, is an Array
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  data_export_id :uuid             not null
+#  id              :uuid             not null, primary key
+#  completed       :boolean          default(FALSE), not null
+#  csv_lines       :text
+#  index           :integer
+#  object_ids      :uuid             not null, is an Array
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  data_export_id  :uuid             not null
+#  organization_id :uuid
 #
 # Indexes
 #
-#  index_data_export_parts_on_data_export_id  (data_export_id)
+#  index_data_export_parts_on_data_export_id   (data_export_id)
+#  index_data_export_parts_on_organization_id  (organization_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (data_export_id => data_exports.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #

@@ -11,7 +11,11 @@ module DataExports
     end
 
     def call
-      result.data_export_part = data_export.data_export_parts.create!(object_ids:, index:)
+      result.data_export_part = data_export.data_export_parts.create!(
+        organization_id: data_export.organization_id,
+        object_ids:,
+        index:
+      )
       after_commit { DataExports::ProcessPartJob.perform_later(result.data_export_part) }
       result
     rescue => e
