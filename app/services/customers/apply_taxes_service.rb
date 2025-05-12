@@ -18,7 +18,9 @@ module Customers
       ).destroy_all
 
       result.applied_taxes = tax_codes.map do |tax_code|
-        customer.applied_taxes.find_or_create_by!(tax: taxes.find_by(code: tax_code))
+        customer.applied_taxes
+          .create_with(organization_id: customer.organization_id)
+          .find_or_create_by!(tax: taxes.find_by(code: tax_code))
       end
 
       customer.invoices.draft.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
