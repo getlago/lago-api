@@ -29,6 +29,8 @@ class BillingEntity < ApplicationRecord
   has_many :wallets, through: :customers
   has_many :wallet_transactions, through: :wallets
 
+  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
+
   belongs_to :applied_dunning_campaign, class_name: "DunningCampaign", optional: true
 
   has_one_attached :logo

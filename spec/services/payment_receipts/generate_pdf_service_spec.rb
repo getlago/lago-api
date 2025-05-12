@@ -13,7 +13,15 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
   let(:payment) { create(:payment, payable: invoice) }
   let(:payment_receipt) { create(:payment_receipt, payment:, organization:) }
 
-  before { stub_pdf_generation }
+  before do
+    billing_entity = organization.default_billing_entity
+    billing_entity.logo.attach(
+      io: File.open(Rails.root.join("spec/factories/images/logo.png")),
+      content_type: "image/png",
+      filename: "logo"
+    )
+    stub_pdf_generation
+  end
 
   describe "#call" do
     it "generates the payment receipt synchronously" do

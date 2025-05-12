@@ -47,6 +47,8 @@ RSpec.describe Organizations::CreateService, type: :service do
             organization: service_result.organization,
             name: service_result.organization.name,
             code: service_result.organization.name.parameterize(separator: "_"),
+            document_number_prefix: service_result.organization.document_number_prefix,
+            eu_tax_management: false,
             document_numbering: "per_customer"
           )
         end

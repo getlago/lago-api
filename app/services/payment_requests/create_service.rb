@@ -15,14 +15,23 @@ module PaymentRequests
       return result if result.error
 
       payment_request = ActiveRecord::Base.transaction do
-        customer.payment_requests.create!(
+        request = customer.payment_requests.create!(
           organization:,
           dunning_campaign:,
           amount_cents: invoices.sum("total_amount_cents - total_paid_amount_cents"),
           amount_currency: currency,
-          email:,
-          invoices:
+          email:
         )
+
+        invoices.each do |invoice|
+          PaymentRequest::AppliedInvoice.create!(
+            payment_request: request,
+            invoice: invoice,
+            organization_id: invoice.organization_id
+          )
+        end
+
+        request
       end
 
       after_commit do

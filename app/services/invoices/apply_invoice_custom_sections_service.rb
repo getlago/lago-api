@@ -15,6 +15,7 @@ module Invoices
 
       customer.applicable_invoice_custom_sections.each do |custom_section|
         invoice.applied_invoice_custom_sections.create!(
+          organization_id: invoice.organization_id,
           code: custom_section.code,
           details: custom_section.details,
           display_name: custom_section.display_name,

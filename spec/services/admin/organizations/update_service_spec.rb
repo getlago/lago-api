@@ -30,7 +30,7 @@ RSpec.describe Admin::Organizations::UpdateService do
         result = update_service.call
 
         aggregate_failures do
-          expect(result.success).to be_falsey
+          expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
         end
       end

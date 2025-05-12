@@ -49,7 +49,7 @@ RSpec.describe AddOns::ApplyTaxesService, type: :service do
 
     context "when applied tax is already present" do
       it "does not create a new applied tax" do
-        create(:add_on_applied_tax, add_on:, tax: tax1)
+        create(:add_on_applied_tax, add_on:, tax: tax1, organization:)
         expect { apply_service.call }.to change { add_on.applied_taxes.count }.from(1).to(2)
       end
     end

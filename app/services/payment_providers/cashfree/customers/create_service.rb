@@ -15,7 +15,11 @@ module PaymentProviders
 
         def call
           provider_customer = PaymentProviderCustomers::CashfreeCustomer.find_by(customer_id: customer.id)
-          provider_customer ||= PaymentProviderCustomers::CashfreeCustomer.new(customer_id: customer.id, payment_provider_id:)
+          provider_customer ||= PaymentProviderCustomers::CashfreeCustomer.new(
+            customer_id: customer.id,
+            payment_provider_id:,
+            organization_id: organization.id
+          )
 
           if params.key?(:sync_with_provider)
             provider_customer.sync_with_provider = params[:sync_with_provider].presence

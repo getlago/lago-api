@@ -8,6 +8,7 @@ class Invoice
 
     belongs_to :invoice
     belongs_to :tax, optional: true
+    belongs_to :organization, optional: true
 
     monetize :amount_cents,
       :fees_amount_cents,
@@ -49,16 +50,19 @@ end
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #  invoice_id                :uuid             not null
+#  organization_id           :uuid
 #  tax_id                    :uuid
 #
 # Indexes
 #
 #  index_invoices_taxes_on_invoice_id             (invoice_id)
 #  index_invoices_taxes_on_invoice_id_and_tax_id  (invoice_id,tax_id) UNIQUE WHERE ((tax_id IS NOT NULL) AND (created_at >= '2023-09-12 00:00:00'::timestamp without time zone))
+#  index_invoices_taxes_on_organization_id        (organization_id)
 #  index_invoices_taxes_on_tax_id                 (tax_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (invoice_id => invoices.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (tax_id => taxes.id)
 #

@@ -11,6 +11,7 @@ class CreditNote < ApplicationRecord
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :invoice
+  # TODO: belongs_to :organization, optional: true
 
   has_one :organization, through: :invoice
   has_one :billing_entity, through: :invoice
@@ -23,6 +24,8 @@ class CreditNote < ApplicationRecord
   has_many :taxes, through: :applied_taxes
   has_many :integration_resources, as: :syncable
   has_many :error_details, as: :owner, dependent: :destroy
+
+  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
 
   has_one_attached :file
 
@@ -193,15 +196,18 @@ end
 #  updated_at                              :datetime         not null
 #  customer_id                             :uuid             not null
 #  invoice_id                              :uuid             not null
+#  organization_id                         :uuid
 #  sequential_id                           :integer          not null
 #
 # Indexes
 #
-#  index_credit_notes_on_customer_id  (customer_id)
-#  index_credit_notes_on_invoice_id   (invoice_id)
+#  index_credit_notes_on_customer_id      (customer_id)
+#  index_credit_notes_on_invoice_id       (invoice_id)
+#  index_credit_notes_on_organization_id  (organization_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (invoice_id => invoices.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #

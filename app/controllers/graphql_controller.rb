@@ -90,5 +90,6 @@ class GraphqlController < ApplicationController
 
   def set_context_source
     CurrentContext.source = "graphql"
+    CurrentContext.api_key_id = nil
   end
 end

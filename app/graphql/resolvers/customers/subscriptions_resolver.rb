@@ -21,7 +21,7 @@ module Resolvers
         statuses = status
         subscriptions = object.subscriptions
 
-        return subscriptions.order(created_at: :desc) if statuses.blank?
+        return subscriptions.order(created_at: :desc).reject { |s| s.pending? && s.previous_subscription&.downgraded? } if statuses.blank?
 
         # if requested statuses do not include pending ones we should just perform filtering by given statuses
         return subscriptions.where(status: statuses).order(created_at: :desc) unless statuses&.include?("pending")

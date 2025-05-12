@@ -7,6 +7,10 @@ RSpec.describe Coupon, type: :model do
 
   it_behaves_like "paper_trail traceable"
 
+  describe "Clickhouse associations", clickhouse: true do
+    it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
   it { is_expected.to validate_presence_of(:name) }
   it { is_expected.to validate_numericality_of(:amount_cents).is_greater_than(0).allow_nil }
 

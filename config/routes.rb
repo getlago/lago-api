@@ -12,6 +12,8 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
+      resources :activity_logs, param: :activity_id, only: %i[index show]
+
       namespace :analytics do
         get :gross_revenue, to: "gross_revenues#index", as: :gross_revenue
         get :invoiced_usage, to: "invoiced_usages#index", as: :invoiced_usage
@@ -19,6 +21,8 @@ Rails.application.routes.draw do
         get :mrr, to: "mrrs#index", as: :mrr
         get :overdue_balance, to: "overdue_balances#index", as: :overdue_balance
       end
+
+      get "analytics/usage", to: "data_api/usages#index", as: :usage
 
       resources :billing_entities, param: :code, only: %i[index show update create] do
         post :manage_taxes, on: :member

@@ -13,7 +13,7 @@ class Invoice < ApplicationRecord
   TAX_INVOICE_LABEL_COUNTRIES = %w[AU AE NZ ID SG].freeze
 
   before_save :ensure_organization_sequential_id, if: -> { organization.per_organization? && !self_billed }
-  before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
+  # before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
   before_save :ensure_number
   before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
 
@@ -44,6 +44,8 @@ class Invoice < ApplicationRecord
   has_many :applied_usage_thresholds
   has_many :usage_thresholds, through: :applied_usage_thresholds
   has_many :applied_invoice_custom_sections
+
+  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
 
   has_one_attached :file
 

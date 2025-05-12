@@ -2,6 +2,8 @@
 
 module AppliedCoupons
   class CreateService < BaseService
+    Result = BaseResult[:applied_coupon]
+
     def initialize(customer:, coupon:, params:)
       @customer = customer
       @coupon = coupon
@@ -17,6 +19,7 @@ module AppliedCoupons
       applied_coupon = AppliedCoupon.new(
         customer:,
         coupon:,
+        organization: customer.organization,
         amount_cents: params[:amount_cents] || coupon.amount_cents,
         amount_currency: params[:amount_currency] || coupon.amount_currency,
         percentage_rate: params[:percentage_rate] || coupon.percentage_rate,

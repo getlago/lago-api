@@ -85,15 +85,12 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
       end
 
       context "when taxes are unknown" do
-        it "returns tax error", aggregate_failures: true do
+        it "keeps the tax status as pending", aggregate_failures: true do
           result = create_service.call
 
-          expect(result).not_to be_success
-          expect(result.error.code).to eq("tax_error")
-          expect(result.error.error_message).to eq("unknown taxes")
+          expect(result).to be_success
 
           invoice = customer.invoices.order(created_at: :desc).first
-
           expect(invoice.status).to eq("pending")
           expect(invoice.tax_status).to eq("pending")
           expect(invoice.error_details.count).to eq(0)

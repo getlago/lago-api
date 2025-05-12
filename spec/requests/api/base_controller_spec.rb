@@ -26,6 +26,7 @@ RSpec.describe Api::BaseController, type: :controller do
     get :index
 
     expect(CurrentContext.source).to eq "api"
+    expect(CurrentContext.api_key_id).to eq api_key.id
   end
 
   describe "#authenticate" do
@@ -86,6 +87,6 @@ RSpec.describe Api::BaseController, type: :controller do
 
     json = JSON.parse(response.body, symbolize_names: true)
     expect(json[:status]).to eq(400)
-    expect(json[:error]).to eq("BadRequest: param is missing or the value is empty: input")
+    expect(json[:error]).to eq("BadRequest: param is missing or the value is empty or invalid: input")
   end
 end

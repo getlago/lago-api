@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :stripe_customer, class: "PaymentProviderCustomers::StripeCustomer" do
     customer
+    organization { customer.organization }
 
     provider_customer_id { SecureRandom.uuid }
     provider_payment_methods { %w[card sepa_debit] }
@@ -10,24 +11,28 @@ FactoryBot.define do
 
   factory :gocardless_customer, class: "PaymentProviderCustomers::GocardlessCustomer" do
     customer
+    organization { customer.organization }
 
     provider_customer_id { SecureRandom.uuid }
   end
 
   factory :cashfree_customer, class: "PaymentProviderCustomers::CashfreeCustomer" do
     customer
+    organization { customer.organization }
 
     provider_customer_id { SecureRandom.uuid }
   end
 
   factory :adyen_customer, class: "PaymentProviderCustomers::AdyenCustomer" do
     customer
+    organization { customer.organization }
 
     provider_customer_id { SecureRandom.uuid }
   end
 
   factory :moneyhash_customer, class: "PaymentProviderCustomers::MoneyhashCustomer" do
     customer
+    organization { customer.organization }
 
     provider_customer_id { SecureRandom.uuid }
   end

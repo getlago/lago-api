@@ -15,6 +15,7 @@ module CreditNotes
       return result.not_allowed_failure!(code: "invalid_type_or_status") unless valid_type_or_status?
 
       @credit_note = CreditNote.new(
+        organization_id: invoice.organization_id,
         customer: invoice.customer,
         invoice:,
         total_amount_currency: invoice.currency,

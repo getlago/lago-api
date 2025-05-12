@@ -109,6 +109,8 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
   end
 
   context "when VIES returns an error" do
+    let(:retry_job) { class_double(Customers::RetryViesCheckJob) }
+
     it "does not change taxes but send the webhook" do
       enable_eu_tax_management!
 
@@ -119,6 +121,9 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
       vat_number = "FR12345678901"
       allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
         .and_raise(::Valvat::RateLimitError.new("rate limit exceeded", Valvat::Lookup::VIES))
+
+      allow(Customers::RetryViesCheckJob).to receive(:set).and_return retry_job
+      allow(retry_job).to receive(:perform_later)
 
       create_or_update_customer(external_id: "user_fr_123", tax_identification_number: vat_number)
 

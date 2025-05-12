@@ -15,7 +15,11 @@ module PaymentProviders
 
         def call
           provider_customer = PaymentProviderCustomers::MoneyhashCustomer.find_by(customer_id: customer.id)
-          provider_customer ||= PaymentProviderCustomers::MoneyhashCustomer.new(customer_id: customer.id, payment_provider_id:)
+          provider_customer ||= PaymentProviderCustomers::MoneyhashCustomer.new(
+            customer_id: customer.id,
+            payment_provider_id:,
+            organization_id: organization.id
+          )
 
           if params.key?(:provider_customer_id)
             provider_customer.provider_customer_id = params[:provider_customer_id].presence

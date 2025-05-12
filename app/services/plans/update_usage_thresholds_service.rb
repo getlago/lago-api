@@ -84,6 +84,7 @@ module Plans
 
       usage_threshold.threshold_display_name = params[:threshold_display_name]
       usage_threshold.amount_cents = params[:amount_cents]
+      usage_threshold.organization_id = plan.organization_id
 
       usage_threshold.save!
       usage_threshold

@@ -18,7 +18,9 @@ module Charges
       ).destroy_all
 
       result.applied_taxes = tax_codes.map do |tax_code|
-        charge.applied_taxes.find_or_create_by!(tax: taxes.find_by(code: tax_code))
+        charge.applied_taxes
+          .create_with(organization_id: charge.organization_id)
+          .find_or_create_by!(tax: taxes.find_by(code: tax_code))
       end
 
       result

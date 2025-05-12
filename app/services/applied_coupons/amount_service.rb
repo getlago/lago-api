@@ -2,6 +2,8 @@
 
 module AppliedCoupons
   class AmountService < BaseService
+    Result = BaseResult[:amount]
+
     def initialize(applied_coupon:, base_amount_cents:)
       @applied_coupon = applied_coupon
       @base_amount_cents = base_amount_cents

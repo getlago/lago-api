@@ -71,6 +71,68 @@ RSpec.describe Idempotency, transaction: false do
       end
     end
 
+    context "when returning early from the transaction" do
+      it "raises an error" do
+        # define method so we don't have a local jump error
+        def test_func
+          described_class.transaction do
+            return 1 # rubocop:disable Rails/TransactionExitStatement
+          end
+        end
+
+        expect do
+          test_func
+        end.to raise_error(Idempotency::IdempotencyError, "You've returned early from an Idempotency transaction, please use `next` instead")
+      end
+
+      it "does not create an idempotency_record" do
+        def test_func
+          described_class.transaction do
+            described_class.unique!(invoice, id: invoice.id)
+            return 1 # rubocop:disable Rails/TransactionExitStatement
+          end
+        end
+
+        expect do
+          test_func
+        rescue # test_func raises so we rescue
+          nil
+        end.not_to change(IdempotencyRecord, :count)
+      end
+
+      it "does not create a customer" do
+        def test_func
+          described_class.transaction do
+            create(:customer)
+            return 1 # rubocop:disable Rails/TransactionExitStatement
+          end
+        end
+
+        expect do
+          test_func
+        rescue => e
+          expect(e).to be_instance_of(Idempotency::IdempotencyError)
+        end.not_to change(Customer, :count)
+      end
+
+      it "does not create a customer when raising a rollback" do
+        def test_func
+          described_class.transaction do
+            create(:customer)
+            raise ActiveRecord::Rollback
+          end
+        end
+
+        expect do
+          test_func
+        end.not_to change(Customer, :count)
+
+        expect do
+          test_func
+        end.not_to raise_error
+      end
+    end
+
     context "when an idempotency error occurs" do
       it "raises an IdempotencyError" do
         # Execute the transaction once
@@ -94,8 +156,8 @@ RSpec.describe Idempotency, transaction: false do
             described_class.unique!(invoice, id: invoice.id)
             raise "Test error"
           end
-        rescue
-          # Ignore the error
+        rescue => e
+          expect(e).to be_instance_of(RuntimeError)
         end
 
         expect(described_class.current_transaction).to be_nil

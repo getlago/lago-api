@@ -22,6 +22,7 @@ module Invoices
 
       subscriptions_with_fees.each do |subscription|
         invoice.invoice_subscriptions << InvoiceSubscription.create!(
+          organization: subscription.organization,
           invoice:,
           subscription:,
           timestamp:,

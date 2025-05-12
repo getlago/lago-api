@@ -50,7 +50,7 @@ module ChargeFilters
             end
           end
 
-          filter ||= charge.filters.new
+          filter ||= charge.filters.new(organization_id: charge.organization_id)
 
           filter.invoice_display_name = filter_param[:invoice_display_name]
           filter.properties = Charges::FilterChargeModelPropertiesService.call(

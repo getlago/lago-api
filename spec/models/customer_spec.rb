@@ -26,6 +26,10 @@ RSpec.describe Customer, type: :model do
   it { is_expected.to have_many(:invoice_custom_section_selections) }
   it { is_expected.to have_many(:selected_invoice_custom_sections) }
 
+  describe "Clickhouse associations", clickhouse: true do
+    it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
+  end
+
   it "sets the default value to inherit" do
     expect(customer.finalize_zero_amount_invoice).to eq "inherit"
   end
@@ -851,6 +855,36 @@ RSpec.describe Customer, type: :model do
       expect { customer.flag_wallets_for_refresh }.to change {
         wallet.reload.ready_to_be_refreshed
       }.from(false).to(true)
+    end
+  end
+
+  describe "#tax_customer" do
+    let(:customer) { create(:customer) }
+
+    context "with anrok attached" do
+      let(:anrok_customer) { create(:anrok_customer, customer:) }
+
+      before { anrok_customer }
+
+      it "returns anrok customer" do
+        expect(customer.tax_customer).to eq(anrok_customer)
+      end
+    end
+
+    context "with avalara attached" do
+      let(:avalara_customer) { create(:avalara_customer, customer:) }
+
+      before { avalara_customer }
+
+      it "returns avalara customer" do
+        expect(customer.tax_customer).to eq(avalara_customer)
+      end
+    end
+
+    context "without any tax integration" do
+      it "returns nil" do
+        expect(customer.tax_customer).to eq(nil)
+      end
     end
   end
 end

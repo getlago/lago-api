@@ -14,6 +14,7 @@ module IdempotencyRecords
     def call
       ApplicationRecord.transaction do
         idempotency_record = IdempotencyRecord.create!(
+          organization_id: resource&.organization_id,
           idempotency_key: idempotency_key,
           resource: resource
         )

@@ -24,7 +24,7 @@ module Subscriptions
     attr_reader :subscription, :charge, :to_datetime, :cache
 
     def cache_expiration
-      (to_datetime - Time.current).to_i.seconds
+      [(to_datetime - Time.current).to_i.seconds, 0].max
     end
   end
 end

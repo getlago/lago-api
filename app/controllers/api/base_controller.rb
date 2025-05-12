@@ -34,6 +34,7 @@ module Api
 
     def set_context_source
       CurrentContext.source = "api"
+      CurrentContext.api_key_id = current_api_key.id
     end
 
     def track_api_key_usage

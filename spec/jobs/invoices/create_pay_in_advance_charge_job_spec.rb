@@ -13,7 +13,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob, type: :job do
 
   before do
     allow(Invoices::CreatePayInAdvanceChargeService).to receive(:new)
-      .with(charge:, event:, timestamp:, invoice:)
+      .with(charge:, event:, timestamp:)
       .and_return(invoice_service)
     allow(invoice_service).to receive(:call)
       .and_return(result)
@@ -53,26 +53,10 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeJob, type: :job do
       end
     end
 
-    context "when a generating invoice is attached to the result" do
-      let(:result_invoice) { create(:invoice, :generating) }
-
-      before { result.invoice = result_invoice }
-
-      it "retries the job with the invoice" do
-        described_class.perform_now(charge:, event:, timestamp:)
-
-        expect(Invoices::CreatePayInAdvanceChargeService).to have_received(:new)
-        expect(invoice_service).to have_received(:call)
-
-        expect(described_class).to have_been_enqueued
-          .with(charge:, event:, timestamp:, invoice: nil)
-      end
-    end
-
-    context "when a not generating invoice is attached to the result" do
+    context "when no invoice is attached to the result" do
       let(:result_invoice) { create(:invoice, :draft) }
 
-      before { result.invoice = result_invoice }
+      before { result.invoice = nil }
 
       it "raises an error" do
         expect do

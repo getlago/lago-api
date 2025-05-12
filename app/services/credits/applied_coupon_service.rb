@@ -21,6 +21,7 @@ module Credits
       credit_amount = AppliedCoupons::AmountService.call(applied_coupon:, base_amount_cents:).amount
 
       new_credit = Credit.create!(
+        organization_id: invoice.organization_id,
         invoice:,
         applied_coupon:,
         amount_cents: credit_amount,

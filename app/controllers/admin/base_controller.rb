@@ -29,6 +29,7 @@ module Admin
 
     def set_context_source
       CurrentContext.source = "admin"
+      CurrentContext.api_key_id = nil
     end
   end
 end

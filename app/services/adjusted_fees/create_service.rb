@@ -2,6 +2,8 @@
 
 module AdjustedFees
   class CreateService < BaseService
+    Result = BaseResult[:fee, :adjusted_fee]
+
     def initialize(invoice:, params:)
       @invoice = invoice
       @organization = invoice.organization
@@ -35,7 +37,8 @@ module AdjustedFees
         unit_amount_cents: unit_precise_amount_cents.round,
         unit_precise_amount_cents: unit_precise_amount_cents,
         grouped_by: fee.grouped_by,
-        charge_filter: fee.charge_filter
+        charge_filter: fee.charge_filter,
+        organization:
       )
       adjusted_fee.save!
 

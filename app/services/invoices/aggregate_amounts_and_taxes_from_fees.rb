@@ -35,6 +35,7 @@ module Invoices
       invoice.applied_taxes = invoice.fees.includes(:applied_taxes).flat_map(&:applied_taxes).group_by(&:tax_id).map do |tax_id, applied_taxes|
         t = applied_taxes.first
         Invoice::AppliedTax.new(
+          organization: invoice.organization,
           tax_id: tax_id,
           tax_name: t.tax_name,
           tax_code: t.tax_code,

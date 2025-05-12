@@ -4,15 +4,10 @@ module Invoices
   class CreatePayInAdvanceChargeService < BaseService
     Result = BaseResult[:invoice, :fees_taxes, :invoice_id]
 
-    def initialize(charge:, event:, timestamp:, invoice: nil)
+    def initialize(charge:, event:, timestamp:)
       @charge = charge
       @event = Events::CommonFactory.new_instance(source: event)
       @timestamp = timestamp
-
-      # NOTE: In case of retry when the creation process failed,
-      #       and if the generating invoice was persisted,
-      #       the process can be retried without creating a new invoice
-      @invoice = invoice
 
       super
     end
@@ -23,8 +18,7 @@ module Invoices
       return result if fees.none?
 
       ActiveRecord::Base.transaction do
-        create_generating_invoice unless invoice
-        result.invoice = invoice
+        create_generating_invoice
         fees.each { |f| f.update!(invoice:) }
 
         invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
@@ -48,6 +42,8 @@ module Invoices
         Invoices::TransitionToFinalStatusService.call(invoice:)
         invoice.save!
       end
+
+      result.invoice = invoice
 
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)

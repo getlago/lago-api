@@ -2,6 +2,8 @@
 
 module AdjustedFees
   class DestroyService < BaseService
+    Result = BaseResult[:fee]
+
     def initialize(fee:)
       @fee = fee
 
