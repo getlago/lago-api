@@ -191,6 +191,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
     end
 
     context "when provider service raises a service failure" do
+      let(:original_error) { ::Stripe::StripeError.new("card declined") }
       let(:result) do
         BaseService::Result.new.tap do |r|
           r.payment = instance_double(Payment, status: "failed", payable_payment_status: "failed")
@@ -202,7 +203,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
 
       before do
         allow(provider_service).to receive(:call!)
-          .and_raise(BaseService::ServiceFailure.new(result, code: "code", error_message: "error", original_error: ::Stripe::StripeError.new("card declined")))
+          .and_raise(BaseService::ServiceFailure.new(result, code: "code", error_message: "error", original_error:))
       end
 
       it "re-raise the error and delivers an error webhook" do
@@ -219,6 +220,26 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
             },
             error_details: Hash
           ).on_queue(webhook_queue)
+      end
+
+      context "when original_error is not set" do
+        let(:original_error) { nil }
+
+        it "re-raise the error and delivers an error webhook" do
+          expect { create_service.call }
+            .to raise_error(BaseService::ServiceFailure)
+            .and enqueue_job(SendWebhookJob)
+            .with(
+              "invoice.payment_failure",
+              invoice,
+              provider_customer_id: provider_customer.provider_customer_id,
+              provider_error: {
+                message: "error",
+                error_code: "code"
+              },
+              error_details: {}
+            ).on_queue(webhook_queue)
+        end
       end
 
       context "when payment has a payable_payment_status" do

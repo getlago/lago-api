@@ -142,7 +142,7 @@ module Invoices
             message: payment_result.error_message,
             error_code: payment_result.error_code
           },
-          error_details: V1::Errors::ErrorSerializerFactory.new_instance(e.original_error).serialize
+          error_details: e.original_error ? V1::Errors::ErrorSerializerFactory.new_instance(e.original_error).serialize : {}
         })
       end
 
