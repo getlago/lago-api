@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe BillableMetrics::DestroyService, type: :service do
-  subject(:destroy_service) { described_class.new(metric: billable_metric) }
-
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:billable_metric) { create(:billable_metric, organization:) }
@@ -19,17 +17,17 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
     allow(Utils::ActivityLog).to receive(:produce)
   end
 
-  describe "#call" do
+  describe ".call" do
     it "soft deletes the billable metric" do
       freeze_time do
-        expect { destroy_service.call }.to change(BillableMetric, :count).by(-1)
+        expect { described_class.call(metric: billable_metric) }.to change(BillableMetric, :count).by(-1)
           .and change { billable_metric.reload.deleted_at }.from(nil).to(Time.current)
       end
     end
 
     it "soft deletes all the related charges" do
       freeze_time do
-        expect { destroy_service.call }.to change { charge.reload.deleted_at }.from(nil).to(Time.current)
+        expect { described_class.call(metric: billable_metric) }.to change { charge.reload.deleted_at }.from(nil).to(Time.current)
       end
     end
 
@@ -40,7 +38,7 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
 
     it "enqueues a BillableMetrics::DeleteEventsJob" do
       expect do
-        destroy_service.call
+        described_class.call(metric: billable_metric)
       end.to have_enqueued_job(BillableMetrics::DeleteEventsJob).with(billable_metric)
     end
 
@@ -48,18 +46,18 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
       invoice = create(:invoice, :draft)
       create(:invoice_subscription, subscription:, invoice:)
 
-      expect { destroy_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+      expect { described_class.call(metric: billable_metric) }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
     end
 
     it "produces an activity log" do
-      destroy_service.call
+      described_class.call(metric: billable_metric)
 
       expect(Utils::ActivityLog).to have_received(:produce).with(billable_metric, "billable_metric.deleted")
     end
 
     context "when billable metric is not found" do
       it "returns an error" do
-        result = described_class.new(metric: nil).call
+        result = described_class.call(metric: nil)
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("billable_metric_not_found")

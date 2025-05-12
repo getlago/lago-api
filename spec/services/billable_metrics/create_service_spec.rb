@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe BillableMetrics::CreateService, type: :service do
-  subject(:create_service) { described_class.new(create_args) }
-
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -29,7 +27,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
     end
 
     it "creates a billable metric" do
-      expect { create_service.call }
+      expect { described_class.call(create_args) }
         .to change(BillableMetric, :count).by(1)
     end
 
@@ -37,7 +35,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
       it "creates a billable metric with the same code" do
         create(:billable_metric, organization:, code: "new_metric", deleted_at: Time.current)
 
-        expect { create_service.call }
+        expect { described_class.call(create_args) }
           .to change(BillableMetric, :count).by(1)
 
         metrics = organization.billable_metrics.with_discarded
@@ -69,7 +67,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
       end
 
       it "creates billable metric's filters" do
-        expect { create_service.call }
+        expect { described_class.call(create_args) }
           .to change(BillableMetricFilter, :count).by(1)
       end
 
@@ -77,7 +75,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
         let(:filters) { [{key: "foo"}] }
 
         it "returns an error if a filter is invalid" do
-          result = create_service.call
+          result = described_class.call(create_args)
 
           aggregate_failures do
             expect(result).not_to be_success
@@ -89,7 +87,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
     end
 
     it "calls SegmentTrackJob" do
-      metric = create_service.call.billable_metric
+      metric = described_class.call(create_args).billable_metric
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
@@ -106,7 +104,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
     end
 
     it "produces an activity log" do
-      metric = create_service.call.billable_metric
+      metric = described_class.call(create_args).billable_metric
 
       expect(Utils::ActivityLog).to have_received(:produce).with(metric, "billable_metric.created")
     end
@@ -121,7 +119,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
       end
 
       it "returns an error" do
-        result = create_service.call
+        result = described_class.call(create_args)
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -144,7 +142,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
       end
 
       it "returns a forbidden failure" do
-        result = create_service.call
+        result = described_class.call(create_args)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
