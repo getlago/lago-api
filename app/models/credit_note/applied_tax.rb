@@ -8,6 +8,7 @@ class CreditNote
 
     belongs_to :credit_note
     belongs_to :tax, optional: true
+    belongs_to :organization, optional: true
 
     monetize :amount_cents
     monetize :base_amount_cents, with_model_currency: :amount_currency
@@ -29,17 +30,20 @@ end
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
 #  credit_note_id    :uuid             not null
+#  organization_id   :uuid
 #  tax_id            :uuid
 #
 # Indexes
 #
 #  index_credit_notes_taxes_on_credit_note_id               (credit_note_id)
 #  index_credit_notes_taxes_on_credit_note_id_and_tax_code  (credit_note_id,tax_code) UNIQUE
+#  index_credit_notes_taxes_on_organization_id              (organization_id)
 #  index_credit_notes_taxes_on_tax_code                     (tax_code)
 #  index_credit_notes_taxes_on_tax_id                       (tax_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (credit_note_id => credit_notes.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (tax_id => taxes.id)
 #
