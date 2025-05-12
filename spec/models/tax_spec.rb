@@ -24,7 +24,6 @@ RSpec.describe Tax, type: :model do
     end
 
     context "when tax is applied to the billing_entity" do
-      let(:applied_to_organization) { true }
       let(:applied_to_billing_entity_tax) { create(:billing_entity_applied_tax, tax:, billing_entity: tax.organization.default_billing_entity) }
 
       before do
