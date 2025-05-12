@@ -48,10 +48,10 @@ module Coupons
       ActiveRecord::Base.transaction do
         coupon.save!
 
-        plans.each { |plan| CouponTarget.create!(coupon:, plan:) } if plan_identifiers.present?
+        plans.each { |plan| CouponTarget.create!(coupon:, plan:, organization_id:) } if plan_identifiers.present?
 
         if billable_metric_identifiers.present?
-          billable_metrics.each { |billable_metric| CouponTarget.create!(coupon:, billable_metric:) }
+          billable_metrics.each { |bm| CouponTarget.create!(coupon:, billable_metric: bm, organization_id:) }
         end
       end
 

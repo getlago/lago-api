@@ -162,6 +162,7 @@ ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_20
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_1db0057d9b;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_1d112bf8a0;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
+ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_189f2a3949;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_150139409e;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_1454058c96;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_142809fee1;
@@ -417,6 +418,7 @@ DROP INDEX IF EXISTS public.index_coupons_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_coupons_on_organization_id;
 DROP INDEX IF EXISTS public.index_coupons_on_deleted_at;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_plan_id;
+DROP INDEX IF EXISTS public.index_coupon_targets_on_organization_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_deleted_at;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_coupon_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_billable_metric_id;
@@ -1341,7 +1343,8 @@ CREATE TABLE public.coupon_targets (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    billable_metric_id uuid
+    billable_metric_id uuid,
+    organization_id uuid
 );
 
 
@@ -4716,6 +4719,13 @@ CREATE INDEX index_coupon_targets_on_deleted_at ON public.coupon_targets USING b
 
 
 --
+-- Name: index_coupon_targets_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_coupon_targets_on_organization_id ON public.coupon_targets USING btree (organization_id);
+
+
+--
 -- Name: index_coupon_targets_on_plan_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6457,6 +6467,14 @@ ALTER TABLE ONLY public.invoice_subscriptions
 
 
 --
+-- Name: coupon_targets fk_rails_189f2a3949; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coupon_targets
+    ADD CONSTRAINT fk_rails_189f2a3949 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: customer_metadata fk_rails_195153290d; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7687,6 +7705,9 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250512151248'),
+('20250512151247'),
+('20250512151246'),
 ('20250512144220'),
 ('20250512144219'),
 ('20250512144218'),
