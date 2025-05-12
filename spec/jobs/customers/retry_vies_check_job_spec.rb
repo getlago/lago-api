@@ -11,8 +11,7 @@ RSpec.describe Customers::RetryViesCheckJob, type: :job do
   end
 
   before do
-    customer.organization.update(eu_tax_management: true, country: "FR")
-    customer.organization.update(eu_tax_management: true)
+    customer.billing_entity.update(eu_tax_management: true, country: "FR")
 
     allow(Customers::EuAutoTaxesService).to receive(:call)
       .with(customer: customer, new_record: false, tax_attributes_changed: true)
