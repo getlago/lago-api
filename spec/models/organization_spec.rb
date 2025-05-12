@@ -438,7 +438,7 @@ RSpec.describe Organization, type: :model do
       billing_entity
     end
 
-    it "ignores existing record on organization and uses value from default_billing_entity" do
+    it "ignores existing value in organization and uses value from default_billing_entity" do
       expect(organization.default_currency).to eq("GBP")
     end
   end
@@ -452,7 +452,7 @@ RSpec.describe Organization, type: :model do
       billing_entity
     end
 
-    it "ignores existing record on organization and uses value from default_billing_entity" do
+    it "ignores existing value in organization and uses value from default_billing_entity" do
       expect(organization.timezone).to eq("Europe/London")
     end
   end
