@@ -8,8 +8,7 @@ RSpec.describe ::BaseService, type: :service do
   it { is_expected.to be_kind_of(AfterCommitEverywhere) }
   it { is_expected.to respond_to(:call) }
   it { is_expected.to respond_to(:call_async) }
-  it { is_expected.to respond_to(:audit_logs) }
-  it { is_expected.to respond_to(:call_with_audit_logs) }
+  it { is_expected.to respond_to(:call_with_activity_log) }
 
   context "with current_user" do
     it "assigns the current_user to the result" do

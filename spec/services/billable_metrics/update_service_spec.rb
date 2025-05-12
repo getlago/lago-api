@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe BillableMetrics::UpdateService, type: :service do
-  subject(:update_service) { described_class.new(billable_metric:, params:) }
-
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -25,13 +23,13 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
   end
   let(:filters) { nil }
 
-  describe "#call" do
+  describe ".call" do
     before do
-      allow(Utils::ActivityLog).to receive(:produce)
+      allow(Utils::ActivityLog).to receive(:produce).and_call_original
     end
 
     it "updates the billable metric" do
-      result = update_service.call
+      result = described_class.call(billable_metric:, params:)
       expect(result).to be_success
 
       metric = result.billable_metric
@@ -47,7 +45,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
     end
 
     it "produces an activity log" do
-      update_service.call
+      described_class.call(billable_metric:, params:)
 
       expect(Utils::ActivityLog).to have_received(:produce).with(billable_metric, "billable_metric.updated")
     end
@@ -63,7 +61,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
 
       it "updates billable metric's filters" do
-        expect { update_service.call }.to change { billable_metric.filters.reload.count }.from(0).to(1)
+        expect { described_class.call(billable_metric:, params:) }.to change { billable_metric.filters.reload.count }.from(0).to(1)
       end
     end
 
@@ -78,7 +76,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
 
       it "returns an error" do
-        result = update_service.call
+        result = described_class.call(billable_metric:, params:)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -90,7 +88,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       let(:billable_metric) { nil }
 
       it "returns an error" do
-        result = update_service.call
+        result = described_class.call(billable_metric:, params:)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -102,7 +100,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       let(:params) { {aggregation_type: "custom_agg"} }
 
       it "returns a forbidden failure" do
-        result = update_service.call
+        result = described_class.call(billable_metric:, params:)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
@@ -116,7 +114,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       before { charge }
 
       it "updates only name and description" do
-        result = update_service.call
+        result = described_class.call(billable_metric:, params:)
 
         expect(result).to be_success
 

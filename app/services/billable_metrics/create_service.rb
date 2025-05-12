@@ -7,6 +7,11 @@ module BillableMetrics
       super
     end
 
+    activity_loggable(
+      action: "billable_metric.created",
+      record: -> { result.billable_metric }
+    )
+
     def call
       organization = Organization.find_by(id: args[:organization_id])
 
@@ -38,8 +43,6 @@ module BillableMetrics
 
         result.billable_metric = metric
         track_billable_metric_created(metric)
-
-        Utils::ActivityLog.produce(metric, "billable_metric.created")
       end
       result
     rescue ActiveRecord::RecordInvalid => e

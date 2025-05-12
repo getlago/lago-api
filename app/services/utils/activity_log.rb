@@ -6,8 +6,12 @@ module Utils
       IGNORED_FIELDS = %w[updated_at].freeze
 
       def produce(object, activity_type, activity_id: SecureRandom.uuid)
+        return yield if object.nil?
+
         before_attrs = object_serialized(object)
         result = yield
+        return result if result.failure?
+
         after_attrs = object_serialized(object.reload)
 
         changes = before_attrs.each_with_object({}) do |(key, before), result|
@@ -15,13 +19,13 @@ module Utils
           result[key] = [before, after] if before != after
         end
 
-        produce_with_diff(object, activity_type, object_changes: changes, activity_id:)
+        produce_with_diff(object, activity_type, activity_id:, object_changes: changes)
         result
       end
 
       private
 
-      def produce_with_diff(object, activity_type, object_changes: {}, activity_id:)
+      def produce_with_diff(object, activity_type, activity_id:, object_changes: {})
         return if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
         return if ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"].blank?
 
@@ -70,8 +74,7 @@ module Utils
       end
 
       def activity_object_changes(object_changes, activity_type)
-        return {} if activity_type.include?("deleted")
-        return {} if object_changes.key?("id")
+        return {} unless activity_type.include?("updated")
 
         object_changes.transform_values(&:to_s)
       end
