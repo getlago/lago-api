@@ -200,13 +200,13 @@ class Organization < ApplicationRecord
   # This field used to be on organization, but as we're migrating this data to the billing entity, it should be taken from the billing_entity
   def default_currency
     return super if new_record?
-    default_billing_entity ? default_billing_entity&.default_currency : super
+    default_billing_entity ? default_billing_entity.default_currency : super
   end
 
   # This field used to be on organization, but as we're migrating this data to the billing entity, it should be taken from the billing_entity
   def timezone
     return super if new_record?
-    default_billing_entity ? default_billing_entity&.timezone : super
+    default_billing_entity ? default_billing_entity.timezone : super
   end
 
   private
