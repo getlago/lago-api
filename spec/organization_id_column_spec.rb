@@ -36,7 +36,6 @@ Rspec.describe "All tables must have an organization_id" do
       customers_taxes
       data_export_parts
       dunning_campaign_thresholds
-      fees_taxes
       integration_collection_mappings
       integration_customers
       integration_items
