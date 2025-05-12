@@ -19,7 +19,9 @@ module BillingEntities
         return result if result.failure?
 
         result.applied_taxes = result.taxes_to_apply.map do |tax|
-          billing_entity.applied_taxes.find_or_create_by!(tax:)
+          billing_entity.applied_taxes
+            .create_with(organization_id: tax.organization_id)
+            .find_or_create_by!(tax:)
         end
 
         result

@@ -92,6 +92,7 @@ ALTER TABLE IF EXISTS ONLY public.dunning_campaigns DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_6b1e3d1159;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_67d4eb3c92;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_66eb6b32c1;
+ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_651eadaaa4;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails_64267aab58;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_63d3df128b;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_63ac282e70;
@@ -437,6 +438,7 @@ DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_transaction_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_event_id;
 DROP INDEX IF EXISTS public.index_cached_aggregations_on_charge_id;
 DROP INDEX IF EXISTS public.index_billing_entities_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_billing_entities_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_billing_entities_taxes_on_billing_entity_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_billing_entities_taxes_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_billing_entities_on_organization_id;
@@ -1193,7 +1195,8 @@ CREATE TABLE public.billing_entities_taxes (
     billing_entity_id uuid NOT NULL,
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4491,6 +4494,13 @@ CREATE UNIQUE INDEX index_billing_entities_taxes_on_billing_entity_id_and_tax_id
 
 
 --
+-- Name: index_billing_entities_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_billing_entities_taxes_on_organization_id ON public.billing_entities_taxes USING btree (organization_id);
+
+
+--
 -- Name: index_billing_entities_taxes_on_tax_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6927,6 +6937,14 @@ ALTER TABLE ONLY public.memberships
 
 
 --
+-- Name: billing_entities_taxes fk_rails_651eadaaa4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_entities_taxes
+    ADD CONSTRAINT fk_rails_651eadaaa4 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: subscriptions fk_rails_66eb6b32c1; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7597,6 +7615,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250512122608'),
+('20250512122607'),
+('20250512122606'),
 ('20250512081332'),
 ('20250507154910'),
 ('20250506170753'),
