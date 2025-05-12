@@ -29,7 +29,7 @@ module DunningCampaigns
           max_attempts: params[:max_attempts],
           name: params[:name],
           description: params[:description],
-          thresholds_attributes: params[:thresholds].map(&:to_h)
+          thresholds_attributes: params[:thresholds].map { _1.to_h.merge(organization_id: organization.id) }
         )
 
         result.dunning_campaign = dunning_campaign
