@@ -42,7 +42,6 @@ module DataExports
           payment_due_date
           payment_dispute_lost_at
           payment_overdue
-          billing_entity_code
         ]
       end
 
