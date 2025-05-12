@@ -5,8 +5,9 @@ require "rails_helper"
 RSpec.describe Customers::EuAutoTaxesService, type: :service do
   subject(:eu_tax_service) { described_class.new(customer:, new_record:, tax_attributes_changed:) }
 
-  let(:organization) { create(:organization, country: "FR", eu_tax_management: true) }
-  let(:customer) { create(:customer, organization:, tax_identification_number:, zipcode: nil) }
+  let(:organization) { create(:organization, country: "IT", eu_tax_management: true) }
+  let(:billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: true) }
+  let(:customer) { create(:customer, organization:, billing_entity:, tax_identification_number:, zipcode: nil) }
   let(:new_record) { true }
   let(:tax_attributes_changed) { true }
   let(:tax_identification_number) { "IT12345678901" }
@@ -72,7 +73,8 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
       end
 
       context "when eu_tax_management is false" do
-        let(:organization) { create(:organization, country: "FR", eu_tax_management: false) }
+        let(:organization) { create(:organization, country: "IT", eu_tax_management: false) }
+        let(:billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: false) }
 
         it "returns error" do
           result = eu_tax_service.call
@@ -111,14 +113,14 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
 
         before { applied_tax }
 
-        it "returns the organization country tax code" do
+        it "returns the billing_entity country tax code" do
           result = eu_tax_service.call
 
           expect(result.tax_code).to eq("lago_eu_fr_standard")
         end
       end
 
-      context "with same country as the organization" do
+      context "with same country as the billing_entity" do
         let(:vies_response) do
           {
             country_code: "FR"
@@ -140,7 +142,7 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
         end
       end
 
-      context "with a different country from the organization one" do
+      context "with a different country from the billing_entity one" do
         let(:vies_response) do
           {
             country_code: "DE"
@@ -202,7 +204,7 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
           customer.update(country: nil)
         end
 
-        it "returns the organization country tax code" do
+        it "returns the billing entity country tax code" do
           result = eu_tax_service.call
 
           expect(result.tax_code).to eq("lago_eu_fr_standard")

@@ -6,7 +6,7 @@ module Customers
 
     def initialize(customer:, new_record:, tax_attributes_changed:)
       @customer = customer
-      @organization_country_code = customer.organization.country
+      @billing_country_code = customer.billing_entity.country
       @new_record = new_record
       @tax_attributes_changed = tax_attributes_changed
 
@@ -29,7 +29,7 @@ module Customers
 
     private
 
-    attr_reader :customer, :organization_country_code, :tax_attributes_changed, :new_record
+    attr_reader :customer, :billing_country_code, :tax_attributes_changed, :new_record
 
     def check_vies
       return nil if customer.tax_identification_number.blank?
@@ -60,9 +60,9 @@ module Customers
     end
 
     def process_vies_tax(customer_vies)
-      return "lago_eu_reverse_charge" unless organization_country_code.casecmp?(customer_vies[:country_code])
+      return "lago_eu_reverse_charge" unless billing_country_code.casecmp?(customer_vies[:country_code])
 
-      standard_code = "lago_eu_#{organization_country_code.downcase}_standard"
+      standard_code = "lago_eu_#{billing_country_code.downcase}_standard"
       return standard_code if customer.zipcode.blank?
       return standard_code if applicable_tax_exceptions(country_code: customer_vies[:country_code]).blank?
 
@@ -71,7 +71,7 @@ module Customers
     end
 
     def process_not_vies_tax
-      return "lago_eu_#{organization_country_code.downcase}_standard" if customer.country.blank?
+      return "lago_eu_#{billing_country_code.downcase}_standard" if customer.country.blank?
       return "lago_eu_#{customer.country.downcase}_standard" if eu_countries_code.include?(customer.country.upcase)
 
       "lago_eu_tax_exempt"
@@ -92,7 +92,7 @@ module Customers
     end
 
     def should_apply_eu_taxes?
-      return false unless customer.organization.eu_tax_management
+      return false unless customer.billing_entity.eu_tax_management
       return true if new_record
 
       non_existing_eu_taxes = customer.taxes.where("code ILIKE ?", "lago_eu%").none?
