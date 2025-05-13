@@ -2,7 +2,9 @@
 
 module Invoices
   class VoidService < BaseService
-    def initialize(invoice:, params:)
+
+
+    def initialize(invoice:, params: {})
       @invoice = invoice
       @params = params
       @generate_credit_note = ActiveModel::Type::Boolean.new.cast(params[:generate_credit_note])
