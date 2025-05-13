@@ -2,8 +2,6 @@
 
 module Invoices
   class VoidService < BaseService
-
-
     def initialize(invoice:, params: {})
       @invoice = invoice
       @params = params
