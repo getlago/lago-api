@@ -32347,6 +32347,29 @@
           "enumValues": null
         },
         {
+          "kind": "ENUM",
+          "name": "NextSubscriptionTypeEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "upgrade",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "downgrade",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
           "kind": "SCALAR",
           "name": "ObfuscatedString",
           "description": null,
@@ -43635,6 +43658,30 @@
               "type": {
                 "kind": "OBJECT",
                 "name": "Subscription",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "nextSubscriptionAt",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "nextSubscriptionType",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "NextSubscriptionTypeEnum",
                 "ofType": null
               },
               "isDeprecated": false,

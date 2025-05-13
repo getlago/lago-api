@@ -6957,6 +6957,11 @@ type NetsuiteIntegration {
   tokenSecret: ObfuscatedString
 }
 
+enum NextSubscriptionTypeEnum {
+  downgrade
+  upgrade
+}
+
 scalar ObfuscatedString
 
 """
@@ -8378,6 +8383,8 @@ type Subscription {
   nextPendingStartDate: ISO8601Date
   nextPlan: Plan
   nextSubscription: Subscription
+  nextSubscriptionAt: ISO8601DateTime
+  nextSubscriptionType: NextSubscriptionTypeEnum
   periodEndDate: ISO8601Date
   plan: Plan!
   startedAt: ISO8601DateTime
