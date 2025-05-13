@@ -50,6 +50,7 @@ module CreditNotes
         amount_cents = item_attr[:amount_cents]&.to_i || 0
 
         item = CreditNoteItem.new(
+          organization_id: invoice.organization_id,
           fee: invoice.fees.find_by(id: item_attr[:fee_id]),
           amount_cents: amount_cents.round,
           precise_amount_cents: amount_cents,
