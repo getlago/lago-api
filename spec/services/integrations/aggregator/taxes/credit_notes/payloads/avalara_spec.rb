@@ -107,13 +107,13 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::Payloads::Avalara d
             "item_id" => fee_add_on.item_id,
             "item_code" => "m1",
             "unit" => 0.0,
-            "amount" => -1.90
+            "amount" => "-1.9"
           },
           {
             "item_id" => fee_add_on_two.item_id,
             "item_code" => "1",
             "unit" => 0.0,
-            "amount" => -1.62
+            "amount" => "-1.62"
           }
         ]
       }
