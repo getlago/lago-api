@@ -1,22 +1,22 @@
-FROM ruby:3.3.6-slim AS build
+FROM ruby:3.4.3-slim AS build
 
 WORKDIR /app
 
 RUN apt update && apt upgrade -y
-RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl -y && \
-    curl https://sh.rustup.rs -sSf | bash -s -- -y
+RUN apt install nodejs curl build-essential git pkg-config libpq-dev libclang-dev postgresql-client curl libyaml-dev -y && \
+  curl https://sh.rustup.rs -sSf | bash -s -- -y
 
 COPY ./Gemfile /app/Gemfile
 COPY ./Gemfile.lock /app/Gemfile.lock
 
-ENV BUNDLER_VERSION='2.5.5'
+ENV BUNDLER_VERSION='2.6.8'
 ENV PATH="$PATH:/root/.cargo/bin/"
-RUN gem install bundler --no-document -v '2.5.5'
+RUN gem install bundler --no-document -v '2.6.8'
 
 RUN bundle config build.nokogiri --use-system-libraries &&\
-    bundle install --jobs=3 --retry=3 --without development test
+  bundle install --jobs=3 --retry=3 --without development test
 
-FROM ruby:3.3.6-slim
+FROM ruby:3.4.3-slim
 
 WORKDIR /app
 
