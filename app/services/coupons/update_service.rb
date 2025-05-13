@@ -73,6 +73,8 @@ module Coupons
 
     attr_reader :coupon, :params, :limitations
 
+    delegate :organization, to: :coupon
+
     def plan_identifiers
       key = api_context? ? :plan_codes : :plan_ids
       limitations[key]&.compact&.uniq
@@ -95,7 +97,7 @@ module Coupons
       plans.each do |plan|
         next if existing_coupon_plan_ids.include?(plan.id)
 
-        CouponTarget.create!(coupon:, plan:)
+        CouponTarget.create!(coupon:, plan:, organization_id: organization.id)
       end
 
       sanitize_coupon_plans
@@ -131,7 +133,7 @@ module Coupons
       billable_metrics.each do |billable_metric|
         next if existing_coupon_billable_metric_ids.include?(billable_metric.id)
 
-        CouponTarget.create!(coupon:, billable_metric:)
+        CouponTarget.create!(coupon:, billable_metric:, organization_id: organization.id)
       end
 
       sanitize_coupon_billable_metrics

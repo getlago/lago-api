@@ -29,7 +29,6 @@ Rspec.describe "All tables must have an organization_id" do
       charge_filter_values
       commitments
       commitments_taxes
-      coupon_targets
       credit_note_items
       integration_collection_mappings
       integration_customers
