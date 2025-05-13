@@ -31,7 +31,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
   end
 
   before do
-    create(:tax, organization:, applied_to_organization: true)
+    create(:tax, :applied_to_billing_entity, organization:)
     billing_entity.update!(email_settings:)
   end
 

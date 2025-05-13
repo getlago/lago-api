@@ -15,8 +15,8 @@ RSpec.describe TaxesQuery, type: :query do
   let(:order) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:tax_first) { create(:tax, organization:, name: "defgh", code: "11", rate: 10) }
-  let(:tax_second) { create(:tax, organization:, name: "abcde", code: "22", rate: 5) }
+  let(:tax_first) { create(:tax, :applied_to_billing_entity, organization:, name: "defgh", code: "11", rate: 10) }
+  let(:tax_second) { create(:tax, :applied_to_billing_entity, organization:, name: "abcde", code: "22", rate: 5) }
 
   let(:tax_third) do
     create(
@@ -24,7 +24,6 @@ RSpec.describe TaxesQuery, type: :query do
       organization:,
       name: "presuv",
       code: "33",
-      applied_to_organization: false,
       rate: 20
     )
   end
@@ -32,6 +31,7 @@ RSpec.describe TaxesQuery, type: :query do
   let(:auto_generated_tax) do
     create(
       :tax,
+      :applied_to_billing_entity,
       organization:,
       name: "auto_generated",
       code: "auto_generated",
@@ -94,11 +94,20 @@ RSpec.describe TaxesQuery, type: :query do
     end
   end
 
-  context "with a filter on applied by default" do
+  context "with a filter on not applied to BE" do
     let(:filters) { {applied_to_organization: false} }
 
-    it "returns only one tax" do
+    it "returns only one bot applied tax" do
       expect(result.taxes).to eq([tax_third])
+    end
+  end
+
+  context "with a filter on applied to BE" do
+    let(:filters) { {applied_to_organization: true} }
+
+    it "returns all applied taxes" do
+      expect(result.taxes.count).to eq(3)
+      expect(result.taxes).to match_array([tax_first, tax_second, auto_generated_tax])
     end
   end
 

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Api::V1::InvoicesController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:tax) { create(:tax, organization:, rate: 20) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
 
   before { tax }
 
@@ -1111,6 +1111,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
     context "when sending billing_entity_code" do
       let(:billing_entity) { create(:billing_entity, organization:) }
+      let(:applied_tax) { create(:billing_entity_applied_tax, billing_entity:, tax:) }
       let(:preview_params) do
         {
           customer: {
@@ -1123,6 +1124,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           billing_entity_code: billing_entity.code
         }
       end
+
+      before { applied_tax }
 
       it "creates a preview invoice" do
         subject

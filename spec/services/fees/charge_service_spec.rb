@@ -2118,7 +2118,7 @@ RSpec.describe Fees::ChargeService do
       let(:apply_taxes) { true }
 
       before do
-        create(:tax, organization:, rate: 20)
+        create(:tax, :applied_to_billing_entity, organization:, rate: 20)
 
         create(
           :event,

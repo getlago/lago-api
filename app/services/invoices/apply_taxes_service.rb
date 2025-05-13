@@ -54,6 +54,8 @@ module Invoices
 
     delegate :organization, to: :invoice
 
+    # Note: taxes, applied on the fees might be created on organization, but selected for specific add-on, for example
+    # so not applied on the billing_entity
     def applicable_taxes
       organization.taxes.where(id: indexed_fees.keys)
     end

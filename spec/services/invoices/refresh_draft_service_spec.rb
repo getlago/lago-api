@@ -39,7 +39,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
     end
 
     let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:, recurring: true) }
-    let(:tax) { create(:tax, organization:, rate: 15) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 15) }
 
     before do
       invoice_subscription

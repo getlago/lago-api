@@ -44,6 +44,12 @@ class TaxesQuery < BaseQuery
   end
 
   def with_applied_to_organization(scope)
-    scope.where(applied_to_organization: filters.applied_to_organization)
+    if filters.applied_to_organization
+      scope.joins(:billing_entities_taxes)
+        .where(billing_entities_taxes: {billing_entity_id: organization.default_billing_entity.id})
+    else
+      scope.where.not(id: scope.joins(:billing_entities_taxes)
+        .where(billing_entities_taxes: {billing_entity_id: organization.default_billing_entity.id}))
+    end
   end
 end

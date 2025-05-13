@@ -8,7 +8,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
   describe "#call" do
     let(:organization) { create(:organization) }
     let(:billing_entity) { create(:billing_entity, organization:) }
-    let(:tax) { create(:tax, rate: 50.0, organization:) }
+    let(:tax) { create(:tax, :applied_to_billing_entity, rate: 50.0, organization:, billing_entity:) }
     let(:customer) { build(:customer, organization:, billing_entity:) }
     let(:timestamp) { Time.zone.parse("30 Mar 2024") }
     let(:plan) { create(:plan, organization:, interval: "monthly") }
@@ -996,7 +996,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
 
         context "with multiple persisted subscriptions" do
-          let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
+          let(:customer) { create(:customer, organization:, invoice_grace_period: 3, billing_entity:) }
           let(:plan1) { create(:plan, organization:, interval: "monthly") }
           let(:plan2) { create(:plan, organization:, interval: "monthly") }
           let(:subscriptions) { [subscription1, subscription2] }

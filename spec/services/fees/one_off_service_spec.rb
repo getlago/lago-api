@@ -11,7 +11,7 @@ RSpec.describe Fees::OneOffService do
   let(:billing_entity) { create(:billing_entity) }
   let(:organization) { billing_entity.organization }
   let(:customer) { create(:customer, organization:) }
-  let(:tax) { create(:tax, organization:) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, billing_entity:) }
   let(:tax2) { create(:tax, organization:, applied_to_organization: false) }
   let(:add_on_first) { create(:add_on, organization:) }
   let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
