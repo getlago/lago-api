@@ -14,7 +14,9 @@ module V1
           payment_provider_code: model.payment_provider.code,
           payment_provider_type: model.payment_provider.type,
           provider_payment_id: model.provider_payment_id,
-          next_action: model.provider_payment_data
+          next_action: model.provider_payment_data,
+          amount_cents: model.amount_cents,
+          amount_currency: model.amount_currency
         }
       end
     end
