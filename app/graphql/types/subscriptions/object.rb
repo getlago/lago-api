@@ -11,8 +11,6 @@ module Types
       field :plan, Types::Plans::Object, null: false
 
       field :name, String, null: true
-      field :next_name, String, null: true
-      field :next_pending_start_date, GraphQL::Types::ISO8601Date, method: :downgrade_plan_date
       field :period_end_date, GraphQL::Types::ISO8601Date
       field :status, Types::Subscriptions::StatusTypeEnum
 
@@ -29,8 +27,14 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :next_name, String, null: true
       field :next_plan, Types::Plans::Object
       field :next_subscription, Types::Subscriptions::Object
+      field :next_subscription_at, GraphQL::Types::ISO8601DateTime
+      field :next_subscription_type, Types::Subscriptions::NextSubscriptionTypeEnum
+
+      # TODO: Remove once frontend is updated
+      field :next_pending_start_date, GraphQL::Types::ISO8601Date, method: :downgrade_plan_date # Deprecated
 
       field :fees, [Types::Fees::Object], null: true
 
@@ -42,6 +46,18 @@ module Types
 
       def next_name
         object.next_subscription&.name
+      end
+
+      def next_subscription_type
+        if object.upgraded?
+          "upgrade"
+        elsif object.downgraded?
+          "downgrade"
+        end
+      end
+
+      def next_subscription_at
+        object.next_subscription&.started_at || object.next_subscription&.subscription_at
       end
 
       def period_end_date
