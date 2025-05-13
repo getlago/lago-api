@@ -71,10 +71,45 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         it "returns invoice_id" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice_id).to be_present
-          end
+          expect(result).to be_success
+          expect(result.invoice_id).to be_present
+        end
+      end
+
+      context "when void invoice sync is successful for avalara integration" do
+        let(:integration) { create(:avalara_integration, organization:) }
+        let(:integration_customer) { create(:avalara_customer, integration:, customer:) }
+        let(:endpoint) { "https://api.nango.dev/v1/avalara/void_invoices" }
+        let(:body) do
+          path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response_void.json")
+          File.read(path)
+        end
+        let(:headers) do
+          {
+            "Connection-Id" => integration.connection_id,
+            "Authorization" => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
+            "Provider-Config-Key" => "avalara-sandbox"
+          }
+        end
+        let(:params) do
+          [
+            {
+              "company_code" => integration.company_code,
+              "id" => invoice.id
+            }
+          ]
+        end
+
+        before do
+          allow(lago_client).to receive(:post_with_response).with(params, headers).and_return(response)
+          allow(response).to receive(:body).and_return(body)
+        end
+
+        it "returns invoice_id" do
+          result = service_call
+
+          expect(result).to be_success
+          expect(result.invoice_id).to be_present
         end
       end
 
@@ -87,11 +122,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         it "returns errors" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("taxDateTooFarInFuture")
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("taxDateTooFarInFuture")
         end
 
         it "delivers an error webhook" do
@@ -128,12 +161,10 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::VoidService do
         it "returns an error" do
           result = service_call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.fees).to be(nil)
-            expect(result.error).to be_a(BaseService::ServiceFailure)
-            expect(result.error.code).to eq("action_script_runtime_error")
-          end
+          expect(result).not_to be_success
+          expect(result.fees).to be(nil)
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("action_script_runtime_error")
         end
       end
     end

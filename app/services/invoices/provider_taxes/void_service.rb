@@ -11,6 +11,7 @@ module Invoices
 
       def call
         return result.not_found_failure!(resource: "invoice") if invoice.blank?
+        return result.not_allowed_failure!(code: "status_not_voided") unless invoice.voided?
 
         invoice.error_details.tax_voiding_error.discard_all
 
@@ -21,6 +22,12 @@ module Invoices
 
           unless negate_result.success?
             return result.validation_failure!(errors: {tax_error: [negate_result.error.code]})
+          end
+        elsif locked_transaction?(tax_result)
+          refund_result = perform_invoice_refund
+
+          unless refund_result.success?
+            return result.validation_failure!(errors: {tax_error: [refund_result.error.code]})
           end
         elsif !tax_result.success?
           create_error_detail(tax_result.error.code)
@@ -47,6 +54,14 @@ module Invoices
         negate_result
       end
 
+      def perform_invoice_refund
+        refund_result = Integrations::Aggregator::Taxes::Invoices::CreateService.new(invoice:).call
+
+        create_error_detail(refund_result.error.code) unless refund_result.success?
+
+        refund_result
+      end
+
       def create_error_detail(code)
         error_result = ErrorDetails::CreateService.call(
           owner: invoice,
@@ -64,7 +79,15 @@ module Invoices
       # transactionFrozenForFiling error means that tax is already reported to the tax authority
       # We should call negate action instead
       def frozen_transaction?(tax_result)
+        return false unless invoice.customer.anrok_customer
+
         !tax_result.success? && tax_result.error.code == "transactionFrozenForFiling"
+      end
+
+      def locked_transaction?(tax_result)
+        return false unless invoice.customer.avalara_customer
+
+        !tax_result.success? && tax_result.error.code == "CannotModifyLockedTransaction"
       end
     end
   end
