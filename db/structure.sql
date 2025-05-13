@@ -63,6 +63,7 @@ ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_90d93bd016;
+ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_909197908c;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_8fa6f0d920;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
@@ -376,6 +377,7 @@ DROP INDEX IF EXISTS public.index_dunning_campaign_thresholds_on_dunning_campaig
 DROP INDEX IF EXISTS public.index_dunning_campaign_thresholds_on_deleted_at;
 DROP INDEX IF EXISTS public.index_data_exports_on_organization_id;
 DROP INDEX IF EXISTS public.index_data_exports_on_membership_id;
+DROP INDEX IF EXISTS public.index_data_export_parts_on_organization_id;
 DROP INDEX IF EXISTS public.index_data_export_parts_on_data_export_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_usage_date;
 DROP INDEX IF EXISTS public.index_daily_usages_on_subscription_id;
@@ -1586,7 +1588,8 @@ CREATE TABLE public.data_export_parts (
     completed boolean DEFAULT false NOT NULL,
     csv_lines text,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4969,6 +4972,13 @@ CREATE INDEX index_data_export_parts_on_data_export_id ON public.data_export_par
 
 
 --
+-- Name: index_data_export_parts_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_data_export_parts_on_organization_id ON public.data_export_parts USING btree (organization_id);
+
+
+--
 -- Name: index_data_exports_on_membership_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7213,6 +7223,14 @@ ALTER TABLE ONLY public.commitments_taxes
 
 
 --
+-- Name: data_export_parts fk_rails_909197908c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_export_parts
+    ADD CONSTRAINT fk_rails_909197908c FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: invoice_subscriptions fk_rails_90d93bd016; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7651,6 +7669,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250512142914'),
+('20250512142913'),
+('20250512142912'),
 ('20250512130616'),
 ('20250512130615'),
 ('20250512130614'),
