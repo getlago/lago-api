@@ -16,6 +16,7 @@ module IntegrationCustomers
       return create_result if create_result.error
 
       new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
+        organization_id: integration.organization_id,
         integration:,
         customer:,
         external_customer_id: create_result.contact_id,

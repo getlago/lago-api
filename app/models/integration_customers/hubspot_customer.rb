@@ -26,6 +26,7 @@ end
 #  customer_id          :uuid             not null
 #  external_customer_id :string
 #  integration_id       :uuid             not null
+#  organization_id      :uuid
 #
 # Indexes
 #
@@ -33,9 +34,11 @@ end
 #  index_integration_customers_on_customer_id_and_type  (customer_id,type) UNIQUE
 #  index_integration_customers_on_external_customer_id  (external_customer_id)
 #  index_integration_customers_on_integration_id        (integration_id)
+#  index_integration_customers_on_organization_id       (organization_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (integration_id => integrations.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #

@@ -13,6 +13,7 @@ module IntegrationCustomers
 
     def create
       new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
+        organization_id: integration.organization_id,
         integration:,
         customer:,
         type: "IntegrationCustomers::SalesforceCustomer",
