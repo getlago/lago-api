@@ -20,6 +20,7 @@ module CreditNotes
         invoice_applied_tax = find_invoice_applied_tax(tax_code)
 
         applied_tax = CreditNote::AppliedTax.new(
+          organization_id: invoice.organization_id,
           tax: invoice_applied_tax.tax,
           tax_description: invoice_applied_tax.tax_description,
           tax_code: invoice_applied_tax.tax_code,
