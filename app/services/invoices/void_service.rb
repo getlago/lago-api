@@ -145,7 +145,10 @@ module Invoices
       total_amount = credit_amount + refund_amount
 
       if total_amount > invoice.total_amount_cents
-        return result.single_validation_failure!(field: :total_amount, error_code: "total_amount_exceeds_invoice_amount")
+        return result.single_validation_failure!(
+          field: :credit_refund_amount,
+           error_code: "total_amount_exceeds_invoice_amount"
+        )
       end
 
       # Generate items with proportional distribution of the credit/refund amount
