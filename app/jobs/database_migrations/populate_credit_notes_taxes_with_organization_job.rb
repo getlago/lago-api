@@ -14,7 +14,7 @@ module DatabaseMigrations
 
       if batch.exists?
         # rubocop:disable Rails/SkipsModelValidations
-        batch.update_all("organization_id = (SELECT organization_id FROM taxes WHERE taxes.id = credit_notes_taxes.tax_id)")
+        batch.update_all("organization_id = (SELECT organization_id FROM credit_notes WHERE credit_notes.id = credit_notes_taxes.credit_note_id)")
         # rubocop:enable Rails/SkipsModelValidations
 
         # Queue the next batch
