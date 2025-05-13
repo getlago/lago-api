@@ -23,7 +23,7 @@ RSpec.describe Idempotency, transaction: false do
           described_class.transaction do
             # No operations
           end
-        end.to raise_error(ArgumentError, "An idempotent_transaction cannot be created when already in a transaction")
+        end.to raise_error(ArgumentError, "An idempotent_transaction cannot be created in a transaction. (1 open transactions)")
       end
     end
 
@@ -145,7 +145,7 @@ RSpec.describe Idempotency, transaction: false do
           described_class.transaction do
             described_class.unique!(invoice, id: invoice.id)
           end
-        end.to raise_error(Idempotency::IdempotencyError)
+        end.to raise_error(Idempotency::IdempotencyError, "Idempotency key already exists for resource [#{invoice.to_gid}] based on {id: \"#{invoice.id}\"}.")
       end
     end
 

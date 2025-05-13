@@ -25,7 +25,7 @@ class Idempotency
 
     def ensure_idempotent!
       idempotent_resources.each do |resource, values|
-        # generate idempotency key for this resource
+        # generate the idempotency key for this resource
         idempotency_key = IdempotencyRecords::KeyService.call!(**values).idempotency_key
 
         # try and generate a resource
@@ -33,8 +33,11 @@ class Idempotency
           idempotency_key:,
           resource:
         )
-        # raise in case the create service fails
-        raise IdempotencyError.new("resource: #{resource} based on #{values.inspect} is not unique") unless result.success?
+        if result.failure?
+          msg = "Idempotency key already exists for resource [#{resource.to_gid}] based on #{values.inspect}."
+          Rails.logger.warn(msg)
+          raise IdempotencyError.new(msg)
+        end
       end
     end
 
@@ -58,7 +61,9 @@ class Idempotency
     # Create a new transaction context
     self.current_transaction = Transaction.new
 
-    raise ArgumentError, "An idempotent_transaction cannot be created when already in a transaction" if ApplicationRecord.connection.open_transactions > 0
+    if ApplicationRecord.connection.open_transactions > 0
+      raise ArgumentError, "An idempotent_transaction cannot be created in a transaction. (#{ApplicationRecord.connection.open_transactions} open transactions)"
+    end
 
     # Ensure the transaction context is cleaned up even if an exception occurs
     ActiveRecord::Base.transaction do
