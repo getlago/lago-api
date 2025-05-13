@@ -16,14 +16,13 @@ module BillingEntities
         if billing_entity.net_payment_term != net_payment_term
           billing_entity.net_payment_term = net_payment_term
 
-          # TODO: uncomment when billing_entity is the source of truth
-          # # update only invoices, where the customer does not have a setting
-          # billing_entity.invoices.includes(:customer).draft.find_each do |invoice|
-          #   # the customer has a setting of their own, no update needed.
-          #   next unless invoice.customer.net_payment_term.nil?
-          #
-          #   invoice.update!(net_payment_term:, payment_due_date: invoice_payment_due_date(invoice))
-          # end
+          # update only invoices, where the customer does not have a setting
+          billing_entity.invoices.includes(:customer).draft.find_each do |invoice|
+            # the customer has a setting of their own, no update needed.
+            next unless invoice.customer.net_payment_term.nil?
+
+            invoice.update!(net_payment_term:, payment_due_date: invoice_payment_due_date(invoice))
+          end
         end
 
         result.billing_entity = billing_entity
