@@ -73,10 +73,10 @@ module Coupons
     def count_active_credits
       # Get all credits for this coupon excluding the current one being voided
       Credit.joins(:invoice)
-            .where(applied_coupon_id: applied_coupon.id)
-            .where.not(id: credit.id)
-            .where.not(invoices: {status: :voided})
-            .count
+        .where(applied_coupon_id: applied_coupon.id)
+        .where.not(id: credit.id)
+        .where.not(invoices: {status: :voided})
+        .count
     end
   end
 end
