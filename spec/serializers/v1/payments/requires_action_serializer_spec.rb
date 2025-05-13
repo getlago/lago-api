@@ -26,5 +26,7 @@ RSpec.describe ::V1::Payments::RequiresActionSerializer do
     expect(result["payment"]["payment_provider_type"]).to eq(payment.payment_provider.type)
     expect(result["payment"]["provider_payment_id"]).to eq(payment.provider_payment_id)
     expect(result["payment"]["next_action"]).to eq(payment.provider_payment_data)
+    expect(result["payment"]["amount_cents"]).to eq(payment.amount_cents)
+    expect(result["payment"]["amount_currency"]).to eq(payment.amount_currency)
   end
 end
