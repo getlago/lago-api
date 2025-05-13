@@ -77,7 +77,7 @@ module Invoices
 
       # Get all fees from the invoice that have remaining creditable amount
       fees = invoice.fees.to_a.select { |fee| fee.creditable_amount_cents.positive? }
-      
+
       # Calculate total remaining creditable amount across all fees
       total_creditable_amount = fees.sum(&:creditable_amount_cents)
 
@@ -95,7 +95,7 @@ module Invoices
       fees[0...-1].each do |fee|
         # Calculate the proportion of this fee's creditable amount relative to the total
         proportion = fee.creditable_amount_cents.to_f / total_creditable_amount
-        
+
         # Calculate the amount for this fee, capped at its creditable amount
         fee_amount = [
           (actual_total_amount * proportion).round,
@@ -116,7 +116,7 @@ module Invoices
       last_fee = fees.last
       if last_fee && remaining_amount.positive?
         last_fee_amount = [remaining_amount, last_fee.creditable_amount_cents].min
-        
+
         if last_fee_amount.positive?
           items << {
             fee_id: last_fee.id,
@@ -140,14 +140,14 @@ module Invoices
       if refund_amount > available_refund_amount
         return result.single_validation_failure!(field: :refund_amount, error_code: "refund_amount_exceeds_available_amount")
       end
-      
+
       # Calculate the total amount to be credited/refunded
       total_amount = credit_amount + refund_amount
 
       if total_amount > invoice.total_amount_cents
         return result.single_validation_failure!(
           field: :credit_refund_amount,
-           error_code: "total_amount_exceeds_invoice_amount"
+          error_code: "total_amount_exceeds_invoice_amount"
         )
       end
 
