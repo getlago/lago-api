@@ -49,9 +49,8 @@ module DunningCampaigns
 
       # Update or create new thresholds from the input
       params[:thresholds].each do |threshold_input|
-        threshold = dunning_campaign.thresholds.find_or_initialize_by(
-          id: threshold_input[:id]
-        )
+        threshold = dunning_campaign.thresholds
+          .find_or_initialize_by(id: threshold_input[:id]) { |t| t.organization_id = organization.id }
 
         threshold.assign_attributes(threshold_input.to_h.slice(:amount_cents, :currency))
 

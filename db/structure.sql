@@ -9,6 +9,7 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_fd84cdb7c6;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_fd399a23d3;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_f98413d404;
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_f66617edcb;
@@ -373,6 +374,7 @@ DROP INDEX IF EXISTS public.index_error_details_on_deleted_at;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_organization_id;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_deleted_at;
+DROP INDEX IF EXISTS public.index_dunning_campaign_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_dunning_campaign_thresholds_on_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_dunning_campaign_thresholds_on_deleted_at;
 DROP INDEX IF EXISTS public.index_data_exports_on_organization_id;
@@ -1624,7 +1626,8 @@ CREATE TABLE public.dunning_campaign_thresholds (
     amount_cents bigint NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    organization_id uuid
 );
 
 
@@ -5007,6 +5010,13 @@ CREATE INDEX index_dunning_campaign_thresholds_on_dunning_campaign_id ON public.
 
 
 --
+-- Name: index_dunning_campaign_thresholds_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_dunning_campaign_thresholds_on_organization_id ON public.dunning_campaign_thresholds USING btree (organization_id);
+
+
+--
 -- Name: index_dunning_campaigns_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7663,12 +7673,23 @@ ALTER TABLE ONLY public.adjusted_fees
 
 
 --
+-- Name: dunning_campaign_thresholds fk_rails_fd84cdb7c6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dunning_campaign_thresholds
+    ADD CONSTRAINT fk_rails_fd84cdb7c6 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250512144220'),
+('20250512144219'),
+('20250512144218'),
 ('20250512142914'),
 ('20250512142913'),
 ('20250512142912'),
