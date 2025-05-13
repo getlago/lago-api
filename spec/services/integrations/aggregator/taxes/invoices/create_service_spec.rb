@@ -184,14 +184,14 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
                   "item_id" => fee_add_on.id,
                   "item_code" => "m1",
                   "unit" => 0.00,
-                  "amount" => 2.00
+                  "amount" => "2.0"
                 },
                 {
                   "item_key" => fee_add_on_two.item_key,
                   "item_id" => fee_add_on_two.id,
                   "item_code" => "1",
                   "unit" => 0.00,
-                  "amount" => 2.00
+                  "amount" => "2.0"
                 }
               ]
             }
@@ -258,14 +258,14 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
                     "item_id" => fee_add_on.id,
                     "item_code" => "m1",
                     "unit" => 0.00,
-                    "amount" => -2.00
+                    "amount" => "-2.0"
                   },
                   {
                     "item_key" => fee_add_on_two.item_key,
                     "item_id" => fee_add_on_two.id,
                     "item_code" => "1",
                     "unit" => 0.00,
-                    "amount" => -2.00
+                    "amount" => "-2.0"
                   }
                 ]
               }
