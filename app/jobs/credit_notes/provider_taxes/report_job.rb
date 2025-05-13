@@ -7,7 +7,7 @@ module CreditNotes
 
       def perform(credit_note:)
         return if credit_note.invoice.credit?
-        return unless credit_note.customer.anrok_customer
+        return unless credit_note.customer.tax_customer
 
         # NOTE: We don't want to raise error here.
         #       If sync fails, invoice would be marked and retry option would be available in the UI
