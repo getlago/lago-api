@@ -156,6 +156,7 @@ ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS f
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_2496c105ed;
 ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS fk_rails_23975f5a47;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_22af6c6d28;
+ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_2259c88f26;
 ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_21eb389927;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS fk_rails_21808fa528;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_216ac8a975;
@@ -425,6 +426,7 @@ DROP INDEX IF EXISTS public.index_coupon_targets_on_deleted_at;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_coupon_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_commitments_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id;
 DROP INDEX IF EXISTS public.index_commitments_on_plan_id;
 DROP INDEX IF EXISTS public.index_commitments_on_organization_id;
@@ -1332,7 +1334,8 @@ CREATE TABLE public.commitments_taxes (
     commitment_id uuid NOT NULL,
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4703,6 +4706,13 @@ CREATE INDEX index_commitments_taxes_on_commitment_id ON public.commitments_taxe
 
 
 --
+-- Name: index_commitments_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_commitments_taxes_on_organization_id ON public.commitments_taxes USING btree (organization_id);
+
+
+--
 -- Name: index_commitments_taxes_on_tax_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6550,6 +6560,14 @@ ALTER TABLE ONLY public.cached_aggregations
 
 
 --
+-- Name: commitments_taxes fk_rails_2259c88f26; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.commitments_taxes
+    ADD CONSTRAINT fk_rails_2259c88f26 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: invoices_taxes fk_rails_22af6c6d28; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7736,6 +7754,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250515083935'),
 ('20250515083802'),
 ('20250515083649'),
+('20250513144354'),
+('20250513144353'),
+('20250513144352'),
 ('20250513132425'),
 ('20250513132424'),
 ('20250513132423'),
