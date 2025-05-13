@@ -145,6 +145,80 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
         end
       end
 
+      context "when Avalara taxes are successfully fetched for finalized invoice" do
+        let(:integration) { create(:avalara_integration, organization:) }
+        let(:integration_customer) { create(:avalara_customer, integration:, customer:, external_customer_id: "123") }
+        let(:endpoint) { "https://api.nango.dev/v1/avalara/finalized_invoices" }
+        let(:params) do
+          [
+            {
+              "id" => invoice.id,
+              "type" => "salesInvoice",
+              "issuing_date" => invoice.issuing_date,
+              "currency" => invoice.currency,
+              "contact" => {
+                "external_id" => "123",
+                "name" => customer.name,
+                "address_line_1" => customer.address_line1,
+                "city" => customer.city,
+                "zip" => customer.zipcode,
+                "region" => customer.state,
+                "country" => customer.country,
+                "taxable" => false,
+                "tax_number" => nil
+              },
+              "billing_entity" => {
+                "address_line_1" => customer.billing_entity&.address_line1,
+                "city" => customer.billing_entity&.city,
+                "zip" => customer.billing_entity&.zipcode,
+                "region" => customer.billing_entity&.state,
+                "country" => customer.billing_entity&.country
+              },
+              "fees" => [
+                {
+                  "item_key" => fee_add_on.item_key,
+                  "item_id" => fee_add_on.id,
+                  "item_code" => "m1",
+                  "unit" => 0.00,
+                  "amount" => 2.00
+                },
+                {
+                  "item_key" => fee_add_on_two.item_key,
+                  "item_id" => fee_add_on_two.id,
+                  "item_code" => "1",
+                  "unit" => 0.00,
+                  "amount" => 2.00
+                }
+              ]
+            }
+          ]
+        end
+        let(:headers) do
+          {
+            "Connection-Id" => integration.connection_id,
+            "Authorization" => "Bearer #{ENV["NANGO_SECRET_KEY"]}",
+            "Provider-Config-Key" => "avalara-sandbox"
+          }
+        end
+        let(:body) do
+          path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
+          File.read(path)
+        end
+
+        it "returns fees" do
+          result = service_call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.fees.first["tax_breakdown"].first["rate"]).to eq("0.10")
+            expect(result.fees.first["tax_breakdown"].first["name"]).to eq("GST/HST")
+            expect(result.fees.first["tax_breakdown"].last["name"]).to eq("Reverse charge")
+            expect(result.fees.first["tax_breakdown"].last["type"]).to eq("exempt")
+            expect(result.fees.first["tax_breakdown"].last["rate"]).to eq("0.00")
+          end
+        end
+      end
+
       context "when taxes are not successfully fetched for finalized invoice" do
         let(:body) do
           path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
