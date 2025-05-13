@@ -23,6 +23,7 @@ module BillingEntities
             .create_with(organization_id: tax.organization_id)
             .find_or_create_by!(tax:)
         end
+        refresh_draft_invoices
 
         result
       end
