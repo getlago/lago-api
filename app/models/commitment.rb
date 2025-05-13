@@ -2,6 +2,7 @@
 
 class Commitment < ApplicationRecord
   belongs_to :plan
+  belongs_to :organization, optional: true
   has_many :applied_taxes, class_name: "Commitment::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
@@ -31,14 +32,17 @@ end
 #  invoice_display_name :string
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
+#  organization_id      :uuid
 #  plan_id              :uuid             not null
 #
 # Indexes
 #
 #  index_commitments_on_commitment_type_and_plan_id  (commitment_type,plan_id) UNIQUE
+#  index_commitments_on_organization_id              (organization_id)
 #  index_commitments_on_plan_id                      (plan_id)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (plan_id => plans.id)
 #
