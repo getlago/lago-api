@@ -110,18 +110,19 @@ group :development, :test do
   gem "debug", platforms: %i[mri mingw x64_mingw], require: false
   gem "dotenv"
   gem "fuubar"
-  gem "i18n-tasks", git: "https://github.com/glebm/i18n-tasks.git"
   gem "rspec-rails"
   gem "simplecov", require: false
   gem "webmock"
-  gem "rubocop-rails"
+  gem "awesome_print"
+  gem "pry"
+  gem "knapsack_pro", "~> 8.1"
+
+  gem "i18n-tasks", git: "https://github.com/glebm/i18n-tasks.git", require: false
+  gem "rubocop-rails", require: false
   gem "rubocop-graphql", require: false
   gem "rubocop-performance", require: false
   gem "rubocop-rspec", require: false
   gem "rubocop-thread_safety", require: false
-  gem "awesome_print"
-  gem "pry"
-  gem "knapsack_pro", "~> 8.1"
 end
 
 group :test do
