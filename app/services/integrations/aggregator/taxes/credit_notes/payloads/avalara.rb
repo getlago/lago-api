@@ -63,13 +63,19 @@ module Integrations
                 "item_id" => fee.item_id,
                 "item_code" => mapped_item.external_id,
                 "unit" => fee.units,
-                "amount" => (item.sub_total_excluding_taxes_amount_cents.to_i * -1).fdiv(fee.amount.currency.subunit_to_unit)
+                "amount" => item_amount(item, fee)
               }
             end
 
             private
 
             attr_reader :customer, :integration_customer, :credit_note, :billing_entity
+
+            def item_amount(item, fee)
+              amount = (item.sub_total_excluding_taxes_amount_cents.to_i * -1).fdiv(fee.amount.currency.subunit_to_unit)
+
+              amount.to_s
+            end
           end
         end
       end
