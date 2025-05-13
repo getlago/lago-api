@@ -134,6 +134,7 @@ ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_34b5ee1894;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_34ab152115;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_348acbd245;
+ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_33d169382f;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_32600e5a72;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_310fcb3585;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_2fd7ee65e6;
@@ -381,6 +382,7 @@ DROP INDEX IF EXISTS public.index_daily_usages_on_subscription_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_organization_id;
 DROP INDEX IF EXISTS public.index_daily_usages_on_customer_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_customers_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_customers_taxes_on_customer_id;
 DROP INDEX IF EXISTS public.index_customers_on_organization_id;
@@ -1546,7 +1548,8 @@ CREATE TABLE public.customers_taxes (
     customer_id uuid NOT NULL,
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4917,6 +4920,13 @@ CREATE UNIQUE INDEX index_customers_taxes_on_customer_id_and_tax_id ON public.cu
 
 
 --
+-- Name: index_customers_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_customers_taxes_on_organization_id ON public.customers_taxes USING btree (organization_id);
+
+
+--
 -- Name: index_customers_taxes_on_tax_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6627,6 +6637,14 @@ ALTER TABLE ONLY public.payment_requests
 
 
 --
+-- Name: customers_taxes fk_rails_33d169382f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.customers_taxes
+    ADD CONSTRAINT fk_rails_33d169382f FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: lifetime_usages fk_rails_348acbd245; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7633,6 +7651,9 @@ ALTER TABLE ONLY public.adjusted_fees
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250512130616'),
+('20250512130615'),
+('20250512130614'),
 ('20250512123541'),
 ('20250512123540'),
 ('20250512123539'),
