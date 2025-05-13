@@ -35,6 +35,7 @@ module Integrations
           Rails.logger.info "Creating integration resource with external ID: #{result.external_id}"
 
           IntegrationResource.create!(
+            organization_id: integration.organization_id,
             integration:,
             external_id: result.external_id,
             syncable_id: invoice.id,
