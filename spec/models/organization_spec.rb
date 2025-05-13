@@ -446,4 +446,32 @@ RSpec.describe Organization, type: :model do
       expect(organization.system_generated_invoice_custom_sections).to contain_exactly(system_generated_section)
     end
   end
+
+  describe "default_currency" do
+    let(:organization) { create(:organization, default_currency: "USD") }
+    let(:billing_entity) { create(:billing_entity, organization:, default_currency: "EUR") }
+
+    before do
+      organization.default_billing_entity.update(default_currency: "GBP")
+      billing_entity
+    end
+
+    it "ignores existing value in organization and uses value from default_billing_entity" do
+      expect(organization.default_currency).to eq("GBP")
+    end
+  end
+
+  describe "timezone" do
+    let(:organization) { create(:organization, timezone: "UTC") }
+    let(:billing_entity) { create(:billing_entity, organization:, timezone: "America/New_York") }
+
+    before do
+      organization.default_billing_entity.update(timezone: "Europe/London")
+      billing_entity
+    end
+
+    it "ignores existing value in organization and uses value from default_billing_entity" do
+      expect(organization.timezone).to eq("Europe/London")
+    end
+  end
 end

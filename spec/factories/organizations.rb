@@ -16,6 +16,9 @@ FactoryBot.define do
     end
 
     after(:create) do |organization, evaluator|
+      # because we're building billing entity while building the organization, possible that the billing_entity will be
+      # created att he same moment as the organization, so we need to reload it to get the correct scope
+      organization.reload
       if evaluator.webhook_url
         organization.webhook_endpoints.create!(webhook_url: evaluator.webhook_url)
       end

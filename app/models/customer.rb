@@ -6,6 +6,7 @@ class Customer < ApplicationRecord
   include Currencies
   include CustomerTimezone
   include OrganizationTimezone
+  include BillingEntityTimezone
   include Discard::Model
   self.discard_column = :deleted_at
 

@@ -618,14 +618,17 @@ RSpec.describe Customer, type: :model do
       )
     end
 
-    let(:organization) { create(:organization, timezone: "America/Los_Angeles") }
+    let(:organization) { create(:organization) }
+
+    before do
+      organization.default_billing_entity.update(timezone: "America/Los_Angeles")
+    end
 
     it "has helper to get dates in timezones" do
-      aggregate_failures do
-        expect(customer.created_at.to_s).to eq("2022-11-17 23:34:23 UTC")
-        expect(customer.created_at_in_customer_timezone.to_s).to eq("2022-11-18 00:34:23 +0100")
-        expect(customer.created_at_in_organization_timezone.to_s).to eq("2022-11-17 15:34:23 -0800")
-      end
+      expect(customer.created_at.to_s).to eq("2022-11-17 23:34:23 UTC")
+      expect(customer.created_at_in_customer_timezone.to_s).to eq("2022-11-18 00:34:23 +0100")
+      expect(customer.created_at_in_organization_timezone.to_s).to eq("2022-11-17 15:34:23 -0800")
+      expect(customer.created_at_in_billing_entity_timezone.to_s).to eq("2022-11-17 15:34:23 -0800")
     end
   end
 
