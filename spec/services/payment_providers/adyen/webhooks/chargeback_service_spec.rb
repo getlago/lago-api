@@ -10,7 +10,6 @@ RSpec.describe PaymentProviders::Adyen::Webhooks::ChargebackService, type: :serv
   let(:membership) { create(:membership, organization:) }
   let(:customer) { create(:customer, organization:) }
   let(:payment) { create(:payment, payable: invoice, provider_payment_id: "9915555555555555") }
-  let(:lose_dispute_service) { Invoices::LoseDisputeService.new(invoice:) }
   let(:invoice) { create(:invoice, customer:, organization:, status:, payment_status: "succeeded") }
 
   describe "#call" do
