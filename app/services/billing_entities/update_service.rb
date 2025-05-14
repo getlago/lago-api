@@ -48,7 +48,6 @@ module BillingEntities
       handle_eu_tax_management if params.key?(:eu_tax_management)
 
       if License.premium? && billing.key?(:invoice_grace_period)
-        # for now we won't update related invoices to the billing_entity from this service
         BillingEntities::UpdateInvoiceGracePeriodService.call(
           billing_entity:,
           grace_period: billing[:invoice_grace_period]
