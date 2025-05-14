@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Invoice < ApplicationRecord
-  self.ignored_columns += [:negative_amount_cents] # TODO: remove when negative_amount_cents is removed from the database
+  self.ignored_columns += [:negative_amount_cents]
 
   include AASM
   include PaperTrailTraceable
