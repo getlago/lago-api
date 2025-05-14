@@ -189,7 +189,7 @@ module Fees
     end
 
     def integration_customer
-      @integration_customer ||= customer.anrok_customer
+      @integration_customer ||= customer.tax_customer
     end
 
     def customer
