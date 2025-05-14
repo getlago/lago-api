@@ -8,6 +8,7 @@ RSpec.describe Types::DataExports::CreditNotes::FiltersInput do
   it do
     expect(subject).to accept_argument(:amount_from).of_type("Int")
     expect(subject).to accept_argument(:amount_to).of_type("Int")
+    expect(subject).to accept_argument(:billing_entity_ids).of_type("[ID!]")
     expect(subject).to accept_argument(:credit_status).of_type("[CreditNoteCreditStatusEnum!]")
     expect(subject).to accept_argument(:currency).of_type("CurrencyEnum")
     expect(subject).to accept_argument(:customer_external_id).of_type("String")

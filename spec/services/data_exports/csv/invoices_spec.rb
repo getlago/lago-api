@@ -72,7 +72,8 @@ RSpec.describe DataExports::Csv::Invoices do
       payment_due_date: "2023-02-01",
       payment_dispute_lost_at: "2023-12-22",
       payment_overdue: false,
-      progressive_billing_credit_amount_cents: 999
+      progressive_billing_credit_amount_cents: 999,
+      billing_entity_code: "the-test-bil-ent"
     }
   end
 
@@ -103,6 +104,26 @@ RSpec.describe DataExports::Csv::Invoices do
       file.close
       File.unlink(file.path)
       expect(generated_csv).to eq(expected_csv)
+    end
+
+    context "when organization has multiple billing_entities" do
+      let(:billing_entity) { create(:billing_entity, organization:) }
+
+      before { billing_entity }
+
+      it "adds billing_entity_code to the csv" do
+        expected_csv = <<~CSV
+          invoice-lago-id-123,SEQ123,false,2023-01-01,customer-lago-id-456,CUST123,customer name,customer@eamil.com,US,123456789,INV123,credit,pending,finalized,http://api.lago.com/invoice.pdf,USD,70000,1655,10500,334,1000,77511,2023-02-01,2023-12-22,false,999,the-test-bil-ent
+        CSV
+
+        expect(result).to be_success
+        file = result.csv_file
+        generated_csv = file.read
+
+        file.close
+        File.unlink(file.path)
+        expect(generated_csv).to eq(expected_csv)
+      end
     end
   end
 end

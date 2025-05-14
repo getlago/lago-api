@@ -4188,6 +4188,7 @@ Export credit notes search query and filters input argument
 input DataExportCreditNoteFiltersInput {
   amountFrom: Int
   amountTo: Int
+  billingEntityIds: [ID!]
   creditStatus: [CreditNoteCreditStatusEnum!]
   currency: CurrencyEnum
   customerExternalId: String
@@ -4215,6 +4216,7 @@ Export Invoices search query and filters input argument
 input DataExportInvoiceFiltersInput {
   amountFrom: Int
   amountTo: Int
+  billingEntityIds: [ID!]
   currency: CurrencyEnum
   customerExternalId: String
   invoiceType: [InvoiceTypeEnum!]

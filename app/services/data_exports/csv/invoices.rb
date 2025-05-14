@@ -11,7 +11,7 @@ module DataExports
       def initialize(data_export_part:, serializer_klass: V1::InvoiceSerializer)
         @data_export_part = data_export_part
         @serializer_klass = serializer_klass
-        @progressive_billing_enabled = data_export_part.data_export.organization&.progressive_billing_enabled?
+        @progressive_billing_enabled = organization&.progressive_billing_enabled?
         super
       end
 
@@ -48,6 +48,7 @@ module DataExports
       def headers
         base = self.class.base_headers.dup
         base << "progressive_billing_credit_amount_cents" if progressive_billing_enabled
+        base << "billing_entity_code" if org_has_multiple_billing_entities?
         base
       end
 
@@ -89,11 +90,22 @@ module DataExports
         ]
 
         row << serialized_invoice[:progressive_billing_credit_amount_cents] if progressive_billing_enabled
+        row << serialized_invoice[:billing_entity_code] if org_has_multiple_billing_entities?
         csv << row
       end
 
       def collection
         Invoice.find(data_export_part.object_ids)
+      end
+
+      def organization
+        @organization ||= data_export_part.data_export.organization
+      end
+
+      def org_has_multiple_billing_entities?
+        return false unless organization
+
+        organization.billing_entities.count > 1
       end
     end
   end
