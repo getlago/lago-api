@@ -13,7 +13,7 @@ module PaymentProviders
           return result if !payment || !payment.payable.is_a?(Invoice)
 
           if status == "lost"
-            return Invoices::LoseDisputeService.call(invoice: payment.payable, payment_dispute_lost_at:, reason:)
+            return Payments::LoseDisputeService.call(payment:, payment_dispute_lost_at:, reason:)
           end
 
           result
