@@ -48,4 +48,7 @@ Rails.application.configure do
     config.cache_store = :redis_cache_store, redis_store_config
   end
   config.cache_store = :null_store
+
+  # Set default API URL for test environment
+  ENV["LAGO_API_URL"] ||= "http://localhost:3000"
 end

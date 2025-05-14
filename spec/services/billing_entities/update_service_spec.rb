@@ -15,6 +15,7 @@ RSpec.describe BillingEntities::UpdateService do
 
   let(:params) do
     {
+      name: "New Name",
       legal_name: "Foobar",
       legal_number: "1234",
       tax_identification_number: "2246",
@@ -41,6 +42,7 @@ RSpec.describe BillingEntities::UpdateService do
     it "updates the billing_entity" do
       result = update_service.call
 
+      expect(result.billing_entity.name).to eq("New Name")
       expect(result.billing_entity.legal_name).to eq("Foobar")
       expect(result.billing_entity.legal_number).to eq("1234")
       expect(result.billing_entity.tax_identification_number).to eq("2246")

@@ -14,6 +14,7 @@ module BillingEntities
     def call
       return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
+      billing_entity.name = params[:name] if params.key?(:name)
       billing_entity.email = params[:email] if params.key?(:email)
       billing_entity.legal_name = params[:legal_name] if params.key?(:legal_name)
       billing_entity.legal_number = params[:legal_number] if params.key?(:legal_number)
