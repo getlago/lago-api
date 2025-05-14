@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+class ApplicationRecord
+  self.ignored_columns = []
+end
+
 class AddBalanceCentsToWallets < ActiveRecord::Migration[7.0]
   def change
     safety_assured do
