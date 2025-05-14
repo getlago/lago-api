@@ -23,6 +23,24 @@ module Api
         )
       end
 
+      def create
+        result = BillingEntities::CreateService.new(
+          organization: current_organization,
+          params: create_params
+        ).call
+
+        if result.success?
+          render(
+            json: ::V1::BillingEntitySerializer.new(
+              result.billing_entity,
+              root_name: "billing_entity"
+            )
+          )
+        else
+          render_error_response(result)
+        end
+      end
+
       def update
         entity = BillingEntity.find_by(code: params[:code], organization: current_organization)
         return not_found_error(resource: "billing_entity") if entity.blank?
@@ -56,6 +74,37 @@ module Api
       end
 
       private
+
+      def create_params
+        params.require(:billing_entity).permit(
+          :code,
+          :name,
+          :email,
+          :legal_name,
+          :legal_number,
+          :tax_identification_number,
+          :address_line1,
+          :address_line2,
+          :city,
+          :state,
+          :zipcode,
+          :country,
+          :default_currency,
+          :timezone,
+          :document_numbering,
+          :document_number_prefix,
+          :finalize_zero_amount_invoice,
+          :net_payment_term,
+          :eu_tax_management,
+          :logo,
+          email_settings: [],
+          billing_configuration: [
+            :invoice_footer,
+            :invoice_grace_period,
+            :document_locale
+          ]
+        )
+      end
 
       def update_params
         params.require(:billing_entity).permit(
