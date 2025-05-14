@@ -47,11 +47,11 @@ en:
       finalized:
         download: Download invoice for details
         due_date: total due %{date}
-        invoice_from: Invoice from %{organization_name}
+        invoice_from: Invoice from %{billing_entity_name}
         invoice_number: Invoice Number
         issue_date: Issue Date
         issued_on: issued on %{date}
-        subject: 'Your Invoice from %{organization_name} #%{invoice_number}'
+        subject: 'Your Invoice from %{billing_entity_name} #%{invoice_number}'
     password_reset:
       subject: Reset your Lago password
     payment_receipt:

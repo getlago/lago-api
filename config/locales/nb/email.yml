@@ -16,11 +16,11 @@ nb:
       finalized:
         download: Last ned faktura for detaljer
         due_date: Forfallsdato %{date}
-        invoice_from: Faktura fra %{organization_name}
+        invoice_from: Faktura fra %{billing_entity_name}
         invoice_number: Fakturanummer
         issue_date: Dato
         issued_on: utstedt den %{date}
-        subject: 'Faktura fra %{organization_name} #%{invoice_number}'
+        subject: 'Faktura fra %{billing_entity_name} #%{invoice_number}'
     payment_receipt:
       created:
         payment_receipt_from: Betalingskvittering fra %{organization_name}

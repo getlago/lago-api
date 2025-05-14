@@ -16,11 +16,11 @@ sv:
       finalized:
         download: Ladda ner fakturan för ytterligare information
         due_date: Förfaller %{date}
-        invoice_from: Faktura från %{organization_name}
+        invoice_from: Faktura från %{billing_entity_name}
         invoice_number: Fakturanummer
         issue_date: Fakturadatum
         issued_on: utfärdad den %{date}
-        subject: 'Din faktura från %{organization_name} #%{invoice_number}'
+        subject: 'Din faktura från %{billing_entity_name} #%{invoice_number}'
     payment_receipt:
       created:
         payment_receipt_from: Betalningskvitto från %{organization_name}
