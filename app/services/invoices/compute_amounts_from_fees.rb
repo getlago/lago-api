@@ -52,7 +52,7 @@ module Invoices
     attr_reader :invoice, :provider_taxes
 
     def customer_provider_taxation?
-      @customer_provider_taxation ||= invoice.customer.anrok_customer
+      @customer_provider_taxation ||= invoice.customer.tax_customer
     end
 
     def fee_taxes(fee)
