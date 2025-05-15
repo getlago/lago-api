@@ -1048,7 +1048,8 @@ CREATE TABLE public.applied_coupons (
     frequency integer DEFAULT 0 NOT NULL,
     frequency_duration integer,
     frequency_duration_remaining integer,
-    organization_id uuid
+    organization_id uuid,
+    voided_at timestamp(6) without time zone
 );
 
 
@@ -7705,6 +7706,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250513164054'),
 ('20250512151248'),
 ('20250512151247'),
 ('20250512151246'),
