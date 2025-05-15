@@ -16,7 +16,7 @@ RSpec.describe CreditNoteMailer, type: :mailer do
       mailer = credit_note_mailer.with(credit_note:).created
 
       expect(mailer.to).to eq([credit_note.customer.email])
-      expect(mailer.reply_to).to eq([credit_note.organization.email])
+      expect(mailer.reply_to).to eq([credit_note.billing_entity.email])
       expect(mailer.attachments).not_to be_empty
       expect(mailer.attachments.first.filename).to eq("credit_note-#{credit_note.number}.pdf")
     end
@@ -50,9 +50,9 @@ RSpec.describe CreditNoteMailer, type: :mailer do
       end
     end
 
-    context "when organization email is nil" do
+    context "when billing entity email is nil" do
       before do
-        credit_note.organization.update(email: nil)
+        credit_note.billing_entity.update(email: nil)
       end
 
       it "returns a mailer with nil values" do
