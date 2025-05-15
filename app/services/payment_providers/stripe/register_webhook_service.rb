@@ -21,7 +21,7 @@ module PaymentProviders
         result
       rescue ActiveRecord::RecordInvalid => e
         result.record_validation_failure!(record: e.record)
-      rescue ::Stripe::AuthenticationError => e
+      rescue ::Stripe::AuthenticationError, ::Stripe::PermissionError => e
         deliver_error_webhook(action: "payment_provider.register_webhook", error: e)
         result
       rescue ::Stripe::InvalidRequestError => e
