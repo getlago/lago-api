@@ -156,10 +156,10 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
       perform_dunning
       # NOTE: Email is sent twice: first synchronously after Stripe response, and then when the webhook is received
       expect(ActionMailer::Base.deliveries.count).to eq(2)
-      expect(ActionMailer::Base.deliveries.map(&:subject)).to all eq "Your overdue balance from JC AI"
+      expect(ActionMailer::Base.deliveries.map(&:subject)).to all eq "Your overdue balance from ACME Corp"
 
       mail = ActionMailer::Base.deliveries.last
-      expect(mail.subject).to eq "Your overdue balance from JC AI"
+      expect(mail.subject).to eq "Your overdue balance from ACME Corp"
 
       pr = customer.payment_requests.sole
       expect(pr.amount_cents).to eq(155_00)

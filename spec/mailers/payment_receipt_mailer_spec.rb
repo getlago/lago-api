@@ -17,7 +17,7 @@ RSpec.describe PaymentReceiptMailer, type: :mailer do
       mailer = payment_receipt_mailer.with(payment_receipt:).created
 
       expect(mailer.to).to eq([payment_receipt.payment.payable.customer.email])
-      expect(mailer.reply_to).to eq([payment_receipt.organization.email])
+      expect(mailer.reply_to).to eq([payment_receipt.billing_entity.email])
       expect(mailer.attachments).not_to be_empty
       expect(mailer.attachments.first.filename).to eq("receipt-#{payment_receipt.number}.pdf")
     end
@@ -51,9 +51,9 @@ RSpec.describe PaymentReceiptMailer, type: :mailer do
       end
     end
 
-    context "when organization email is nil" do
+    context "when billing entity email is nil" do
       before do
-        payment_receipt.organization.update(email: nil)
+        payment_receipt.billing_entity.update(email: nil)
       end
 
       it "returns a mailer with nil values" do
