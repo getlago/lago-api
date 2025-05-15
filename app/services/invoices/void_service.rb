@@ -36,7 +36,7 @@ module Invoices
         end
 
         if credit.applied_coupon_id.present?
-          res = Coupons::VoidAndRestoreAppliedCouponService.call(credit:)
+          res = AppliedCoupons::VoidAndRestoreService.call(credit:)
           Rails.logger.warn("Voiding applied coupon for credit #{credit.id} failed for invoice #{invoice.id}") unless res.success?
         end
       end
