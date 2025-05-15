@@ -8,8 +8,9 @@ module DatabaseMigrations
     BATCH_SIZE = 1000
 
     def perform(batch_number = 1)
-      batch = Invoice.where("organization_sequential_id != 0")
-        .where("billing_entity_sequential_id != organization_sequential_id")
+      batch = Invoice
+        .where("organization_sequential_id != 0 AND billing_entity_sequential_id IS NULL")
+        .or(Invoice.where("organization_sequential_id != 0 AND billing_entity_sequential_id != organization_sequential_id"))
         .order(:organization_id, :organization_sequential_id)
         .limit(BATCH_SIZE)
 
