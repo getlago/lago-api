@@ -8062,6 +8062,11 @@ type Query {
   ): WalletCollection!
 
   """
+  Query a webhook
+  """
+  webhook(id: ID!): Webhook
+
+  """
   Query a single webhook endpoint
   """
   webhookEndpoint(
