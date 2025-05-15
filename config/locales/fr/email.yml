@@ -3,7 +3,7 @@ fr:
   email:
     credit_note:
       created:
-        credit_note_from: Votre avoir de %{organization_name}
+        credit_note_from: Votre avoir de %{billing_entity_name}
         credit_note_number: Avoir nº
         credited_notice: Crédité sur le solde du client le %{date}
         credited_refunded_notice: Crédité sur le solde du client et remboursé le %{date}
@@ -11,7 +11,7 @@ fr:
         invoice_number: Facture nº
         issue_date: Date d'émission
         refunded_notice: Remboursé le %{date}
-        subject: Votre avoir nº  %{credit_note_number} de %{organization_name}
+        subject: Votre avoir nº  %{credit_note_number} de %{billing_entity_name}
     invoice:
       finalized:
         download: Télécharger la facture pour plus de détails
@@ -23,8 +23,8 @@ fr:
         subject: Votre facture nº %{invoice_number} de %{billing_entity_name}
     payment_receipt:
       created:
-        payment_receipt_from: Reçu de paiement de %{organization_name}
-        subject: 'Votre reçu de paiement de %{organization_name} #%{payment_receipt_number}'
+        payment_receipt_from: Reçu de paiement de %{billing_entity_name}
+        subject: 'Votre reçu de paiement de %{billing_entity_name} #%{payment_receipt_number}'
     payment_request:
       requested:
         already_paid: Si vous avez déjà réglé ces factures, veuillez ignorer cet e-mail.
@@ -35,8 +35,8 @@ fr:
           other: Nos conditions de paiement convenues contractuellement sont de %{count} jours.
           zero: Nos conditions de paiement définies contractuellement exigent le paiement à la création de la facture.
         remaining_amount: Montant restant à payer
-        reminder_overdue_balance: Ceci est un rappel de l'équipe financière de %{organization_name} que certaines de vos factures sont arrivées à échéance et non réglées.
-        subject: Votre solde impayé pour %{organization_name}
+        reminder_overdue_balance: Ceci est un rappel de l'équipe financière de %{billing_entity_name} que certaines de vos factures sont arrivées à échéance et non réglées.
+        subject: Votre solde impayé pour %{billing_entity_name}
         thank_you: Merci.
         total_amount_due: Le montant total dû est de %{amount}.
     powered_by: Généré par

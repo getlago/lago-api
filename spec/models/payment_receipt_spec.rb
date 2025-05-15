@@ -8,6 +8,7 @@ RSpec.describe PaymentReceipt, type: :model do
   it do
     expect(subject).to belong_to(:payment)
     expect(subject).to belong_to(:organization)
+    expect(subject).to belong_to(:billing_entity)
     expect(subject).to have_one_attached(:file)
   end
 

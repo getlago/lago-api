@@ -258,6 +258,7 @@ DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_customer_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_payment_id;
 DROP INDEX IF EXISTS public.index_payment_receipts_on_organization_id;
+DROP INDEX IF EXISTS public.index_payment_receipts_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_payment_providers_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_providers_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_payment_provider_customers_on_provider_customer_id;
@@ -3125,7 +3126,8 @@ CREATE TABLE public.payment_receipts (
     payment_id uuid NOT NULL,
     organization_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    billing_entity_id uuid NOT NULL
 );
 
 
@@ -5846,6 +5848,13 @@ CREATE INDEX index_payment_providers_on_organization_id ON public.payment_provid
 
 
 --
+-- Name: index_payment_receipts_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payment_receipts_on_billing_entity_id ON public.payment_receipts USING btree (billing_entity_id);
+
+
+--
 -- Name: index_payment_receipts_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7705,6 +7714,10 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250515085230'),
+('20250515083935'),
+('20250515083802'),
+('20250515083649'),
 ('20250512151248'),
 ('20250512151247'),
 ('20250512151246'),

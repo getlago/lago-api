@@ -5,11 +5,11 @@ class CreditNoteMailer < ApplicationMailer
 
   def created
     @credit_note = params[:credit_note]
-    @organization = @credit_note.organization
     @customer = @credit_note.customer
-    @show_lago_logo = !@organization.remove_branding_watermark_enabled?
+    @billing_entity = @credit_note.billing_entity
+    @show_lago_logo = !@billing_entity.organization.remove_branding_watermark_enabled?
 
-    return if @organization.email.blank?
+    return if @billing_entity.email.blank?
     return if @customer.email.blank?
 
     if @pdfs_enabled
@@ -21,11 +21,11 @@ class CreditNoteMailer < ApplicationMailer
     I18n.with_locale(@customer.preferred_document_locale) do
       mail(
         to: @customer.email,
-        from: email_address_with_name(@organization.from_email_address, @organization.name),
-        reply_to: email_address_with_name(@organization.email, @organization.name),
+        from: email_address_with_name(@billing_entity.from_email_address, @billing_entity.name),
+        reply_to: email_address_with_name(@billing_entity.email, @billing_entity.name),
         subject: I18n.t(
           "email.credit_note.created.subject",
-          organization_name: @organization.name,
+          billing_entity_name: @billing_entity.name,
           credit_note_number: @credit_note.number
         )
       )

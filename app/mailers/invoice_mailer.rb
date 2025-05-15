@@ -5,10 +5,9 @@ class InvoiceMailer < ApplicationMailer
 
   def finalized
     @invoice = params[:invoice]
-    organization = @invoice.organization
     @billing_entity = @invoice.billing_entity
     @customer = @invoice.customer
-    @show_lago_logo = !organization.remove_branding_watermark_enabled?
+    @show_lago_logo = !@billing_entity.organization.remove_branding_watermark_enabled?
 
     return if @billing_entity.email.blank?
     return if @customer.email.blank?

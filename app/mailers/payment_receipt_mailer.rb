@@ -5,14 +5,14 @@ class PaymentReceiptMailer < ApplicationMailer
 
   def created
     @payment_receipt = params[:payment_receipt]
-    @organization = @payment_receipt.organization
+    @billing_entity = @payment_receipt.billing_entity
     @customer = @payment_receipt.payment.payable.customer
-    @show_lago_logo = !@organization.remove_branding_watermark_enabled?
+    @show_lago_logo = !@billing_entity.organization.remove_branding_watermark_enabled?
     @total_due_amount = @payment_receipt.payment.payable.is_a?(Invoice) ?
       @payment_receipt.payment.payable.total_due_amount :
       @payment_receipt.payment.payable.amount - @payment_receipt.payment.amount
 
-    return if @organization.email.blank?
+    return if @billing_entity.email.blank?
     return if @customer.email.blank?
 
     @invoices = if @payment_receipt.payment.payable.is_a?(Invoice)
@@ -34,11 +34,11 @@ class PaymentReceiptMailer < ApplicationMailer
     I18n.with_locale(@customer.preferred_document_locale) do
       mail(
         to: @customer.email,
-        from: email_address_with_name(@organization.from_email_address, @organization.name),
-        reply_to: email_address_with_name(@organization.email, @organization.name),
+        from: email_address_with_name(@billing_entity.from_email_address, @billing_entity.name),
+        reply_to: email_address_with_name(@billing_entity.email, @billing_entity.name),
         subject: I18n.t(
           "email.payment_receipt.created.subject",
-          organization_name: @organization.name,
+          billing_entity_name: @billing_entity.name,
           payment_receipt_number: @payment_receipt.number
         )
       )

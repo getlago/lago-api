@@ -14,6 +14,7 @@ RSpec.describe BillingEntity, type: :model do
   it { is_expected.to have_many(:invoice_custom_section_selections) }
   it { is_expected.to have_many(:selected_invoice_custom_sections).through(:invoice_custom_section_selections) }
   it { is_expected.to have_many(:fees) }
+  it { is_expected.to have_many(:payment_receipts) }
   it { is_expected.to have_many(:subscriptions).through(:customers) }
   it { is_expected.to have_many(:wallets).through(:customers) }
   it { is_expected.to have_many(:wallet_transactions).through(:wallets) }

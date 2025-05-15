@@ -3,7 +3,7 @@ nb:
   email:
     credit_note:
       created:
-        credit_note_from: Kreditnota fra %{organization_name}
+        credit_note_from: Kreditnota fra %{billing_entity_name}
         credit_note_number: Kreditnota nummer
         credited_notice: Kreditert til kontobalanse %{date}
         credited_refunded_notice: Kreditert til kontobalanse og refundert %{date}
@@ -11,7 +11,7 @@ nb:
         invoice_number: Faktura nummer
         issue_date: Dato
         refunded_notice: Refundert %{date}
-        subject: 'Kreditnota din fra %{organization_name} #%{credit_note_number}'
+        subject: 'Kreditnota din fra %{billing_entity_name} #%{credit_note_number}'
     invoice:
       finalized:
         download: Last ned faktura for detaljer
@@ -23,8 +23,8 @@ nb:
         subject: 'Faktura fra %{billing_entity_name} #%{invoice_number}'
     payment_receipt:
       created:
-        payment_receipt_from: Betalingskvittering fra %{organization_name}
-        subject: 'Din betalingskvittering fra %{organization_name} #%{payment_receipt_number}'
+        payment_receipt_from: Betalingskvittering fra %{billing_entity_name}
+        subject: 'Din betalingskvittering fra %{billing_entity_name} #%{payment_receipt_number}'
     payment_request:
       requested:
         already_paid: Hvis du allerede har foretatt betalingen, vennligst se bort fra denne e-posten.
@@ -35,8 +35,8 @@ nb:
           other: Våre avtalte betalingsbetingelser er %{count} dager.
           zero: Våre avtalte betalingsbetingelser krever betaling ved fakturautstedelse.
         remaining_amount: Gjenstående beløp å betale
-        reminder_overdue_balance: Dette er en påminnelse fra økonomiavdelingen i %{organization_name} om at noen fakturaer er forfalt.
-        subject: Din forfalte saldo fra %{organization_name}
+        reminder_overdue_balance: Dette er en påminnelse fra økonomiavdelingen i %{billing_entity_name} om at noen fakturaer er forfalt.
+        subject: Din forfalte saldo fra %{billing_entity_name}
         thank_you: Takk.
         total_amount_due: Totalbeløpet som forfaller er %{amount}.
     powered_by: Fakturering drevet av
