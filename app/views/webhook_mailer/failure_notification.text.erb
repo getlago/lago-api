@@ -1,0 +1,13 @@
+Hello,
+
+We were unable to deliver a webhook to your endpoint after <%= @webhook.retries %> attempts.
+
+There are currently <%= @failed_webhooks_count %> failed webhooks in the last hour.
+
+You can find and retry failed webhooks in the developer sections:
+<%= @front_webhooks_url %>
+
+Please check your webhook endpoint and ensure it's able to receive webhooks from Lago.
+
+Best regards,
+The Lago Team
