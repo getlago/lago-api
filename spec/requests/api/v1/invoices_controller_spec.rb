@@ -822,10 +822,6 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
 
     context "when voiding with extra params" do
-      let(:status) { :finalized }
-      let(:payment_status) { :pending }
-      let(:invoice_id) { invoice.id }
-
       let(:params) do
         {
           generate_credit_note: true,
