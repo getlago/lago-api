@@ -847,6 +847,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         post_with_token(organization, "/api/v1/invoices/#{invoice_id}/void", params)
         expect(response).to have_http_status(:success)
         expect(Invoices::VoidService).to have_received(:call).with(expected_params)
+        expect(invoice.reload.status).to eq("voided")
       end
     end
   end
