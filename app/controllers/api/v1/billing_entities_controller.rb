@@ -132,7 +132,8 @@ module Api
             :invoice_footer,
             :invoice_grace_period,
             :document_locale
-          ]
+          ],
+          tax_codes: []
         )
       end
     end

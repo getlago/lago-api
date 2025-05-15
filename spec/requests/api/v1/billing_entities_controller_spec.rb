@@ -284,6 +284,29 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
       expect(json[:billing_entity][:logo_url]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
     end
 
+    context "when updating billing_entity taxes" do
+      let(:tax1) { create(:tax, organization:, code: "TAX_CODE_1") }
+      let(:tax2) { create(:tax, organization:, code: "TAX_CODE_2") }
+      let(:update_params) do
+        {
+          billing_entity: {
+            tax_codes: [tax2.code]
+          }
+        }
+      end
+
+      before do
+        billing_entity1.taxes << tax1
+      end
+
+
+      it "updates the taxes" do
+        subject
+        expect(billing_entity1.reload.taxes.count).to eq(1)
+        expect(billing_entity1.taxes.map(&:code)).to include("TAX_CODE_2")
+      end
+    end
+
     context "when the billing entity is not found" do
       let(:billing_entity_code) { "NON_EXISTING_CODE" }
 
