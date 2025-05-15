@@ -28,6 +28,7 @@ module Organizations
       organization.document_number_prefix = params[:document_number_prefix] if params.key?(:document_number_prefix)
       organization.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)
       organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
+      organization.document_numbering = params[:document_numbering] if params.key?(:document_numbering)
 
       billing = params[:billing_configuration]&.to_h || {}
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
@@ -47,13 +48,6 @@ module Organizations
         #       Remove it when fully migrated to billing_entity.
         if License.premium? && billing.key?(:invoice_grace_period)
           organization.invoice_grace_period = billing[:invoice_grace_period]
-        end
-
-        if params.key?(:document_numbering)
-          Organizations::UpdateInvoiceNumberingService.call(
-            organization:,
-            document_numbering: params[:document_numbering]
-          )
         end
 
         assign_premium_attributes
