@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Rails::ConsoleMethods
+Rails.application.console do
   if Rails.env.development?
     def gavin
       @gavin ||= hooli.users.find_by email: "gavin@hooli.com"
