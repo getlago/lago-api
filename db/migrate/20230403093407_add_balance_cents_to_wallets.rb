@@ -1,6 +1,10 @@
 # frozen_string_literal: true
 
 class AddBalanceCentsToWallets < ActiveRecord::Migration[7.0]
+  class Wallet < ApplicationRecord
+    self.ignored_columns = []
+  end
+
   def change
     safety_assured do
       change_table :wallets, bulk: true do |t|
