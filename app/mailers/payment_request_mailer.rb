@@ -5,11 +5,11 @@ class PaymentRequestMailer < ApplicationMailer
 
   def requested
     @payment_request = params[:payment_request]
-    @organization = @payment_request.organization
-    @show_lago_logo = !@organization.remove_branding_watermark_enabled?
+    @billing_entity = @payment_request.billing_entity
+    @show_lago_logo = !@billing_entity.organization.remove_branding_watermark_enabled?
 
     return if @payment_request.email.blank?
-    return if @organization.email.blank?
+    return if @billing_entity.email.blank?
 
     @customer = @payment_request.customer
     @invoices = @payment_request.invoices
@@ -20,12 +20,12 @@ class PaymentRequestMailer < ApplicationMailer
     I18n.with_locale(@customer.preferred_document_locale) do
       mail(
         to: @payment_request.email,
-        from: email_address_with_name(@organization.from_email_address, @organization.name),
+        from: email_address_with_name(@billing_entity.from_email_address, @billing_entity.name),
         bcc: bcc_emails,
-        reply_to: email_address_with_name(@organization.email, @organization.name),
+        reply_to: email_address_with_name(@billing_entity.email, @billing_entity.name),
         subject: I18n.t(
           "email.payment_request.requested.subject",
-          organization_name: @organization.name
+          billing_entity_name: @billing_entity.name
         )
       )
     end

@@ -20,6 +20,7 @@ class BillingEntity < ApplicationRecord
   has_many :customers
   has_many :fees
   has_many :invoices
+  has_many :payment_receipts
   has_many :invoice_custom_section_selections, dependent: :destroy
 
   has_many :credit_notes, through: :invoices

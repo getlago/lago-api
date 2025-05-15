@@ -22,7 +22,7 @@ module PaymentReceipts
         return result
       end
 
-      result.payment_receipt = PaymentReceipt.create!(payment:, organization:)
+      result.payment_receipt = PaymentReceipt.create!(payment:, organization:, billing_entity:)
 
       SendWebhookJob.perform_later("payment_receipt.created", result.payment_receipt)
       GeneratePdfAndNotifyJob.perform_later(payment_receipt: result.payment_receipt, email: should_deliver_email?)

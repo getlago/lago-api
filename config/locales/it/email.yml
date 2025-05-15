@@ -3,7 +3,7 @@ it:
   email:
     credit_note:
       created:
-        credit_note_from: Nota di credito da %{organization_name}
+        credit_note_from: Nota di credito da %{billing_entity_name}
         credit_note_number: Numero Nota di Credito
         credited_notice: Accreditato sul saldo cliente il %{date}
         credited_refunded_notice: Accreditato sul saldo cliente e rimborsato il %{date}
@@ -11,7 +11,7 @@ it:
         invoice_number: Numero Fattura
         issue_date: Data Emissione
         refunded_notice: Rimborsato il %{date}
-        subject: 'La tua nota di credito da %{organization_name} #%{credit_note_number}'
+        subject: 'La tua nota di credito da %{billing_entity_name} #%{credit_note_number}'
     invoice:
       finalized:
         download: Scarica la fattura per ulteriori dettagli
@@ -23,8 +23,8 @@ it:
         subject: 'La tua fattura da %{billing_entity_name} #%{invoice_number}'
     payment_receipt:
       created:
-        payment_receipt_from: Ricevuta di pagamento da %{organization_name}
-        subject: 'La tua ricevuta di pagamento da %{organization_name} #%{payment_receipt_number}'
+        payment_receipt_from: Ricevuta di pagamento da %{billing_entity_name}
+        subject: 'La tua ricevuta di pagamento da %{billing_entity_name} #%{payment_receipt_number}'
     payment_request:
       requested:
         already_paid: Se hai già effettuato il pagamento, ti preghiamo di ignorare questa email.
@@ -35,8 +35,8 @@ it:
           other: I nostri termini di pagamento contrattualmente concordati sono %{count} giorni.
           zero: I nostri termini di pagamento contrattualmente concordati richiedono il pagamento al momento della generazione della fattura.
         remaining_amount: Importo residuo da pagare
-        reminder_overdue_balance: Questo è un promemoria del team finanziario di %{organization_name} che alcune fatture sono in ritardo.
-        subject: Il tuo saldo in ritardo da %{organization_name}
+        reminder_overdue_balance: Questo è un promemoria del team finanziario di %{billing_entity_name} che alcune fatture sono in ritardo.
+        subject: Il tuo saldo in ritardo da %{billing_entity_name}
         thank_you: Grazie.
         total_amount_due: L'importo totale dovuto è di %{amount}.
     powered_by: Elaborato da
