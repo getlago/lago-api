@@ -113,7 +113,7 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
       )
       perform_billing
 
-      expect(webhooks_sent.map { _1["webhook_type"] }).to eq(%w[
+      expect(webhooks_sent.map { it["webhook_type"] }).to eq(%w[
         subscription.started
         invoice.created
         invoice.generated
