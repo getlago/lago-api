@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-module Coupons
-  class VoidAndRestoreAppliedCouponService < BaseService
+module AppliedCoupons
+  class VoidAndRestoreService < BaseService
     def initialize(credit:)
       @credit = credit
       @applied_coupon = credit.applied_coupon
@@ -11,8 +11,7 @@ module Coupons
     def call
       return result.not_found_failure!(resource: "applied_coupon") if applied_coupon.nil?
       return result.not_allowed_failure!(code: "already_voided") if applied_coupon.voided?
-      return result if unlimited_usage?
-      return result if expired?
+      return result if unlimited_usage? || expired?
 
       applied_coupon.with_lock do
         applied_coupon.mark_as_voided!
@@ -36,7 +35,6 @@ module Coupons
     end
 
     def create_new_applied_coupon!
-      # Prepare parameters for the new applied coupon
       params = {
         amount_cents: applied_coupon.amount_cents,
         amount_currency: applied_coupon.amount_currency,
@@ -55,23 +53,17 @@ module Coupons
         params[:frequency_duration_remaining] = applied_coupon.frequency_duration - active_credits_count
       end
 
-      # Use the existing service to create a new applied coupon
       create_result = AppliedCoupons::CreateService.call(
         customer: applied_coupon.customer,
         coupon: applied_coupon.coupon,
         params: params
       )
 
-      # Handle potential errors
       create_result.raise_if_error!
-
-      # Return the newly created applied coupon
       create_result.applied_coupon
     end
 
-    # Count the number of active (non-voided) credits associated with this coupon
     def count_active_credits
-      # Get all credits for this coupon excluding the current one being voided
       Credit.joins(:invoice)
         .where(applied_coupon_id: applied_coupon.id)
         .where.not(id: credit.id)
