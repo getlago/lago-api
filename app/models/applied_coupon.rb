@@ -42,7 +42,7 @@ class AppliedCoupon < ApplicationRecord
     @remaining_amount = amount_cents - already_applied_amount
   end
 
-  def mark_as_voided!(timestamp: Time.current)
+  def mark_as_voided!(timestamp: Time.zone.now)
     update!(
       status: :voided,
       voided_at: timestamp
