@@ -7733,6 +7733,16 @@ type Query {
   dunningCampaigns(appliedToOrganization: Boolean, currency: [CurrencyEnum!], limit: Int, order: String, page: Int, searchTerm: String): DunningCampaignCollection!
 
   """
+  Query a single event of an organization
+  """
+  event(
+    """
+    Uniq ID of the event
+    """
+    id: ID!
+  ): Event
+
+  """
   Query events of an organization
   """
   events(limit: Int, page: Int): EventCollection
