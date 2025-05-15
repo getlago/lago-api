@@ -58,7 +58,8 @@ module Integrations
       def throttle!(*providers)
         providers.each do |provider_name|
           if provider == provider_name.to_s
-            raise BaseService::ThrottlingError unless Throttling.for(provider_name.to_sym).check(:client, throttle_key)
+            raise BaseService::ThrottlingError.new("Service not available. Try again later.", provider: provider) \
+              unless Throttling.for(provider_name.to_sym).check(:client, throttle_key)
           end
         end
       end
