@@ -820,6 +820,39 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         end
       end
     end
+
+    context "when voiding with extra params" do
+      let(:status) { :finalized }
+      let(:payment_status) { :pending }
+      let(:invoice_id) { invoice.id }
+
+      let(:params) do
+        {
+          generate_credit_note: true,
+          refund_amount: 0,
+          credit_amount: 0
+        }
+      end
+
+      let(:expected_params) do
+        {
+          invoice: invoice,
+          params: ActionController::Parameters.new(params).permit(
+            :generate_credit_note, :refund_amount, :credit_amount
+          )
+        }
+      end
+
+      before do
+        allow(Invoices::VoidService).to receive(:call).and_call_original
+      end
+
+      it "passes void params to the service" do
+        post_with_token(organization, "/api/v1/invoices/#{invoice_id}/void", params)
+        expect(response).to have_http_status(:success)
+        expect(Invoices::VoidService).to have_received(:call).with(expected_params)
+      end
+    end
   end
 
   describe "POST /api/v1/invoices/:id/lose_dispute" do
