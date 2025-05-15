@@ -7,6 +7,11 @@ module Plans
       super
     end
 
+    activity_loggable(
+      action: "plan.created",
+      record: -> { result.plan }
+    )
+
     def call
       plan = Plan.new(
         organization_id: args[:organization_id],
