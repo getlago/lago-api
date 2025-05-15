@@ -153,7 +153,7 @@ RSpec.describe Invoice, type: :model do
       end
     end
 
-    context "with organization numbering and invoices in another month" do
+    context "with billing_entity numbering and invoices in another month" do
       let(:organization) { create(:organization, document_numbering: "per_organization") }
       let(:created_at) { Time.now.utc - 1.month }
 
@@ -163,14 +163,14 @@ RSpec.describe Invoice, type: :model do
         create(:invoice, customer:, organization:, sequential_id: 2, billing_entity_sequential_id: 2, organization_sequential_id: 2, created_at:)
       end
 
-      it "scopes the organization_sequential_id to the organization and month" do
+      it "scopes the billing_entity_sequential_id to the billing_entity and month" do
         invoice.save!
         invoice.finalized!
 
         expect(invoice).to be_valid
         expect(invoice.sequential_id).to eq(3)
-        # expect(invoice.billing_entity_sequential_id).to eq(3)
-        expect(invoice.organization_sequential_id).to eq(3)
+        expect(invoice.billing_entity_sequential_id).to eq(3)
+        # expect(invoice.organization_sequential_id).to eq(3)
       end
     end
   end
@@ -532,57 +532,58 @@ RSpec.describe Invoice, type: :model do
   end
 
   describe "number" do
-    let(:organization) { create(:organization, name: "LAGO") }
-    let(:customer) { create(:customer, organization:) }
+    let(:organization) { create(:organization, name: "ACME Corporation") }
+    let(:billing_entity) { create(:billing_entity, organization:, name: "LAGO") }
+    let(:customer) { create(:customer, organization:, billing_entity:) }
     let(:subscription) { create(:subscription, organization:, customer:) }
-    let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: 0, status: :generating) }
+    let(:invoice) { build(:invoice, customer:, organization:, billing_entity:, billing_entity_sequential_id: nil, status: :generating) }
 
     it "generates the invoice number" do
       invoice.save!
       invoice.finalized!
-      organization_id_substring = organization.id.last(4).upcase
+      billing_entity_id_substring = billing_entity.id.last(4).upcase
 
-      expect(invoice.number).to eq("LAG-#{organization_id_substring}-001-001")
+      expect(invoice.number).to eq("LAG-#{billing_entity_id_substring}-001-001")
     end
 
-    context "with organization numbering" do
-      let(:organization) { create(:organization, document_numbering: "per_organization", name: "lago") }
+    context "with billing entity numbering" do
+      let(:billing_entity) { create(:billing_entity, organization:, name: "lago", document_numbering: "per_billing_entity") }
 
-      it "scopes the organization_sequential_id to the organization and month" do
+      it "scopes the billing_entity_sequential_id to the billing entity and month" do
         invoice.save!
         invoice.finalized!
-        organization_id_substring = organization.id.last(4).upcase
+        billing_entity_id_substring = billing_entity.id.last(4).upcase
 
-        expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-001")
+        expect(invoice.number).to eq("LAG-#{billing_entity_id_substring}-#{Time.now.utc.strftime("%Y%m")}-001")
       end
 
       context "with existing invoices in current month" do
         let(:created_at) { Time.now.utc }
 
         before do
-          create(:invoice, customer:, organization:, sequential_id: 4, organization_sequential_id: 14, created_at:)
-          create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15, created_at:)
+          create(:invoice, customer:, billing_entity:, organization:, sequential_id: 4, billing_entity_sequential_id: 14, created_at:)
+          create(:invoice, customer:, billing_entity:, organization:, sequential_id: 5, billing_entity_sequential_id: 15, created_at:)
         end
 
-        it "scopes the organization_sequential_id to the organization and month" do
+        it "scopes the billing_entity_sequential_id to the billing entity and month" do
           invoice.save!
           invoice.finalized!
 
-          organization_id_substring = organization.id.last(4).upcase
+          billing_entity_id_substring = billing_entity.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
+          expect(invoice.number).to eq("LAG-#{billing_entity_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
         end
 
         context "when invoice is self_billed" do
-          let(:invoice) { build(:invoice, customer:, organization:, organization_sequential_id: 0, status: :generating, self_billed: true) }
+          let(:invoice) { build(:invoice, customer:, organization:, billing_entity:, billing_entity_sequential_id: nil, status: :generating, self_billed: true) }
 
           it "generates the invoice number based on customer sequence" do
             invoice.customer.update(sequential_id: 27)
             invoice.save!
             invoice.finalized!
-            organization_id_substring = organization.id.last(4).upcase
+            billing_entity_id_substring = billing_entity.id.last(4).upcase
 
-            expect(invoice.number).to eq("LAG-#{organization_id_substring}-027-006")
+            expect(invoice.number).to eq("LAG-#{billing_entity_id_substring}-027-006")
           end
         end
       end
@@ -591,17 +592,17 @@ RSpec.describe Invoice, type: :model do
         let(:created_at) { Time.now.utc - 1.month }
 
         before do
-          create(:invoice, customer:, organization:, sequential_id: 4, organization_sequential_id: 14, created_at:)
-          create(:invoice, customer:, organization:, sequential_id: 5, organization_sequential_id: 15, created_at:)
+          create(:invoice, customer:, billing_entity:, organization:, sequential_id: 4, billing_entity_sequential_id: 14, created_at:)
+          create(:invoice, customer:, billing_entity:, organization:, sequential_id: 5, billing_entity_sequential_id: 15, created_at:)
         end
 
-        it "scopes the organization_sequential_id to the organization and month" do
+        it "scopes the billing_entity_sequential_id to the billing entity and month" do
           invoice.save!
           invoice.finalized!
 
-          organization_id_substring = organization.id.last(4).upcase
+          billing_entity_id_substring = billing_entity.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
+          expect(invoice.number).to eq("LAG-#{billing_entity_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
         end
       end
 
@@ -613,11 +614,12 @@ RSpec.describe Invoice, type: :model do
             :invoice,
             customer:,
             organization:,
+            billing_entity:,
             sequential_id: 4,
-            organization_sequential_id: 14,
+            billing_entity_sequential_id: 14,
             created_at:,
             status: :draft,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014"
+            number: "LAG-#{billing_entity.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014"
           )
         end
         let(:invoice2) do
@@ -625,10 +627,11 @@ RSpec.describe Invoice, type: :model do
             :invoice,
             customer:,
             organization:,
+            billing_entity:,
             sequential_id: 5,
-            organization_sequential_id: 15,
+            billing_entity_sequential_id: 15,
             created_at:,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-015"
+            number: "LAG-#{billing_entity.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-015"
           )
         end
 
@@ -637,23 +640,23 @@ RSpec.describe Invoice, type: :model do
           invoice2
         end
 
-        it "scopes the organization_sequential_id to the organization and month" do
+        it "scopes the billing_entity_sequential_id to the billing entity and month" do
           invoice.save!
           invoice.finalized!
 
-          organization_id_substring = organization.id.last(4).upcase
+          billing_entity_id_substring = billing_entity.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
+          expect(invoice.number).to eq("LAG-#{billing_entity_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
 
           invoice1.update!(payment_due_date: invoice1.payment_due_date + 1.day)
           invoice2.update!(payment_due_date: invoice2.payment_due_date + 1.day)
 
-          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
-          expect(invoice2.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-015")
+          expect(invoice1.reload.number).to eq("LAG-#{billing_entity_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
+          expect(invoice2.reload.number).to eq("LAG-#{billing_entity_id_substring}-#{Time.now.utc.strftime("%Y%m")}-015")
 
           invoice1.finalized!
 
-          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
+          expect(invoice1.reload.number).to eq("LAG-#{billing_entity_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
         end
       end
 
@@ -665,11 +668,12 @@ RSpec.describe Invoice, type: :model do
             :invoice,
             customer:,
             organization:,
+            billing_entity:,
             sequential_id: nil,
-            organization_sequential_id: 0,
+            billing_entity_sequential_id: nil,
             created_at:,
             status: :draft,
-            number: "LAG-#{organization.id.last(4).upcase}-DRAFT"
+            number: "LAG-#{billing_entity.id.last(4).upcase}-DRAFT"
           )
         end
         let(:invoice2) do
@@ -677,10 +681,11 @@ RSpec.describe Invoice, type: :model do
             :invoice,
             customer:,
             organization:,
+            billing_entity:,
             sequential_id: 4,
-            organization_sequential_id: 14,
+            billing_entity_sequential_id: 14,
             created_at:,
-            number: "LAG-#{organization.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014"
+            number: "LAG-#{billing_entity.id.last(4).upcase}-#{Time.now.utc.strftime("%Y%m")}-014"
           )
         end
 
@@ -689,23 +694,23 @@ RSpec.describe Invoice, type: :model do
           invoice2
         end
 
-        it "scopes the organization_sequential_id to the organization and month" do
+        it "scopes the billing_entity_sequential_id to the billing entity and month" do
           invoice.save!
           invoice.finalized!
 
-          organization_id_substring = organization.id.last(4).upcase
+          billing_entity_id_substring = billing_entity.id.last(4).upcase
 
-          expect(invoice.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-015")
+          expect(invoice.number).to eq("LAG-#{billing_entity_id_substring}-#{Time.now.utc.strftime("%Y%m")}-015")
 
           invoice1.update!(payment_due_date: invoice1.payment_due_date + 1.day)
           invoice2.update!(payment_due_date: invoice2.payment_due_date + 1.day)
 
-          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-DRAFT")
-          expect(invoice2.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
+          expect(invoice1.reload.number).to eq("LAG-#{billing_entity_id_substring}-DRAFT")
+          expect(invoice2.reload.number).to eq("LAG-#{billing_entity_id_substring}-#{Time.now.utc.strftime("%Y%m")}-014")
 
           invoice1.finalized!
 
-          expect(invoice1.reload.number).to eq("LAG-#{organization_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
+          expect(invoice1.reload.number).to eq("LAG-#{billing_entity_id_substring}-#{Time.now.utc.strftime("%Y%m")}-016")
         end
       end
     end
