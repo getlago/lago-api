@@ -25,6 +25,8 @@ module Api
           else
             render_error_response(result)
           end
+        rescue BaseService::ThrottlingError => exception
+          provider_error(exception.provider_struct, exception)
         end
 
         def past
