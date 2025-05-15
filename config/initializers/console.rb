@@ -27,6 +27,10 @@ Rails.application.console do
     end
   end
 
+  def deadjobs_summary
+    Sidekiq::DeadSet.new.map { it.args[0]["job_class"] }.tally
+  end
+
   def enable_premium_integration!(org_id, integration_name)
     org = Organization.find(org_id)
     org.premium_integrations << integration_name
