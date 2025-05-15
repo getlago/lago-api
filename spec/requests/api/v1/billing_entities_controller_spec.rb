@@ -299,7 +299,6 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
         billing_entity1.taxes << tax1
       end
 
-
       it "updates the taxes" do
         subject
         expect(billing_entity1.reload.taxes.count).to eq(1)

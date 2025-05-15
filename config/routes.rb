@@ -26,7 +26,6 @@ Rails.application.routes.draw do
 
       resources :billing_entities, param: :code, only: %i[index show update create]
 
-
       resources :customers, param: :external_id, only: %i[create index show destroy] do
         get :portal_url
 
