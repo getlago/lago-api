@@ -5,7 +5,7 @@ module Integrations
     module Contacts
       module Payloads
         class Netsuite < BasePayload
-          STATE_LIMIT = 30
+          BASE_LIMIT = 30
           ADDR1_LIMIT = 150
 
           def create_body
@@ -55,7 +55,10 @@ module Integrations
             # customer_type might be nil -> in that case it's a company so we better check for an individual type here
             return {"companyname" => customer.name} unless customer.customer_type_individual?
 
-            names_hash = {"firstname" => customer.firstname, "lastname" => customer.lastname}
+            names_hash = {
+              "firstname" => customer.firstname&.first(BASE_LIMIT),
+              "lastname" => customer.lastname&.first(BASE_LIMIT)
+            }
 
             customer.name.present? ? names_hash.merge("companyname" => customer.name) : names_hash
           end
@@ -82,7 +85,7 @@ module Integrations
                         "addr2" => customer.address_line2,
                         "city" => customer.city,
                         "zip" => customer.zipcode,
-                        "state" => customer.state&.first(STATE_LIMIT),
+                        "state" => customer.state&.first(BASE_LIMIT),
                         "country" => customer.country
                       }
                     }
@@ -103,7 +106,7 @@ module Integrations
                         "addr2" => customer.address_line2,
                         "city" => customer.city,
                         "zip" => customer.zipcode,
-                        "state" => customer.state&.first(STATE_LIMIT),
+                        "state" => customer.state&.first(BASE_LIMIT),
                         "country" => customer.country
                       }
                     },
@@ -116,7 +119,7 @@ module Integrations
                         "addr2" => customer.shipping_address_line2,
                         "city" => customer.shipping_city,
                         "zip" => customer.shipping_zipcode,
-                        "state" => customer.shipping_state&.first(STATE_LIMIT),
+                        "state" => customer.shipping_state&.first(BASE_LIMIT),
                         "country" => customer.shipping_country
                       }
                     }
