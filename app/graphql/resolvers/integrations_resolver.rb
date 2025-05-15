@@ -11,17 +11,21 @@ module Resolvers
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
-    argument :type, Types::Integrations::IntegrationTypeEnum, required: false
+    argument :type, [Types::Integrations::IntegrationTypeEnum], required: false
 
     type Types::Integrations::Object.collection_type, null: true
 
     def resolve(type: nil, page: nil, limit: nil)
       scope = current_organization.integrations.page(page).per(limit)
-      scope = scope.where(type: integration_type(type)) if type.present?
+      scope = scope.where(type: types(type)) if type.present?
       scope
     end
 
     private
+
+    def types(input)
+      input.map { |type| integration_type(type) }
+    end
 
     def integration_type(type)
       case type

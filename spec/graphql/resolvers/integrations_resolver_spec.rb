@@ -24,8 +24,12 @@ RSpec.describe Resolvers::IntegrationsResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:netsuite_integration) { create(:netsuite_integration, organization:) }
+  let(:xero_integration) { create(:xero_integration, organization:) }
 
-  before { netsuite_integration }
+  before do
+    netsuite_integration
+    xero_integration
+  end
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
@@ -35,7 +39,7 @@ RSpec.describe Resolvers::IntegrationsResolver, type: :graphql do
     let(:query) do
       <<~GQL
         query {
-          integrations(limit: 5, type: netsuite) {
+          integrations(limit: 5, type: [netsuite]) {
             collection {
               ... on NetsuiteIntegration {
                 id
