@@ -20,6 +20,9 @@ module PaymentProviders
           event_json: event
         )
         result.raise_if_error!
+      rescue BaseService::ServiceFailure => e
+        # If the payment method wasn't attached to the customer, there is no need to retry to make it the default method
+        raise e unless e.message.include?("The customer does not have a payment method with the ID")
       end
     end
   end
