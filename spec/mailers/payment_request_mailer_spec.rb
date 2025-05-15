@@ -6,9 +6,11 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
   subject(:mailer) { described_class.with(payment_request:).requested }
 
   let(:organization) { create(:organization, document_number_prefix: "ORG-123B") }
-  let(:first_invoice) { create(:invoice, total_amount_cents: 1000, total_paid_amount_cents: 1, organization:) }
-  let(:second_invoice) { create(:invoice, total_amount_cents: 2000, total_paid_amount_cents: 2, organization:) }
-  let(:payment_request) { create(:payment_request, organization:, invoices: [first_invoice, second_invoice]) }
+  let(:billing_entity) { organization.default_billing_entity }
+  let(:customer) { create(:customer, organization:) }
+  let(:first_invoice) { create(:invoice, total_amount_cents: 1000, total_paid_amount_cents: 1, organization:, customer:) }
+  let(:second_invoice) { create(:invoice, total_amount_cents: 2000, total_paid_amount_cents: 2, organization:, customer:) }
+  let(:payment_request) { create(:payment_request, organization:, invoices: [first_invoice, second_invoice], customer:) }
 
   before do
     first_invoice.file.attach(
@@ -39,7 +41,7 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
 
     specify do
       expect(mailer.to).to eq([payment_request.email])
-      expect(mailer.reply_to).to eq([payment_request.organization.email])
+      expect(mailer.reply_to).to eq([payment_request.billing_entity.email])
       expect(mailer.bcc).to be_nil
       expect(mailer.body.encoded).to include(CGI.escapeHTML(first_invoice.number))
       expect(mailer.body.encoded).to include(CGI.escapeHTML(second_invoice.number))
@@ -62,7 +64,7 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
       let(:dunning_campaign) { create(:dunning_campaign, organization:, bcc_emails:) }
 
       before do
-        payment_request.update(dunning_campaign:)
+        payment_request.update!(dunning_campaign:)
       end
 
       it "includes the BCC email addresses in the mailer" do
@@ -71,15 +73,15 @@ RSpec.describe PaymentRequestMailer, type: :mailer do
     end
 
     context "when payment request email is nil" do
-      before { payment_request.update(email: nil) }
+      before { payment_request.update!(email: nil) }
 
       it "returns a mailer with nil values" do
         expect(mailer.to).to be_nil
       end
     end
 
-    context "when organization email is nil" do
-      before { organization.update(email: nil) }
+    context "when billing_entity email is nil" do
+      before { billing_entity.update!(email: nil) }
 
       it "returns a mailer with nil values" do
         expect(mailer.to).to be_nil
