@@ -1399,6 +1399,16 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
+  describe "#force_void!" do
+    let(:invoice) { build(:invoice, status: :finalized, ready_for_payment_processing: true) }
+
+    it "sets status to voided and disables payment processing" do
+      invoice.force_void!
+      expect(invoice.reload.status).to eq("voided")
+      expect(invoice.ready_for_payment_processing).to be(false)
+    end
+  end
+
   describe "#mark_as_dispute_lost!" do
     subject(:mark_as_dispute_lost_call) { invoice.mark_as_dispute_lost! }
 
