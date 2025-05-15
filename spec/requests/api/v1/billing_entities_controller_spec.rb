@@ -305,52 +305,15 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
         expect(billing_entity1.reload.taxes.count).to eq(1)
         expect(billing_entity1.taxes.map(&:code)).to include("TAX_CODE_2")
       end
-    end
 
-    context "when the billing entity is not found" do
-      let(:billing_entity_code) { "NON_EXISTING_CODE" }
-
-      it "returns a 404" do
-        subject
-        expect(response).to be_not_found
-      end
-    end
-  end
-
-  describe "POST /api/v1/billing_entities/:code/manage_taxes" do
-    subject do
-      post_with_token(organization, "/api/v1/billing_entities/#{billing_entity_code}/manage_taxes", tax_codes: tax_codes)
-    end
-
-    let(:tax1) { create(:tax, organization:, code: "TAX_CODE_1") }
-    let(:tax2) { create(:tax, organization:, code: "TAX_CODE_2") }
-
-    context "when the billing entity is found" do
-      let(:billing_entity_code) { billing_entity1.code }
-      let(:tax_codes) { [tax1.code, tax2.code] }
-
-      before do
-        allow(BillingEntities::Taxes::ManageTaxesService).to receive(:call).and_call_original
-      end
-
-      it "returns a 200" do
-        subject
-        expect(response).to be_successful
-      end
-
-      it "updates the taxes" do
-        subject
-        expect(billing_entity1.taxes.count).to eq(2)
-        expect(billing_entity1.taxes.map(&:code)).to include("TAX_CODE_1", "TAX_CODE_2")
-      end
-
-      it "calls the manage taxes service" do
-        subject
-        expect(BillingEntities::Taxes::ManageTaxesService).to have_received(:call).with(billing_entity: billing_entity1, tax_codes: tax_codes)
-      end
-
-      context "when the tax codes are not found" do
-        let(:tax_codes) { ["TAX_CODE_1", "TAX_CODE_3"] }
+      context "when the tax is not found" do
+        let(:update_params) do
+          {
+            billing_entity: {
+              tax_codes: ["NON_EXISTING_CODE"]
+            }
+          }
+        end
 
         it "returns a 404" do
           subject
@@ -361,7 +324,6 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
 
     context "when the billing entity is not found" do
       let(:billing_entity_code) { "NON_EXISTING_CODE" }
-      let(:tax_codes) { ["TAX_CODE_1", "TAX_CODE_2"] }
 
       it "returns a 404" do
         subject

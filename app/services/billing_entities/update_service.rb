@@ -64,7 +64,7 @@ module BillingEntities
       end
 
       if params.key?(:tax_codes)
-        BillingEntities::Taxes::ManageTaxesService.call(billing_entity: entity, tax_codes: params[:tax_codes])
+        BillingEntities::Taxes::ManageTaxesService.call!(billing_entity:, tax_codes: params[:tax_codes])
       end
 
       assign_premium_attributes
