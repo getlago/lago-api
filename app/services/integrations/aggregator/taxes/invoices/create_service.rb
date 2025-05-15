@@ -20,6 +20,7 @@ module Integrations
 
             process_response(body)
             assign_external_customer_id
+            create_integration_resource if integration.type.to_s == "Integrations::AvalaraIntegration" && result.succeeded_id
 
             result
           rescue LagoHttpClient::HttpError => e
@@ -50,6 +51,16 @@ module Integrations
             end
 
             [invoice_data]
+          end
+
+          def create_integration_resource
+            IntegrationResource.create!(
+              syncable_id: invoice.id,
+              syncable_type: "Invoice",
+              external_id: result.succeeded_id,
+              integration_id: integration.id,
+              resource_type: :invoice
+            )
           end
         end
       end

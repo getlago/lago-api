@@ -218,6 +218,12 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
           end
         end
 
+        it "creates integration resource" do
+          service_call
+
+          expect(invoice.reload.integration_resources.count).to eq(1)
+        end
+
         context "when invoice is voided" do
           let(:params) do
             [
