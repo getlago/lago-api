@@ -6,7 +6,9 @@ class MigrateOrganizationTaxes < ActiveRecord::Migration[7.0]
 
   class Tax < ApplicationRecord; end
 
-  class Customer < ApplicationRecord; end
+  class Customer < ApplicationRecord
+    self.ignored_columns = []
+  end
 
   class CustomersTax < ApplicationRecord; end
 
