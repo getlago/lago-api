@@ -61,7 +61,6 @@ module Wallets
           INNER JOIN wallets ON wallets.id = recurring_transaction_rules.wallet_id
           INNER JOIN customers ON customers.id = wallets.customer_id
           INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
-          INNER JOIN organizations ON organizations.id = customers.organization_id
           LEFT JOIN already_applied_today ON already_applied_today.wallet_id = wallets.id
         WHERE
           -- Exclude top-ups already applied today
@@ -81,7 +80,6 @@ module Wallets
           INNER JOIN wallets ON wallets.id = recurring_transaction_rules.wallet_id
           INNER JOIN customers ON customers.id = wallets.customer_id
           INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
-          INNER JOIN organizations ON organizations.id = customers.organization_id
         WHERE wallets.status = #{Wallet.statuses[:active]} 
           AND recurring_transaction_rules.status = #{RecurringTransactionRule.statuses[:active]}
           AND recurring_transaction_rules.trigger = #{RecurringTransactionRule.triggers[:interval]}
@@ -214,7 +212,6 @@ module Wallets
           INNER JOIN wallets AS wal ON wallet_transactions.wallet_id = wal.id
           INNER JOIN customers AS cus ON wal.customer_id = cus.id
           INNER JOIN billing_entities ON cus.billing_entity_id = billing_entities.id
-          INNER JOIN organizations AS org ON cus.organization_id = org.id
         WHERE wallet_transactions.source = #{WalletTransaction.sources[:interval]}
           AND wallet_transactions.transaction_type = #{WalletTransaction.transaction_types[:inbound]}
           AND DATE(

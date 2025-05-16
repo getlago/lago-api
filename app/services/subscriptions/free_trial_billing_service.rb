@@ -65,7 +65,6 @@ module Subscriptions
           INNER JOIN initial_started_at ON initial_started_at.external_id = subscriptions.external_id
           INNER JOIN customers ON subscriptions.customer_id = customers.id
           INNER JOIN billing_entities ON customers.billing_entity_id = billing_entities.id
-          INNER JOIN organizations ON customers.organization_id = organizations.id
           LEFT JOIN already_billed_today ON already_billed_today.subscription_id = subscriptions.id
         WHERE
           subscriptions.status = 1
@@ -102,7 +101,6 @@ module Subscriptions
           INNER JOIN subscriptions AS sub ON invoice_subscriptions.subscription_id = sub.id
           INNER JOIN customers AS cus ON sub.customer_id = cus.id
           INNER JOIN billing_entities ON cus.billing_entity_id = billing_entities.id
-          INNER JOIN organizations AS org ON cus.organization_id = org.id
         WHERE invoice_subscriptions.recurring = 't'
           AND invoice_subscriptions.timestamp IS NOT NULL
           AND DATE(

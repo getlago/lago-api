@@ -10,7 +10,6 @@ class DailyUsage < ApplicationRecord
 
     joins("INNER JOIN customers AS cus ON daily_usages.customer_id = cus.id")
       .joins("INNER JOIN billing_entities ON cus.billing_entity_id = billing_entities.id")
-      .joins("INNER JOIN organizations AS org ON daily_usages.organization_id = org.id")
       .where("DATE((daily_usages.usage_date)#{at_time_zone}) = DATE(:timestamp#{at_time_zone})", timestamp:)
   end
 end
