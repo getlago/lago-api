@@ -15,6 +15,7 @@ module Resolvers
     argument :search_term, String, required: false
 
     argument :aggregation_types, [Types::BillableMetrics::AggregationTypeEnum], required: false
+    argument :plan_id, ID, required: false
 
     type Types::BillableMetrics::Object.collection_type, null: false
 
@@ -23,7 +24,7 @@ module Resolvers
         organization: current_organization,
         search_term: args[:search_term],
         pagination: {page: args[:page], limit: args[:limit]},
-        filters: args.slice(:recurring, :aggregation_types)
+        filters: args.slice(:recurring, :aggregation_types, :plan_id)
       )
 
       result.billable_metrics
