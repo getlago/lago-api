@@ -18,7 +18,9 @@ module Commitments
       ).destroy_all
 
       result.applied_taxes = tax_codes.map do |tax_code|
-        commitment.applied_taxes.find_or_create_by!(tax: taxes.find_by(code: tax_code))
+        commitment.applied_taxes
+          .create_with(organization_id: commitment.plan.organization_id)
+          .find_or_create_by!(tax: taxes.find_by(code: tax_code))
       end
 
       result
