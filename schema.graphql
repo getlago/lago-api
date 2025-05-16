@@ -168,6 +168,11 @@ enum ActivityTypeEnum {
   invoice_generated
 
   """
+  invoice.one_off_created
+  """
+  invoice_one_off_created
+
+  """
   invoice.paid_credit_added
   """
   invoice_paid_credit_added

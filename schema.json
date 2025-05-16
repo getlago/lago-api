@@ -437,6 +437,12 @@
               "deprecationReason": null
             },
             {
+              "name": "invoice_one_off_created",
+              "description": "invoice.one_off_created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "invoice_paid_credit_added",
               "description": "invoice.paid_credit_added",
               "isDeprecated": false,
