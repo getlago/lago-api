@@ -46,6 +46,7 @@ module Integrations
       def handle_items(new_items)
         new_items.each do |item|
           integration_item = IntegrationItem.new(
+            organization_id: integration.organization_id,
             integration:,
             external_id: item["id"],
             external_account_code: item["account_code"],
