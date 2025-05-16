@@ -50,6 +50,7 @@ module IntegrationCustomers
       sync_with_provider = integration&.type&.to_s == "Integrations::SalesforceIntegration"
 
       new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
+        organization_id: integration.organization_id,
         integration:,
         customer:,
         external_customer_id: params[:external_customer_id],

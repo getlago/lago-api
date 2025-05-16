@@ -33,6 +33,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_d9ffb8
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_d9448a540b;
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
+ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ce2c63d69f;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_cc318ad1ff;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf700aeb8;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_caeb5a3949;
@@ -327,6 +328,7 @@ DROP INDEX IF EXISTS public.index_integration_resources_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_mappable;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_items_on_integration_id;
+DROP INDEX IF EXISTS public.index_integration_customers_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_external_customer_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_customer_id_and_type;
@@ -2853,7 +2855,8 @@ CREATE TABLE public.integration_customers (
     type character varying NOT NULL,
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5440,6 +5443,13 @@ CREATE INDEX index_integration_customers_on_integration_id ON public.integration
 
 
 --
+-- Name: index_integration_customers_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_integration_customers_on_organization_id ON public.integration_customers USING btree (organization_id);
+
+
+--
 -- Name: index_integration_items_on_integration_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7588,6 +7598,14 @@ ALTER TABLE ONLY public.integration_mappings
 
 
 --
+-- Name: integration_customers fk_rails_ce2c63d69f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.integration_customers
+    ADD CONSTRAINT fk_rails_ce2c63d69f FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: wallet_transactions fk_rails_d07bc24ce3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7790,6 +7808,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250515083935'),
 ('20250515083802'),
 ('20250515083649'),
+('20250513153630'),
+('20250513153629'),
+('20250513153628'),
 ('20250513152807'),
 ('20250513152806'),
 ('20250513152805'),

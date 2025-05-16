@@ -28,7 +28,6 @@ Rspec.describe "All tables must have an organization_id" do
     %w[
       charge_filter_values
       integration_collection_mappings
-      integration_customers
       integration_items
       integration_mappings
       recurring_transaction_rules

@@ -15,6 +15,7 @@ module IntegrationCustomers
       # For Anrok real customer sync happens with the first document sync. In the meantime,
       # integration customer object needs to be stored on Lago side
       new_integration_customer = IntegrationCustomers::BaseCustomer.create!(
+        organization_id: integration.organization_id,
         integration:,
         customer:,
         type: "IntegrationCustomers::AnrokCustomer",
