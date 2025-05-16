@@ -20,7 +20,7 @@ module PaymentProviders
 
           result.stripe_customer = stripe_customer
           result
-        rescue ::Stripe::PermissionError => e
+        rescue ::Stripe::PermissionError, ::Stripe::InvalidRequestError => e
           result.service_failure!(code: "stripe_error", message: e.message)
         end
 
