@@ -24,9 +24,12 @@ RSpec.describe WebhookMailer, type: :mailer do
       expect(mail.subject).to eq("[ALERT] Webhook delivery failed for Test Org")
       expect(mail.to).to match_array(["admin1@example.com", "admin2@example.com", "org1@example.com", "org2@example.com"])
 
+      expect(mail.content_type).to eq "text/plain; charset=UTF-8"
+
       body = mail.body.encoded
       expect(body).to include("https://app.lago.com/developers/webhooks")
       expect(body).to include("There are currently 4 failed webhooks in the last hour.")
+      expect(body).to include("The Lago Team") # Ensure footer
     end
 
     context "when organization has no admins" do
