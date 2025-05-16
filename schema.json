@@ -40193,12 +40193,20 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "type",
+                  "name": "types",
                   "description": null,
                   "type": {
-                    "kind": "ENUM",
-                    "name": "IntegrationTypeEnum",
-                    "ofType": null
+                    "kind": "LIST",
+                    "name": null,
+                    "ofType": {
+                      "kind": "NON_NULL",
+                      "name": null,
+                      "ofType": {
+                        "kind": "ENUM",
+                        "name": "IntegrationTypeEnum",
+                        "ofType": null
+                      }
+                    }
                   },
                   "defaultValue": null,
                   "isDeprecated": false,

@@ -7810,7 +7810,7 @@ type Query {
   """
   Query organization's integrations
   """
-  integrations(limit: Int, page: Int, type: IntegrationTypeEnum): IntegrationCollection
+  integrations(limit: Int, page: Int, types: [IntegrationTypeEnum!]): IntegrationCollection
 
   """
   Query a single Invite
