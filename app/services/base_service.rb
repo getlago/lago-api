@@ -14,7 +14,19 @@ class BaseService
     end
   end
 
-  class ThrottlingError < StandardError; end
+  class ThrottlingError < StandardError
+    attr_reader :provider, :code
+
+    def initialize(message = nil, provider: nil)
+      @provider = provider
+
+      super(message)
+    end
+
+    def provider_struct
+      Data.define(:code).new(provider)
+    end
+  end
 
   class NotFoundFailure < FailedResult
     attr_reader :resource
