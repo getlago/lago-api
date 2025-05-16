@@ -217,12 +217,13 @@ module Wallets
         FROM wallet_transactions
           INNER JOIN wallets AS wal ON wallet_transactions.wallet_id = wal.id
           INNER JOIN customers AS cus ON wal.customer_id = cus.id
+          INNER JOIN billing_entities ON cus.billing_entity_id = billing_entities.id
           INNER JOIN organizations AS org ON cus.organization_id = org.id
         WHERE wallet_transactions.source = #{WalletTransaction.sources[:interval]}
           AND wallet_transactions.transaction_type = #{WalletTransaction.transaction_types[:inbound]}
           AND DATE(
-            (wallet_transactions.created_at)#{at_time_zone(customer: "cus", organization: "org")}
-          ) = DATE(:today#{at_time_zone(customer: "cus", organization: "org")})
+            (wallet_transactions.created_at)#{at_time_zone(customer: "cus", billing_entity: "billing_entities")}
+          ) = DATE(:today#{at_time_zone(customer: "cus", billing_entity: "billing_entities")})
         GROUP BY wallet_transactions.wallet_id
       SQL
     end

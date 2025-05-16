@@ -318,8 +318,8 @@ module Subscriptions
           AND org.id = '#{organization.id}'
           AND invoice_subscriptions.timestamp IS NOT NULL
           AND DATE(
-            (invoice_subscriptions.timestamp)#{at_time_zone(customer: "cus", organization: "org")}
-          ) = DATE(:today#{at_time_zone(customer: "cus", organization: "org")})
+            (invoice_subscriptions.timestamp)#{at_time_zone(customer: "cus", billing_entity: "billing_entities")}
+          ) = DATE(:today#{at_time_zone(customer: "cus", billing_entity: "billing_entities")})
         GROUP BY invoice_subscriptions.subscription_id
       SQL
     end
