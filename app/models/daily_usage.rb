@@ -6,10 +6,10 @@ class DailyUsage < ApplicationRecord
   belongs_to :subscription
 
   scope :usage_date_in_timezone, ->(timestamp) do
-    at_time_zone = Utils::Timezone.at_time_zone_sql(customer: "cus", organization: "org")
+    at_time_zone = Utils::Timezone.at_time_zone_sql(customer: "cus", billing_entity: "billing_entities")
 
     joins("INNER JOIN customers AS cus ON daily_usages.customer_id = cus.id")
-      .joins("INNER JOIN organizations AS org ON daily_usages.organization_id = org.id")
+      .joins("INNER JOIN billing_entities ON cus.billing_entity_id = billing_entities.id")
       .where("DATE((daily_usages.usage_date)#{at_time_zone}) = DATE(:timestamp#{at_time_zone})", timestamp:)
   end
 end
