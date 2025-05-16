@@ -35,11 +35,11 @@ RSpec.describe Resolvers::IntegrationsResolver, type: :graphql do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", %w[customers:view organization:integrations:view]
 
-  context "when type is present" do
+  context "when types is present" do
     let(:query) do
       <<~GQL
         query {
-          integrations(limit: 5, type: [netsuite]) {
+          integrations(limit: 5, types: [netsuite]) {
             collection {
               ... on NetsuiteIntegration {
                 id

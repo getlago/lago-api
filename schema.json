@@ -40193,7 +40193,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "type",
+                  "name": "types",
                   "description": null,
                   "type": {
                     "kind": "LIST",
