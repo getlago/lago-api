@@ -308,6 +308,26 @@ RSpec.describe Payment, type: :model do
     end
   end
 
+  describe "#invoices" do
+    context "when payable is an invoice" do
+      let(:payable) { create(:invoice) }
+
+      it "returns the payable in an array" do
+        expect(subject.invoices).to eq([payable])
+      end
+    end
+
+    context "when payable is a payment request" do
+      let(:invoices) { create_list(:invoice, 2) }
+      let(:payable) { create(:payment_request, invoices:) }
+
+      it "returns the payable in an array" do
+        expect(subject.invoices).to be_a Array
+        expect(subject.invoices).to eq(invoices)
+      end
+    end
+  end
+
   describe "#payment_provider_type" do
     subject(:payment_provider_type) { payment.payment_provider_type }
 
