@@ -8,6 +8,7 @@ module IntegrationMappings
       return result.not_found_failure!(resource: "integration") unless integration
 
       integration_mapping = IntegrationMappings::Factory.new_instance(integration:).new(
+        organization_id: integration.organization_id,
         integration_id: args[:integration_id],
         mappable_id: args[:mappable_id],
         mappable_type: args[:mappable_type]

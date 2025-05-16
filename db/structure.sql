@@ -174,6 +174,7 @@ ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_103e187859;
+ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_0f762162b0;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_0e464363cb;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_0d349e632f;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_0d2be3d72c;
@@ -325,6 +326,7 @@ DROP INDEX IF EXISTS public.index_integrations_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_integration_resources_on_syncable;
 DROP INDEX IF EXISTS public.index_integration_resources_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_resources_on_integration_id;
+DROP INDEX IF EXISTS public.index_integration_mappings_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_mappable;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_items_on_integration_id;
@@ -2888,7 +2890,8 @@ CREATE TABLE public.integration_mappings (
     type character varying NOT NULL,
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4123,7 +4126,7 @@ CREATE UNIQUE INDEX idx_on_amount_cents_plan_id_recurring_888044d66b ON public.u
 -- Name: idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655 ON public.invoices USING btree (billing_entity_id, billing_entity_sequential_id DESC) INCLUDE (self_billed);
+CREATE INDEX idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655 ON public.invoices USING btree (billing_entity_id, billing_entity_sequential_id DESC) INCLUDE (self_billed);
 
 
 --
@@ -5471,6 +5474,13 @@ CREATE INDEX index_integration_mappings_on_mappable ON public.integration_mappin
 
 
 --
+-- Name: index_integration_mappings_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_integration_mappings_on_organization_id ON public.integration_mappings USING btree (organization_id);
+
+
+--
 -- Name: index_integration_resources_on_integration_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6475,6 +6485,14 @@ ALTER TABLE ONLY public.invoices
 
 ALTER TABLE ONLY public.integration_customers
     ADD CONSTRAINT fk_rails_0e464363cb FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
+-- Name: integration_mappings fk_rails_0f762162b0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.integration_mappings
+    ADD CONSTRAINT fk_rails_0f762162b0 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7804,6 +7822,9 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250516100026'),
+('20250516100025'),
+('20250516100024'),
 ('20250516084025'),
 ('20250515085230'),
 ('20250515083935'),
