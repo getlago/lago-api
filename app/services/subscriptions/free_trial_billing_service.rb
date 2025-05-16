@@ -106,8 +106,8 @@ module Subscriptions
         WHERE invoice_subscriptions.recurring = 't'
           AND invoice_subscriptions.timestamp IS NOT NULL
           AND DATE(
-            (invoice_subscriptions.timestamp)#{at_time_zone(customer: "cus", billing_entity: "billing_entities", organization: "org")}
-          ) = DATE('#{timestamp}'#{at_time_zone(customer: "cus", billing_entity: "billing_entities", organization: "org")})
+            (invoice_subscriptions.timestamp)#{at_time_zone(customer: "cus", billing_entity: "billing_entities")}
+          ) = DATE('#{timestamp}'#{at_time_zone(customer: "cus", billing_entity: "billing_entities")})
         GROUP BY invoice_subscriptions.subscription_id
       SQL
     end
