@@ -105,6 +105,7 @@ ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_5cb67dee79;
+ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_5cb2f24c3d;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_5c2e0b6d34;
 ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS fk_rails_5c21eece29;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_5ade8984b1;
@@ -415,6 +416,7 @@ DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_customer_id;
+DROP INDEX IF EXISTS public.index_credit_note_items_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_fee_id;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_coupons_on_organization_id_and_code;
@@ -1396,7 +1398,8 @@ CREATE TABLE public.credit_note_items (
     amount_currency character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    precise_amount_cents numeric(30,5) NOT NULL
+    precise_amount_cents numeric(30,5) NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4790,6 +4793,13 @@ CREATE INDEX index_credit_note_items_on_fee_id ON public.credit_note_items USING
 
 
 --
+-- Name: index_credit_note_items_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_credit_note_items_on_organization_id ON public.credit_note_items USING btree (organization_id);
+
+
+--
 -- Name: index_credit_notes_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6976,6 +6986,14 @@ ALTER TABLE ONLY public.payment_receipts
 
 
 --
+-- Name: credit_note_items fk_rails_5cb2f24c3d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credit_note_items
+    ADD CONSTRAINT fk_rails_5cb2f24c3d FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: credit_notes fk_rails_5cb67dee79; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7754,6 +7772,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250515083935'),
 ('20250515083802'),
 ('20250515083649'),
+('20250513151260'),
+('20250513151259'),
+('20250513151258'),
 ('20250513144354'),
 ('20250513144353'),
 ('20250513144352'),
