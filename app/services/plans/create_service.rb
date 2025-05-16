@@ -85,6 +85,7 @@ module Plans
 
     def create_commitment(plan, args, commitment_type)
       Commitment.create!(
+        organization_id: plan.organization_id,
         plan:,
         commitment_type:,
         invoice_display_name: args[:invoice_display_name],

@@ -139,7 +139,8 @@ module Plans
 
     def process_minimum_commitment(plan, params)
       if params.present?
-        minimum_commitment = plan.minimum_commitment || Commitment.new(plan:, commitment_type: "minimum_commitment")
+        minimum_commitment = plan.minimum_commitment ||
+          Commitment.new(organization_id: plan.organization_id, plan:, commitment_type: "minimum_commitment")
 
         minimum_commitment.amount_cents = params[:amount_cents] if params.key?(:amount_cents)
         minimum_commitment.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
