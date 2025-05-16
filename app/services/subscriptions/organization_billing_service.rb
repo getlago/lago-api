@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+# ASK VINCENT ABOUT THE TIMEZONES!!!
 
 module Subscriptions
   class OrganizationBillingService < BaseService
@@ -74,6 +75,7 @@ module Subscriptions
           INNER JOIN billable_subscriptions ON billable_subscriptions.subscription_id = subscriptions.id
           INNER JOIN customers ON customers.id = subscriptions.customer_id
           INNER JOIN organizations ON organizations.id = customers.organization_id
+          INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
           LEFT JOIN already_billed_today ON already_billed_today.subscription_id = subscriptions.id
         WHERE
           organizations.id = '#{organization.id}'
@@ -101,6 +103,7 @@ module Subscriptions
         FROM subscriptions
           INNER JOIN plans ON plans.id = subscriptions.plan_id
           INNER JOIN customers ON customers.id = subscriptions.customer_id
+          INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
           INNER JOIN organizations ON organizations.id = customers.organization_id
         WHERE subscriptions.status = #{Subscription.statuses[:active]}
           AND organizations.id = '#{organization.id}'
