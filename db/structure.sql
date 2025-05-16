@@ -4123,7 +4123,7 @@ CREATE UNIQUE INDEX idx_on_amount_cents_plan_id_recurring_888044d66b ON public.u
 -- Name: idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655 ON public.invoices USING btree (billing_entity_id, billing_entity_sequential_id DESC) INCLUDE (self_billed);
+CREATE INDEX idx_on_billing_entity_id_billing_entity_sequential__bd26b2e655 ON public.invoices USING btree (billing_entity_id, billing_entity_sequential_id DESC) INCLUDE (self_billed);
 
 
 --
