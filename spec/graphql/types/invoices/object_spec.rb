@@ -66,5 +66,7 @@ RSpec.describe Types::Invoices::Object do
     expect(subject).to have_field(:integration_salesforce_syncable).of_type("Boolean!")
     expect(subject).to have_field(:integration_syncable).of_type("Boolean!")
     expect(subject).to have_field(:payments).of_type("[Payment!]")
+
+    expect(subject).to have_field(:tax_provider_id).of_type("String")
   end
 end
