@@ -30,8 +30,10 @@ ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_dd7e076158;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_dd342449a6;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_d9ffb8b4a1;
+ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_d9448a540b;
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
+ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ce2c63d69f;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_cc318ad1ff;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf700aeb8;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_caeb5a3949;
@@ -85,6 +87,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_78f6642ddf;
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_7886e1bc34;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_77f2d4440d;
+ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_76ceb88c74;
 ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rails_755d734f25;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_745b4ca7dd;
@@ -104,6 +107,7 @@ ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_5cb67dee79;
+ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_5cb2f24c3d;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_5c2e0b6d34;
 ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS fk_rails_5c21eece29;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_5ade8984b1;
@@ -155,6 +159,7 @@ ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS f
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_2496c105ed;
 ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS fk_rails_23975f5a47;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_22af6c6d28;
+ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_2259c88f26;
 ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_21eb389927;
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS fk_rails_21808fa528;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_216ac8a975;
@@ -318,10 +323,12 @@ DROP INDEX IF EXISTS public.index_invites_on_membership_id;
 DROP INDEX IF EXISTS public.index_integrations_on_organization_id;
 DROP INDEX IF EXISTS public.index_integrations_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_integration_resources_on_syncable;
+DROP INDEX IF EXISTS public.index_integration_resources_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_resources_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_mappable;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_items_on_integration_id;
+DROP INDEX IF EXISTS public.index_integration_customers_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_external_customer_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_customer_id_and_type;
@@ -413,6 +420,7 @@ DROP INDEX IF EXISTS public.index_credit_notes_taxes_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_credit_notes_on_customer_id;
+DROP INDEX IF EXISTS public.index_credit_note_items_on_organization_id;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_fee_id;
 DROP INDEX IF EXISTS public.index_credit_note_items_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_coupons_on_organization_id_and_code;
@@ -424,8 +432,10 @@ DROP INDEX IF EXISTS public.index_coupon_targets_on_deleted_at;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_coupon_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_tax_id;
+DROP INDEX IF EXISTS public.index_commitments_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id;
 DROP INDEX IF EXISTS public.index_commitments_on_plan_id;
+DROP INDEX IF EXISTS public.index_commitments_on_organization_id;
 DROP INDEX IF EXISTS public.index_commitments_on_commitment_type_and_plan_id;
 DROP INDEX IF EXISTS public.index_charges_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_charges_taxes_on_organization_id;
@@ -1316,7 +1326,8 @@ CREATE TABLE public.commitments (
     amount_cents bigint NOT NULL,
     invoice_display_name character varying,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -1329,7 +1340,8 @@ CREATE TABLE public.commitments_taxes (
     commitment_id uuid NOT NULL,
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -1390,7 +1402,8 @@ CREATE TABLE public.credit_note_items (
     amount_currency character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    precise_amount_cents numeric(30,5) NOT NULL
+    precise_amount_cents numeric(30,5) NOT NULL,
+    organization_id uuid
 );
 
 
@@ -2842,7 +2855,8 @@ CREATE TABLE public.integration_customers (
     type character varying NOT NULL,
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -2890,7 +2904,8 @@ CREATE TABLE public.integration_resources (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     integration_id uuid,
-    resource_type integer DEFAULT 0 NOT NULL
+    resource_type integer DEFAULT 0 NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4679,6 +4694,13 @@ CREATE UNIQUE INDEX index_commitments_on_commitment_type_and_plan_id ON public.c
 
 
 --
+-- Name: index_commitments_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_commitments_on_organization_id ON public.commitments USING btree (organization_id);
+
+
+--
 -- Name: index_commitments_on_plan_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4690,6 +4712,13 @@ CREATE INDEX index_commitments_on_plan_id ON public.commitments USING btree (pla
 --
 
 CREATE INDEX index_commitments_taxes_on_commitment_id ON public.commitments_taxes USING btree (commitment_id);
+
+
+--
+-- Name: index_commitments_taxes_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_commitments_taxes_on_organization_id ON public.commitments_taxes USING btree (organization_id);
 
 
 --
@@ -4767,6 +4796,13 @@ CREATE INDEX index_credit_note_items_on_credit_note_id ON public.credit_note_ite
 --
 
 CREATE INDEX index_credit_note_items_on_fee_id ON public.credit_note_items USING btree (fee_id);
+
+
+--
+-- Name: index_credit_note_items_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_credit_note_items_on_organization_id ON public.credit_note_items USING btree (organization_id);
 
 
 --
@@ -5407,6 +5443,13 @@ CREATE INDEX index_integration_customers_on_integration_id ON public.integration
 
 
 --
+-- Name: index_integration_customers_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_integration_customers_on_organization_id ON public.integration_customers USING btree (organization_id);
+
+
+--
 -- Name: index_integration_items_on_integration_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5432,6 +5475,13 @@ CREATE INDEX index_integration_mappings_on_mappable ON public.integration_mappin
 --
 
 CREATE INDEX index_integration_resources_on_integration_id ON public.integration_resources USING btree (integration_id);
+
+
+--
+-- Name: index_integration_resources_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_integration_resources_on_organization_id ON public.integration_resources USING btree (organization_id);
 
 
 --
@@ -6540,6 +6590,14 @@ ALTER TABLE ONLY public.cached_aggregations
 
 
 --
+-- Name: commitments_taxes fk_rails_2259c88f26; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.commitments_taxes
+    ADD CONSTRAINT fk_rails_2259c88f26 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: invoices_taxes fk_rails_22af6c6d28; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -6948,6 +7006,14 @@ ALTER TABLE ONLY public.payment_receipts
 
 
 --
+-- Name: credit_note_items fk_rails_5cb2f24c3d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.credit_note_items
+    ADD CONSTRAINT fk_rails_5cb2f24c3d FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: credit_notes fk_rails_5cb67dee79; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7097,6 +7163,14 @@ ALTER TABLE ONLY public.refunds
 
 ALTER TABLE ONLY public.integrations
     ADD CONSTRAINT fk_rails_755d734f25 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: commitments fk_rails_76ceb88c74; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.commitments
+    ADD CONSTRAINT fk_rails_76ceb88c74 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7524,6 +7598,14 @@ ALTER TABLE ONLY public.integration_mappings
 
 
 --
+-- Name: integration_customers fk_rails_ce2c63d69f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.integration_customers
+    ADD CONSTRAINT fk_rails_ce2c63d69f FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: wallet_transactions fk_rails_d07bc24ce3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7537,6 +7619,14 @@ ALTER TABLE ONLY public.wallet_transactions
 
 ALTER TABLE ONLY public.idempotency_records
     ADD CONSTRAINT fk_rails_d4f02c82b2 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: integration_resources fk_rails_d9448a540b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.integration_resources
+    ADD CONSTRAINT fk_rails_d9448a540b FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7714,10 +7804,26 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250516084025'),
 ('20250515085230'),
 ('20250515083935'),
 ('20250515083802'),
 ('20250515083649'),
+('20250513153630'),
+('20250513153629'),
+('20250513153628'),
+('20250513152807'),
+('20250513152806'),
+('20250513152805'),
+('20250513151260'),
+('20250513151259'),
+('20250513151258'),
+('20250513144354'),
+('20250513144353'),
+('20250513144352'),
+('20250513132425'),
+('20250513132424'),
+('20250513132423'),
 ('20250512151248'),
 ('20250512151247'),
 ('20250512151246'),

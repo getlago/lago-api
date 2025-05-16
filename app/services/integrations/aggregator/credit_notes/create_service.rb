@@ -34,6 +34,7 @@ module Integrations
           return result unless result.external_id
 
           IntegrationResource.create!(
+            organization_id: integration.organization_id,
             integration:,
             external_id: result.external_id,
             syncable_id: credit_note.id,

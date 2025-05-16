@@ -37395,6 +37395,18 @@
                   "defaultValue": null,
                   "isDeprecated": false,
                   "deprecationReason": null
+                },
+                {
+                  "name": "planId",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 }
               ]
             },
@@ -40193,7 +40205,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "type",
+                  "name": "types",
                   "description": null,
                   "type": {
                     "kind": "LIST",

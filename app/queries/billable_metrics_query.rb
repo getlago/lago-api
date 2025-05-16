@@ -2,7 +2,7 @@
 
 class BillableMetricsQuery < BaseQuery
   Result = BaseResult[:billable_metrics]
-  Filters = BaseFilters[:organization_id, :recurring, :aggregation_types]
+  Filters = BaseFilters[:organization_id, :recurring, :aggregation_types, :plan_id]
 
   def call
     return result unless validate_filters.success?
@@ -13,6 +13,7 @@ class BillableMetricsQuery < BaseQuery
 
     metrics = with_recurring(metrics) unless filters.recurring.nil?
     metrics = with_aggregation_type(metrics) if filters.aggregation_types.present?
+    metrics = with_plan(metrics) if filters.plan_id.present?
 
     result.billable_metrics = metrics
     result
@@ -44,5 +45,9 @@ class BillableMetricsQuery < BaseQuery
 
   def with_aggregation_type(scope)
     scope.where(aggregation_type: filters.aggregation_types)
+  end
+
+  def with_plan(scope)
+    scope.joins(:charges).where(charges: {plan_id: filters.plan_id})
   end
 end

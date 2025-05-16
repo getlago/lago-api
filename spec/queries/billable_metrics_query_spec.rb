@@ -145,4 +145,20 @@ RSpec.describe BillableMetricsQuery, type: :query do
       expect(returned_ids).not_to include(billable_metric_third.id)
     end
   end
+
+  context "when filtering by plan_id" do
+    let(:plan) { create(:plan, organization:) }
+    let(:charge) { create(:standard_charge, plan:, billable_metric: billable_metric_first) }
+    let(:filters) { {plan_id: plan.id} }
+
+    before { charge }
+
+    it "returns only billable metrics associated with the plan" do
+      expect(returned_ids.count).to eq(1)
+      expect(returned_ids).to include(billable_metric_first.id)
+      expect(returned_ids).not_to include(billable_metric_second.id)
+      expect(returned_ids).not_to include(billable_metric_third.id)
+      expect(returned_ids).not_to include(billable_metric_fourth.id)
+    end
+  end
 end
