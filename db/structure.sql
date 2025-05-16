@@ -7804,7 +7804,6 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-('20250516084025'),
 ('20250515085230'),
 ('20250515083935'),
 ('20250515083802'),
