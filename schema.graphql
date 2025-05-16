@@ -7504,7 +7504,7 @@ type Query {
   """
   Query billable metrics of an organization
   """
-  billableMetrics(aggregationTypes: [AggregationTypeEnum!], limit: Int, page: Int, recurring: Boolean, searchTerm: String): BillableMetricCollection!
+  billableMetrics(aggregationTypes: [AggregationTypeEnum!], limit: Int, page: Int, planId: ID, recurring: Boolean, searchTerm: String): BillableMetricCollection!
 
   """
   Query active billing_entities of an organization
