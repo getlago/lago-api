@@ -1,4 +1,4 @@
-FROM ruby:3.4.3-slim AS build
+FROM ruby:3.4.4-slim AS build
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN gem install bundler --no-document -v '2.6.8'
 RUN bundle config build.nokogiri --use-system-libraries &&\
   bundle install --jobs=3 --retry=3 --without development test
 
-FROM ruby:3.4.3-slim
+FROM ruby:3.4.4-slim
 
 WORKDIR /app
 
