@@ -64,6 +64,7 @@ module Wallets
           INNER JOIN pending_recurring_rules ON pending_recurring_rules.rule_id = recurring_transaction_rules.id
           INNER JOIN wallets ON wallets.id = recurring_transaction_rules.wallet_id
           INNER JOIN customers ON customers.id = wallets.customer_id
+          INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
           INNER JOIN organizations ON organizations.id = customers.organization_id
           LEFT JOIN already_applied_today ON already_applied_today.wallet_id = wallets.id
         WHERE
@@ -83,6 +84,7 @@ module Wallets
         FROM recurring_transaction_rules
           INNER JOIN wallets ON wallets.id = recurring_transaction_rules.wallet_id
           INNER JOIN customers ON customers.id = wallets.customer_id
+          INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
           INNER JOIN organizations ON organizations.id = customers.organization_id
         WHERE wallets.status = #{Wallet.statuses[:active]}
           AND recurring_transaction_rules.status = #{RecurringTransactionRule.statuses[:active]}

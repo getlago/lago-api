@@ -10,7 +10,7 @@ module Subscriptions
 
     def activate_all_pending
       Subscription
-        .joins(customer: :organization)
+        .joins(customer: [:organization, :billing_entity])
         .pending
         .where(previous_subscription: nil)
         .where(

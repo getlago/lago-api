@@ -1,5 +1,4 @@
 # frozen_string_literal: true
-# ASK VINCENT ABOUT THE TIMEZONES!!!
 
 module Subscriptions
   class OrganizationBillingService < BaseService
@@ -313,6 +312,7 @@ module Subscriptions
         FROM invoice_subscriptions
           INNER JOIN subscriptions AS sub ON invoice_subscriptions.subscription_id = sub.id
           INNER JOIN customers AS cus ON sub.customer_id = cus.id
+          INNER JOIN billing_entities ON cus.billing_entity_id = billing_entities.id
           INNER JOIN organizations AS org ON cus.organization_id = org.id
         WHERE invoice_subscriptions.recurring = 't'
           AND org.id = '#{organization.id}'
