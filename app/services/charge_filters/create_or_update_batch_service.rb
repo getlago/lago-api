@@ -68,7 +68,7 @@ module ChargeFilters
 
             filter_value = filter.values.find_or_initialize_by(
               billable_metric_filter_id: billable_metric_filter&.id
-            )
+            ) { it.organization_id = organization.id }
 
             filter_value.values = values
             if filter_value.save! && touch && !filter_value.changed?
