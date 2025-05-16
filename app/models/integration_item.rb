@@ -4,6 +4,7 @@ class IntegrationItem < ApplicationRecord
   include PaperTrailTraceable
 
   belongs_to :integration, class_name: "Integrations::BaseIntegration"
+  belongs_to :organization, optional: true
 
   ITEM_TYPES = [
     :standard,
@@ -32,13 +33,16 @@ end
 #  updated_at            :datetime         not null
 #  external_id           :string           not null
 #  integration_id        :uuid             not null
+#  organization_id       :uuid
 #
 # Indexes
 #
 #  index_int_items_on_external_id_and_int_id_and_type  (external_id,integration_id,item_type) UNIQUE
 #  index_integration_items_on_integration_id           (integration_id)
+#  index_integration_items_on_organization_id          (organization_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (integration_id => integrations.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #
