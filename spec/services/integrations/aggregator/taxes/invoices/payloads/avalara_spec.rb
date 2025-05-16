@@ -97,14 +97,14 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::Payloads::Avalara do
               "item_id" => fee_add_on.id,
               "item_code" => "m1",
               "unit" => 1,
-              "amount" => 20.35
+              "amount" => "20.35"
             },
             {
               "item_key" => fee_add_on_two.item_key,
               "item_id" => fee_add_on_two.id,
               "item_code" => "1",
               "unit" => 1,
-              "amount" => 20.35
+              "amount" => "20.35"
             }
           ]
         }
@@ -145,14 +145,14 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::Payloads::Avalara do
                 "item_id" => fee_add_on.id,
                 "item_code" => "m1",
                 "unit" => 1,
-                "amount" => -20.35
+                "amount" => "-20.35"
               },
               {
                 "item_key" => fee_add_on_two.item_key,
                 "item_id" => fee_add_on_two.id,
                 "item_code" => "1",
                 "unit" => 1,
-                "amount" => -20.35
+                "amount" => "-20.35"
               }
             ]
           }
