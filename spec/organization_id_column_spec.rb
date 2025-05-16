@@ -31,7 +31,6 @@ Rspec.describe "All tables must have an organization_id" do
       integration_customers
       integration_items
       integration_mappings
-      integration_resources
       recurring_transaction_rules
       refunds
       versions

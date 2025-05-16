@@ -30,6 +30,7 @@ ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_ra
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_dd7e076158;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_dd342449a6;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_d9ffb8b4a1;
+ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_d9448a540b;
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_cc318ad1ff;
@@ -321,6 +322,7 @@ DROP INDEX IF EXISTS public.index_invites_on_membership_id;
 DROP INDEX IF EXISTS public.index_integrations_on_organization_id;
 DROP INDEX IF EXISTS public.index_integrations_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_integration_resources_on_syncable;
+DROP INDEX IF EXISTS public.index_integration_resources_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_resources_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_mappable;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_integration_id;
@@ -2899,7 +2901,8 @@ CREATE TABLE public.integration_resources (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     integration_id uuid,
-    resource_type integer DEFAULT 0 NOT NULL
+    resource_type integer DEFAULT 0 NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5465,6 +5468,13 @@ CREATE INDEX index_integration_resources_on_integration_id ON public.integration
 
 
 --
+-- Name: index_integration_resources_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_integration_resources_on_organization_id ON public.integration_resources USING btree (organization_id);
+
+
+--
 -- Name: index_integration_resources_on_syncable; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7594,6 +7604,14 @@ ALTER TABLE ONLY public.idempotency_records
 
 
 --
+-- Name: integration_resources fk_rails_d9448a540b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.integration_resources
+    ADD CONSTRAINT fk_rails_d9448a540b FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: fees fk_rails_d9ffb8b4a1; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7772,6 +7790,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250515083935'),
 ('20250515083802'),
 ('20250515083649'),
+('20250513152807'),
+('20250513152806'),
+('20250513152805'),
 ('20250513151260'),
 ('20250513151259'),
 ('20250513151258'),
