@@ -6,6 +6,26 @@ module Utils
       IGNORED_FIELDS = %w[updated_at].freeze
 
       def produce(object, activity_type, activity_id: SecureRandom.uuid)
+        return yield if object.nil?
+
+        before_attrs = object_serialized(object)
+        result = yield
+        return result if result.failure?
+
+        after_attrs = object_serialized(object.reload)
+
+        changes = before_attrs.each_with_object({}) do |(key, before), result|
+          after = after_attrs[key]
+          result[key] = [before, after] if before != after
+        end
+
+        produce_with_diff(object, activity_type, activity_id:, object_changes: changes)
+        result
+      end
+
+      private
+
+      def produce_with_diff(object, activity_type, activity_id:, object_changes: {})
         return if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
         return if ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"].blank?
 
@@ -24,36 +44,39 @@ module Utils
             resource_id: resource(object).id,
             resource_type: resource(object).class.name,
             organization_id: organization_id(object),
-            activity_object: activity_object(object),
-            activity_object_changes: activity_object_changes(object)
+            activity_object: activity_object(object, activity_type),
+            activity_object_changes: activity_object_changes(object_changes, activity_type)
           }.to_json
         )
       end
 
-      private
-
       def activity_source
         return "front" if CurrentContext.source == "graphql"
 
-        CurrentContext.source
+        CurrentContext.source || "system"
       end
 
       def user_id
         return nil if CurrentContext.api_key_id.present?
+        return nil if CurrentContext.membership.blank?
 
         Membership.find_by(id: CurrentContext.membership.split("/").last)&.user_id
       end
 
-      def activity_object(object)
+      def activity_object(object, activity_type)
+        return {} if activity_type.include?("deleted")
+
+        object_serialized(object)
+      end
+
+      def object_serialized(object)
         "V1::#{object.class.name}Serializer".constantize.new(object).serialize
       end
 
-      def activity_object_changes(object)
-        changes = object.previous_changes.except(*IGNORED_FIELDS).transform_values(&:to_s)
+      def activity_object_changes(object_changes, activity_type)
+        return {} unless activity_type.include?("updated")
 
-        return nil if changes.key?("id")
-
-        changes
+        object_changes.transform_values(&:to_s)
       end
 
       def organization_id(activity_object)
