@@ -25,6 +25,7 @@ class Organization < ApplicationRecord
   has_many :users, through: :memberships
   has_many :billable_metrics
   has_many :plans
+  has_many :pricing_units
   has_many :customers
   has_many :subscriptions, through: :customers
   has_many :invoices

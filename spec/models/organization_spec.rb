@@ -23,6 +23,7 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:api_keys) }
   it { is_expected.to have_many(:billing_entities).conditions(archived_at: nil) }
   it { is_expected.to have_many(:all_billing_entities).class_name("BillingEntity") }
+  it { is_expected.to have_many(:pricing_units) }
   it { is_expected.to have_one(:default_billing_entity).class_name("BillingEntity") }
   it { is_expected.to have_many(:webhook_endpoints) }
   it { is_expected.to have_many(:webhooks).through(:webhook_endpoints) }
