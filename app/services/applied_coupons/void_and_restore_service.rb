@@ -36,16 +36,30 @@ module AppliedCoupons
     end
 
     def expired?
-      applied_coupon.coupon.expiration_at&.< Time.current
+      coupon = applied_coupon.coupon
+      return false if coupon.no_expiration?
+
+      coupon.expiration_at.present? && coupon.expiration_at < Time.current
     end
 
     def restore_recurring_usage!
-      applied_coupon.update!(
-        frequency_duration_remaining: [
-          (applied_coupon.frequency_duration_remaining || 0) + 1,
-          applied_coupon.frequency_duration
-        ].min
-      )
+      current = applied_coupon.frequency_duration_remaining.to_i
+      max = applied_coupon.frequency_duration
+      new_remaining = [current + 1, max].min
+
+      # If the coupon was terminated and has now regained availability, reactivate it
+      if applied_coupon.terminated? && new_remaining > 0
+        applied_coupon.update!(
+          frequency_duration_remaining: new_remaining,
+          status: :active,
+          terminated_at: nil
+        )
+      else
+        applied_coupon.update!(
+          frequency_duration_remaining: new_remaining
+        )
+      end
+
       applied_coupon
     end
 
