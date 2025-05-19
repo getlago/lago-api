@@ -1,4 +1,4 @@
-FROM ruby:3.4.3-slim
+FROM ruby:3.4.4-slim
 
 WORKDIR /app
 ENV POSTGRES_VERSION=14
