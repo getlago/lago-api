@@ -12,6 +12,11 @@ module Invoices
       super(nil)
     end
 
+    activity_loggable(
+      action: "invoice.one_off_created",
+      record: -> { result.invoice }
+    )
+
     def call
       return result.not_found_failure!(resource: "customer") unless customer
       return result.not_found_failure!(resource: "fees") if fees.blank?
