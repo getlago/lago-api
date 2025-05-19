@@ -21,14 +21,13 @@ Rspec.describe "All tables must have an organization_id" do
       group_properties
       groups
       password_resets
+      versions
     ]
   end
 
   let(:tables_to_migrate) do
     %w[
-      integration_collection_mappings
       refunds
-      versions
     ]
   end
 

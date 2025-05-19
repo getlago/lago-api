@@ -16,6 +16,7 @@ module IntegrationCollectionMappings
       return result.not_found_failure!(resource: "integration") unless integration
 
       integration_collection_mapping = IntegrationCollectionMappings::Factory.new_instance(integration:).new(
+        organization_id: params[:organization_id],
         integration_id: params[:integration_id],
         mapping_type: params[:mapping_type]
       )
