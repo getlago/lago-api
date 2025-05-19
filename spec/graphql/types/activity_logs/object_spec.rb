@@ -11,6 +11,7 @@ RSpec.describe Types::ActivityLogs::Object do
     expect(subject).to have_field(:activity_object_changes).of_type("JSON")
     expect(subject).to have_field(:activity_source).of_type("ActivitySourceEnum!")
     expect(subject).to have_field(:activity_type).of_type("ActivityTypeEnum!")
+    expect(subject).to have_field(:api_key_id).of_type("ID")
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:external_customer_id).of_type("String")
     expect(subject).to have_field(:external_subscription_id).of_type("String")

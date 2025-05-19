@@ -11,6 +11,7 @@ module Types
       field :activity_object_changes, GraphQL::Types::JSON
       field :activity_source, Types::ActivityLogs::ActivitySourceEnum, null: false
       field :activity_type, Types::ActivityLogs::ActivityTypeEnum, null: false
+      field :api_key_id, ID
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :external_customer_id, String
       field :external_subscription_id, String
