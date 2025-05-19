@@ -45,11 +45,9 @@ module Charges
     end
 
     def build_aggregation_result
-      OpenStruct.new(
-        aggregation: units,
-        total_aggregated_units: units,
-        current_usage_units: units
-      )
+      Struct.new(
+        :aggregation, :total_aggregated_units, :current_usage_units, :full_units_number
+      ).new(units, units, units, units)
     end
   end
 end
