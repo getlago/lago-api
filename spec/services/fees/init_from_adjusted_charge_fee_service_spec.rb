@@ -119,6 +119,45 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
         payment_status: "pending"
       )
     end
+
+    context "when units are 0" do
+      let(:adjusted_fee) do
+        create(
+          :adjusted_fee,
+          invoice:,
+          subscription:,
+          charge:,
+          properties:,
+          fee_type: :charge,
+          adjusted_units: false,
+          adjusted_amount: true,
+          units: 0,
+          unit_amount_cents: 0,
+          unit_precise_amount_cents: 0.0
+        )
+      end
+
+      it "initializes a fee" do
+        result = init_service.call
+
+        expect(result).to be_success
+        expect(result.fee).to be_a(Fee)
+        expect(result.fee).to have_attributes(
+          id: nil,
+          invoice:,
+          charge:,
+          amount_cents: 0,
+          precise_amount_cents: 0.0,
+          taxes_precise_amount_cents: 0.0,
+          amount_currency: invoice.currency,
+          units: 0,
+          unit_amount_cents: 0,
+          precise_unit_amount: 0,
+          events_count: 0,
+          payment_status: "pending"
+        )
+      end
+    end
   end
 
   context "with charge model error" do

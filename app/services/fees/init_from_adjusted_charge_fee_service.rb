@@ -62,7 +62,7 @@ module Fees
         unit_amount_cents = unit_precise_amount_cents.round
         precise_amount_cents = units * unit_precise_amount_cents
         amount_cents = precise_amount_cents.round
-        precise_unit_amount = precise_amount_cents / (currency.subunit_to_unit * units)
+        precise_unit_amount = units.zero? ? 0 : precise_amount_cents / (currency.subunit_to_unit * units)
         amount_details = {}
       end
 
