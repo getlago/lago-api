@@ -25,12 +25,6 @@ Rspec.describe "All tables must have an organization_id" do
     ]
   end
 
-  let(:tables_to_migrate) do
-    %w[
-      refunds
-    ]
-  end
-
   it do
     query = <<~SQL
       SELECT DISTINCT
@@ -55,6 +49,6 @@ Rspec.describe "All tables must have an organization_id" do
       .reject { |table| internal_tables.include?(table) || tables_to_skip.include?(table) }
       .sort
 
-    expect(tables_without_organization_id).to match_array(tables_to_migrate)
+    expect(tables_without_organization_id).to be_empty
   end
 end

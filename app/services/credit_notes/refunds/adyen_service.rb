@@ -18,6 +18,7 @@ module CreditNotes
         adyen_result = create_adyen_refund
 
         refund = Refund.new(
+          organization: credit_note.organization_id,
           credit_note:,
           payment:,
           payment_provider: payment.payment_provider,
