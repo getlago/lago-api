@@ -19,6 +19,7 @@ module Wallets
         end
 
         attributes = {
+          organization_id: wallet.organization_id,
           paid_credits: rule_params[:paid_credits] || paid_credits || 0.0,
           granted_credits: rule_params[:granted_credits] || granted_credits || 0.0,
           threshold_credits: rule_params[:threshold_credits] || 0.0,

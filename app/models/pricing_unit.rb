@@ -21,17 +21,18 @@ end
 # Table name: pricing_units
 #
 #  id              :uuid             not null, primary key
-#  code            :string
-#  description     :string
-#  name            :string
-#  short_name      :string
+#  code            :string           not null
+#  description     :text
+#  name            :string           not null
+#  short_name      :string           not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  organization_id :uuid             not null
 #
 # Indexes
 #
-#  index_pricing_units_on_organization_id  (organization_id)
+#  index_pricing_units_on_code_and_organization_id  (code,organization_id) UNIQUE
+#  index_pricing_units_on_organization_id           (organization_id)
 #
 # Foreign Keys
 #

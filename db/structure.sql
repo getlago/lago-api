@@ -118,6 +118,7 @@ ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_5628a713de;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
 ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS fk_rails_526379cd99;
+ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_52370612ae;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_521b5240ed;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_51ac39a0c6;
 ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS fk_rails_51077e7c0e;
@@ -238,6 +239,7 @@ DROP INDEX IF EXISTS public.index_refunds_on_payment_id;
 DROP INDEX IF EXISTS public.index_refunds_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_wallet_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_started_at;
+DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_organization_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_expiration_at;
 DROP INDEX IF EXISTS public.index_quantified_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_quantified_events_on_group_id;
@@ -3266,7 +3268,8 @@ CREATE TABLE public.recurring_transaction_rules (
     transaction_metadata jsonb DEFAULT '[]'::jsonb,
     expiration_at timestamp(6) without time zone,
     terminated_at timestamp(6) without time zone,
-    status integer DEFAULT 0
+    status integer DEFAULT 0,
+    organization_id uuid
 );
 
 
@@ -6181,6 +6184,13 @@ CREATE INDEX index_recurring_transaction_rules_on_expiration_at ON public.recurr
 
 
 --
+-- Name: index_recurring_transaction_rules_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_recurring_transaction_rules_on_organization_id ON public.recurring_transaction_rules USING btree (organization_id);
+
+
+--
 -- Name: index_recurring_transaction_rules_on_started_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7028,6 +7038,14 @@ ALTER TABLE ONLY public.commitments
 
 ALTER TABLE ONLY public.credits
     ADD CONSTRAINT fk_rails_521b5240ed FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
+
+
+--
+-- Name: recurring_transaction_rules fk_rails_52370612ae; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_transaction_rules
+    ADD CONSTRAINT fk_rails_52370612ae FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7909,6 +7927,9 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250519084649'),
+('20250519084648'),
+('20250519084647'),
 ('20250517100023'),
 ('20250516115757'),
 ('20250516115756'),
