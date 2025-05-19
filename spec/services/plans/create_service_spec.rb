@@ -106,6 +106,7 @@ RSpec.describe Plans::CreateService, type: :service do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
+      allow(Utils::ActivityLog).to receive(:produce)
     end
 
     it "creates a plan" do
@@ -159,12 +160,10 @@ RSpec.describe Plans::CreateService, type: :service do
           plan = Plan.order(:created_at).last
           usage_thresholds = plan.usage_thresholds.order(threshold_display_name: :asc)
 
-          aggregate_failures do
-            expect(plan.usage_thresholds.count).to eq(3)
-            expect(usage_thresholds.first).to have_attributes(amount_cents: 1_000)
-            expect(usage_thresholds.second).to have_attributes(amount_cents: 10_000)
-            expect(usage_thresholds.third).to have_attributes(amount_cents: 100)
-          end
+          expect(plan.usage_thresholds.count).to eq(3)
+          expect(usage_thresholds.first).to have_attributes(amount_cents: 1_000)
+          expect(usage_thresholds.second).to have_attributes(amount_cents: 10_000)
+          expect(usage_thresholds.third).to have_attributes(amount_cents: 100)
         end
       end
     end
@@ -228,6 +227,12 @@ RSpec.describe Plans::CreateService, type: :service do
           parent_id: nil
         }
       )
+    end
+
+    it "produces an activity log" do
+      result = described_class.call(create_args)
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(result.plan, "plan.created")
     end
 
     context "when premium" do
@@ -316,11 +321,9 @@ RSpec.describe Plans::CreateService, type: :service do
       it "returns an error" do
         result = plans_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
       end
 
       context "with premium charge model" do
@@ -355,11 +358,9 @@ RSpec.describe Plans::CreateService, type: :service do
         it "returns an error" do
           result = plans_service.call
 
-          aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:charge_model]).to eq(["value_is_mandatory"])
-          end
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:charge_model]).to eq(["value_is_mandatory"])
         end
       end
     end
