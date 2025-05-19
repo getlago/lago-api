@@ -22,7 +22,7 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
 
     allow(BillableMetrics::DeleteEventsJob).to receive(:perform_later).and_call_original
     allow(Invoices::RefreshDraftService).to receive(:call)
-    allow(Utils::ActivityLog).to receive(:produce)
+    allow(Utils::ActivityLog).to receive(:produce).and_call_original
   end
 
   describe ".call" do
