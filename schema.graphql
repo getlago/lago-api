@@ -568,6 +568,7 @@ type AvalaraIntegration {
   accountId: String
   code: String!
   companyCode: String!
+  companyId: String
   failedInvoicesCount: Int
   hasMappingsConfigured: Boolean
   id: ID!
