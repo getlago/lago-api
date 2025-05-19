@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe PaymentReceipts::CreateService, type: :service do
-  subject(:service) { described_class.new(payment:) }
-
   let(:invoice) { create(:invoice, customer:, organization:, total_amount_cents: 10000, status: :finalized) }
   let(:organization) { create(:organization) }
   let(:billing_entity) { organization.default_billing_entity }
@@ -14,7 +12,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
   describe "#call" do
     context "when issuing receipts is not enabled" do
       it "returns forbidden failure" do
-        result = service.call
+        result = described_class.call(payment:)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
@@ -29,7 +27,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
         let(:customer) { create(:customer, organization:, account_type: :partner) }
 
         it "returns result" do
-          result = service.call
+          result = described_class.call(payment:)
 
           expect(result).to be_success
           expect(result.payment_receipt).to be_nil
@@ -41,7 +39,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
           let(:payment) { nil }
 
           it "returns not found failure" do
-            result = service.call
+            result = described_class.call(payment:)
 
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -53,7 +51,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
             before { create(:payment_receipt, payment:, organization:) }
 
             it "returns result" do
-              result = service.call
+              result = described_class.call(payment:)
 
               expect(result).to be_success
               expect(result.payment_receipt).to be_nil
@@ -67,7 +65,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
               let(:payable_payment_status) { Payment::PAYABLE_PAYMENT_STATUS.reject { _1 == "succeeded" }.sample }
 
               it "returns result" do
-                result = service.call
+                result = described_class.call(payment:)
 
                 expect(result).to be_success
                 expect(result.payment_receipt).to be_nil
@@ -80,15 +78,16 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
 
               before do
                 allow(PaymentReceipt).to receive(:new).and_return(payment_receipt)
+                allow(Utils::ActivityLog).to receive(:produce)
               end
 
               it "creates the payment receipt" do
-                expect { service.call }.to change(PaymentReceipt, :count).by(1)
+                expect { described_class.call(payment:) }.to change(PaymentReceipt, :count).by(1)
               end
 
               it "enqueues the webhook job" do
                 expect do
-                  service.call
+                  described_class.call(payment:)
                 end.to have_enqueued_job(SendWebhookJob).with("payment_receipt.created", payment_receipt)
               end
 
@@ -96,8 +95,14 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
                 expect do
                   billing_entity.email_settings << "payment_receipt.created"
                   billing_entity.save!
-                  service.call
+                  described_class.call(payment:)
                 end.to have_enqueued_job(PaymentReceipts::GeneratePdfAndNotifyJob).with(payment_receipt:, email: true)
+              end
+
+              it "produces an activity log" do
+                payment_receipt = described_class.call(payment:).payment_receipt
+
+                expect(Utils::ActivityLog).to have_received(:produce).with(payment_receipt, "payment_receipt.created")
               end
             end
           end
