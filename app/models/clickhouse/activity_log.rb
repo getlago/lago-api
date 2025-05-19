@@ -21,6 +21,7 @@ module Clickhouse
       invoice_drafted: "invoice.drafted",
       invoice_failed: "invoice.failed",
       invoice_created: "invoice.created",
+      invoice_one_off_created: "invoice.one_off_created",
       invoice_paid_credit_added: "invoice.paid_credit_added",
       invoice_generated: "invoice.generated",
       invoice_payment_status_updated: "invoice.payment_status_updated",
