@@ -30,7 +30,7 @@ Rails.application.configure do
     :info
   end
 
-  config.assume_ssl = true
+  config.assume_ssl = !ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_SSL"])
   config.force_ssl = false
 
   config.action_mailer.perform_caching = false
