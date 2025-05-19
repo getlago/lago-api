@@ -27,7 +27,6 @@ Rspec.describe "All tables must have an organization_id" do
   let(:tables_to_migrate) do
     %w[
       integration_collection_mappings
-      recurring_transaction_rules
       refunds
       versions
     ]

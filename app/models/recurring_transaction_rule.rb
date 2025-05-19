@@ -4,6 +4,7 @@ class RecurringTransactionRule < ApplicationRecord
   include PaperTrailTraceable
 
   belongs_to :wallet
+  belongs_to :organization, optional: true
 
   STATUSES = [
     :active,
@@ -65,15 +66,18 @@ end
 #  trigger                             :integer          default("interval"), not null
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
+#  organization_id                     :uuid
 #  wallet_id                           :uuid             not null
 #
 # Indexes
 #
-#  index_recurring_transaction_rules_on_expiration_at  (expiration_at)
-#  index_recurring_transaction_rules_on_started_at     (started_at)
-#  index_recurring_transaction_rules_on_wallet_id      (wallet_id)
+#  index_recurring_transaction_rules_on_expiration_at    (expiration_at)
+#  index_recurring_transaction_rules_on_organization_id  (organization_id)
+#  index_recurring_transaction_rules_on_started_at       (started_at)
+#  index_recurring_transaction_rules_on_wallet_id        (wallet_id)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (wallet_id => wallets.id)
 #
