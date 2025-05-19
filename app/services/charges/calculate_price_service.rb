@@ -3,6 +3,7 @@
 module Charges
   class CalculatePriceService < BaseService
     Result = BaseResult[:charge_amount_cents, :subscription_amount_cents, :total_amount_cents]
+    AggregationResult = Struct.new(:aggregation, :total_aggregated_units, :current_usage_units, :full_units_number)
 
     def initialize(billable_metric:, subscription:, date:, units:)
       @billable_metric = billable_metric
@@ -37,17 +38,15 @@ module Charges
 
       charge_model = ChargeModelFactory.new_instance(
         charge:,
-        aggregation_result: build_aggregation_result,
+        aggregation_result:,
         properties: filtered_properties
       )
 
       charge_model.apply.amount
     end
 
-    def build_aggregation_result
-      Struct.new(
-        :aggregation, :total_aggregated_units, :current_usage_units, :full_units_number
-      ).new(units, units, units, units)
+    def aggregation_result
+      AggregationResult.new(units, units, units, units)
     end
   end
 end
