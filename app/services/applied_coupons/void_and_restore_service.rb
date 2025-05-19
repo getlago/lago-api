@@ -14,9 +14,14 @@ module AppliedCoupons
       return result if unlimited_usage? || expired?
 
       applied_coupon.with_lock do
-        applied_coupon.mark_as_voided!
-        result.restored_applied_coupon = create_new_applied_coupon!
+        if applied_coupon.recurring?
+          result.restored_applied_coupon = restore_recurring_usage!
+        else
+          applied_coupon.mark_as_voided!
+          result.restored_applied_coupon = create_new_applied_coupon!
+        end
       end
+
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -34,6 +39,16 @@ module AppliedCoupons
       applied_coupon.coupon.expiration_at&.< Time.current
     end
 
+    def restore_recurring_usage!
+      applied_coupon.update!(
+        frequency_duration_remaining: [
+          (applied_coupon.frequency_duration_remaining || 0) + 1,
+          applied_coupon.frequency_duration
+        ].min
+      )
+      applied_coupon
+    end
+
     def create_new_applied_coupon!
       params = {
         amount_cents: applied_coupon.amount_cents,
@@ -43,16 +58,6 @@ module AppliedCoupons
         frequency_duration: applied_coupon.frequency_duration
       }
 
-      # For recurring coupons, calculate the correct remaining usage count
-      if applied_coupon.recurring?
-        # Count active credits associated with this coupon
-        active_credits_count = count_active_credits
-
-        # Calculate remaining usage based on original frequency duration minus active credits
-        # This ensures the correct count regardless of the order invoices are voided
-        params[:frequency_duration_remaining] = applied_coupon.frequency_duration - active_credits_count
-      end
-
       create_result = AppliedCoupons::CreateService.call(
         customer: applied_coupon.customer,
         coupon: applied_coupon.coupon,
@@ -61,14 +66,6 @@ module AppliedCoupons
 
       create_result.raise_if_error!
       create_result.applied_coupon
-    end
-
-    def count_active_credits
-      Credit.joins(:invoice)
-        .where(applied_coupon_id: applied_coupon.id)
-        .where.not(id: credit.id)
-        .where.not(invoices: {status: :voided})
-        .count
     end
   end
 end
