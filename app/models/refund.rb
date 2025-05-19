@@ -7,6 +7,7 @@ class Refund < ApplicationRecord
   belongs_to :credit_note
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, class_name: "PaymentProviderCustomers::BaseCustomer"
+  belongs_to :organization, optional: true
 end
 
 # == Schema Information
@@ -20,6 +21,7 @@ end
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
 #  credit_note_id               :uuid             not null
+#  organization_id              :uuid
 #  payment_id                   :uuid             not null
 #  payment_provider_customer_id :uuid             not null
 #  payment_provider_id          :uuid
@@ -28,6 +30,7 @@ end
 # Indexes
 #
 #  index_refunds_on_credit_note_id                (credit_note_id)
+#  index_refunds_on_organization_id               (organization_id)
 #  index_refunds_on_payment_id                    (payment_id)
 #  index_refunds_on_payment_provider_customer_id  (payment_provider_customer_id)
 #  index_refunds_on_payment_provider_id           (payment_provider_id)
@@ -35,6 +38,7 @@ end
 # Foreign Keys
 #
 #  fk_rails_...  (credit_note_id => credit_notes.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_id => payments.id)
 #  fk_rails_...  (payment_provider_customer_id => payment_provider_customers.id)
 #  fk_rails_...  (payment_provider_id => payment_providers.id)

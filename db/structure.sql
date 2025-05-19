@@ -89,6 +89,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_78f6642ddf;
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_7886e1bc34;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_77f2d4440d;
+ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_778360c382;
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_76ceb88c74;
 ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rails_755d734f25;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
@@ -237,6 +238,7 @@ DROP INDEX IF EXISTS public.index_search_quantified_events;
 DROP INDEX IF EXISTS public.index_refunds_on_payment_provider_id;
 DROP INDEX IF EXISTS public.index_refunds_on_payment_provider_customer_id;
 DROP INDEX IF EXISTS public.index_refunds_on_payment_id;
+DROP INDEX IF EXISTS public.index_refunds_on_organization_id;
 DROP INDEX IF EXISTS public.index_refunds_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_wallet_id;
 DROP INDEX IF EXISTS public.index_recurring_transaction_rules_on_started_at;
@@ -3291,7 +3293,8 @@ CREATE TABLE public.refunds (
     status character varying NOT NULL,
     provider_refund_id character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -6222,6 +6225,13 @@ CREATE INDEX index_refunds_on_credit_note_id ON public.refunds USING btree (cred
 
 
 --
+-- Name: index_refunds_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_refunds_on_organization_id ON public.refunds USING btree (organization_id);
+
+
+--
 -- Name: index_refunds_on_payment_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7299,6 +7309,14 @@ ALTER TABLE ONLY public.commitments
 
 
 --
+-- Name: refunds fk_rails_778360c382; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.refunds
+    ADD CONSTRAINT fk_rails_778360c382 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: credit_notes_taxes fk_rails_77f2d4440d; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7945,6 +7963,9 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250519092053'),
+('20250519092052'),
+('20250519092051'),
 ('20250519085911'),
 ('20250519085910'),
 ('20250519085909'),
