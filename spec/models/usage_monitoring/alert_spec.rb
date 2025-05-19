@@ -21,7 +21,7 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
       it do
         alert = build(:billable_metric_usage_amount_alert, billable_metric_id: nil)
         expect(alert).to be_invalid
-        expect(alert.errors[:billable_metric_id]).to include("is required for `billable_metric_usage_amount` alert type")
+        expect(alert.errors[:billable_metric]).to eq ["value_is_mandatory"]
       end
     end
 

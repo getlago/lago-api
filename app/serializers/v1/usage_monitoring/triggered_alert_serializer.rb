@@ -8,7 +8,7 @@ module V1
           lago_id: model.id,
           lago_alert_id: model.alert.id,
           lago_subscription_id: model.subscription_id,
-          lago_billable_metric_id: model.alert.billable_metric_id,
+          billable_metric_code: model.alert.billable_metric&.code,
           alert_name: model.alert.name,
           alert_code: model.alert.code,
           alert_type: model.alert.alert_type,

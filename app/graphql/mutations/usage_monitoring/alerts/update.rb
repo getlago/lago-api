@@ -16,13 +16,11 @@ module Mutations
         type Types::UsageMonitoring::Alerts::Object
 
         def resolve(**args)
-          alert = current_organization.alerts.find(args[:id])
+          alert = current_organization.alerts.find_by(id: args[:id])
+
           result = ::UsageMonitoring::UpdateAlertService.call(
             alert:,
-            params: args,
-            billable_metric: args[:billable_metric_id] ?
-              current_organization.billable_metrics.find(args[:billable_metric_id]) :
-              nil
+            params: args
           )
 
           result.success? ? result.alert : result_error(result)

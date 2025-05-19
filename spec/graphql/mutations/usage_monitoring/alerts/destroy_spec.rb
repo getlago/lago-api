@@ -51,4 +51,23 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Destroy, type: :graphql do
     expect(result_data["thresholds"]).to be_empty
     expect(result_data["deletedAt"]).to start_with Time.current.year.to_s
   end
+
+  context "when alert is not found" do
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {id: SecureRandom.uuid}
+        }
+      )
+
+      response = result["errors"].first["extensions"]
+
+      expect(response["status"]).to eq(404)
+      expect(response["details"]["alert"]).to include("not_found")
+    end
+  end
 end

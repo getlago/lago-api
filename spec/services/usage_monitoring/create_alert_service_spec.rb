@@ -4,11 +4,11 @@ require "rails_helper"
 
 RSpec.describe UsageMonitoring::CreateAlertService do
   describe ".call" do
-    subject(:result) { described_class.call(organization:, subscription:, params:, billable_metric:) }
+    subject(:result) { described_class.call(organization:, subscription:, params:) }
 
     let(:organization) { create(:organization) }
     let(:thresholds) { [{code: "warning", value: 80}, {code: "critical", value: 120}] }
-    let(:params) { {alert_type: "usage_amount", name: "Main", thresholds:, code: "first"} }
+    let(:params) { {alert_type: "usage_amount", name: "Main", thresholds:, code: "first", billable_metric_id: billable_metric&.id} }
     let(:subscription) { create(:subscription, organization:) }
     let(:billable_metric) { nil }
 
@@ -44,12 +44,12 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       it "returns a record validation failure result" do
         create(:billable_metric_usage_amount_alert, organization:, code: "first", subscription_external_id: subscription.external_id)
         expect(result).to be_failure
-        expect(result.error.message).to include("code_already_exists")
+        expect(result.error.messages[:code]).to eq(["value_already_exists"])
       end
     end
 
     context "with billable_metric_usage_amount type" do
-      let(:params) { {alert_type: "billable_metric_usage_amount", thresholds:, code: "first"} }
+      let(:params) { {alert_type: "billable_metric_usage_amount", billable_metric_id: billable_metric.id, thresholds:, code: "first"} }
       let(:billable_metric) { create(:billable_metric, organization:) }
 
       it do
@@ -66,7 +66,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
         it "returns a record validation failure result" do
           expect(result).to be_failure
-          expect(result.error.message).to include("is required for `billable_metric_usage_amount` alert type")
+          expect(result.error.messages[:billable_metric]).to eq(["value_is_mandatory"])
         end
       end
     end
@@ -80,11 +80,11 @@ RSpec.describe UsageMonitoring::CreateAlertService do
     end
 
     context "when code is blank" do
-      let(:params) { {alert_type: "usage", code: nil, thresholds: [1]} }
+      let(:params) { {alert_type: "usage_amount", code: nil, thresholds: [1]} }
 
       it "returns a validation failure result" do
         expect(result).to be_failure
-        expect(result.error.message).to include("code_must_be_present")
+        expect(result.error.messages[:code]).to eq(["value_is_mandatory"])
       end
     end
 
@@ -93,16 +93,16 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
       it "returns a validation failure result" do
         expect(result).to be_failure
-        expect(result.error.message).to include("alert_type_must_be_present")
+        expect(result.error.messages[:alert_type]).to eq(%w[value_is_mandatory value_is_invalid])
       end
     end
 
     context "when thresholds are blank" do
-      let(:params) { {alert_type: "usage", code: "ok", thresholds: []} }
+      let(:params) { {alert_type: "usage_amount", code: "ok", thresholds: []} }
 
       it "returns a validation failure result" do
         expect(result).to be_failure
-        expect(result.error.message).to include("thresholds_must_be_present")
+        expect(result.error.messages[:thresholds]).to include("value_is_mandatory")
       end
     end
 
@@ -111,7 +111,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
 
       it "returns a record validation failure result" do
         expect(result).to be_failure
-        expect(result.error.message).to include("code_must_be_present")
+        expect(result.error.messages[:code]).to eq(["value_is_mandatory"])
       end
     end
 

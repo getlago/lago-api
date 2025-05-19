@@ -51,8 +51,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     alert_on_bm = UsageMonitoring::CreateAlertService.call!(
       organization:,
       subscription:,
-      billable_metric: bm_2,
-      params: {alert_type: :billable_metric_usage_amount, code: :bm, thresholds: [
+      params: {alert_type: :billable_metric_usage_amount, code: :bm, billable_metric: bm_2, thresholds: [
         {value: 399_00, code: :warn},
         {value: 1000_00, code: :alert}
       ]}

@@ -4,20 +4,16 @@ module UsageMonitoring
   class UpdateAlertService < BaseService
     Result = BaseResult[:alert]
 
-    def initialize(alert:, params:, billable_metric: nil)
+    def initialize(alert:, params:)
       @alert = alert
       @params = params
-      @billable_metric = billable_metric
       super
     end
 
     def call
-      result.alert = alert
+      return result.not_found_failure!(resource: "alert") unless alert
 
-      # NOTE: If the billable_metric isn't already set, it means it's not a BillableMetric*Alert
-      if billable_metric && alert.billable_metric.nil?
-        return result.single_validation_failure!(field: :billable_metric, error_code: "invalid_alert_type")
-      end
+      result.alert = alert
 
       ActiveRecord::Base.transaction do
         alert.name = params[:name] if params.key?(:name)
@@ -34,11 +30,18 @@ module UsageMonitoring
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-      result
     end
 
     private
 
-    attr_reader :alert, :params, :billable_metric
+    attr_reader :alert, :params
+
+    def billable_metric
+      @billable_metric ||= if params[:billable_metric_id]
+        BillableMetric.find_by(id: params[:billable_metric_id])
+      elsif params[:billable_metric_code]
+        BillableMetric.find_by(code: params[:billable_metric_code])
+      end
+    end
   end
 end

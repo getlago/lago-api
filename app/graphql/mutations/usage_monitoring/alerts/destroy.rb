@@ -17,7 +17,7 @@ module Mutations
         type Types::UsageMonitoring::Alerts::Object
 
         def resolve(**args)
-          alert = current_organization.alerts.find(args[:id])
+          alert = current_organization.alerts.find_by(id: args[:id])
           result = ::UsageMonitoring::DestroyAlertService.call(alert:)
 
           result.success? ? result.alert : result_error(result)

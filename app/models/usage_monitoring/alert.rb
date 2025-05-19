@@ -29,7 +29,10 @@ module UsageMonitoring
       foreign_key: :usage_monitoring_alert_id,
       class_name: "UsageMonitoring::TriggeredAlert"
 
-    validate :billable_metric_when_required
+    validates :alert_type, presence: true, inclusion: {in: STI_MAPPING.keys}
+    validates :code, presence: true
+    validates :billable_metric, presence: true, if: :need_billable_metric?
+    validates :billable_metric, absence: true, unless: :need_billable_metric?
 
     def self.find_sti_class(type_name)
       STI_MAPPING.fetch(type_name).constantize
@@ -39,13 +42,14 @@ module UsageMonitoring
       STI_MAPPING.invert.fetch(name)
     end
 
-    def subscription
-      @subscription ||= organization
-        .subscriptions
-        .active
-        .order(started_at: :desc)
-        .find_by(external_id: subscription_external_id)
-    end
+    # TODO: Remove?
+    # def subscription
+    #   @subscription ||= organization
+    #     .subscriptions
+    #     .active
+    #     .order(started_at: :desc)
+    #     .find_by(external_id: subscription_external_id)
+    # end
 
     def find_thresholds_crossed(current)
       crossed = []
@@ -92,10 +96,8 @@ module UsageMonitoring
 
     private
 
-    def billable_metric_when_required
-      if billable_metric_id.blank? && BILLABLE_METRIC_TYPES.include?(alert_type)
-        errors.add(:billable_metric_id, "is required for `#{alert_type}` alert type")
-      end
+    def need_billable_metric?
+      BILLABLE_METRIC_TYPES.include?(alert_type)
     end
 
     def find_recurring_thresholds_crossed(previous, current, step, initial)

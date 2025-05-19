@@ -94,4 +94,26 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Update, type: :graphql do
       expect(result_data["billableMetric"]["code"]).to eq "new_bm"
     end
   end
+
+  context "when alert is not found" do
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: SecureRandom.uuid,
+            code: "new code"
+          }
+        }
+      )
+
+      response = result["errors"].first["extensions"]
+
+      expect(response["status"]).to eq(404)
+      expect(response["details"]["alert"]).to include("not_found")
+    end
+  end
 end

@@ -20,7 +20,7 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
       expect(payload["lago_id"]).to eq(triggered_alert.id)
       expect(payload["lago_alert_id"]).to eq(triggered_alert.alert.id)
       expect(payload["lago_subscription_id"]).to eq(triggered_alert.subscription.id)
-      expect(payload["lago_billable_metric_id"]).to be_nil
+      expect(payload["billable_metric_code"]).to be_nil
       expect(payload["alert_name"]).to eq("General Alert")
       expect(payload["alert_code"]).to eq("first")
       expect(payload["alert_type"]).to eq("usage_amount")
@@ -41,7 +41,7 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
       result = JSON.parse(serializer.to_json)
 
       payload = result["triggered_alert"]
-      expect(payload["lago_billable_metric_id"]).to eq alert.billable_metric_id
+      expect(payload["billable_metric_code"]).to eq alert.billable_metric.code
     end
   end
 end

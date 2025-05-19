@@ -3,10 +3,9 @@
 require "rails_helper"
 
 RSpec.describe UsageMonitoring::UpdateAlertService do
-  subject(:result) { described_class.call(alert:, params:, billable_metric:) }
+  subject(:result) { described_class.call(alert:, params:) }
 
   let(:alert) { create(:alert, thresholds: [1, 50]) }
-  let(:billable_metric) { nil }
 
   describe "#call" do
     let(:params) do
@@ -26,9 +25,16 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
       expect(alert.reload.thresholds.map(&:code)).to eq [nil, "warn", "critical"]
     end
 
-    context "with a billable metric" do
+    context "with a billable_metric_id" do
       let(:alert) { create(:billable_metric_usage_amount_alert, thresholds: [50]) }
       let(:billable_metric) { create(:billable_metric, organization: alert.organization) }
+      let(:params) do
+        {code: "new_code", name: "Renamed", billable_metric_id: billable_metric.id, thresholds: [
+          {value: 40},
+          {code: :warn, value: 100},
+          {code: :critical, value: 200, recurring: true}
+        ]}
+      end
 
       it "updates the alert" do
         expect(result).to be_success
@@ -40,7 +46,7 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
 
         it "returns an error" do
           expect(result).not_to be_success
-          expect(result.error.message).to include("invalid_alert_type")
+          expect(result.error.messages[:billable_metric]).to eq ["value_must_be_blank"]
         end
       end
     end

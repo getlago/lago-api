@@ -3,7 +3,7 @@
 FactoryBot.define do
   factory :alert, class: "UsageMonitoring::Alert" do
     association :organization
-    subscription_external_id { create(:subscription).external_id }
+    subscription_external_id { create(:subscription, organization_id: organization.id).external_id }
     name { "General Alert" }
     sequence(:code) { |n| "default#{n}" }
     alert_type { "usage_amount" }
@@ -39,6 +39,6 @@ FactoryBot.define do
     class: "UsageMonitoring::BillableMetricUsageAmountAlert",
     parent: :alert do
     alert_type { "billable_metric_usage_amount" }
-    association :billable_metric
+    billable_metric { association(:billable_metric, organization: organization) }
   end
 end

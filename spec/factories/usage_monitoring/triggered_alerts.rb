@@ -2,9 +2,9 @@
 
 FactoryBot.define do
   factory :triggered_alert, class: "UsageMonitoring::TriggeredAlert" do
-    association :alert
-    association :organization
-    association :subscription
+    alert
+    organization { alert.organization }
+    subscription { association(:subscription, organization: alert.organization) }
     current_value { 3000 }
     previous_value { 1000 }
     triggered_at { Time.current }
