@@ -138,6 +138,7 @@ ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_3a
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_3926855f12;
 ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS fk_rails_36cda06530;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_364213cc3e;
+ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_3640b4a66a;
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS fk_rails_34b5ee1894;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_34ab152115;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_348acbd245;
@@ -454,6 +455,7 @@ DROP INDEX IF EXISTS public.index_charges_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_charge_filters_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filters_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charge_filters_on_charge_id;
+DROP INDEX IF EXISTS public.index_charge_filter_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_deleted_at;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_charge_filter_values_on_billable_metric_filter_id;
@@ -1260,7 +1262,8 @@ CREATE TABLE public.charge_filter_values (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    "values" character varying[] DEFAULT '{}'::character varying[] NOT NULL
+    "values" character varying[] DEFAULT '{}'::character varying[] NOT NULL,
+    organization_id uuid
 );
 
 
@@ -4602,6 +4605,13 @@ CREATE INDEX index_charge_filter_values_on_deleted_at ON public.charge_filter_va
 
 
 --
+-- Name: index_charge_filter_values_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_charge_filter_values_on_organization_id ON public.charge_filter_values USING btree (organization_id);
+
+
+--
 -- Name: index_charge_filters_on_charge_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6802,6 +6812,14 @@ ALTER TABLE ONLY public.groups
 
 
 --
+-- Name: charge_filter_values fk_rails_3640b4a66a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.charge_filter_values
+    ADD CONSTRAINT fk_rails_3640b4a66a FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: subscriptions fk_rails_364213cc3e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7840,6 +7858,9 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250516115757'),
+('20250516115756'),
+('20250516115755'),
 ('20250516100026'),
 ('20250516100025'),
 ('20250516100024'),

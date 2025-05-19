@@ -9,6 +9,7 @@ class ChargeFilterValue < ApplicationRecord
 
   belongs_to :charge_filter, -> { with_discarded }
   belongs_to :billable_metric_filter, -> { with_discarded }
+  belongs_to :organization, optional: true
 
   validates :values, presence: true
   validate :validate_values
@@ -23,7 +24,7 @@ class ChargeFilterValue < ApplicationRecord
   def validate_values
     unless values.nil?
       return if values.count == 1 && values.first == ALL_FILTER_VALUES
-      return if values.all? { billable_metric_filter&.values&.include?(_1) } # rubocop:disable Performance/InefficientHashSearch
+      return if values.all? { billable_metric_filter&.values&.include?(it) } # rubocop:disable Performance/InefficientHashSearch
     end
 
     errors.add(:values, :inclusion)
@@ -41,6 +42,7 @@ end
 #  updated_at                :datetime         not null
 #  billable_metric_filter_id :uuid             not null
 #  charge_filter_id          :uuid             not null
+#  organization_id           :uuid
 #
 # Indexes
 #
@@ -48,9 +50,11 @@ end
 #  index_charge_filter_values_on_billable_metric_filter_id  (billable_metric_filter_id)
 #  index_charge_filter_values_on_charge_filter_id           (charge_filter_id)
 #  index_charge_filter_values_on_deleted_at                 (deleted_at)
+#  index_charge_filter_values_on_organization_id            (organization_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (billable_metric_filter_id => billable_metric_filters.id)
 #  fk_rails_...  (charge_filter_id => charge_filters.id)
+#  fk_rails_...  (organization_id => organizations.id)
 #

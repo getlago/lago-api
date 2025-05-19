@@ -68,7 +68,7 @@ module ChargeFilters
 
             filter_value = filter.values.find_or_initialize_by(
               billable_metric_filter_id: billable_metric_filter&.id
-            )
+            ) { it.organization_id = charge.organization_id }
 
             filter_value.values = values
             if filter_value.save! && touch && !filter_value.changed?
@@ -84,7 +84,7 @@ module ChargeFilters
         remove_query = charge.filters
         remove_query = remove_query.where(id: inherited_filter_ids) if cascade_updates && parent_filters
         remove_query.where.not(id: result.filters.map(&:id)).find_each do
-          remove_filter(_1)
+          remove_filter(it)
         end
       end
 
@@ -110,9 +110,9 @@ module ChargeFilters
     def remove_all
       ActiveRecord::Base.transaction do
         if cascade_updates
-          charge.filters.where(id: inherited_filter_ids).find_each { remove_filter(_1) }
+          charge.filters.where(id: inherited_filter_ids).find_each { remove_filter(it) }
         else
-          charge.filters.each { remove_filter(_1) }
+          charge.filters.each { remove_filter(it) }
         end
       end
     end
