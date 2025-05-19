@@ -123,6 +123,7 @@ ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXI
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_50d46d3679;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_4934f27a06;
 ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS fk_rails_49212d501e;
+ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_47d8081062;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_4117574b51;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_41088c7d45;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_3ff27d7624;
@@ -329,6 +330,7 @@ DROP INDEX IF EXISTS public.index_integration_resources_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_mappable;
 DROP INDEX IF EXISTS public.index_integration_mappings_on_integration_id;
+DROP INDEX IF EXISTS public.index_integration_items_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_items_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_integration_id;
@@ -2874,7 +2876,8 @@ CREATE TABLE public.integration_items (
     external_account_code character varying,
     external_name character varying,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5460,6 +5463,13 @@ CREATE INDEX index_integration_items_on_integration_id ON public.integration_ite
 
 
 --
+-- Name: index_integration_items_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_integration_items_on_organization_id ON public.integration_items USING btree (organization_id);
+
+
+--
 -- Name: index_integration_mappings_on_integration_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6904,6 +6914,14 @@ ALTER TABLE ONLY public.credit_notes
 
 
 --
+-- Name: integration_items fk_rails_47d8081062; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.integration_items
+    ADD CONSTRAINT fk_rails_47d8081062 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: webhooks fk_rails_49212d501e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7825,6 +7843,9 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250516100026'),
 ('20250516100025'),
 ('20250516100024'),
+('20250516095315'),
+('20250516095314'),
+('20250516095313'),
 ('20250516084025'),
 ('20250515085230'),
 ('20250515083935'),
