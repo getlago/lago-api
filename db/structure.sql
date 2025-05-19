@@ -24,6 +24,7 @@ ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_e88403f4b9;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
+ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_de6b3c3138;
@@ -343,6 +344,7 @@ DROP INDEX IF EXISTS public.index_integration_customers_on_integration_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_external_customer_id;
 DROP INDEX IF EXISTS public.index_integration_customers_on_customer_id_and_type;
 DROP INDEX IF EXISTS public.index_integration_customers_on_customer_id;
+DROP INDEX IF EXISTS public.index_integration_collection_mappings_on_organization_id;
 DROP INDEX IF EXISTS public.index_integration_collection_mappings_on_integration_id;
 DROP INDEX IF EXISTS public.index_int_items_on_external_id_and_int_id_and_type;
 DROP INDEX IF EXISTS public.index_int_collection_mappings_on_mapping_type_and_int_id;
@@ -2853,7 +2855,8 @@ CREATE TABLE public.integration_collection_mappings (
     type character varying NOT NULL,
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5463,6 +5466,13 @@ CREATE INDEX index_integration_collection_mappings_on_integration_id ON public.i
 
 
 --
+-- Name: index_integration_collection_mappings_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_integration_collection_mappings_on_organization_id ON public.integration_collection_mappings USING btree (organization_id);
+
+
+--
 -- Name: index_integration_customers_on_customer_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7801,6 +7811,14 @@ ALTER TABLE ONLY public.customer_metadata
 
 
 --
+-- Name: integration_collection_mappings fk_rails_e148d17c1f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.integration_collection_mappings
+    ADD CONSTRAINT fk_rails_e148d17c1f FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: charge_filters fk_rails_e711e8089e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7927,6 +7945,9 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250519085911'),
+('20250519085910'),
+('20250519085909'),
 ('20250519084649'),
 ('20250519084648'),
 ('20250519084647'),
