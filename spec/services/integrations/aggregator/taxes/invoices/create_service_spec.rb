@@ -143,6 +143,10 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
 
           expect(integration_customer.reload.external_customer_id).to eq(customer.external_id)
         end
+
+        it "does not create integration resource" do
+          expect { service_call }.not_to change { invoice.reload.integration_resources.count }
+        end
       end
 
       context "when Avalara taxes are successfully fetched for finalized invoice" do
@@ -216,6 +220,10 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
             expect(result.fees.first["tax_breakdown"].last["type"]).to eq("exempt")
             expect(result.fees.first["tax_breakdown"].last["rate"]).to eq("0.00")
           end
+        end
+
+        it "creates integration resource" do
+          expect { service_call }.to change { invoice.reload.integration_resources.count }.by(1)
         end
 
         context "when invoice is voided" do

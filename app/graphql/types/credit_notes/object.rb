@@ -85,7 +85,7 @@ module Types
       end
 
       def tax_provider_id
-        integration_customer = object.customer&.anrok_customer
+        integration_customer = object.customer&.tax_customer
         return nil unless integration_customer
 
         object.integration_resources.where(integration_id: integration_customer.integration_id).last&.external_id

@@ -5264,6 +5264,7 @@ type Invoice {
   subTotalExcludingTaxesAmountCents: BigInt!
   subTotalIncludingTaxesAmountCents: BigInt!
   subscriptions: [Subscription!]
+  taxProviderId: String
   taxProviderVoidable: Boolean!
   taxStatus: InvoiceTaxStatusTypeEnum
   taxesAmountCents: BigInt!
