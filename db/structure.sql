@@ -687,15 +687,15 @@ DROP TABLE IF EXISTS public.idempotency_records;
 DROP TABLE IF EXISTS public.groups;
 DROP TABLE IF EXISTS public.group_properties;
 DROP VIEW IF EXISTS public.exports_wallets;
-DROP VIEW IF EXISTS public.exports_wallet_transactions;
 DROP TABLE IF EXISTS public.wallets;
+DROP VIEW IF EXISTS public.exports_wallet_transactions;
 DROP TABLE IF EXISTS public.wallet_transactions;
 DROP VIEW IF EXISTS public.exports_taxes;
+DROP TABLE IF EXISTS public.taxes;
 DROP VIEW IF EXISTS public.exports_subscriptions;
 DROP VIEW IF EXISTS public.exports_plans;
 DROP TABLE IF EXISTS public.plans_taxes;
 DROP VIEW IF EXISTS public.exports_invoices_taxes;
-DROP TABLE IF EXISTS public.taxes;
 DROP TABLE IF EXISTS public.invoices_taxes;
 DROP VIEW IF EXISTS public.exports_invoices;
 DROP TABLE IF EXISTS public.invoices;
@@ -704,6 +704,7 @@ DROP VIEW IF EXISTS public.exports_fees_taxes;
 DROP TABLE IF EXISTS public.fees_taxes;
 DROP VIEW IF EXISTS public.exports_fees;
 DROP TABLE IF EXISTS public.subscriptions;
+DROP TABLE IF EXISTS public.plans;
 DROP TABLE IF EXISTS public.fees;
 DROP VIEW IF EXISTS public.exports_customers;
 DROP TABLE IF EXISTS public.payment_provider_customers;
@@ -712,7 +713,6 @@ DROP VIEW IF EXISTS public.exports_credit_notes_taxes;
 DROP VIEW IF EXISTS public.exports_credit_notes;
 DROP VIEW IF EXISTS public.exports_coupons;
 DROP VIEW IF EXISTS public.exports_charges;
-DROP TABLE IF EXISTS public.plans;
 DROP VIEW IF EXISTS public.exports_billable_metrics;
 DROP VIEW IF EXISTS public.exports_applied_coupons;
 DROP TABLE IF EXISTS public.events;
@@ -1768,7 +1768,7 @@ WITH (autovacuum_vacuum_scale_factor='0.005');
 --
 
 CREATE VIEW public.exports_applied_coupons AS
- SELECT cp.organization_id,
+ SELECT ac.organization_id,
     ac.id AS lago_id,
     ac.coupon_id AS lago_coupon_id,
     ac.customer_id AS lago_customer_id,
@@ -1845,36 +1845,11 @@ CREATE VIEW public.exports_billable_metrics AS
 
 
 --
--- Name: plans; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.plans (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    name character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    code character varying NOT NULL,
-    "interval" integer NOT NULL,
-    description character varying,
-    amount_cents bigint NOT NULL,
-    amount_currency character varying NOT NULL,
-    trial_period double precision,
-    pay_in_advance boolean DEFAULT false NOT NULL,
-    bill_charges_monthly boolean,
-    parent_id uuid,
-    deleted_at timestamp(6) without time zone,
-    pending_deletion boolean DEFAULT false NOT NULL,
-    invoice_display_name character varying
-);
-
-
---
 -- Name: exports_charges; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.exports_charges AS
- SELECT p.organization_id,
+ SELECT c.organization_id,
     c.id AS lago_id,
     c.billable_metric_id AS lago_billable_metric_id,
     c.invoice_display_name,
@@ -1905,8 +1880,7 @@ CREATE VIEW public.exports_charges AS
                   WHERE (cfcv.charge_filter_id = cf.id)))) AS json_agg
            FROM public.charge_filters cf
           WHERE (cf.charge_id = c.id)) AS charge_filters
-   FROM (public.charges c
-     LEFT JOIN public.plans p ON ((p.id = c.plan_id)));
+   FROM public.charges c;
 
 
 --
@@ -1960,7 +1934,7 @@ CREATE VIEW public.exports_coupons AS
 --
 
 CREATE VIEW public.exports_credit_notes AS
- SELECT c.organization_id,
+ SELECT cn.organization_id,
     cn.id AS lago_id,
     cn.sequential_id,
     cn.number,
@@ -2007,8 +1981,7 @@ CREATE VIEW public.exports_credit_notes AS
     ( SELECT json_agg(json_build_object('lago_id', ed.id, 'error_code', ed.error_code, 'details', ed.details)) AS json_agg
            FROM public.error_details ed
           WHERE (ed.owner_id = cn.id)) AS error_details
-   FROM (public.credit_notes cn
-     LEFT JOIN public.customers c ON ((c.id = cn.customer_id)));
+   FROM public.credit_notes cn;
 
 
 --
@@ -2016,8 +1989,8 @@ CREATE VIEW public.exports_credit_notes AS
 --
 
 CREATE VIEW public.exports_credit_notes_taxes AS
- SELECT c.organization_id,
-    cn.id AS lago_id,
+ SELECT cnt.organization_id,
+    cnt.id AS lago_id,
     cnt.tax_id AS lago_tax_id,
     cnt.credit_note_id AS lago_credit_note_id,
     cnt.tax_name,
@@ -2029,9 +2002,7 @@ CREATE VIEW public.exports_credit_notes_taxes AS
     cnt.amount_currency,
     cnt.created_at,
     cnt.updated_at
-   FROM ((public.credit_notes_taxes cnt
-     LEFT JOIN public.credit_notes cn ON ((cn.id = cnt.credit_note_id)))
-     LEFT JOIN public.customers c ON ((c.id = cn.customer_id)));
+   FROM public.credit_notes_taxes cnt;
 
 
 --
@@ -2209,6 +2180,31 @@ CREATE TABLE public.fees (
 
 
 --
+-- Name: plans; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.plans (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    name character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    code character varying NOT NULL,
+    "interval" integer NOT NULL,
+    description character varying,
+    amount_cents bigint NOT NULL,
+    amount_currency character varying NOT NULL,
+    trial_period double precision,
+    pay_in_advance boolean DEFAULT false NOT NULL,
+    bill_charges_monthly boolean,
+    parent_id uuid,
+    deleted_at timestamp(6) without time zone,
+    pending_deletion boolean DEFAULT false NOT NULL,
+    invoice_display_name character varying
+);
+
+
+--
 -- Name: subscriptions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2363,7 +2359,7 @@ CREATE TABLE public.fees_taxes (
 --
 
 CREATE VIEW public.exports_fees_taxes AS
- SELECT f.organization_id,
+ SELECT ft.organization_id,
     ft.id AS lago_id,
     ft.fee_id AS lago_fee_id,
     ft.tax_id AS lago_tax_id,
@@ -2375,8 +2371,7 @@ CREATE VIEW public.exports_fees_taxes AS
     ft.amount_currency,
     ft.created_at,
     ft.updated_at
-   FROM (public.fees_taxes ft
-     LEFT JOIN public.fees f ON ((f.id = ft.fee_id)));
+   FROM public.fees_taxes ft;
 
 
 --
@@ -2536,29 +2531,11 @@ CREATE TABLE public.invoices_taxes (
 
 
 --
--- Name: taxes; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.taxes (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    organization_id uuid NOT NULL,
-    description character varying,
-    code character varying NOT NULL,
-    name character varying NOT NULL,
-    rate double precision DEFAULT 0.0 NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    applied_to_organization boolean DEFAULT false NOT NULL,
-    auto_generated boolean DEFAULT false NOT NULL
-);
-
-
---
 -- Name: exports_invoices_taxes; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.exports_invoices_taxes AS
- SELECT t.organization_id,
+ SELECT it.organization_id,
     it.id AS lago_id,
     it.invoice_id AS lago_invoice_id,
     it.tax_id AS lago_tax_id,
@@ -2571,8 +2548,7 @@ CREATE VIEW public.exports_invoices_taxes AS
     it.fees_amount_cents,
     it.created_at,
     it.updated_at
-   FROM (public.invoices_taxes it
-     LEFT JOIN public.taxes t ON ((it.tax_id = t.id)));
+   FROM public.invoices_taxes it;
 
 
 --
@@ -2627,7 +2603,7 @@ CREATE VIEW public.exports_plans AS
 --
 
 CREATE VIEW public.exports_subscriptions AS
- SELECT c.organization_id,
+ SELECT s.organization_id,
     s.id AS lago_id,
     s.external_id,
     s.customer_id AS lago_customer_id,
@@ -2657,8 +2633,25 @@ CREATE VIEW public.exports_subscriptions AS
            FROM public.subscriptions ns
           WHERE (ns.previous_subscription_id = s.id))) AS lago_next_subscriptions_id,
     s.previous_subscription_id AS lago_previous_subscription_id
-   FROM (public.subscriptions s
-     LEFT JOIN public.customers c ON ((s.customer_id = c.id)));
+   FROM public.subscriptions s;
+
+
+--
+-- Name: taxes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.taxes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    description character varying,
+    code character varying NOT NULL,
+    name character varying NOT NULL,
+    rate double precision DEFAULT 0.0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    applied_to_organization boolean DEFAULT false NOT NULL,
+    auto_generated boolean DEFAULT false NOT NULL
+);
 
 
 --
@@ -2705,45 +2698,11 @@ CREATE TABLE public.wallet_transactions (
 
 
 --
--- Name: wallets; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.wallets (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    customer_id uuid NOT NULL,
-    status integer NOT NULL,
-    name character varying,
-    rate_amount numeric(30,5) DEFAULT 0.0 NOT NULL,
-    credits_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
-    consumed_credits numeric(30,5) DEFAULT 0.0 NOT NULL,
-    expiration_at timestamp without time zone,
-    last_balance_sync_at timestamp without time zone,
-    last_consumed_credit_at timestamp without time zone,
-    terminated_at timestamp without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    balance_cents bigint DEFAULT 0 NOT NULL,
-    balance_currency character varying NOT NULL,
-    consumed_amount_cents bigint DEFAULT 0 NOT NULL,
-    consumed_amount_currency character varying NOT NULL,
-    ongoing_balance_cents bigint DEFAULT 0 NOT NULL,
-    ongoing_usage_balance_cents bigint DEFAULT 0 NOT NULL,
-    credits_ongoing_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
-    credits_ongoing_usage_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
-    depleted_ongoing_balance boolean DEFAULT false NOT NULL,
-    invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
-    lock_version integer DEFAULT 0 NOT NULL,
-    ready_to_be_refreshed boolean DEFAULT false NOT NULL,
-    organization_id uuid
-);
-
-
---
 -- Name: exports_wallet_transactions; Type: VIEW; Schema: public; Owner: -
 --
 
 CREATE VIEW public.exports_wallet_transactions AS
- SELECT c.organization_id,
+ SELECT wt.organization_id,
     wt.id AS lago_id,
     wt.wallet_id AS lago_wallet_id,
         CASE wt.status
@@ -2778,9 +2737,41 @@ CREATE VIEW public.exports_wallet_transactions AS
     wt.updated_at,
     wt.invoice_requires_successful_payment,
     wt.metadata
-   FROM ((public.wallet_transactions wt
-     LEFT JOIN public.wallets w ON ((wt.wallet_id = w.id)))
-     LEFT JOIN public.customers c ON ((c.id = w.customer_id)));
+   FROM public.wallet_transactions wt;
+
+
+--
+-- Name: wallets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wallets (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    customer_id uuid NOT NULL,
+    status integer NOT NULL,
+    name character varying,
+    rate_amount numeric(30,5) DEFAULT 0.0 NOT NULL,
+    credits_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
+    consumed_credits numeric(30,5) DEFAULT 0.0 NOT NULL,
+    expiration_at timestamp without time zone,
+    last_balance_sync_at timestamp without time zone,
+    last_consumed_credit_at timestamp without time zone,
+    terminated_at timestamp without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    balance_cents bigint DEFAULT 0 NOT NULL,
+    balance_currency character varying NOT NULL,
+    consumed_amount_cents bigint DEFAULT 0 NOT NULL,
+    consumed_amount_currency character varying NOT NULL,
+    ongoing_balance_cents bigint DEFAULT 0 NOT NULL,
+    ongoing_usage_balance_cents bigint DEFAULT 0 NOT NULL,
+    credits_ongoing_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
+    credits_ongoing_usage_balance numeric(30,5) DEFAULT 0.0 NOT NULL,
+    depleted_ongoing_balance boolean DEFAULT false NOT NULL,
+    invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
+    lock_version integer DEFAULT 0 NOT NULL,
+    ready_to_be_refreshed boolean DEFAULT false NOT NULL,
+    organization_id uuid
+);
 
 
 --
@@ -2788,7 +2779,7 @@ CREATE VIEW public.exports_wallet_transactions AS
 --
 
 CREATE VIEW public.exports_wallets AS
- SELECT c.organization_id,
+ SELECT w.organization_id,
     w.id AS lago_id,
     w.customer_id AS lago_customer_id,
         CASE w.status
@@ -2812,8 +2803,7 @@ CREATE VIEW public.exports_wallets AS
     w.last_balance_sync_at,
     w.last_consumed_credit_at,
     w.invoice_requires_successful_payment
-   FROM (public.wallets w
-     LEFT JOIN public.customers c ON ((c.id = w.customer_id)));
+   FROM public.wallets w;
 
 
 --
@@ -8217,6 +8207,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250520143628'),
 ('20250520080000'),
 ('20250519092053'),
 ('20250519092052'),
