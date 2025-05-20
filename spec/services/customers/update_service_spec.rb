@@ -10,6 +10,10 @@ RSpec.describe Customers::UpdateService, type: :service do
   let(:payment_provider_code) { "stripe_1" }
 
   describe "update" do
+    before do
+      allow(Utils::ActivityLog).to receive(:produce)
+    end
+
     let(:customer) do
       create(
         :customer,
@@ -57,6 +61,12 @@ RSpec.describe Customers::UpdateService, type: :service do
         expect(updated_customer.shipping_city).to eq(shipping_address[:city])
         expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", updated_customer)
       end
+    end
+
+    it "produces an activity log" do
+      described_class.call(customer:, args: update_args)
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(customer, "customer.updated")
     end
 
     context "when updating the billing entity reference" do

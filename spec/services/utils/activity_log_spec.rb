@@ -52,7 +52,9 @@ RSpec.describe Utils::ActivityLog, type: :service do
             resource_type: "Invoice",
             organization_id: organization.id,
             activity_object: V1::InvoiceSerializer.new(invoice).serialize,
-            activity_object_changes: {}
+            activity_object_changes: {},
+            external_customer_id: invoice.customer.external_id,
+            external_subscription_id: nil
           }.to_json
         )
       end
@@ -77,7 +79,9 @@ RSpec.describe Utils::ActivityLog, type: :service do
               resource_type: "Invoice",
               organization_id: organization.id,
               activity_object: {},
-              activity_object_changes: {}
+              activity_object_changes: {},
+              external_customer_id: invoice.customer.external_id,
+              external_subscription_id: nil
             }.to_json
           )
         end

@@ -35,6 +35,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
   before do
     allow(SendWebhookJob).to receive(:perform_later)
     allow(CurrentContext).to receive(:source).and_return("api")
+    allow(Utils::ActivityLog).to receive(:produce)
   end
 
   it "creates a new customer" do
@@ -94,6 +95,12 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     customer = result.customer
 
     expect(SendWebhookJob).to have_received(:perform_later).with("customer.created", customer)
+  end
+
+  it "produces an activity log" do
+    result = described_class.call(organization:, params: create_args)
+
+    expect(Utils::ActivityLog).to have_received(:produce).with(result.customer, "customer.created")
   end
 
   context "when organization has multiple billing entities" do
