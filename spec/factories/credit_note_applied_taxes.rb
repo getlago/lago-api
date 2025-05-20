@@ -3,7 +3,8 @@
 FactoryBot.define do
   factory :credit_note_applied_tax, class: "CreditNote::AppliedTax" do
     credit_note
-    tax
+    tax { association(:tax, organization:) }
+    organization { credit_note.organization }
     tax_code { "vat-#{SecureRandom.uuid}" }
     tax_description { "French Standard VAT" }
     tax_name { "VAT" }

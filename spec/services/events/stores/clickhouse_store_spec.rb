@@ -21,7 +21,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
   let(:organization) { billable_metric.organization }
 
   let(:customer) { create(:customer, organization:) }
-  let(:subscription) { create(:subscription, customer:, started_at:) }
+  let(:subscription) { create(:subscription, organization:, customer:, started_at:) }
 
   let(:started_at) { DateTime.parse("2023-03-15") }
   let(:code) { billable_metric.code }

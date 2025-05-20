@@ -3,7 +3,8 @@
 FactoryBot.define do
   factory :credit_note do
     customer
-    invoice
+    invoice { association(:invoice, customer:, organization:) }
+    organization { customer.organization }
 
     issuing_date { Time.zone.today }
 

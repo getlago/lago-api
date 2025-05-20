@@ -112,6 +112,7 @@ RSpec.describe LifetimeUsages::CheckThresholdsService, type: :service, transacti
     let(:progressive_billing_invoice) do
       create(
         :invoice,
+        :subscription,
         organization:,
         customer:,
         status: "finalized",

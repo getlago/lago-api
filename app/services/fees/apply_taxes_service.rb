@@ -19,7 +19,7 @@ module Fees
 
       applicable_taxes.each do |tax|
         applied_tax = Fee::AppliedTax.new(
-          organization: fee.organization,
+          organization_id: fee.organization_id,
           fee:,
           tax:,
           tax_description: tax.description,

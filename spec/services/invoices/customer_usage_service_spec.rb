@@ -18,7 +18,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
   let(:customer) { create(:customer, organization:) }
   let(:customer_id) { customer&.id }
   let(:subscription_id) { subscription&.id }
-  let(:plan) { create(:plan, interval: "monthly") }
+  let(:plan) { create(:plan, organization:, interval: "monthly") }
   let(:timestamp) { Time.current }
   let(:apply_taxes) { true }
 
@@ -26,6 +26,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
     create(
       :subscription,
       plan:,
+      organization:,
       customer:,
       started_at: Time.zone.now - 2.years
     )

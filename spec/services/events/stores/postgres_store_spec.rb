@@ -22,7 +22,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
   let(:customer) { create(:customer, organization:) }
   let(:started_at) { Time.zone.parse("2023-03-15") }
-  let(:subscription) { create(:subscription, customer:, started_at:) }
+  let(:subscription) { create(:subscription, organization:, customer:, started_at:) }
 
   let(:code) { billable_metric.code }
 

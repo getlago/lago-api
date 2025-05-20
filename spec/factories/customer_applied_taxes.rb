@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :customer_applied_tax, class: "Customer::AppliedTax" do
     customer
-    tax
+    tax { association(:tax, organization:) }
+    organization { customer.organization }
   end
 end

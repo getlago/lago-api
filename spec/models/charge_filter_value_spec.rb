@@ -9,6 +9,7 @@ RSpec.describe ChargeFilterValue, type: :model do
 
   it { is_expected.to belong_to(:charge_filter) }
   it { is_expected.to belong_to(:billable_metric_filter) }
+  it { is_expected.to belong_to(:organization) }
 
   it { is_expected.to validate_presence_of(:values) }
 

@@ -158,7 +158,10 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
     let(:arguments) { "invoiceNumber: #{credit_note.invoice.number.inspect}" }
     let!(:credit_note) { create(:credit_note, customer:) }
 
-    before { create(:credit_note, customer:) }
+    before do
+      invoice = create(:invoice, customer:, number: "FOO-01")
+      create(:credit_note, customer:, invoice:)
+    end
 
     it "returns finalized credit_notes matching invoice number" do
       expect(response_collection.pluck("id")).to contain_exactly credit_note.id
@@ -207,7 +210,10 @@ RSpec.describe Resolvers::CreditNotesResolver, type: :graphql do
     let(:arguments) { "searchTerm: #{credit_note.number.inspect}" }
     let!(:credit_note) { create(:credit_note, customer:) }
 
-    before { create(:credit_note, customer:) }
+    before do
+      invoice = create(:invoice, customer:, number: "FOO-01")
+      create(:credit_note, customer:, invoice:)
+    end
 
     it "returns finalized credit_notes matching the terms" do
       expect(response_collection.pluck("id")).to contain_exactly credit_note.id

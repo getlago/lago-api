@@ -33,7 +33,7 @@ RSpec.describe Invoices::Preview::SubscriptionsService, type: :service do
       let(:customer) { create(:customer, organization:) }
 
       context "when external_ids are provided" do
-        let!(:subscriptions) { create_pair(:subscription, customer:) }
+        let!(:subscriptions) { create_pair(:subscription, organization:, customer:) }
         let(:subscription_ids) { subscriptions.map(&:external_id) }
 
         context "when terminated at is not provided" do
