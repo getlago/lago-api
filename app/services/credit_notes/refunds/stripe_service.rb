@@ -20,7 +20,7 @@ module CreditNotes
         stripe_result = create_stripe_refund
 
         refund = Refund.new(
-          organization: credit_note.organization_id,
+          organization_id: credit_note.organization_id,
           credit_note:,
           payment:,
           payment_provider: payment.payment_provider,
