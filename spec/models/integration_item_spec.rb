@@ -8,6 +8,7 @@ RSpec.describe IntegrationItem, type: :model do
   it_behaves_like "paper_trail traceable"
 
   it { is_expected.to belong_to(:integration) }
+  it { is_expected.to belong_to(:organization) }
   it { is_expected.to validate_presence_of(:external_id) }
   it { is_expected.to define_enum_for(:item_type).with_values(%i[standard tax account]) }
 

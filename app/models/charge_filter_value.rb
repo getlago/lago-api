@@ -9,7 +9,7 @@ class ChargeFilterValue < ApplicationRecord
 
   belongs_to :charge_filter, -> { with_discarded }
   belongs_to :billable_metric_filter, -> { with_discarded }
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   validates :values, presence: true
   validate :validate_values
