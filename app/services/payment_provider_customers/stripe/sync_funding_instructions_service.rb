@@ -86,7 +86,7 @@ module PaymentProviderCustomers
 
       def eu_bank_transfer_payload
         customer_country = customer.country&.upcase
-        organization_country = customer.organization.country&.upcase
+        organization_country = customer.billing_entity.country&.upcase
 
         country =
           if SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(customer_country)
@@ -94,10 +94,10 @@ module PaymentProviderCustomers
           elsif SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(organization_country)
             organization_country
           else
-            return result.service_failure!(
+            result.service_failure!(
               code: "missing_country",
               message: "No country found for customer or organization supported for EU bank transfer payload"
-            )
+            ).raise_if_error!
           end
 
         {

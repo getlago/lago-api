@@ -179,13 +179,8 @@ module PaymentProviders
         end
 
         def handle_eu_bank_transfer
-          customer_country = payment.customer.country.upcase
-          {type: "eu_bank_transfer", eu_bank_transfer: {country: customer_country}}
-        end
-
-        def handle_eu_bank_transfer_new
           customer_country = payment.customer.country&.upcase
-          organization_country = invoice.organization.country&.upcase
+          organization_country = payment.customer.billing_entity.country&.upcase
 
           country =
             if SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(customer_country)
@@ -193,7 +188,10 @@ module PaymentProviders
             elsif SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(organization_country)
               organization_country
             else
-              result.service_failure!(code: "eu_bank_transfer", message: "Unsupported EU bank transfer country")
+              result.service_failure!(
+                code: "missing_country",
+                message: "No country found for customer or organization supported for EU bank transfer payload"
+              ).raise_if_error!
             end
 
           {
