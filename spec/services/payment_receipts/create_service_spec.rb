@@ -62,7 +62,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
             before { payment.update!(payable_payment_status:) }
 
             context "when payment is not succeeded" do
-              let(:payable_payment_status) { Payment::PAYABLE_PAYMENT_STATUS.reject { _1 == "succeeded" }.sample }
+              let(:payable_payment_status) { Payment::PAYABLE_PAYMENT_STATUS.reject { |status| status == "succeeded" }.sample }
 
               it "returns result" do
                 result = described_class.call(payment:)
