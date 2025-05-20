@@ -12,6 +12,11 @@ module Customers
       super
     end
 
+    activity_loggable(
+      action: "customer.created",
+      record: -> { result.customer }
+    )
+
     def call
       return result.not_found_failure!(resource: "organization") unless organization
 
