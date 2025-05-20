@@ -18,6 +18,7 @@ module CreditNotes
       return result.not_found_failure!(resource: "credit_note") if credit_note.blank? || !credit_note.finalized?
 
       if should_generate_pdf?
+        # TODO.
         generate_pdf(credit_note)
         SendWebhookJob.perform_later("credit_note.generated", credit_note)
       end
