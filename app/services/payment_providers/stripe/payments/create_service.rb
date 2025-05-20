@@ -4,6 +4,8 @@ module PaymentProviders
   module Stripe
     module Payments
       class CreateService < BaseService
+        SUPPORTED_EU_BANK_TRANSFER_COUNTRIES = %w[BE DE ES FR IE NL].freeze
+
         def initialize(payment:, reference:, metadata:)
           @payment = payment
           @reference = reference
@@ -179,6 +181,24 @@ module PaymentProviders
         def handle_eu_bank_transfer
           customer_country = payment.customer.country.upcase
           {type: "eu_bank_transfer", eu_bank_transfer: {country: customer_country}}
+        end
+        def handle_eu_bank_transfer_new
+          customer_country = payment.customer.country&.upcase
+          organization_country = invoice.organization.country&.upcase
+
+          country =
+            if SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(customer_country)
+              customer_country
+            elsif SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(organization_country)
+              organization_country
+            else
+              result.service_failure!(code: "eu_bank_transfer", message: "Unsupported EU bank transfer country")
+            end
+
+          {
+            type: "eu_bank_transfer",
+            eu_bank_transfer: {country: country}
+          }
         end
 
         def success_redirect_url

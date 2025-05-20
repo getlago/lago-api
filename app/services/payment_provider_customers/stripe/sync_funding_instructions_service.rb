@@ -4,6 +4,7 @@ module PaymentProviderCustomers
   module Stripe
     class SyncFundingInstructionsService < BaseService
       Result = BaseResult[:funding_instructions]
+      SUPPORTED_EU_BANK_TRANSFER_COUNTRIES = %w[BE DE ES FR IE NL].freeze
 
       def initialize(stripe_customer)
         @stripe_customer = stripe_customer
@@ -84,16 +85,25 @@ module PaymentProviderCustomers
       end
 
       def eu_bank_transfer_payload
-        customer_country = customer.country || customer.organization.country
+        customer_country = customer.country&.upcase
+        organization_country = customer.organization.country&.upcase
 
-        if customer_country.blank?
-          return result.service_failure!(
-            code: "missing_country",
-            message: "No country found for customer or organization to generate EU bank transfer payload"
-          )
-        end
+        country =
+          if SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(customer_country)
+            customer_country
+          elsif SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(organization_country)
+            organization_country
+          else
+            return result.service_failure!(
+              code: "missing_country",
+              message: "No country found for customer or organization supported for EU bank transfer payload"
+            )
+          end
 
-        {type: "eu_bank_transfer", eu_bank_transfer: {country: customer_country.upcase}}
+        {
+          type: "eu_bank_transfer",
+          eu_bank_transfer: {country: country}
+        }
       end
 
       def customer_currency
