@@ -7496,6 +7496,7 @@ type Properties {
   packageSize: BigInt
   perTransactionMaxAmount: String
   perTransactionMinAmount: String
+  pricingGroupKeys: [String!]
   rate: String
   volumeRanges: [VolumeRange!]
 }
@@ -7513,6 +7514,7 @@ input PropertiesInput {
   packageSize: BigInt
   perTransactionMaxAmount: String
   perTransactionMinAmount: String
+  pricingGroupKeys: [String!]
   rate: String
   volumeRanges: [VolumeRangeInput!]
 }
