@@ -19,6 +19,11 @@ module CreditNotes
       super
     end
 
+    activity_loggable(
+      action: "credit_note.created",
+      record: -> { result.credit_note }
+    )
+
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result.forbidden_failure! unless should_create_credit_note?
