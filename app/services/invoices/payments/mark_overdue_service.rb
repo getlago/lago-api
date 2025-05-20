@@ -9,6 +9,11 @@ module Invoices
         super
       end
 
+      activity_loggable(
+        action: "invoice.payment_overdue",
+        record: -> { invoice }
+      )
+
       def call
         return result.not_found_failure!(resource: "invoice") unless invoice
         return result.not_allowed_failure!(code: "invoice_not_finalized") unless invoice.finalized?
