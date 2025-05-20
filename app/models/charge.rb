@@ -59,6 +59,10 @@ class Charge < ApplicationRecord
     standard? || dynamic?
   end
 
+  def pricing_group_keys
+    properties["pricing_group_keys"].presence || properties["grouped_by"]
+  end
+
   def equal_properties?(charge)
     charge_model == charge.charge_model && properties == charge.properties
   end

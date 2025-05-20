@@ -5,9 +5,25 @@ module V1
     def serialize
       {
         invoice_display_name: model.invoice_display_name,
-        properties: model.properties,
+        properties:,
         values: model.to_h
       }
+    end
+
+    private
+
+    # TODO(pricing_group_keys): remove after deprecation of grouped_by
+    def properties
+      attributes = model.properties
+      if attributes["grouped_by"].present? && attributes["pricing_group_keys"].blank?
+        attributes["pricing_group_keys"] = attributes["grouped_by"]
+      end
+
+      if attributes["pricing_group_keys"].present? && attributes["grouped_by"].blank?
+        attributes["grouped_by"] = attributes["pricing_group_keys"]
+      end
+
+      attributes
     end
   end
 end

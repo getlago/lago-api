@@ -29,7 +29,7 @@ module BillableMetrics
             compute_grouped_by_precise_total_amount_cents(options:)
           end
 
-          result.aggregations.each { apply_rounding(_1) }
+          result.aggregations.each { apply_rounding(it) }
         else
           compute_aggregation(options:)
           if charge.dynamic?
