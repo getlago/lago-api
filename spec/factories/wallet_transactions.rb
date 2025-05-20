@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :wallet_transaction do
     wallet
+    organization { wallet.organization }
     transaction_type { "inbound" }
     status { "settled" }
     amount { "1.00" }
@@ -16,10 +17,10 @@ FactoryBot.define do
 
     trait :with_invoice do
       transient do
-        customer { association(:customer) }
+        customer { association(:customer, organization:) }
       end
 
-      invoice { association(:invoice, customer:, organization: customer.organization) }
+      invoice { association(:invoice, customer:, organization:) }
     end
   end
 end

@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :netsuite_collection_mapping, class: "IntegrationCollectionMappings::NetsuiteCollectionMapping" do
     association :integration, factory: :netsuite_integration
+    organization { integration.organization }
     mapping_type { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit].sample }
 
     settings do
@@ -19,6 +20,7 @@ FactoryBot.define do
 
   factory :xero_collection_mapping, class: "IntegrationCollectionMappings::XeroCollectionMapping" do
     association :integration, factory: :xero_integration
+    organization { integration.organization }
     mapping_type { %i[fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit account].sample }
 
     settings do

@@ -3,7 +3,8 @@
 FactoryBot.define do
   factory :charge do
     billable_metric
-    plan
+    organization { billable_metric.organization }
+    plan { association(:plan, organization: billable_metric.organization) }
     invoice_display_name { Faker::Fantasy::Tolkien.location }
 
     factory :standard_charge do
@@ -101,6 +102,16 @@ FactoryBot.define do
       pay_in_advance { true }
       invoiceable { false }
       regroup_paid_fees { "invoice" }
+    end
+
+    transient do
+      taxes { [] }
+
+      after(:create) do |charge, evaluator|
+        evaluator.taxes.each do |tax|
+          create(:charge_applied_tax, charge:, tax:)
+        end
+      end
     end
   end
 end

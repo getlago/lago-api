@@ -2,7 +2,7 @@
 
 class Commitment < ApplicationRecord
   belongs_to :plan
-  belongs_to :organization, optional: true
+  belongs_to :organization
   has_many :applied_taxes, class_name: "Commitment::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 

@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :commitment_applied_tax, class: "Commitment::AppliedTax" do
     commitment
-    tax
+    organization { commitment.organization }
+    tax { association(:tax, organization:) }
   end
 end

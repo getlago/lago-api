@@ -137,6 +137,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
       before do
         invoice = create(
           :invoice,
+          :subscription,
           organization:,
           customer:,
           status: "finalized",

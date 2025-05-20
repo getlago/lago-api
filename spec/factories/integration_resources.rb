@@ -2,8 +2,9 @@
 
 FactoryBot.define do
   factory :integration_resource do
-    association :syncable, factory: %i[invoice payment credit_note].sample
+    syncable { association(%i[invoice payment credit_note].sample, organization:) }
     association :integration, factory: :netsuite_integration
+    organization { integration.organization }
     external_id { SecureRandom.uuid }
   end
 end

@@ -5,6 +5,7 @@ FactoryBot.define do
     association :payable, factory: :invoice
     association :payment_provider, factory: :stripe_provider
     association :payment_provider_customer, factory: :stripe_customer
+    organization { payment_provider&.organization || payable&.organization || create(:organization) }
 
     amount_cents { 200 }
     amount_currency { "EUR" }

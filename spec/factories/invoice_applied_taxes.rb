@@ -3,7 +3,8 @@
 FactoryBot.define do
   factory :invoice_applied_tax, class: "Invoice::AppliedTax" do
     invoice
-    tax
+    organization { invoice.organization }
+    tax { association(:tax, organization:) }
     tax_code { tax&.code.presence || "vat-#{SecureRandom.uuid}" }
     tax_description { "French Standard VAT" }
     tax_name { "VAT" }

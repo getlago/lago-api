@@ -6,7 +6,7 @@ class BillableMetricFilter < ApplicationRecord
   self.discard_column = :deleted_at
 
   belongs_to :billable_metric, -> { with_discarded }
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   has_many :filter_values, class_name: "ChargeFilterValue", dependent: :destroy
   has_many :charge_filters, through: :filter_values

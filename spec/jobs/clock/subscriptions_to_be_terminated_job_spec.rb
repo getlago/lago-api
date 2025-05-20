@@ -11,13 +11,13 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
     let(:subscription2) { create(:subscription, ending_at: ending_at + 1.year) }
     let(:subscription3) { create(:subscription, ending_at: nil) }
     let(:webhook_started1) do
-      create(:webhook, :succeeded, object_id: subscription1.id, webhook_type: "subscription.started")
+      create(:webhook, :succeeded, object: subscription1, webhook_type: "subscription.started")
     end
     let(:webhook_started2) do
-      create(:webhook, :succeeded, object_id: subscription2.id, webhook_type: "subscription.started")
+      create(:webhook, :succeeded, object: subscription2, webhook_type: "subscription.started")
     end
     let(:webhook_started3) do
-      create(:webhook, :succeeded, object_id: subscription3.id, webhook_type: "subscription.started")
+      create(:webhook, :succeeded, object: subscription3, webhook_type: "subscription.started")
     end
 
     before do
@@ -80,7 +80,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
         create(
           :webhook,
           :succeeded,
-          object_id: subscription1.id,
+          object: subscription1,
           webhook_type: "subscription.termination_alert",
           created_at: Time.current + 2.months
         )
@@ -107,7 +107,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
         create(
           :webhook,
           :succeeded,
-          object_id: subscription1.id,
+          object: subscription1,
           webhook_type: "subscription.termination_alert",
           created_at: ending_at - 45.days
         )
@@ -134,7 +134,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
         create(
           :webhook,
           :succeeded,
-          object_id: subscription1.id,
+          object: subscription1,
           webhook_type: "subscription.termination_alert",
           created_at: ending_at - 45.days
         )
@@ -144,7 +144,7 @@ describe Clock::SubscriptionsToBeTerminatedJob, job: true do
         create(
           :webhook,
           :succeeded,
-          object_id: subscription1.id,
+          object: subscription1,
           webhook_type: "subscription.termination_alert",
           created_at: ending_at - 45.days
         )

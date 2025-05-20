@@ -3,7 +3,8 @@
 FactoryBot.define do
   factory :applied_coupon do
     customer
-    coupon
+    organization { customer.organization }
+    coupon { association(:coupon, organization:) }
 
     amount_cents { 200 }
     amount_currency { "EUR" }

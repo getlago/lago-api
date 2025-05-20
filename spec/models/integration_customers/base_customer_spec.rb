@@ -12,6 +12,7 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
 
   it { is_expected.to belong_to(:integration) }
   it { is_expected.to belong_to(:customer) }
+  it { is_expected.to belong_to(:organization) }
 
   describe ".accounting_kind" do
     let(:netsuite_customer) { create(:netsuite_customer) }
@@ -167,9 +168,9 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
         end
       end
 
-      context "when it not is unique in scope of type" do
+      context "when it is not unique in scope of type" do
         subject(:another_integration_customer) do
-          described_class.new(integration:, customer:, type:, external_customer_id:)
+          described_class.new(integration:, customer:, type:, external_customer_id:, organization: customer.organization)
         end
 
         before do
