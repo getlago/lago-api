@@ -39,24 +39,23 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
       plan_code: plan.code
     })
     subscription = customer.subscriptions.sole
-    alert = UsageMonitoring::CreateAlertService.call!(
-      organization:,
-      subscription:,
-      params: {alert_type: :usage_amount, code: :simple, thresholds: [
+
+    create_alert(subscription_external_id, {alert_type: :usage_amount, code: :simple, thresholds: [
+      {value: 15_00, code: :warn},
+      {value: 30_00, code: :warn},
+      {value: 50_00, code: :alert},
+      {value: 1230_00, code: :block}
+    ]})
+    alert = UsageMonitoring::Alert.find(json[:alert][:lago_id])
+
+    create_alert(subscription_external_id, {alert_type: :billable_metric_usage_amount, billable_metric_code: bm_2.code, code: :bm,
+      thresholds: [
         {value: 15_00, code: :warn},
         {value: 30_00, code: :warn},
         {value: 50_00, code: :alert},
         {value: 1230_00, code: :block}
-      ]}
-    ).alert
-    alert_on_bm = UsageMonitoring::CreateAlertService.call!(
-      organization:,
-      subscription:,
-      params: {alert_type: :billable_metric_usage_amount, code: :bm, billable_metric: bm_2, thresholds: [
-        {value: 399_00, code: :warn},
-        {value: 1000_00, code: :alert}
-      ]}
-    ).alert
+      ]})
+    alert_on_bm = UsageMonitoring::Alert.find(json[:alert][:lago_id])
 
     expect(UsageMonitoring::SubscriptionActivity.where(subscription:).count).to eq 0
     send_event!(code: billable_metric.code, properties: {ops_count: 2}, external_subscription_id: subscription_external_id)
