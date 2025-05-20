@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::SubscriptionAlertsController, type: :request do
+RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
   let(:external_id) { "sub+1" }
   let(:external_id_query_param) { external_id }
   let(:code) { "my-alert" }
@@ -31,7 +31,7 @@ RSpec.describe Api::V1::SubscriptionAlertsController, type: :request do
   describe "GET /api/v1/subscriptions/:external_id/alerts" do
     subject { get_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/alerts") }
 
-    it_behaves_like "requires API permission", "subscription", "read"
+    it_behaves_like "requires API permission", "alert", "read"
     it_behaves_like "returns error if subscription not found"
 
     context "when there are alerts" do
@@ -84,7 +84,7 @@ RSpec.describe Api::V1::SubscriptionAlertsController, type: :request do
       }
     end
 
-    it_behaves_like "requires API permission", "subscription", "write"
+    it_behaves_like "requires API permission", "alert", "write"
     it_behaves_like "returns error if subscription not found"
 
     it do
@@ -188,7 +188,7 @@ RSpec.describe Api::V1::SubscriptionAlertsController, type: :request do
   describe "GET /api/v1/subscriptions/:external_id/alerts/:code" do
     subject { get_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/alerts/#{code}") }
 
-    it_behaves_like "requires API permission", "subscription", "read"
+    it_behaves_like "requires API permission", "alert", "read"
     it_behaves_like "returns error if subscription not found"
 
     it do
@@ -228,7 +228,7 @@ RSpec.describe Api::V1::SubscriptionAlertsController, type: :request do
       }
     end
 
-    it_behaves_like "requires API permission", "subscription", "write"
+    it_behaves_like "requires API permission", "alert", "write"
     it_behaves_like "returns error if subscription not found"
 
     it "updates the alert" do
@@ -248,7 +248,7 @@ RSpec.describe Api::V1::SubscriptionAlertsController, type: :request do
     end
 
     context "when code already exists for this subscription" do
-      it do
+      it "does not update the alert" do
         create(:billable_metric_usage_amount_alert, organization:, code: params[:code], subscription_external_id: external_id)
 
         subject
@@ -259,7 +259,6 @@ RSpec.describe Api::V1::SubscriptionAlertsController, type: :request do
           status: 422
         })
 
-        # Alert was not updated
         expect(alert.reload.name).to eq "General Alert"
         expect(alert.reload.code).to eq "my-alert"
       end
@@ -323,7 +322,7 @@ RSpec.describe Api::V1::SubscriptionAlertsController, type: :request do
   describe "DELETE /api/v1/subscriptions/:external_id/alerts/:code" do
     subject { delete_with_token(organization, "/api/v1/subscriptions/#{external_id_query_param}/alerts/#{code}") }
 
-    it_behaves_like "requires API permission", "subscription", "write"
+    it_behaves_like "requires API permission", "alert", "write"
     it_behaves_like "returns error if subscription not found"
 
     it do

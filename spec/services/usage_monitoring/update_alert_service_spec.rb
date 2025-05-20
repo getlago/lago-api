@@ -60,6 +60,14 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
           expect(result.error.message).to eq "billable_metric_not_found"
         end
       end
+
+      context "when code already exists" do
+        it "returns a record validation failure result" do
+          create(:billable_metric_usage_amount_alert, organization: alert.organization, code: "new_code", subscription_external_id: alert.subscription_external_id)
+          expect(result).to be_failure
+          expect(result.error.messages[:code]).to eq(["value_already_exists"])
+        end
+      end
     end
 
     context "with too many thresholds" do
