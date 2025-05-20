@@ -17,13 +17,13 @@ module CreditNotes
       # Important to call this method as it modifies @amount if needed
       items = calculate_items!
 
-      CreditNotes::CreateService.new(
+      CreditNotes::CreateService.call(
         invoice: progressive_billing_invoice,
         credit_amount_cents: creditable_amount_cents(amount, items),
         items:,
         reason:,
         automatic: true
-      ).call.raise_if_error!
+      ).raise_if_error!
     end
 
     private
