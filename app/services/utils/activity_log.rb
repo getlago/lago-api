@@ -6,22 +6,24 @@ module Utils
       IGNORED_FIELDS = %w[updated_at].freeze
       IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity].freeze
 
-      def produce(object, activity_type, activity_id: SecureRandom.uuid)
-        return yield if object.nil?
+      def produce(object, activity_type, activity_id: SecureRandom.uuid, changes: nil)
+        return yield if object.nil? && block_given?
 
-        before_attrs = object_serialized(object)
-        result = yield
-        return result if result.failure?
+        if block_given?
+          before_attrs = object_serialized(object)
+          result = yield
+          return result if result.failure?
 
-        after_attrs = object_serialized(object.reload)
+          after_attrs = object_serialized(object.reload)
 
-        changes = before_attrs.each_with_object({}) do |(key, before), result|
-          after = after_attrs[key]
-          result[key] = [before, after] if before != after
+          changes = before_attrs.each_with_object({}) do |(key, before), result|
+            after = after_attrs[key]
+            result[key] = [before, after] if before != after
+          end
         end
 
         produce_with_diff(object, activity_type, activity_id:, object_changes: changes)
-        result
+        block_given? ? result : nil
       end
 
       private
