@@ -182,5 +182,43 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
         end
       end
     end
+
+    describe 'tax integration uniqueness validation' do
+      context 'when no tax integration exists for a customer' do
+        let(:integration) { create(:anrok_integration) }
+        let(:type) { 'IntegrationCustomers::AnrokCustomer' }
+
+        it 'allows creating a first tax integration (Anrok)' do
+          expect(integration_customer).to be_valid
+        end
+      end
+
+      context 'when a tax integration already exists for the customer' do
+        let(:integration) { create(:anrok_integration) }
+        let(:type) { 'IntegrationCustomers::AnrokCustomer' }
+
+        context 'with existing anrok integration' do
+          before do
+            create(:anrok_customer, customer:)
+          end
+
+          it 'is invalid for a second AnrokCustomer' do
+            expect(integration_customer).not_to be_valid
+            expect(integration_customer.errors[:type]).to include('tax_integration_exists')
+          end
+        end
+
+        context 'with existing avalara integration' do
+          before do
+            create(:avalara_customer, customer:)
+          end
+
+          it 'is invalid for a different tax integration' do
+            expect(integration_customer).not_to be_valid
+            expect(integration_customer.errors[:type]).to include('tax_integration_exists')
+          end
+        end
+      end
+    end
   end
 end

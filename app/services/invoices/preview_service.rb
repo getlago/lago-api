@@ -282,7 +282,7 @@ module Invoices
     end
 
     def provider_taxation?
-      customer.integration_customers.find { |ic| %w[IntegrationCustomers::AnrokCustomer IntegrationCustomers::AvalaraCustomer].include?(ic.type) }
+      customer.integration_customers.find { |ic| ic.tax_integration? }
     end
 
     def should_create_subscription_fee?(subscription)
