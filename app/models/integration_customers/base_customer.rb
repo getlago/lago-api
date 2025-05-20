@@ -17,7 +17,7 @@ module IntegrationCustomers
     ].freeze
 
     validates :customer_id, uniqueness: {scope: :type}
-    validate  :only_one_tax_integration_per_customer, if: :tax_integration?
+    validate :only_one_tax_integration_per_customer, if: :tax_integration?
 
     scope :accounting_kind, -> do
       where(type: %w[IntegrationCustomers::NetsuiteCustomer IntegrationCustomers::XeroCustomer])
@@ -55,7 +55,7 @@ module IntegrationCustomers
     end
 
     def tax_integration?
-      TAX_INTEGRATION_TYPES.include?(self.type)
+      TAX_INTEGRATION_TYPES.include?(type)
     end
 
     private
