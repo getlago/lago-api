@@ -4,6 +4,7 @@ module Utils
   class ActivityLog
     class << self
       IGNORED_FIELDS = %w[updated_at].freeze
+      IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity].freeze
 
       def produce(object, activity_type, activity_id: SecureRandom.uuid)
         return yield if object.nil?
@@ -45,7 +46,9 @@ module Utils
             resource_type: resource(object).class.name,
             organization_id: organization_id(object),
             activity_object: activity_object(object, activity_type),
-            activity_object_changes: activity_object_changes(object_changes, activity_type)
+            activity_object_changes: activity_object_changes(object_changes, activity_type),
+            external_customer_id: external_customer_id(object),
+            external_subscription_id: external_subscription_id(object)
           }.to_json
         )
       end
@@ -99,6 +102,18 @@ module Utils
         else
           activity_object
         end
+      end
+
+      def external_customer_id(activity_object)
+        return nil if IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES.include?(activity_object.class.name)
+        return activity_object.external_id if activity_object.is_a?(Customer)
+
+        resource(activity_object).customer&.external_id
+      end
+
+      def external_subscription_id(activity_object)
+        # TODO: Implement me.
+        nil
       end
     end
   end
