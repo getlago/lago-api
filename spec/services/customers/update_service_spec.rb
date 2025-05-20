@@ -64,7 +64,7 @@ RSpec.describe Customers::UpdateService, type: :service do
     end
 
     it "produces an activity log" do
-      result = described_class.call(customer:, args: update_args)
+      described_class.call(customer:, args: update_args)
 
       expect(Utils::ActivityLog).to have_received(:produce).with(customer, "customer.updated")
     end
