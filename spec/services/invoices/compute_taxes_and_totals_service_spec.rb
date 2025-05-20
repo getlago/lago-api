@@ -13,6 +13,7 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService, type: :service do
       create(
         :invoice,
         :finalized,
+        :with_subscriptions,
         customer:,
         organization:,
         subscriptions: [subscription],

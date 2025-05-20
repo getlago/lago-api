@@ -26,7 +26,7 @@ RSpec.describe BillingEntities::Taxes::ApplyTaxesService do
 
       context "when billing_entity already have taxes applied" do
         before do
-          billing_entity.applied_taxes.create!(tax: tax1)
+          billing_entity.applied_taxes.create!(tax: tax1, organization:)
         end
 
         it "does not create duplicate applied taxes" do

@@ -8,7 +8,7 @@ class Customer
 
     belongs_to :customer
     belongs_to :tax
-    belongs_to :organization, optional: true
+    belongs_to :organization
   end
 end
 
