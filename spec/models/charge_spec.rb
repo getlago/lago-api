@@ -10,6 +10,9 @@ RSpec.describe Charge, type: :model do
   it { is_expected.to belong_to(:organization).optional }
   it { is_expected.to have_many(:filters).dependent(:destroy) }
 
+  it { is_expected.to have_one(:applied_pricing_unit) }
+  it { is_expected.to have_one(:pricing_unit).through(:applied_pricing_unit) }
+
   describe "#validate_graduated" do
     subject(:charge) do
       build(:graduated_charge, properties: charge_properties)

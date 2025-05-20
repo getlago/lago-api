@@ -12,6 +12,9 @@ class Charge < ApplicationRecord
   belongs_to :billable_metric, -> { with_discarded }
   belongs_to :parent, class_name: "Charge", optional: true
 
+  has_one :applied_pricing_unit, as: :pricing_unitable
+  has_one :pricing_unit, through: :applied_pricing_unit
+
   has_many :children, class_name: "Charge", foreign_key: :parent_id, dependent: :nullify
   has_many :fees
   has_many :filters, dependent: :destroy, class_name: "ChargeFilter"
