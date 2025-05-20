@@ -109,8 +109,8 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
     it "returns an error" do
       response = result["errors"].first["extensions"]
 
-      expect(response["status"]).to eq(422)
-      expect(response["details"]["billableMetric"]).to include("value_is_mandatory")
+      expect(response["status"]).to eq(404)
+      expect(response["details"]["billableMetric"]).to include("not_found")
     end
   end
 

@@ -2,6 +2,8 @@
 
 module UsageMonitoring
   class CreateAlertService < BaseService
+    include Concerns::CreateOrUpdateConcern
+
     Result = BaseResult[:alert]
 
     def initialize(organization:, subscription:, params:)
@@ -19,6 +21,9 @@ module UsageMonitoring
       if params[:thresholds].size > AlertThreshold::SOFT_LIMIT
         return result.single_validation_failure!(field: :thresholds, error_code: "too_many_thresholds")
       end
+
+      billable_metric = find_billable_metric_from_params!
+      return result unless result.success?
 
       ActiveRecord::Base.transaction do
         alert = Alert.create!(
@@ -52,15 +57,5 @@ module UsageMonitoring
     private
 
     attr_reader :organization, :subscription, :params
-
-    def billable_metric
-      @billable_metric ||= if params[:billable_metric]
-        params[:billable_metric]
-      elsif params[:billable_metric_id]
-        BillableMetric.find_by(id: params[:billable_metric_id])
-      elsif params[:billable_metric_code]
-        BillableMetric.find_by(code: params[:billable_metric_code])
-      end
-    end
   end
 end

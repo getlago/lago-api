@@ -2,6 +2,8 @@
 
 module UsageMonitoring
   class UpdateAlertService < BaseService
+    include Concerns::CreateOrUpdateConcern
+
     Result = BaseResult[:alert]
 
     def initialize(alert:, params:)
@@ -14,6 +16,9 @@ module UsageMonitoring
       return result.not_found_failure!(resource: "alert") unless alert
 
       result.alert = alert
+
+      billable_metric = find_billable_metric_from_params!
+      return result unless result.success?
 
       ActiveRecord::Base.transaction do
         alert.name = params[:name] if params.key?(:name)
@@ -35,13 +40,6 @@ module UsageMonitoring
     private
 
     attr_reader :alert, :params
-
-    def billable_metric
-      @billable_metric ||= if params[:billable_metric_id]
-        BillableMetric.find_by(id: params[:billable_metric_id])
-      elsif params[:billable_metric_code]
-        BillableMetric.find_by(code: params[:billable_metric_code])
-      end
-    end
+    delegate :organization, to: :alert
   end
 end

@@ -42,15 +42,6 @@ module UsageMonitoring
       STI_MAPPING.invert.fetch(name)
     end
 
-    # TODO: Remove?
-    # def subscription
-    #   @subscription ||= organization
-    #     .subscriptions
-    #     .active
-    #     .order(started_at: :desc)
-    #     .find_by(external_id: subscription_external_id)
-    # end
-
     def find_thresholds_crossed(current)
       crossed = []
       return crossed if current < previous_value

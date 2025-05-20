@@ -69,6 +69,16 @@ RSpec.describe UsageMonitoring::CreateAlertService do
           expect(result.error.messages[:billable_metric]).to eq(["value_is_mandatory"])
         end
       end
+
+      context "when billable_metric is not found" do
+        let(:params) { {alert_type: "billable_metric_usage_amount", billable_metric_code: "not,found", thresholds:, code: "first"} }
+        let(:billable_metric) { nil }
+
+        it "returns a record validation failure result" do
+          expect(result).to be_failure
+          expect(result.error.message).to eq "billable_metric_not_found"
+        end
+      end
     end
 
     context "when the subscription is not active" do

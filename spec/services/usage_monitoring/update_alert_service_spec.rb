@@ -49,6 +49,15 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
           expect(result.error.messages[:billable_metric]).to eq ["value_must_be_blank"]
         end
       end
+
+      context "when billable_metric is not found" do
+        let(:params) { {code: "new_code", billable_metric_id: "not-found"} }
+
+        it "returns a record validation failure result" do
+          expect(result).to be_failure
+          expect(result.error.message).to eq "billable_metric_not_found"
+        end
+      end
     end
   end
 end
