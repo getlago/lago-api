@@ -29,6 +29,11 @@ FactoryBot.define do
     end
   end
 
+  trait :processed do
+    previous_value { 8_00 }
+    last_processed_at { DateTime.new(2000, 1, 1, 12, 0, 0) }
+  end
+
   factory :usage_amount_alert,
     class: "UsageMonitoring::UsageAmountAlert",
     parent: :alert do
@@ -45,7 +50,7 @@ FactoryBot.define do
     class: "UsageMonitoring::BillableMetricUsageAmountAlert",
     parent: :alert do
     alert_type { "billable_metric_usage_amount" }
-    billable_metric { association(:billable_metric, organization: organization) }
+    billable_metric { association(:billable_metric, organization:) }
   end
 
   factory :billable_metric_usage_units_alert,
