@@ -15,6 +15,7 @@ module Invoices
         end
 
         if invoice.visible?
+          Utils::ActivityLog.produce(invoice, "invoice.payment_failure")
           SendWebhookJob.perform_later("invoice.payment_failure", invoice, params)
         end
 
