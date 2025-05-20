@@ -15,7 +15,7 @@ module UsageMonitoring
     def call
       return result unless License.premium?
       return result unless subscription.active?
-      return result unless need_lifetime_usage?
+      return result unless need_lifetime_usage? || has_alerts?
 
       UsageMonitoring::SubscriptionActivity.insert_all( # rubocop:disable Rails/SkipsModelValidations
         [{organization_id: organization.id, subscription_id: subscription.id}],
@@ -37,6 +37,10 @@ module UsageMonitoring
       return true if organization.lifetime_usage_enabled?
 
       organization.progressive_billing_enabled? && subscription.usage_thresholds.any?
+    end
+
+    def has_alerts?
+      Alert.where(subscription_external_id: subscription.external_id).any?
     end
   end
 end

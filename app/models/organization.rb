@@ -52,6 +52,8 @@ class Organization < ApplicationRecord
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
 
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
+  has_many :alerts, class_name: "UsageMonitoring::Alert"
+  has_many :triggered_alerts, class_name: "UsageMonitoring::TriggeredAlert"
 
   has_many :stripe_payment_providers, class_name: "PaymentProviders::StripeProvider"
   has_many :gocardless_payment_providers, class_name: "PaymentProviders::GocardlessProvider"
