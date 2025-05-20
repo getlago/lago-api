@@ -182,6 +182,7 @@ module PaymentProviders
           customer_country = payment.customer.country.upcase
           {type: "eu_bank_transfer", eu_bank_transfer: {country: customer_country}}
         end
+
         def handle_eu_bank_transfer_new
           customer_country = payment.customer.country&.upcase
           organization_country = invoice.organization.country&.upcase
