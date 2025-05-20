@@ -14,7 +14,7 @@ module Customers
     end
 
     # TODO: Split this service into multiple services (create and update)
-    #       Add activity log for create
+    #       Add activity log for update
     activity_loggable(
       action: "customer.created",
       record: -> { result.customer }
