@@ -41,7 +41,7 @@ Rails.application.routes.draw do
 
       resources :subscriptions, only: %i[create update show index], param: :external_id do
         resource :lifetime_usage, only: %i[show update]
-        resources :alerts, only: %i[create index update show destroy], param: :code, controller: "subscription_alerts"
+        resources :alerts, only: %i[create index update show destroy], param: :code, controller: "subscriptions/alerts"
       end
       delete "/subscriptions/:external_id", to: "subscriptions#terminate", as: :terminate
 
