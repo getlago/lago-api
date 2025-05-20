@@ -9,7 +9,10 @@ RSpec.describe Customers::DestroyService, type: :service do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
 
-  before { customer }
+  before do
+    customer
+    allow(Utils::ActivityLog).to receive(:produce)
+  end
 
   describe "#call" do
     it "soft deletes the customer" do
@@ -24,6 +27,12 @@ RSpec.describe Customers::DestroyService, type: :service do
 
       expect(Customers::TerminateRelationsJob).to have_been_enqueued
         .with(customer_id: customer.id)
+    end
+
+    it "produces an activity log" do
+      described_class.call(customer:)
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(customer, "customer.deleted")
     end
 
     context "when customer is not found" do

@@ -12,6 +12,11 @@ module Customers
       super
     end
 
+    activity_loggable(
+      action: "customer.updated",
+      record: -> { customer }
+    )
+
     def call
       return result.not_found_failure!(resource: "customer") unless customer
 
