@@ -9,6 +9,11 @@ module CreditNotes
       super
     end
 
+    activity_loggable(
+      action: "credit_note.generated",
+      record: -> { credit_note }
+    )
+
     def call
       return result.not_found_failure!(resource: "credit_note") if credit_note.blank? || !credit_note.finalized?
 
