@@ -17,12 +17,16 @@ module Types
       field :external_subscription_id, String
       field :logged_at, GraphQL::Types::ISO8601DateTime, null: false
       field :organization, Types::Organizations::OrganizationType
-      field :resource_id, String, null: false
+      field :resource, GraphQL::Types::JSON
       field :resource_type, String, null: false
       field :user_email, String
 
       def user_email
         object.user.email
+      end
+
+      def resource
+        "V1::#{object.resource_type}Serializer".constantize.new(object.resource).serialize
       end
     end
   end
