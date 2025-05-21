@@ -7,7 +7,7 @@ RSpec.describe BillableMetricsQuery, type: :query do
     described_class.call(organization:, search_term:, pagination:, filters:)
   end
 
-  let(:returned_ids) { result.billable_metrics.pluck(:id) }
+  let(:returned_ids) { result.billable_metrics.map(&:id) }
   let(:pagination) { nil }
   let(:search_term) { nil }
   let(:filters) { {} }
@@ -148,10 +148,12 @@ RSpec.describe BillableMetricsQuery, type: :query do
 
   context "when filtering by plan_id" do
     let(:plan) { create(:plan, organization:) }
-    let(:charge) { create(:standard_charge, plan:, billable_metric: billable_metric_first) }
     let(:filters) { {plan_id: plan.id} }
 
-    before { charge }
+    before do
+      create(:standard_charge, plan:, billable_metric: billable_metric_first)
+      create(:standard_charge, plan:, billable_metric: billable_metric_first)
+    end
 
     it "returns only billable metrics associated with the plan" do
       expect(returned_ids.count).to eq(1)
