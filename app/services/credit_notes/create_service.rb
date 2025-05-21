@@ -19,11 +19,6 @@ module CreditNotes
       super
     end
 
-    activity_loggable(
-      action: "credit_note.created",
-      record: -> { result.credit_note }
-    )
-
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result.forbidden_failure! unless should_create_credit_note?
@@ -80,6 +75,7 @@ module CreditNotes
         after_commit do
           track_credit_note_created
           deliver_webhook
+          Utils::ActivityLog.produce(credit_note, "credit_note.created")
           CreditNotes::GeneratePdfJob.perform_later(credit_note)
           deliver_email
           handle_refund if should_handle_refund?
