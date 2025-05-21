@@ -57,9 +57,9 @@ RSpec.describe PaymentProviderCustomers::Stripe::SyncFundingInstructionsService 
       end
     end
 
-    context "when customer country is unsupported but organization country is supported" do
-      let(:organization) { create(:organization, country: "IE") }
-      let(:customer) { create(:customer, organization:, currency: "EUR", country: "SE") }
+    context "when customer country is unsupported but billing entity country is supported" do
+      let(:billing_entity) { create(:billing_entity, organization:, country: "IE") }
+      let(:customer) { create(:customer, organization:, currency: "EUR", country: "SE", billing_entity:) }
       let(:bank_transfer_data) { instance_double("BankTransfer", to_hash: {some: "details"}) }
       let(:funding_instructions) { instance_double("FundingInstructions", bank_transfer: bank_transfer_data) }
       let(:invoice_custom_section) { build_stubbed(:invoice_custom_section, organization:) }
@@ -74,7 +74,7 @@ RSpec.describe PaymentProviderCustomers::Stripe::SyncFundingInstructionsService 
         allow(payment_provider).to receive(:secret_key).and_return("sk_test_123")
       end
 
-      it "uses organization country" do
+      it "uses billing entity country" do
         sync_funding_service.call
 
         expect(::Stripe::Customer).to have_received(:create_funding_instructions).with(
