@@ -4,8 +4,6 @@ module PaymentProviders
   module Stripe
     module Payments
       class CreateService < BaseService
-        SUPPORTED_EU_BANK_TRANSFER_COUNTRIES = %w[BE DE ES FR IE NL].freeze
-
         def initialize(payment:, reference:, metadata:)
           @payment = payment
           @reference = reference
@@ -180,13 +178,13 @@ module PaymentProviders
 
         def handle_eu_bank_transfer
           customer_country = payment.customer.country&.upcase
-          organization_country = payment.customer.billing_entity.country&.upcase
+          billing_entity_country = payment.customer.billing_entity.country&.upcase
 
           country =
-            if SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(customer_country)
+            if PaymentProviders::StripeProvider::SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(customer_country)
               customer_country
-            elsif SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(organization_country)
-              organization_country
+            elsif PaymentProviders::StripeProvider::SUPPORTED_EU_BANK_TRANSFER_COUNTRIES.include?(billing_entity_country)
+              billing_entity_country
             else
               result.service_failure!(
                 code: "missing_country",
