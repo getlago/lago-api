@@ -43,6 +43,7 @@ module Invoices
         invoice.credit_notes.each do |credit_note|
           track_credit_note_created(credit_note)
           SendWebhookJob.perform_later("credit_note.created", credit_note)
+          Utils::ActivityLog.produce(credit_note, "credit_note.created")
           CreditNotes::GeneratePdfJob.perform_later(credit_note)
         end
       end

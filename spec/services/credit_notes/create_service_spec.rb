@@ -138,15 +138,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     end
 
     it "produces an activity log" do
-      result = described_class.call(
-        invoice:,
-        items:,
-        description: nil,
-        credit_amount_cents:,
-        refund_amount_cents:,
-        automatic:,
-        context:
-      )
+      result = create_service.call
 
       expect(Utils::ActivityLog).to have_received(:produce).with(result.credit_note, "credit_note.created")
     end
