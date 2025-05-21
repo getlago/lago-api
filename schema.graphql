@@ -414,6 +414,7 @@ enum AggregationTypeEnum {
 type Alert {
   alertType: AlertTypeEnum!
   billableMetric: BillableMetric
+  billableMetricId: ID
   code: String!
   createdAt: ISO8601DateTime!
   deletedAt: ISO8601DateTime
