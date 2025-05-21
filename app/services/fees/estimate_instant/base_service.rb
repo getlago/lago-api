@@ -22,7 +22,10 @@ module Fees
         # Todo: perhaps this should live in its own service
         Events::CalculateExpressionService.call(organization:, event:)
         billable_metric = charge.billable_metric
-        units = BigDecimal(event.properties[charge.billable_metric.field_name] || 0)
+        base_unit = 0
+        # in case for the aggregations we do not use field_name, we count each event as 1 unit
+        base_unit = 1 if charge.billable_metric.field_name.nil?
+        units = BigDecimal(event.properties[charge.billable_metric.field_name] || base_unit)
         units = BillableMetrics::Aggregations::ApplyRoundingService.call!(billable_metric:, units:).units
 
         estimate_result = estimate_class(charge).call!(properties:, units:)

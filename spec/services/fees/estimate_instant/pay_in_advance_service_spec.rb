@@ -74,6 +74,24 @@ RSpec.describe Fees::EstimateInstant::PayInAdvanceService do
 
         fee = result.fees.first
         expect(fee[:amount_cents]).to eq(50)
+        expect(fee[:units]).to eq(500)
+      end
+
+      context "when billable metric aggregation does not support field name" do
+        let(:billable_metric) { create(:billable_metric, organization:) }
+        let(:charge) { create(:percentage_charge, :pay_in_advance, plan:, billable_metric:, properties: {rate: "10", fixed_amount: "0"}) }
+        let(:properties) { {} }
+
+        it "calculates the fee correctly" do
+          result = subject.call
+
+          expect(result).to be_success
+          expect(result.fees.count).to eq(1)
+
+          fee = result.fees.first
+          expect(fee[:amount_cents]).to eq(10)
+          expect(fee[:units]).to eq(1)
+        end
       end
     end
 
