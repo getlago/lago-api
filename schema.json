@@ -240,32 +240,12 @@
               "args": []
             },
             {
-              "name": "resourceId",
+              "name": "resource",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "resourceType",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
+                "kind": "UNION",
+                "name": "ActivityLogResourceObject",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -335,6 +315,62 @@
               "args": []
             }
           ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "UNION",
+          "name": "ActivityLogResourceObject",
+          "description": "Activity log resource",
+          "interfaces": null,
+          "possibleTypes": [
+            {
+              "kind": "OBJECT",
+              "name": "BillableMetric",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "BillingEntity",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "Coupon",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "CreditNote",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "Customer",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "Invoice",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "Plan",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "Subscription",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
+              "name": "Wallet",
+              "ofType": null
+            }
+          ],
+          "fields": null,
           "inputFields": null,
           "enumValues": null
         },

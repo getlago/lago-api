@@ -30,8 +30,7 @@ type ActivityLog {
   externalSubscriptionId: String
   loggedAt: ISO8601DateTime!
   organization: Organization
-  resourceId: String!
-  resourceType: String!
+  resource: ActivityLogResourceObject
   userEmail: String
 }
 
@@ -49,6 +48,11 @@ type ActivityLogCollection {
   """
   metadata: CollectionMetadata!
 }
+
+"""
+Activity log resource
+"""
+union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | Invoice | Plan | Subscription | Wallet
 
 """
 Activity Logs source enums
