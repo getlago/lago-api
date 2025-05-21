@@ -3,19 +3,21 @@
 class WebhookMailer < ApplicationMailer
   def failure_notification
     @webhook = params[:webhook]
-    @organization = @webhook.organization
+    @org_name = @webhook.organization.name
     @front_webhooks_url = "#{ENV["LAGO_FRONT_URL"]}/developers/webhooks"
     @failed_webhooks_count = @webhook.organization.webhooks.failed.where(last_retried_at: 1.hour.ago..).count
 
-    @emails = @organization.admins.pluck(:email)
-    if @organization.email
-      @emails += @organization.email.split(",")
+    @emails = @webhook.organization.admins.pluck(:email)
+    if @webhook.organization.email
+      @emails += @webhook.organization.email.split(",")
     end
 
-    mail(
-      to: @emails,
-      from: ENV["LAGO_FROM_EMAIL"],
-      subject: "[ALERT] Webhook delivery failed for #{@organization.name}"
-    )
+    I18n.with_locale(:en) do
+      mail(
+        to: @emails,
+        from: ENV["LAGO_FROM_EMAIL"],
+        subject: I18n.t("email.webhook.failure_notification.subject", org_name: @org_name)
+      )
+    end
   end
 end

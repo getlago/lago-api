@@ -24,7 +24,8 @@ RSpec.describe WebhookMailer, type: :mailer do
       expect(mail.subject).to eq("[ALERT] Webhook delivery failed for Test Org")
       expect(mail.to).to match_array(["admin1@example.com", "admin2@example.com", "org1@example.com", "org2@example.com"])
 
-      expect(mail.content_type).to eq "text/plain; charset=UTF-8"
+      expect(mail.content_type).to start_with "multipart/alternative"
+      expect(mail.content_type).to end_with "charset=UTF-8"
 
       body = mail.body.encoded
       expect(body).to include("https://app.lago.com/developers/webhooks")
