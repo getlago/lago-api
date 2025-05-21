@@ -48,6 +48,7 @@ module Invoices
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
         deliver_webhooks
+        Utils::ActivityLog.produce(invoice, "invoice.created")
         GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?

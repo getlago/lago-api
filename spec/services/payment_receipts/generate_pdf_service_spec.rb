@@ -26,13 +26,13 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
 
   describe "#call" do
     it "generates the payment receipt synchronously" do
-      result = described_class.call(payment_receipt:, context:)
+      result = payment_receipt_generate_service.call
 
       expect(result.payment_receipt.file).to be_present
     end
 
     it "calls the SendWebhook job" do
-      expect { described_class.call(payment_receipt:, context:) }.to have_enqueued_job(SendWebhookJob)
+      expect { payment_receipt_generate_service.call }.to have_enqueued_job(SendWebhookJob)
     end
 
     it "produces an activity log" do
@@ -45,7 +45,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
       let(:payment_receipt) { nil }
 
       it "returns a result with error" do
-        result = described_class.call(payment_receipt:, context:)
+        result = payment_receipt_generate_service.call
 
         expect(result.success).to be_falsey
         expect(result.error.error_code).to eq("payment_receipt_not_found")
@@ -64,13 +64,13 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
       it "does not generate the pdf" do
         allow(LagoHttpClient::Client).to receive(:new)
 
-        described_class.call(payment_receipt:, context:)
+        payment_receipt_generate_service.call
 
         expect(LagoHttpClient::Client).not_to have_received(:new)
       end
 
       it "does not call the SendWebhook job" do
-        expect { described_class.call(payment_receipt:, context:) }.not_to have_enqueued_job(SendWebhookJob)
+        expect { payment_receipt_generate_service.call }.not_to have_enqueued_job(SendWebhookJob)
       end
     end
 
@@ -78,7 +78,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
       let(:context) { "api" }
 
       it "calls the SendWebhook job" do
-        expect { described_class.call(payment_receipt:, context:) }.to have_enqueued_job(SendWebhookJob)
+        expect { payment_receipt_generate_service.call }.to have_enqueued_job(SendWebhookJob)
       end
     end
 
@@ -94,7 +94,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
       end
 
       it "generates the invoice synchronously" do
-        result = described_class.call(payment_receipt:, context:)
+        result = payment_receipt_generate_service.call
 
         expect(result.payment_receipt.file.filename.to_s).not_to eq("receipt.pdf")
       end

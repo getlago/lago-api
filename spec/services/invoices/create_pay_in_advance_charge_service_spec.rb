@@ -66,6 +66,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
 
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
+      allow(Utils::ActivityLog).to receive(:produce)
     end
 
     it "creates an invoice" do
@@ -154,6 +155,13 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       expect do
         invoice_service.call
       end.to have_enqueued_job(SendWebhookJob).with("fee.created", Fee)
+    end
+
+
+    it "produces an activity log" do
+      invoice = described_class.call(charge:, event:, timestamp: timestamp.to_i).invoice
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.created")
     end
 
     it "enqueues GeneratePdfAndNotifyJob with email false" do
