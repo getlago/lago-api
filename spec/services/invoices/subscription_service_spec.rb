@@ -238,6 +238,13 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         end.to have_enqueued_job(SendWebhookJob).with("invoice.drafted", Invoice)
       end
 
+      it "produces an activity log" do
+        invoice = described_class.call(subscriptions:, timestamp: timestamp.to_i, invoicing_reason:).invoice
+
+        expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.drafted")
+      end
+
+
       it "does not flag lifetime usage for refresh" do
         invoice_service.call
 

@@ -29,6 +29,7 @@ module Invoices
           invoice.failed!
           invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
           create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
+          Utils::ActivityLog.produce(invoice, "invoice.failed")
 
           return fee_result
         end

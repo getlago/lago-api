@@ -36,6 +36,7 @@ module Invoices
           invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
           invoice.sub_total_excluding_taxes_amount_cents = invoice.fees_amount_cents
           invoice.failed!
+          Utils::ActivityLog.produce(invoice, "invoice.failed")
 
           # TODO: Refactor this return by using a next method
           # rubocop:disable Rails/TransactionExitStatement

@@ -253,8 +253,12 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
           File.read(p)
         end
 
+        before do
+          allow(Utils::ActivityLog).to receive(:produce)
+        end
+
         it "returns tax error" do
-          result = invoice_service.call
+          result = described_class.call(charge:, event:, timestamp: timestamp.to_i)
 
           aggregate_failures do
             expect(result).not_to be_success
@@ -266,6 +270,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
             expect(invoice.status).to eq("failed")
             expect(invoice.error_details.count).to eq(1)
             expect(invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
+            expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.failed")
           end
         end
       end
