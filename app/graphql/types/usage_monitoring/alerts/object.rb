@@ -10,6 +10,7 @@ module Types
 
         field :alert_type, AlertTypeEnum, null: false
         field :billable_metric, Types::BillableMetrics::Object
+        field :billable_metric_id, ID
         field :subscription_external_id, String, null: false
 
         field :code, String, null: false
