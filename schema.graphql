@@ -8525,7 +8525,6 @@ type Subscription {
   lifetimeUsage: SubscriptionLifetimeUsage
   name: String
   nextName: String
-  nextPendingStartDate: ISO8601Date
   nextPlan: Plan
   nextSubscription: Subscription
   nextSubscriptionAt: ISO8601DateTime

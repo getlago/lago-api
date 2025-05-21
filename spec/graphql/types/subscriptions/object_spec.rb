@@ -13,7 +13,6 @@ RSpec.describe Types::Subscriptions::Object do
 
     expect(subject).to have_field(:name).of_type("String")
     expect(subject).to have_field(:next_name).of_type("String")
-    expect(subject).to have_field(:next_pending_start_date).of_type("ISO8601Date")
     expect(subject).to have_field(:period_end_date).of_type("ISO8601Date")
     expect(subject).to have_field(:status).of_type("StatusTypeEnum")
 
