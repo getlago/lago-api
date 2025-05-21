@@ -433,7 +433,7 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       end
     end
 
-    context "when rule have medata" do
+    context "when rule have metadata" do
       let(:recurring_transaction_rule) do
         create(
           :recurring_transaction_rule,
@@ -495,6 +495,101 @@ RSpec.describe Wallets::CreateIntervalWalletTransactionsService, type: :service 
       it "does not enqueue a job for expired rules" do
         travel_to(current_date) do
           expect { create_interval_transactions_service.call }.not_to have_enqueued_job
+        end
+      end
+    end
+
+    context "when credits are zero" do
+      let(:created_at) { DateTime.parse("20 Feb 2021") }
+      let(:wallet) { create(:wallet, customer:, created_at:) }
+      let(:current_date) { created_at + 2.weeks }
+
+      context "when both paid and granted credits are zero" do
+        let(:recurring_transaction_rule) do
+          create(
+            :recurring_transaction_rule,
+            trigger: :interval,
+            wallet:,
+            interval: :weekly,
+            created_at:,
+            method: "target",
+            target_ongoing_balance: 500,
+            granted_credits: 0
+          )
+        end
+
+        before { wallet.update!(credits_ongoing_balance: 500) }
+
+        it "does not enqueue a job" do
+          travel_to(current_date) do
+            expect { create_interval_transactions_service.call }.not_to have_enqueued_job
+          end
+        end
+      end
+
+      context "when only paid credits is zero" do
+        let(:recurring_transaction_rule) do
+          create(
+            :recurring_transaction_rule,
+            trigger: :interval,
+            wallet:,
+            interval: :weekly,
+            created_at:,
+            method: "fixed",
+            target_ongoing_balance: 500,
+            granted_credits: 100
+          )
+        end
+
+        before { wallet.update!(credits_ongoing_balance: 1000) }
+
+        it "enqueues a job" do
+          travel_to(current_date) do
+            expect { create_interval_transactions_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          end
+        end
+      end
+
+      context "when only granted credits is zero" do
+        let(:recurring_transaction_rule) do
+          create(
+            :recurring_transaction_rule,
+            trigger: :interval,
+            wallet:,
+            interval: :weekly,
+            created_at:,
+            method: "target",
+            paid_credits: 100,
+            target_ongoing_balance: 500
+          )
+        end
+
+        it "enqueues a job" do
+          travel_to(current_date) do
+            expect { create_interval_transactions_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          end
+        end
+      end
+
+      context "when both paid and granted credits are non-zero" do
+        let(:recurring_transaction_rule) do
+          create(
+            :recurring_transaction_rule,
+            trigger: :interval,
+            wallet:,
+            interval: :weekly,
+            created_at:,
+            method: "target",
+            paid_credits: 100,
+            granted_credits: 50,
+            target_ongoing_balance: 500
+          )
+        end
+
+        it "enqueues a job" do
+          travel_to(current_date) do
+            expect { create_interval_transactions_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
+          end
         end
       end
     end
