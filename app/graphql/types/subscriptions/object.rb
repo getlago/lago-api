@@ -33,9 +33,6 @@ module Types
       field :next_subscription_at, GraphQL::Types::ISO8601DateTime
       field :next_subscription_type, Types::Subscriptions::NextSubscriptionTypeEnum
 
-      # TODO: Remove once frontend is updated
-      field :next_pending_start_date, GraphQL::Types::ISO8601Date, method: :downgrade_plan_date # Deprecated
-
       field :fees, [Types::Fees::Object], null: true
 
       field :lifetime_usage, Types::Subscriptions::LifetimeUsageObject, null: true
