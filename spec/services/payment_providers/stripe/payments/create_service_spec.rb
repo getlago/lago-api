@@ -5,7 +5,8 @@ require "rails_helper"
 RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service do
   subject(:create_service) { described_class.new(payment:, reference:, metadata:) }
 
-  let(:customer) { create(:customer, payment_provider_code: code, country: "CA") }
+  let(:customer) { create(:customer, payment_provider_code: code, country:) }
+  let(:country) { "CA" }
   let(:organization) { customer.organization }
   let(:stripe_payment_provider) { create(:stripe_provider, organization:, code:) }
   let(:stripe_customer) { create(:stripe_customer, customer:, payment_method_id: "pm_123456", payment_provider: stripe_payment_provider) }
@@ -419,13 +420,14 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
 
         context "when currency is EUR" do
           let(:currency) { "EUR" }
+          let(:country) { "DE" }
 
           it "includes EU bank transfer details" do
             expected_payload = base_payload.deep_merge(
               payment_method_options: {
                 customer_balance: {
                   bank_transfer: {
-                    eu_bank_transfer: {country: "CA"},
+                    eu_bank_transfer: {country:},
                     type: "eu_bank_transfer"
                   }
                 }
