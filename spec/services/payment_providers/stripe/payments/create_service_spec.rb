@@ -427,7 +427,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
               payment_method_options: {
                 customer_balance: {
                   bank_transfer: {
-                    eu_bank_transfer: {country: },
+                    eu_bank_transfer: {country:},
                     type: "eu_bank_transfer"
                   }
                 }
