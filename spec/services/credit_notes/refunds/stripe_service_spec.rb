@@ -384,7 +384,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
       end
 
       it "produces an activity log" do
-        result = stripe_service.update_status(
+        stripe_service.update_status(
           provider_refund_id: refund.provider_refund_id,
           status: "failed"
         )
