@@ -21,7 +21,7 @@ module UsageMonitoring
       #       We believe it's a good tradeoff because they should rarely raise but this can change in the future
 
       begin
-        if organization.lifetime_usage_enabled? || organization.progressive_billing_enabled?
+        if organization.using_lifetime_usage?
           LifetimeUsages::CalculateService.call!(lifetime_usage:, current_usage:)
         end
 
@@ -33,12 +33,17 @@ module UsageMonitoring
       end
 
       begin
-        Alert.where(
+        alerts = Alert.where(
           subscription_external_id: subscription.external_id,
-          organization_id: subscription_activity.organization_id,
-          alert_type: Alert::CURRENT_USAGE_TYPES
-        ).includes(:thresholds).find_each do |alert|
+          organization_id: subscription_activity.organization_id
+        ).includes(:thresholds)
+
+        alerts.where(alert_type: Alert::CURRENT_USAGE_TYPES).find_each do |alert|
           ProcessAlertService.call(alert:, subscription:, current_metrics: current_usage)
+        end
+
+        alerts.where(alert_type: "lifetime_usage_amount").find_each do |alert|
+          ProcessAlertService.call(alert:, subscription:, current_metrics: lifetime_usage)
         end
       rescue => e
         # If progressive billing already raised, we don't override the first error

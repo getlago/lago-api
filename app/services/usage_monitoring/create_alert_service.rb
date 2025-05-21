@@ -14,6 +14,10 @@ module UsageMonitoring
     end
 
     def call
+      if params[:alert_type] == "lifetime_usage_amount" && !organization.using_lifetime_usage?
+        return result.single_validation_failure!(field: :alert_type, error_code: "feature_not_available")
+      end
+
       if params[:thresholds].blank?
         return result.single_validation_failure!(field: :thresholds, error_code: "value_is_mandatory")
       end

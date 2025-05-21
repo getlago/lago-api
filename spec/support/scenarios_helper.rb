@@ -207,6 +207,7 @@ module ScenariosHelper
     Clock::SubscriptionsBillerJob.perform_later
     Clock::FreeTrialSubscriptionsBillerJob.perform_later
     perform_all_enqueued_jobs
+    perform_usage_update
   end
 
   def perform_invoices_refresh

@@ -9,11 +9,14 @@ module UsageMonitoring
 
     STI_MAPPING = {
       "usage_amount" => "UsageMonitoring::UsageAmountAlert",
-      "billable_metric_usage_amount" => "UsageMonitoring::BillableMetricUsageAmountAlert"
+      "billable_metric_usage_amount" => "UsageMonitoring::BillableMetricUsageAmountAlert",
+      "billable_metric_usage_units" => "UsageMonitoring::BillableMetricUsageUnitsAlert",
+
+      "lifetime_usage_amount" => "UsageMonitoring::LifetimeUsageAmountAlert"
     }
 
-    CURRENT_USAGE_TYPES = %w[usage_amount billable_metric_usage_amount]
-    BILLABLE_METRIC_TYPES = %w[billable_metric_usage_amount]
+    CURRENT_USAGE_TYPES = %w[usage_amount billable_metric_usage_amount billable_metric_usage_units]
+    BILLABLE_METRIC_TYPES = %w[billable_metric_usage_amount billable_metric_usage_units]
 
     default_scope -> { kept }
 
