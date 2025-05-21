@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 FactoryBot.define do
-  factory :customer_invoice_custom_section, class: "Customer::InvoiceCustomSection" do
+  factory :customer_applied_invoice_custom_section, class: "Customer::AppliedInvoiceCustomSection" do
     organization
     billing_entity { organization&.default_billing_entity || association(:billing_entity) }
     customer { association(:customer, organization:, billing_entity:) }

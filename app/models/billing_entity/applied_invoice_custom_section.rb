@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class BillingEntity::InvoiceCustomSection < ApplicationRecord
+class BillingEntity::AppliedInvoiceCustomSection < ApplicationRecord
   self.table_name = "billing_entities_invoice_custom_sections"
 
   belongs_to :organization

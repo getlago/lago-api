@@ -2,9 +2,9 @@
 
 require "rails_helper"
 
-RSpec.describe BillingEntity::InvoiceCustomSection, type: :model do
-  subject(:billing_entity_invoice_custom_section) do
-    create(:billing_entity_invoice_custom_section)
+RSpec.describe BillingEntity::AppliedInvoiceCustomSection, type: :model do
+  subject(:applied_invoice_custom_section) do
+    create(:billing_entity_applied_invoice_custom_section)
   end
 
   it { is_expected.to belong_to(:organization) }

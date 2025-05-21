@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Customer::InvoiceCustomSection < ApplicationRecord
+class Customer::AppliedInvoiceCustomSection < ApplicationRecord
   self.table_name = "customers_invoice_custom_sections"
 
   belongs_to :organization
