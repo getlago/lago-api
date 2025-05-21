@@ -17,8 +17,7 @@ RSpec.describe Types::ActivityLogs::Object do
     expect(subject).to have_field(:external_subscription_id).of_type("String")
     expect(subject).to have_field(:logged_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:organization).of_type("Organization")
-    expect(subject).to have_field(:resource_id).of_type("String!")
-    expect(subject).to have_field(:resource_type).of_type("String!")
+    expect(subject).to have_field(:resource).of_type("ActivityLogResourceObject")
     expect(subject).to have_field(:user_email).of_type("String")
   end
 end
