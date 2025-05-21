@@ -47,6 +47,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
+      allow(Utils::ActivityLog).to receive(:produce)
     end
 
     it "calls SegmentTrackJob" do
@@ -115,6 +116,12 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       expect do
         invoice_service.call
       end.to have_enqueued_job(SendWebhookJob).with("invoice.created", Invoice)
+    end
+
+    it "produces an activity log" do
+      invoice = described_class.call(subscriptions:, timestamp: timestamp.to_i, invoicing_reason:).invoice
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.created")
     end
 
     it "enqueues GeneratePdfAndNotifyJob with email false" do

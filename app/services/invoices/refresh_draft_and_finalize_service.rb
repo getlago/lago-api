@@ -33,6 +33,7 @@ module Invoices
         clear_invoice_generation_errors(invoice)
         unless invoice.closed?
           SendWebhookJob.perform_later("invoice.created", invoice)
+          Utils::ActivityLog.produce(invoice, "invoice.created")
           GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
