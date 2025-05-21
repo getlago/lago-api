@@ -119,6 +119,10 @@ RSpec.configure do |config|
       WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))
     end
 
+    if example.metadata[:with_bullet]
+      Bullet.enable = true
+    end
+
     if example.metadata[:cache]
       Rails.cache = if example.metadata[:cache].to_sym == :memory
         ActiveSupport::Cache.lookup_store(:memory_store)
@@ -129,6 +133,12 @@ RSpec.configure do |config|
       else
         raise "Unknown cache store: #{example.metadata[:cache]}"
       end
+    end
+  end
+
+  config.after do |example|
+    if example.metadata[:with_bullet]
+      Bullet.end_request
     end
   end
 

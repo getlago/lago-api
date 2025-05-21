@@ -105,6 +105,7 @@ group :development, :test, :staging do
 end
 
 group :development, :test do
+  gem "bullet"
   gem "byebug"
   gem "clockwork-test"
   gem "debug", platforms: %i[mri mingw x64_mingw], require: false
@@ -134,7 +135,6 @@ group :test do
 end
 
 group :development do
-  gem "bullet"
   gem "coffee-rails"
   gem "graphiql-rails", git: "https://github.com/rmosolgo/graphiql-rails.git"
 

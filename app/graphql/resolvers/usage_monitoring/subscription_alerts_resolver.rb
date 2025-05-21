@@ -10,6 +10,8 @@ module Resolvers
 
       description "Query alerts of a subscription"
 
+      extras [:lookahead]
+
       argument :subscription_external_id, String, required: true, description: "External id of a subscription"
 
       argument :limit, Integer, required: false
@@ -17,8 +19,8 @@ module Resolvers
 
       type Types::UsageMonitoring::Alerts::Object.collection_type, null: false
 
-      def resolve(subscription_external_id:, limit: nil, page: nil)
-        result = ::UsageMonitoring::AlertsQuery.call(
+      def resolve(subscription_external_id:, lookahead:, limit: nil, page: nil)
+        alerts_query = ::UsageMonitoring::AlertsQuery.call(
           organization: current_organization,
           filters: {
             subscription_external_id:
@@ -27,9 +29,17 @@ module Resolvers
             page:,
             limit:
           }
-        )
+        ).alerts
 
-        result.alerts
+        if lookahead.selection(:collection).selects?(:thresholds)
+          alerts_query = alerts_query.includes(:thresholds)
+        end
+
+        if lookahead.selection(:collection).selects?(:billable_metric)
+          alerts_query = alerts_query.includes(:billable_metric)
+        end
+
+        alerts_query
       end
     end
   end
