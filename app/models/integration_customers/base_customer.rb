@@ -11,10 +11,20 @@ module IntegrationCustomers
     belongs_to :integration, class_name: "Integrations::BaseIntegration"
     belongs_to :organization, optional: true
 
+    TAX_INTEGRATION_TYPES = %w[
+      IntegrationCustomers::AnrokCustomer
+      IntegrationCustomers::AvalaraCustomer
+    ].freeze
+
     validates :customer_id, uniqueness: {scope: :type}
+    validate :only_one_tax_integration_per_customer, if: :tax_kind?
 
     scope :accounting_kind, -> do
       where(type: %w[IntegrationCustomers::NetsuiteCustomer IntegrationCustomers::XeroCustomer])
+    end
+
+    scope :tax_kind, -> do
+      where(type: TAX_INTEGRATION_TYPES)
     end
 
     scope :hubspot_kind, -> do
@@ -46,6 +56,21 @@ module IntegrationCustomers
       else
         raise(NotImplementedError)
       end
+    end
+
+    def tax_kind?
+      TAX_INTEGRATION_TYPES.include?(type)
+    end
+
+    private
+
+    def only_one_tax_integration_per_customer
+      conflict = IntegrationCustomers::BaseCustomer.tax_kind.where(customer_id:)
+      conflict = conflict.where.not(id:) if persisted?
+
+      return unless conflict.exists?
+
+      errors.add(:type, "tax_integration_exists")
     end
   end
 end

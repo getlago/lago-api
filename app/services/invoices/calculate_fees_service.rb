@@ -178,7 +178,7 @@ module Invoices
           subscription:,
           context: :recurring,
           boundaries:,
-          apply_taxes: invoice.customer.anrok_customer.blank?
+          apply_taxes: invoice.customer.tax_customer.blank?
         )
 
         result.non_invoiceable_fees.concat(fee_result.fees)

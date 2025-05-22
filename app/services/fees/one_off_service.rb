@@ -92,7 +92,7 @@ module Fees
     end
 
     def customer_provider_taxation?
-      @apply_provider_taxes ||= customer.anrok_customer
+      @apply_provider_taxes ||= customer.tax_customer
     end
 
     def apply_provider_taxes(fees_result)

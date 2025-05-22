@@ -149,6 +149,23 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
     end
   end
 
+  describe "#tax_kind?" do
+    context "with tax integration" do
+      let(:integration) { create(:anrok_integration) }
+      let(:type) { "IntegrationCustomers::AnrokCustomer" }
+
+      it "returns true" do
+        expect(integration_customer.tax_kind?).to be_truthy
+      end
+    end
+
+    context "without tax integration" do
+      it "returns false" do
+        expect(integration_customer.tax_kind?).to be_falsy
+      end
+    end
+  end
+
   describe "validations" do
     describe "of customer id uniqueness" do
       let(:errors) { another_integration_customer.errors }
@@ -179,6 +196,54 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
 
         it "adds an error" do
           expect(errors.where(:customer_id, :taken)).to be_present
+        end
+      end
+    end
+
+    describe "tax integration uniqueness validation" do
+      context "when no tax integration exists for a customer" do
+        let(:integration) { create(:anrok_integration) }
+        let(:type) { "IntegrationCustomers::AnrokCustomer" }
+
+        it "allows creating a first tax integration" do
+          expect(integration_customer).to be_valid
+        end
+      end
+
+      context "when a tax integration already exists for the customer" do
+        let(:integration) { create(:anrok_integration) }
+        let(:type) { "IntegrationCustomers::AnrokCustomer" }
+
+        context "with existing anrok integration" do
+          before do
+            create(:anrok_customer, customer:)
+          end
+
+          it "is invalid for a second AnrokCustomer" do
+            expect(integration_customer).not_to be_valid
+            expect(integration_customer.errors[:type]).to include("tax_integration_exists")
+          end
+        end
+
+        context "with existing avalara integration" do
+          before do
+            create(:avalara_customer, customer:)
+          end
+
+          it "is invalid for a different tax integration" do
+            expect(integration_customer).not_to be_valid
+            expect(integration_customer.errors[:type]).to include("tax_integration_exists")
+          end
+        end
+
+        context "when validating persisted record" do
+          before do
+            integration_customer.save!
+          end
+
+          it "does not add any errors" do
+            expect(integration_customer).to be_valid
+          end
         end
       end
     end
