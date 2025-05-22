@@ -13,6 +13,7 @@ class BillableMetricsQuery < BaseQuery
 
     metrics = with_recurring(metrics) unless filters.recurring.nil?
     metrics = with_aggregation_type(metrics) if filters.aggregation_types.present?
+
     metrics = with_plan(metrics) if filters.plan_id.present?
 
     result.billable_metrics = metrics
@@ -48,6 +49,6 @@ class BillableMetricsQuery < BaseQuery
   end
 
   def with_plan(scope)
-    scope.joins(:charges).where(charges: {plan_id: filters.plan_id})
+    scope.joins(:charges).where(charges: {plan_id: filters.plan_id}).distinct
   end
 end
