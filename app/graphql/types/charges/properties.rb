@@ -5,7 +5,8 @@ module Types
     class Properties < Types::BaseObject
       # NOTE: Standard and Package charge model
       field :amount, String, null: true
-      field :grouped_by, [String], null: true
+      field :grouped_by, [String], null: true # TODO(pricing_group_keys): remove after deprecation of grouped_by
+      field :pricing_group_keys, [String], null: true
 
       # NOTE: Graduated charge model
       field :graduated_ranges, [Types::Charges::GraduatedRange], null: true
@@ -30,6 +31,11 @@ module Types
 
       # NOTE: properties for the custom aggregation
       field :custom_properties, GraphQL::Types::JSON, null: true
+
+      def pricing_group_keys
+        # TODO(pricing_group_keys): remove after deprecation of grouped_by
+        object["pricing_group_keys"].presence || object["grouped_by"]
+      end
     end
   end
 end

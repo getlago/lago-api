@@ -547,6 +547,24 @@ RSpec.describe Charge, type: :model do
     end
   end
 
+  describe "#pricing_group_keys" do
+    subject(:charge) { build(:standard_charge, properties:) }
+
+    let(:properties) { {"amount_cents" => "1000", :pricing_group_keys => ["user_id"]} }
+
+    it "returns the pricing group keys" do
+      expect(charge.pricing_group_keys).to eq(["user_id"])
+    end
+
+    context "with grouped_by property" do
+      let(:properties) { {"amount_cents" => "1000", :grouped_by => ["user_id"]} }
+
+      it "returns the pricing group keys" do
+        expect(charge.pricing_group_keys).to eq(["user_id"])
+      end
+    end
+  end
+
   describe "#equal_properties?" do
     let(:charge1) { build(:standard_charge, properties: {amount: 100}) }
 
