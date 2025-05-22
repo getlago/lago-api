@@ -19,7 +19,7 @@ module Resolvers
     argument :external_subscription_id, String, required: false
     argument :from_date, GraphQL::Types::ISO8601Date, required: false
     argument :resource_ids, [String], required: false
-    argument :resource_types, [String], required: false
+    argument :resource_types, [Types::ActivityLogs::ResourceTypeEnum], required: false
     argument :to_date, GraphQL::Types::ISO8601Date, required: false
     argument :user_emails, [String], required: false
 

@@ -37699,8 +37699,8 @@
                       "kind": "NON_NULL",
                       "name": null,
                       "ofType": {
-                        "kind": "SCALAR",
-                        "name": "String",
+                        "kind": "ENUM",
+                        "name": "ResourceTypeEnum",
                         "ofType": null
                       }
                     }
@@ -43408,6 +43408,71 @@
             }
           ],
           "enumValues": null
+        },
+        {
+          "kind": "ENUM",
+          "name": "ResourceTypeEnum",
+          "description": "Activity Logs resource type enums",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "billable_metric",
+              "description": "BillableMetric",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "plan",
+              "description": "Plan",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "customer",
+              "description": "Customer",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "invoice",
+              "description": "Invoice",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "credit_note",
+              "description": "CreditNote",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "billing_entity",
+              "description": "BillingEntity",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscription",
+              "description": "Subscription",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "wallet",
+              "description": "Wallet",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon",
+              "description": "Coupon",
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
         },
         {
           "kind": "INPUT_OBJECT",

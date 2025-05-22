@@ -7570,7 +7570,7 @@ type Query {
   """
   Query activity logs of an organization
   """
-  activityLogs(activitySources: [ActivitySourceEnum!], activityTypes: [ActivityTypeEnum!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, limit: Int, page: Int, resourceIds: [String!], resourceTypes: [String!], toDate: ISO8601Date, userEmails: [String!]): ActivityLogCollection
+  activityLogs(activitySources: [ActivitySourceEnum!], activityTypes: [ActivityTypeEnum!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, limit: Int, page: Int, resourceIds: [String!], resourceTypes: [ResourceTypeEnum!], toDate: ISO8601Date, userEmails: [String!]): ActivityLogCollection
 
   """
   Query a single add-on of an organization
@@ -8343,6 +8343,56 @@ input ResetPasswordInput {
   clientMutationId: String
   newPassword: String!
   token: String!
+}
+
+"""
+Activity Logs resource type enums
+"""
+enum ResourceTypeEnum {
+  """
+  BillableMetric
+  """
+  billable_metric
+
+  """
+  BillingEntity
+  """
+  billing_entity
+
+  """
+  Coupon
+  """
+  coupon
+
+  """
+  CreditNote
+  """
+  credit_note
+
+  """
+  Customer
+  """
+  customer
+
+  """
+  Invoice
+  """
+  invoice
+
+  """
+  Plan
+  """
+  plan
+
+  """
+  Subscription
+  """
+  subscription
+
+  """
+  Wallet
+  """
+  wallet
 }
 
 """
