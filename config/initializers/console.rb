@@ -91,4 +91,9 @@ Rails.application.console do
     puts "Organization `#{org_name}` created with admin invite: #{result.invite_url}" # rubocop:disable Rails/Output
     {organization:, invite_url: result.invite_url}
   end
+
+  def delete_invoice_pdf(id)
+    inv = Invoice.find(id)
+    inv.file.destroy
+  end
 end
