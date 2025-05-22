@@ -57,6 +57,6 @@ FactoryBot.define do
     class: "UsageMonitoring::BillableMetricUsageUnitsAlert",
     parent: :alert do
     alert_type { "billable_metric_usage_units" }
-    billable_metric { association(:billable_metric, organization: organization) }
+    billable_metric { association(:billable_metric, organization:) }
   end
 end

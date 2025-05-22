@@ -14,7 +14,6 @@ RSpec.describe ::V1::UsageMonitoring::AlertSerializer do
     payload = result["alert"]
     expect(payload["lago_id"]).to eq(alert.id)
     expect(payload["subscription_external_id"]).to eq("ext-id")
-    expect(payload["billable_metric_code"]).to be_nil
     expect(payload["name"]).to eq("General Alert")
     expect(payload["code"]).to eq("yolo")
     expect(payload["alert_type"]).to eq("usage_amount")
@@ -25,23 +24,17 @@ RSpec.describe ::V1::UsageMonitoring::AlertSerializer do
     ])
     expect(payload["previous_value"]).to eq("800.0")
     expect(payload["last_processed_at"]).to eq("2000-01-01T12:00:00Z")
+    expect(payload["billable_metric"]).to be_nil
   end
 
   context "with billable_metric_usage_amount alert" do
     let(:alert) { create(:billable_metric_usage_amount_alert) }
 
     it "has the billable_metric_id the object" do
-      payload = result["alert"]
-      expect(payload["billable_metric_code"]).to eq alert.billable_metric.code
-    end
-  end
-
-  context "with soft deleted alert" do
-    before { alert.discard }
-
-    it "includes deleted_at field" do
-      payload = result["alert"]
-      expect(payload["deleted_at"]).to eq(alert.deleted_at.iso8601)
+      payload = result["alert"]["billable_metric"]
+      expect(payload["lago_id"]).to eq alert.billable_metric.id
+      expect(payload["code"]).to eq alert.billable_metric.code
+      expect(payload["field_name"]).to be_nil
     end
   end
 end

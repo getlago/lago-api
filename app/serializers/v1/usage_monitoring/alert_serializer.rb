@@ -8,7 +8,6 @@ module V1
           lago_id: model.id,
           lago_organization_id: model.organization_id,
           subscription_external_id: model.subscription_external_id,
-          billable_metric_code: model.billable_metric&.code,
           alert_type: model.alert_type,
           code: model.code,
           name: model.name,
@@ -16,8 +15,7 @@ module V1
           last_processed_at: model.last_processed_at&.iso8601,
           thresholds: formatted_thresholds,
           created_at: model.created_at&.iso8601,
-          updated_at: model.updated_at&.iso8601,
-          deleted_at: model.deleted_at&.iso8601
+          billable_metric: model.billable_metric_id ? billable_metric : nil
         }
       end
 
@@ -31,6 +29,10 @@ module V1
             recurring: threshold.recurring
           }
         end
+      end
+
+      def billable_metric
+        ::V1::BillableMetricSerializer.new(model.billable_metric).serialize
       end
     end
   end
