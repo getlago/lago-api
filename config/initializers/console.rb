@@ -94,6 +94,12 @@ Rails.application.console do
 
   def delete_invoice_pdf(id)
     inv = Invoice.find(id)
-    inv.file.destroy
+    puts "Going to delete invoice pdf from org `#{inv.organization.name}` (id: #{inv.id})"
+    unless inv.finalized?
+      puts "Invoice is not finalized. Skipping."
+      return
+    end
+
+    inv.file&.destroy
   end
 end
