@@ -101,4 +101,32 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver, type: :gr
       expect(metadata["totalCount"]).to eq(2)
     end
   end
+
+  context "when requesting relationships" do
+    let(:query) do
+      <<~GQL
+        query($subscriptionExternalId: String!) {
+          alerts(subscriptionExternalId: $subscriptionExternalId) {
+            collection { code billableMetric { id } thresholds { value } }
+          }
+        }
+      GQL
+    end
+
+    it "eager loads the relationships", with_bullet: true do
+      create_list(:billable_metric_usage_amount_alert, 3, organization:, subscription_external_id: subscription.external_id, thresholds: [10])
+
+      Bullet.start_request
+
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {subscriptionExternalId: subscription.external_id}
+      )
+
+      expect(Bullet.notification?).to eq false
+    end
+  end
 end
