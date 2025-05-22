@@ -15,16 +15,16 @@ class BaseService
   end
 
   class ThrottlingError < StandardError
-    attr_reader :provider, :code
+    attr_reader :provider_name
 
-    def initialize(message = nil, provider: nil)
-      @provider = provider
+    def initialize(provider_name: nil)
+      @provider_name = provider_name
 
       super(message)
     end
 
-    def provider_struct
-      Data.define(:code).new(provider)
+    def message
+      "Service #{provider_name} is not available. Try again later."
     end
   end
 
@@ -127,6 +127,16 @@ class BaseService
     end
   end
 
+  class TooManyRequestsFailure < FailedResult
+    attr_reader :error
+
+    def initialize(result, error:)
+      @error = error
+
+      super(result, error.message, original_error: error)
+    end
+  end
+
   # DEPRECATED: This is a legacy result class that should
   #             be replaced be defining a Result in every service, using the BaseResult
   class LegacyResult < OpenStruct
@@ -196,6 +206,10 @@ class BaseService
 
     def third_party_failure!(third_party:, error_code:, error_message:)
       fail_with_error!(ThirdPartyFailure.new(self, third_party:, error_code:, error_message:))
+    end
+
+    def too_many_requests_failure!(error:)
+      fail_with_error!(TooManyRequestsFailure.new(self, error:))
     end
 
     def raise_if_error!

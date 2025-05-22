@@ -38,6 +38,8 @@ module Invoices
       result.usage = compute_usage
       result.invoice = invoice
       result
+    rescue BaseService::ThrottlingError => error
+      result.too_many_requests_failure!(error:)
     end
 
     private

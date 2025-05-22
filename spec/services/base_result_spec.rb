@@ -161,6 +161,19 @@ RSpec.describe BaseResult do
     it { expect { result.raise_if_error! }.to raise_error(BaseService::ThirdPartyFailure) }
   end
 
+  describe ".too_many_requests_failure!" do
+    let(:error) { StandardError.new("custom_error") }
+
+    before { result.too_many_requests_failure!(error:) }
+
+    it { expect(result).not_to be_success }
+    it { expect(result).to be_failure }
+    it { expect(result.error).to be_a(BaseService::TooManyRequestsFailure) }
+    it { expect(result.error.message).to eq("custom_error") }
+
+    it { expect { result.raise_if_error! }.to raise_error(BaseService::TooManyRequestsFailure) }
+  end
+
   describe ".raise_if_error!" do
     context "when the result is a failure" do
       before { result.fail_with_error!(StandardError.new) }
