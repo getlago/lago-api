@@ -17,10 +17,14 @@ module IntegrationCustomers
     ].freeze
 
     validates :customer_id, uniqueness: {scope: :type}
-    validate :only_one_tax_integration_per_customer, if: :tax_integration?
+    validate :only_one_tax_integration_per_customer, if: :tax_kind?
 
     scope :accounting_kind, -> do
       where(type: %w[IntegrationCustomers::NetsuiteCustomer IntegrationCustomers::XeroCustomer])
+    end
+
+    scope :tax_kind, -> do
+      where(type: TAX_INTEGRATION_TYPES)
     end
 
     scope :hubspot_kind, -> do
@@ -54,14 +58,14 @@ module IntegrationCustomers
       end
     end
 
-    def tax_integration?
+    def tax_kind?
       TAX_INTEGRATION_TYPES.include?(type)
     end
 
     private
 
     def only_one_tax_integration_per_customer
-      conflict = IntegrationCustomers::BaseCustomer.where(customer_id:, type: TAX_INTEGRATION_TYPES)
+      conflict = IntegrationCustomers::BaseCustomer.tax_kind.where(customer_id:)
       conflict = conflict.where.not(id:) if persisted?
 
       return unless conflict.exists?
