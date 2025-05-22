@@ -111,15 +111,12 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
         plan_code: plan.code
       })
       subscription = customer.subscriptions.sole
-      alert = UsageMonitoring::CreateAlertService.call!(
-        organization:,
-        subscription:,
-        params: {alert_type: :usage_amount, code: "simple", thresholds: [
-          {value: 15_00, code: :warn},
-          {value: 30_00, code: :warn},
-          {value: 10_00, code: :alert, recurring: true}
-        ]}
-      ).alert
+      create_alert(subscription_external_id, {alert_type: :usage_amount, code: :simple, thresholds: [
+        {value: 15_00, code: :warn},
+        {value: 30_00, code: :warn},
+        {value: 10_00, code: :alert, recurring: true}
+      ]})
+      alert = UsageMonitoring::Alert.find(json[:alert][:lago_id])
 
       send_event!(code: billable_metric.code, properties: {ops_count: 7}, external_subscription_id: subscription_external_id)
 
@@ -154,14 +151,16 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
         external_id: subscription_external_id,
         plan_code: plan.code
       })
-      subscription = customer.subscriptions.sole
-      alert_on_bm_units = UsageMonitoring::CreateAlertService.call!(
-        organization:,
-        subscription:,
-        params: {alert_type: :billable_metric_usage_units, code: :bm_units, billable_metric:, thresholds: [
+
+      create_alert(subscription_external_id, {
+        alert_type: :billable_metric_usage_units,
+        code: :bm_units,
+        billable_metric_code: billable_metric.code,
+        thresholds: [
           {value: 90, code: :warn}
-        ]}
-      ).alert
+        ]
+      })
+      alert_on_bm_units = UsageMonitoring::Alert.find(json[:alert][:lago_id])
 
       send_event!(code: billable_metric.code, properties: {ops_count: 89}, external_subscription_id: subscription_external_id)
       perform_usage_update
@@ -203,14 +202,12 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
         })
       end
 
-      subscription = customer.subscriptions.sole
-      lifetime_alert = UsageMonitoring::CreateAlertService.call!(
-        organization:,
-        subscription:,
-        params: {alert_type: :lifetime_usage_amount, code: :bm_units, thresholds: [
-          {value: 150_00, code: :warn}
-        ]}
-      ).alert
+      create_alert(subscription_external_id, {
+        alert_type: :lifetime_usage_amount,
+        code: :lifetime,
+        thresholds: [{value: 150_00, code: :warn}]
+      })
+      lifetime_alert = UsageMonitoring::Alert.find(json[:alert][:lago_id])
 
       [DateTime.new(2025, 1, 1), DateTime.new(2025, 2, 1)].each do |month|
         travel_to month + 5.days do
