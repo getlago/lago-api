@@ -95,9 +95,9 @@ Rails.application.console do
   # Often this procedure is called "regenerate invoice"
   def delete_invoice_pdf(id)
     inv = Invoice.find(id)
-    puts "Going to delete invoice pdf from org `#{inv.organization.name}` (id: #{inv.id})"
+    puts "Going to delete invoice pdf from org `#{inv.organization.name}` (id: #{inv.id})" # rubocop:disable Rails/Output
     unless inv.finalized?
-      puts "Invoice is not finalized. Skipping."
+      puts "Invoice is not finalized. Skipping." # rubocop:disable Rails/Output
       return
     end
 
