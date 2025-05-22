@@ -123,8 +123,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
 
         it "rescue from provider throttles" do
           subject
-          expect(response).to have_http_status(:unprocessable_entity)
-          expect(response.body).to include("Try again later")
+          expect(response).to have_http_status(:too_many_requests)
+          expect(response.body).to match(/anrok.*Try again later/)
         end
       end
     end
