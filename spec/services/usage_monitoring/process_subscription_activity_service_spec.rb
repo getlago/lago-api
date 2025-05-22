@@ -105,16 +105,27 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
 
   context "when subscription has alerts" do
     let(:premium_integrations) { [] }
-    let(:alert) { create(:usage_amount_alert, recurring_threshold: 35, thresholds: [10, 20], previous_value: 4, code: "test", organization:, subscription_external_id: subscription.external_id) }
+    let(:billable_metric) { create(:billable_metric, organization:) }
+    let(:alert) { create(:usage_amount_alert, organization:, subscription_external_id: subscription.external_id) }
+    let(:alert_2) { create(:billable_metric_usage_amount_alert, billable_metric:, organization:, subscription_external_id: subscription.external_id) }
+    let(:alert_3) { create(:billable_metric_usage_units_alert, billable_metric:, organization:, subscription_external_id: subscription.external_id) }
+    let(:alert_4) { create(:lifetime_usage_amount_alert, organization:, subscription_external_id: subscription.external_id) }
 
     before do
       alert
+      alert_2
+      alert_3
+      alert_4
       allow(::UsageMonitoring::ProcessAlertService).to receive(:call)
     end
 
     it "processes the alerts" do
       service.call
-      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert:, subscription:, current_metrics: mocked_current_usage)
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).exactly(4).times
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert, subscription:, current_metrics: mocked_current_usage)
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_2, subscription:, current_metrics: mocked_current_usage)
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_3, subscription:, current_metrics: mocked_current_usage)
+      expect(::UsageMonitoring::ProcessAlertService).to have_received(:call).with(alert: alert_4, subscription:, current_metrics: subscription.lifetime_usage)
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
 

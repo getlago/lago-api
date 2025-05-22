@@ -6,7 +6,8 @@ RSpec.describe UsageMonitoring::CreateAlertService do
   describe ".call" do
     subject(:result) { described_class.call(organization:, subscription:, params:) }
 
-    let(:organization) { create(:organization) }
+    let(:organization) { create(:organization, premium_integrations:) }
+    let(:premium_integrations) { [] }
     let(:thresholds) { [{code: "warning", value: 80}, {code: "critical", value: 120}] }
     let(:params) { {alert_type: "usage_amount", name: "Main", thresholds:, code: "first", billable_metric_id: billable_metric&.id} }
     let(:subscription) { create(:subscription, organization:) }
@@ -144,6 +145,31 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       it "returns a record validation failure result" do
         expect(result).to be_failure
         expect(result.error.message).to include("too_many_thresholds")
+      end
+    end
+
+    context "when creating lifetime_usage alert" do
+      let(:params) { {alert_type: "lifetime_usage_amount", thresholds:, code: "first"} }
+
+      around { |test| lago_premium!(&test) }
+
+      context "when organization using lifetime usage" do
+        let(:premium_integrations) { [] }
+
+        it "returns a record validation failure result" do
+          expect(result).to be_failure
+          expect(result.error.messages[:alert_type]).to eq ["feature_not_available"]
+        end
+      end
+
+      context "when organization does not use lifetime usage" do
+        let(:premium_integrations) { ["lifetime_usage"] }
+
+        it "creates the alert" do
+          expect(result).to be_success
+          expect(result.alert).to be_persisted
+          expect(result.alert.alert_type).to eq "lifetime_usage_amount"
+        end
       end
     end
   end

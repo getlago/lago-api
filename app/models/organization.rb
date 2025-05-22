@@ -143,6 +143,10 @@ class Organization < ApplicationRecord
     end
   end
 
+  def using_lifetime_usage?
+    lifetime_usage_enabled? || progressive_billing_enabled?
+  end
+
   def admins
     users.joins(:memberships).merge!(memberships.admin)
   end

@@ -15,6 +15,10 @@ module UsageMonitoring
     def call
       return result.not_found_failure!(resource: "alert") unless alert
 
+      if params.has_key?(:thresholds) && params[:thresholds].size > AlertThreshold::SOFT_LIMIT
+        return result.single_validation_failure!(field: :thresholds, error_code: "too_many_thresholds")
+      end
+
       result.alert = alert
 
       billable_metric = find_billable_metric_from_params!

@@ -324,6 +324,18 @@ RSpec.describe Organization, type: :model do
     end
   end
 
+  describe "#using_lifetime_usage?" do
+    around { |test| lago_premium!(&test) }
+
+    it do
+      expect(build(:organization, premium_integrations: ["lifetime_usage"])).to be_using_lifetime_usage
+      expect(build(:organization, premium_integrations: ["progressive_billing"])).to be_using_lifetime_usage
+      expect(build(:organization, premium_integrations: ["lifetime_usage", "progressive_billing"])).to be_using_lifetime_usage
+      expect(build(:organization, premium_integrations: [])).not_to be_using_lifetime_usage
+      expect(build(:organization, premium_integrations: ["okta"])).not_to be_using_lifetime_usage
+    end
+  end
+
   describe "#admins" do
     subject { organization.admins }
 

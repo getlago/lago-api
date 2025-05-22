@@ -3,7 +3,8 @@
 require "rails_helper"
 
 describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :redis do
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, premium_integrations:) }
+  let(:premium_integrations) { [] }
   let(:plan) { create(:plan, organization:, name: "Premium Plan", code: "premium_plan", amount_cents: 49_00) }
   let(:customer) { create(:customer, external_id: "cust#{external_id}", organization:) }
 
@@ -144,6 +145,95 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
         {code: "alert", value: "4000.0", recurring: true},
         {code: "alert", value: "5000.0", recurring: true}
       ])
+    end
+  end
+
+  context "with billable_metric_usage_units alert" do
+    it do
+      create_subscription({
+        external_customer_id: customer.external_id,
+        external_id: subscription_external_id,
+        plan_code: plan.code
+      })
+      subscription = customer.subscriptions.sole
+      alert_on_bm_units = UsageMonitoring::CreateAlertService.call!(
+        organization:,
+        subscription:,
+        params: {alert_type: :billable_metric_usage_units, code: :bm_units, billable_metric:, thresholds: [
+          {value: 90, code: :warn}
+        ]}
+      ).alert
+
+      send_event!(code: billable_metric.code, properties: {ops_count: 89}, external_subscription_id: subscription_external_id)
+      perform_usage_update
+      expect(alert_on_bm_units.triggered_alerts.count).to eq 0
+
+      send_event!(code: billable_metric.code, properties: {ops_count: 5}, external_subscription_id: subscription_external_id)
+      perform_usage_update
+      expect(alert_on_bm_units.triggered_alerts.count).to eq 1
+
+      ta = alert_on_bm_units.triggered_alerts.sole
+
+      expect(ta.current_value).to eq(94)
+      expect(ta.previous_value).to eq(89)
+      expect(ta.crossed_thresholds.map(&:symbolize_keys)).to eq([
+        {code: "warn", value: "90.0", recurring: false}
+      ])
+
+      webhooks_sent.find { |w| w[:webhook_type] == "alert.triggered" }.tap do |webhook|
+        expect(webhook[:object_type]).to eq("triggered_alert")
+        expect(webhook[:triggered_alert]).to include({
+          lago_id: ta.id,
+          current_value: "94.0",
+          previous_value: "89.0",
+          triggered_at: String
+        })
+      end
+    end
+  end
+
+  context "with lifetime_usage alerts" do
+    let(:premium_integrations) { %i[lifetime_usage progressive_billing] }
+
+    it do
+      travel_to(DateTime.new(2025, 1, 1)) do
+        create_subscription({
+          external_customer_id: customer.external_id,
+          external_id: subscription_external_id,
+          plan_code: plan.code
+        })
+      end
+
+      subscription = customer.subscriptions.sole
+      lifetime_alert = UsageMonitoring::CreateAlertService.call!(
+        organization:,
+        subscription:,
+        params: {alert_type: :lifetime_usage_amount, code: :bm_units, thresholds: [
+          {value: 150_00, code: :warn}
+        ]}
+      ).alert
+
+      [DateTime.new(2025, 1, 1), DateTime.new(2025, 2, 1)].each do |month|
+        travel_to month + 5.days do
+          send_event!(code: billable_metric.code, properties: {ops_count: 10}, external_subscription_id: subscription_external_id)
+          perform_usage_update
+        end
+        travel_to((month + 1.month).beginning_of_month) do
+          perform_billing
+          expect(organization.triggered_alerts.count).to eq 0
+        end
+      end
+
+      travel_to DateTime.new(2025, 3, 15) do
+        send_event!(code: billable_metric.code, properties: {ops_count: 11}, external_subscription_id: subscription_external_id)
+        perform_usage_update
+      end
+
+      expect(organization.triggered_alerts.count).to eq 1
+      ta = organization.triggered_alerts.sole
+      expect(ta.usage_monitoring_alert_id).to eq lifetime_alert.id
+      expect(ta.current_value).to eq 155_00
+      expect(ta.crossed_thresholds).to eq [{"code" => "warn", "value" => "15000.0", "recurring" => false}]
     end
   end
 

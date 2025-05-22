@@ -5,7 +5,9 @@ require "rails_helper"
 RSpec.describe UsageMonitoring::UpdateAlertService do
   subject(:result) { described_class.call(alert:, params:) }
 
-  let(:alert) { create(:alert, thresholds: [1, 50]) }
+  let(:organization) { create(:organization, premium_integrations:) }
+  let(:premium_integrations) { [] }
+  let(:alert) { create(:alert, thresholds: [1, 50], organization: organization) }
 
   describe "#call" do
     let(:params) do
@@ -57,6 +59,21 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
           expect(result).to be_failure
           expect(result.error.message).to eq "billable_metric_not_found"
         end
+      end
+    end
+
+    context "with too many thresholds" do
+      let(:params) do
+        {
+          thresholds: Array.new(21) do |i|
+            {code: "warning#{i}", value: 10 + i}
+          end
+        }
+      end
+
+      it "returns a record validation failure result" do
+        expect(result).to be_failure
+        expect(result.error.message).to include("too_many_thresholds")
       end
     end
   end

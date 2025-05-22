@@ -929,7 +929,9 @@ CREATE TYPE public.tax_status AS ENUM (
 
 CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
     'usage_amount',
-    'billable_metric_usage_amount'
+    'billable_metric_usage_amount',
+    'billable_metric_usage_units',
+    'lifetime_usage_amount'
 );
 
 
@@ -8393,6 +8395,8 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250521104239'),
 ('20250521095733'),
+('20250520170402'),
+('20250520155108'),
 ('20250520143628'),
 ('20250520080000'),
 ('20250519092053'),

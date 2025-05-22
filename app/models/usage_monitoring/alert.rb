@@ -9,11 +9,14 @@ module UsageMonitoring
 
     STI_MAPPING = {
       "usage_amount" => "UsageMonitoring::UsageAmountAlert",
-      "billable_metric_usage_amount" => "UsageMonitoring::BillableMetricUsageAmountAlert"
+      "billable_metric_usage_amount" => "UsageMonitoring::BillableMetricUsageAmountAlert",
+      "billable_metric_usage_units" => "UsageMonitoring::BillableMetricUsageUnitsAlert",
+
+      "lifetime_usage_amount" => "UsageMonitoring::LifetimeUsageAmountAlert"
     }
 
-    CURRENT_USAGE_TYPES = %w[usage_amount billable_metric_usage_amount]
-    BILLABLE_METRIC_TYPES = %w[billable_metric_usage_amount]
+    CURRENT_USAGE_TYPES = %w[usage_amount billable_metric_usage_amount billable_metric_usage_units]
+    BILLABLE_METRIC_TYPES = %w[billable_metric_usage_amount billable_metric_usage_units]
 
     default_scope -> { kept }
 
@@ -33,6 +36,9 @@ module UsageMonitoring
     validates :code, presence: true
     validates :billable_metric, presence: true, if: :need_billable_metric?
     validates :billable_metric, absence: true, unless: :need_billable_metric?
+
+    scope :using_current_usage, -> { where(alert_type: CURRENT_USAGE_TYPES) }
+    scope :using_lifetime_usage, -> { where(alert_type: "lifetime_usage_amount") }
 
     def self.find_sti_class(type_name)
       STI_MAPPING.fetch(type_name).constantize
