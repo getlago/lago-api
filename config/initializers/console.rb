@@ -92,6 +92,7 @@ Rails.application.console do
     {organization:, invite_url: result.invite_url}
   end
 
+  # Often this procedure is called "regenerate invoice"
   def delete_invoice_pdf(id)
     inv = Invoice.find(id)
     puts "Going to delete invoice pdf from org `#{inv.organization.name}` (id: #{inv.id})"
