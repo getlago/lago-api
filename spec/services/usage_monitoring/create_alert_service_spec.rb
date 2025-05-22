@@ -149,9 +149,12 @@ RSpec.describe UsageMonitoring::CreateAlertService do
     end
 
     context "when creating lifetime_usage alert" do
-      context "without required premium_integrations" do
+      let(:params) { {alert_type: "lifetime_usage_amount", thresholds:, code: "first"} }
+
+      around { |test| lago_premium!(&test) }
+
+      context "when organization using lifetime usage" do
         let(:premium_integrations) { [] }
-        let(:params) { {alert_type: "lifetime_usage_amount", thresholds:, code: "first"} }
 
         it "returns a record validation failure result" do
           expect(result).to be_failure
@@ -159,14 +162,12 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         end
       end
 
-      context "with required premium_integrations" do
+      context "when organization does not use lifetime usage" do
         let(:premium_integrations) { ["lifetime_usage"] }
-        let(:params) { {alert_type: "lifetime_usage_amount", thresholds:, code: "first"} }
-
-        around { |test| lago_premium!(&test) }
 
         it "creates the alert" do
           expect(result).to be_success
+          expect(result.alert).to be_persisted
           expect(result.alert.alert_type).to eq "lifetime_usage_amount"
         end
       end

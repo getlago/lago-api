@@ -38,11 +38,11 @@ module UsageMonitoring
           organization_id: subscription_activity.organization_id
         ).includes(:thresholds)
 
-        alerts.where(alert_type: Alert::CURRENT_USAGE_TYPES).find_each do |alert|
+        alerts.using_current_usage.find_each do |alert|
           ProcessAlertService.call(alert:, subscription:, current_metrics: current_usage)
         end
 
-        alerts.where(alert_type: "lifetime_usage_amount").find_each do |alert|
+        alerts.using_lifetime_usage.find_each do |alert|
           ProcessAlertService.call(alert:, subscription:, current_metrics: lifetime_usage)
         end
       rescue => e

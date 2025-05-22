@@ -37,6 +37,9 @@ module UsageMonitoring
     validates :billable_metric, presence: true, if: :need_billable_metric?
     validates :billable_metric, absence: true, unless: :need_billable_metric?
 
+    scope :using_current_usage, -> { where(alert_type: CURRENT_USAGE_TYPES) }
+    scope :using_lifetime_usage, -> { where(alert_type: "lifetime_usage_amount") }
+
     def self.find_sti_class(type_name)
       STI_MAPPING.fetch(type_name).constantize
     end
