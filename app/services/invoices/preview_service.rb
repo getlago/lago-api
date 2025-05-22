@@ -282,7 +282,7 @@ module Invoices
     end
 
     def provider_taxation?
-      customer.integration_customers.find { |ic| ic.tax_integration? }
+      customer.integration_customers.find { |ic| ic.tax_kind? }
     end
 
     def should_create_subscription_fee?(subscription)

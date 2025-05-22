@@ -149,6 +149,23 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
     end
   end
 
+  describe "#tax_kind?" do
+    context "with tax integration" do
+      let(:integration) { create(:anrok_integration) }
+      let(:type) { "IntegrationCustomers::AnrokCustomer" }
+
+      it "returns true" do
+        expect(integration_customer.tax_kind?).to be_truthy
+      end
+    end
+
+    context "without tax integration" do
+      it "returns false" do
+        expect(integration_customer.tax_kind?).to be_falsy
+      end
+    end
+  end
+
   describe "validations" do
     describe "of customer id uniqueness" do
       let(:errors) { another_integration_customer.errors }
@@ -216,6 +233,16 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
           it "is invalid for a different tax integration" do
             expect(integration_customer).not_to be_valid
             expect(integration_customer.errors[:type]).to include("tax_integration_exists")
+          end
+        end
+
+        context "when validating persisted record" do
+          before do
+            integration_customer.save!
+          end
+
+          it "does not add any errors" do
+            expect(integration_customer).to be_valid
           end
         end
       end
