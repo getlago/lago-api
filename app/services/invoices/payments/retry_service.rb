@@ -29,6 +29,7 @@ module Invoices
         end
 
         deliver_webhook
+        produce_activity_log
         Invoices::Payments::CreateService.call_async(invoice:)
 
         result.invoice = invoice
@@ -44,6 +45,12 @@ module Invoices
 
       def deliver_webhook
         SendWebhookJob.perform_later(WEBHOOK_TYPE[invoice.invoice_type], invoice)
+      end
+
+      def produce_activity_log
+        return unless Clickhouse::ActivityLog::ACTIVITY_TYPES.value? WEBHOOK_TYPE[invoice.invoice_type]
+
+        Utils::ActivityLog.produce(invoice, WEBHOOK_TYPE[invoice.invoice_type])
       end
     end
   end

@@ -9,6 +9,11 @@ module PaymentReceipts
       super
     end
 
+    activity_loggable(
+      action: "payment_receipt.generated",
+      record: -> { payment_receipt }
+    )
+
     def call
       return result.not_found_failure!(resource: "payment_receipt") if payment_receipt.blank?
 
