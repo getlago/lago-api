@@ -12,7 +12,7 @@ module WalletTransactions
       return result if wallet_transaction.status == "failed"
 
       ActiveRecord::Base.transaction do
-        if wallet_transaction.settled?
+        if wallet_transaction.settled? && wallet_transaction.inbound?
           Wallets::Balance::DecreaseService
             .new(wallet: wallet_transaction.wallet, wallet_transaction: wallet_transaction).call
         end
