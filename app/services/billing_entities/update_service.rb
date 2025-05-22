@@ -11,6 +11,11 @@ module BillingEntities
       super(nil)
     end
 
+    activity_loggable(
+      action: "billing_entities.updated",
+      record: -> { billing_entity }
+    )
+
     def call
       return result.not_found_failure!(resource: "billing_entity") unless billing_entity
 
