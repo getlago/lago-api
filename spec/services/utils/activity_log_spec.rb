@@ -60,7 +60,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
       end
 
       context "when the object is deleted" do
-        it "does not set activity_object and activity_object_changes" do
+        it "does not set activity_object_changes" do
           allow(CurrentContext).to receive(:source).and_return(nil)
           activity_log.produce(invoice, "invoice.deleted", activity_id: "activity-id") { BaseService::Result.new }
 
@@ -78,7 +78,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
               resource_id: invoice.id,
               resource_type: "Invoice",
               organization_id: organization.id,
-              activity_object: {},
+              activity_object: V1::InvoiceSerializer.new(invoice).serialize,
               activity_object_changes: {},
               external_customer_id: invoice.customer.external_id,
               external_subscription_id: nil
