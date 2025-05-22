@@ -67,8 +67,6 @@ module Utils
       end
 
       def activity_object(object, activity_type)
-        return {} if activity_type.include?("deleted")
-
         object_serialized(object)
       end
 
