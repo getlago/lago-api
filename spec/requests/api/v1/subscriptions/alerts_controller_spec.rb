@@ -9,7 +9,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
   let(:organization) { create(:organization) }
   let(:subscription) { create(:subscription, external_id:, customer: create(:customer, organization: organization)) }
   let(:alert) { create(:alert, :processed, code:, subscription_external_id: external_id, organization:) }
-  let(:deleted_alert) { create(:alert, :processed, deleted_at: Time.current, subscription_external_id: external_id, organization:) }
+  let(:deleted_alert) { create(:alert, :processed, deleted_at: Time.current, subscription_external_id: external_id, organization:, thresholds: []) }
 
   before do
     subscription
@@ -35,16 +35,15 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
     it_behaves_like "returns error if subscription not found"
 
     context "when there are alerts" do
-      it do
+      it "retrieves a paginated list of alerts" do
         subject
         expect(json[:alerts].sole).to include({
           code:,
           lago_id: alert.id,
+          billable_metric: be_nil,
           previous_value: "800.0",
           name: "General Alert",
-          created_at: be_present,
-          updated_at: be_present,
-          deleted_at: be_nil
+          created_at: be_present
         })
         expect(json[:meta]).to eq({
           current_page: 1,
@@ -96,9 +95,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
         name: "New Alert",
         previous_value: "0.0",
         last_processed_at: be_nil,
-        created_at: be_present,
-        updated_at: be_present,
-        deleted_at: be_nil
+        created_at: be_present
       })
     end
 
@@ -198,9 +195,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
         lago_id: alert.id,
         previous_value: "800.0",
         name: "General Alert",
-        created_at: be_present,
-        updated_at: be_present,
-        deleted_at: be_nil
+        created_at: be_present
       })
     end
 
@@ -241,9 +236,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
         name: "General Alert", # Not updated if not part of params
         previous_value: "800.0",
         last_processed_at: be_present,
-        created_at: be_present,
-        updated_at: be_present,
-        deleted_at: be_nil
+        created_at: be_present
       })
     end
 
@@ -301,7 +294,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
           lago_id: alert.id,
           alert_type: "billable_metric_usage_amount",
           code: "bm",
-          billable_metric_code: "bm_code"
+          billable_metric: hash_including({code: "bm_code"})
         })
       end
 
@@ -325,9 +318,9 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
     it_behaves_like "requires API permission", "alert", "write"
     it_behaves_like "returns error if subscription not found"
 
-    it do
+    it "soft deletes the invoice" do
       subject
-      expect(Time.zone.parse(json[:alert][:deleted_at])).to be_within(5.seconds).of(Time.current)
+      expect(alert.reload.deleted_at).to be_within(5.seconds).of(Time.current)
     end
 
     context "when alert is not found" do
