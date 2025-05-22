@@ -8,6 +8,18 @@ module Clickhouse
     belongs_to :organization
     belongs_to :resource, polymorphic: true
 
+    RESOURCE_TYPES = {
+      billable_metric: "BillableMetric",
+      plan: "Plan",
+      customer: "Customer",
+      invoice: "Invoice",
+      credit_note: "CreditNote",
+      billing_entity: "BillingEntity",
+      subscription: "Subscription",
+      wallet: "Wallet",
+      coupon: "Coupon"
+    }.freeze
+
     ACTIVITY_TYPES = {
       billable_metric_created: "billable_metric.created",
       billable_metric_updated: "billable_metric.updated",
