@@ -186,6 +186,23 @@ RSpec.describe Fees::EstimateInstant::BatchPayInAdvanceService do
           end
         end
       end
+
+      context "when billable metric does not have field name to run aggregation on" do
+        let(:billable_metric) { create(:billable_metric, organization:) }
+        let(:charge) { create(:percentage_charge, :pay_in_advance, plan:, billable_metric:, properties: {rate: "10", fixed_amount: "0"}) }
+        let(:properties) { {} }
+
+        it "takes the whole event as one unit" do
+          result = subject.call
+
+          expect(result).to be_success
+          expect(result.fees.count).to eq(1)
+
+          fee = result.fees.first
+          expect(fee[:amount_cents]).to eq(10)
+          expect(fee[:units]).to eq(1)
+        end
+      end
     end
   end
 
