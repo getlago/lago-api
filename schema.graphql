@@ -452,6 +452,8 @@ type AlertThreshold {
 
 enum AlertTypeEnum {
   billable_metric_usage_amount
+  billable_metric_usage_units
+  lifetime_usage_amount
   usage_amount
 }
 
