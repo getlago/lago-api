@@ -724,6 +724,7 @@ DROP VIEW IF EXISTS public.exports_fees;
 DROP TABLE IF EXISTS public.subscriptions;
 DROP TABLE IF EXISTS public.plans;
 DROP TABLE IF EXISTS public.fees;
+DROP VIEW IF EXISTS public.exports_daily_usages;
 DROP VIEW IF EXISTS public.exports_customers;
 DROP TABLE IF EXISTS public.payment_provider_customers;
 DROP TABLE IF EXISTS public.organizations;
@@ -2178,6 +2179,27 @@ CREATE VIEW public.exports_customers AS
      LEFT JOIN public.organizations o ON ((o.id = c.organization_id)))
      LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL))))
   WHERE (c.deleted_at IS NULL);
+
+
+--
+-- Name: exports_daily_usages; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_daily_usages AS
+ SELECT du.organization_id,
+    du.id AS lago_id,
+    du.from_datetime,
+    du.to_datetime,
+    du.refreshed_at,
+    du.usage_date,
+    du.usage AS daily_usage,
+    du.usage_diff AS daily_usage_diff,
+    du.created_at,
+    du.updated_at,
+    du.customer_id AS lago_customer_id,
+    du.subscription_id AS lago_subscription_id,
+    du.external_subscription_id
+   FROM public.daily_usages du;
 
 
 --
@@ -8393,6 +8415,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250522134155'),
 ('20250521104239'),
 ('20250521095733'),
 ('20250520170402'),
