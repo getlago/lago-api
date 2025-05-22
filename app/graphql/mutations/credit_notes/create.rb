@@ -26,11 +26,10 @@ module Mutations
         args[:items].map!(&:to_h)
 
         result = ::CreditNotes::CreateService
-          .new(
+          .call(
             invoice: current_organization.invoices.visible.find_by(id: args[:invoice_id]),
             **args
           )
-          .call
 
         result.success? ? result.credit_note : result_error(result)
       end
