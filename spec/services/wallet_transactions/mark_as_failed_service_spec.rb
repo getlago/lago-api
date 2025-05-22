@@ -53,8 +53,8 @@ RSpec.describe WalletTransactions::MarkAsFailedService, type: :service do
         it "decreases the wallet balance" do
           expect {
             service.call
-          }.to change { wallet.reload.balance_cents }.by(-100).and change { wallet_transaction.reload.status }.
-            from("settled").to("failed")
+          }.to change { wallet.reload.balance_cents }.by(-100).and change { wallet_transaction.reload.status }
+            .from("settled").to("failed")
         end
       end
     end

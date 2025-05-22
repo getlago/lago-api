@@ -101,7 +101,7 @@ RSpec.describe Invoices::VoidService, type: :service do
 
         context "when the invoice has applied credits from the wallet" do
           let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
-          let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: 'outbound', amount: 100, credit_amount: 100) }
+          let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: "outbound", amount: 100, credit_amount: 100) }
 
           before do
             wallet_transaction
@@ -120,7 +120,7 @@ RSpec.describe Invoices::VoidService, type: :service do
           let(:invoice) { create(:invoice, :credit, status: :finalized, payment_status:, payment_overdue: true) }
           let(:payment_status) { [:pending, :failed].sample }
           let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
-          let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: 'inbound', amount: 100, credit_amount: 100) }
+          let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: "inbound", amount: 100, credit_amount: 100) }
 
           before do
             wallet_transaction
