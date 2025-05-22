@@ -98,6 +98,51 @@ RSpec.describe Invoices::VoidService, type: :service do
 
           expect(invoice.subscriptions.first.lifetime_usage.recalculate_invoiced_usage).to be(true)
         end
+
+        context "when the invoice has applied credits from the wallet" do
+          let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
+          let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: 'outbound', amount: 100, credit_amount: 100) }
+
+          before do
+            wallet_transaction
+            allow(WalletTransactions::RecreditService).to receive(:call).and_call_original
+          end
+
+          it "recredits the wallet transaction" do
+            void_service.call
+            expect(WalletTransactions::RecreditService).to have_received(:call).with(wallet_transaction: wallet_transaction)
+            expect(wallet.wallet_transactions.count).to eq(2)
+            expect(wallet.reload.credits_balance).to eq(200)
+          end
+        end
+
+        context "when invoice is a purchase credits invoice" do
+          let(:invoice) { create(:invoice, :credit, status: :finalized, payment_status:, payment_overdue: true) }
+          let(:payment_status) { [:pending, :failed].sample }
+          let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
+          let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: 'inbound', amount: 100, credit_amount: 100) }
+
+          before do
+            wallet_transaction
+            allow(WalletTransactions::RecreditService).to receive(:call).and_call_original
+          end
+
+          it "voids the invoice" do
+            result = void_service.call
+
+            expect(result).to be_success
+            expect(result.invoice).to be_voided
+            expect(result.invoice.voided_at).to be_present
+          end
+
+          it "does not recredit the wallet transaction" do
+            void_service.call
+
+            expect(wallet.wallet_transactions.count).to eq(1)
+            expect(wallet.reload.credits_balance).to eq(100)
+            expect(WalletTransactions::RecreditService).not_to have_received(:call)
+          end
+        end
       end
     end
   end

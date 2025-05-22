@@ -41,6 +41,22 @@ RSpec.describe WalletTransactions::MarkAsFailedService, type: :service do
           service.call
         }.to have_enqueued_job(SendWebhookJob).with("wallet_transaction.updated", wallet_transaction)
       end
+
+      context "when the wallet_transaction is settled" do
+        let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, status: "settled", amount: 100, credit_amount: 100) }
+
+        before do
+          wallet_transaction
+        end
+
+        it "decreases the wallet balance" do
+          expect {
+            service.call
+          }.to change { wallet.reload.balance_cents }.by(-100).and change { wallet_transaction.reload.status }.
+            from("settled").to("failed")
+        end
+      end
     end
   end
 end

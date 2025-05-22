@@ -11,7 +11,13 @@ module WalletTransactions
       return result unless wallet_transaction
       return result if wallet_transaction.status == "failed"
 
-      wallet_transaction.mark_as_failed!
+      ActiveRecord::Base.transaction do
+        if wallet_transaction.settled?
+          Wallets::Balance::DecreaseService
+            .new(wallet: wallet_transaction.wallet, wallet_transaction: wallet_transaction).call
+        end
+        wallet_transaction.mark_as_failed!
+      end
       SendWebhookJob.perform_later("wallet_transaction.updated", wallet_transaction)
       result.wallet_transaction = wallet_transaction
       result
