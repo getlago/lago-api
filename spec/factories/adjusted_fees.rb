@@ -2,10 +2,11 @@
 
 FactoryBot.define do
   factory :adjusted_fee do
-    invoice
     fee
+    organization { fee&.organization || association(:organization) }
+    invoice { fee&.invoice || association(:invoice, organization:) }
     charge { nil }
-    subscription
+    subscription { fee&.subscription || association(:subscription, organization:) }
 
     fee_type { "subscription" }
 

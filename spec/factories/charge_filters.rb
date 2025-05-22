@@ -7,6 +7,7 @@ FactoryBot.define do
     end
 
     charge_id { charge.id }
+    organization { charge.organization }
     properties { charge.properties }
   end
 end

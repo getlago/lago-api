@@ -2,8 +2,9 @@
 
 FactoryBot.define do
   factory :netsuite_customer, class: "IntegrationCustomers::NetsuiteCustomer" do
-    association :integration, factory: :netsuite_integration
+    integration { association(:netsuite_integration, organization:) }
     customer
+    organization { customer.organization }
     type { "IntegrationCustomers::NetsuiteCustomer" }
     external_customer_id { SecureRandom.uuid }
 
@@ -13,8 +14,9 @@ FactoryBot.define do
   end
 
   factory :anrok_customer, class: "IntegrationCustomers::AnrokCustomer" do
-    association :integration, factory: :anrok_integration
+    integration { association(:anrok_integration, organization:) }
     customer
+    organization { customer.organization }
     type { "IntegrationCustomers::AnrokCustomer" }
     external_customer_id { SecureRandom.uuid }
 
@@ -24,8 +26,9 @@ FactoryBot.define do
   end
 
   factory :avalara_customer, class: "IntegrationCustomers::AvalaraCustomer" do
-    association :integration, factory: :avalara_integration
+    integration { association(:avalara_integration, organization:) }
     customer
+    organization { customer.organization }
     type { "IntegrationCustomers::AvalaraCustomer" }
     external_customer_id { SecureRandom.uuid }
 
@@ -35,8 +38,9 @@ FactoryBot.define do
   end
 
   factory :xero_customer, class: "IntegrationCustomers::XeroCustomer" do
-    association :integration, factory: :xero_integration
+    integration { association(:xero_integration, organization:) }
     customer
+    organization { customer.organization }
     type { "IntegrationCustomers::XeroCustomer" }
     external_customer_id { SecureRandom.uuid }
 
@@ -46,8 +50,9 @@ FactoryBot.define do
   end
 
   factory :hubspot_customer, class: "IntegrationCustomers::HubspotCustomer" do
-    association :integration, factory: :hubspot_integration
+    integration { association(:hubspot_integration, organization:) }
     customer
+    organization { customer.organization }
     type { "IntegrationCustomers::HubspotCustomer" }
     external_customer_id { SecureRandom.uuid }
 
@@ -61,8 +66,9 @@ FactoryBot.define do
   end
 
   factory :salesforce_customer, class: "IntegrationCustomers::SalesforceCustomer" do
-    association :integration, factory: :salesforce_integration
+    integration { association(:salesforce_integration, organization:) }
     customer
+    organization { customer.organization }
     type { "IntegrationCustomers::SalesforceCustomer" }
     external_customer_id { SecureRandom.uuid }
     settings { {} }

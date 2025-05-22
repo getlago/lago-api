@@ -6,7 +6,7 @@ class AppliedCoupon < ApplicationRecord
 
   belongs_to :coupon
   belongs_to :customer
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   has_many :credits
 

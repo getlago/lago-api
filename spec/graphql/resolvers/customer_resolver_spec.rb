@@ -98,7 +98,7 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
 
     expect(customer_response["id"]).to eq(customer.id)
     expect(customer_response["subscriptions"].count).to eq(1)
-    expect(customer_response["invoices"].count).to eq(2)
+    expect(customer_response["invoices"].count).to eq(3)
     expect(customer_response["appliedAddOns"].count).to eq(1)
     expect(customer_response["taxes"].count).to eq(1)
     expect(customer_response["currency"]).to be_present

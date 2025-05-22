@@ -146,6 +146,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:progressive_invoice) do
           create(
             :invoice,
+            :subscription,
             customer:,
             status: "finalized",
             invoice_type: :progressive_billing,

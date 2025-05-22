@@ -3,7 +3,7 @@
 module BillingEntities
   module Taxes
     class ManageTaxesService < BaseService
-      Result = BaseResult[:taxes]
+      Result = BaseResult[:taxes, :applied_taxes]
       def initialize(billing_entity:, tax_codes:)
         @billing_entity = billing_entity
         @tax_codes = tax_codes || []
@@ -34,8 +34,18 @@ module BillingEntities
           result.not_found_failure!(resource: "tax")
         end
 
+        billing_entity.applied_taxes.where(
+          tax_id: organization.taxes.where.not("UPPER(code) IN (?)", unique_tax_codes).pluck(:id)
+        ).destroy_all
+
+        taxes.each do |tax|
+          billing_entity.applied_taxes
+            .create_with(organization: organization)
+            .find_or_create_by(tax_id: tax.id)
+        end
+
         result.taxes = taxes
-        billing_entity.taxes = taxes
+        result.applied_taxes = billing_entity.applied_taxes
       end
     end
   end

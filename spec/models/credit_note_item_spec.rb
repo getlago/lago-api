@@ -7,6 +7,7 @@ RSpec.describe CreditNoteItem, type: :model do
 
   it { is_expected.to belong_to(:credit_note) }
   it { is_expected.to belong_to(:fee) }
+  it { is_expected.to belong_to(:organization) }
 
   describe "#sub_total_excluding_taxes_amount_cents" do
     let(:credit_note_item) { build(:credit_note_item, amount_cents: 100, fee: fee) }
