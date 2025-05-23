@@ -42,7 +42,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
             source: :threshold,
             invoice_requires_successful_payment: false,
             metadata: []
-          }
+          },
+          unique_transaction: true
         )
     end
 
@@ -63,7 +64,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
         expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
           .with(
             organization_id: wallet.organization.id,
-            params: hash_including(invoice_requires_successful_payment: true)
+            params: hash_including(invoice_requires_successful_payment: true),
+            unique_transaction: true
           )
       end
     end
@@ -87,7 +89,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
         expect { top_up_service.call }.to have_enqueued_job(WalletTransactions::CreateJob)
           .with(
             organization_id: wallet.organization.id,
-            params: hash_including(metadata: transaction_metadata)
+            params: hash_including(metadata: transaction_metadata),
+            unique_transaction: true
           )
       end
     end
@@ -151,7 +154,8 @@ RSpec.describe Wallets::ThresholdTopUpService, type: :service do
               source: :threshold,
               invoice_requires_successful_payment: false,
               metadata: []
-            }
+            },
+            unique_transaction: true
           )
       end
     end

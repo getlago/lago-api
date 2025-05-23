@@ -21,7 +21,8 @@ module Wallets
           source: :threshold,
           invoice_requires_successful_payment: threshold_rule.invoice_requires_successful_payment?,
           metadata: threshold_rule.transaction_metadata
-        }
+        },
+        unique_transaction: true
       )
     end
 
