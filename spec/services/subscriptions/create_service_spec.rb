@@ -30,6 +30,10 @@ RSpec.describe Subscriptions::CreateService, type: :service do
   end
 
   describe "#call" do
+    before do
+      allow(Utils::ActivityLog).to receive(:produce)
+    end
+
     it "creates a subscription with subscription date set to current date" do
       result = create_service.call
 
@@ -62,6 +66,12 @@ RSpec.describe Subscriptions::CreateService, type: :service do
         create_service.call
         expect(Integrations::Aggregator::Subscriptions::Hubspot::CreateJob).to have_received(:perform_later)
       end
+    end
+
+    it "produces an activity log" do
+      subscription = create_service.call.subscription
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.started")
     end
 
     context "when ending_at is passed" do
@@ -649,6 +659,11 @@ RSpec.describe Subscriptions::CreateService, type: :service do
           it "sends updated subscription webhook" do
             create_service.call
             expect(SendWebhookJob).to have_been_enqueued.with("subscription.updated", subscription)
+          end
+
+          it "produces an activity log" do
+            create_service.call
+            expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.updated")
           end
 
           it "keeps the current subscription" do

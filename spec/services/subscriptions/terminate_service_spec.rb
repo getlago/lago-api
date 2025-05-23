@@ -198,7 +198,10 @@ RSpec.describe Subscriptions::TerminateService do
     let(:next_subscription) { create(:subscription, previous_subscription_id: subscription.id, status: :pending) }
     let(:timestamp) { Time.zone.now.to_i }
 
-    before { next_subscription }
+    before do
+      allow(Utils::ActivityLog).to receive(:produce)
+      next_subscription
+    end
 
     it "terminates the subscription" do
       result = terminate_service.terminate_and_start_next(timestamp:)
@@ -223,6 +226,12 @@ RSpec.describe Subscriptions::TerminateService do
       terminate_service.terminate_and_start_next(timestamp:)
       expect(SendWebhookJob).to have_been_enqueued.with("subscription.terminated", subscription)
       expect(SendWebhookJob).to have_been_enqueued.with("subscription.started", next_subscription)
+    end
+
+    it "produces the activity logs" do
+      terminate_service.terminate_and_start_next(timestamp:)
+      expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.terminated")
+      expect(Utils::ActivityLog).to have_received(:produce).with(next_subscription, "subscription.started")
     end
 
     context "when terminated subscription is payed in arrear" do
