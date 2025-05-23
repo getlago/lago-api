@@ -24,6 +24,7 @@ module Resolvers
       argument :external_customer_id, String, required: false
       argument :external_subscription_id, String, required: false
 
+      argument :billing_entity_code, String, required: false
       argument :plan_code, String, required: false
 
       type Types::DataApi::Mrrs::Object.collection_type, null: false

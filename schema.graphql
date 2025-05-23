@@ -7809,7 +7809,7 @@ type Query {
   """
   Query monthly recurring revenues of an organization
   """
-  dataApiMrrs(currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiMrrCollection!
+  dataApiMrrs(billingEntityCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiMrrCollection!
 
   """
   Query monthly recurring revenues plans of an organization
@@ -7819,12 +7819,12 @@ type Query {
   """
   Query prepaid credits of an organization
   """
-  dataApiPrepaidCredits(currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiPrepaidCreditCollection!
+  dataApiPrepaidCredits(billingEntityCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiPrepaidCreditCollection!
 
   """
   Query revenue streams of an organization
   """
-  dataApiRevenueStreams(currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiRevenueStreamCollection!
+  dataApiRevenueStreams(billingEntityCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiRevenueStreamCollection!
 
   """
   Query revenue streams customers of an organization
@@ -7839,17 +7839,17 @@ type Query {
   """
   Query usages of an organization
   """
-  dataApiUsages(billableMetricCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, isBillableMetricRecurring: Boolean, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageCollection!
+  dataApiUsages(billableMetricCode: String, billingEntityCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, isBillableMetricRecurring: Boolean, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageCollection!
 
   """
   Query usages of an organization
   """
-  dataApiUsagesAggregatedAmounts(currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, isBillableMetricRecurring: Boolean, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageAggregatedAmountCollection!
+  dataApiUsagesAggregatedAmounts(billingEntityCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, isBillableMetricRecurring: Boolean, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageAggregatedAmountCollection!
 
   """
   Query invoiced usages of an organization
   """
-  dataApiUsagesInvoiced(billableMetricCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, filterValues: String, fromDate: ISO8601Date, groupedBy: String, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageInvoicedCollection!
+  dataApiUsagesInvoiced(billableMetricCode: String, billingEntityCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, filterValues: String, fromDate: ISO8601Date, groupedBy: String, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageInvoicedCollection!
 
   """
   Query a single dunning campaign of an organization

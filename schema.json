@@ -39377,6 +39377,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "billingEntityCode",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "planCode",
                   "description": null,
                   "type": {
@@ -39555,6 +39567,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "billingEntityCode",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "planCode",
                   "description": null,
                   "type": {
@@ -39669,6 +39693,18 @@
                 },
                 {
                   "name": "externalSubscriptionId",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "billingEntityCode",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",
@@ -39959,6 +39995,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "billingEntityCode",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "planCode",
                   "description": null,
                   "type": {
@@ -40096,6 +40144,18 @@
                   "deprecationReason": null
                 },
                 {
+                  "name": "billingEntityCode",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "planCode",
                   "description": null,
                   "type": {
@@ -40222,6 +40282,18 @@
                 },
                 {
                   "name": "billableMetricCode",
+                  "description": null,
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "billingEntityCode",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",

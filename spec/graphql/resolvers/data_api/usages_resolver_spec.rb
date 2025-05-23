@@ -6,8 +6,8 @@ RSpec.describe Resolvers::DataApi::UsagesResolver, type: :graphql do
   let(:required_permission) { "data_api:view" }
   let(:query) do
     <<~GQL
-      query($currency: CurrencyEnum, $externalCustomerId: String) {
-        dataApiUsages(currency: $currency, externalCustomerId: $externalCustomerId) {
+      query($currency: CurrencyEnum, $externalCustomerId: String, $billingEntityCode: String) {
+        dataApiUsages(currency: $currency, externalCustomerId: $externalCustomerId, billingEntityCode: $billingEntityCode) {
           collection {
             amountCurrency
             amountCents
@@ -24,7 +24,7 @@ RSpec.describe Resolvers::DataApi::UsagesResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:body_response) { File.read("spec/fixtures/lago_data_api/usages.json") }
-  let(:params) { {time_granularity: "daily"} }
+  let(:params) { {time_granularity: "daily", billing_entity_code: "code"} }
 
   before do
     stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/")
@@ -43,7 +43,8 @@ RSpec.describe Resolvers::DataApi::UsagesResolver, type: :graphql do
       current_user: membership.user,
       current_organization: organization,
       permissions: required_permission,
-      query:
+      query:,
+      variables: {billingEntityCode: "code"}
     )
 
     usages_response = result["data"]["dataApiUsages"]
