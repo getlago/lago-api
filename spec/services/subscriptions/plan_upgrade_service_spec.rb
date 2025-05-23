@@ -29,6 +29,8 @@ RSpec.describe Subscriptions::PlanUpgradeService, type: :service do
 
   describe "#call", :aggregate_failures do
     before do
+      allow(Utils::ActivityLog).to receive(:produce)
+
       subscription.mark_as_active!
     end
 
@@ -47,6 +49,11 @@ RSpec.describe Subscriptions::PlanUpgradeService, type: :service do
       result
       expect(SendWebhookJob).to have_been_enqueued.with("subscription.terminated", subscription)
       expect(SendWebhookJob).to have_been_enqueued.with("subscription.started", result.subscription)
+    end
+
+    it "produces an activity log" do
+      result
+      expect(Utils::ActivityLog).to have_received(:produce).with(result.subscription, "subscription.started")
     end
 
     it "enqueues the Hubspot update job" do

@@ -125,7 +125,10 @@ module Subscriptions
       end
 
       if new_subscription.active?
-        after_commit { SendWebhookJob.perform_later("subscription.started", new_subscription) }
+        after_commit do
+          SendWebhookJob.perform_later("subscription.started", new_subscription)
+          Utils::ActivityLog.produce(new_subscription, "subscription.started")
+        end
       end
 
       if new_subscription.should_sync_hubspot_subscription?
