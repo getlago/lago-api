@@ -7,6 +7,11 @@ module Wallets
       super
     end
 
+    activity_loggable(
+      action: "wallet.created",
+      record: -> { result.wallet }
+    )
+
     def call
       return result unless valid?
 
