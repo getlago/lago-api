@@ -661,6 +661,11 @@ RSpec.describe Subscriptions::CreateService, type: :service do
             expect(SendWebhookJob).to have_been_enqueued.with("subscription.updated", subscription)
           end
 
+          it "produces an activity log" do
+            create_service.call
+            expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.updated")
+          end
+
           it "keeps the current subscription" do
             result = create_service.call
 
