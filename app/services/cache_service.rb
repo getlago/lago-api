@@ -15,7 +15,19 @@ class CacheService < BaseService
   end
 
   def call(&)
-    Rails.cache.fetch(cache_key, expires_in:, &)
+    # NOTE: We don't rely on fetch here because some services compute expires_in = 0
+    #       and we think this is the root of an invalid expiration time passed to Redis
+    value = Rails.cache.read(cache_key)
+    return value if value
+
+    value = yield
+
+    # NOTE: It seems that passing expires_in: 0 is not a NO-OP, so bypass manually
+    if expires_in.nil? || expires_in > 0
+      Rails.cache.write(cache_key, value, expires_in:)
+    end
+
+    value
   end
 
   def expire_cache
