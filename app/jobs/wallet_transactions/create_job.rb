@@ -4,20 +4,19 @@ module WalletTransactions
   class CreateJob < ApplicationJob
     queue_as "high_priority"
     unique :until_executed, on_conflict: :log
-    
+
     def perform(organization_id:, params:, unique_transaction: false)
-      # Continue with normal job execution
       organization = Organization.find(organization_id)
       WalletTransactions::CreateFromParamsService.call!(organization:, params:)
     end
-    
+
     # Override lock_key_arguments to conditionally include only relevant parameters
     # when uniqueness is needed (unique_transaction is true)
     def lock_key_arguments
       org_id = arguments.first[:organization_id]
       params = arguments.first[:params]
       unique_transaction = arguments.first[:unique_transaction] || false
-      
+
       if unique_transaction
         [
           org_id,
