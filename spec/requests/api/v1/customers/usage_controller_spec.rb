@@ -107,6 +107,28 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       end
     end
 
+    context "when apply_taxes is true" do
+      let(:params) { {external_subscription_id: subscription.external_id, apply_taxes: true} }
+
+      context "with a anrok provider" do
+        let(:integration) { create(:anrok_integration, organization:) }
+        let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
+        let(:double_checker) { instance_double(Throttling::Base) }
+
+        before {
+          integration_customer
+          allow(Throttling).to receive(:for).with(:anrok).and_return(double_checker)
+          allow(double_checker).to receive(:check).and_return(false)
+        }
+
+        it "rescue from provider throttles" do
+          subject
+          expect(response).to have_http_status(:too_many_requests)
+          expect(response.body).to match(/anrok.*Try again later/)
+        end
+      end
+    end
+
     context "with filters" do
       let(:billable_metric_filter) do
         create(:billable_metric_filter, billable_metric: metric, key: "cloud", values: %w[aws google])

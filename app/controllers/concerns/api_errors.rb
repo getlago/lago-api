@@ -86,12 +86,28 @@ module ApiErrors
     )
   end
 
+  def too_many_requests_error(error:)
+    render(
+      json: {
+        status: 429,
+        error: "Too Many Requests",
+        code: "too_many_requests",
+        error_details: {
+          message: error.message
+        }
+      },
+      status: :too_many_requests
+    )
+  end
+
   def render_error_response(error_result)
     case error_result.error
     when BaseService::NotFoundFailure
       not_found_error(resource: error_result.error.resource)
     when BaseService::MethodNotAllowedFailure
       method_not_allowed_error(code: error_result.error.code)
+    when BaseService::TooManyRequestsFailure
+      too_many_requests_error(error: error_result.error)
     when BaseService::ValidationFailure
       validation_errors(errors: error_result.error.messages)
     when BaseService::ForbiddenFailure
