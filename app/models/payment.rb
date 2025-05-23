@@ -50,13 +50,7 @@ class Payment < ApplicationRecord
   }
 
   def invoices
-    if payable.is_a?(Invoice)
-      [payable]
-    elsif payable.is_a?(PaymentRequest)
-      payable.invoices.to_a
-    else
-      []
-    end
+    payable.payment_invoices
   end
 
   def should_sync_payment?

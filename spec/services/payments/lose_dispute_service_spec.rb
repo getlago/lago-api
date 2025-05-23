@@ -12,16 +12,32 @@ RSpec.describe Payments::LoseDisputeService, type: :service do
       it "returns a failure" do
         result = lose_dispute_service.call
 
-        aggregate_failures do
-          expect(result).not_to be_success
+        expect(result).to be_failure
 
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq("payment")
-        end
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("payment")
       end
 
       it "does not enqueue a send webhook job for the invoice" do
         expect { lose_dispute_service.call }.not_to have_enqueued_job(SendWebhookJob)
+      end
+    end
+
+    context "when payable is not found" do
+      let(:payment) { create(:payment, payable: create(:payment_request)) }
+
+      before do
+        payment.payable.destroy!
+        payment.reload
+      end
+
+      it "marks all invoices as dispute lost" do
+        result = lose_dispute_service.call
+
+        expect(result).to be_failure
+
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("payable")
       end
     end
 
