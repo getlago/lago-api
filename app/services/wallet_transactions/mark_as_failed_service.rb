@@ -10,14 +10,10 @@ module WalletTransactions
     def call
       return result unless wallet_transaction
       return result if wallet_transaction.status == "failed"
+      # note: if a wallet transaction is settled, but they mark payment as failed, they need to void credits manually
+      return result if wallet_transaction.status == "settled"
 
-      ActiveRecord::Base.transaction do
-        if wallet_transaction.settled? && wallet_transaction.inbound?
-          Wallets::Balance::DecreaseService
-            .new(wallet: wallet_transaction.wallet, wallet_transaction: wallet_transaction).call
-        end
-        wallet_transaction.mark_as_failed!
-      end
+      wallet_transaction.mark_as_failed!
       SendWebhookJob.perform_later("wallet_transaction.updated", wallet_transaction)
       result.wallet_transaction = wallet_transaction
       result
