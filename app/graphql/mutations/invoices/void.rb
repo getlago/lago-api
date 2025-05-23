@@ -17,12 +17,19 @@ module Mutations
 
       def resolve(**args)
         invoice = current_organization.invoices.visible.find_by(id: args[:id])
-        result = ::Invoices::VoidService.call(
-          invoice: invoice,
+        
+        # Collect all parameters except invoice into a params hash
+        params = {
           generate_credit_note: args[:generate_credit_note],
           refund_amount: args[:refund_amount],
           credit_amount: args[:credit_amount]
+        }
+        
+        result = ::Invoices::VoidService.call(
+          invoice: invoice,
+          params: params
         )
+        
         result.success? ? result.invoice : result_error(result)
       end
     end
