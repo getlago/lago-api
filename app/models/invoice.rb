@@ -147,6 +147,10 @@ class Invoice < ApplicationRecord
     %w[customer]
   end
 
+  def payment_invoices
+    Invoice.where(id: id)
+  end
+
   def visible?
     !invisible?
   end

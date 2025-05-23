@@ -49,6 +49,10 @@ class Payment < ApplicationRecord
       .where("invoices.id IS NOT NULL OR payment_requests.id IS NOT NULL")
   }
 
+  def invoices
+    payable.payment_invoices
+  end
+
   def should_sync_payment?
     return false unless payable.is_a?(Invoice)
 

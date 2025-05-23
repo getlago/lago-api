@@ -26,6 +26,10 @@ class PaymentRequest < ApplicationRecord
   monetize :amount_cents
   monetize :total_due_amount_cents, with_model_currency: :currency, allow_nil: true
 
+  def payment_invoices
+    invoices
+  end
+
   def invoice_ids
     applied_invoices.pluck(:invoice_id)
   end
