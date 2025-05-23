@@ -21,10 +21,23 @@ class BillingEntity < ApplicationRecord
   has_many :fees
   has_many :invoices
   has_many :payment_receipts
-  has_many :invoice_custom_section_selections, dependent: :destroy
+
+  has_many :applied_invoice_custom_sections,
+    class_name: "BillingEntity::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :selected_invoice_custom_sections,
+    through: :applied_invoice_custom_sections,
+    source: :invoice_custom_section
+  has_many :manual_selected_invoice_custom_sections,
+    -> { where(section_type: :manual) },
+    through: :applied_invoice_custom_sections,
+    source: :invoice_custom_section
+  has_many :system_generated_selected_invoice_custom_sections,
+    -> { where(section_type: :system_generated) },
+    through: :applied_invoice_custom_sections,
+    source: :invoice_custom_section
 
   has_many :credit_notes, through: :invoices
-  has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section
   has_many :subscriptions, through: :customers
   has_many :taxes, through: :applied_taxes
   has_many :wallets, through: :customers

@@ -63,15 +63,17 @@ class Customer < ApplicationRecord
   has_many :applied_taxes, class_name: "Customer::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
-  has_many :invoice_custom_section_selections
-  has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section
+  has_many :applied_invoice_custom_sections,
+    class_name: "Customer::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :selected_invoice_custom_sections, through: :applied_invoice_custom_sections, source: :invoice_custom_section
   has_many :manual_selected_invoice_custom_sections,
     -> { where(section_type: :manual) },
-    through: :invoice_custom_section_selections,
+    through: :applied_invoice_custom_sections,
     source: :invoice_custom_section
   has_many :system_generated_invoice_custom_sections,
     -> { where(section_type: :system_generated) },
-    through: :invoice_custom_section_selections,
+    through: :applied_invoice_custom_sections,
     source: :invoice_custom_section
 
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
@@ -157,20 +159,17 @@ class Customer < ApplicationRecord
   # - plus any system-generated sections
   # These are the ones that will actually appear on the invoice.
   def applicable_invoice_custom_sections
-    manual_ids = configurable_invoice_custom_sections.map(&:id)
-    system_ids = system_generated_invoice_custom_sections.ids
-
-    InvoiceCustomSection.where(id: manual_ids + system_ids)
+    InvoiceCustomSection.where(id: configurable_invoice_custom_sections)
+      .or(InvoiceCustomSection.where(id: system_generated_invoice_custom_sections))
   end
 
-  # TODO: migrate invoice custom sections to Billing Entities
   # `configurable_invoice_custom_sections` are manually selected sections:
   # - either directly configured on the customer
-  # - or fallback to selections at the organization level if none on the customer
+  # - or fallback to selections at the billing entity level if none on the customer
   def configurable_invoice_custom_sections
-    return [] if skip_invoice_custom_sections?
+    return InvoiceCustomSection.none if skip_invoice_custom_sections?
 
-    manual_selected_invoice_custom_sections.order(:name).presence || organization.selected_invoice_custom_sections.order(:name)
+    manual_selected_invoice_custom_sections.order(:name).presence || billing_entity.selected_invoice_custom_sections.order(:name)
   end
 
   def editable?

@@ -11,8 +11,6 @@ RSpec.describe BillingEntity, type: :model do
 
   it { is_expected.to have_many(:customers) }
   it { is_expected.to have_many(:invoices) }
-  it { is_expected.to have_many(:invoice_custom_section_selections) }
-  it { is_expected.to have_many(:selected_invoice_custom_sections).through(:invoice_custom_section_selections) }
   it { is_expected.to have_many(:fees) }
   it { is_expected.to have_many(:payment_receipts) }
   it { is_expected.to have_many(:subscriptions).through(:customers) }
@@ -20,6 +18,11 @@ RSpec.describe BillingEntity, type: :model do
   it { is_expected.to have_many(:wallet_transactions).through(:wallets) }
   it { is_expected.to have_many(:credit_notes).through(:invoices) }
   it { is_expected.to belong_to(:applied_dunning_campaign).class_name("DunningCampaign").optional }
+
+  it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("BillingEntity::AppliedInvoiceCustomSection").dependent(:destroy) }
+  it { is_expected.to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
+  it { is_expected.to have_many(:manual_selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
+  it { is_expected.to have_many(:system_generated_selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
 
   it { is_expected.to have_many(:applied_taxes).dependent(:destroy) }
   it { is_expected.to have_many(:taxes).through(:applied_taxes) }
