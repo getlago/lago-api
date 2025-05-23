@@ -208,48 +208,50 @@ end
 #
 # Table name: fees
 #
-#  id                                  :uuid             not null, primary key
-#  amount_cents                        :bigint           not null
-#  amount_currency                     :string           not null
-#  amount_details                      :jsonb            not null
-#  deleted_at                          :datetime
-#  description                         :string
-#  events_count                        :integer
-#  failed_at                           :datetime
-#  fee_type                            :integer
-#  grouped_by                          :jsonb            not null
-#  invoice_display_name                :string
-#  invoiceable_type                    :string
-#  pay_in_advance                      :boolean          default(FALSE), not null
-#  payment_status                      :integer          default("pending"), not null
-#  precise_amount_cents                :decimal(40, 15)  default(0.0), not null
-#  precise_coupons_amount_cents        :decimal(30, 5)   default(0.0), not null
-#  precise_unit_amount                 :decimal(30, 15)  default(0.0), not null
-#  properties                          :jsonb            not null
-#  refunded_at                         :datetime
-#  succeeded_at                        :datetime
-#  taxes_amount_cents                  :bigint           not null
-#  taxes_base_rate                     :float            default(1.0), not null
-#  taxes_precise_amount_cents          :decimal(40, 15)  default(0.0), not null
-#  taxes_rate                          :float            default(0.0), not null
-#  total_aggregated_units              :decimal(, )
-#  unit_amount_cents                   :bigint           default(0), not null
-#  units                               :decimal(, )      default(0.0), not null
-#  created_at                          :datetime         not null
-#  updated_at                          :datetime         not null
-#  add_on_id                           :uuid
-#  applied_add_on_id                   :uuid
-#  billing_entity_id                   :uuid             not null
-#  charge_filter_id                    :uuid
-#  charge_id                           :uuid
-#  group_id                            :uuid
-#  invoice_id                          :uuid
-#  invoiceable_id                      :uuid
-#  organization_id                     :uuid             not null
-#  pay_in_advance_event_id             :uuid
-#  pay_in_advance_event_transaction_id :string
-#  subscription_id                     :uuid
-#  true_up_parent_fee_id               :uuid
+#  id                                       :uuid             not null, primary key
+#  amount_cents                             :bigint           not null
+#  amount_currency                          :string           not null
+#  amount_details                           :jsonb            not null
+#  deleted_at                               :datetime
+#  description                              :string
+#  events_count                             :integer
+#  failed_at                                :datetime
+#  fee_type                                 :integer
+#  grouped_by                               :jsonb            not null
+#  invoice_display_name                     :string
+#  invoiceable_type                         :string
+#  pay_in_advance                           :boolean          default(FALSE), not null
+#  payment_status                           :integer          default("pending"), not null
+#  precise_amount_cents                     :decimal(40, 15)  default(0.0), not null
+#  precise_coupons_amount_cents             :decimal(30, 5)   default(0.0), not null
+#  precise_credit_notes_amount_cents        :decimal(30, 5)   default(0.0), not null
+#  precise_progressive_credits_amount_cents :decimal(30, 5)   default(0.0), not null
+#  precise_unit_amount                      :decimal(30, 15)  default(0.0), not null
+#  properties                               :jsonb            not null
+#  refunded_at                              :datetime
+#  succeeded_at                             :datetime
+#  taxes_amount_cents                       :bigint           not null
+#  taxes_base_rate                          :float            default(1.0), not null
+#  taxes_precise_amount_cents               :decimal(40, 15)  default(0.0), not null
+#  taxes_rate                               :float            default(0.0), not null
+#  total_aggregated_units                   :decimal(, )
+#  unit_amount_cents                        :bigint           default(0), not null
+#  units                                    :decimal(, )      default(0.0), not null
+#  created_at                               :datetime         not null
+#  updated_at                               :datetime         not null
+#  add_on_id                                :uuid
+#  applied_add_on_id                        :uuid
+#  billing_entity_id                        :uuid             not null
+#  charge_filter_id                         :uuid
+#  charge_id                                :uuid
+#  group_id                                 :uuid
+#  invoice_id                               :uuid
+#  invoiceable_id                           :uuid
+#  organization_id                          :uuid             not null
+#  pay_in_advance_event_id                  :uuid
+#  pay_in_advance_event_transaction_id      :string
+#  subscription_id                          :uuid
+#  true_up_parent_fee_id                    :uuid
 #
 # Indexes
 #
