@@ -13,9 +13,10 @@ module WalletTransactions
     # Override lock_key_arguments to conditionally include only relevant parameters
     # when uniqueness is needed (unique_transaction is true)
     def lock_key_arguments
-      org_id = arguments.first[:organization_id]
-      params = arguments.first[:params]
-      unique_transaction = arguments.first[:unique_transaction] || false
+      args = arguments[0].symbolize_keys
+      org_id = args[:organization_id]
+      params = args[:params]
+      unique_transaction = args[:unique_transaction]
 
       if unique_transaction
         [
