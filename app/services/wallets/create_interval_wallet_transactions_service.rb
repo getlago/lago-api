@@ -5,13 +5,17 @@ module Wallets
     def call
       recurring_transaction_rules.each do |recurring_transaction_rule|
         wallet = recurring_transaction_rule.wallet
+        paid_credits = paid_credits(recurring_transaction_rule)
+        granted_credits = granted_credits(recurring_transaction_rule)
+
+        next if recurring_transaction_rule.target? && paid_credits.zero? && granted_credits.zero?
 
         WalletTransactions::CreateJob.perform_later(
           organization_id: wallet.organization.id,
           params: {
             wallet_id: wallet.id,
-            paid_credits: paid_credits(recurring_transaction_rule),
-            granted_credits: granted_credits(recurring_transaction_rule),
+            paid_credits: paid_credits.to_s,
+            granted_credits: granted_credits.to_s,
             source: :interval,
             invoice_requires_successful_payment: recurring_transaction_rule.invoice_requires_successful_payment?,
             metadata: recurring_transaction_rule.transaction_metadata
@@ -27,15 +31,15 @@ module Wallets
     end
 
     def paid_credits(rule)
-      return (rule.target_ongoing_balance - rule.wallet.credits_ongoing_balance).to_s if rule.target?
+      return [(rule.target_ongoing_balance - rule.wallet.credits_ongoing_balance), 0.0].max if rule.target?
 
-      rule.paid_credits.to_s
+      rule.paid_credits
     end
 
     def granted_credits(rule)
-      return "0.0" if rule.target?
+      return 0.0 if rule.target?
 
-      rule.granted_credits.to_s
+      rule.granted_credits
     end
 
     # NOTE: Retrieve list of recurring_transaction_rules that should create wallet transactions today
@@ -80,11 +84,11 @@ module Wallets
           INNER JOIN wallets ON wallets.id = recurring_transaction_rules.wallet_id
           INNER JOIN customers ON customers.id = wallets.customer_id
           INNER JOIN organizations ON organizations.id = customers.organization_id
-        WHERE wallets.status = #{Wallet.statuses[:active]} 
+        WHERE wallets.status = #{Wallet.statuses[:active]}
           AND recurring_transaction_rules.status = #{RecurringTransactionRule.statuses[:active]}
           AND recurring_transaction_rules.trigger = #{RecurringTransactionRule.triggers[:interval]}
           AND recurring_transaction_rules.interval = #{RecurringTransactionRule.intervals[interval]}
-          AND (recurring_transaction_rules.expiration_at IS NULL 
+          AND (recurring_transaction_rules.expiration_at IS NULL
            OR recurring_transaction_rules.expiration_at > '#{Time.current.utc.strftime("%Y-%m-%d %H:%M:%S")}')
           AND #{conditions.join(" AND ")}
         GROUP BY recurring_transaction_rules.id
