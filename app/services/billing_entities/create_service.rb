@@ -11,6 +11,11 @@ module BillingEntities
       super
     end
 
+    activity_loggable(
+      action: "billing_entities.created",
+      record: -> { result.billing_entity }
+    )
+
     def call
       return result.forbidden_failure! unless organization.can_create_billing_entity?
 
