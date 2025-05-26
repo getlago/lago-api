@@ -10,7 +10,8 @@ class DunningCampaign < ApplicationRecord
   belongs_to :organization
 
   has_many :thresholds, class_name: "DunningCampaignThreshold", dependent: :destroy
-  has_many :customers, foreign_key: :applied_dunning_campaign_id, dependent: :nullify
+  has_many :customers, foreign_key: :applied_dunning_campaign_id
+  has_many :billing_entities, foreign_key: :applied_dunning_campaign_id
   has_many :payment_requests, dependent: :nullify
 
   accepts_nested_attributes_for :thresholds

@@ -61,7 +61,8 @@ RSpec.describe DunningCampaigns::DestroyService, type: :service do
         it "resets last attempt on customers" do
           customer = create(:customer, organization:, applied_dunning_campaign: dunning_campaign, last_dunning_campaign_attempt: 1)
 
-          expect { destroy_service.call }.to change { customer.reload.last_dunning_campaign_attempt }.from(1).to(0)
+          expect { destroy_service.call }.to change { customer.reload.last_dunning_campaign_attempt }.from(1)
+            .to(0).and change { customer.applied_dunning_campaign_id }.from(dunning_campaign.id).to(nil)
         end
 
         it "soft deletes the dunning campaign" do
@@ -75,6 +76,14 @@ RSpec.describe DunningCampaigns::DestroyService, type: :service do
           freeze_time do
             expect { destroy_service.call }.to change(DunningCampaignThreshold, :count).by(-1)
               .and change { dunning_campaign_threshold.reload.deleted_at }.from(nil).to(Time.current)
+          end
+        end
+
+        context "when dunning campaign was applied on organization" do
+          before { organization.default_billing_entity.update!(applied_dunning_campaign: dunning_campaign) }
+
+          it "resets the applied dunning campaign on the billing entity" do
+            expect { destroy_service.call }.to change { organization.default_billing_entity.reload.applied_dunning_campaign_id }.from(dunning_campaign.id).to(nil)
           end
         end
       end
