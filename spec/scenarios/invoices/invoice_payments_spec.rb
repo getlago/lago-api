@@ -32,7 +32,7 @@ describe "Invoice Payments Scenarios", :scenarios, type: :request do
     stub_request(:post, "https://api.stripe.com/v1/payment_intents")
       .and_return(
         status: 402,
-        body: File.read("spec/fixtures/stripe/payment_intent_failed_card_declined.json")
+        body: get_stripe_fixtures("payment_intent_failed_card_declined.json")
       )
   end
 
@@ -47,7 +47,7 @@ describe "Invoice Payments Scenarios", :scenarios, type: :request do
       )
       perform_billing
 
-      payment_failure_webhook = webhooks_sent.find { _1["webhook_type"] == "invoice.payment_failure" }
+      payment_failure_webhook = webhooks_sent.find { it["webhook_type"] == "invoice.payment_failure" }
 
       expect(payment_failure_webhook["payment_provider_invoice_payment_error"]["error_details"]).to include({
         "code" => "card_declined",

@@ -22,8 +22,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService, t
 
       context "when dispute is lost" do
         let(:event_json) do
-          path = Rails.root.join("spec/fixtures/stripe/charge_dispute_lost_event.json")
-          File.read(path)
+          get_stripe_fixtures("charge_dispute_lost_event.json")
         end
 
         context "when invoice is draft" do
@@ -66,8 +65,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService, t
 
       context "when dispute is won" do
         let(:event_json) do
-          path = Rails.root.join("spec/fixtures/stripe/charge_dispute_won_event.json")
-          File.read(path)
+          get_stripe_fixtures("charge_dispute_won_event.json")
         end
 
         context "when invoice is draft" do
@@ -110,8 +108,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService, t
 
       context "when dispute is lost" do
         let(:event_json) do
-          path = Rails.root.join("spec/fixtures/stripe/charge_dispute_lost_event.json")
-          File.read(path)
+          get_stripe_fixtures("charge_dispute_lost_event.json")
         end
 
         it "flags all the invoices of the PaymentRequests" do
@@ -131,8 +128,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService, t
 
       context "when dispute is won" do
         let(:event_json) do
-          path = Rails.root.join("spec/fixtures/stripe/charge_dispute_won_event.json")
-          File.read(path)
+          get_stripe_fixtures("charge_dispute_won_event.json")
         end
 
         it "does not call LoseDisputeService" do

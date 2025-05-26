@@ -10,8 +10,7 @@ RSpec.describe WebhooksController, type: :request do
     let(:event_type) { "payment_intent.succeeded" }
 
     let(:event) do
-      path = Rails.root.join("spec/fixtures/stripe/payment_intent_event.json")
-      JSON.parse(File.read(path))
+      JSON.parse(get_stripe_fixtures("payment_intent_event.json"))
     end
 
     let(:payload) { event.merge(code:) }
