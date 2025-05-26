@@ -12,6 +12,7 @@ module Resolvers
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
 
+    argument :activity_ids, [String], required: false
     argument :activity_sources, [Types::ActivityLogs::ActivitySourceEnum], required: false
     argument :activity_types, [Types::ActivityLogs::ActivityTypeEnum], required: false
     argument :api_key_ids, [String], required: false
@@ -31,6 +32,8 @@ module Resolvers
         filters: {
           from_date: args[:from_date],
           to_date: args[:to_date],
+          api_key_ids: args[:api_key_ids],
+          activity_ids: args[:activity_ids],
           activity_types: args[:activity_types],
           activity_sources: args[:activity_sources],
           user_emails: args[:user_emails],

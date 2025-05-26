@@ -5,6 +5,8 @@ class ActivityLogsQuery < BaseQuery
   Filters = BaseFilters[
     :from_date,
     :to_date,
+    :api_key_ids,
+    :activity_ids,
     :activity_types,
     :activity_sources,
     :user_emails,
@@ -22,6 +24,8 @@ class ActivityLogsQuery < BaseQuery
     activity_logs = activity_logs.order(logged_at: :desc)
 
     activity_logs = with_logged_at_range(activity_logs) if filters.from_date || filters.to_date
+    activity_logs = with_api_key_ids(activity_logs) if filters.api_key_ids.present?
+    activity_logs = with_activity_ids(activity_logs) if filters.activity_ids.present?
     activity_logs = with_activity_types(activity_logs) if filters.activity_types.present?
     activity_logs = with_activity_sources(activity_logs) if filters.activity_sources.present?
     activity_logs = with_user_emails(activity_logs) if filters.user_emails.present?
@@ -40,6 +44,14 @@ class ActivityLogsQuery < BaseQuery
     scope = scope.where(logged_at: from_date..) if filters.from_date
     scope = scope.where(logged_at: ..to_date) if filters.to_date
     scope
+  end
+
+  def with_api_key_ids(scope)
+    scope.where(api_key_id: filters.api_key_ids)
+  end
+
+  def with_activity_ids(scope)
+    scope.where(activity_id: filters.activity_ids)
   end
 
   def with_activity_types(scope)

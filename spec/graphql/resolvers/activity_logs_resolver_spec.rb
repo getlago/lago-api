@@ -49,6 +49,8 @@ RSpec.describe Resolvers::ActivityLogsResolver, type: :graphql, clickhouse: true
       {
         from_date: nil,
         to_date: nil,
+        api_key_ids: nil,
+        activity_ids: nil,
         activity_types: nil,
         activity_sources: nil,
         user_emails: nil,
