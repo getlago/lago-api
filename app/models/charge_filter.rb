@@ -3,6 +3,7 @@
 class ChargeFilter < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
+  include ChargePropertiesValidation
   self.discard_column = :deleted_at
 
   belongs_to :charge, -> { with_discarded }, touch: true
@@ -11,6 +12,8 @@ class ChargeFilter < ApplicationRecord
   has_many :values, class_name: "ChargeFilterValue", dependent: :destroy
   has_many :billable_metric_filters, through: :values
   has_many :fees
+
+  has_one :billable_metric, through: :charge
 
   validate :validate_properties
 
@@ -49,29 +52,7 @@ class ChargeFilter < ApplicationRecord
   private
 
   def validate_properties
-    case charge&.charge_model
-    when "standard"
-      validate_charge_model(Charges::Validators::StandardService)
-    when "graduated"
-      validate_charge_model(Charges::Validators::GraduatedService)
-    when "package"
-      validate_charge_model(Charges::Validators::PackageService)
-    when "percentage"
-      validate_charge_model(Charges::Validators::PercentageService)
-    when "volume"
-      validate_charge_model(Charges::Validators::VolumeService)
-    when "graduated_percentage"
-      validate_charge_model(Charges::Validators::GraduatedPercentageService)
-    end
-  end
-
-  def validate_charge_model(validator)
-    instance = validator.new(charge:, properties:)
-    return if instance.valid?
-
-    instance.result.error.messages.map { |_, codes| codes }
-      .flatten
-      .each { |code| errors.add(:properties, code) }
+    validate_charge_model_properties(charge&.charge_model)
   end
 end
 
