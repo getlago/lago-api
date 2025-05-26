@@ -262,7 +262,6 @@ end
 #  address_line2                :string
 #  api_key                      :string
 #  city                         :string
-#  clickhouse_aggregation       :boolean          default(FALSE), not null
 #  clickhouse_events_store      :boolean          default(FALSE), not null
 #  country                      :string
 #  custom_aggregation           :boolean          default(FALSE)
