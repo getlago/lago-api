@@ -7,6 +7,11 @@ module Coupons
       super
     end
 
+    activity_loggable(
+      action: "coupon.created",
+      record: -> { result.coupon }
+    )
+
     def call
       return result unless valid?(args)
 

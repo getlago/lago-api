@@ -9,6 +9,11 @@ module Coupons
       super
     end
 
+    activity_loggable(
+      action: "coupon.updated",
+      record: -> { coupon }
+    )
+
     def call
       return result.not_found_failure!(resource: "coupon") unless coupon
       return result unless valid?(params)

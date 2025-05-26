@@ -7,6 +7,11 @@ module Coupons
       super
     end
 
+    activity_loggable(
+      action: "coupon.deleted",
+      record: -> { coupon }
+    )
+
     def call
       return result.not_found_failure!(resource: "coupon") unless coupon
 
