@@ -10,7 +10,10 @@ RSpec.describe AppliedCoupon, type: :model do
   describe "#remaining_amount" do
     let(:applied_coupon) { create(:applied_coupon, amount_cents: 50) }
     let(:invoice) { create(:invoice) }
-    let!(:credit) { create(:credit, applied_coupon: applied_coupon, amount_cents: 10, invoice: invoice) }
+
+    before do
+      create(:credit, applied_coupon: applied_coupon, amount_cents: 10, invoice: invoice)
+    end
 
     context "when invoice is not voided" do
       it "returns the amount minus credit" do
