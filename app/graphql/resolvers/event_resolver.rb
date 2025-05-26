@@ -7,16 +7,13 @@ module Resolvers
 
     description "Query a single event of an organization"
 
-    argument :id, ID, required: true, description: "Uniq ID of the event"
+    argument :transaction_id, ID, required: true, description: "Transaction ID of the event"
 
     type Types::Events::Object, null: true
 
-    def resolve(id: nil)
-      if current_organization.clickhouse_events_store?
-        Clickhouse::EventsRaw.where(organization_id: current_organization.id).find(id)
-      else
-        Event.where(organization_id: current_organization.id).find(id)
-      end
+    def resolve(transaction_id: nil)
+      event_scope = current_organization.clickhouse_events_store? ? Clickhouse::EventsRaw : Event
+      event_scope.find_by!(organization_id: current_organization.id, transaction_id:)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "event")
     end
