@@ -7570,7 +7570,7 @@ type Query {
   """
   Query activity logs of an organization
   """
-  activityLogs(activitySources: [ActivitySourceEnum!], activityTypes: [ActivityTypeEnum!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, limit: Int, page: Int, resourceIds: [String!], resourceTypes: [ResourceTypeEnum!], toDate: ISO8601Date, userEmails: [String!]): ActivityLogCollection
+  activityLogs(activityIds: [String!], activitySources: [ActivitySourceEnum!], activityTypes: [ActivityTypeEnum!], apiKeyIds: [String!], externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, limit: Int, page: Int, resourceIds: [String!], resourceTypes: [ResourceTypeEnum!], toDate: ISO8601Date, userEmails: [String!]): ActivityLogCollection
 
   """
   Query a single add-on of an organization

@@ -64,6 +64,26 @@ RSpec.describe ActivityLogsQuery, type: :query, clickhouse: true do
     end
   end
 
+  context "with api_key_ids filter" do
+    it "returns expected activity logs" do
+      filters = {api_key_ids: [activity_log.api_key_id]}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs.first.activity_id).to eq(activity_log.activity_id)
+
+      filters = {api_key_ids: ["other"]}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
+    end
+  end
+
+  context "with activity_ids filter" do
+    it "returns expected activity logs" do
+      filters = {activity_ids: [activity_log.activity_id]}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs.first.activity_id).to eq(activity_log.activity_id)
+
+      filters = {activity_ids: ["other"]}
+      expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
+    end
+  end
+
   context "with activity_types filter" do
     it "returns expected activity logs" do
       filters = {activity_types: [activity_log.activity_type]}
