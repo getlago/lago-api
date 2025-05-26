@@ -10,10 +10,10 @@ module PaymentProviders
           provider_payment_id = event.data.object.payment_intent
 
           payment = Payment.find_by(provider_payment_id:)
-          return result if !payment || !payment.payable.is_a?(Invoice)
+          return result unless payment
 
           if status == "lost"
-            return Invoices::LoseDisputeService.call(invoice: payment.payable, payment_dispute_lost_at:, reason:)
+            return ::Payments::LoseDisputeService.call(payment:, payment_dispute_lost_at:, reason:)
           end
 
           result
