@@ -2090,7 +2090,6 @@ CREATE TABLE public.organizations (
     document_numbering integer DEFAULT 0 NOT NULL,
     document_number_prefix character varying,
     eu_tax_management boolean DEFAULT false,
-    clickhouse_aggregation boolean DEFAULT false NOT NULL,
     premium_integrations character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     custom_aggregation boolean DEFAULT false,
     finalize_zero_amount_invoice boolean DEFAULT true NOT NULL,
@@ -8416,6 +8415,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250526133654'),
 ('20250526111147'),
 ('20250522134155'),
 ('20250521104239'),
