@@ -8,19 +8,20 @@ RSpec.describe AppliedCoupon, type: :model do
   it_behaves_like "paper_trail traceable"
 
   describe "#remaining_amount" do
-    let(:invoice) { create(:invoice) }
-    let(:credit) { create(:credit, applied_coupon:, amount_cents: 10, invoice:) }
     let(:applied_coupon) { create(:applied_coupon, amount_cents: 50) }
+    let(:invoice) { create(:invoice) }
+    let!(:credit) { create(:credit, applied_coupon: applied_coupon, amount_cents: 10, invoice: invoice) }
 
-    it "returns correct amount" do
-      applied_coupon.credits = [credit]
-      expect(applied_coupon.remaining_amount).to eq(40)
+    context "when invoice is not voided" do
+      it "returns the amount minus credit" do
+        expect(applied_coupon.remaining_amount).to eq(40)
+      end
     end
 
-    context 'when invoice is voided' do
+    context "when invoice is voided" do
       let(:invoice) { create(:invoice, status: :voided) }
-      
-      it "does not count credits from voided invoices" do
+
+      it "ignores the credit amount" do
         expect(applied_coupon.remaining_amount).to eq(50)
       end
     end
