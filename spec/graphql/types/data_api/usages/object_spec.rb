@@ -12,6 +12,8 @@ RSpec.describe Types::DataApi::Usages::Object do
     expect(subject).to have_field(:billable_metric_code).of_type("String!")
     expect(subject).to have_field(:units).of_type("Float!")
 
+    expect(subject).to have_field(:is_billable_metric_deleted).of_type("Boolean!")
+
     expect(subject).to have_field(:end_of_period_dt).of_type("ISO8601Date!")
     expect(subject).to have_field(:start_of_period_dt).of_type("ISO8601Date!")
   end

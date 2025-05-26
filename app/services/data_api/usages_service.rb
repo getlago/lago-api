@@ -5,11 +5,22 @@ module DataApi
     Result = BaseResult[:usages]
 
     def call
-      result.usages = http_client.get(headers:, params: filtered_params)
+      response = http_client.get(headers:, params: filtered_params)
+
+      result.usages = response.map do |usage|
+        code = usage["billable_metric_code"]
+        usage["is_billable_metric_deleted"] = discarded_billable_metrics_codes.include?(code)
+        usage
+      end
+
       result
     end
 
     private
+
+    def discarded_billable_metrics_codes
+      @discarded_billable_metrics_codes ||= BillableMetric.where(organization:).with_discarded.discarded.pluck(:code)
+    end
 
     def filtered_params
       if License.premium?

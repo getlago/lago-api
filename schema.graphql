@@ -4182,6 +4182,7 @@ type DataApiUsage {
   amountCurrency: CurrencyEnum!
   billableMetricCode: String!
   endOfPeriodDt: ISO8601Date!
+  isBillableMetricDeleted: Boolean!
   startOfPeriodDt: ISO8601Date!
   units: Float!
 }
