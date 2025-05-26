@@ -34,7 +34,7 @@ module V1
       return nil if model.recurring? || model.forever?
       return nil if model.coupon.percentage?
 
-      model.amount_cents - model.credits.sum(:amount_cents)
+      model.amount_cents - model.credits.active.sum(:amount_cents)
     end
 
     def credits

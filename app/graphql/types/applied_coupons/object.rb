@@ -24,7 +24,7 @@ module Types
         return nil if object.recurring?
         return nil if object.coupon.percentage?
 
-        object.amount_cents - object.credits.sum(:amount_cents)
+        object.amount_cents - object.credits.active.sum(:amount_cents)
       end
     end
   end
