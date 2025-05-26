@@ -18,7 +18,7 @@ module Invoices
         syncable_id: invoice.id,
         syncable_type: "Invoice",
         resource_type: :invoice
-      )
+      ) { it.organization_id = invoice.organization_id }
 
       if integration_resource.new_record?
         integration_resource.save!

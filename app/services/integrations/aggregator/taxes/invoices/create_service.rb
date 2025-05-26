@@ -55,6 +55,7 @@ module Integrations
 
           def create_integration_resource
             IntegrationResource.create!(
+              organization_id: integration.organization_id,
               syncable_id: invoice.id,
               syncable_type: "Invoice",
               external_id: result.succeeded_id,

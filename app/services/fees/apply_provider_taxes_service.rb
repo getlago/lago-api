@@ -22,6 +22,7 @@ module Fees
         tax_rate = tax.rate.to_f * 100
 
         applied_tax = Fee::AppliedTax.new(
+          organization_id: fee.organization_id,
           tax_description: tax.type,
           tax_code: tax.name.parameterize(separator: "_"),
           tax_name: tax.name,
