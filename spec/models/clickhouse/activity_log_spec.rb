@@ -7,6 +7,8 @@ RSpec.describe Clickhouse::ActivityLog, type: :model, clickhouse: true do
 
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:resource) }
+  it { is_expected.to belong_to(:customer).optional }
+  it { is_expected.to belong_to(:subscription).optional }
 
   describe "#ensure_activity_id" do
     it "sets the activity_id if it is not set" do

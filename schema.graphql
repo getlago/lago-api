@@ -3733,6 +3733,7 @@ type Customer {
   Number of active subscriptions per customer
   """
   activeSubscriptionsCount: Int!
+  activityLogs: [ActivityLog!]
   addressLine1: String
   addressLine2: String
   anrokCustomer: AnrokCustomer
@@ -8569,6 +8570,7 @@ type StripeProvider {
 }
 
 type Subscription {
+  activityLogs: [ActivityLog!]
   billingTime: BillingTimeEnum
   canceledAt: ISO8601DateTime
   createdAt: ISO8601DateTime!

@@ -74,7 +74,10 @@ class Customer < ApplicationRecord
     through: :invoice_custom_section_selections,
     source: :invoice_custom_section
 
-  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
+  has_many :activity_logs,
+    class_name: "Clickhouse::ActivityLog",
+    foreign_key: :external_customer_id,
+    primary_key: :external_id
 
   has_one :stripe_customer, class_name: "PaymentProviderCustomers::StripeCustomer"
   has_one :gocardless_customer, class_name: "PaymentProviderCustomers::GocardlessCustomer"
