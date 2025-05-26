@@ -18,7 +18,7 @@ module Customers
 
       ActiveRecord::Base.transaction do
         if !skip_invoice_custom_sections.nil?
-          customer.selected_invoice_custom_sections = [] if !!skip_invoice_custom_sections
+          customer.selected_invoice_custom_sections = InvoiceCustomSection.none if !!skip_invoice_custom_sections
           customer.skip_invoice_custom_sections = skip_invoice_custom_sections
         end
 
@@ -49,7 +49,7 @@ module Customers
     end
 
     def assign_selected_sections
-      # Note: when assigning organization's sections, an empty array will be sent
+      # Note: when assigning billing entity's sections, an empty array will be sent
       selected_sections = if section_ids
         customer.organization.invoice_custom_sections.where(id: section_ids)
       elsif section_codes
@@ -59,7 +59,18 @@ module Customers
       end
 
       system_generated_sections = customer.system_generated_invoice_custom_sections
-      customer.selected_invoice_custom_sections = selected_sections + system_generated_sections
+
+      # Clear existing manual sections
+      customer.applied_invoice_custom_sections.where.not(invoice_custom_section: system_generated_sections).destroy_all
+
+      # Create new join records for selected sections
+      selected_sections.each do |section|
+        customer.applied_invoice_custom_sections.create!(
+          organization_id: customer.organization_id,
+          billing_entity_id: customer.billing_entity_id,
+          invoice_custom_section: section
+        )
+      end
     end
   end
 end
