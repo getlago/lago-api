@@ -20,8 +20,17 @@ module Invoices
       end
 
       invoice.credits.each do |credit|
-        res = CreditNotes::RecreditService.call(credit:)
-        Rails.logger.warn("Recrediting credit #{credit.id} failed for invoice #{invoice.id}") unless res.success?
+        # Handle credits related to applied coupons
+        if credit.applied_coupon_id.present?
+          recredit_result = AppliedCoupons::RecreditService.call(credit:)
+          Rails.logger.warn("Recrediting applied coupon for credit #{credit.id} failed for invoice #{invoice.id}") unless recredit_result.success?
+        end
+
+        # Handle credits related to credit notes
+        if credit.credit_note_id.present?
+          res = CreditNotes::RecreditService.call(credit:)
+          Rails.logger.warn("Recrediting credit #{credit.id} failed for invoice #{invoice.id}") unless res.success?
+        end
       end
 
       invoice.wallet_transactions.outbound.each do |wallet_transaction|
