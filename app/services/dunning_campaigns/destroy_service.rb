@@ -16,6 +16,10 @@ module DunningCampaigns
         dunning_campaign.reset_customers_last_attempt
         dunning_campaign.discard!
         dunning_campaign.thresholds.discard_all
+
+        if dunning_campaign.applied_to_organization?
+          dunning_campaign.organization.default_billing_entity.update!(applied_dunning_campaign: nil)
+        end
       end
 
       result.dunning_campaign = dunning_campaign

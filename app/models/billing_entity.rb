@@ -178,5 +178,6 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (applied_dunning_campaign_id => dunning_campaigns.id) ON DELETE => nullify
 #  fk_rails_...  (organization_id => organizations.id)
 #

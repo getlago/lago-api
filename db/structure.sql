@@ -7401,6 +7401,14 @@ ALTER TABLE ONLY public.charges
 
 
 --
+-- Name: billing_entities fk_rails_4aa58496c3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_entities
+    ADD CONSTRAINT fk_rails_4aa58496c3 FOREIGN KEY (applied_dunning_campaign_id) REFERENCES public.dunning_campaigns(id) ON DELETE SET NULL;
+
+
+--
 -- Name: payment_provider_customers fk_rails_50d46d3679; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8417,6 +8425,9 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250602075710'),
 ('20250526133654'),
+('20250526134136'),
+('20250526133152'),
+('20250526130953'),
 ('20250526111147'),
 ('20250522134155'),
 ('20250521151540'),
