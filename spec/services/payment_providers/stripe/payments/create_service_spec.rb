@@ -58,7 +58,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
     end
 
     let(:customer_response) do
-      File.read(Rails.root.join("spec/fixtures/stripe/customer_retrieve_response.json"))
+      get_stripe_fixtures("customer_retrieve_response.json")
     end
 
     let(:stripe_payment_intent_data) do
@@ -153,7 +153,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
 
     context "with card error on stripe" do
       let(:payment_response) do
-        File.read(Rails.root.join("spec/fixtures/stripe/payment_intent_card_declined_response.json"))
+        get_stripe_fixtures("payment_intent_card_declined_response.json")
       end
 
       let(:customer) { create(:customer, organization:, payment_provider_code: code) }

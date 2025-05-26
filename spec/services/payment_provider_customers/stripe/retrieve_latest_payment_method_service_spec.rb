@@ -14,7 +14,7 @@ RSpec.describe PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodServ
     context "when customer has a default payment method in Stripe" do
       it do
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
-          status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/customer_with_default_payment_method.json"))
+          status: 200, body: get_stripe_fixtures("customer_with_default_payment_method.json")
         )
 
         result = subject.call
@@ -25,10 +25,10 @@ RSpec.describe PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodServ
     context "when customer has payment method in Stripe but no default" do
       it do
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
-          status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/customer_no_default_payment_method.json"))
+          status: 200, body: get_stripe_fixtures("customer_no_default_payment_method.json")
         )
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}/payment_methods}).and_return(
-          status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/customer_list_payment_methods.json"))
+          status: 200, body: get_stripe_fixtures("customer_list_payment_methods.json")
         )
 
         result = subject.call
@@ -39,10 +39,10 @@ RSpec.describe PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodServ
     context "when customer has no payment method in Stripe" do
       it do
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
-          status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/customer_no_default_payment_method.json"))
+          status: 200, body: get_stripe_fixtures("customer_no_default_payment_method.json")
         )
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}/payment_methods}).and_return(
-          status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/customer_list_no_payment_methods.json"))
+          status: 200, body: get_stripe_fixtures("customer_list_no_payment_methods.json")
         )
 
         result = subject.call

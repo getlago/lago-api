@@ -17,7 +17,7 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
       }
     end
     let(:stripe_api_response) do
-      json = File.read(Rails.root.join("spec/fixtures/stripe/webhook_endpoint_create.json"))
+      json = get_stripe_fixtures("webhook_endpoint_create.json")
       hash = JSON.parse(json)
       hash["url"] = url
       hash
