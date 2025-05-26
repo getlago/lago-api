@@ -13,18 +13,20 @@ module AppliedCoupons
     def call
       return result.not_found_failure!(resource: "applied_coupon") if applied_coupon.nil?
 
-      # If the coupon was terminated and this was the last credit that caused it to be terminated,
-      # reactivate the coupon
-      if applied_coupon.terminated? && should_reactivate_coupon?
-        applied_coupon.status = :active
-        applied_coupon.terminated_at = nil
-        applied_coupon.save!
-      end
+      applied_coupon.with_lock do
+        # If the coupon was terminated and this was the last credit that caused it to be terminated,
+        # reactivate the coupon
+        if applied_coupon.terminated? && should_reactivate_coupon?
+          applied_coupon.status = :active
+          applied_coupon.terminated_at = nil
+          applied_coupon.save!
+        end
 
-      # For recurring coupons, increment the frequency_duration_remaining
-      if applied_coupon.recurring?
-        applied_coupon.frequency_duration_remaining += 1
-        applied_coupon.save!
+        # For recurring coupons, increment the frequency_duration_remaining
+        if applied_coupon.recurring?
+          applied_coupon.frequency_duration_remaining += 1
+          applied_coupon.save!
+        end
       end
 
       result.applied_coupon = applied_coupon
