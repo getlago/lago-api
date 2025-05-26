@@ -22,6 +22,42 @@ RSpec.describe PaymentProviders::BaseProvider, type: :model do
   it { is_expected.to have_many(:payments).dependent(:nullify) }
   it { is_expected.to have_many(:refunds).dependent(:nullify) }
 
+  it { is_expected.to validate_presence_of(:name) }
+
+  describe "validations" do
+    describe "of code uniqueness" do
+      let(:error) { payment_provider.errors.where(:code, :taken) }
+
+      let(:payment_provider) { build(:stripe_provider, organization:, code: "stripe1") }
+      let(:organization) { create(:organization) }
+
+      before do
+        create(:stripe_provider, code: "stripe1")
+        create(:stripe_provider, code: "stripe1", organization:, deleted_at: generate(:past_date))
+      end
+
+      context "when code is unique in scope of the organization" do
+        before { payment_provider.valid? }
+
+        it "does not add an error" do
+          expect(error).not_to be_present
+        end
+      end
+
+      context "when code is not unique in scope of the organization" do
+        before do
+          create(:stripe_provider, code: "stripe1", organization:)
+
+          payment_provider.valid?
+        end
+
+        it "adds an error" do
+          expect(error).to be_present
+        end
+      end
+    end
+  end
+
   describe ".json_secrets" do
     it { expect(provider.secrets_json).to eq(secrets) }
   end
