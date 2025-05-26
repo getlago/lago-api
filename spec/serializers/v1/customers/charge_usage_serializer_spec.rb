@@ -67,7 +67,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     let(:charge_filter) { create(:charge_filter, charge:, invoice_display_name: nil) }
 
     let(:usage) do
-      [
+      Array.new(3) do
         OpenStruct.new(
           charge_id: charge.id,
           billable_metric:,
@@ -84,22 +84,22 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           grouped_by: {"card_type" => "visa"},
           charge_filter:
         )
-      ]
+      end
     end
 
     it "returns filters array" do
       expect(result["charges"].first["filters"].first).to include(
-        "units" => "10.0",
-        "amount_cents" => 100,
-        "events_count" => 12,
+        "units" => "30.0",
+        "amount_cents" => 300,
+        "events_count" => 36,
         "invoice_display_name" => charge_filter.invoice_display_name,
         "values" => {}
       )
 
       expect(result["charges"].first["grouped_usage"].first["filters"].first).to include(
-        "units" => "10.0",
-        "amount_cents" => 100,
-        "events_count" => 12,
+        "units" => "30.0",
+        "amount_cents" => 300,
+        "events_count" => 36,
         "invoice_display_name" => charge_filter.invoice_display_name,
         "values" => {}
       )
