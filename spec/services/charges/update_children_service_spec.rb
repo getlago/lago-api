@@ -3,13 +3,22 @@
 require "rails_helper"
 
 RSpec.describe Charges::UpdateChildrenService, type: :service do
-  subject(:update_service) { described_class.new(charge:, params:, old_parent_attrs:, old_parent_filters_attrs:) }
+  subject(:update_service) do
+    described_class.new(
+      charge:,
+      params:,
+      old_parent_attrs:,
+      old_parent_filters_attrs:,
+      old_parent_applied_pricing_unit_attrs:
+    )
+  end
 
   let(:billable_metric) { create(:billable_metric) }
   let(:organization) { billable_metric.organization }
   let(:plan) { create(:plan, organization:) }
   let(:old_parent_attrs) { charge&.attributes }
   let(:old_parent_filters_attrs) { charge&.filters&.map(&:attributes) }
+  let(:old_parent_applied_pricing_unit_attrs) { charge&.applied_pricing_unit&.attributes }
   let(:charge) do
     create(
       :standard_charge,
@@ -53,6 +62,7 @@ RSpec.describe Charges::UpdateChildrenService, type: :service do
       properties: {
         amount: "400"
       },
+      applied_pricing_unit: {conversion_rate: 2.5},
       filters: [
         {
           invoice_display_name: "Card filter",
@@ -63,7 +73,10 @@ RSpec.describe Charges::UpdateChildrenService, type: :service do
     }
   end
 
-  before { child_charge }
+  before do
+    charge && create(:applied_pricing_unit, pricing_unitable: charge, conversion_rate: 1.1)
+    child_charge && create(:applied_pricing_unit, pricing_unitable: child_charge, conversion_rate: 1.1)
+  end
 
   describe "#call" do
     context "when charge is not found" do
@@ -94,6 +107,7 @@ RSpec.describe Charges::UpdateChildrenService, type: :service do
           billable_metric_filter_id: billable_metric_filter.id,
           values: ["card"]
         )
+        expect(child_charge.applied_pricing_unit.conversion_rate).to eq 2.5
       end
     end
 

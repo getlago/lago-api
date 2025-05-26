@@ -695,4 +695,45 @@ RSpec.describe Charge, type: :model do
       end
     end
   end
+
+  describe "#equal_applied_pricing_unit_rate?" do
+    subject { charge.equal_applied_pricing_unit_rate?(another_charge) }
+
+    let(:charge) { build(:standard_charge, applied_pricing_unit:) }
+
+    let(:another_charge) do
+      build(
+        :standard_charge,
+        applied_pricing_unit: build(:applied_pricing_unit)
+      )
+    end
+
+    context "when has associated applied pricing unit" do
+      let(:applied_pricing_unit) { build(:applied_pricing_unit, conversion_rate:) }
+
+      context "when charges conversion rate is equal" do
+        let(:conversion_rate) { another_charge.applied_pricing_unit.conversion_rate }
+
+        it "returns true" do
+          expect(subject).to be true
+        end
+      end
+
+      context "when charges conversion rate is not equal" do
+        let(:conversion_rate) { another_charge.applied_pricing_unit.conversion_rate - 0.5 }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+    end
+
+    context "when has no associated applied pricing unit" do
+      let(:applied_pricing_unit) { nil }
+
+      it "returns false" do
+        expect(subject).to be false
+      end
+    end
+  end
 end

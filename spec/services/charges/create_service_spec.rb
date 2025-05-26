@@ -61,7 +61,7 @@ RSpec.describe Charges::CreateService, type: :service do
 
       context "when params are valid" do
         let!(:parent_charge) { create(:standard_charge) }
-
+        let(:pricing_unit) { create(:pricing_unit, organization:) }
         let(:billable_metric_filter) do
           create(
             :billable_metric_filter,
@@ -73,6 +73,7 @@ RSpec.describe Charges::CreateService, type: :service do
 
         let(:params) do
           {
+            applied_pricing_unit: applied_pricing_unit_params,
             billable_metric_id: sum_billable_metric.id,
             charge_model: "standard",
             pay_in_advance: false,
@@ -87,6 +88,13 @@ RSpec.describe Charges::CreateService, type: :service do
                 values: {billable_metric_filter.key => ["card"]}
               }
             ]
+          }
+        end
+
+        let(:applied_pricing_unit_params) do
+          {
+            code: pricing_unit.code,
+            conversion_rate: rand(0.1..5.0)
           }
         end
 
@@ -119,23 +127,57 @@ RSpec.describe Charges::CreateService, type: :service do
           )
         end
 
-        describe "premium attributes" do
-          context "when premium" do
-            around { |test| lago_premium!(&test) }
+        context "when premium" do
+          around { |test| lago_premium!(&test) }
 
-            it "assigns values from params" do
-              expect(result.charge)
-                .to be_persisted
-                .and have_attributes(invoiceable: false, min_amount_cents: 10)
+          it "assigns premium attributes values from params" do
+            expect(result.charge)
+              .to be_persisted
+              .and have_attributes(invoiceable: false, min_amount_cents: 10)
+          end
+
+          context "when applied pricing unit params are valid" do
+            it "creates applied pricing unit" do
+              expect { subject }.to change(AppliedPricingUnit, :count).by(1)
             end
           end
 
-          context "when freemium" do
-            it "assigns default values no matter of values in params" do
-              expect(result.charge)
-                .to be_persisted
-                .and have_attributes(invoiceable: true, min_amount_cents: 0)
+          context "when applied pricing unit params are invalid" do
+            let(:applied_pricing_unit_params) do
+              {
+                code: "non-existing-code",
+                conversion_rate: -5
+              }
             end
+
+            it "fails with a validation error" do
+              expect(result).to be_failure
+
+              expect(result.error.messages).to match(
+                conversion_rate: ["value_is_out_of_range"],
+                pricing_unit: ["relation_must_exist"]
+              )
+            end
+
+            it "does not create charge" do
+              expect { subject }.not_to change(Charge, :count)
+            end
+
+            it "does not create applied pricing unit" do
+              expect { subject }.not_to change(AppliedPricingUnit, :count)
+            end
+          end
+        end
+
+        context "when freemium" do
+          it "assigns premium attributes default values no matter of values in params" do
+            expect(result.charge)
+              .to be_persisted
+              .and have_attributes(invoiceable: true, min_amount_cents: 0)
+          end
+
+          it "does not create applied pricing units" do
+            expect { subject }.not_to change(AppliedPricingUnit, :count)
           end
         end
       end

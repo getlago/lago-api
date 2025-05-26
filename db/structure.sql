@@ -8493,6 +8493,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250609121102'),
 ('20250602075710'),
 ('20250530112903'),
 ('20250526134136'),
@@ -8501,7 +8502,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250526130953'),
 ('20250526111147'),
 ('20250522134155'),
-('20250522121102'),
 ('20250521151540'),
 ('20250521135607'),
 ('20250521104239'),

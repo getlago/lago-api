@@ -140,6 +140,9 @@ module Plans
       end
 
       charge.save!
+
+      AppliedPricingUnits::CreateService.call!(charge:, params: args[:applied_pricing_unit])
+
       charge
     end
 

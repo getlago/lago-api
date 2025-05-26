@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateAppliedPricingUnits < ActiveRecord::Migration[8.0]
   def change
     create_table :applied_pricing_units, id: :uuid do |t|

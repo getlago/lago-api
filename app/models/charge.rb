@@ -71,6 +71,12 @@ class Charge < ApplicationRecord
     charge_model == charge.charge_model && properties == charge.properties
   end
 
+  def equal_applied_pricing_unit_rate?(another_charge)
+    return false unless applied_pricing_unit && another_charge.applied_pricing_unit
+
+    applied_pricing_unit.conversion_rate == another_charge.applied_pricing_unit.conversion_rate
+  end
+
   # NOTE: If same charge is NOT included in upgraded plan we still want to bill it. However if new plan is using
   # the same charge it should not be billed since it is recurring and will be billed at the end of period
   def included_in_next_subscription?(subscription)

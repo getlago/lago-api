@@ -58,6 +58,7 @@ RSpec.describe Charges::UpdateService, type: :service do
           properties: {
             amount: "400"
           },
+          applied_pricing_unit: applied_pricing_unit_params,
           filters: [
             {
               invoice_display_name: "Card filter",
@@ -67,6 +68,14 @@ RSpec.describe Charges::UpdateService, type: :service do
           ]
         }
       end
+
+      let(:applied_pricing_unit_params) do
+        {
+          conversion_rate: 2.5
+        }
+      end
+
+      before { create(:applied_pricing_unit, pricing_unitable: charge, conversion_rate: 1.1) }
 
       it "updates existing charge" do
         subject
@@ -107,16 +116,15 @@ RSpec.describe Charges::UpdateService, type: :service do
           {
             cascade: true,
             parent_filters: [],
-            equal_properties: true
+            equal_properties: true,
+            equal_applied_pricing_unit_rate: true
           }
         end
 
         it "updates charge properties and filters" do
           subject
 
-          expect(charge.reload).to have_attributes(
-            properties: {"amount" => "400"}
-          )
+          expect(charge.reload).to have_attributes(properties: {"amount" => "400"})
 
           expect(charge.filters.first).to have_attributes(
             invoice_display_name: "Card filter",
@@ -126,6 +134,10 @@ RSpec.describe Charges::UpdateService, type: :service do
             billable_metric_filter_id: billable_metric_filter.id,
             values: ["card"]
           )
+        end
+
+        it "updates applied pricing unit's conversion rate" do
+          expect { subject }.to change(charge.applied_pricing_unit, :conversion_rate).to(2.5)
         end
 
         context "with charge properties already overridden" do
@@ -139,6 +151,23 @@ RSpec.describe Charges::UpdateService, type: :service do
 
           it "does not update charge properties" do
             expect { subject }.not_to change { charge.reload.properties }
+          end
+        end
+
+        context "when applied pricing unit params are invalid" do
+          let(:applied_pricing_unit_params) do
+            {
+              conversion_rate: -1
+            }
+          end
+
+          it "fails with a validation error" do
+            expect(result).to be_failure
+            expect(result.error.messages).to match(conversion_rate: ["value_is_out_of_range"])
+          end
+
+          it "does not update applied pricing unit's conversion rate" do
+            expect { subject }.not_to change { charge.applied_pricing_unit.reload.conversion_rate }
           end
         end
       end

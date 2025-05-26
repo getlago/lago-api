@@ -28,6 +28,12 @@ module Charges
 
         charge.save!
 
+        AppliedPricingUnits::UpdateService.call!(
+          charge:,
+          cascade_options:,
+          params: params.delete(:applied_pricing_unit).presence
+        )
+
         filters = params.delete(:filters)
         unless filters.nil?
           ChargeFilters::CreateOrUpdateBatchService.call(
