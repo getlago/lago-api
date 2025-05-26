@@ -34,7 +34,7 @@ module V1
       def filters(fees)
         return [] unless fees.first.charge&.filters&.any?
 
-        fees.group_by { |f| f.charge_filter&.to_h }.values.map do |grouped_fees|
+        fees.group_by { |f| f.charge_filter&.id }.values.map do |grouped_fees|
           {
             units: grouped_fees.map { |f| BigDecimal(f.units) }.sum.to_s,
             amount_cents: grouped_fees.sum(&:amount_cents),
