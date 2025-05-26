@@ -6,8 +6,7 @@ module PaymentProviders
       queue_as "providers"
 
       def perform(stripe_provider)
-        result = PaymentProviders::Stripe::RegisterWebhookService.call(stripe_provider)
-        result.raise_if_error!
+        PaymentProviders::Stripe::RegisterWebhookService.call!(stripe_provider)
       end
     end
   end
