@@ -8,8 +8,8 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: 'invoice') unless invoice
-      return result.not_allowed_failure!(code: 'not_voidable') if invoice.voided?
+      return result.not_found_failure!(resource: "invoice") unless invoice
+      return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
 
       ActiveRecord::Base.transaction do
         invoice.payment_overdue = false if invoice.payment_overdue?
@@ -43,7 +43,7 @@ module Invoices
         Invoices::ProviderTaxes::VoidJob.perform_later(invoice:)
         Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice:) if invoice.should_update_hubspot_invoice?
       else
-        result.service_failure!(code: 'void_operation_failed', message: 'Failed to void the invoice')
+        result.service_failure!(code: "void_operation_failed", message: "Failed to void the invoice")
       end
 
       result
