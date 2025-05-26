@@ -31,6 +31,7 @@ module DunningCampaigns
           description: params[:description],
           thresholds_attributes: params[:thresholds].map { _1.to_h.merge(organization_id: organization.id) }
         )
+        organization.default_billing_entity.update!(applied_dunning_campaign: dunning_campaign) if params[:applied_to_organization]
 
         result.dunning_campaign = dunning_campaign
       end
