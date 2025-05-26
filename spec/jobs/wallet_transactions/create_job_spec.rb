@@ -24,4 +24,35 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
 
     expect(WalletTransactions::CreateFromParamsService).to have_received(:call!).with(organization:, params:)
   end
+
+  describe "#lock_key_arguments" do
+    let(:organization_id) { "org-123" }
+    let(:wallet_id) { "wallet-456" }
+    let(:params) do
+      {
+        wallet_id: wallet_id,
+        paid_credits: "10.0",
+        granted_credits: "3.0",
+        source: :threshold
+      }
+    end
+
+    context "when unique_transaction is true" do
+      it "returns a stable lock key array" do
+        job = described_class.new
+        allow(job).to receive(:arguments).and_return([{
+          organization_id: organization_id,
+          params: params,
+          unique_transaction: true
+        }])
+
+        expect(job.lock_key_arguments).to eq([
+          organization_id,
+          wallet_id,
+          "10.0",
+          "3.0"
+        ])
+      end
+    end
+  end
 end
