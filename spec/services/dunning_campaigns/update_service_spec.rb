@@ -412,6 +412,11 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             expect(result.dunning_campaign.applied_to_organization).to eq(true)
           end
 
+          it "updates applied_dunning_campaign_id on the default billing entity" do
+            expect(result).to be_success
+            expect(organization.default_billing_entity.applied_dunning_campaign).to eq(result.dunning_campaign)
+          end
+
           context "with a previous dunning campaign set as applied_to_organization" do
             let(:dunning_campaign_2) do
               create(:dunning_campaign, organization:, applied_to_organization: true)
