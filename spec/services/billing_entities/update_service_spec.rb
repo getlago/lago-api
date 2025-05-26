@@ -38,6 +38,10 @@ RSpec.describe BillingEntities::UpdateService do
     }
   end
 
+  before do
+    allow(Utils::ActivityLog).to receive(:produce)
+  end
+
   describe "#call" do
     it "updates the billing_entity" do
       result = update_service.call
@@ -58,6 +62,12 @@ RSpec.describe BillingEntities::UpdateService do
 
       expect(result.billing_entity.invoice_footer).to eq("invoice footer")
       expect(result.billing_entity.document_locale).to eq("fr")
+    end
+
+    it "produces an activity log" do
+      described_class.call(billing_entity:, params:)
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(billing_entity, "billing_entities.updated")
     end
 
     context "when document_number_prefix is sent" do
