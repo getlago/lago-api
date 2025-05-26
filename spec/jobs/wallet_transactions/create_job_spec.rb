@@ -47,11 +47,11 @@ RSpec.describe WalletTransactions::CreateJob, type: :job do
         }])
 
         expect(job.lock_key_arguments).to eq([
-         organization_id,
-         wallet_id,
-         "10.0",
-         "3.0"
-       ])
+          organization_id,
+          wallet_id,
+          "10.0",
+          "3.0"
+        ])
       end
     end
   end
