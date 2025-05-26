@@ -6,10 +6,20 @@ module UsageMonitoring
 
     def call
       # NOTE: If we need to handle different delays per organization, this would be done here.
-      #     This is why it's a dedicated service and not just done in the job
+      #     This is also where we should report metrics
+      #     That's why it's a dedicated service and not just done in the job
 
-      Organization.all.pluck(:id).each do |organization_id|
+      now = Time.current.iso8601
+
+      SubscriptionActivity.group(:organization_id).count.each do |organization_id, count|
         ProcessOrganizationSubscriptionActivitiesJob.perform_later(organization_id)
+
+        Rails.logger.info({
+          metric: "usage_monitoring.subscription_activities_size",
+          value: count,
+          timestamp: now,
+          organization_id: organization_id
+        }.to_json)
       end
 
       result
