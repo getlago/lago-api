@@ -102,6 +102,7 @@ module DunningCampaigns
         .update_all(applied_to_organization: false) # rubocop:disable Rails/SkipsModelValidations
 
       organization.reset_customers_last_dunning_campaign_attempt
+      organization.default_billing_entity.update(applied_dunning_campaign: dunning_campaign)
 
       new_applied_dunning_campaign = dunning_campaign.applied_to_organization ? dunning_campaign : nil
       organization.default_billing_entity.update!(applied_dunning_campaign: new_applied_dunning_campaign)
