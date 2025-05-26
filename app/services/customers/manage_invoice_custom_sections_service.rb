@@ -2,6 +2,8 @@
 
 module Customers
   class ManageInvoiceCustomSectionsService < BaseService
+    Result = BaseResult[:customer]
+
     def initialize(customer:, skip_invoice_custom_sections:, section_ids: nil, section_codes: nil)
       @customer = customer
       @section_ids = section_ids
@@ -31,6 +33,8 @@ module Customers
         end
         customer.save!
       end
+
+      result.customer = customer
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
