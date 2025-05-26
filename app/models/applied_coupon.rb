@@ -37,8 +37,9 @@ class AppliedCoupon < ApplicationRecord
   def remaining_amount
     return @remaining_amount if defined?(@remaining_amount)
 
-    # Only count credits from non-voided invoices
-    already_applied_amount = credits.joins(:invoice).where.not(invoices: { status: :voided }).sum(&:amount_cents)
+    already_applied_amount = credits.joins(:invoice)
+      .where.not(invoices: {status: :voided})
+      .sum(&:amount_cents)
     @remaining_amount = amount_cents - already_applied_amount
   end
 end

@@ -39,38 +39,13 @@ module AppliedCoupons
     attr_reader :credit, :applied_coupon, :invoice
 
     def should_reactivate_coupon?
-      # Forever coupons don't need to be reactivated as they don't get terminated due to usage
+      # Forever coupons don't need to be reactivated
       return false if applied_coupon.forever?
-
-      # Only reactivate coupons that were terminated due to usage
-      # For once coupons
-      if applied_coupon.once?
-        # If the coupon is percentage-based, it's always terminated after one use
-        # so we can safely reactivate it
-        return true if applied_coupon.coupon.percentage?
-
-        # For fixed amount coupons, check if this credit would make the coupon usable again
-        credit_amount = credit.amount_cents
-        remaining_amount_without_this_credit = calculate_remaining_amount_without_this_credit
-        
-        # If adding this credit back would make the remaining amount positive, reactivate
-        return remaining_amount_without_this_credit + credit_amount > 0
-      else
-        # For recurring coupons, check if incrementing the frequency_duration_remaining would make it positive
-        return applied_coupon.frequency_duration_remaining + 1 > 0
-      end
-    end
-
-    def calculate_remaining_amount_without_this_credit
-      # Calculate remaining amount excluding this specific credit
-      # Also exclude credits from voided invoices
-      total_credits_amount = applied_coupon.credits
-        .joins(:invoice)
-        .where.not(id: credit.id)
-        .where.not(invoices: { status: :voided })
-        .sum(:amount_cents)
-      
-      applied_coupon.amount_cents - total_credits_amount
+      # Check if the original coupon is still active
+      return false if applied_coupon.coupon.terminated?
+      # For both once and recurring coupons, we can reactivate them if they're terminated
+      # since they would have been terminated due to usage
+      true
     end
   end
 end
