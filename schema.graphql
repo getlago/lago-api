@@ -5295,6 +5295,7 @@ enum InviteStatusTypeEnum {
 Invoice
 """
 type Invoice {
+  activityLogs: [ActivityLog!]
   allChargesHaveFees: Boolean!
   appliedTaxes: [InvoiceAppliedTax!]
   associatedActiveWalletPresent: Boolean!
