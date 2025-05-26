@@ -13,6 +13,16 @@ RSpec.describe BillingEntities::CreateService, type: :service do
     }
   end
 
+  before do
+    allow(Utils::ActivityLog).to receive(:produce)
+  end
+
+  it "produces an activity log" do
+    billing_entity = result.billing_entity
+
+    expect(Utils::ActivityLog).to have_received(:produce).with(billing_entity, "billing_entities.created")
+  end
+
   context "when lago freemium" do
     it "returns an error" do
       expect(result).to be_failure
