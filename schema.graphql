@@ -7871,9 +7871,9 @@ type Query {
   """
   event(
     """
-    Uniq ID of the event
+    Transaction ID of the event
     """
-    id: ID!
+    transactionId: ID!
   ): Event
 
   """

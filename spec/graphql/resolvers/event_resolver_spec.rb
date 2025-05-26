@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Resolvers::EventResolver, type: :graphql, transaction: false do
   let(:query) do
     <<~GQL
-      query($eventId: ID!) {
-        event(id: $eventId) {
+      query($eventTransactionId: ID!) {
+        event(transactionId: $eventTransactionId) {
           id
           code
           transactionId
@@ -51,11 +51,30 @@ RSpec.describe Resolvers::EventResolver, type: :graphql, transaction: false do
       current_user: membership.user,
       current_organization: organization,
       query:,
-      variables: {eventId: event.id}
+      variables: {eventTransactionId: event.transaction_id}
     )
 
     event_response = result["data"]["event"]
-    aggregate_failures do
+    expect(event_response["id"]).to eq(event.id)
+    expect(event_response["code"]).to eq(event.code)
+  end
+
+  context "with clickhouse", clickhouse: true do
+    let(:event) do
+      create(:clickhouse_events_raw, organization_id: organization.id)
+    end
+
+    before { organization.update!(clickhouse_events_store: true) }
+
+    it "returns a single event" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        query:,
+        variables: {eventTransactionId: event.transaction_id}
+      )
+
+      event_response = result["data"]["event"]
       expect(event_response["id"]).to eq(event.id)
       expect(event_response["code"]).to eq(event.code)
     end
@@ -67,7 +86,7 @@ RSpec.describe Resolvers::EventResolver, type: :graphql, transaction: false do
         current_user: membership.user,
         current_organization: organization,
         query:,
-        variables: {eventId: "non_existing"}
+        variables: {eventTransactionId: "non_existing"}
       )
 
       expect_graphql_error(

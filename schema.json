@@ -40432,8 +40432,8 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "id",
-                  "description": "Uniq ID of the event",
+                  "name": "transactionId",
+                  "description": "Transaction ID of the event",
                   "type": {
                     "kind": "NON_NULL",
                     "name": null,
