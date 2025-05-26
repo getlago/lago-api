@@ -9,7 +9,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: 'invoice') unless invoice
-      return result.not_allowed_failure!(code: 'invoice_already_voided') if invoice.voided?
+      return result.not_allowed_failure!(code: 'not_voidable') if invoice.voided?
 
       ActiveRecord::Base.transaction do
         invoice.payment_overdue = false if invoice.payment_overdue?
