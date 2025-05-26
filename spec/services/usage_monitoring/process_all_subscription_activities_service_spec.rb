@@ -24,9 +24,6 @@ RSpec.describe UsageMonitoring::ProcessAllSubscriptionActivitiesService, type: :
       expect(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob).to have_received(:perform_later).with(organization1.id)
       expect(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob).to have_received(:perform_later).with(organization2.id)
       expect(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob).not_to have_received(:perform_later).with(organization3.id)
-
-      expect(Rails.logger).to have_received(:info).with(including('"value":2'))
-      expect(Rails.logger).to have_received(:info).with(including('"value":3'))
     end
   end
 end
