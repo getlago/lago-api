@@ -31,4 +31,22 @@ RSpec.describe Wallet, type: :model do
       expect(wallet.currency).to eq(wallet.balance_currency)
     end
   end
+
+  describe "limited_fee_types?" do
+    context "when allowed_fee_types is present" do
+      before { wallet.allowed_fee_types = %w[charge] }
+
+      it "returns true" do
+        expect(wallet.limited_fee_types?).to be true
+      end
+    end
+
+    context "when allowed_fee_types is empty" do
+      before { wallet.allowed_fee_types = [] }
+
+      it "returns false" do
+        expect(wallet.limited_fee_types?).to be false
+      end
+    end
+  end
 end

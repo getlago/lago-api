@@ -43,6 +43,10 @@ class Wallet < ApplicationRecord
   def currency
     balance_currency
   end
+
+  def limited_fee_types?
+    allowed_fee_types.present?
+  end
 end
 
 # == Schema Information
@@ -50,6 +54,7 @@ end
 # Table name: wallets
 #
 #  id                                  :uuid             not null, primary key
+#  allowed_fee_types                   :string           default([]), not null, is an Array
 #  balance_cents                       :bigint           default(0), not null
 #  balance_currency                    :string           not null
 #  consumed_amount_cents               :bigint           default(0), not null

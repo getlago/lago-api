@@ -2843,7 +2843,8 @@ CREATE TABLE public.wallets (
     invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
     lock_version integer DEFAULT 0 NOT NULL,
     ready_to_be_refreshed boolean DEFAULT false NOT NULL,
-    organization_id uuid
+    organization_id uuid,
+    allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL
 );
 
 
@@ -8415,6 +8416,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250526111147'),
 ('20250522134155'),
 ('20250521104239'),
 ('20250521095733'),
