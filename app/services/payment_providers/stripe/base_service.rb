@@ -31,6 +31,20 @@ module PaymentProviders
           }
         )
       end
+
+      def webhook_endpoint_shared_params
+        {
+          url: webhook_endpoint_destination,
+          enabled_events: PaymentProviders::StripeProvider::WEBHOOKS_EVENTS
+        }
+      end
+
+      def webhook_endpoint_destination
+        URI.join(
+          ENV["LAGO_API_URL"],
+          "webhooks/stripe/#{organization_id}?code=#{URI.encode_www_form_component(payment_provider.code)}"
+        )
+      end
     end
   end
 end

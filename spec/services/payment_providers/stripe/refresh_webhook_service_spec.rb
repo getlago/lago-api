@@ -2,11 +2,11 @@
 
 require "rails_helper"
 
-RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
+RSpec.describe PaymentProviders::Stripe::RefreshWebhookService do
   subject(:provider_service) { described_class.new(payment_provider) }
 
   let(:organization) { create(:organization) }
-  let(:payment_provider) { create(:stripe_provider, organization:, code: "stripe_sandbox") }
+  let(:payment_provider) { create(:stripe_provider, organization:, code: "stripe_sandbox", webhook_id: "we_1QzHw4Q8iJWBZFaMg54WCeIn") }
 
   describe ".call" do
     let(:url) { "#{ENV["LAGO_API_URL"]}/webhooks/stripe/#{organization.id}?code=stripe_sandbox" }
@@ -17,7 +17,7 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
       }
     end
     let(:stripe_api_response) do
-      json = File.read(Rails.root.join("spec/fixtures/stripe/webhook_endpoint_create.json"))
+      json = File.read(Rails.root.join("spec/fixtures/stripe/webhook_endpoint_update.json"))
       hash = JSON.parse(json)
       hash["url"] = url
       hash
@@ -25,7 +25,7 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
 
     before do
       stub_const("ENV", ENV.to_h.merge("LAGO_API_URL" => "https://billing.example.com"))
-      stub_request(:post, "https://api.stripe.com/v1/webhook_endpoints")
+      stub_request(:post, "https://api.stripe.com/v1/webhook_endpoints/#{payment_provider.webhook_id}")
         .with(body: expected_request_body)
         .and_return(status: 200, body: stripe_api_response.to_json)
     end
@@ -39,7 +39,7 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
     context "when authentication fails on stripe API" do
       before do
         allow(::Stripe::WebhookEndpoint)
-          .to receive(:create)
+          .to receive(:update)
           .and_raise(::Stripe::AuthenticationError.new(
             "This API call cannot be made with a publishable API key. Please use a secret API key. You can find a list of your API keys at https://dashboard.stripe.com/account/apikeys."
           ))
@@ -67,7 +67,7 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
     context "when the webhook limit is reached" do
       before do
         allow(::Stripe::WebhookEndpoint)
-          .to receive(:create)
+          .to receive(:update)
           .and_raise(::Stripe::InvalidRequestError.new(
             "You have reached the maximum of 16 test webhook endpoints.", {}
           ))

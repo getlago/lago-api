@@ -20,6 +20,8 @@ module PaymentProviders
         Customer.where(id: customer_ids).update_all(payment_provider: nil, payment_provider_code: nil) # rubocop:disable Rails/SkipsModelValidations
       end
 
+      # TODO: Create job to unregister webhook
+
       result.payment_provider = payment_provider
       result
     end
