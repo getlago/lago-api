@@ -34,13 +34,13 @@ module V1
       def filters(fees)
         return [] unless fees.first.charge&.filters&.any?
 
-        fees.sort_by { |f| f.charge_filter&.display_name.to_s }.map do |f|
+        fees.group_by { |f| f.charge_filter&.to_h }.values.map do |grouped_fees|
           {
-            units: f.units,
-            amount_cents: f.amount_cents,
-            events_count: f.events_count,
-            invoice_display_name: f.charge_filter&.invoice_display_name,
-            values: f.charge_filter&.to_h
+            units: grouped_fees.map { |f| BigDecimal(f.units) }.sum.to_s,
+            amount_cents: grouped_fees.sum(&:amount_cents),
+            events_count: grouped_fees.sum(&:events_count),
+            invoice_display_name: grouped_fees.first.charge_filter&.invoice_display_name,
+            values: grouped_fees.first.charge_filter&.to_h
           }
         end.compact
       end
