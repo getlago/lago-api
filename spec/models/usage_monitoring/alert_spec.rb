@@ -64,7 +64,8 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
   describe "#find_thresholds_crossed" do
     it "returns threshold values between previous_value and current (inclusive)" do
       alert.previous_value = 8
-      expect(alert.find_thresholds_crossed(31)).to eq([10, 30])
+      expect(alert.find_thresholds_crossed(8)).to eq([]) # exclude previous_values
+      expect(alert.find_thresholds_crossed(30)).to eq([10, 30])
       alert.previous_value = 31
       expect(alert.find_thresholds_crossed(60)).to eq([50])
     end
