@@ -65,7 +65,7 @@ RSpec.describe UsageMonitoring::UpdateAlertService do
         it "returns a record validation failure result" do
           create(:billable_metric_usage_amount_alert, organization: alert.organization, code: "new_code", subscription_external_id: alert.subscription_external_id)
           expect(result).to be_failure
-          expect(result.error.messages[:code]).to eq(["value_already_exists"])
+          expect(result.error.messages[:code]).to eq(["value_already_exist"])
         end
       end
     end
