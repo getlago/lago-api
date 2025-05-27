@@ -4,11 +4,10 @@ module Api
   module V1
     class CreditNotesController < Api::BaseController
       def create
-        service = CreditNotes::CreateService.new(
+        result = CreditNotes::CreateService.call(
           invoice: current_organization.invoices.visible.find_by(id: input_params[:invoice_id]),
           **input_params
         )
-        result = service.call
 
         if result.success?
           render(

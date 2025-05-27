@@ -39,6 +39,8 @@ class WalletTransaction < ApplicationRecord
   enum :transaction_type, TRANSACTION_TYPES
   enum :source, SOURCES
 
+  delegate :customer, to: :wallet
+
   scope :pending, -> { where(status: :pending) }
 
   def amount_cents
