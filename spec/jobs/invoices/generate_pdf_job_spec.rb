@@ -15,12 +15,12 @@ RSpec.describe Invoices::GeneratePdfJob, type: :job do
     allow(Invoices::GeneratePdfService).to receive(:new)
       .with(invoice:, context: "api")
       .and_return(generate_service)
-    allow(generate_service).to receive(:call)
+    allow(generate_service).to receive(:call_with_activity_log)
       .and_return(result)
 
     described_class.perform_now(invoice)
 
     expect(Invoices::GeneratePdfService).to have_received(:new)
-    expect(generate_service).to have_received(:call)
+    expect(generate_service).to have_received(:call_with_activity_log)
   end
 end
