@@ -3,10 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Invoices::CreateOneOffService, type: :service do
-  subject(:create_service) do
-    described_class.new(customer:, timestamp: timestamp.to_i, fees:, currency:)
-  end
-
+  let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:} }
   let(:timestamp) { Time.zone.now.beginning_of_month }
   let(:organization) { create(:organization) }
   let(:billing_entity) { create(:billing_entity, organization:) }
@@ -29,6 +26,10 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
     ]
   end
 
+  before do
+    allow(Utils::ActivityLog).to receive(:produce)
+  end
+
   describe "call" do
     before do
       tax
@@ -39,7 +40,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
     end
 
     it "creates an invoice" do
-      result = create_service.call
+      result = described_class.call(**args)
 
       aggregate_failures do
         expect(result).to be_success
@@ -65,15 +66,15 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
     end
 
     it_behaves_like "syncs invoice" do
-      let(:service_call) { create_service.call }
+      let(:service_call) { described_class.call(**args) }
     end
 
     it_behaves_like "applies invoice_custom_sections" do
-      let(:service_call) { create_service.call }
+      let(:service_call) { described_class.call(**args) }
     end
 
     it "calls SegmentTrackJob" do
-      invoice = create_service.call.invoice
+      invoice = described_class.call(**args).invoice
 
       expect(SegmentTrackJob).to have_received(:perform_later).with(
         membership_id: CurrentContext.membership,
@@ -89,20 +90,16 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
     it "creates a payment" do
       allow(Invoices::Payments::CreateService).to receive(:call_async)
 
-      create_service.call
+      described_class.call(**args)
 
       expect(Invoices::Payments::CreateService).to have_received(:call_async)
     end
 
     context "when skip_payment is true" do
-      let(:create_service) do
-        described_class.new(customer:, timestamp: timestamp.to_i, fees:, currency:, skip_psp: true)
-      end
-
       it "does not create a payment" do
         allow(Invoices::Payments::CreateService).to receive(:call_async)
 
-        create_service.call
+        described_class.call(**args.merge(skip_psp: true))
 
         expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
       end
@@ -110,13 +107,13 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
 
     it "enqueues a SendWebhookJob" do
       expect do
-        create_service.call
+        described_class.call(**args)
       end.to have_enqueued_job(SendWebhookJob)
     end
 
     it "enqueues GeneratePdfAndNotifyJob with email false" do
       expect do
-        create_service.call
+        described_class.call(**args)
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
@@ -167,8 +164,14 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
         end
       end
 
+      it "produces an activity log" do
+        invoice = described_class.call(**args).invoice
+
+        expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.one_off_created")
+      end
+
       it "creates an invoice" do
-        result = create_service.call
+        result = described_class.call(**args)
 
         aggregate_failures do
           expect(result).to be_success
@@ -195,7 +198,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
 
       it "saves applies taxes on fees and on invoice" do
-        result = create_service.call
+        result = described_class.call(**args)
         invoice = result.invoice.reload
 
         expect(invoice.applied_taxes.count).to eq(2)
@@ -209,14 +212,19 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
           File.read(p)
         end
 
+        before do
+          allow(Utils::ActivityLog).to receive(:produce)
+        end
+
         it "returns tax error" do
-          result = create_service.call
+          result = described_class.call(**args)
 
           aggregate_failures do
             expect(result).to be_success
             expect(result.invoice.status).to eq("failed")
             expect(result.invoice.error_details.count).to eq(1)
             expect(result.invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
+            expect(Utils::ActivityLog).to have_received(:produce).with(result.invoice, "invoice.failed")
           end
         end
       end
@@ -235,7 +243,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
 
       it "creates a payment_succeeded invoice" do
-        result = create_service.call
+        result = described_class.call(**args)
 
         aggregate_failures do
           expect(result).to be_success
@@ -262,7 +270,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
 
       it "enqueues GeneratePdfAndNotifyJob with email true" do
         expect do
-          create_service.call
+          described_class.call(**args)
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
@@ -271,7 +279,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
 
         it "enqueues GeneratePdfAndNotifyJob with email false" do
           expect do
-            create_service.call
+            described_class.call(**args)
           end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
         end
       end
@@ -283,7 +291,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       let(:timestamp) { DateTime.parse("2022-11-25 01:00:00") }
 
       it "assigns the issuing date in the customer timezone" do
-        result = create_service.call
+        result = described_class.call(**args)
 
         expect(result.invoice.issuing_date.to_s).to eq("2022-11-24")
       end
@@ -293,7 +301,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       let(:currency) { "NOK" }
 
       it "fails" do
-        result = create_service.call
+        result = described_class.call(**args)
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -310,7 +318,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       before { customer.update!(currency: nil) }
 
       it "fails" do
-        result = create_service.call
+        result = described_class.call(**args)
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -325,7 +333,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       let(:customer) { nil }
 
       it "returns a not found error" do
-        result = create_service.call
+        result = described_class.call(**args)
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -339,7 +347,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       let(:fees) { [] }
 
       it "returns a not found error" do
-        result = create_service.call
+        result = described_class.call(**args)
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -365,7 +373,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
 
       it "returns a not found error" do
-        result = create_service.call
+        result = described_class.call(**args)
 
         aggregate_failures do
           expect(result).not_to be_success
@@ -377,7 +385,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
   end
 
   describe "#tax_error?" do
-    subject(:method_call) { create_service.__send__(:tax_error?, result) }
+    subject(:method_call) { described_class.new(**args).__send__(:tax_error?, result) }
 
     let(:result) { BaseService::Result.new }
 

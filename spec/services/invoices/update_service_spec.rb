@@ -245,6 +245,10 @@ RSpec.describe Invoices::UpdateService do
       let(:webhook_notification) { true }
 
       context "when invoice is visible" do
+        before do
+          allow(Utils::ActivityLog).to receive(:produce)
+        end
+
         it "delivers a webhook" do
           result
 
@@ -252,6 +256,12 @@ RSpec.describe Invoices::UpdateService do
             "invoice.payment_status_updated",
             invoice
           )
+        end
+
+        it "produces an activity log" do
+          result
+
+          expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.payment_status_updated")
         end
       end
 
