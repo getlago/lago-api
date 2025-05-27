@@ -7,7 +7,7 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
 
   let(:customer) { create :customer, organization:, currency: }
   let(:organization) { create :organization }
-  let(:billing_entity) { create :billing_entity, organization: }
+  let(:billing_entity) { organization.default_billing_entity }
   let(:currency) { "EUR" }
   let(:dunning_campaign) { create :dunning_campaign, organization: }
   let(:dunning_campaign_threshold) do
