@@ -8,30 +8,40 @@ module Invoices
     end
 
     def call
-      return result.not_found_failure!(resource: "invoice") if invoice.nil?
-
-      result.invoice = invoice
+      return result.not_found_failure!(resource: "invoice") unless invoice
+      return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
 
       ActiveRecord::Base.transaction do
         invoice.payment_overdue = false if invoice.payment_overdue?
         invoice.void!
 
         flag_lifetime_usage_for_refresh
-      end
 
-      invoice.credits.each do |credit|
-        res = CreditNotes::RecreditService.call(credit:)
-        Rails.logger.warn("Recrediting credit #{credit.id} failed for invoice #{invoice.id}") unless res.success?
-      end
+        # Process credits within the same transaction
+        invoice.credits.each do |credit|
+          # Handle credits related to applied coupons
+          if credit.applied_coupon_id.present?
+            AppliedCoupons::RecreditService.call!(credit:)
+          end
 
-      invoice.wallet_transactions.outbound.each do |wallet_transaction|
-        res = WalletTransactions::RecreditService.call(wallet_transaction:)
+          # Handle credits related to credit notes
+          if credit.credit_note_id.present?
+            CreditNotes::RecreditService.call!(credit:)
+          end
+        end
 
-        unless res.success?
-          Rails.logger.warn("Recrediting wallet transaction #{wallet_transaction.id} failed for invoice #{invoice.id}")
+        # Process wallet transactions within the same transaction
+        invoice.wallet_transactions.outbound.each do |wallet_transaction|
+          WalletTransactions::RecreditService.call!(wallet_transaction:)
         end
       end
 
+      # Only proceed with webhooks and jobs if the transaction was successful
+      unless invoice.voided?
+        return result.service_failure!(code: "void_operation_failed", message: "Failed to void the invoice")
+      end
+
+      result.invoice = invoice
       SendWebhookJob.perform_later("invoice.voided", result.invoice)
       Invoices::ProviderTaxes::VoidJob.perform_later(invoice:)
       Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice:) if invoice.should_update_hubspot_invoice?

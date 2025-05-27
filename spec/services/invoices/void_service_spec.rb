@@ -116,6 +116,35 @@ RSpec.describe Invoices::VoidService, type: :service do
           end
         end
 
+        context "when the invoice has credits from applied coupons" do
+          let(:coupon) { create(:coupon) }
+          let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
+          let!(:credit) { create(:credit, invoice: invoice, applied_coupon: applied_coupon) }
+
+          before do
+            allow(AppliedCoupons::RecreditService).to receive(:call!).and_call_original
+          end
+
+          it "calls the recredit service for applied coupons" do
+            void_service.call
+            expect(AppliedCoupons::RecreditService).to have_received(:call!).with(credit: credit)
+          end
+        end
+
+        context "when the invoice has credits from credit notes" do
+          let(:credit_note) { create(:credit_note) }
+          let!(:credit) { create(:credit, invoice: invoice, credit_note: credit_note) }
+
+          before do
+            allow(CreditNotes::RecreditService).to receive(:call!).and_call_original
+          end
+
+          it "calls the recredit service for credit notes" do
+            void_service.call
+            expect(CreditNotes::RecreditService).to have_received(:call!).with(credit: credit)
+          end
+        end
+
         context "when invoice is a purchase credits invoice" do
           let(:invoice) { create(:invoice, :credit, status: :finalized, payment_status:, payment_overdue: true) }
           let(:payment_status) { [:pending, :failed].sample }
