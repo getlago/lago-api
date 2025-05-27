@@ -589,7 +589,7 @@ module Events
           attempts += 1
 
           yield
-        rescue Errno::ECONNRESET
+        rescue Errno::ECONNRESET, ActiveRecord::ActiveRecordError
           if attempts < MAX_RETRIES
             sleep(0.05)
             retry
