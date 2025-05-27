@@ -28,7 +28,7 @@ RSpec.describe Wallets::ValidateLimitationsService, type: :service do
     context "when there is wrong fee type" do
       let(:limitations) do
         {
-          fee_types: %w[invalid_fee_type charge],
+          fee_types: %w[invalid_fee_type charge]
         }
       end
 
@@ -41,13 +41,13 @@ RSpec.describe Wallets::ValidateLimitationsService, type: :service do
     context "when limitations are valid" do
       let(:limitations) do
         {
-          fee_types: %w[charge subscription],
+          fee_types: %w[charge subscription]
         }
       end
 
       it "returns true and result has no errors" do
         expect(validate_service).to be_valid
-        expect(result.error).not_to be
+        expect(result.error).to be_nil
       end
     end
   end

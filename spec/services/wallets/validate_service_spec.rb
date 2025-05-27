@@ -188,7 +188,7 @@ RSpec.describe Wallets::ValidateService, type: :service do
 
         it "returns true and result has no errors" do
           expect(validate_service).to be_valid
-          expect(result.error).not_to be
+          expect(result.error).to be_nil
         end
       end
     end
