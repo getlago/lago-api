@@ -82,6 +82,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         )
 
         succeeded_fees.each { |fee| Fees::ApplyTaxesService.call(fee:) }
+        allow(Utils::ActivityLog).to receive(:produce)
       end
 
       it "creates invoices" do
@@ -108,6 +109,7 @@ RSpec.describe Invoices::AdvanceChargesService, type: :service do
         expect(sub.invoicing_reason).to eq "in_advance_charge_periodic"
 
         expect(SendWebhookJob).to have_been_enqueued.with("invoice.created", result.invoice)
+        expect(Utils::ActivityLog).to have_received(:produce).with(result.invoice, "invoice.created")
         expect(Invoices::GeneratePdfAndNotifyJob).to have_been_enqueued.with(invoice: result.invoice, email: false)
         expect(SegmentTrackJob).to have_been_enqueued.once
         expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
