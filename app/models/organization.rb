@@ -5,6 +5,8 @@ class Organization < ApplicationRecord
   include OrganizationTimezone
   include Currencies
 
+  self.ignored_columns += [:clickhouse_aggregation]
+
   EMAIL_SETTINGS = [
     "invoice.finalized",
     "credit_note.created",
