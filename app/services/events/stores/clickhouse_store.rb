@@ -7,18 +7,20 @@ module Events
       MAX_RETRIES = 3
 
       def events(force_from: false, ordered: false)
-        scope = ::Clickhouse::EventsEnriched.where(external_subscription_id: subscription.external_id)
-          .where(organization_id: subscription.organization.id)
-          .where(code:)
+        with_retry do
+          scope = ::Clickhouse::EventsEnriched.where(external_subscription_id: subscription.external_id)
+            .where(organization_id: subscription.organization.id)
+            .where(code:)
 
-        scope = scope.order(timestamp: :asc) if ordered
+          scope = scope.order(timestamp: :asc) if ordered
 
-        scope = scope.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
-        scope = scope.where("events_enriched.timestamp <= ?", to_datetime) if to_datetime
-        scope = scope.limit_by(1, "events_enriched.transaction_id")
+          scope = scope.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary
+          scope = scope.where("events_enriched.timestamp <= ?", to_datetime) if to_datetime
+          scope = scope.limit_by(1, "events_enriched.transaction_id")
 
-        scope = with_grouped_by_values(scope) if grouped_by_values?
-        filters_scope(scope)
+          scope = with_grouped_by_values(scope) if grouped_by_values?
+          filters_scope(scope)
+        end
       end
 
       def distinct_codes
