@@ -9,8 +9,9 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
 
   let(:timestamp) { Time.zone.now.beginning_of_month }
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
-  let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
+  let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:customer) { create(:customer, organization:, billing_entity:) }
+  let(:tax) { create(:tax, :applied_to_billing_entity, billing_entity:, organization:, rate: 20) }
   let(:currency) { "EUR" }
   let(:add_on_first) { create(:add_on, organization:) }
   let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
