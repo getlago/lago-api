@@ -5,7 +5,7 @@ module CreditNotes
     queue_as "invoices"
 
     def perform(credit_note)
-      result = CreditNotes::GenerateService.new(credit_note:, context: "api").call
+      result = CreditNotes::GenerateService.call(credit_note:, context: "api")
       result.raise_if_error!
     end
   end
