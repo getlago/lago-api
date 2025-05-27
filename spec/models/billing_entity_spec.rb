@@ -295,13 +295,13 @@ RSpec.describe BillingEntity, type: :model do
 
   describe "#reset_customers_last_dunning_campaign_attempt" do
     let(:last_dunning_campaign_attempt_at) { 1.day.ago }
-    let(:campaign) { create(:dunning_campaign, organization:) }
+    let(:campaign) { create(:dunning_campaign, organization: billing_entity.organization) }
 
     it "resets the last dunning campaign attempt for customers with fallback dunning_campaign" do
       customer1 = create(:customer, billing_entity:, last_dunning_campaign_attempt: 1, last_dunning_campaign_attempt_at:)
       customer2 = create(:customer, billing_entity:, last_dunning_campaign_attempt: 1, last_dunning_campaign_attempt_at:, applied_dunning_campaign: campaign)
 
-      expect { organization.reset_customers_last_dunning_campaign_attempt }
+      expect { billing_entity.reset_customers_last_dunning_campaign_attempt }
         .to change { customer1.reload.last_dunning_campaign_attempt }.from(1).to(0)
         .and change(customer1, :last_dunning_campaign_attempt_at).from(last_dunning_campaign_attempt_at).to(nil)
       expect(customer2.reload.last_dunning_campaign_attempt).to eq(1)
