@@ -7,7 +7,7 @@ RSpec.describe Mutations::DunningCampaigns::Update, type: :graphql do
   let(:organization) { create(:organization, premium_integrations: ["auto_dunning"]) }
   let(:membership) { create(:membership, organization:) }
   let(:dunning_campaign) do
-    create(:dunning_campaign, organization:, applied_to_organization: true)
+    create(:dunning_campaign, organization:)
   end
   let(:dunning_campaign_threshold) do
     create(:dunning_campaign_threshold, dunning_campaign:)
@@ -48,7 +48,7 @@ RSpec.describe Mutations::DunningCampaigns::Update, type: :graphql do
   around { |test| lago_premium!(&test) }
 
   before do
-    dunning_campaign
+    organization.default_billing_entity.update!(applied_dunning_campaign: dunning_campaign)
   end
 
   it_behaves_like "requires current user"
