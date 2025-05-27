@@ -79,7 +79,7 @@ RSpec.describe DunningCampaigns::DestroyService, type: :service do
           end
         end
 
-        context "when dunning campaign was applied on organization" do
+        context "when dunning campaign was applied on billing_entity" do
           before { organization.default_billing_entity.update!(applied_dunning_campaign: dunning_campaign) }
 
           it "resets the applied dunning campaign on the billing entity" do

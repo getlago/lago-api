@@ -6,6 +6,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
   subject(:update_service) { described_class.new(organization:, dunning_campaign:, params:) }
 
   let(:organization) { create(:organization) }
+  let(:billing_entity) { organization.default_billing_entity }
   let(:membership) { create(:membership, organization:) }
   let(:dunning_campaign) do
     create(:dunning_campaign, organization:, applied_to_organization: true)
@@ -18,6 +19,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
     before do
       dunning_campaign
+      billing_entity.update!(applied_dunning_campaign: dunning_campaign)
     end
 
     context "when lago freemium" do
@@ -398,6 +400,11 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             expect(result).to be_success
             expect(result.dunning_campaign.applied_to_organization).to eq(false)
           end
+
+          it "unassigns dunning_campaign from the default billing entity" do
+            expect(result).to be_success
+            expect(organization.default_billing_entity.applied_dunning_campaign).to be_nil
+          end
         end
 
         context "with applied_to_organization true" do
@@ -405,6 +412,10 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           let(:dunning_campaign) do
             create(:dunning_campaign, organization:, applied_to_organization: false)
+          end
+
+          before do
+            billing_entity.update!(applied_dunning_campaign: nil)
           end
 
           it "updates the dunning campaign" do
@@ -424,6 +435,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
             before do
               dunning_campaign_2
+              billing_entity.update!(applied_dunning_campaign: dunning_campaign_2)
             end
 
             it "removes applied_to_organization from previous dunning campaign" do
@@ -431,6 +443,11 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
                 .to change { dunning_campaign_2.reload.applied_to_organization }
                 .from(true)
                 .to(false)
+            end
+
+            it "changes applied_dunning_campaign_id on the default billing entity" do
+              expect(result).to be_success
+              expect(organization.default_billing_entity.applied_dunning_campaign).to eq(result.dunning_campaign)
             end
           end
 
