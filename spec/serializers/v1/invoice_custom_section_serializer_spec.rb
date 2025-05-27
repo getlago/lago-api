@@ -18,7 +18,7 @@ RSpec.describe ::V1::InvoiceCustomSectionSerializer do
         "description" => invoice_custom_section.description,
         "details" => invoice_custom_section.details,
         "display_name" => invoice_custom_section.display_name,
-        "applied_to_organization" => invoice_custom_section.selected_for_organization?,
+        "applied_to_organization" => invoice_custom_section.selected_for_default_billing_entity?,
         "organization_id" => invoice_custom_section.organization_id
       )
     end

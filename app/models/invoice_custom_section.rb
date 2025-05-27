@@ -21,6 +21,10 @@ class InvoiceCustomSection < ApplicationRecord
     uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
 
   default_scope -> { kept }
+
+  def selected_for_default_billing_entity?
+    billing_entity_applied_invoice_custom_sections.exists?(billing_entity: organization.default_billing_entity)
+  end
 end
 
 # == Schema Information
