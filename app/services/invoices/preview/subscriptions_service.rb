@@ -49,9 +49,9 @@ module Invoices
             params:
           )
         when :projection
-          self.class::Result.new.tap do |r|
-            r.subscriptions = customer_subscriptions
-          end
+          FindSubscriptionsService.call(
+            subscriptions: customer_subscriptions
+          )
         end
       end
 
@@ -69,7 +69,7 @@ module Invoices
         elsif target_plan_code
           :plan_change
         else
-          :projection # Preview for existing subscriptions without any modifications
+          :projection # Preview for existing subscriptions including their next subscriptions
         end
       end
 
