@@ -18,7 +18,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
     subject(:result) { update_service.call }
 
     before do
-      dunning_campaign
       billing_entity.update!(applied_dunning_campaign: dunning_campaign)
     end
 
@@ -119,7 +118,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
         end
 
         context "when bcc_emails is set and should be reset" do
-          let(:dunning_campaign) { create(:dunning_campaign, organization:, applied_to_organization: true, bcc_emails: ["earl@example.com"]) }
+          let(:dunning_campaign) { create(:dunning_campaign, organization:, bcc_emails: ["earl@example.com"]) }
           let(:params) do
             {
               name: "Updated Dunning Campaign",
@@ -188,13 +187,13 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           context "when the campaign is assigned to the customer" do
             let(:dunning_campaign) do
-              create(:dunning_campaign, organization:, applied_to_organization: false)
+              create(:dunning_campaign, organization:)
             end
 
             include_examples "resets customer last dunning campaign attempt fields", :customer_assigned
           end
 
-          context "when the customer defaults to the campaign applied to organization" do
+          context "when the customer defaults to the campaign applied to billing entity" do
             include_examples "resets customer last dunning campaign attempt fields", :customer_defaulting
           end
         end
@@ -223,7 +222,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           context "when the campaign is assigned to the customer" do
             let(:dunning_campaign) do
-              create(:dunning_campaign, organization:, applied_to_organization: false)
+              create(:dunning_campaign, organization:)
             end
 
             include_examples "resets customer last dunning campaign attempt fields", :customer_assigned
@@ -260,7 +259,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           context "when the campaign is assigned to the customer" do
             let(:dunning_campaign) do
-              create(:dunning_campaign, organization:, applied_to_organization: false)
+              create(:dunning_campaign, organization:)
             end
 
             include_examples "does not reset customer last dunning campaign attempt fields", :customer_assigned
@@ -304,7 +303,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           context "when the campaign is assigned to the customer" do
             let(:dunning_campaign) do
-              create(:dunning_campaign, organization:, applied_to_organization: false)
+              create(:dunning_campaign, organization:)
             end
 
             include_examples "does not reset customer last dunning campaign attempt fields", :customer_assigned
@@ -331,7 +330,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           context "when the campaign is assigned to the customer" do
             let(:dunning_campaign) do
-              create(:dunning_campaign, organization:, applied_to_organization: false)
+              create(:dunning_campaign, organization:)
             end
 
             include_examples "resets customer last dunning campaign attempt fields", :customer_assigned
@@ -367,7 +366,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           context "when the campaign is assigned to the customer" do
             let(:dunning_campaign) do
-              create(:dunning_campaign, organization:, applied_to_organization: false)
+              create(:dunning_campaign, organization:)
             end
 
             include_examples "does not reset customer last dunning campaign attempt fields", :customer_assigned
@@ -411,7 +410,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           let(:params) { {applied_to_organization: true} }
 
           let(:dunning_campaign) do
-            create(:dunning_campaign, organization:, applied_to_organization: false)
+            create(:dunning_campaign, organization:)
           end
 
           before do
@@ -434,7 +433,6 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             end
 
             before do
-              dunning_campaign_2
               billing_entity.update!(applied_dunning_campaign: dunning_campaign_2)
             end
 
