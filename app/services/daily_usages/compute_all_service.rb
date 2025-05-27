@@ -10,7 +10,7 @@ module DailyUsages
 
     def call
       subscriptions.find_each do |subscription|
-        DailyUsages::ComputeJob.perform_later(subscription, timestamp:)
+        DailyUsages::ComputeJob.set(wait: rand(30.minutes)).perform_later(subscription, timestamp:)
       end
 
       result
