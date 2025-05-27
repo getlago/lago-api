@@ -13,6 +13,7 @@ module Wallets
       return result.not_found_failure!(resource: "wallet") unless wallet
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])
       return result unless valid_recurring_transaction_rules?
+      return result unless valid_limitations?
 
       ActiveRecord::Base.transaction do
         wallet.name = params[:name] if params.key?(:name)
@@ -22,6 +23,9 @@ module Wallets
         end
         if params[:recurring_transaction_rules] && License.premium?
           Wallets::RecurringTransactionRules::UpdateService.call(wallet:, params: params[:recurring_transaction_rules])
+        end
+        if params.key?(:applies_to)
+          wallet.allowed_fee_types = params[:applies_to][:fee_types] if params[:applies_to].key?(:fee_types)
         end
 
         wallet.save!
@@ -49,6 +53,10 @@ module Wallets
 
       result.single_validation_failure!(field: :expiration_at, error_code: "invalid_date")
       false
+    end
+
+    def valid_limitations?
+      Wallets::ValidateLimitationsService.new(result, **params).valid?
     end
   end
 end

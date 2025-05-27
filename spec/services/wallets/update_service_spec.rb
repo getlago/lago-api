@@ -9,7 +9,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
-  let(:wallet) { create(:wallet, customer:) }
+  let(:wallet) { create(:wallet, customer:, allowed_fee_types: []) }
   let(:expiration_at) { (Time.current + 1.year).iso8601 }
 
   describe "#call" do
@@ -318,6 +318,63 @@ RSpec.describe Wallets::UpdateService, type: :service do
           expect(result).not_to be_success
           expect(result.error.messages[:recurring_transaction_rules]).to eq(["invalid_recurring_rule"])
 
+          expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+        end
+      end
+    end
+
+    context "with limitations" do
+      let(:limitations) do
+        {
+          fee_types: %w[charge]
+        }
+      end
+      let(:params) do
+        {
+          id: wallet.id,
+          name: "new name",
+          applies_to: limitations
+        }
+      end
+
+      it "creates fee limitation" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.wallet.reload.name).to eq(params[:name])
+        expect(result.wallet.reload.allowed_fee_types).to eq(limitations[:fee_types])
+        expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+
+      context "when an empty array is sent as argument" do
+        let(:limitations) do
+          {
+            fee_types: []
+          }
+        end
+
+        it "removes fee limitations" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.wallet.reload.name).to eq(params[:name])
+          expect(result.wallet.reload.allowed_fee_types).to eq(limitations[:fee_types])
+          expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
+        end
+      end
+
+      context "when fee type is invalid" do
+        let(:limitations) do
+          {
+            fee_types: %w[invalid]
+          }
+        end
+
+        it "returns an error" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages[:allowed_fee_types]).to eq(["invalid_fee_types"])
           expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
         end
       end
