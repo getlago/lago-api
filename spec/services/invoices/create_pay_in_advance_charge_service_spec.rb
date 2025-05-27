@@ -157,7 +157,6 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end.to have_enqueued_job(SendWebhookJob).with("fee.created", Fee)
     end
 
-
     it "produces an activity log" do
       invoice = described_class.call(charge:, event:, timestamp: timestamp.to_i).invoice
 
