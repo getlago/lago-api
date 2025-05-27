@@ -29,13 +29,12 @@ RSpec.describe AppliedCoupons::RecreditService, type: :service do
 
     context "when applied_coupon is terminated" do
       let(:applied_coupon) do
-        create(:applied_coupon, 
-          coupon:, 
-          customer:, 
-          organization:, 
-          status: :terminated, 
-          terminated_at: Time.current
-        )
+        create(:applied_coupon,
+          coupon:,
+          customer:,
+          organization:,
+          status: :terminated,
+          terminated_at: Time.current)
       end
 
       context "when it should be reactivated" do
@@ -47,21 +46,21 @@ RSpec.describe AppliedCoupons::RecreditService, type: :service do
         end
 
         it "uses with_lock to prevent race conditions" do
-          expect(applied_coupon).to receive(:with_lock).and_call_original
+          allow(applied_coupon).to receive(:with_lock).and_call_original
           recredit_service.call
+          expect(applied_coupon).to have_received(:with_lock)
         end
       end
 
       context "when it is a forever coupon" do
         let(:applied_coupon) do
-          create(:applied_coupon, 
-            coupon:, 
-            customer:, 
-            organization:, 
-            status: :terminated, 
+          create(:applied_coupon,
+            coupon:,
+            customer:,
+            organization:,
+            status: :terminated,
             terminated_at: Time.current,
-            frequency: :forever
-          )
+            frequency: :forever)
         end
 
         it "does not reactivate the coupon" do
@@ -84,13 +83,12 @@ RSpec.describe AppliedCoupons::RecreditService, type: :service do
 
     context "when applied_coupon is recurring" do
       let(:applied_coupon) do
-        create(:applied_coupon, 
-          coupon:, 
-          customer:, 
-          organization:, 
+        create(:applied_coupon,
+          coupon:,
+          customer:,
+          organization:,
           frequency: :recurring,
-          frequency_duration_remaining: 2
-        )
+          frequency_duration_remaining: 2)
       end
 
       it "increments frequency_duration_remaining" do
@@ -100,8 +98,9 @@ RSpec.describe AppliedCoupons::RecreditService, type: :service do
       end
 
       it "uses with_lock to prevent race conditions" do
-        expect(applied_coupon).to receive(:with_lock).and_call_original
+        allow(applied_coupon).to receive(:with_lock).and_call_original
         recredit_service.call
+        expect(applied_coupon).to have_received(:with_lock)
       end
     end
   end
