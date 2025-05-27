@@ -25,6 +25,8 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
   let(:rate_amount) { 1 }
 
   before do
+    allow(Utils::ActivityLog).to receive(:produce)
+
     subscription
   end
 
@@ -82,6 +84,12 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
       expect do
         create_service
       end.to have_enqueued_job(SendWebhookJob).thrice.with("wallet_transaction.created", WalletTransaction)
+    end
+
+    it "produces an activity log" do
+      create_service
+
+      expect(Utils::ActivityLog).to have_received(:produce).thrice.with(an_instance_of(WalletTransaction), "wallet_transaction.created")
     end
 
     context "with valid metadata" do

@@ -18,7 +18,11 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
   let(:customer) { create(:customer) }
   let(:subscription) { create(:subscription, customer:) }
 
-  before { subscription }
+  before do
+    allow(Utils::ActivityLog).to receive(:produce)
+
+    subscription
+  end
 
   describe "#call" do
     it "calculates prepaid credit" do
@@ -49,6 +53,12 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
     it "enqueues a SendWebhookJob" do
       expect { credit_service.call }.to have_enqueued_job(SendWebhookJob)
         .with("wallet_transaction.created", WalletTransaction)
+    end
+
+    it "produces an activity log" do
+      wallet_transaction = described_class.call(invoice:, wallet:).wallet_transaction
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(wallet_transaction, "wallet_transaction.created")
     end
 
     context "when wallet credits are less than invoice amount" do

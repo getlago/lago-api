@@ -7,6 +7,11 @@ module WalletTransactions
       super
     end
 
+    activity_loggable(
+      action: "wallet_transaction.updated",
+      record: -> { wallet_transaction }
+    )
+
     def call
       return result unless wallet_transaction
       return result if wallet_transaction.status == "failed"
