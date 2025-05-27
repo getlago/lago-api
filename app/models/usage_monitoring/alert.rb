@@ -50,11 +50,11 @@ module UsageMonitoring
 
     def find_thresholds_crossed(current)
       crossed = []
-      return crossed if current < previous_value
+      return crossed if current <= previous_value
       return crossed if current < one_time_thresholds_values.first
 
       if previous_value < one_time_thresholds_values.last
-        crossed += one_time_thresholds_values.filter { |t| t.between?(previous_value, current) }
+        crossed += one_time_thresholds_values.filter { it > previous_value && it <= current }
       end
 
       crossed += find_recurring_thresholds_crossed(
