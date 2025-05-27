@@ -11,6 +11,8 @@ module Types
         field :billable_metric_code, String, null: false
         field :units, Float, null: false
 
+        field :is_billable_metric_deleted, Boolean, null: false
+
         field :end_of_period_dt, GraphQL::Types::ISO8601Date, null: false
         field :start_of_period_dt, GraphQL::Types::ISO8601Date, null: false
       end

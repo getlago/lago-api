@@ -14,6 +14,10 @@ FactoryBot.define do
     trait :recurring do
       recurring { true }
     end
+
+    trait :discarded do
+      deleted_at { Time.current }
+    end
   end
 
   factory :sum_billable_metric, parent: :billable_metric do

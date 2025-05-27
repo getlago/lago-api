@@ -14,6 +14,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
       "start_of_period_dt" => "2024-01-01",
       "end_of_period_dt" => "2024-01-31",
       "billable_metric_code" => "account_members",
+      "is_billable_metric_deleted" => false,
       "amount_currency" => "EUR",
       "amount_cents" => 26600,
       "units" => 266
@@ -34,10 +35,25 @@ RSpec.describe DataApi::UsagesService, type: :service do
           .to_return(status: 200, body: body_response, headers: {})
       end
 
-      it "returns usages" do
-        expect(service_call).to be_success
-        expect(service_call.usages.count).to eq(3)
-        expect(service_call.usages.first).to eq(usage_json)
+      context "when billable metric is not deleted" do
+        it "returns usages" do
+          expect(service_call).to be_success
+          expect(service_call.usages.count).to eq(3)
+          expect(service_call.usages.first).to eq(usage_json)
+        end
+      end
+
+      context "when billable metric is deleted" do
+        before do
+          create(:billable_metric, :discarded, organization:, code: "account_members")
+          usage_json["is_billable_metric_deleted"] = true
+        end
+
+        it "returns usages" do
+          expect(service_call).to be_success
+          expect(service_call.usages.count).to eq(3)
+          expect(service_call.usages.first).to eq(usage_json)
+        end
       end
     end
 
@@ -52,10 +68,25 @@ RSpec.describe DataApi::UsagesService, type: :service do
           .to_return(status: 200, body: body_response, headers: {})
       end
 
-      it "returns usages" do
-        expect(service_call).to be_success
-        expect(service_call.usages.count).to eq(3)
-        expect(service_call.usages.first).to eq(usage_json)
+      context "when billable metric is not deleted" do
+        it "returns usages" do
+          expect(service_call).to be_success
+          expect(service_call.usages.count).to eq(3)
+          expect(service_call.usages.first).to eq(usage_json)
+        end
+      end
+
+      context "when billable metric is deleted" do
+        before do
+          create(:billable_metric, :discarded, organization:, code: "account_members")
+          usage_json["is_billable_metric_deleted"] = true
+        end
+
+        it "returns usages" do
+          expect(service_call).to be_success
+          expect(service_call.usages.count).to eq(3)
+          expect(service_call.usages.first).to eq(usage_json)
+        end
       end
     end
   end
@@ -144,6 +175,47 @@ RSpec.describe DataApi::UsagesService, type: :service do
 
     it "returns the correct API path for the organization" do
       expect(action_path).to eq("usages/#{organization.id}/")
+    end
+  end
+
+  describe "#discarded_billable_metrics_codes" do
+    subject(:discarded_codes) { service.send(:discarded_billable_metrics_codes) }
+
+    let(:params) { {} }
+
+    context "when there are discarded billable metrics" do
+      before do
+        create(:billable_metric, organization: organization, code: "active_metric")
+        create(:billable_metric, :discarded, organization: organization, code: "deleted_metric")
+      end
+
+      it "returns the codes of discarded billable metrics" do
+        expect(discarded_codes).to match_array(["deleted_metric"])
+      end
+    end
+
+    context "when there are no discarded billable metrics" do
+      before do
+        create(:billable_metric, organization: organization, code: "active_metric")
+      end
+
+      it "returns an empty array" do
+        expect(discarded_codes).to be_empty
+      end
+    end
+
+    context "when there are discarded metrics from other organizations" do
+      let(:other_organization) { create(:organization) }
+
+      before do
+        create(:billable_metric, organization: organization, code: "active_metric")
+        create(:billable_metric, :discarded, organization: organization, code: "deleted_metric")
+        create(:billable_metric, :discarded, organization: other_organization, code: "other_org_deleted")
+      end
+
+      it "only returns the codes of discarded billable metrics for the current organization" do
+        expect(discarded_codes).to contain_exactly("deleted_metric")
+      end
     end
   end
 end
