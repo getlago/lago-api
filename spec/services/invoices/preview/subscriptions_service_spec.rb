@@ -33,8 +33,7 @@ RSpec.describe Invoices::Preview::SubscriptionsService, type: :service do
       let(:customer) { create(:customer, organization:) }
 
       context "when external_ids are provided" do
-        let!(:subscriptions) { create_pair(:subscription, customer:) }
-        let(:subscription_ids) { subscriptions.map(&:external_id) }
+        let(:subscriptions) { create_pair(:subscription, customer:) }
 
         context "when terminated at is not provided" do
           context "when plan code is present" do
@@ -49,32 +48,45 @@ RSpec.describe Invoices::Preview::SubscriptionsService, type: :service do
 
             let(:target_plan) { create(:plan, organization:, pay_in_advance: true) }
 
-            context "when multiple subscriptions passed" do
-              let(:external_ids) { subscriptions.map(&:external_id) }
+            context "when customer is a new record" do
+              let(:customer) { build(:customer, organization:) }
+              let(:external_ids) { [SecureRandom.uuid] }
 
-              it "fails with multiple subscriptions error" do
+              it "fails with customer not persisted error" do
                 expect(result).to be_failure
 
-                expect(result.error.messages)
-                  .to match(subscriptions: ["only_one_subscription_allowed_for_plan_change"])
+                expect(result.error.messages).to match(customer: ["must_be_persisted"])
               end
             end
 
-            context "when single subscription passed" do
-              let(:external_ids) { [subscriptions.first.external_id] }
+            context "when customer is a persisted record" do
+              context "when multiple subscriptions passed" do
+                let(:external_ids) { subscriptions.map(&:external_id) }
 
-              before { freeze_time }
+                it "fails with multiple subscriptions error" do
+                  expect(result).to be_failure
 
-              it "returns result with subscriptions marked as terminated and new subscription" do
-                expect(result).to be_success
-                expect(subject).to match_array [subscriptions.first, Subscription]
+                  expect(result.error.messages)
+                    .to match(subscriptions: ["only_one_subscription_allowed_for_plan_change"])
+                end
+              end
 
-                expect(subject.first)
-                  .to have_attributes(status: "terminated", terminated_at: Time.current)
+              context "when single subscription passed" do
+                let(:external_ids) { [subscriptions.first.external_id] }
 
-                expect(subject.second)
-                  .to be_new_record
-                  .and have_attributes(status: "active", started_at: Time.current, name: target_plan.name)
+                before { freeze_time }
+
+                it "returns result with subscriptions marked as terminated and new subscription" do
+                  expect(result).to be_success
+                  expect(subject).to match_array [subscriptions.first, Subscription]
+
+                  expect(subject.first)
+                    .to have_attributes(status: "terminated", terminated_at: Time.current)
+
+                  expect(subject.second)
+                    .to be_new_record
+                    .and have_attributes(status: "active", started_at: Time.current, name: target_plan.name)
+                end
               end
             end
           end
@@ -83,14 +95,29 @@ RSpec.describe Invoices::Preview::SubscriptionsService, type: :service do
             let(:params) do
               {
                 subscriptions: {
-                  external_ids: subscriptions.map(&:external_id)
+                  external_ids:
                 }
               }
             end
 
-            it "returns persisted customer subscriptions" do
-              expect(result).to be_success
-              expect(subject.pluck(:external_id)).to match_array subscriptions.map(&:external_id)
+            context "when customer is a new record" do
+              let(:customer) { build(:customer, organization:) }
+              let(:external_ids) { [SecureRandom.uuid] }
+
+              it "fails with customer not persisted error" do
+                expect(result).to be_failure
+
+                expect(result.error.messages).to match(customer: ["must_be_persisted"])
+              end
+            end
+
+            context "when customer is a persisted record" do
+              let(:external_ids) { subscriptions.map(&:external_id) }
+
+              it "returns persisted customer subscriptions" do
+                expect(result).to be_success
+                expect(subject.pluck(:external_id)).to match_array subscriptions.map(&:external_id)
+              end
             end
           end
         end
@@ -107,30 +134,43 @@ RSpec.describe Invoices::Preview::SubscriptionsService, type: :service do
             }
           end
 
-          context "when multiple subscriptions passed" do
-            let(:external_ids) { subscriptions.map(&:external_id) }
+          context "when customer is a new record" do
+            let(:customer) { build(:customer, organization:) }
+            let(:external_ids) { [SecureRandom.uuid] }
 
-            it "fails with multiple subscriptions error" do
+            it "fails with customer not persisted error" do
               expect(result).to be_failure
 
-              expect(result.error.messages)
-                .to match(subscriptions: ["only_one_subscription_allowed_for_termination"])
+              expect(result.error.messages).to match(customer: ["must_be_persisted"])
             end
           end
 
-          context "when single subscription passed" do
-            let(:external_ids) { [subscriptions.first.external_id] }
+          context "when customer is a persisted record" do
+            context "when multiple subscriptions passed" do
+              let(:external_ids) { subscriptions.map(&:external_id) }
 
-            it "returns result with subscriptions marked as terminated" do
-              expect(result).to be_success
+              it "fails with multiple subscriptions error" do
+                expect(result).to be_failure
 
-              expect(subject).to all(
-                be_a(Subscription)
-                  .and(have_attributes(
-                    terminated_at: terminated_at.change(usec: 0),
-                    status: "terminated"
-                  ))
-              )
+                expect(result.error.messages)
+                  .to match(subscriptions: ["only_one_subscription_allowed_for_termination"])
+              end
+            end
+
+            context "when single subscription passed" do
+              let(:external_ids) { [subscriptions.first.external_id] }
+
+              it "returns result with subscriptions marked as terminated" do
+                expect(result).to be_success
+
+                expect(subject).to all(
+                  be_a(Subscription)
+                    .and(have_attributes(
+                      terminated_at: terminated_at.change(usec: 0),
+                      status: "terminated"
+                    ))
+                )
+              end
             end
           end
         end
@@ -149,19 +189,42 @@ RSpec.describe Invoices::Preview::SubscriptionsService, type: :service do
         let(:subscription_at) { generate(:past_date) }
         let(:billing_time) { "anniversary" }
 
-        it "returns new subscription with provided params" do
-          expect(result).to be_success
-          expect(subject).to contain_exactly Subscription
+        context "when customer is a new record" do
+          let(:customer) { build(:customer, organization:) }
 
-          expect(subject.first)
-            .to be_new_record
-            .and have_attributes(
-              customer:,
-              plan:,
-              subscription_at: subscription_at.change(usec: 0),
-              started_at: subscription_at.change(usec: 0),
-              billing_time:
-            )
+          it "returns new subscription with provided params" do
+            expect(result).to be_success
+            expect(subject).to contain_exactly Subscription
+
+            expect(subject.first)
+              .to be_new_record
+              .and have_attributes(
+                customer:,
+                plan:,
+                subscription_at: subscription_at.change(usec: 0),
+                started_at: subscription_at.change(usec: 0),
+                billing_time:
+              )
+          end
+        end
+
+        context "when customer is a persisted record" do
+          let(:customer) { create(:customer, organization:) }
+
+          it "returns new subscription with provided params" do
+            expect(result).to be_success
+            expect(subject).to contain_exactly Subscription
+
+            expect(subject.first)
+              .to be_new_record
+              .and have_attributes(
+                customer:,
+                plan:,
+                subscription_at: subscription_at.change(usec: 0),
+                started_at: subscription_at.change(usec: 0),
+                billing_time:
+              )
+          end
         end
       end
     end

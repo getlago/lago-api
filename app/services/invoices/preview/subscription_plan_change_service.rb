@@ -31,7 +31,7 @@ module Invoices
 
       private
 
-      attr_reader :current_subscription, :target_plan_code, :context
+      attr_reader :current_subscription, :target_plan_code
 
       delegate :organization, :customer, to: :current_subscription
 
