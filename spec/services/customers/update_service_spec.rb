@@ -441,8 +441,9 @@ RSpec.describe Customers::UpdateService, type: :service do
       let(:invoice_custom_sections) { create_list(:invoice_custom_section, 4, organization:) }
 
       before do
-        customer.selected_invoice_custom_sections << invoice_custom_sections[0]
-        organization.selected_invoice_custom_sections = invoice_custom_sections[2..3]
+        create(:customer_applied_invoice_custom_section, organization:, billing_entity:, customer:, invoice_custom_section: invoice_custom_sections[0])
+        create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: invoice_custom_sections[2])
+        create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: invoice_custom_sections[3])
       end
 
       context "when customer is set to skip_invoice_custom_sections: true" do
