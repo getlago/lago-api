@@ -249,21 +249,6 @@ RSpec.describe Organization, type: :model do
     end
   end
 
-  describe "#reset_customers_last_dunning_campaign_attempt" do
-    let(:last_dunning_campaign_attempt_at) { 1.day.ago }
-    let(:campaign) { create(:dunning_campaign, organization:) }
-
-    it "resets the last dunning campaign attempt for customers" do
-      customer1 = create(:customer, organization:, last_dunning_campaign_attempt: 1, last_dunning_campaign_attempt_at:)
-      customer2 = create(:customer, organization:, last_dunning_campaign_attempt: 1, last_dunning_campaign_attempt_at:, applied_dunning_campaign: campaign)
-
-      expect { organization.reset_customers_last_dunning_campaign_attempt }
-        .to change { customer1.reload.last_dunning_campaign_attempt }.from(1).to(0)
-        .and change(customer1, :last_dunning_campaign_attempt_at).from(last_dunning_campaign_attempt_at).to(nil)
-      expect(customer2.reload.last_dunning_campaign_attempt).to eq(1)
-    end
-  end
-
   describe "#can_create_billing_entity?" do
     subject { organization.can_create_billing_entity? }
 

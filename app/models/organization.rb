@@ -187,15 +187,6 @@ class Organization < ApplicationRecord
     super(value&.upcase)
   end
 
-  def reset_customers_last_dunning_campaign_attempt
-    customers
-      .falling_back_to_default_dunning_campaign
-      .update_all( # rubocop:disable Rails/SkipsModelValidations
-        last_dunning_campaign_attempt: 0,
-        last_dunning_campaign_attempt_at: nil
-      )
-  end
-
   def from_email_address
     return email if from_email_enabled?
 

@@ -43,8 +43,8 @@ class DunningCampaign < ApplicationRecord
       last_dunning_campaign_attempt_at: nil
     )
 
-    # NOTE: Reset last attempt on customers falling back to the organization campaign
-    organization.reset_customers_last_dunning_campaign_attempt if applied_to_organization?
+    # NOTE: Reset last attempt on customers falling back to the billing_entity campaign
+    billing_entities.map(&:reset_customers_last_dunning_campaign_attempt)
   end
 end
 
