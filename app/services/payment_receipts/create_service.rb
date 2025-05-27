@@ -11,6 +11,11 @@ module PaymentReceipts
       super
     end
 
+    activity_loggable(
+      action: "payment_receipt.created",
+      record: -> { result.payment_receipt }
+    )
+
     def call
       return result.not_found_failure!(resource: "payment") unless payment
       return result.forbidden_failure! unless organization.issue_receipts_enabled?
