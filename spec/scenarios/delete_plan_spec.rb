@@ -45,7 +45,7 @@ describe "Delete Plan Scenarios", :scenarios, type: :request do
 
     travel_to(jan20) do
       overridden_plan = plan.children.first
-      delete_plan(plan)
+      delete_with_token(organization, "/api/v1/plans/#{plan.code}")
 
       # Plan is pending deletion
       expect(plan.reload).to be_pending_deletion
