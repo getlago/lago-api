@@ -4,7 +4,7 @@ module Clock
   class TerminateEndedSubscriptionsJob < ClockJob
     def perform
       Subscription
-        .joins(customer: :organization)
+        .joins(customer: :billing_entity)
         .active
         .where(
           "DATE(subscriptions.ending_at#{Utils::Timezone.at_time_zone_sql}) = " \

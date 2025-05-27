@@ -35,6 +35,10 @@ RSpec.describe DailyUsages::ComputeAllService, type: :service do
     context "when the organization has a timezone" do
       let(:organization) { create(:organization, timezone: "America/Sao_Paulo", premium_integrations:) }
 
+      before do
+        organization.default_billing_entity.update(timezone: "America/Sao_Paulo")
+      end
+
       it "takes the timezone into account" do
         expect(compute_service.call).to be_success
         expect(DailyUsages::ComputeJob).not_to have_been_enqueued

@@ -74,6 +74,7 @@ module Subscriptions
           INNER JOIN billable_subscriptions ON billable_subscriptions.subscription_id = subscriptions.id
           INNER JOIN customers ON customers.id = subscriptions.customer_id
           INNER JOIN organizations ON organizations.id = customers.organization_id
+          INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
           LEFT JOIN already_billed_today ON already_billed_today.subscription_id = subscriptions.id
         WHERE
           organizations.id = '#{organization.id}'
@@ -101,6 +102,7 @@ module Subscriptions
         FROM subscriptions
           INNER JOIN plans ON plans.id = subscriptions.plan_id
           INNER JOIN customers ON customers.id = subscriptions.customer_id
+          INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
           INNER JOIN organizations ON organizations.id = customers.organization_id
         WHERE subscriptions.status = #{Subscription.statuses[:active]}
           AND organizations.id = '#{organization.id}'
@@ -310,13 +312,14 @@ module Subscriptions
         FROM invoice_subscriptions
           INNER JOIN subscriptions AS sub ON invoice_subscriptions.subscription_id = sub.id
           INNER JOIN customers AS cus ON sub.customer_id = cus.id
+          INNER JOIN billing_entities ON cus.billing_entity_id = billing_entities.id
           INNER JOIN organizations AS org ON cus.organization_id = org.id
         WHERE invoice_subscriptions.recurring = 't'
           AND org.id = '#{organization.id}'
           AND invoice_subscriptions.timestamp IS NOT NULL
           AND DATE(
-            (invoice_subscriptions.timestamp)#{at_time_zone(customer: "cus", organization: "org")}
-          ) = DATE(:today#{at_time_zone(customer: "cus", organization: "org")})
+            (invoice_subscriptions.timestamp)#{at_time_zone(customer: "cus", billing_entity: "billing_entities")}
+          ) = DATE(:today#{at_time_zone(customer: "cus", billing_entity: "billing_entities")})
         GROUP BY invoice_subscriptions.subscription_id
       SQL
     end
