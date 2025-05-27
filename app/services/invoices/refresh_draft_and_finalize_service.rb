@@ -17,7 +17,9 @@ module Invoices
         refresh_result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
         if invoice.tax_pending?
           invoice.update!(issuing_date: drafted_issuing_date)
+          # rubocop:disable Rails/TransactionExitStatement
           return refresh_result
+          # rubocop:enable Rails/TransactionExitStatement
         end
         refresh_result.raise_if_error!
 
