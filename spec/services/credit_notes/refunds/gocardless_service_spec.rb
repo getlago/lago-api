@@ -92,6 +92,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
       before do
         allow(gocardless_refunds_service).to receive(:create)
           .and_raise(GoCardlessPro::Error.new("code" => "code", "message" => "error"))
+        allow(Utils::ActivityLog).to receive(:produce)
       end
 
       it "delivers an error webhook" do
@@ -108,6 +109,13 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
               error_code: "code"
             }
           )
+      end
+
+      it "produces an activity log" do
+        expect { gocardless_service.create }
+          .to raise_error(GoCardlessPro::Error)
+
+        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failed")
       end
     end
 
@@ -269,7 +277,10 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
     end
 
     context "when status is failed" do
-      before { gocardless_service }
+      before do
+        gocardless_service
+        allow(Utils::ActivityLog).to receive(:produce)
+      end
 
       it "delivers an error webhook" do
         result = gocardless_service.update_status(
@@ -295,6 +306,15 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
               }
             )
         end
+      end
+
+      it "produces an activity log" do
+        gocardless_service.update_status(
+          provider_refund_id: refund.provider_refund_id,
+          status: "failed"
+        )
+
+        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failed")
       end
     end
   end

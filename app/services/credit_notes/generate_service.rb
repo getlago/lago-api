@@ -15,6 +15,7 @@ module CreditNotes
       if should_generate_pdf?
         generate_pdf(credit_note)
         SendWebhookJob.perform_later("credit_note.generated", credit_note)
+        Utils::ActivityLog.produce(credit_note, "credit_note.generated")
       end
 
       result.credit_note = credit_note
