@@ -75,6 +75,7 @@ class Customer < ApplicationRecord
     source: :invoice_custom_section
 
   has_many :activity_logs,
+    -> { order(logged_at: :desc) },
     class_name: "Clickhouse::ActivityLog",
     foreign_key: :external_customer_id,
     primary_key: :external_id

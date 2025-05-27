@@ -14,7 +14,10 @@ class Coupon < ApplicationRecord
   has_many :plans, through: :coupon_targets
   has_many :billable_metrics, through: :coupon_targets
 
-  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
 
   STATUSES = [
     :active,
