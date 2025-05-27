@@ -127,10 +127,11 @@ class BaseService
     end
   end
 
-  class TooManyRequestsFailure < FailedResult
-    attr_reader :error
+  class TooManyProviderRequestsFailure < FailedResult
+    attr_reader :provider_name, :error
 
-    def initialize(result, error:)
+    def initialize(result, provider_name:, error:)
+      @provider_name = provider_name
       @error = error
 
       super(result, error.message, original_error: error)
@@ -208,8 +209,8 @@ class BaseService
       fail_with_error!(ThirdPartyFailure.new(self, third_party:, error_code:, error_message:))
     end
 
-    def too_many_requests_failure!(error:)
-      fail_with_error!(TooManyRequestsFailure.new(self, error:))
+    def too_many_provider_requests_failure!(provider_name:, error:)
+      fail_with_error!(TooManyProviderRequestsFailure.new(self, provider_name:, error:))
     end
 
     def raise_if_error!

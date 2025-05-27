@@ -39,7 +39,7 @@ module Invoices
       result.invoice = invoice
       result
     rescue BaseService::ThrottlingError => error
-      result.too_many_requests_failure!(error:)
+      result.too_many_provider_requests_failure!(provider_name: error.provider_name, error:)
     end
 
     private

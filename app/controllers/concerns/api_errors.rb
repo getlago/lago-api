@@ -86,13 +86,14 @@ module ApiErrors
     )
   end
 
-  def too_many_requests_error(error:)
+  def too_many_provider_requests_error(error:)
     render(
       json: {
         status: 429,
-        error: "Too Many Requests",
-        code: "too_many_requests",
+        error: "Too Many Provider Requests",
+        code: "too_many_provider_requests",
         error_details: {
+          provider_name: error.provider_name,
           message: error.message
         }
       },
@@ -106,8 +107,6 @@ module ApiErrors
       not_found_error(resource: error_result.error.resource)
     when BaseService::MethodNotAllowedFailure
       method_not_allowed_error(code: error_result.error.code)
-    when BaseService::TooManyRequestsFailure
-      too_many_requests_error(error: error_result.error)
     when BaseService::ValidationFailure
       validation_errors(errors: error_result.error.messages)
     when BaseService::ForbiddenFailure
@@ -116,6 +115,8 @@ module ApiErrors
       unauthorized_error(message: error_result.error.message)
     when BaseService::ProviderFailure
       provider_error(error_result.error.provider, error_result.error.original_error)
+    when BaseService::TooManyProviderRequestsFailure
+      too_many_provider_requests_error(error: error_result.error)
     when BaseService::ThirdPartyFailure
       thirdpary_error(error: error_result.error)
     else

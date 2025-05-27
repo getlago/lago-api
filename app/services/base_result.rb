@@ -71,8 +71,8 @@ class BaseResult
     fail_with_error!(BaseService::ThirdPartyFailure.new(self, third_party:, error_code:, error_message:))
   end
 
-  def too_many_requests_failure!(error:)
-    fail_with_error!(BaseService::TooManyRequestsFailure.new(self, error:))
+  def too_many_provider_requests_failure!(provider_name:, error:)
+    fail_with_error!(BaseService::TooManyProviderRequestsFailure.new(self, provider_name:, error:))
   end
 
   def raise_if_error!
