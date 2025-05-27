@@ -2,6 +2,8 @@
 
 module AppliedCoupons
   class RecreditService < BaseService
+    Result = BaseResult[:applied_coupon]
+
     def initialize(credit:)
       @credit = credit
       @applied_coupon = credit.applied_coupon
