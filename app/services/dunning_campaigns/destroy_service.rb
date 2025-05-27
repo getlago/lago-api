@@ -12,7 +12,7 @@ module DunningCampaigns
       return result.not_found_failure!(resource: "dunning_campaign") unless dunning_campaign
       return result.forbidden_failure! unless dunning_campaign.organization.auto_dunning_enabled?
 
-      # rubop:disable Rails/SkipsModelValidations
+      # rubocop:disable Rails/SkipsModelValidations
       ActiveRecord::Base.transaction do
         dunning_campaign.reset_customers_last_attempt
         dunning_campaign.discard!
