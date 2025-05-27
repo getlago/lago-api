@@ -10,7 +10,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
   context "when premium features are enabled" do
     let(:organization) { create :organization, premium_integrations: %w[auto_dunning] }
     let(:billing_entity) { organization.default_billing_entity }
-    let(:customer) { create :customer, organization:, currency: }
+    let(:customer) { create :customer, organization:, billing_entity:, currency: }
 
     let(:invoice_1) do
       create(
@@ -77,7 +77,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
 
         context "when maximum attempts are reached" do
-          let(:customer) { create :customer, billing_entity:, last_dunning_campaign_attempt: 5 }
+          let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt: 5 }
 
           let(:dunning_campaign) do
             create(
@@ -96,7 +96,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
 
         context "when not enough days have passed since last attempt" do
-          let(:customer) { create :customer, billing_entity:, last_dunning_campaign_attempt_at: 3.days.ago }
+          let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt_at: 3.days.ago }
 
           let(:dunning_campaign) do
             create(
@@ -115,14 +115,13 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
 
         context "when enough days have passed since last attempt" do
-          let(:customer) { create :customer, billing_entity:, last_dunning_campaign_attempt_at: 4.days.ago - 1.second }
+          let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt_at: 4.days.ago - 1.second }
 
           let(:dunning_campaign) do
             create(
               :dunning_campaign,
               organization:,
-              days_between_attempts: 4,
-              applied_to_organization: true
+              days_between_attempts: 4
             )
           end
 
@@ -172,6 +171,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         let(:customer) do
           create(
             :customer,
+            organization:,
             billing_entity:,
             currency:,
             applied_dunning_campaign: customer_dunning_campaign
@@ -242,7 +242,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       end
 
       context "when customer is excluded from dunning campaigns" do
-        let(:customer) { create :customer, organization:, currency:, exclude_from_dunning_campaign: true }
+        let(:customer) { create :customer, organization:, billing_entity:, currency:, exclude_from_dunning_campaign: true }
 
         context "when a customer has overdue balance exceeding threshold in same currency" do
           before do
@@ -262,6 +262,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       let(:customer) do
         create(
           :customer,
+          organization:,
           billing_entity:,
           currency:,
           applied_dunning_campaign: dunning_campaign
@@ -308,7 +309,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
 
         context "when maximum attempts are reached" do
-          let(:customer) { create :customer, billing_entity:, last_dunning_campaign_attempt: 5 }
+          let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt: 5 }
 
           let(:dunning_campaign) do
             create(
@@ -327,7 +328,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
 
         context "when not enough days have passed since last attempt" do
-          let(:customer) { create :customer, billing_entity:, last_dunning_campaign_attempt_at: 3.days.ago }
+          let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt_at: 3.days.ago }
 
           let(:dunning_campaign) do
             create(
@@ -346,7 +347,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
 
         context "when enough days have passed since last attempt" do
-          let(:customer) { create :customer, billing_entity:, last_dunning_campaign_attempt_at: 4.days.ago - 1.second }
+          let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt_at: 4.days.ago - 1.second }
 
           let(:dunning_campaign) do
             create(

@@ -7,8 +7,9 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
 
   let(:customer) { create :customer, organization:, currency: }
   let(:organization) { create :organization }
+  let(:billing_entity) { create :billing_entity, organization: }
   let(:currency) { "EUR" }
-  let(:dunning_campaign) { create :dunning_campaign, organization:, applied_to_organization: true }
+  let(:dunning_campaign) { create :dunning_campaign, organization: }
   let(:dunning_campaign_threshold) do
     create :dunning_campaign_threshold, dunning_campaign:, currency:, amount_cents: 99_00
   end
@@ -23,6 +24,7 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
   end
 
   before do
+    billing_entity.update!(applied_dunning_campaign: dunning_campaign)
     allow(PaymentRequests::CreateService)
       .to receive(:call)
       .and_return(payment_request_result)

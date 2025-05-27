@@ -8,12 +8,12 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
   end
 
   let(:billing_entity) do
-    create(:billing_entity, organization:, name: "ACME Corp", email_settings: [])
+    create(:billing_entity, organization:, name: "ACME Corp", email_settings: [], applied_dunning_campaign: dunning_campaign)
   end
 
   let(:dunning_campaign) do
     create(:dunning_campaign, organization:,
-      applied_to_organization: true, max_attempts: 2, days_between_attempts: 2)
+      max_attempts: 2, days_between_attempts: 2)
   end
   let(:dunning_campaign_threshold) do
     create(:dunning_campaign_threshold, dunning_campaign:, amount_cents: 150_00, currency: "EUR")

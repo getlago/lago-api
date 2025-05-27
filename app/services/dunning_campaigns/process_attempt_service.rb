@@ -7,6 +7,7 @@ module DunningCampaigns
       @dunning_campaign_threshold = dunning_campaign_threshold
       @dunning_campaign = dunning_campaign_threshold.dunning_campaign
       @organization = customer.organization
+      @billing_entity = customer.billing_entity
 
       super
     end
@@ -43,13 +44,13 @@ module DunningCampaigns
 
     private
 
-    attr_reader :customer, :dunning_campaign, :dunning_campaign_threshold, :organization
+    attr_reader :customer, :dunning_campaign, :dunning_campaign_threshold, :organization, :billing_entity
 
     def applicable_dunning_campaign?
       return false if customer.exclude_from_dunning_campaign?
 
       custom_campaign = customer.applied_dunning_campaign
-      default_campaign = organization.applied_dunning_campaign
+      default_campaign = billing_entity.applied_dunning_campaign
 
       custom_campaign == dunning_campaign || (!custom_campaign && default_campaign == dunning_campaign)
     end
