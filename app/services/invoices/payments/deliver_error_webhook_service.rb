@@ -12,6 +12,7 @@ module Invoices
         if invoice.credit? && (invoice.open? || invoice.visible?)
           wallet_transaction = invoice.fees.credit.first.invoiceable
           SendWebhookJob.perform_later("wallet_transaction.payment_failure", wallet_transaction, params)
+          Utils::ActivityLog.produce(wallet_transaction, "wallet_transaction.payment_failure")
         end
 
         if invoice.visible?
