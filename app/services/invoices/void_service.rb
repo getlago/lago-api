@@ -7,6 +7,11 @@ module Invoices
       super
     end
 
+    activity_loggable(
+      action: "invoice.voided",
+      record: -> { invoice }
+    )
+
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.nil?
 

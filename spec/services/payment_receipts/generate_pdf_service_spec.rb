@@ -21,6 +21,7 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
       filename: "logo"
     )
     stub_pdf_generation
+    allow(Utils::ActivityLog).to receive(:produce)
   end
 
   describe "#call" do
@@ -32,6 +33,12 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
 
     it "calls the SendWebhook job" do
       expect { payment_receipt_generate_service.call }.to have_enqueued_job(SendWebhookJob)
+    end
+
+    it "produces an activity log" do
+      payment_receipt = described_class.call(payment_receipt:, context:).payment_receipt
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(payment_receipt, "payment_receipt.generated")
     end
 
     context "with not found payment receipt" do
