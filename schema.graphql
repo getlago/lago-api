@@ -585,6 +585,7 @@ scalar BigInt
 Base billable metric
 """
 type BillableMetric {
+  activityLogs: [ActivityLog!]
   aggregationType: AggregationTypeEnum!
   code: String!
   createdAt: ISO8601DateTime!
@@ -2162,6 +2163,7 @@ enum CountryCode {
 }
 
 type Coupon {
+  activityLogs: [ActivityLog!]
   amountCents: BigInt
   amountCurrency: CurrencyEnum
   appliedCouponsCount: Int!
@@ -2839,6 +2841,7 @@ input CreateXeroIntegrationInput {
 CreditNote
 """
 type CreditNote {
+  activityLogs: [ActivityLog!]
   appliedTaxes: [CreditNoteAppliedTax!]
   balanceAmountCents: BigInt!
   billingEntity: BillingEntity!
@@ -7393,6 +7396,7 @@ type Permissions {
 
 type Plan {
   activeSubscriptionsCount: Int!
+  activityLogs: [ActivityLog!]
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
@@ -10294,6 +10298,7 @@ input VolumeRangeInput {
 Wallet
 """
 type Wallet {
+  activityLogs: [ActivityLog!]
   balanceCents: BigInt!
   consumedAmountCents: BigInt!
   consumedCredits: Float!
