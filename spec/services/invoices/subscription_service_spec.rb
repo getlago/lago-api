@@ -244,7 +244,6 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.drafted")
       end
 
-
       it "does not flag lifetime usage for refresh" do
         invoice_service.call
 

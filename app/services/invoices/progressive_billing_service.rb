@@ -125,11 +125,11 @@ module Invoices
     end
 
     def create_applied_usage_thresholds
-      sorted_usage_thresholds.each do
+      sorted_usage_thresholds.each do |usage_threshold|
         AppliedUsageThreshold.create!(
           organization_id: lifetime_usage.organization_id,
           invoice:,
-          usage_threshold: _1,
+          usage_threshold:,
           lifetime_usage_amount_cents: lifetime_usage.total_amount_cents
         )
       end

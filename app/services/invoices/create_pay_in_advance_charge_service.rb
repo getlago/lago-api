@@ -31,7 +31,9 @@ module Invoices
           create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
           Utils::ActivityLog.produce(invoice, "invoice.failed")
 
+          # rubocop:disable Rails/TransactionExitStatement
           return fee_result
+          # rubocop:enable Rails/TransactionExitStatement
         end
 
         Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
