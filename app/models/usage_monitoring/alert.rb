@@ -78,6 +78,7 @@ module UsageMonitoring
       end
 
       formatted_regular_thresholds = thresholds
+        .reject { it.recurring }
         .filter { regular_thresholds_values.include?(it.value) }
         .map { |t| {code: t.code, value: t.value, recurring: false} }
 

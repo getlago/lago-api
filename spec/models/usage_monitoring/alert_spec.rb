@@ -89,6 +89,17 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
       )
     end
 
+    context "when there is a non-recurring and a recurring threshold with the same value" do
+      let(:alert) { create(:alert, code: "my-code", thresholds: [10, 15, 50], recurring_threshold: 10) }
+
+      it "rejects the recurring threshold" do
+        expect(alert.formatted_crossed_thresholds([10, 15])).to eq([
+          {code: "warn10", recurring: false, value: 10},
+          {code: "warn15", recurring: false, value: 15}
+        ])
+      end
+    end
+
     context "when crossed thresholds isn't part of threshold values" do
       it "assumes it's recurring" do
         expect(alert.formatted_crossed_thresholds([40, 41, 42])).to eq([
