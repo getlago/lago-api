@@ -26,10 +26,8 @@ module Customers
 
         if !section_ids.nil? || !section_codes.nil?
           customer.skip_invoice_custom_sections = false
-          return result if customer.selected_invoice_custom_sections.ids == section_ids ||
-            customer.selected_invoice_custom_sections.map(&:code) == section_codes
 
-          assign_selected_sections
+          assign_selected_sections unless selected_sections_match?
         end
         customer.save!
       end
@@ -50,6 +48,11 @@ module Customers
 
     def fail_with_invalid_params
       result.validation_failure!(errors: {invoice_custom_sections: ["skip_sections_and_selected_ids_sent_together"]})
+    end
+
+    def selected_sections_match?
+      customer.selected_invoice_custom_sections.ids == section_ids ||
+        customer.selected_invoice_custom_sections.map(&:code) == section_codes
     end
 
     def assign_selected_sections
