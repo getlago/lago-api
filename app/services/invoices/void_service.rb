@@ -24,7 +24,7 @@ module Invoices
         Rails.logger.warn("Recrediting credit #{credit.id} failed for invoice #{invoice.id}") unless res.success?
       end
 
-      invoice.wallet_transactions.each do |wallet_transaction|
+      invoice.wallet_transactions.outbound.each do |wallet_transaction|
         res = WalletTransactions::RecreditService.call(wallet_transaction:)
 
         unless res.success?
