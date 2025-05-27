@@ -36,6 +36,7 @@ module Subscriptions
         new_subscription.mark_as_active!
         after_commit do
           SendWebhookJob.perform_later("subscription.started", new_subscription)
+          Utils::ActivityLog.produce(new_subscription, "subscription.started")
         end
 
         bill_subscriptions(billable_subscriptions) if billable_subscriptions.any?

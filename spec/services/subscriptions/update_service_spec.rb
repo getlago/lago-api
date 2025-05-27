@@ -20,7 +20,11 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       }
     end
 
-    before { subscription }
+    before do
+      allow(Utils::ActivityLog).to receive(:produce)
+
+      subscription
+    end
 
     it "updates the subscription" do
       result = update_service.call
@@ -37,6 +41,11 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     it "sends updated subscription webhook" do
       update_service.call
       expect(SendWebhookJob).to have_been_enqueued.with("subscription.updated", subscription)
+    end
+
+    it "produces an activity log" do
+      update_service.call
+      expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.updated")
     end
 
     context "when subscription should sync Hubspot subscription" do

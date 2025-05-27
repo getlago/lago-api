@@ -89,7 +89,9 @@ module Subscriptions
       BillNonInvoiceableFeesJob.perform_later([subscription], rotation_date) # Ignore next subscription since there can't be events
 
       SendWebhookJob.perform_later("subscription.terminated", subscription)
+      Utils::ActivityLog.produce(subscription, "subscription.terminated")
       SendWebhookJob.perform_later("subscription.started", next_subscription)
+      Utils::ActivityLog.produce(next_subscription, "subscription.started")
 
       result.subscription = next_subscription
 
