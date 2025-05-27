@@ -33,10 +33,13 @@ module Types
 
       field :invoice_requires_successful_payment, Boolean, null: false
 
+      field :applies_to, Types::Wallets::AppliesTo, null: true, method: :itself
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :expiration_at, GraphQL::Types::ISO8601DateTime, null: true
       field :terminated_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
       def recurring_transaction_rules
         object.recurring_transaction_rules.active
       end

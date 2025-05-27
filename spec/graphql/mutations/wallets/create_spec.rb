@@ -35,6 +35,9 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
               value
             }
           }
+          appliesTo {
+            feeTypes
+          }
         }
       }
     GQL
@@ -78,7 +81,10 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
                 {key: "another_key", value: "another_value"}
               ]
             }
-          ]
+          ],
+          appliesTo: {
+            feeTypes: %w[subscription]
+          }
         }
       }
     )
@@ -102,6 +108,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
         {"key" => "example_key", "value" => "example_value"},
         {"key" => "another_key", "value" => "another_value"}
       )
+      expect(result_data["appliesTo"]["feeTypes"]).to eq(["subscription"])
     end
 
     expect(WalletTransactions::CreateJob).to have_received(:perform_later).with(

@@ -37,6 +37,9 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
               value
             }
           }
+          appliesTo {
+            feeTypes
+          }
         }
       }
     GQL
@@ -81,7 +84,10 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
                 {key: "another_key", value: "another_value"}
               ]
             }
-          ]
+          ],
+          appliesTo: {
+            feeTypes: %w[subscription]
+          }
         }
       }
     )
@@ -111,6 +117,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       "targetOngoingBalance" => "300.0",
       "invoiceRequiresSuccessfulPayment" => true
     )
+    expect(result_data["appliesTo"]["feeTypes"]).to eq(["subscription"])
 
     expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
   end
