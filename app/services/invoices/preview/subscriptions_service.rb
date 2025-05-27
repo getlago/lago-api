@@ -16,6 +16,13 @@ module Invoices
         return result.not_found_failure!(resource: "organization") unless organization
         return result.not_found_failure!(resource: "customer") unless customer
 
+        if context != :proposal && customer.new_record?
+          return result.single_validation_failure!(
+            error_code: "must_be_persisted",
+            field: :customer
+          )
+        end
+
         if [:termination, :plan_change].include?(context)
           if customer_subscriptions.size > 1
             return result.single_validation_failure!(
