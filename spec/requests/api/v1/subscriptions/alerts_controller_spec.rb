@@ -107,7 +107,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
         expect(json).to eq({
           code: "validation_errors",
           error: "Unprocessable Entity",
-          error_details: {code: ["value_already_exists"]},
+          error_details: {code: ["value_already_exist"]},
           status: 422
         })
       end
@@ -248,7 +248,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
         expect(json).to eq({
           code: "validation_errors",
           error: "Unprocessable Entity",
-          error_details: {code: ["value_already_exists"]},
+          error_details: {code: ["value_already_exist"]},
           status: 422
         })
 
