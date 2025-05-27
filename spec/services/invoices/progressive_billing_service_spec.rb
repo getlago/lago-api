@@ -8,7 +8,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
   let(:sorted_usage_thresholds) { [create(:usage_threshold, plan:)] }
   let(:plan) { create(:plan) }
   let(:organization) { plan.organization }
-
+  let(:billing_entity) { customer.billing_entity }
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, plan:, customer:, started_at: timestamp - 1.week) }
   let(:lifetime_usage) { create(:lifetime_usage, subscription:, organization:) }
