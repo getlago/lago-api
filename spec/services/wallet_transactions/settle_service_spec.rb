@@ -8,6 +8,10 @@ RSpec.describe WalletTransactions::SettleService, type: :service do
   let(:wallet_transaction) { create(:wallet_transaction, status: "pending", settled_at: nil) }
 
   describe ".call" do
+    before do
+      allow(Utils::ActivityLog).to receive(:produce)
+    end
+
     it "updates wallet_transaction status" do
       expect {
         service.call
@@ -19,6 +23,12 @@ RSpec.describe WalletTransactions::SettleService, type: :service do
       expect do
         service.call
       end.to have_enqueued_job(SendWebhookJob).with("wallet_transaction.updated", WalletTransaction)
+    end
+
+    it "produces an activity log" do
+      described_class.call(wallet_transaction:)
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(wallet_transaction, "wallet_transaction.updated")
     end
   end
 end
