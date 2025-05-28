@@ -14,7 +14,5 @@ RSpec.describe Types::InvoiceCustomSections::Object do
     expect(subject).to have_field(:details).of_type("String")
     expect(subject).to have_field(:display_name).of_type("String")
     expect(subject).to have_field(:name).of_type("String!")
-
-    expect(subject).to have_field(:selected).of_type("Boolean!")
   end
 end
