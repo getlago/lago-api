@@ -18,7 +18,10 @@ class BillableMetric < ApplicationRecord
   has_many :groups, dependent: :delete_all
   has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: "BillableMetricFilter"
 
-  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
 
   AGGREGATION_TYPES = {
     count_agg: 0,

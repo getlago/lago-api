@@ -8,6 +8,16 @@ module Clickhouse
     belongs_to :organization
     belongs_to :resource, polymorphic: true
 
+    belongs_to :customer,
+      primary_key: :external_id,
+      foreign_key: :external_customer_id,
+      optional: true
+
+    belongs_to :subscription,
+      primary_key: :external_id,
+      foreign_key: :external_subscription_id,
+      optional: true
+
     RESOURCE_TYPES = {
       billable_metric: "BillableMetric",
       plan: "Plan",

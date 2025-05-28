@@ -18,7 +18,11 @@ class Subscription < ApplicationRecord
   has_many :daily_usages
   has_many :usage_thresholds, through: :plan
 
-  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    foreign_key: :external_subscription_id,
+    primary_key: :external_id
 
   has_one :lifetime_usage, autosave: true
   has_one :subscription_activity, class_name: "UsageMonitoring::SubscriptionActivity"

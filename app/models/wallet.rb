@@ -11,7 +11,10 @@ class Wallet < ApplicationRecord
   has_many :wallet_transactions
   has_many :recurring_transaction_rules
 
-  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
 
   monetize :balance_cents
   monetize :consumed_amount_cents

@@ -31,6 +31,8 @@ module Types
       field :rounding_function, Types::BillableMetrics::RoundingFunctionEnum, null: true
       field :rounding_precision, Integer, null: true
 
+      field :activity_logs, [Types::ActivityLogs::Object], null: true
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

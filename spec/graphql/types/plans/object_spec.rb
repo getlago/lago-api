@@ -21,6 +21,7 @@ RSpec.describe Types::Plans::Object do
     expect(subject).to have_field(:parent).of_type("Plan")
     expect(subject).to have_field(:pay_in_advance).of_type("Boolean!")
     expect(subject).to have_field(:trial_period).of_type("Float")
+    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
     expect(subject).to have_field(:charges).of_type("[Charge!]")
     expect(subject).to have_field(:taxes).of_type("[Tax!]")
     expect(subject).to have_field(:created_at).of_type("ISO8601DateTime!")
