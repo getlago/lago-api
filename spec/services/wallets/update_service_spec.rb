@@ -14,7 +14,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
 
   describe "#call" do
     before do
-      allow(Utils::ActivityLog).to receive(:produce)
+      allow(Utils::ActivityLog).to receive(:produce).and_call_original
 
       subscription
       wallet
