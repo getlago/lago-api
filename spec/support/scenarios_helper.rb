@@ -1,10 +1,23 @@
 # frozen_string_literal: true
 
 module ScenariosHelper
+  def api_call
+    yield
+    perform_all_enqueued_jobs
+    json.with_indifferent_access
+  end
+
+  def clock_job
+    yield
+    perform_all_enqueued_jobs
+  end
+
   ### Organizations
 
   def update_organization(params)
-    put_with_token(organization, "/api/v1/organizations", {organization: params})
+    api_call do
+      put_with_token(organization, "/api/v1/organizations", {organization: params})
+    end
   end
 
   ### Billing entities
@@ -17,109 +30,141 @@ module ScenariosHelper
   ### Billable metrics
 
   def create_metric(params)
-    post_with_token(organization, "/api/v1/billable_metrics", {billable_metric: params})
+    api_call do
+      post_with_token(organization, "/api/v1/billable_metrics", {billable_metric: params})
+    end
   end
 
   def update_metric(metric, params)
-    put_with_token(organization, "/api/v1/billable_metrics/#{metric.code}", {billable_metric: params})
+    api_call do
+      put_with_token(organization, "/api/v1/billable_metrics/#{metric.code}", {billable_metric: params})
+    end
   end
 
   ### Customers
 
   def create_or_update_customer(params)
-    post_with_token(organization, "/api/v1/customers", {customer: params})
-    perform_all_enqueued_jobs
+    api_call do
+      post_with_token(organization, "/api/v1/customers", {customer: params})
+    end
   end
 
   def delete_customer(customer)
-    delete_with_token(organization, "/api/v1/customers/#{customer.external_id}")
+    api_call do
+      delete_with_token(organization, "/api/v1/customers/#{customer.external_id}")
+    end
   end
 
   def fetch_current_usage(customer:, subscription: customer.subscriptions.first)
-    get_with_token(
-      organization,
-      "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}"
-    )
+    api_call do
+      url = "/api/v1/customers/#{customer.external_id}/current_usage?external_subscription_id=#{subscription.external_id}"
+      get_with_token(organization, url)
+    end
   end
 
   ### Plans
 
   def create_plan(params)
-    post_with_token(organization, "/api/v1/plans", {plan: params})
+    api_call do
+      post_with_token(organization, "/api/v1/plans", {plan: params})
+    end
   end
 
   def update_plan(plan, params)
-    put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: params})
+    api_call do
+      put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: params})
+    end
   end
 
   def delete_plan(plan)
-    delete_with_token(organization, "/api/v1/plans/#{plan.code}")
+    api_call do
+      delete_with_token(organization, "/api/v1/plans/#{plan.code}")
+    end
   end
 
   ### Subscriptions
 
   def create_subscription(params)
-    post_with_token(organization, "/api/v1/subscriptions", {subscription: params})
-    perform_all_enqueued_jobs
+    api_call do
+      post_with_token(organization, "/api/v1/subscriptions", {subscription: params})
+    end
   end
 
   def terminate_subscription(subscription)
-    delete_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}")
-    perform_all_enqueued_jobs
+    api_call do
+      delete_with_token(organization, "/api/v1/subscriptions/#{subscription.external_id}")
+    end
+  end
+
+  def create_alert(sub_external_id, params)
+    api_call do
+      post_with_token(organization, "/api/v1/subscriptions/#{sub_external_id}/alerts", {alert: params})
+    end
   end
 
   ### Invoices
 
   def refresh_invoice(invoice)
-    put_with_token(organization, "/api/v1/invoices/#{invoice.id}/refresh", {})
-    invoice.reload
+    api_call do
+      put_with_token(organization, "/api/v1/invoices/#{invoice.id}/refresh", {})
+    end
   end
 
   def finalize_invoice(invoice)
-    put_with_token(organization, "/api/v1/invoices/#{invoice.id}/finalize", {})
-    invoice.reload
+    api_call do
+      put_with_token(organization, "/api/v1/invoices/#{invoice.id}/finalize", {})
+    end
   end
 
   def update_invoice(invoice, params)
-    put_with_token(organization, "/api/v1/invoices/#{invoice.id}", {invoice: params})
-    invoice.reload
+    api_call do
+      put_with_token(organization, "/api/v1/invoices/#{invoice.id}", {invoice: params})
+    end
   end
 
   def create_one_off_invoice(customer, addons, taxes: [], units: 1)
-    create_invoice_params = {
-      external_customer_id: customer.external_id,
-      currency: "EUR",
-      fees: [],
-      timestamp: Time.zone.now.to_i
-    }
-    addons.each do |fee|
-      fee_addon_params = {
-        add_on_id: fee.id,
-        add_on_code: fee.code,
-        name: fee.name,
-        units:,
-        unit_amount_cents: fee.amount_cents,
-        tax_codes: taxes
+    api_call do
+      create_invoice_params = {
+        external_customer_id: customer.external_id,
+        currency: "EUR",
+        fees: [],
+        timestamp: Time.zone.now.to_i
       }
-      create_invoice_params[:fees].push(fee_addon_params)
+      addons.each do |fee|
+        fee_addon_params = {
+          add_on_id: fee.id,
+          add_on_code: fee.code,
+          name: fee.name,
+          units:,
+          unit_amount_cents: fee.amount_cents,
+          tax_codes: taxes
+        }
+        create_invoice_params[:fees].push(fee_addon_params)
+      end
+      post_with_token(organization, "/api/v1/invoices", {invoice: create_invoice_params})
     end
-    post_with_token(organization, "/api/v1/invoices", {invoice: create_invoice_params})
   end
 
   ### Coupons
 
   def create_coupon(params)
-    post_with_token(organization, "/api/v1/coupons", {coupon: params})
+    api_call do
+      post_with_token(organization, "/api/v1/coupons", {coupon: params})
+    end
   end
 
   def apply_coupon(params)
-    post_with_token(organization, "/api/v1/applied_coupons", {applied_coupon: params})
+    api_call do
+      post_with_token(organization, "/api/v1/applied_coupons", {applied_coupon: params})
+    end
   end
 
   ### Taxes
 
   def create_tax(params)
-    post_with_token(organization, "/api/v1/taxes", {tax: params})
+    api_call do
+      post_with_token(organization, "/api/v1/taxes", {tax: params})
+    end
   end
 
   # The mock always return a valid response,
@@ -136,13 +181,15 @@ module ScenariosHelper
   ### Wallets
 
   def create_wallet(params)
-    post_with_token(organization, "/api/v1/wallets", {wallet: params})
-    perform_all_enqueued_jobs
+    api_call do
+      post_with_token(organization, "/api/v1/wallets", {wallet: params})
+    end
   end
 
   def create_wallet_transaction(params)
-    post_with_token(organization, "/api/v1/wallet_transactions", {wallet_transaction: params})
-    perform_all_enqueued_jobs
+    api_call do
+      post_with_token(organization, "/api/v1/wallet_transactions", {wallet_transaction: params})
+    end
   end
 
   def recalculate_wallet_balances
@@ -164,29 +211,31 @@ module ScenariosHelper
   end
 
   def create_event(params)
-    post_with_token(organization, "/api/v1/events", {event: params})
-    perform_all_enqueued_jobs
-    JSON.parse(response.body) unless response.body.empty?
+    api_call do
+      post_with_token(organization, "/api/v1/events", {event: params})
+    end
   end
 
   ### Credit notes
 
   def create_credit_note(params)
-    post_with_token(organization, "/api/v1/credit_notes", {credit_note: params})
+    api_call do
+      post_with_token(organization, "/api/v1/credit_notes", {credit_note: params})
+    end
   end
 
   def estimate_credit_note(params)
-    post_with_token(organization, "/api/v1/credit_notes/estimate", {credit_note: params})
+    api_call do
+      post_with_token(organization, "/api/v1/credit_notes/estimate", {credit_note: params})
+    end
   end
 
   ### Analytics
 
   def get_analytics(organization:, analytics_type:)
-    get_with_token(
-      organization,
-      "/api/v1/analytics/#{analytics_type}",
-      months: 20
-    )
+    api_call do
+      get_with_token(organization, "/api/v1/analytics/#{analytics_type}", months: 20)
+    end
   end
 
   ### Payment methods
@@ -200,40 +249,50 @@ module ScenariosHelper
   ### Fees
 
   def update_fee(fee_id, params)
-    put_with_token(organization, "/api/v1/fees/#{fee_id}", {fee: params})
+    api_call do
+      put_with_token(organization, "/api/v1/fees/#{fee_id}", {fee: params})
+    end
   end
 
+  # Clock jobs
+
   def perform_billing
-    Clock::SubscriptionsBillerJob.perform_later
-    Clock::FreeTrialSubscriptionsBillerJob.perform_later
-    perform_all_enqueued_jobs
+    clock_job do
+      Clock::SubscriptionsBillerJob.perform_later
+      Clock::FreeTrialSubscriptionsBillerJob.perform_later
+    end
     perform_usage_update
   end
 
   def perform_invoices_refresh
-    Clock::RefreshDraftInvoicesJob.perform_later
-    perform_all_enqueued_jobs
+    clock_job do
+      Clock::RefreshDraftInvoicesJob.perform_later
+    end
   end
 
   def perform_finalize_refresh
-    Clock::FinalizeInvoicesJob.perform_later
-    perform_all_enqueued_jobs
+    clock_job do
+      Clock::FinalizeInvoicesJob.perform_later
+    end
   end
 
   def perform_usage_update
-    Clock::ComputeAllDailyUsagesJob.perform_later
-    Clock::RefreshLifetimeUsagesJob.perform_later
-    Clock::ProcessAllSubscriptionActivitiesJob.perform_later
-    perform_all_enqueued_jobs
+    clock_job do
+      Clock::ComputeAllDailyUsagesJob.perform_later
+      Clock::RefreshLifetimeUsagesJob.perform_later
+      Clock::ProcessAllSubscriptionActivitiesJob.perform_later
+    end
   end
 
   def perform_overdue_balance_update
-    Clock::MarkInvoicesAsPaymentOverdueJob.perform_later
-    perform_all_enqueued_jobs
+    clock_job do
+      Clock::MarkInvoicesAsPaymentOverdueJob.perform_later
+    end
   end
 
   def perform_dunning
-    Clock::ProcessDunningCampaignsJob.perform_later
-    perform_all_enqueued_jobs
+    clock_job do
+      Clock::ProcessDunningCampaignsJob.perform_later
+    end
   end
 end
