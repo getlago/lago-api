@@ -30,7 +30,6 @@ ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAIN
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_de6b3c3138;
-ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_dd7e076158;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_dd342449a6;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_db9140d0fd;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_d9ffb8b4a1;
@@ -62,7 +61,6 @@ ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
-ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_9ff1d277f3;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_9f22076477;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_9ea6759859;
 ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS fk_rails_9c8e276cc0;
@@ -106,7 +104,6 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRA
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_6e148ccbb1;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_6d465e6b10;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaigns DROP CONSTRAINT IF EXISTS fk_rails_6c720a8ccd;
-ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_6b1e3d1159;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_699cd1384f;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_68754484c0;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_67d4eb3c92;
@@ -345,9 +342,6 @@ DROP INDEX IF EXISTS public.index_invoice_metadata_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoice_custom_sections_on_section_type;
 DROP INDEX IF EXISTS public.index_invoice_custom_sections_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_invoice_custom_sections_on_organization_id;
-DROP INDEX IF EXISTS public.index_invoice_custom_section_selections_on_organization_id;
-DROP INDEX IF EXISTS public.index_invoice_custom_section_selections_on_customer_id;
-DROP INDEX IF EXISTS public.index_invoice_custom_section_selections_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_invites_on_token;
 DROP INDEX IF EXISTS public.index_invites_on_organization_id;
 DROP INDEX IF EXISTS public.index_invites_on_membership_id;
@@ -558,7 +552,6 @@ DROP INDEX IF EXISTS public.idx_on_organization_id_83703a45f4;
 DROP INDEX IF EXISTS public.idx_on_organization_id_376a587b04;
 DROP INDEX IF EXISTS public.idx_on_invoice_id_payment_request_id_aa550779a4;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_ccb39e9622;
-DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_7edbcef7b5;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_5f37496c8c;
 DROP INDEX IF EXISTS public.idx_on_dunning_campaign_id_currency_fbf233b2ae;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_invoice_custom_section_id_bd78c547d3;
@@ -607,7 +600,6 @@ ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF E
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS invoice_subscriptions_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS invoice_metadata_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_sections DROP CONSTRAINT IF EXISTS invoice_custom_sections_pkey;
-ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS invoice_custom_section_selections_pkey;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS invites_pkey;
 ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS integrations_pkey;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS integration_resources_pkey;
@@ -692,7 +684,6 @@ DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
 DROP TABLE IF EXISTS public.invoices_payment_requests;
 DROP TABLE IF EXISTS public.invoice_subscriptions;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
-DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
 DROP TABLE IF EXISTS public.integrations;
 DROP TABLE IF EXISTS public.integration_resources;
@@ -3066,21 +3057,6 @@ CREATE TABLE public.invites (
 
 
 --
--- Name: invoice_custom_section_selections; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoice_custom_section_selections (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_custom_section_id uuid NOT NULL,
-    organization_id uuid,
-    customer_id uuid,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    billing_entity_id uuid
-);
-
-
---
 -- Name: invoice_custom_sections; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4043,14 +4019,6 @@ ALTER TABLE ONLY public.invites
 
 
 --
--- Name: invoice_custom_section_selections invoice_custom_section_selections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.invoice_custom_section_selections
-    ADD CONSTRAINT invoice_custom_section_selections_pkey PRIMARY KEY (id);
-
-
---
 -- Name: invoice_custom_sections invoice_custom_sections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4420,13 +4388,6 @@ CREATE UNIQUE INDEX idx_on_dunning_campaign_id_currency_fbf233b2ae ON public.dun
 --
 
 CREATE INDEX idx_on_invoice_custom_section_id_5f37496c8c ON public.customers_invoice_custom_sections USING btree (invoice_custom_section_id);
-
-
---
--- Name: idx_on_invoice_custom_section_id_7edbcef7b5; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_on_invoice_custom_section_id_7edbcef7b5 ON public.invoice_custom_section_selections USING btree (invoice_custom_section_id);
 
 
 --
@@ -5897,27 +5858,6 @@ CREATE INDEX index_invites_on_organization_id ON public.invites USING btree (org
 --
 
 CREATE UNIQUE INDEX index_invites_on_token ON public.invites USING btree (token);
-
-
---
--- Name: index_invoice_custom_section_selections_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoice_custom_section_selections_on_billing_entity_id ON public.invoice_custom_section_selections USING btree (billing_entity_id);
-
-
---
--- Name: index_invoice_custom_section_selections_on_customer_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoice_custom_section_selections_on_customer_id ON public.invoice_custom_section_selections USING btree (customer_id);
-
-
---
--- Name: index_invoice_custom_section_selections_on_organization_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoice_custom_section_selections_on_organization_id ON public.invoice_custom_section_selections USING btree (organization_id);
 
 
 --
@@ -7625,14 +7565,6 @@ ALTER TABLE ONLY public.billing_entities_invoice_custom_sections
 
 
 --
--- Name: invoice_custom_section_selections fk_rails_6b1e3d1159; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.invoice_custom_section_selections
-    ADD CONSTRAINT fk_rails_6b1e3d1159 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
-
-
---
 -- Name: dunning_campaigns fk_rails_6c720a8ccd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7977,14 +7909,6 @@ ALTER TABLE ONLY public.credit_note_items
 
 
 --
--- Name: invoice_custom_section_selections fk_rails_9ff1d277f3; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.invoice_custom_section_selections
-    ADD CONSTRAINT fk_rails_9ff1d277f3 FOREIGN KEY (invoice_custom_section_id) REFERENCES public.invoice_custom_sections(id);
-
-
---
 -- Name: group_properties fk_rails_a2d2cb3819; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8233,14 +8157,6 @@ ALTER TABLE ONLY public.invites
 
 
 --
--- Name: invoice_custom_section_selections fk_rails_dd7e076158; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.invoice_custom_section_selections
-    ADD CONSTRAINT fk_rails_dd7e076158 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
-
-
---
 -- Name: coupon_targets fk_rails_de6b3c3138; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8415,6 +8331,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250528133222'),
 ('20250526133654'),
 ('20250526111147'),
 ('20250522134155'),
