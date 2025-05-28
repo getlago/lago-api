@@ -16,6 +16,7 @@ module BillingEntities
     end
 
     private
+
     attr_reader :billing_entity, :dunning_campaign
   end
 end

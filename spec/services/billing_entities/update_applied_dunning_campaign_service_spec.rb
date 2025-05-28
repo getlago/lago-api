@@ -120,9 +120,9 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService, type: :serv
 
         it "does not reset customer attempts" do
           expect { update_service.call }.to not_change { customer_1.reload.last_dunning_campaign_attempt }
-          .and not_change { customer_2.reload.last_dunning_campaign_attempt }
-          .and not_change { customer_3.reload.last_dunning_campaign_attempt }
-          .and not_change { customer_4.reload.last_dunning_campaign_attempt }
+            .and not_change { customer_2.reload.last_dunning_campaign_attempt }
+            .and not_change { customer_3.reload.last_dunning_campaign_attempt }
+            .and not_change { customer_4.reload.last_dunning_campaign_attempt }
         end
       end
     end
