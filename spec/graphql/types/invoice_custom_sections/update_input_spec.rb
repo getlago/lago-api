@@ -12,6 +12,5 @@ RSpec.describe Types::InvoiceCustomSections::UpdateInput do
     expect(subject).to accept_argument(:details).of_type("String")
     expect(subject).to accept_argument(:display_name).of_type("String")
     expect(subject).to accept_argument(:name).of_type("String")
-    expect(subject).to accept_argument(:selected).of_type("Boolean")
   end
 end
