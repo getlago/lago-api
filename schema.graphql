@@ -590,6 +590,7 @@ scalar BigInt
 Base billable metric
 """
 type BillableMetric {
+  activityLogs: [ActivityLog!]
   aggregationType: AggregationTypeEnum!
   code: String!
   createdAt: ISO8601DateTime!
@@ -2168,6 +2169,7 @@ enum CountryCode {
 }
 
 type Coupon {
+  activityLogs: [ActivityLog!]
   amountCents: BigInt
   amountCurrency: CurrencyEnum
   appliedCouponsCount: Int!
@@ -2847,6 +2849,7 @@ input CreateXeroIntegrationInput {
 CreditNote
 """
 type CreditNote {
+  activityLogs: [ActivityLog!]
   appliedTaxes: [CreditNoteAppliedTax!]
   balanceAmountCents: BigInt!
   billingEntity: BillingEntity!
@@ -3741,6 +3744,7 @@ type Customer {
   Number of active subscriptions per customer
   """
   activeSubscriptionsCount: Int!
+  activityLogs: [ActivityLog!]
   addressLine1: String
   addressLine2: String
   anrokCustomer: AnrokCustomer
@@ -5302,6 +5306,7 @@ enum InviteStatusTypeEnum {
 Invoice
 """
 type Invoice {
+  activityLogs: [ActivityLog!]
   allChargesHaveFees: Boolean!
   appliedTaxes: [InvoiceAppliedTax!]
   associatedActiveWalletPresent: Boolean!
@@ -7399,6 +7404,7 @@ type Permissions {
 
 type Plan {
   activeSubscriptionsCount: Int!
+  activityLogs: [ActivityLog!]
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
@@ -8577,6 +8583,7 @@ type StripeProvider {
 }
 
 type Subscription {
+  activityLogs: [ActivityLog!]
   billingTime: BillingTimeEnum
   canceledAt: ISO8601DateTime
   createdAt: ISO8601DateTime!
@@ -10302,6 +10309,7 @@ input VolumeRangeInput {
 Wallet
 """
 type Wallet {
+  activityLogs: [ActivityLog!]
   appliesTo: WalletAppliesTo
   balanceCents: BigInt!
   consumedAmountCents: BigInt!
