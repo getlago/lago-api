@@ -88,7 +88,7 @@ module DunningCampaigns
     end
 
     def customers_fallback_campaign
-      organization.customers.falling_back_to_default_dunning_campaign
+      organization.customers.falling_back_to_default_dunning_campaign.where(billing_entity_id: dunning_campaign.billing_entities.ids)
     end
 
     def handle_applied_to_organization_update
