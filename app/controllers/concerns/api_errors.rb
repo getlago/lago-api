@@ -86,6 +86,21 @@ module ApiErrors
     )
   end
 
+  def too_many_provider_requests_error(error:)
+    render(
+      json: {
+        status: 429,
+        error: "Too Many Provider Requests",
+        code: "too_many_provider_requests",
+        error_details: {
+          provider_name: error.provider_name,
+          message: error.message
+        }
+      },
+      status: :too_many_requests
+    )
+  end
+
   def render_error_response(error_result)
     case error_result.error
     when BaseService::NotFoundFailure
@@ -100,6 +115,8 @@ module ApiErrors
       unauthorized_error(message: error_result.error.message)
     when BaseService::ProviderFailure
       provider_error(error_result.error.provider, error_result.error.original_error)
+    when BaseService::TooManyProviderRequestsFailure
+      too_many_provider_requests_error(error: error_result.error)
     when BaseService::ThirdPartyFailure
       thirdpary_error(error: error_result.error)
     else
