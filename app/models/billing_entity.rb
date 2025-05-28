@@ -30,7 +30,10 @@ class BillingEntity < ApplicationRecord
   has_many :wallets, through: :customers
   has_many :wallet_transactions, through: :wallets
 
-  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
 
   belongs_to :applied_dunning_campaign, class_name: "DunningCampaign", optional: true
 

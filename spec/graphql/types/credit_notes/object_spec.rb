@@ -37,6 +37,7 @@ RSpec.describe Types::CreditNotes::Object do
 
     expect(subject).to have_field(:file_url).of_type("String")
 
+    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
     expect(subject).to have_field(:applied_taxes).of_type("[CreditNoteAppliedTax!]")
     expect(subject).to have_field(:customer).of_type("Customer!")
     expect(subject).to have_field(:invoice).of_type("Invoice")
