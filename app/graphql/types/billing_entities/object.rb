@@ -43,6 +43,8 @@ module Types
 
       field :applied_dunning_campaign, Types::DunningCampaigns::Object
 
+      field :selected_invoice_custom_sections, [Types::InvoiceCustomSections::Object]
+
       def is_default
         object.organization.default_billing_entity&.id == object.id
       end

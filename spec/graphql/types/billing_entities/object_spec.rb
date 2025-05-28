@@ -39,4 +39,6 @@ RSpec.describe Types::BillingEntities::Object do
 
   it { is_expected.to have_field(:applied_dunning_campaign).of_type("DunningCampaign") }
   it { is_expected.to have_field(:is_default).of_type("Boolean!") }
+
+  it { is_expected.to have_field(:selected_invoice_custom_sections).of_type("[InvoiceCustomSection!]") }
 end
