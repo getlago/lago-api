@@ -24,7 +24,7 @@ module DunningCampaigns
     class CustomerDunningEvaluator < BaseService
       def initialize(customer)
         @customer = customer
-        @organization = customer.organization
+        @billing_entity = customer.billing_entity
         @dunning_campaign = applicable_dunning_campaign
         @threshold = applicable_dunning_campaign_threshold
       end
@@ -41,10 +41,10 @@ module DunningCampaigns
 
       private
 
-      attr_reader :customer, :dunning_campaign, :threshold, :organization
+      attr_reader :customer, :dunning_campaign, :threshold, :billing_entity
 
       def applicable_dunning_campaign
-        customer.applied_dunning_campaign || organization.applied_dunning_campaign
+        customer.applied_dunning_campaign || billing_entity.applied_dunning_campaign
       end
 
       def applicable_dunning_campaign_threshold
