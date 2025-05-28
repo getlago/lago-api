@@ -23,6 +23,23 @@ module Types
       def user_email
         object.user.email
       end
+
+      # TODO: remove this once we have a proper way to handle JSON in Clickhouse
+      # https://github.com/PNixx/clickhouse-activerecord/pull/192
+      def activity_object
+        object.activity_object.transform_values do |value|
+          parsed = value.is_a?(String) ? JSON.parse(value) : value
+          (parsed.is_a?(Array) || parsed.is_a?(Hash)) ? parsed : value
+        rescue JSON::ParserError
+          value
+        end
+      end
+
+      # TODO: remove this once we have a proper way to handle JSON in Clickhouse
+      # https://github.com/PNixx/clickhouse-activerecord/pull/192
+      def activity_object_changes
+        object.activity_object_changes.transform_values { |v| JSON.parse(v) }
+      end
     end
   end
 end
