@@ -181,7 +181,7 @@ module Fees
     def format_grouped_by
       return {} if properties["grouped_by"].blank?
 
-      properties["grouped_by"].index_with { event.properties[_1] }
+      properties["grouped_by"].index_with { event.properties[it] }
     end
 
     def customer_provider_taxation?

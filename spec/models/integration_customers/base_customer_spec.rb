@@ -31,6 +31,24 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
     end
   end
 
+  describe ".tax_kind" do
+    let(:netsuite_customer) { create(:netsuite_customer) }
+    let(:xero_customer) { create(:xero_customer) }
+    let(:anrok_customer) { create(:anrok_customer) }
+    let(:avalara_customer) { create(:avalara_customer) }
+
+    before do
+      netsuite_customer
+      xero_customer
+      anrok_customer
+      avalara_customer
+    end
+
+    it "returns only tax kind customers" do
+      expect(described_class.tax_kind).to contain_exactly(anrok_customer, avalara_customer)
+    end
+  end
+
   describe ".hubspot_kind and .salesforce_kind" do
     let(:netsuite_customer) { create(:netsuite_customer) }
     let(:xero_customer) { create(:xero_customer) }
@@ -155,13 +173,13 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
       let(:type) { "IntegrationCustomers::AnrokCustomer" }
 
       it "returns true" do
-        expect(integration_customer.tax_kind?).to be_truthy
+        expect(integration_customer).to be_tax_kind
       end
     end
 
     context "without tax integration" do
       it "returns false" do
-        expect(integration_customer.tax_kind?).to be_falsy
+        expect(integration_customer).not_to be_tax_kind
       end
     end
   end
