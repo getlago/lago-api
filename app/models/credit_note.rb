@@ -25,7 +25,10 @@ class CreditNote < ApplicationRecord
   has_many :integration_resources, as: :syncable
   has_many :error_details, as: :owner, dependent: :destroy
 
-  has_many :activity_logs, class_name: "Clickhouse::ActivityLog", as: :resource
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
 
   has_one_attached :file
 
