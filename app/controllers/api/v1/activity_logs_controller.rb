@@ -65,7 +65,7 @@ module Api
       end
 
       def ensure_premium_license
-        return forbidden_error(code: "feature_unavailable") unless License.premium?
+        forbidden_error(code: "feature_unavailable") unless License.premium?
       end
     end
   end
