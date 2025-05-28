@@ -4,10 +4,9 @@ module InvoiceCustomSections
   class UpdateService < BaseService
     Result = BaseResult[:invoice_custom_section]
 
-    def initialize(invoice_custom_section:, update_params:, selected: false)
+    def initialize(invoice_custom_section:, update_params:)
       @update_params = update_params
       @invoice_custom_section = invoice_custom_section
-      @selected = selected
       super
     end
 
@@ -15,17 +14,6 @@ module InvoiceCustomSections
       return result.not_found_failure!(resource: "invoice_custom_section") unless invoice_custom_section
 
       invoice_custom_section.update!(update_params)
-      if selected
-        BillingEntities::SelectInvoiceCustomSectionService.call!(
-          section: invoice_custom_section,
-          billing_entity: default_billing_entity
-        )
-      else
-        BillingEntities::DeselectInvoiceCustomSectionService.call!(
-          section: invoice_custom_section,
-          billing_entity: default_billing_entity
-        )
-      end
       result.invoice_custom_section = invoice_custom_section
       result
     rescue ActiveRecord::RecordInvalid => e
@@ -34,10 +22,6 @@ module InvoiceCustomSections
 
     private
 
-    attr_reader :invoice_custom_section, :update_params, :selected
-
-    def default_billing_entity
-      @default_billing_entity ||= invoice_custom_section.organization.default_billing_entity
-    end
+    attr_reader :invoice_custom_section, :update_params
   end
 end
