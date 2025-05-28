@@ -68,20 +68,7 @@ module BillingEntities
           BillingEntities::Taxes::ManageTaxesService.call!(billing_entity:, tax_codes: params[:tax_codes])
         end
 
-        if params.key?(:invoice_custom_section_ids)
-          existing_section_ids = billing_entity.selected_invoice_custom_sections.ids
-          new_section_ids = params[:invoice_custom_section_ids]
-
-          billing_entity.applied_invoice_custom_sections.where.not(invoice_custom_section_id: new_section_ids).destroy_all
-
-          sections_to_create = new_section_ids - existing_section_ids
-          sections_to_create.each do |invoice_custom_section_id|
-            billing_entity.applied_invoice_custom_sections.create!(
-              invoice_custom_section_id:,
-              organization_id: billing_entity.organization_id
-            )
-          end
-        end
+        handle_invoice_custom_sections if params.key?(:invoice_custom_section_ids)
 
         assign_premium_attributes
         handle_base64_logo if params.key?(:logo)
@@ -132,6 +119,21 @@ module BillingEntities
         billing_entity:,
         eu_tax_management: params[:eu_tax_management]
       )
+    end
+
+    def handle_invoice_custom_sections
+      existing_section_ids = billing_entity.selected_invoice_custom_sections.ids
+      new_section_ids = params[:invoice_custom_section_ids]
+
+      billing_entity.applied_invoice_custom_sections.where.not(invoice_custom_section_id: new_section_ids).destroy_all
+
+      sections_to_create = new_section_ids - existing_section_ids
+      sections_to_create.each do |invoice_custom_section_id|
+        billing_entity.applied_invoice_custom_sections.create!(
+          invoice_custom_section_id:,
+          organization_id: billing_entity.organization_id
+        )
+      end
     end
   end
 end
