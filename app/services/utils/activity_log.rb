@@ -3,7 +3,7 @@
 module Utils
   class ActivityLog
     class << self
-      IGNORED_FIELDS = %w[updated_at].freeze
+      IGNORED_FIELDS = %i[updated_at].freeze
       IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity].freeze
 
       def produce(object, activity_type, activity_id: SecureRandom.uuid, changes: nil)
@@ -79,7 +79,7 @@ module Utils
       def activity_object_changes(object_changes, activity_type)
         return {} unless activity_type.include?("updated")
 
-        object_changes.transform_values(&:to_s)
+        object_changes&.except(*IGNORED_FIELDS)
       end
 
       def organization_id(activity_object)

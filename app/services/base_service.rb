@@ -272,7 +272,7 @@ class BaseService
   def call_with_activity_log(&block)
     action = self.class.activity_log_config[:action]
 
-    if action.include?("deleted")
+    if action.include?("updated")
       record = instance_exec(&self.class.activity_log_config[:record])
       Utils::ActivityLog.produce(record, action) { call(&block) }
     else
