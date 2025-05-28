@@ -45,7 +45,7 @@ module V1
     def limitations
       {
         applies_to: {
-          fee_types: model.allowed_fee_types,
+          fee_types: model.allowed_fee_types
         }
       }
     end
