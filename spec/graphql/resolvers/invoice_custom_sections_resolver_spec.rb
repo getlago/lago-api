@@ -17,22 +17,18 @@ RSpec.describe Resolvers::InvoiceCustomSectionsResolver, type: :graphql do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:invoice_custom_sections) do
-    [
-      create(:invoice_custom_section, organization:, name: "x"),
-      create(:invoice_custom_section, organization:, name: "r"),
-      create(:invoice_custom_section, organization:, name: "c"),
-      create(:invoice_custom_section, organization:, name: "a"),
-      create(:invoice_custom_section, organization:, name: "z"),
-      create(:invoice_custom_section, organization:, name: "n"),
-      create(:invoice_custom_section, organization:, name: "not show", section_type: "system_generated")
-    ]
-  end
+  let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:customer) { create(:customer, organization:, billing_entity:) }
+  let(:invoice_custom_section_1_manual) { create(:invoice_custom_section, organization:, name: "x") }
+  let(:invoice_custom_section_2_manual) { create(:invoice_custom_section, organization:, name: "a") }
+  let(:invoice_custom_section_3_manual) { create(:invoice_custom_section, organization:, name: "c") }
+  let(:invoice_custom_section_4_system_generated) { create(:invoice_custom_section, :system_generated, organization:, name: "not show") }
 
   before do
-    organization.selected_invoice_custom_sections.concat(invoice_custom_sections[2..4])
-    customer.selected_invoice_custom_sections.concat(invoice_custom_sections[0..1])
+    invoice_custom_section_1_manual
+    invoice_custom_section_2_manual
+    invoice_custom_section_3_manual
+    invoice_custom_section_4_system_generated
   end
 
   it_behaves_like "requires current user"
@@ -49,12 +45,10 @@ RSpec.describe Resolvers::InvoiceCustomSectionsResolver, type: :graphql do
 
     invoice_custom_sections_response = result["data"]["invoiceCustomSections"]
 
-    aggregate_failures do
-      expect(invoice_custom_sections_response["collection"].count).to eq(5)
-      expect(invoice_custom_sections_response["collection"].map { |ics| ics["name"] }.join("")).to eq("acznr")
+    expect(invoice_custom_sections_response["collection"].count).to eq(3)
+    expect(invoice_custom_sections_response["collection"].map { |ics| ics["name"] }.join("")).to eq("acx")
 
-      expect(invoice_custom_sections_response["metadata"]["currentPage"]).to eq(1)
-      expect(invoice_custom_sections_response["metadata"]["totalCount"]).to eq(6)
-    end
+    expect(invoice_custom_sections_response["metadata"]["currentPage"]).to eq(1)
+    expect(invoice_custom_sections_response["metadata"]["totalCount"]).to eq(3)
   end
 end

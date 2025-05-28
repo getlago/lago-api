@@ -11,6 +11,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
 
   describe "call" do
     let(:organization) { create(:organization) }
+    let(:billing_entity) { customer.billing_entity }
     let(:customer) { create(:customer, organization:, payment_provider: :stripe) }
     let(:subscription) { create(:subscription, plan:, customer:) }
     let(:plan) { create(:plan, organization:) }
