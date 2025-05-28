@@ -87,7 +87,8 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             applied_dunning_campaign: nil,
             last_dunning_campaign_attempt: 4,
             last_dunning_campaign_attempt_at: 1.day.ago,
-            organization: organization
+            organization: organization,
+            billing_entity: billing_entity
           )
         end
         let(:customer_assigned) do
@@ -97,7 +98,8 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             applied_dunning_campaign: dunning_campaign,
             last_dunning_campaign_attempt: 4,
             last_dunning_campaign_attempt_at: 1.day.ago,
-            organization: organization
+            organization: organization,
+            billing_entity: billing_entity
           )
         end
 
