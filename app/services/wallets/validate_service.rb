@@ -9,6 +9,7 @@ module Wallets
       valid_expiration_at? if args[:expiration_at]
       valid_recurring_transaction_rules? if args[:recurring_transaction_rules].present?
       valid_metadata? if args[:transaction_metadata]
+      valid_limitations? if args[:applies_to]
 
       if errors?
         result.validation_failure!(errors:)
@@ -74,6 +75,14 @@ module Wallets
       end
 
       true
+    end
+
+    def valid_limitations?
+      return true if Wallets::ValidateLimitationsService.new(BaseService::Result.new, **args).valid?
+
+      add_error(field: :applies_to, error_code: "invalid_limitations")
+
+      false
     end
   end
 end

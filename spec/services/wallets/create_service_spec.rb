@@ -237,5 +237,48 @@ RSpec.describe Wallets::CreateService, type: :service do
         end
       end
     end
+
+    context "with limitations" do
+      let(:limitations) do
+        {
+          fee_types: %w[charge]
+        }
+      end
+      let(:params) do
+        {
+          name: "New Wallet",
+          customer:,
+          organization_id: organization.id,
+          currency: "EUR",
+          rate_amount: "1.00",
+          expiration_at:,
+          paid_credits:,
+          granted_credits:,
+          applies_to: limitations
+        }
+      end
+
+      it "creates a wallet with correct limitations" do
+        expect { service_result }.to change(Wallet, :count).by(1)
+        expect(service_result).to be_success
+
+        wallet = service_result.wallet
+        expect(wallet.reload.name).to eq("New Wallet")
+        expect(wallet.reload.allowed_fee_types).to eq(%w[charge])
+      end
+
+      context "when fee limitations are not correct" do
+        let(:limitations) do
+          {
+            fee_types: %w[invalid]
+          }
+        end
+
+        it "returns an error" do
+          expect(service_result).not_to be_success
+          expect(service_result.error.messages[:applies_to]).to eq(["invalid_limitations"])
+        end
+      end
+    end
   end
 end

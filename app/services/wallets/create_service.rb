@@ -23,6 +23,10 @@ module Wallets
         attributes[:invoice_requires_successful_payment] = ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
       end
 
+      if params.key?(:applies_to)
+        attributes[:allowed_fee_types] = params[:applies_to][:fee_types] if params[:applies_to].key?(:fee_types)
+      end
+
       wallet = Wallet.new(attributes)
 
       ActiveRecord::Base.transaction do
