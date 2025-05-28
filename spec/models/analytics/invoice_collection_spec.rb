@@ -126,5 +126,22 @@ RSpec.describe Analytics::InvoiceCollection, type: :model do
         ])
       end
     end
+
+    context "when billing entity code is provided" do
+      let(:args) { {billing_entity_code: billing_entity2.code} }
+
+      it "returns the finalized invoices collections filtered by billing_entity_code" do
+        expect(invoice_collections).to match_array([
+          hash_including({"month" => Time.current.beginning_of_month - 3.months,
+                         "payment_status" => nil, "currency" => nil, "invoices_count" => 0, "amount_cents" => 0.0}),
+          hash_including({"month" => Time.current.beginning_of_month - 2.months,
+                         "payment_status" => nil, "currency" => nil, "invoices_count" => 0, "amount_cents" => 0.0}),
+          hash_including({"month" => Time.current.beginning_of_month - 1.month,
+                         "payment_status" => "pending", "currency" => "EUR", "invoices_count" => 1, "amount_cents" => 400.0}),
+          hash_including({"month" => Time.current.beginning_of_month,
+                         "payment_status" => nil, "currency" => nil, "invoices_count" => 0, "amount_cents" => 0.0})
+        ])
+      end
+    end
   end
 end
