@@ -21,7 +21,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     end
 
     before do
-      allow(Utils::ActivityLog).to receive(:produce)
+      allow(Utils::ActivityLog).to receive(:produce).and_call_original
 
       subscription
     end
