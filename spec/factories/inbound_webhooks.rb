@@ -10,8 +10,6 @@ FactoryBot.define do
     code { "webhook-endpoint-code" }
     signature { "MySignature" }
 
-    payload do
-      File.read(Rails.root.join("spec/fixtures/stripe/payment_intent_event.json"))
-    end
+    payload { "{}" }
   end
 end

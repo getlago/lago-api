@@ -8,11 +8,11 @@ RSpec.shared_context "with Stripe configured for customer" do
   let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider, provider_customer_id: stripe_cus_id) }
 
   let(:stripe_customer_response) do
-    File.read("spec/fixtures/stripe/customer_retrieve_response.json")
+    get_stripe_fixtures("customer_retrieve_response.json")
   end
   let(:stripe_payment_method_response) do
     JSON.parse(
-      File.read("spec/fixtures/stripe/retrieve_payment_method.json"),
+      get_stripe_fixtures("retrieve_payment_method.json"),
       symbolize_names: true
     ).merge!({
       id: stripe_pm_id,

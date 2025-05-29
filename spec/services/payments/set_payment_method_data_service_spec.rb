@@ -13,7 +13,7 @@ RSpec.describe Payments::SetPaymentMethodDataService, type: :service do
 
       it "updates the payment method data" do
         stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
-          status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/retrieve_payment_method.json"))
+          status: 200, body: get_stripe_fixtures("retrieve_payment_method.json")
         )
 
         result = service.call

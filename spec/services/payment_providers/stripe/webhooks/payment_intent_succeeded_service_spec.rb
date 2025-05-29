@@ -9,8 +9,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
   let(:organization) { create(:organization) }
 
   let(:event_json) do
-    path = Rails.root.join("spec/fixtures/stripe/webhooks/payment_intent_succeeded-#{fixtures_version}.json")
-    File.read(path)
+    get_stripe_fixtures("webhooks/payment_intent_succeeded-#{fixtures_version}.json")
   end
 
   before do
@@ -43,7 +42,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         payment = create(:payment, provider_payment_id: event.data.object.id, payable: invoice)
 
         stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
-          status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/retrieve_payment_method.json"))
+          status: 200, body: get_stripe_fixtures("retrieve_payment_method.json")
         )
 
         result = event_service.call
@@ -63,7 +62,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         create(:payment, payable:, provider_payment_id: event.data.object.id)
 
         stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
-          status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/retrieve_payment_method.json"))
+          status: 200, body: get_stripe_fixtures("retrieve_payment_method.json")
         )
 
         expect { event_service.call }.not_to have_enqueued_job(PaymentReceipts::CreateJob)
@@ -79,7 +78,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           create(:payment, payable:, provider_payment_id: event.data.object.id)
 
           stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
-            status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/retrieve_payment_method.json"))
+            status: 200, body: get_stripe_fixtures("retrieve_payment_method.json")
           )
 
           expect { event_service.call }.to have_enqueued_job(PaymentReceipts::CreateJob)
@@ -90,8 +89,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
 
   context "when payment intent event for a payment request" do
     let(:event_json) do
-      path = Rails.root.join("spec/fixtures/stripe/payment_intent_event_payment_request.json")
-      File.read(path)
+      get_stripe_fixtures("payment_intent_event_payment_request.json")
     end
 
     context "when issue_receipts_enabled is true" do
@@ -117,7 +115,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         create(:payment_request, customer: create(:customer, organization:), payments: [payment])
 
         stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
-          status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/retrieve_payment_method.json"))
+          status: 200, body: get_stripe_fixtures("retrieve_payment_method.json")
         )
 
         expect { event_service.call }.to have_enqueued_job(PaymentReceipts::CreateJob)
@@ -143,7 +141,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
       create(:payment_request, customer: create(:customer, organization:), payments: [payment])
 
       stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
-        status: 200, body: File.read(Rails.root.join("spec/fixtures/stripe/retrieve_payment_method.json"))
+        status: 200, body: get_stripe_fixtures("retrieve_payment_method.json")
       )
 
       result = event_service.call
@@ -185,8 +183,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
 
   context "when payment intent event with an invalid payable type" do
     let(:event_json) do
-      path = Rails.root.join("spec/fixtures/stripe/payment_intent_event_invalid_payable_type.json")
-      File.read(path)
+      get_stripe_fixtures("payment_intent_event_invalid_payable_type.json")
     end
 
     it do

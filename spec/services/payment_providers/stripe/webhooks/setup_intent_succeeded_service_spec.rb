@@ -7,7 +7,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
-  let(:event_json) { File.read("spec/fixtures/stripe/setup_intent_event.json") }
+  let(:event_json) { get_stripe_fixtures("setup_intent_event.json") }
 
   let(:event) { Stripe::Event.construct_from(JSON.parse(event_json)) }
   let(:provider_customer_id) { event.data.object.customer }
@@ -49,7 +49,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
       end
 
       context "when customer in metadata is not found" do
-        let(:event_json) { File.read("spec/fixtures/stripe/setup_intent_event_with_metadata.json") }
+        let(:event_json) { get_stripe_fixtures("setup_intent_event_with_metadata.json") }
 
         it "returns an empty response", aggregate_failures: true do
           result = webhook_service.call
@@ -60,7 +60,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
       end
 
       context "when customer in metadata exists" do
-        let(:event_json) { File.read("spec/fixtures/stripe/setup_intent_event_with_metadata.json") }
+        let(:event_json) { get_stripe_fixtures("setup_intent_event_with_metadata.json") }
         let(:customer) { create(:customer, id: event.data.object.metadata["lago_customer_id"], organization:) }
 
         it "returns a not found error", aggregate_failures: true do
@@ -74,7 +74,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
     end
 
     context "when stripe customer id is nil" do
-      let(:event_json) { File.read("spec/fixtures/stripe/setup_intent_event_without_customer.json") }
+      let(:event_json) { get_stripe_fixtures("setup_intent_event_without_customer.json") }
       let(:provider_customer_id) { "cus_InvaLid" }
 
       it "returns an empty result", aggregate_failures: true do

@@ -20,8 +20,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
 
   context "when setup intent event" do
     let(:event_json) do
-      path = Rails.root.join("spec/fixtures/stripe/setup_intent_event.json")
-      File.read(path)
+      get_stripe_fixtures("setup_intent_event.json")
     end
 
     before do
@@ -40,8 +39,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
 
   context "when customer updated event" do
     let(:event_json) do
-      path = Rails.root.join("spec/fixtures/stripe/customer_updated_event.json")
-      File.read(path)
+      get_stripe_fixtures("customer_updated_event.json")
     end
 
     before do
@@ -60,8 +58,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
 
   context "when payment method detached event" do
     let(:event_json) do
-      path = Rails.root.join("spec/fixtures/stripe/payment_method_detached_event.json")
-      File.read(path)
+      get_stripe_fixtures("payment_method_detached_event.json")
     end
 
     before do
@@ -85,8 +82,7 @@ RSpec.describe PaymentProviders::Stripe::HandleEventService do
     let(:refund_service) { instance_double(CreditNotes::Refunds::StripeService) }
 
     let(:event_json) do
-      path = Rails.root.join("spec/fixtures/stripe/charge_refund_updated_event.json")
-      File.read(path)
+      get_stripe_fixtures("charge_refund_updated_event.json")
     end
 
     before do
