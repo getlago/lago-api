@@ -50,6 +50,7 @@ module Subscriptions
       # NOTE: Wait to ensure job is performed at the end of the database transaction.
       # See https://github.com/getlago/lago-api/blob/main/app/services/subscriptions/create_service.rb#L46.
       SendWebhookJob.set(wait: 2.seconds).perform_later("subscription.terminated", subscription)
+      Utils::ActivityLog.produce(subscription, "subscription.terminated")
 
       result.subscription = subscription
       result
