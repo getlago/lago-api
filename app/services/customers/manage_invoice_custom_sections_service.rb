@@ -2,6 +2,8 @@
 
 module Customers
   class ManageInvoiceCustomSectionsService < BaseService
+    Result = BaseResult[:customer]
+
     def initialize(customer:, skip_invoice_custom_sections:, section_ids: nil, section_codes: nil)
       @customer = customer
       @section_ids = section_ids
@@ -18,19 +20,19 @@ module Customers
 
       ActiveRecord::Base.transaction do
         if !skip_invoice_custom_sections.nil?
-          customer.selected_invoice_custom_sections = [] if !!skip_invoice_custom_sections
+          customer.selected_invoice_custom_sections = InvoiceCustomSection.none if !!skip_invoice_custom_sections
           customer.skip_invoice_custom_sections = skip_invoice_custom_sections
         end
 
         if !section_ids.nil? || !section_codes.nil?
           customer.skip_invoice_custom_sections = false
-          return result if customer.selected_invoice_custom_sections.ids == section_ids ||
-            customer.selected_invoice_custom_sections.map(&:code) == section_codes
 
-          assign_selected_sections
+          assign_selected_sections unless selected_sections_match?
         end
         customer.save!
       end
+
+      result.customer = customer
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -48,8 +50,13 @@ module Customers
       result.validation_failure!(errors: {invoice_custom_sections: ["skip_sections_and_selected_ids_sent_together"]})
     end
 
+    def selected_sections_match?
+      customer.selected_invoice_custom_sections.ids == section_ids ||
+        customer.selected_invoice_custom_sections.map(&:code) == section_codes
+    end
+
     def assign_selected_sections
-      # Note: when assigning organization's sections, an empty array will be sent
+      # Note: when assigning billing entity's sections, an empty array will be sent
       selected_sections = if section_ids
         customer.organization.invoice_custom_sections.where(id: section_ids)
       elsif section_codes
@@ -59,7 +66,18 @@ module Customers
       end
 
       system_generated_sections = customer.system_generated_invoice_custom_sections
-      customer.selected_invoice_custom_sections = selected_sections + system_generated_sections
+
+      # Clear existing manual sections
+      customer.applied_invoice_custom_sections.where.not(invoice_custom_section: system_generated_sections).destroy_all
+
+      # Create new join records for selected sections
+      selected_sections.each do |section|
+        customer.applied_invoice_custom_sections.create!(
+          organization_id: customer.organization_id,
+          billing_entity_id: customer.billing_entity_id,
+          invoice_custom_section: section
+        )
+      end
     end
   end
 end

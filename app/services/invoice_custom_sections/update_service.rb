@@ -2,6 +2,8 @@
 
 module InvoiceCustomSections
   class UpdateService < BaseService
+    Result = BaseResult[:invoice_custom_section]
+
     def initialize(invoice_custom_section:, update_params:, selected: false)
       @update_params = update_params
       @invoice_custom_section = invoice_custom_section
@@ -14,9 +16,15 @@ module InvoiceCustomSections
 
       invoice_custom_section.update!(update_params)
       if selected
-        Organizations::SelectInvoiceCustomSectionService.call(section: invoice_custom_section)
+        BillingEntities::SelectInvoiceCustomSectionService.call!(
+          section: invoice_custom_section,
+          billing_entity: default_billing_entity
+        )
       else
-        Organizations::DeselectInvoiceCustomSectionService.call(section: invoice_custom_section)
+        BillingEntities::DeselectInvoiceCustomSectionService.call!(
+          section: invoice_custom_section,
+          billing_entity: default_billing_entity
+        )
       end
       result.invoice_custom_section = invoice_custom_section
       result
@@ -27,5 +35,9 @@ module InvoiceCustomSections
     private
 
     attr_reader :invoice_custom_section, :update_params, :selected
+
+    def default_billing_entity
+      @default_billing_entity ||= invoice_custom_section.organization.default_billing_entity
+    end
   end
 end

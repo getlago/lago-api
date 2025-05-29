@@ -23,8 +23,10 @@ RSpec.describe Customer, type: :model do
   it { is_expected.to have_one(:hubspot_customer) }
   it { is_expected.to have_one(:salesforce_customer) }
 
-  it { is_expected.to have_many(:invoice_custom_section_selections) }
-  it { is_expected.to have_many(:selected_invoice_custom_sections) }
+  it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("Customer::AppliedInvoiceCustomSection").dependent(:destroy) }
+  it { is_expected.to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
+  it { is_expected.to have_many(:manual_selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section).conditions(section_type: :manual) }
+  it { is_expected.to have_many(:system_generated_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section).conditions(section_type: :system_generated) }
 
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
@@ -479,10 +481,12 @@ RSpec.describe Customer, type: :model do
     let(:organization) { customer.organization }
     let(:manual_section) { create(:invoice_custom_section, organization:, section_type: :manual) }
     let(:system_generated_section) { create(:invoice_custom_section, organization:, section_type: :system_generated) }
+    let(:customer_applied_manual_section) { create(:customer_applied_invoice_custom_section, customer:, invoice_custom_section: manual_section) }
+    let(:customer_applied_system_generated_section) { create(:customer_applied_invoice_custom_section, customer:, invoice_custom_section: system_generated_section) }
 
     before do
-      customer.selected_invoice_custom_sections << manual_section
-      customer.selected_invoice_custom_sections << system_generated_section
+      customer_applied_manual_section
+      customer_applied_system_generated_section
     end
 
     it "returns the correct sections for each scoped association" do
@@ -493,13 +497,14 @@ RSpec.describe Customer, type: :model do
 
   describe "#applicable_invoice_custom_sections" do
     let(:organization) { customer.organization }
+    let(:billing_entity) { customer.billing_entity }
 
     let(:manual_customer_section) do
       create(:invoice_custom_section, organization:, section_type: :manual, name: "Customer Section")
     end
 
-    let(:manual_organization_section) do
-      create(:invoice_custom_section, organization:, section_type: :manual, name: "Organization Section")
+    let(:manual_billing_entity_section) do
+      create(:invoice_custom_section, organization:, section_type: :manual, name: "Billing Entity Section")
     end
 
     let(:system_generated_section) do
@@ -509,7 +514,7 @@ RSpec.describe Customer, type: :model do
     context "when skip_invoice_custom_sections is true and there are system sections" do
       before do
         customer.update!(skip_invoice_custom_sections: true)
-        customer.system_generated_invoice_custom_sections << system_generated_section
+        create(:customer_applied_invoice_custom_section, customer:, organization:, billing_entity:, invoice_custom_section: system_generated_section)
       end
 
       it "returns only system generated sections" do
@@ -519,91 +524,98 @@ RSpec.describe Customer, type: :model do
 
     context "when customer has manual and system sections" do
       before do
-        customer.manual_selected_invoice_custom_sections << manual_customer_section
-        customer.system_generated_invoice_custom_sections << system_generated_section
+        create(:customer_applied_invoice_custom_section, customer:, organization:, billing_entity:, invoice_custom_section: manual_customer_section)
+        create(:customer_applied_invoice_custom_section, customer:, organization:, billing_entity:, invoice_custom_section: system_generated_section)
       end
 
       it "returns both manual and system generated sections" do
-        expect(customer.applicable_invoice_custom_sections).to match_array([manual_customer_section, system_generated_section])
+        expect(customer.applicable_invoice_custom_sections).to contain_exactly(manual_customer_section, system_generated_section)
       end
     end
 
-    context "when customer has no manual, but organization has manual, and customer has system" do
+    context "when customer has no manual, but billing entity has manual, and customer has system" do
       before do
-        organization.selected_invoice_custom_sections << manual_organization_section
-        customer.system_generated_invoice_custom_sections << system_generated_section
+        create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: manual_billing_entity_section)
+        create(:customer_applied_invoice_custom_section, customer:, organization:, billing_entity:, invoice_custom_section: system_generated_section)
       end
 
-      it "returns organization manual + system sections" do
-        expect(customer.applicable_invoice_custom_sections).to match_array([manual_organization_section, system_generated_section])
+      it "returns billing entity manual + system sections" do
+        expect(customer.applicable_invoice_custom_sections).to contain_exactly(manual_billing_entity_section, system_generated_section)
       end
     end
 
-    context "when only organization has manual sections and no system sections" do
+    context "when only billing entity has manual sections and no system sections" do
       before do
-        organization.selected_invoice_custom_sections << manual_organization_section
+        create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: manual_billing_entity_section)
       end
 
-      it "returns only organization manual sections" do
-        expect(customer.applicable_invoice_custom_sections).to match_array([manual_organization_section])
+      it "returns only billing entity manual sections" do
+        expect(customer.applicable_invoice_custom_sections).to contain_exactly(manual_billing_entity_section)
       end
     end
 
     context "when only system_generated sections exist" do
       before do
-        customer.system_generated_invoice_custom_sections << system_generated_section
+        create(:customer_applied_invoice_custom_section, customer:, organization:, billing_entity:, invoice_custom_section: system_generated_section)
       end
 
       it "returns only system_generated sections" do
-        expect(customer.applicable_invoice_custom_sections).to match_array([system_generated_section])
+        expect(customer.applicable_invoice_custom_sections).to contain_exactly(system_generated_section)
       end
     end
 
     context "when no manual or system_generated sections are selected" do
-      it "returns an empty array" do
-        expect(customer.applicable_invoice_custom_sections).to eq([])
+      it "returns an empty collection" do
+        expect(customer.applicable_invoice_custom_sections).to be_empty
       end
     end
   end
 
   describe "#configurable_invoice_custom_sections" do
     let(:organization) { customer.organization }
-    let(:organization_section) { create(:invoice_custom_section, organization: organization) }
-    let(:customer_section) { create(:invoice_custom_section, organization: organization) }
-    let(:not_selected_section) { create(:invoice_custom_section, organization: organization) }
+    let(:billing_entity) { customer.billing_entity }
+    let(:invoice_custom_section_a) { create(:invoice_custom_section, organization:) }
+    let(:invoice_custom_section_b) { create(:invoice_custom_section, organization:) }
 
-    before { not_selected_section }
+    before do
+      invoice_custom_section_a
+      invoice_custom_section_b
+    end
 
     context "when customer has skip_invoice_custom_sections set to true" do
-      before { customer.update(skip_invoice_custom_sections: true) }
+      before do
+        customer.update!(skip_invoice_custom_sections: true)
+        create(:billing_entity_applied_invoice_custom_section, billing_entity:, invoice_custom_section: invoice_custom_section_a)
+      end
 
-      it "returns an empty array" do
-        expect(customer.applicable_invoice_custom_sections).to eq([])
+      it "returns an empty collection" do
+        expect(customer.configurable_invoice_custom_sections).to be_empty
       end
     end
 
-    context "when customer has its own selected_invoice_custom_sections" do
+    context "when customer has its own applied_invoice_custom_sections" do
       before do
-        customer.selected_invoice_custom_sections << customer_section
-        organization.selected_invoice_custom_sections << organization_section
+        create(:customer_applied_invoice_custom_section, customer:, invoice_custom_section: invoice_custom_section_b)
       end
 
       it "returns the customer's selected_invoice_custom_sections" do
-        expect(customer.applicable_invoice_custom_sections).to eq([customer_section])
+        expect(customer.configurable_invoice_custom_sections).to contain_exactly(invoice_custom_section_b)
       end
     end
 
-    context "when customer does not have any selected_invoice_custom_sections but organization has" do
-      before { organization.selected_invoice_custom_sections << organization_section }
+    context "when customer does not have any applied_invoice_custom_sections but billing entity has" do
+      before do
+        create(:billing_entity_applied_invoice_custom_section, billing_entity:, invoice_custom_section: invoice_custom_section_a)
+      end
 
-      it "returns the organization's invoice_custom_sections" do
-        expect(customer.applicable_invoice_custom_sections).to match_array([organization_section])
+      it "returns the billing entity's invoice_custom_sections" do
+        expect(customer.configurable_invoice_custom_sections).to contain_exactly(invoice_custom_section_a)
       end
     end
 
-    context "when neither customer nor organization have selected invoice custom sections" do
-      it "returns an empty array" do
-        expect(customer.applicable_invoice_custom_sections).to eq([])
+    context "when neither customer nor billing entity have selected invoice custom sections" do
+      it "returns an empty collection" do
+        expect(customer.configurable_invoice_custom_sections).to be_empty
       end
     end
   end

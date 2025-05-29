@@ -11,6 +11,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
 
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
+  let(:billing_entity) { customer.billing_entity }
   let(:applied_add_on) { create(:applied_add_on, customer:) }
 
   let(:tax) { create(:tax, :applied_to_billing_entity, rate: 20, organization:) }

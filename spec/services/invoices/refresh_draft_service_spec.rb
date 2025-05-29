@@ -26,6 +26,7 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
     let(:started_at) { 1.month.ago.beginning_of_month }
     let(:customer) { create(:customer) }
     let(:organization) { customer.organization }
+    let(:billing_entity) { customer.billing_entity }
 
     let(:subscription) do
       create(
@@ -212,7 +213,9 @@ RSpec.describe Invoices::RefreshDraftService, type: :service do
 
       before do
         applied_invoice_custom_sections
-        customer.selected_invoice_custom_sections = invoice_custom_sections.take(3)
+        create(:customer_applied_invoice_custom_section, organization:, billing_entity:, customer:, invoice_custom_section: invoice_custom_sections[0])
+        create(:customer_applied_invoice_custom_section, organization:, billing_entity:, customer:, invoice_custom_section: invoice_custom_sections[1])
+        create(:customer_applied_invoice_custom_section, organization:, billing_entity:, customer:, invoice_custom_section: invoice_custom_sections[2])
       end
 
       it "creates new applied_invoice_custom_sections" do

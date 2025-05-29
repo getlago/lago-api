@@ -7,5 +7,9 @@ FactoryBot.define do
     name { Faker::Lorem.words(number: 3).join(" ") }
     display_name { Faker::Lorem.words(number: 3).join(" ") }
     details { "These details are shown in the invoice" }
+
+    trait :system_generated do
+      section_type { "system_generated" }
+    end
   end
 end

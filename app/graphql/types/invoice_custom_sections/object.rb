@@ -14,7 +14,7 @@ module Types
       field :display_name, String, null: true
       field :name, String, null: false
 
-      field :selected, Boolean, null: false, method: :selected_for_organization?
+      field :selected, Boolean, null: false, method: :selected_for_default_billing_entity?
     end
   end
 end

@@ -75,8 +75,11 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
     applied_tax
     subscription
     credit_note_item
-    organization.selected_invoice_custom_sections = invoice_custom_sections
-    customer.selected_invoice_custom_sections = invoice_custom_sections[0..1]
+    invoice_custom_sections.each do |invoice_custom_section|
+      create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section:)
+    end
+    create(:customer_applied_invoice_custom_section, organization:, billing_entity:, customer:, invoice_custom_section: invoice_custom_sections[0])
+    create(:customer_applied_invoice_custom_section, organization:, billing_entity:, customer:, invoice_custom_section: invoice_custom_sections[1])
   end
 
   it_behaves_like "requires current user"

@@ -6,27 +6,28 @@ RSpec.describe InvoiceCustomSections::DeselectAllService, type: :service do
   describe "#call" do
     subject(:service_result) { described_class.call(section:) }
 
-    let(:organization) { create(:organization) }
     let(:customer) { create(:customer) }
-    let(:section) { create(:invoice_custom_section) }
+    let(:organization) { customer.organization }
+    let(:billing_entity) { customer.billing_entity }
+    let(:section) { create(:invoice_custom_section, organization:) }
 
     context "when the section is selected" do
       before do
-        organization.selected_invoice_custom_sections << section
-        customer.selected_invoice_custom_sections << section
+        create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: section)
+        create(:customer_applied_invoice_custom_section, organization:, billing_entity:, customer:, invoice_custom_section: section)
       end
 
-      it "deselects the section for the organization and customer" do
-        expect { service_result }.to change(organization.selected_invoice_custom_sections, :count).from(1).to(0)
-          .and change(customer.selected_invoice_custom_sections, :count).from(1).to(0)
-        expect(InvoiceCustomSectionSelection.count).to eq(0)
+      it "deselects the section for the billing entity and customer" do
+        expect { service_result }
+          .to change(billing_entity.applied_invoice_custom_sections, :count).from(1).to(0)
+          .and change(customer.applied_invoice_custom_sections, :count).from(1).to(0)
+        expect(service_result).to be_success
       end
     end
 
     context "when the section is not selected" do
-      it "does not update anything" do
-        service_result
-        expect(InvoiceCustomSectionSelection.count).to eq(0)
+      it "returns a success" do
+        expect(service_result).to be_success
       end
     end
   end

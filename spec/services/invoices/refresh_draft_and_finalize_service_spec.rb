@@ -7,7 +7,8 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
 
   describe "#call" do
     let(:organization) { create(:organization) }
-    let(:customer) { create(:customer, organization:) }
+    let(:billing_entity) { create(:billing_entity, organization:) }
+    let(:customer) { create(:customer, organization:, billing_entity:) }
 
     let(:invoice) do
       create(

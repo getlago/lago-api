@@ -71,10 +71,8 @@ class Organization < ApplicationRecord
   has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
 
   has_many :invoice_custom_sections
-  has_many :invoice_custom_section_selections
-  has_many :manual_invoice_custom_sections, -> { where(section_type: :manual) }, class_name: "InvoiceCustomSection"
-  has_many :system_generated_invoice_custom_sections, -> { where(section_type: :system_generated) }, class_name: "InvoiceCustomSection"
-  has_many :selected_invoice_custom_sections, through: :invoice_custom_section_selections, source: :invoice_custom_section
+  has_many :manual_invoice_custom_sections, -> { where(section_type: "manual") }, class_name: "InvoiceCustomSection"
+  has_many :system_generated_invoice_custom_sections, -> { where(section_type: "system_generated") }, class_name: "InvoiceCustomSection"
 
   has_one_attached :logo
 

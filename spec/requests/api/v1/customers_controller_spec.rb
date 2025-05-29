@@ -269,10 +269,15 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           invoice_custom_section_codes:
         }
       end
-      let(:invoice_custom_sections) { create_list(:invoice_custom_section, 2, organization: organization) }
+      let(:invoice_custom_sections) { create_list(:invoice_custom_section, 2, organization:) }
 
       before do
-        organization.selected_invoice_custom_sections = [invoice_custom_sections[0]]
+        create(
+          :billing_entity_applied_invoice_custom_section,
+          organization:,
+          billing_entity: organization.default_billing_entity,
+          invoice_custom_section: invoice_custom_sections[0]
+        )
         subject
       end
 

@@ -2,6 +2,8 @@
 
 module InvoiceCustomSections
   class DestroyService < BaseService
+    Result = BaseResult[:invoice_custom_section]
+
     def initialize(invoice_custom_section:)
       @invoice_custom_section = invoice_custom_section
       super
@@ -12,7 +14,7 @@ module InvoiceCustomSections
 
       ActiveRecord::Base.transaction do
         invoice_custom_section.discard
-        DeselectAllService.call(section: invoice_custom_section).raise_if_error!
+        DeselectAllService.call!(section: invoice_custom_section)
         result.invoice_custom_section = invoice_custom_section
         result
       end

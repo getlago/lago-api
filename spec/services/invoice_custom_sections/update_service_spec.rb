@@ -6,13 +6,14 @@ RSpec.describe InvoiceCustomSections::UpdateService do
   subject(:service_result) { described_class.call(invoice_custom_section:, update_params:, selected:) }
 
   let(:organization) { create(:organization) }
-  let(:invoice_custom_section) { create(:invoice_custom_section, organization: organization) }
+  let(:default_billing_entity) { organization.default_billing_entity }
+  let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
   let(:update_params) { {name: "Updated Name"} }
   let(:selected) { true }
 
   before do
-    allow(Organizations::SelectInvoiceCustomSectionService).to receive(:call).and_call_original
-    allow(Organizations::DeselectInvoiceCustomSectionService).to receive(:call).and_call_original
+    allow(BillingEntities::SelectInvoiceCustomSectionService).to receive(:call!).and_call_original
+    allow(BillingEntities::DeselectInvoiceCustomSectionService).to receive(:call!).and_call_original
   end
 
   describe "#call" do
@@ -22,8 +23,8 @@ RSpec.describe InvoiceCustomSections::UpdateService do
 
         expect(result).to be_success
         expect(result.invoice_custom_section.name).to eq("Updated Name")
-        expect(Organizations::SelectInvoiceCustomSectionService).to have_received(:call)
-          .with(section: invoice_custom_section)
+        expect(BillingEntities::SelectInvoiceCustomSectionService).to have_received(:call!)
+          .with(section: invoice_custom_section, billing_entity: default_billing_entity)
       end
 
       context "when pass selected as false" do
@@ -31,8 +32,8 @@ RSpec.describe InvoiceCustomSections::UpdateService do
 
         it "calls Deselect::ForOrganizationService when selected is false" do
           service_result
-          expect(Organizations::DeselectInvoiceCustomSectionService).to have_received(:call)
-            .with(section: invoice_custom_section)
+          expect(BillingEntities::DeselectInvoiceCustomSectionService).to have_received(:call!)
+            .with(section: invoice_custom_section, billing_entity: default_billing_entity)
         end
       end
     end

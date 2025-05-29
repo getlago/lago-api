@@ -8,17 +8,18 @@ RSpec.describe ::V1::CustomerSerializer do
   end
 
   let(:result) { JSON.parse(serializer.to_json) }
-  let(:customer) { create(:customer, :with_salesforce_integration) }
+  let(:organization) { customer.organization }
+  let(:billing_entity) { customer.billing_entity }
+  let(:customer) { create(:customer, :with_salesforce_integration, shipping_city: "Paris", shipping_address_line1: "test1", shipping_zipcode: "002") }
   let(:metadata) { create(:customer_metadata, customer:) }
   let(:tax) { create(:tax, organization: customer.organization) }
   let(:customer_applied_tax) { create(:customer_applied_tax, customer:, tax:) }
-  let(:invoice_custom_section) { create(:invoice_custom_section, organization: customer.organization) }
+  let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
 
   before do
     metadata
     customer_applied_tax
-    customer.update!(shipping_city: "Paris", shipping_address_line1: "test1", shipping_zipcode: "002")
-    customer.selected_invoice_custom_sections << invoice_custom_section
+    create(:customer_applied_invoice_custom_section, organization:, billing_entity:, customer:, invoice_custom_section:)
   end
 
   it "serializes the object" do

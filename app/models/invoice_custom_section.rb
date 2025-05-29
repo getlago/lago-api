@@ -5,7 +5,12 @@ class InvoiceCustomSection < ApplicationRecord
   self.discard_column = :deleted_at
 
   belongs_to :organization
-  has_many :invoice_custom_section_selections, dependent: :destroy
+  has_many :customer_applied_invoice_custom_sections,
+    class_name: "Customer::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :billing_entity_applied_invoice_custom_sections,
+    class_name: "BillingEntity::AppliedInvoiceCustomSection",
+    dependent: :destroy
 
   SECTION_TYPES = {manual: "manual", system_generated: "system_generated"}.freeze
   enum :section_type, SECTION_TYPES, default: :manual, prefix: :section_type
@@ -17,8 +22,8 @@ class InvoiceCustomSection < ApplicationRecord
 
   default_scope -> { kept }
 
-  def selected_for_organization?
-    organization.selected_invoice_custom_sections.exists?(id: id)
+  def selected_for_default_billing_entity?
+    billing_entity_applied_invoice_custom_sections.exists?(billing_entity: organization.default_billing_entity)
   end
 end
 
