@@ -157,7 +157,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
       it "produces an activity log" do
         stripe_service.create
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failed")
+        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failure")
       end
 
       context "when error is about non refundable payment method" do
@@ -389,7 +389,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
           status: "failed"
         )
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failed")
+        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failure")
       end
     end
   end
