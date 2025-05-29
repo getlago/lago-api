@@ -39,6 +39,13 @@ module UsageMonitoring
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
+    rescue ActiveRecord::RecordNotUnique => e
+      if e.message.include?("idx_alerts_code_unique_per_subscription")
+        result.single_validation_failure!(field: :code, error_code: "value_already_exist")
+      else
+        # Only one alert per [alert_type, billable_metric] pair is allowed.
+        result.single_validation_failure!(field: :base, error_code: "alert_already_exists")
+      end
     end
 
     private

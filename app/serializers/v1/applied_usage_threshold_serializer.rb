@@ -8,13 +8,13 @@ module V1
         created_at: model.created_at.iso8601
       }
 
-      payload.merge!(usage_treshold)
+      payload.merge!(usage_threshold)
       payload
     end
 
     private
 
-    def usage_treshold
+    def usage_threshold
       {
         usage_threshold: ::V1::UsageThresholdSerializer.new(model.usage_threshold).serialize
       }
