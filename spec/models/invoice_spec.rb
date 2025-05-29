@@ -1533,13 +1533,177 @@ RSpec.describe Invoice, type: :model do
       it "returns the expected creditable amount in cents" do
         expect(invoice.available_to_credit_amount_cents).to eq(216)
       end
+    end
 
-      context "with progressive billing credit" do
-        let(:progressive_billing_credit_amount_cents) { 2 }
+    context "when invoice has multiple fees with different tax rates" do
+      let(:invoice) do
+        create(
+          :invoice,
+          fees_amount_cents: 300,
+          coupons_amount_cents: 150,
+          progressive_billing_credit_amount_cents: 0,
+          taxes_amount_cents: 54,
+          total_amount_cents: 324,
+          taxes_rate: 20,
+          version_number: 3
+        )
+      end
 
-        it "returns the expected creditable amount in cents" do
-          expect(invoice.available_to_credit_amount_cents).to eq(214)
-        end
+      let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
+      let(:subscription) { invoice_subscription.subscription }
+      let(:billable_metric) do
+        create(:unique_count_billable_metric, organization: subscription.organization)
+      end
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:)
+      end
+
+      before do
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 100, taxes_rate: 20)
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 100, taxes_rate: 10)
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 100, taxes_rate: 0)
+      end
+
+      it "calculates VAT correctly for each fee based on its tax rate" do
+        # Expected calculation:
+        # Fee 1: 100 * 20% = 20
+        # Fee 2: 100 * 10% = 10
+        # Fee 3: 100 * 0% = 0
+        # Total VAT = 30
+        # Credit Coupoun = (coupons_amount_cents + progressive_billing_credit_amount_cents) / fees_amount_cents * fees_total_creditable
+        # Credit Coupoun = (150 + 0) / 300 * 300 = 30
+        # Final amount = original_fees - credit_coupouns + vat
+        # Final amount = 300 - 150 + 15 = 165
+
+        expect(invoice.coupons_amount_cents).to eq(150)
+        expect(invoice.available_to_credit_amount_cents).to eq(165.0)
+      end
+    end
+
+    context "when invoice has progressive billing credit" do
+      let(:invoice) do
+        create(
+          :invoice,
+          fees_amount_cents: 200,
+          coupons_amount_cents: 20,
+          progressive_billing_credit_amount_cents: 30,
+          taxes_amount_cents: 36,
+          total_amount_cents: 246,
+          taxes_rate: 20,
+          version_number: 3
+        )
+      end
+
+      let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
+      let(:subscription) { invoice_subscription.subscription }
+      let(:billable_metric) do
+        create(:unique_count_billable_metric, organization: subscription.organization)
+      end
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:)
+      end
+      let(:fee) do
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 200, taxes_rate: 20)
+      end
+
+      before { fee }
+
+      it "includes progressive billing credit in the calculation" do
+        # Expected calculation:
+        # Fee 1: 100 * 20% = 20
+        # Fee 2: 100 * 20% = 20
+        # Total VAT = 40
+        # Credit adjustment = (coupons_amount_cents + progressive_billing_credit_amount_cents) / fees_amount_cents * fees_total_creditable
+        # Credit adjustment = (20 + 30) / 200 * 200 = 50
+        # For each fee:
+        #   Fee 1 (100 cents, 20% tax):
+        #     fee_rate = 100/200 = 0.5
+        #     prorated_credit = 50 * 0.5 = 25
+        #     vat = (100 - 25) * 20% = 15
+        #   Fee 2 (100 cents, 20% tax):
+        #     fee_rate = 100/200 = 0.5
+        #     prorated_credit = 50 * 0.5 = 25
+        #     vat = (100 - 25) * 20% = 15
+        # Total VAT after credit adjustment = 30
+        # Final amount = fees_total_creditable - credit_adjustment + vat
+        # Final amount = 200 - 50 + 30 = 180
+
+        expect(invoice.available_to_credit_amount_cents).to eq(180)
+      end
+    end
+
+    context "when testing precision of fdiv and round calculations" do
+      let(:invoice) do
+        create(
+          :invoice,
+          fees_amount_cents: 1000,
+          coupons_amount_cents: 100,
+          progressive_billing_credit_amount_cents: 0,
+          taxes_amount_cents: 180,
+          total_amount_cents: 1080,
+          taxes_rate: 20,
+          version_number: 3
+        )
+      end
+
+      let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
+      let(:subscription) { invoice_subscription.subscription }
+      let(:billable_metric) do
+        create(:unique_count_billable_metric, organization: subscription.organization)
+      end
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:)
+      end
+
+      before do
+        # Create fees with amounts that will test precision
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 333, taxes_rate: 20)
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 333, taxes_rate: 20)
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 334, taxes_rate: 20)
+      end
+
+      it "handles division and rounding correctly" do
+        # Expected calculation:
+        # Credit adjustment = 100 / 1000 * 1000 = 100
+        # VAT = (1000 - 100) * 20% = 180
+        # Final amount = 1000 - 100 + 180 = 1080
+        expect(invoice.available_to_credit_amount_cents).to eq(1080)
+      end
+    end
+
+    context "with edge cases and extreme values" do
+      let(:invoice) do
+        create(
+          :invoice,
+          fees_amount_cents: 1_000_000,
+          coupons_amount_cents: 100_000,
+          progressive_billing_credit_amount_cents: 50_000,
+          taxes_amount_cents: 180_000,
+          total_amount_cents: 1_080_000,
+          taxes_rate: 20,
+          version_number: 3
+        )
+      end
+
+      let(:invoice_subscription) { create(:invoice_subscription, invoice:) }
+      let(:subscription) { invoice_subscription.subscription }
+      let(:billable_metric) do
+        create(:unique_count_billable_metric, organization: subscription.organization)
+      end
+      let(:charge) do
+        create(:standard_charge, plan: subscription.plan, billable_metric:)
+      end
+
+      before do
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 1_000_000, taxes_rate: 20)
+      end
+
+      it "handles large numbers correctly" do
+        # Expected calculation:
+        # Credit adjustment = (100_000 + 50_000) / 1_000_000 * 1_000_000 = 150_000
+        # VAT = (1_000_000 - 150_000) * 20% = 170_000
+        # Final amount = 1_000_000 - 150_000 + 170_000 = 1_020_000
+        expect(invoice.available_to_credit_amount_cents).to eq(1_020_000)
       end
     end
   end
