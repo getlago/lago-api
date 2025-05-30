@@ -105,11 +105,7 @@ module Plans
       return unless cascade?
       return if plan.children.empty?
 
-      plan.children.includes(:charges).find_each do |p|
-        child_charge = p.charges.find { |c| c.parent_id == charge.id }
-
-        Charges::DestroyJob.perform_later(charge: child_charge) if child_charge
-      end
+      Charges::DestroyChildrenJob.perform_later(charge.id)
     end
 
     def cascade_charge_update(charge, payload_charge)

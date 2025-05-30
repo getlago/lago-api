@@ -2,6 +2,8 @@
 
 module Charges
   class DestroyService < BaseService
+    Result = BaseResult[:charge]
+
     def initialize(charge:)
       @charge = charge
 
@@ -13,8 +15,12 @@ module Charges
 
       ActiveRecord::Base.transaction do
         charge.discard!
-        charge.filter_values.discard_all
-        charge.filters.discard_all
+
+        deleted_at = Time.current
+        # rubocop:disable Rails/SkipsModelValidations
+        charge.filter_values.update_all(deleted_at:)
+        charge.filters.update_all(deleted_at:)
+        # rubocop:enable Rails/SkipsModelValidations
 
         result.charge = charge
       end
