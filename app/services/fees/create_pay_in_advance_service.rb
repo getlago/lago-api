@@ -34,7 +34,7 @@ module Fees
             result.validation_failure!(errors: {tax_error: [fee_taxes_result.error.code]})
             result.raise_if_error! unless charge.invoiceable?
 
-            return result
+            return result # rubocop:disable Rails/TransactionExitStatement
           end
         end
       end
@@ -181,7 +181,7 @@ module Fees
     def format_grouped_by
       return {} if properties["grouped_by"].blank?
 
-      properties["grouped_by"].index_with { event.properties[_1] }
+      properties["grouped_by"].index_with { event.properties[it] }
     end
 
     def customer_provider_taxation?
@@ -189,7 +189,7 @@ module Fees
     end
 
     def integration_customer
-      @integration_customer ||= customer.anrok_customer
+      @integration_customer ||= customer.tax_customer
     end
 
     def customer

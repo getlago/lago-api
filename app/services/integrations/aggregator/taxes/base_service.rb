@@ -20,7 +20,7 @@ module Integrations
         def integration_customer
           @integration_customer ||= begin
             int_customers = customer.integration_customers
-            int_customers.find { |ic| %w[IntegrationCustomers::AnrokCustomer IntegrationCustomers::AvalaraCustomer].include?(ic.type) }
+            int_customers.find { |ic| ic.tax_kind? }
           end
         end
 

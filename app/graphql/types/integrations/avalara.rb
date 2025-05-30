@@ -8,6 +8,7 @@ module Types
       field :account_id, String, null: true
       field :code, String, null: false
       field :company_code, String, null: false
+      field :company_id, String, null: true
       field :failed_invoices_count, Integer, null: true
       field :has_mappings_configured, Boolean
       field :id, ID, null: false
