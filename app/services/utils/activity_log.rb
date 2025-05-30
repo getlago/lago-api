@@ -95,6 +95,8 @@ module Utils
         case activity_object.class.name
         when "Payment"
           activity_object.payable
+        when "PaymentReceipt"
+          activity_object.payment.payable
         when "AppliedCoupon"
           activity_object.coupon
         when "WalletTransaction"
