@@ -31,6 +31,8 @@ module Credits
           )
           credit.save! unless context == :preview
 
+          apply_credit_to_fees(credit, remaining_invoice_amount) unless context == :preview
+
           # NOTE: Consume remaining credit on the credit note
           update_remaining_credit(credit_note, credit_amount) unless context == :preview
           remaining_invoice_amount -= credit_amount
@@ -80,6 +82,19 @@ module Credits
       )
 
       credit_note.consumed! if credit_note.balance_amount_cents.zero?
+    end
+
+    def apply_credit_to_fees(credit, remaining_invoice_amount)
+      invoice.fees.reload.each do |fee|
+        fee_amount_after_tax = fee.amount_cents - fee.precise_coupons_amount_cents + fee.taxes_amount_cents
+
+        fee.precise_credit_notes_amount_cents += (
+          credit.amount_cents * (fee_amount_after_tax - fee.precise_credit_notes_amount_cents)
+        ).fdiv(remaining_invoice_amount)
+
+        fee.precise_credit_notes_amount_cents = fee_amount_after_tax if fee_amount_after_tax < fee.precise_credit_notes_amount_cents
+        fee.save!
+      end
     end
   end
 end
