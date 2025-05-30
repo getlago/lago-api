@@ -26,6 +26,7 @@ module Resolvers
         argument :external_subscription_id, String, required: false
 
         argument :billable_metric_code, String, required: false
+        argument :billing_entity_code, String, required: false
         argument :plan_code, String, required: false
 
         argument :filter_values, String, required: false
