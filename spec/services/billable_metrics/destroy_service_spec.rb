@@ -11,16 +11,8 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
   let(:subscription) { create(:subscription) }
   let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
 
-  let(:filters) { create_list(:billable_metric_filter, 2, billable_metric:) }
-  let(:charge_filter) { create(:charge_filter, charge:) }
-  let(:filter_value) do
-    create(:charge_filter_value, charge_filter:, billable_metric_filter: filters.first)
-  end
-
   before do
     charge
-
-    filter_value
 
     allow(BillableMetrics::DeleteEventsJob).to receive(:perform_later).and_call_original
     allow(Invoices::RefreshDraftService).to receive(:call)
@@ -40,11 +32,9 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
       end
     end
 
-    it "soft deletes all related filters" do
-      freeze_time do
-        expect { destroy_service.call }.to change { billable_metric.filters.reload.kept.count }.from(2).to(0)
-          .and change { filter_value.reload.reload.deleted_at }.from(nil).to(Time.current)
-      end
+    it "enqueues a BillableMetricFilters::DestroyAllJob" do
+      expect { destroy_service.call }
+        .to have_enqueued_job(BillableMetricFilters::DestroyAllJob).with(billable_metric.id)
     end
 
     it "enqueues a BillableMetrics::DeleteEventsJob" do
