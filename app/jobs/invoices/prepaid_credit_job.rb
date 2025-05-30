@@ -21,7 +21,7 @@ module Invoices
         Wallets::ApplyPaidCreditsService.call(wallet_transaction:)
         Invoices::FinalizeOpenCreditService.call(invoice:)
       elsif payment_status.to_sym == :failed
-        WalletTransactions::MarkAsFailedService.new(wallet_transaction:).call
+        WalletTransactions::MarkAsFailedService.call(wallet_transaction:)
       end
     end
   end

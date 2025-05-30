@@ -5,6 +5,8 @@ class PaymentReceipt < ApplicationRecord
   belongs_to :organization
   belongs_to :billing_entity
 
+  delegate :customer, to: :payment
+
   has_one_attached :file
 
   def file_url
