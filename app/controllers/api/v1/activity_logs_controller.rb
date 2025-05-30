@@ -3,6 +3,8 @@
 module Api
   module V1
     class ActivityLogsController < Api::BaseController
+      before_action :ensure_premium_license
+
       def index
         result = ActivityLogsQuery.call(
           organization: current_organization,
@@ -60,6 +62,10 @@ module Api
           resource_ids: params[:resource_ids],
           resource_types: params[:resource_types]
         }
+      end
+
+      def ensure_premium_license
+        return forbidden_error(code: "feature_unavailable") unless License.premium?
       end
     end
   end
