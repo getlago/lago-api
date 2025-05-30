@@ -35,6 +35,9 @@ module Types
       argument :billing_configuration, Types::BillingEntities::BillingConfigurationInput, required: false, permission: "billing_entities:invoices:view"
       argument :email_settings, [Types::BillingEntities::EmailSettingsEnum], required: false, permission: "billing_entities:emails:view"
       argument :finalize_zero_amount_invoice, Boolean, required: false
+
+      # Invoice custom sections settings
+      argument :invoice_custom_section_ids, [ID], required: false
     end
   end
 end

@@ -7,6 +7,7 @@ RSpec.describe Mutations::BillingEntities::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:invoice_custom_sections) { create_list(:invoice_custom_section, 2, organization:) }
 
   let(:mutation) do
     <<~GQL
@@ -39,6 +40,7 @@ RSpec.describe Mutations::BillingEntities::Update, type: :graphql do
             invoiceGracePeriod,
             documentLocale,
           }
+          selectedInvoiceCustomSections { id }
         }
       }
     GQL
@@ -79,7 +81,8 @@ RSpec.describe Mutations::BillingEntities::Update, type: :graphql do
         invoiceFooter: "invoice footer",
         documentLocale: "es",
         invoiceGracePeriod: 10
-      }
+      },
+      invoiceCustomSectionIds: invoice_custom_sections.map(&:id)
     }
   end
 
@@ -123,6 +126,7 @@ RSpec.describe Mutations::BillingEntities::Update, type: :graphql do
     expect(result_data["logoUrl"]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
     expect(result_data["emailSettings"]).to be_nil
     expect(result_data["billingConfiguration"]).to be_nil
+    expect(result_data["selectedInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })
   end
 
   context "with extra view permissions" do

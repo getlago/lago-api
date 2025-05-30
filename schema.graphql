@@ -671,6 +671,7 @@ type BillingEntity {
   name: String!
   netPaymentTerm: Int!
   organization: Organization!
+  selectedInvoiceCustomSections: [InvoiceCustomSection!]
   state: String
   taxIdentificationNumber: String
   timezone: TimezoneEnum
@@ -9710,6 +9711,7 @@ input UpdateBillingEntityInput {
   euTaxManagement: Boolean
   finalizeZeroAmountInvoice: Boolean
   id: ID!
+  invoiceCustomSectionIds: [ID!]
   legalName: String
   legalNumber: String
   logo: String
