@@ -14,6 +14,7 @@ module AppliedCoupons
 
       applied_coupon.mark_as_terminated! unless applied_coupon.terminated?
 
+      Utils::ActivityLog.produce(applied_coupon, "applied_coupon.deleted")
       result.applied_coupon = applied_coupon
       result
     rescue ActiveRecord::RecordInvalid => e

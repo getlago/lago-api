@@ -24,7 +24,10 @@ RSpec.describe ActivityLogsQuery, type: :query, clickhouse: true do
 
   context "with old activity logs" do
     let(:old_activity_log) do
-      create(:clickhouse_activity_log, organization_id: organization.id, logged_at: (ActivityLogsQuery::MAX_AGE + 3.days).ago)
+      create(:clickhouse_activity_log,
+        organization: organization,
+        resource: activity_log.resource,
+        logged_at: (ActivityLogsQuery::MAX_AGE + 3.days).ago)
     end
 
     before do

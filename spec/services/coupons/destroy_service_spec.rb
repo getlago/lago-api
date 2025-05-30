@@ -11,7 +11,11 @@ RSpec.describe Coupons::DestroyService, type: :service do
   let(:coupon_plan) { create(:coupon_plan, coupon:) }
 
   describe "#call" do
-    before { coupon }
+    before do
+      allow(Utils::ActivityLog).to receive(:produce)
+
+      coupon
+    end
 
     it "soft deletes the coupon" do
       freeze_time do
@@ -25,6 +29,12 @@ RSpec.describe Coupons::DestroyService, type: :service do
         expect { destroy_service.call }.to change { coupon_plan.reload.deleted_at }
           .from(nil).to(Time.current)
       end
+    end
+
+    it "produces an activity log" do
+      described_class.call(coupon:)
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(coupon, "coupon.deleted")
     end
 
     context "with applied coupons" do

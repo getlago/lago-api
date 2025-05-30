@@ -50,6 +50,7 @@ module Invoices
       if invoice.finalized?
         Utils::SegmentTrack.invoice_created(invoice)
         SendWebhookJob.perform_later("invoice.created", invoice)
+        Utils::ActivityLog.produce(invoice, "invoice.created")
         Invoices::GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -124,11 +125,11 @@ module Invoices
     end
 
     def create_applied_usage_thresholds
-      sorted_usage_thresholds.each do
+      sorted_usage_thresholds.each do |usage_threshold|
         AppliedUsageThreshold.create!(
           organization_id: lifetime_usage.organization_id,
           invoice:,
-          usage_threshold: _1,
+          usage_threshold:,
           lifetime_usage_amount_cents: lifetime_usage.total_amount_cents
         )
       end

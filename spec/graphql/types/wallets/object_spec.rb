@@ -27,6 +27,7 @@ RSpec.describe Types::Wallets::Object do
     expect(subject).to have_field(:last_balance_sync_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:last_consumed_credit_at).of_type("ISO8601DateTime")
 
+    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
     expect(subject).to have_field(:recurring_transaction_rules).of_type("[RecurringTransactionRule!]")
 
     expect(subject).to have_field(:invoice_requires_successful_payment).of_type("Boolean!")

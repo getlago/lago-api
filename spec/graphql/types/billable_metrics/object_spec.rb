@@ -23,6 +23,7 @@ RSpec.describe Types::BillableMetrics::Object do
     expect(subject).to have_field(:integration_mappings).of_type("[Mapping!]")
     expect(subject).to have_field(:rounding_function).of_type("RoundingFunctionEnum")
     expect(subject).to have_field(:rounding_precision).of_type("Int")
+    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
 
     expect(subject).to have_field(:has_active_subscriptions).of_type("Boolean!")
     expect(subject).to have_field(:has_draft_invoices).of_type("Boolean!")

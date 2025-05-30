@@ -12,7 +12,7 @@ RSpec.describe PaymentReceipts::GeneratePdfAndNotifyJob, type: :job do
     allow(PaymentReceipts::GeneratePdfService).to receive(:new)
       .with(payment_receipt:, context: "api")
       .and_return(generate_service)
-    allow(generate_service).to receive(:call)
+    allow(generate_service).to receive(:call_with_activity_log)
       .and_return(result)
     allow(PaymentReceiptMailer).to receive(:with)
       .with(payment_receipt:)
@@ -23,7 +23,7 @@ RSpec.describe PaymentReceipts::GeneratePdfAndNotifyJob, type: :job do
     described_class.perform_now(payment_receipt:, email: true)
 
     expect(PaymentReceipts::GeneratePdfService).to have_received(:new)
-    expect(generate_service).to have_received(:call)
+    expect(generate_service).to have_received(:call_with_activity_log)
   end
 
   context "when email is true" do

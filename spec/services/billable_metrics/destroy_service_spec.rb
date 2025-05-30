@@ -16,6 +16,7 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
 
     allow(BillableMetrics::DeleteEventsJob).to receive(:perform_later).and_call_original
     allow(Invoices::RefreshDraftService).to receive(:call)
+    allow(Utils::ActivityLog).to receive(:produce).and_call_original
   end
 
   describe "#call" do
@@ -57,6 +58,14 @@ RSpec.describe BillableMetrics::DestroyService, type: :service do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("billable_metric_not_found")
       end
+    end
+  end
+
+  describe ".call" do
+    it "produces an activity log" do
+      described_class.call(metric: billable_metric)
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(billable_metric, "billable_metric.deleted")
     end
   end
 end

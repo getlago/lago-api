@@ -12,6 +12,11 @@ module AppliedCoupons
       super
     end
 
+    activity_loggable(
+      action: "applied_coupon.created",
+      record: -> { result.applied_coupon }
+    )
+
     def call
       check_preconditions
       return result if result.error

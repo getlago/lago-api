@@ -92,6 +92,7 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
       before do
         allow(modifications_api).to receive(:refund_captured_payment)
           .and_raise(Adyen::AdyenError.new(nil, nil, "error"))
+        allow(Utils::ActivityLog).to receive(:produce)
       end
 
       it "delivers an error webhook" do
@@ -108,6 +109,13 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
               error_code: nil
             }
           )
+      end
+
+      it "produces an activity log" do
+        expect { adyen_service.create }
+          .to raise_error(Adyen::AdyenError)
+
+        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failure")
       end
     end
 
@@ -278,7 +286,10 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
     end
 
     context "when status is failed" do
-      before { adyen_customer }
+      before do
+        adyen_customer
+        allow(Utils::ActivityLog).to receive(:produce)
+      end
 
       it "delivers an error webhook" do
         result = adyen_service.update_status(
@@ -304,6 +315,15 @@ RSpec.describe CreditNotes::Refunds::AdyenService, type: :service do
               }
             )
         end
+      end
+
+      it "produces an activity log" do
+        adyen_service.update_status(
+          provider_refund_id: refund.provider_refund_id,
+          status: "failed"
+        )
+
+        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failure")
       end
     end
   end

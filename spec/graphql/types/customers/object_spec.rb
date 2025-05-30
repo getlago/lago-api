@@ -59,6 +59,7 @@ RSpec.describe Types::Customers::Object do
 
     expect(subject).to have_field(:invoices).of_type("[Invoice!]")
 
+    expect(subject).to have_field(:activity_logs).of_type("[ActivityLog!]")
     expect(subject).to have_field(:applied_add_ons).of_type("[AppliedAddOn!]")
     expect(subject).to have_field(:applied_coupons).of_type("[AppliedCoupon!]")
     expect(subject).to have_field(:taxes).of_type("[Tax!]")

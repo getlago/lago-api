@@ -29,8 +29,11 @@ module Invoices
           invoice.failed!
           invoice.fees.each { |f| SendWebhookJob.perform_later("fee.created", f) }
           create_error_detail(fee_result.error.messages.dig(:tax_error)&.first)
+          Utils::ActivityLog.produce(invoice, "invoice.failed")
 
+          # rubocop:disable Rails/TransactionExitStatement
           return fee_result
+          # rubocop:enable Rails/TransactionExitStatement
         end
 
         Invoices::ComputeAmountsFromFees.call(invoice:, provider_taxes: result.fees_taxes)
@@ -48,6 +51,7 @@ module Invoices
       unless invoice.closed?
         Utils::SegmentTrack.invoice_created(invoice)
         deliver_webhooks
+        Utils::ActivityLog.produce(invoice, "invoice.created")
         GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?

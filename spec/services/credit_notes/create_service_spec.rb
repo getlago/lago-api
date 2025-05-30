@@ -56,9 +56,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     create(:fee_applied_tax, tax:, fee: fee1)
     create(:fee_applied_tax, tax:, fee: fee2)
     create(:invoice_applied_tax, tax:, invoice:) if invoice
+    allow(Utils::ActivityLog).to receive(:produce)
   end
 
-  describe ".call" do
+  describe "#call" do
     it "creates a credit note" do
       result = create_service.call
 
@@ -134,6 +135,12 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       expect do
         create_service.call
       end.to have_enqueued_job(SendEmailJob)
+    end
+
+    it "produces an activity log" do
+      result = create_service.call
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(result.credit_note, "credit_note.created")
     end
 
     it_behaves_like "syncs credit note" do

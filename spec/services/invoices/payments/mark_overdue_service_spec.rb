@@ -18,6 +18,10 @@ RSpec.describe Invoices::Payments::MarkOverdueService, type: :service do
   let(:invoice_dispute_lost_at) { nil }
 
   describe "#call" do
+    before do
+      allow(Utils::ActivityLog).to receive(:produce)
+    end
+
     it "mark the invoice as payment_overdue" do
       expect(result.invoice.payment_overdue).to be_truthy
     end
@@ -26,6 +30,12 @@ RSpec.describe Invoices::Payments::MarkOverdueService, type: :service do
       invoice = result.invoice
 
       expect(SendWebhookJob).to have_been_enqueued.with("invoice.payment_overdue", invoice)
+    end
+
+    it "produces an activity log" do
+      invoice = result.invoice
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.payment_overdue")
     end
 
     context "when invoice is nil" do

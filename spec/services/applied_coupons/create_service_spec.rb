@@ -28,6 +28,8 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
   let(:create_subscription) { customer.present? }
 
   before do
+    allow(Utils::ActivityLog).to receive(:produce)
+
     create(:subscription, customer:) if create_subscription
   end
 
@@ -41,6 +43,12 @@ RSpec.describe AppliedCoupons::CreateService, type: :service do
       expect(create_result.applied_coupon.coupon).to eq(coupon)
       expect(create_result.applied_coupon.amount_cents).to eq(coupon.amount_cents)
       expect(create_result.applied_coupon.amount_currency).to eq(coupon.amount_currency)
+    end
+
+    it "produces an activity log" do
+      applied_coupon = described_class.call(customer:, coupon:, params:).applied_coupon
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(applied_coupon, "applied_coupon.created")
     end
 
     context "when coupon type is percentage" do

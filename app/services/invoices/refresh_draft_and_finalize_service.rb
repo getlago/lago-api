@@ -17,7 +17,9 @@ module Invoices
         refresh_result = Invoices::RefreshDraftService.call(invoice:, context: :finalize)
         if invoice.tax_pending?
           invoice.update!(issuing_date: drafted_issuing_date)
+          # rubocop:disable Rails/TransactionExitStatement
           return refresh_result
+          # rubocop:enable Rails/TransactionExitStatement
         end
         refresh_result.raise_if_error!
 
@@ -33,6 +35,7 @@ module Invoices
         clear_invoice_generation_errors(invoice)
         unless invoice.closed?
           SendWebhookJob.perform_later("invoice.created", invoice)
+          Utils::ActivityLog.produce(invoice, "invoice.created")
           GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_email?)
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
@@ -43,6 +46,7 @@ module Invoices
         invoice.credit_notes.each do |credit_note|
           track_credit_note_created(credit_note)
           SendWebhookJob.perform_later("credit_note.created", credit_note)
+          Utils::ActivityLog.produce(credit_note, "credit_note.created")
           CreditNotes::GeneratePdfJob.perform_later(credit_note)
         end
       end

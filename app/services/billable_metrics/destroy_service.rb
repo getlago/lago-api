@@ -9,6 +9,11 @@ module BillableMetrics
       super
     end
 
+    activity_loggable(
+      action: "billable_metric.deleted",
+      record: -> { metric }
+    )
+
     def call
       return result.not_found_failure!(resource: "billable_metric") unless metric
 

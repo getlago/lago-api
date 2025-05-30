@@ -22,6 +22,7 @@ module Types
       field :trial_period, Float
       field :usage_thresholds, [Types::UsageThresholds::Object]
 
+      field :activity_logs, [Types::ActivityLogs::Object], null: true
       field :charges, [Types::Charges::Object]
       field :taxes, [Types::Taxes::Object]
 

@@ -70,6 +70,10 @@ RSpec.describe Invoices::VoidService, type: :service do
       context "when the payment status is not succeeded" do
         let(:payment_status) { [:pending, :failed].sample }
 
+        before do
+          allow(Utils::ActivityLog).to receive(:produce)
+        end
+
         it "voids the invoice" do
           result = void_service.call
 
@@ -97,6 +101,12 @@ RSpec.describe Invoices::VoidService, type: :service do
           void_service.call
 
           expect(invoice.subscriptions.first.lifetime_usage.recalculate_invoiced_usage).to be(true)
+        end
+
+        it "produces an activity log" do
+          invoice = described_class.call(invoice:).invoice
+
+          expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.voided")
         end
 
         context "when the invoice has applied credits from the wallet" do

@@ -11,6 +11,11 @@ module Credits
       super(nil)
     end
 
+    activity_loggable(
+      action: "wallet_transaction.created",
+      record: -> { result.wallet_transaction }
+    )
+
     def call
       if already_applied?
         return result.service_failure!(code: "already_applied", message: "Prepaid credits already applied")

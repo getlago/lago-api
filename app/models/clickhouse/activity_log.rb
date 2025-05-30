@@ -8,6 +8,22 @@ module Clickhouse
     belongs_to :organization
     belongs_to :resource, polymorphic: true
 
+    belongs_to :customer,
+      -> { with_discarded },
+      primary_key: :external_id,
+      foreign_key: :external_customer_id,
+      optional: true
+
+    belongs_to :subscription,
+      primary_key: :external_id,
+      foreign_key: :external_subscription_id,
+      optional: true
+
+    belongs_to :user, optional: true
+    belongs_to :api_key, optional: true
+
+    RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan Customer BillingEntity Coupon].freeze
+
     RESOURCE_TYPES = {
       billable_metric: "BillableMetric",
       plan: "Plan",
@@ -66,20 +82,16 @@ module Clickhouse
 
     before_save :ensure_activity_id
 
-    def user
-      organization.users.find_by(id: user_id)
-    end
+    # TODO: Remove this once we have soft deletion everywhere
+    def resource
+      return nil if resource_type.blank? || resource_id.blank?
 
-    def api_key
-      organization.api_keys.find_by(id: api_key_id)
-    end
-
-    def customer
-      organization.customers.find_by(external_id: external_customer_id)
-    end
-
-    def subscription
-      organization.subscriptions.find_by(external_id: external_subscription_id)
+      klass = resource_type.safe_constantize
+      if RESOURCE_TYPES_WITH_DISCARDED.include?(resource_type)
+        klass.with_discarded.find_by(organization_id: organization.id, id: resource_id)
+      else
+        klass.find_by(organization_id: organization.id, id: resource_id)
+      end
     end
 
     private
