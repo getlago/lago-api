@@ -31,20 +31,11 @@ module Invoices
 
         flag_lifetime_usage_for_refresh
 
-        # Process credits within the same transaction
         invoice.credits.each do |credit|
-          # Handle credits related to applied coupons
-          if credit.applied_coupon_id.present?
-            AppliedCoupons::RecreditService.call!(credit:)
-          end
-
-          # Handle credits related to credit notes
-          if credit.credit_note_id.present?
-            CreditNotes::RecreditService.call!(credit:)
-          end
+          AppliedCoupons::RecreditService.call!(credit:) if credit.applied_coupon_id.present?
+          CreditNotes::RecreditService.call!(credit:) if credit.credit_note_id.present?
         end
 
-        # Process wallet transactions within the same transaction
         invoice.wallet_transactions.outbound.each do |wallet_transaction|
           WalletTransactions::RecreditService.call!(wallet_transaction:)
         end
@@ -57,7 +48,6 @@ module Invoices
         end
       end
 
-      # Only proceed with webhooks and jobs if the transaction was successful
       unless invoice.voided?
         return result.service_failure!(code: "void_operation_failed", message: "Failed to void the invoice")
       end
@@ -84,66 +74,7 @@ module Invoices
       params.key?(:generate_credit_note)
     end
 
-    # Distributes a given amount proportionally across the invoice fees
-    # Returns an array of items with fee_id and amount_cents
-    def distribute_amount_to_items(total_amount)
-      return [] if total_amount.zero?
-
-      # Get all fees from the invoice that have remaining creditable amount
-      fees = invoice.fees.to_a.select { |fee| fee.creditable_amount_cents.positive? }
-
-      # Calculate total remaining creditable amount across all fees
-      total_creditable_amount = fees.sum(&:creditable_amount_cents)
-
-      # If there are no fees with creditable amount, return empty array
-      return [] if fees.empty? || total_creditable_amount.zero?
-
-      # Cap the total amount to the total creditable amount if needed
-      actual_total_amount = [total_amount, total_creditable_amount].min
-
-      # Calculate proportional amount for each fee based on remaining creditable amount
-      items = []
-      remaining_amount = actual_total_amount
-
-      # Process all fees except the last one
-      fees[0...-1].each do |fee|
-        # Calculate the proportion of this fee's creditable amount relative to the total
-        proportion = fee.creditable_amount_cents.to_f / total_creditable_amount
-
-        # Calculate the amount for this fee, capped at its creditable amount
-        fee_amount = [
-          (actual_total_amount * proportion).round,
-          fee.creditable_amount_cents
-        ].min
-
-        # Add the item if the amount is positive
-        if fee_amount.positive?
-          items << {
-            fee_id: fee.id,
-            amount_cents: fee_amount
-          }
-          remaining_amount -= fee_amount
-        end
-      end
-
-      # Assign the remaining amount to the last fee, capped at its creditable amount
-      last_fee = fees.last
-      if last_fee && remaining_amount.positive?
-        last_fee_amount = [remaining_amount, last_fee.creditable_amount_cents].min
-
-        if last_fee_amount.positive?
-          items << {
-            fee_id: last_fee.id,
-            amount_cents: last_fee_amount
-          }
-        end
-      end
-
-      items
-    end
-
     def create_credit_note
-      # Calculate valid amounts based on invoice limits
       available_credit_amount = invoice.creditable_amount_cents
       available_refund_amount = invoice.refundable_amount_cents
 
@@ -155,7 +86,6 @@ module Invoices
         return result.single_validation_failure!(field: :refund_amount, error_code: "refund_amount_exceeds_available_amount")
       end
 
-      # Calculate the total amount to be credited/refunded
       total_amount = credit_amount + refund_amount
 
       if total_amount > invoice.total_amount_cents
@@ -165,8 +95,8 @@ module Invoices
         )
       end
 
-      # Generate items with proportional distribution of the credit/refund amount
-      items = distribute_amount_to_items(total_amount)
+      estimate_result = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: total_amount)
+      items = estimate_result.success? ? estimate_result.credit_note.items.map { |item| { fee_id: item.fee_id, amount_cents: item.amount_cents } } : []
 
       result = CreditNotes::CreateService.call(
         invoice: invoice,
@@ -177,12 +107,11 @@ module Invoices
         items: items
       )
 
-      # Calculate remaining amount to be voided in a credit note
       total_invoice_amount = invoice.total_amount_cents
       remaining_amount = total_invoice_amount - credit_amount - refund_amount
       if remaining_amount.positive?
-        # Generate items for the remaining amount
-        remaining_items = distribute_amount_to_items(remaining_amount)
+        remaining_estimate = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: remaining_amount)
+        remaining_items = remaining_estimate.success? ? remaining_estimate.credit_note.items.map { |item| { fee_id: item.fee_id, amount_cents: item.amount_cents } } : []
 
         credit_note_to_void = CreditNotes::CreateService.call(
           invoice: invoice,
@@ -191,12 +120,27 @@ module Invoices
           credit_amount_cents: remaining_amount,
           items: remaining_items
         )
+
         if credit_note_to_void.success?
           CreditNotes::VoidService.call(credit_note: credit_note_to_void.credit_note)
         end
       end
 
       result
+    end
+
+    def estimate_credit_note_for_target_credit(invoice:, target_credit_cents:)
+      base_total = invoice.sub_total_including_taxes_amount_cents.to_f
+      ratio = target_credit_cents.to_f / base_total
+
+      items = invoice.fees.map do |fee|
+        {
+          fee_id: fee.id,
+          amount_cents: (fee.amount_cents * ratio).round
+        }
+      end
+
+      CreditNotes::EstimateService.call(invoice: invoice, items: items)
     end
   end
 end
