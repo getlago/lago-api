@@ -21,7 +21,7 @@ module Types
       field :user_email, String
 
       def user_email
-        object.user.email
+        object.user&.email
       end
 
       # TODO: remove this once we have a proper way to handle JSON in Clickhouse

@@ -4,13 +4,13 @@ module Api
   module V1
     class InvoicesController < Api::BaseController
       def create
-        result = Invoices::CreateOneOffService.new(
+        result = Invoices::CreateOneOffService.call(
           customer:,
           currency: create_params[:currency],
           fees: create_params[:fees],
           timestamp: Time.current.to_i,
           skip_psp: create_params[:skip_psp]
-        ).call
+        )
 
         if result.success?
           render_invoice(result.invoice)

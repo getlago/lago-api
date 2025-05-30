@@ -115,7 +115,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
         expect { gocardless_service.create }
           .to raise_error(GoCardlessPro::Error)
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failed")
+        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failure")
       end
     end
 
@@ -314,7 +314,7 @@ RSpec.describe CreditNotes::Refunds::GocardlessService, type: :service do
           status: "failed"
         )
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failed")
+        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failure")
       end
     end
   end

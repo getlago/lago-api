@@ -94,7 +94,7 @@ module Utils
       def resource(activity_object)
         case activity_object.class.name
         when "Payment"
-          activity_object.invoice
+          activity_object.payable
         when "AppliedCoupon"
           activity_object.coupon
         when "WalletTransaction"
