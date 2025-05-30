@@ -15,6 +15,10 @@ RSpec.describe Credits::CreditNoteService do
   end
 
   let(:amount_cents) { 100 }
+  let(:subscription) { create(:subscription, customer:) }
+  let(:subscription_fees) { [fee1, fee2] }
+  let(:fee1) { create(:fee, invoice:, subscription:, amount_cents: 60, taxes_amount_cents: 0) }
+  let(:fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 40, taxes_amount_cents: 0) }
   let(:customer) { create(:customer) }
   let(:context) { nil }
 
@@ -41,6 +45,7 @@ RSpec.describe Credits::CreditNoteService do
   before do
     credit_note1
     credit_note2
+    subscription_fees
   end
 
   describe ".call" do
@@ -70,6 +75,9 @@ RSpec.describe Credits::CreditNoteService do
         expect(credit_note1).to be_consumed
 
         expect(invoice.credit_notes_amount_cents).to eq(70)
+
+        expect(fee1.reload.precise_credit_notes_amount_cents).to eq(42)
+        expect(fee2.reload.precise_credit_notes_amount_cents).to eq(28)
       end
     end
 

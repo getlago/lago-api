@@ -2247,7 +2247,8 @@ CREATE TABLE public.fees (
     taxes_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
     taxes_base_rate double precision DEFAULT 1.0 NOT NULL,
     organization_id uuid NOT NULL,
-    billing_entity_id uuid NOT NULL
+    billing_entity_id uuid NOT NULL,
+    precise_credit_notes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL
 );
 
 
@@ -8415,6 +8416,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250530112903'),
 ('20250526133654'),
 ('20250526111147'),
 ('20250522134155'),
