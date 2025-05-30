@@ -62,7 +62,7 @@ module Fees
           fee_taxes_result = apply_provider_taxes(fees_result)
 
           unless fee_taxes_result.success?
-            return result.service_failure!(code: "tax_error", message: fee_taxes_result.error.code)
+            return result.service_failure!(code: "tax_error", message: fee_taxes_result.error.code) # rubocop:disable Rails/TransactionExitStatement
           end
         end
       end

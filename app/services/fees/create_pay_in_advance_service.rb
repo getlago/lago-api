@@ -34,7 +34,7 @@ module Fees
             result.validation_failure!(errors: {tax_error: [fee_taxes_result.error.code]})
             result.raise_if_error! unless charge.invoiceable?
 
-            return result
+            return result # rubocop:disable Rails/TransactionExitStatement
           end
         end
       end

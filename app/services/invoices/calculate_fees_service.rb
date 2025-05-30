@@ -48,7 +48,7 @@ module Invoices
         Credits::AppliedCouponsService.call(invoice:) if should_create_coupon_credit?
 
         totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice:, finalizing: finalizing_invoice?)
-        return totals_result if !totals_result.success? && totals_result.error.is_a?(BaseService::UnknownTaxFailure)
+        return totals_result if !totals_result.success? && totals_result.error.is_a?(BaseService::UnknownTaxFailure) # rubocop:disable Rails/TransactionExitStatement
 
         totals_result.raise_if_error!
 
