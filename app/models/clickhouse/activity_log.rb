@@ -19,6 +19,9 @@ module Clickhouse
       foreign_key: :external_subscription_id,
       optional: true
 
+    belongs_to :user, optional: true
+    belongs_to :api_key, optional: true
+
     RESOURCE_TYPES_WITH_DISCARDED = %w[BillableMetric Plan Customer BillingEntity Coupon].freeze
 
     RESOURCE_TYPES = {
@@ -78,22 +81,6 @@ module Clickhouse
     }
 
     before_save :ensure_activity_id
-
-    def user
-      organization.users.find_by(id: user_id)
-    end
-
-    def api_key
-      organization.api_keys.find_by(id: api_key_id)
-    end
-
-    def customer
-      organization.customers.find_by(external_id: external_customer_id)
-    end
-
-    def subscription
-      organization.subscriptions.find_by(external_id: external_subscription_id)
-    end
 
     # TODO: Remove this once we have soft deletion everywhere
     def resource
