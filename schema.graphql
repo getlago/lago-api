@@ -7981,7 +7981,7 @@ type Query {
   """
   Query invoice collections of an organization
   """
-  invoiceCollections(billingEntityId: ID, currency: CurrencyEnum): FinalizedInvoiceCollectionCollection!
+  invoiceCollections(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum): FinalizedInvoiceCollectionCollection!
 
   """
   Query invoice's credit note
