@@ -96,7 +96,7 @@ module Invoices
       end
 
       estimate_result = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: total_amount)
-      items = estimate_result.success? ? estimate_result.credit_note.items.map { |item| { fee_id: item.fee_id, amount_cents: item.amount_cents } } : []
+      items = estimate_result.success? ? estimate_result.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents} } : []
 
       result = CreditNotes::CreateService.call(
         invoice: invoice,
@@ -111,7 +111,7 @@ module Invoices
       remaining_amount = total_invoice_amount - credit_amount - refund_amount
       if remaining_amount.positive?
         remaining_estimate = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: remaining_amount)
-        remaining_items = remaining_estimate.success? ? remaining_estimate.credit_note.items.map { |item| { fee_id: item.fee_id, amount_cents: item.amount_cents } } : []
+        remaining_items = remaining_estimate.success? ? remaining_estimate.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents} } : []
 
         credit_note_to_void = CreditNotes::CreateService.call(
           invoice: invoice,
