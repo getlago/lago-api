@@ -8064,7 +8064,7 @@ type Query {
   """
   Query overdue balances of an organization
   """
-  overdueBalances(billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): OverdueBalanceCollection!
+  overdueBalances(billingEntityCode: String, billingEntityId: ID, currency: CurrencyEnum, expireCache: Boolean, externalCustomerId: String, months: Int): OverdueBalanceCollection!
 
   """
   Query a password reset by token
