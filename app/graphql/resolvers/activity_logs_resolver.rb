@@ -27,6 +27,8 @@ module Resolvers
     type Types::ActivityLogs::Object.collection_type, null: true
 
     def resolve(**args)
+      raise unauthorized_error unless License.premium?
+
       result = ActivityLogsQuery.call(
         organization: current_organization,
         filters: {
