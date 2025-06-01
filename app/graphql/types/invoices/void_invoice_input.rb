@@ -5,10 +5,10 @@ module Types
     class VoidInvoiceInput < Types::BaseInputObject
       description "Void Invoice input arguments"
 
-      argument :id, ID, required: true
-      argument :generate_credit_note, Boolean, required: false
-      argument :refund_amount, GraphQL::Types::BigInt, required: false
       argument :credit_amount, GraphQL::Types::BigInt, required: false
+      argument :generate_credit_note, Boolean, required: false
+      argument :id, ID, required: true
+      argument :refund_amount, GraphQL::Types::BigInt, required: false
     end
   end
 end
