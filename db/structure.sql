@@ -711,6 +711,7 @@ DROP TABLE IF EXISTS public.inbound_webhooks;
 DROP TABLE IF EXISTS public.idempotency_records;
 DROP TABLE IF EXISTS public.groups;
 DROP TABLE IF EXISTS public.group_properties;
+DROP VIEW IF EXISTS public.flat_filters;
 DROP VIEW IF EXISTS public.exports_wallets;
 DROP TABLE IF EXISTS public.wallets;
 DROP VIEW IF EXISTS public.exports_wallet_transactions;
@@ -2902,6 +2903,35 @@ CREATE VIEW public.exports_wallets AS
     w.last_consumed_credit_at,
     w.invoice_requires_successful_payment
    FROM public.wallets w;
+
+
+--
+-- Name: flat_filters; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.flat_filters AS
+ SELECT billable_metrics.organization_id,
+    billable_metrics.code AS billable_metric_code,
+    charges.plan_id,
+    charges.id AS charge_id,
+    charges.updated_at AS charge_updated_at,
+    charge_filters.id AS charge_filter_id,
+    charge_filters.updated_at AS charge_filter_updated_at,
+        CASE
+            WHEN (charge_filters.id IS NOT NULL) THEN jsonb_object_agg(COALESCE(billable_metric_filters.key, ''::character varying),
+            CASE
+                WHEN ((charge_filter_values."values")::text[] && ARRAY['__ALL_FILTER_VALUES__'::text]) THEN billable_metric_filters."values"
+                ELSE charge_filter_values."values"
+            END)
+            ELSE NULL::jsonb
+        END AS filters
+   FROM ((((public.billable_metrics
+     JOIN public.charges ON ((charges.billable_metric_id = billable_metrics.id)))
+     LEFT JOIN public.charge_filters ON ((charge_filters.charge_id = charges.id)))
+     LEFT JOIN public.charge_filter_values ON ((charge_filter_values.charge_filter_id = charge_filters.id)))
+     LEFT JOIN public.billable_metric_filters ON ((billable_metric_filters.id = charge_filter_values.billable_metric_filter_id)))
+  WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
+  GROUP BY billable_metrics.organization_id, billable_metrics.code, charges.plan_id, charges.id, charges.updated_at, charge_filters.id, charge_filters.updated_at;
 
 
 --
@@ -8494,6 +8524,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250609121102'),
+('20250602145535'),
 ('20250602075710'),
 ('20250530112903'),
 ('20250526134136'),
