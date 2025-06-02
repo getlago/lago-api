@@ -102,11 +102,6 @@ module ScenariosHelper
     end
   end
 
-  def create_alert(sub_external_id, params)
-    post_with_token(organization, "/api/v1/subscriptions/#{sub_external_id}/alerts", {alert: params})
-    perform_all_enqueued_jobs
-  end
-
   ### Invoices
 
   def refresh_invoice(invoice)

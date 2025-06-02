@@ -1932,19 +1932,19 @@
           "inputFields": null,
           "enumValues": [
             {
-              "name": "usage_amount",
+              "name": "current_usage_amount",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "billable_metric_usage_amount",
+              "name": "billable_metric_current_usage_amount",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "billable_metric_usage_units",
+              "name": "billable_metric_current_usage_units",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
