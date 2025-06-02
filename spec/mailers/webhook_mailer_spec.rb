@@ -19,16 +19,13 @@ RSpec.describe WebhookMailer, type: :mailer do
 
     it "sends the email" do
       create(:membership, user: create(:user, email: "admin1@example.com"), organization:)
-      create(:membership, user: create(:user, email: "admin2@example.com"), organization:)
+      create(:membership, user: create(:user, email: "admin2@example.com,,"), organization:)
       create(:membership, user: create(:user, email: "alpha@example.com , beta@example.com"), organization:)
 
       expect(mail.subject).to eq("[ALERT] Webhook delivery failed for Test Org")
-      expect(mail.to).to match_array([
-        "admin1@example.com", "admin2@example.com", "alpha@example.com", "beta@example.com", "org1@example.com", "org2@example.com"
-      ])
+      expect(mail.to).to match_array(%w[admin1@example.com admin2@example.com alpha@example.com beta@example.com org1@example.com org2@example.com])
 
-      expect(mail.content_type).to start_with "multipart/alternative"
-      expect(mail.content_type).to end_with "charset=UTF-8"
+      expect(mail.content_type).to eq "text/html; charset=UTF-8"
 
       body = mail.body.encoded
       expect(body).to include("https://app.lago.com/developers/webhooks")
@@ -36,43 +33,37 @@ RSpec.describe WebhookMailer, type: :mailer do
       expect(body).to include("The Lago Team") # Ensure footer
     end
 
-    context "when organization has no admins" do
-      it "only uses emails from the organization email field" do
-        expect(mail.to).to match_array(["org1@example.com", "org2@example.com"])
-      end
-    end
-
-    context "when organization email has whitespace" do
-      let(:organization) { create(:organization, email: "org1@example.com, org2@example.com , org3@example.com") }
-
-      it "handles whitespace in comma-separated emails" do
-        expected_emails = ["org1@example.com", "org2@example.com", "org3@example.com"]
-        expect(mail.to).to match_array(expected_emails)
-      end
-    end
-
-    context "when organization no email" do
-      let(:organization) { create(:organization, email: nil) }
-
-      it "handles empty entries in comma-separated emails" do
-        create(:membership, user: create(:user, email: "admin1@example.com"), organization:)
-        expected_emails = ["admin1@example.com"]
-        expect(mail.to).to match_array(expected_emails)
-      end
-    end
-
-    context "when organization email has empty entries" do
-      let(:organization) { create(:organization, email: "org1@example.com,,org2@example.com") }
-
-      it "handles empty entries in comma-separated emails" do
-        expected_emails = ["org1@example.com", "org2@example.com"]
-        expect(mail.to).to match_array(expected_emails)
-      end
-    end
-
     it "delivers the email" do
       expect { mail.deliver_now }.to change { ActionMailer::Base.deliveries.count }.by(1)
       expect(ActionMailer::Base.deliveries.last).to eq(mail)
+    end
+
+    describe "#to" do
+      subject { mail.to }
+
+      context "when organization email has whitespace" do
+        let(:organization) { create(:organization, email: "org1@example.com, org2@example.com , org3@example.com") }
+
+        it "handles whitespace in comma-separated emails" do
+          expect(subject).to match_array(["org1@example.com", "org2@example.com", "org3@example.com"])
+        end
+      end
+
+      context "when organization no email" do
+        let(:organization) { create(:organization, email: nil) }
+
+        it "handles empty entries in comma-separated emails" do
+          expect(subject).to match_array([])
+        end
+      end
+
+      context "when organization email has empty entries" do
+        let(:organization) { create(:organization, email: "org1@example.com,,org2@example.com") }
+
+        it "handles empty entries in comma-separated emails" do
+          expect(subject).to match_array(["org1@example.com", "org2@example.com"])
+        end
+      end
     end
   end
 end

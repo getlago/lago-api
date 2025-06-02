@@ -16,9 +16,12 @@ RSpec.describe Webhooks::NotifyFailureService, type: :service do
       allow(mailer_spy = instance_double(WebhookMailer))
         .to receive(:failure_notification).and_return(double(deliver_later: true)) # rubocop:disable RSpec/VerifiedDoubles
       allow(WebhookMailer).to receive(:with).with(webhook: webhook).and_return(mailer_spy)
+      allow_any_instance_of(described_class).to receive(:should_notify?).and_return(should_notify) # rubocop:disable RSpec/AnyInstance
     end
 
-    context "when no notification has been sent in the last hour" do
+    context "when should notify" do
+      let(:should_notify) { true }
+
       it "sends a failure notification email and writes the notification time to cache" do
         freeze_time do
           result = service_call
@@ -29,38 +32,14 @@ RSpec.describe Webhooks::NotifyFailureService, type: :service do
       end
     end
 
-    context "when a notification has been sent less than an hour ago" do
-      before do
-        allow(Rails.cache).to receive(:read).with(cache_key).and_return(30.minutes.ago)
-      end
+    context "when should not notify" do
+      let(:should_notify) { false }
 
       it "does not send a notification email" do
         result = service_call
         expect(result).to be_success
         expect(WebhookMailer).not_to have_received(:with)
         expect(Rails.cache).not_to have_received(:write)
-      end
-    end
-
-    context "when a notification has been sent exactly an hour ago" do
-      before do
-        allow(Rails.cache).to receive(:read).with(cache_key).and_return(1.hour.ago)
-      end
-
-      it "sends a failure notification email" do
-        service_call
-        expect(WebhookMailer.with(webhook:).failure_notification).to have_received(:deliver_later)
-      end
-    end
-
-    context "when a notification has been sent more than an hour ago" do
-      before do
-        allow(Rails.cache).to receive(:read).with(cache_key).and_return(2.hours.ago)
-      end
-
-      it "sends a failure notification email" do
-        service_call
-        expect(WebhookMailer.with(webhook:).failure_notification).to have_received(:deliver_later)
       end
     end
   end

@@ -7,7 +7,7 @@ class WebhookMailer < ApplicationMailer
     @front_webhooks_url = "#{ENV["LAGO_FRONT_URL"]}/developers/webhooks"
     @failed_webhooks_count = @webhook.organization.webhooks.failed.where(last_retried_at: 1.hour.ago..).count
 
-    #  NOTE: Members can have avec CSV string with emails, just like organization.email
+    # NOTE: user.email can be comma-separated list of email addresses, just like organization.email
     @emails = @webhook.organization.admins.pluck(:email) + [@webhook.organization.email]
     @clean_addresses = @emails.compact.map { it.split(",") }.flatten.compact.uniq
 
