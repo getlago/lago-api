@@ -20,9 +20,12 @@ RSpec.describe WebhookMailer, type: :mailer do
     it "sends the email" do
       create(:membership, user: create(:user, email: "admin1@example.com"), organization:)
       create(:membership, user: create(:user, email: "admin2@example.com"), organization:)
+      create(:membership, user: create(:user, email: "alpha@example.com , beta@example.com"), organization:)
 
       expect(mail.subject).to eq("[ALERT] Webhook delivery failed for Test Org")
-      expect(mail.to).to match_array(["admin1@example.com", "admin2@example.com", "org1@example.com", "org2@example.com"])
+      expect(mail.to).to match_array([
+        "admin1@example.com", "admin2@example.com", "alpha@example.com", "beta@example.com", "org1@example.com", "org2@example.com"
+      ])
 
       expect(mail.content_type).to start_with "multipart/alternative"
       expect(mail.content_type).to end_with "charset=UTF-8"
