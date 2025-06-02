@@ -925,7 +925,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           it "does not enqueue the job for creating new charge" do
             expect do
               plans_service.call
-            end.not_to have_enqueued_job(Charges::CreateJob)
+            end.not_to have_enqueued_job(Charges::CreateChildrenJob)
           end
         end
 
@@ -933,7 +933,8 @@ RSpec.describe Plans::UpdateService, type: :service do
           it "enqueues the job for creating new charge" do
             expect do
               plans_service.call
-            end.to have_enqueued_job(Charges::CreateJob)
+            end.to have_enqueued_job(Charges::CreateChildrenJob)
+              .with(charge: Charge, payload: Hash)
           end
         end
 
@@ -945,7 +946,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           it "does not enqueue the job for creating new charge" do
             expect do
               plans_service.call
-            end.not_to have_enqueued_job(Charges::CreateJob)
+            end.not_to have_enqueued_job(Charges::CreateChildrenJob)
           end
         end
       end

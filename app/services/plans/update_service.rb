@@ -92,13 +92,11 @@ module Plans
       end
     end
 
-    def cascade_charge_creation(payload_charge)
+    def cascade_charge_creation(charge, payload_charge)
       return unless cascade?
       return if plan.children.empty?
 
-      plan.children.find_each do |p|
-        Charges::CreateJob.perform_later(plan: p, params: payload_charge)
-      end
+      Charges::CreateChildrenJob.perform_later(charge:, payload: payload_charge)
     end
 
     def cascade_charge_removal(charge)
@@ -169,10 +167,9 @@ module Plans
           next
         end
 
-        create_charge_result = Charges::CreateService.call(plan:, params: payload_charge)
-        create_charge_result.raise_if_error!
+        create_charge_result = Charges::CreateService.call!(plan:, params: payload_charge)
 
-        after_commit { cascade_charge_creation(payload_charge.merge(parent_id: create_charge_result.charge.id)) }
+        after_commit { cascade_charge_creation(create_charge_result.charge, payload_charge) }
         created_charges_ids.push(create_charge_result.charge.id)
       end
 
