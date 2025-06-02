@@ -15,6 +15,7 @@ RSpec.describe Invoices::GeneratePdfJob, type: :job do
     allow(Invoices::GeneratePdfService).to receive(:new)
       .with(invoice:, context: "api")
       .and_return(generate_service)
+    allow(generate_service).to receive(:produce_activity_log?).and_return(true)
     allow(generate_service).to receive(:call_with_activity_log)
       .and_return(result)
 
