@@ -11,7 +11,7 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
   before { triggered_alert }
 
   context "with usage_amount alert" do
-    let(:alert) { create(:usage_amount_alert, subscription_external_id: "ext-id", code: "first") }
+    let(:alert) { create(:usage_current_amount_alert, subscription_external_id: "ext-id", code: "first") }
 
     it "serializes the object" do
       result = JSON.parse(serializer.to_json)
@@ -23,7 +23,7 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
       expect(payload["billable_metric_code"]).to be_nil
       expect(payload["alert_name"]).to eq("General Alert")
       expect(payload["alert_code"]).to eq("first")
-      expect(payload["alert_type"]).to eq("usage_amount")
+      expect(payload["alert_type"]).to eq("current_usage_amount")
       expect(payload["current_value"]).to eq("3000.0")
       expect(payload["previous_value"]).to eq("1000.0")
       expect(payload["crossed_thresholds"]).to eq([
@@ -34,8 +34,8 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
     end
   end
 
-  context "with billable_metric_usage_amount alert" do
-    let(:alert) { create(:billable_metric_usage_amount_alert, subscription_external_id: "ext-id") }
+  context "with billable_metric_current_usage_amount alert" do
+    let(:alert) { create(:billable_metric_current_usage_amount_alert, subscription_external_id: "ext-id") }
 
     it "has the billable_metric_id the object" do
       result = JSON.parse(serializer.to_json)

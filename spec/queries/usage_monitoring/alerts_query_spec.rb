@@ -11,7 +11,7 @@ RSpec.describe UsageMonitoring::AlertsQuery, type: :query do
   let(:organization) { membership.organization }
   let(:subscription) { create(:subscription, organization:) }
   let(:alert_first) { create(:alert, organization:, subscription_external_id: subscription.external_id) }
-  let(:alert_second) { create(:billable_metric_usage_amount_alert, organization:, subscription_external_id: subscription.external_id) }
+  let(:alert_second) { create(:billable_metric_current_usage_amount_alert, organization:, subscription_external_id: subscription.external_id) }
   let(:alert_third) { create(:alert, organization:) }
   let(:pagination) { {page: 1, limit: 5} }
   let(:filters) { nil }

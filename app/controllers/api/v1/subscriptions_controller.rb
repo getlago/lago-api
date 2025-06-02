@@ -64,7 +64,7 @@ module Api
           organization_id: current_organization.id
         )
 
-        result = Subscriptions::CreateService.call(
+        result = ::Subscriptions::CreateService.call(
           customer:,
           plan:,
           params: create_params.to_h
@@ -90,7 +90,7 @@ module Api
           query.active
         end.first
 
-        result = Subscriptions::TerminateService.call(subscription:)
+        result = ::Subscriptions::TerminateService.call(subscription:)
 
         if result.success?
           render_subscription(result.subscription)
@@ -113,7 +113,7 @@ module Api
           query
         end.first
 
-        result = Subscriptions::UpdateService.call(
+        result = ::Subscriptions::UpdateService.call(
           subscription:,
           params: update_params.to_h
         )

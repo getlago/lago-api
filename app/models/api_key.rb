@@ -7,7 +7,7 @@ class ApiKey < ApplicationRecord
     activity_log add_on analytic billable_metric coupon applied_coupon credit_note customer_usage
     customer event fee invoice organization payment payment_receipt payment_request plan subscription lifetime_usage
     tax wallet wallet_transaction webhook_endpoint webhook_jwt_public_key invoice_custom_section
-    billing_entity
+    billing_entity alert
   ].freeze
 
   MODES = %w[read write].freeze

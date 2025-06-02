@@ -7,7 +7,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization) }
   let(:subscription) { create(:subscription, customer:, organization: membership.organization) }
-  let(:alert) { create(:usage_amount_alert, subscription_external_id: subscription.external_id, organization: membership.organization, recurring_threshold: 33, thresholds: [10, 20, 22]) }
+  let(:alert) { create(:usage_current_amount_alert, subscription_external_id: subscription.external_id, organization: membership.organization, recurring_threshold: 33, thresholds: [10, 20, 22]) }
 
   let(:mutation) do
     <<-GQL
@@ -52,7 +52,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Update, type: :graphql do
 
     result_data = result["data"]["updateSubscriptionAlert"]
     expect(result_data["id"]).to eq alert.id
-    expect(result_data["alertType"]).to eq "usage_amount"
+    expect(result_data["alertType"]).to eq "current_usage_amount"
     expect(result_data["code"]).to eq "new code"
     expect(result_data["billableMetric"]).to be_nil
     expect(result_data["thresholds"]).to contain_exactly(
@@ -62,7 +62,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Update, type: :graphql do
   end
 
   context "with new billable_metric" do
-    let(:alert) { create(:billable_metric_usage_amount_alert, subscription_external_id: subscription.external_id, organization: membership.organization, recurring_threshold: 33, thresholds: [10, 12]) }
+    let(:alert) { create(:billable_metric_current_usage_amount_alert, subscription_external_id: subscription.external_id, organization: membership.organization, recurring_threshold: 33, thresholds: [10, 12]) }
 
     it "updates the alert" do
       new_billable_metric = create(:billable_metric, code: "new_bm", organization: membership.organization)
@@ -83,7 +83,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Update, type: :graphql do
 
       result_data = result["data"]["updateSubscriptionAlert"]
       expect(result_data["id"]).to eq alert.id
-      expect(result_data["alertType"]).to eq "billable_metric_usage_amount"
+      expect(result_data["alertType"]).to eq "billable_metric_current_usage_amount"
       expect(result_data["code"]).to eq "new code"
       expect(result_data["thresholds"]).to contain_exactly(
         {"code" => "warn10", "value" => "10.0", "recurring" => false},

@@ -106,9 +106,9 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
   context "when subscription has alerts" do
     let(:premium_integrations) { [] }
     let(:billable_metric) { create(:billable_metric, organization:) }
-    let(:alert) { create(:usage_amount_alert, organization:, subscription_external_id: subscription.external_id) }
-    let(:alert_2) { create(:billable_metric_usage_amount_alert, billable_metric:, organization:, subscription_external_id: subscription.external_id) }
-    let(:alert_3) { create(:billable_metric_usage_units_alert, billable_metric:, organization:, subscription_external_id: subscription.external_id) }
+    let(:alert) { create(:usage_current_amount_alert, organization:, subscription_external_id: subscription.external_id) }
+    let(:alert_2) { create(:billable_metric_current_usage_amount_alert, billable_metric:, organization:, subscription_external_id: subscription.external_id) }
+    let(:alert_3) { create(:billable_metric_current_usage_units_alert, billable_metric:, organization:, subscription_external_id: subscription.external_id) }
     let(:alert_4) { create(:lifetime_usage_amount_alert, organization:, subscription_external_id: subscription.external_id) }
 
     before do

@@ -35,7 +35,7 @@ end
 sub = create_customer_with_sub("alerting-#{SecureRandom.hex}", plan:, organization:)
 
 UsageMonitoring::CreateAlertService.call(organization:, subscription: sub, params: {
-  alert_type: "usage_amount",
+  alert_type: "current_usage_amount",
   code: "default",
   name: "Default Alert",
   thresholds: [
@@ -54,7 +54,7 @@ UsageMonitoring::CreateAlertService.call(organization:, subscription: sub, param
 })
 
 UsageMonitoring::CreateAlertService.call(organization:, subscription: sub, params: {
-  alert_type: "billable_metric_usage_amount",
+  alert_type: "billable_metric_current_usage_amount",
   billable_metric: ops_bm,
   code: "ops",
   name: "Operations Alert",

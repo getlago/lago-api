@@ -7,7 +7,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Destroy, type: :graphql do
   let(:membership) { create(:membership) }
   let(:customer) { create(:customer, organization: membership.organization) }
   let(:subscription) { create(:subscription, customer:) }
-  let(:alert) { create(:usage_amount_alert, subscription_external_id: subscription.external_id, organization: membership.organization, recurring_threshold: 33, thresholds: [10, 20, 22]) }
+  let(:alert) { create(:usage_current_amount_alert, subscription_external_id: subscription.external_id, organization: membership.organization, recurring_threshold: 33, thresholds: [10, 20, 22]) }
 
   let(:mutation) do
     <<-GQL
@@ -46,7 +46,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Destroy, type: :graphql do
     )
 
     result_data = result["data"]["destroySubscriptionAlert"]
-    expect(result_data["alertType"]).to eq "usage_amount"
+    expect(result_data["alertType"]).to eq "current_usage_amount"
     expect(result_data["code"]).to start_with "default"
     expect(result_data["thresholds"]).to be_empty
     expect(result_data["deletedAt"]).to start_with Time.current.year.to_s

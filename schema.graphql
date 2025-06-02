@@ -451,10 +451,10 @@ type AlertThreshold {
 }
 
 enum AlertTypeEnum {
-  billable_metric_usage_amount
-  billable_metric_usage_units
+  billable_metric_current_usage_amount
+  billable_metric_current_usage_units
+  current_usage_amount
   lifetime_usage_amount
-  usage_amount
 }
 
 type AnrokCustomer {

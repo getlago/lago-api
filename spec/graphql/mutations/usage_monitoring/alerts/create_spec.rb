@@ -41,7 +41,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
     {
       subscriptionId: subscription.id,
       code: "global",
-      alertType: "usage_amount",
+      alertType: "current_usage_amount",
       thresholds: [
         {code: "warn", value: "10"},
         {code: "alert", value: "50"},
@@ -61,7 +61,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
   it "creates an alert" do
     result_data = result["data"]["createSubscriptionAlert"]
     expect(result_data["subscriptionExternalId"]).to eq subscription.external_id
-    expect(result_data["alertType"]).to eq "usage_amount"
+    expect(result_data["alertType"]).to eq "current_usage_amount"
     expect(result_data["code"]).to eq "global"
     expect(result_data["thresholds"]).to contain_exactly(
       {"code" => "warn", "value" => "10.0", "recurring" => false}, # Notice .0 since it's a BigDecimal
@@ -76,7 +76,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
       {
         subscriptionId: subscription.id,
         code: "bm",
-        alertType: "billable_metric_usage_amount",
+        alertType: "billable_metric_current_usage_amount",
         thresholds: [{code: "warn", value: "10"}],
         billableMetricId: billable_metric.id
       }
@@ -85,7 +85,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
     it "creates an alert" do
       result_data = result["data"]["createSubscriptionAlert"]
       expect(result_data["subscriptionExternalId"]).to eq subscription.external_id
-      expect(result_data["alertType"]).to eq "billable_metric_usage_amount"
+      expect(result_data["alertType"]).to eq "billable_metric_current_usage_amount"
       expect(result_data["code"]).to eq "bm"
       expect(result_data["thresholds"]).to contain_exactly(
         {"code" => "warn", "value" => "10.0", "recurring" => false}
@@ -100,7 +100,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
       {
         subscriptionId: subscription.id,
         code: "bm",
-        alertType: "billable_metric_usage_amount",
+        alertType: "billable_metric_current_usage_amount",
         thresholds: [{code: "warn", value: "10"}],
         billableMetricId: SecureRandom.uuid
       }
@@ -119,7 +119,7 @@ RSpec.describe Mutations::UsageMonitoring::Alerts::Create, type: :graphql do
       {
         subscriptionId: subscription.id,
         code: "bm",
-        alertType: "billable_metric_usage_amount",
+        alertType: "billable_metric_current_usage_amount",
         thresholds: [{code: "warn", value: "10"}]
       }
     end
