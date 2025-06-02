@@ -84,4 +84,25 @@ RSpec.describe ChargeFilters::EventMatchingService, type: :service do
       expect(service_result.charge_filter).to be_nil
     end
   end
+
+  context "with an ALL_FILTER_VALUES filter" do
+    let(:filter2_values) do
+      [
+        create(:charge_filter_value, values: ["card"], billable_metric_filter: payment_method, charge_filter: filter2),
+        create(:charge_filter_value, values: ["domestic"], billable_metric_filter: card_location, charge_filter: filter2),
+        create(
+          :charge_filter_value,
+          values: [ChargeFilterValue::ALL_FILTER_VALUES],
+          billable_metric_filter: scheme,
+          charge_filter: filter2
+        ),
+        create(:charge_filter_value, values: ["credit"], billable_metric_filter: card_type, charge_filter: filter2),
+        create(:charge_filter_value, values: ["2"], billable_metric_filter: card_number, charge_filter: filter2)
+      ]
+    end
+
+    it "returns the filter matching the most properties" do
+      expect(service_result.charge_filter).to eq(filter2)
+    end
+  end
 end
