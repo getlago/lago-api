@@ -20,6 +20,10 @@ module Invoices
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
       return result.not_allowed_failure!(code: "not_voidable") if !invoice.voidable? && !explicit_void_intent?
+      return result.single_validation_failure!(
+        field: :credit_refund_amount,
+        error_code: "total_amount_exceeds_invoice_amount"
+      ) unless validate_credit_note_amounts!
 
       ActiveRecord::Base.transaction do
         invoice.payment_overdue = false if invoice.payment_overdue?
@@ -74,26 +78,18 @@ module Invoices
       params.key?(:generate_credit_note)
     end
 
+    def validate_credit_note_amounts!
+      return true unless generate_credit_note
+
+      return false if credit_amount > invoice.creditable_amount_cents
+      return false if refund_amount > invoice.refundable_amount_cents
+      return false if (credit_amount + refund_amount) > invoice.creditable_amount_cents
+
+      true
+    end
+
     def create_credit_note
-      available_credit_amount = invoice.creditable_amount_cents
-      available_refund_amount = invoice.refundable_amount_cents
-
-      if credit_amount > available_credit_amount
-        return result.single_validation_failure!(field: :credit_amount, error_code: "credit_amount_exceeds_available_amount")
-      end
-
-      if refund_amount > available_refund_amount
-        return result.single_validation_failure!(field: :refund_amount, error_code: "refund_amount_exceeds_available_amount")
-      end
-
       total_amount = credit_amount + refund_amount
-
-      if total_amount > available_credit_amount
-        return result.single_validation_failure!(
-          field: :credit_refund_amount,
-          error_code: "total_amount_exceeds_invoice_amount"
-        )
-      end
 
       estimate_result = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: total_amount)
       items = estimate_result.success? ? estimate_result.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents} } : []
@@ -107,8 +103,7 @@ module Invoices
         items: items
       )
 
-      total_invoice_amount = invoice.total_amount_cents
-      remaining_amount = total_invoice_amount - credit_amount - refund_amount
+      remaining_amount = invoice.reload.creditable_amount_cents
       if remaining_amount.positive?
         remaining_estimate = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: remaining_amount)
         remaining_items = remaining_estimate.success? ? remaining_estimate.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents} } : []
