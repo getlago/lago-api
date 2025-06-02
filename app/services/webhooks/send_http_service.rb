@@ -28,10 +28,11 @@ module Webhooks
       EOFError => e
       mark_webhook_as_failed(e)
 
-      # NOTE: By default, Lago is retrying 3 times a webhook
-      return if webhook.retries >= ENV.fetch("LAGO_WEBHOOK_ATTEMPTS", 3).to_i
-
-      SendHttpWebhookJob.set(wait: wait_value).perform_later(webhook)
+      if webhook.retries >= ENV.fetch("LAGO_WEBHOOK_ATTEMPTS", 3).to_i
+        Webhooks::NotifyFailureService.call(webhook: webhook)
+      else
+        SendHttpWebhookJob.set(wait: wait_value).perform_later(webhook)
+      end
     end
 
     private

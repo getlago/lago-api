@@ -40,16 +40,15 @@ RSpec.describe Webhooks::SendHttpService, type: :service do
         LagoHttpClient::HttpError.new(403, error_body.to_json, "")
       )
       allow(SendHttpWebhookJob).to receive(:set).and_return(class_double(SendHttpWebhookJob, perform_later: nil))
+      allow(Webhooks::NotifyFailureService).to receive(:call).and_call_original
     end
 
     it "creates a failed webhook" do
       service.call
 
-      aggregate_failures do
-        expect(webhook).to be_failed
-        expect(webhook.http_status).to eq(403)
-        expect(SendHttpWebhookJob).to have_received(:set)
-      end
+      expect(webhook).to be_failed
+      expect(webhook.http_status).to eq(403)
+      expect(SendHttpWebhookJob).to have_received(:set)
     end
 
     context "with a failed webhook" do
@@ -58,22 +57,21 @@ RSpec.describe Webhooks::SendHttpService, type: :service do
       it "fails the retried webhooks" do
         service.call
 
-        aggregate_failures do
-          expect(webhook).to be_failed
-          expect(webhook.http_status).to eq(403)
-          expect(webhook.retries).to eq(1)
-          expect(webhook.last_retried_at).not_to be_nil
-          expect(SendHttpWebhookJob).to have_received(:set)
-        end
+        expect(webhook).to be_failed
+        expect(webhook.http_status).to eq(403)
+        expect(webhook.retries).to eq(1)
+        expect(webhook.last_retried_at).not_to be_nil
+        expect(SendHttpWebhookJob).to have_received(:set)
       end
 
       context "when the webhook failed 3 times" do
         let(:webhook) { create(:webhook, :failed, retries: 2) }
 
-        it "stops trying" do
+        it "stops trying and notify the admins" do
           service.call
           expect(webhook.reload.retries).to eq 3
           expect(SendHttpWebhookJob).not_to have_received(:set)
+          expect(Webhooks::NotifyFailureService).to have_received(:call).with(webhook:)
         end
       end
     end
