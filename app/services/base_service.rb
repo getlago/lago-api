@@ -229,16 +229,19 @@ class BaseService
 
   Result = LegacyResult
 
-  def self.activity_loggable(action:, record:)
-    self.activity_log_config = {action:, record:}
+  def self.activity_loggable(action:, record:, condition: -> { true })
+    self.activity_log_config = {action:, record:, condition:}
   end
 
   def self.call(*, **, &)
     LagoTracer.in_span("#{name}#call") do
       instance = new(*, **)
-      return instance.call_with_activity_log(&) if activity_log_config
 
-      instance.call(&)
+      if instance.produce_activity_log?
+        instance.call_with_activity_log(&)
+      else
+        instance.call(&)
+      end
     end
   end
 
@@ -269,10 +272,17 @@ class BaseService
     raise NotImplementedError
   end
 
+  def produce_activity_log?
+    return false if activity_log_config.nil?
+
+    instance_exec(&self.class.activity_log_config[:condition])
+  end
+
   def call_with_activity_log(&block)
     action = self.class.activity_log_config[:action]
 
-    if action.include?("updated")
+    case action
+    when /updated/
       record = instance_exec(&self.class.activity_log_config[:record])
       Utils::ActivityLog.produce(record, action) { call(&block) }
     else
