@@ -9,7 +9,7 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver, type: :gr
   let(:organization) { membership.organization }
   let(:subscription) { create(:subscription) }
   let(:alert) { create(:alert, organization:, subscription_external_id: subscription.external_id, recurring_threshold: 33, thresholds: [10, 20]) }
-  let(:alert_bm) { create(:billable_metric_usage_amount_alert, organization:, subscription_external_id: subscription.external_id, recurring_threshold: 33, thresholds: [10, 20]) }
+  let(:alert_bm) { create(:billable_metric_current_usage_amount_alert, organization:, subscription_external_id: subscription.external_id, recurring_threshold: 33, thresholds: [10, 20]) }
   let(:another_alert) { create(:alert, organization:) }
 
   let(:query) do
@@ -93,7 +93,7 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver, type: :gr
       )
       alerts = result["data"]["alerts"]["collection"]
 
-      h = alerts.find { it["alertType"] == "billable_metric_usage_amount" }
+      h = alerts.find { it["alertType"] == "billable_metric_current_usage_amount" }
       expect(h["billableMetricId"]).to eq alert_bm.billable_metric_id
 
       metadata = result["data"]["alerts"]["metadata"]
@@ -114,7 +114,7 @@ RSpec.describe Resolvers::UsageMonitoring::SubscriptionAlertsResolver, type: :gr
     end
 
     it "eager loads the relationships", with_bullet: true do
-      create_list(:billable_metric_usage_amount_alert, 3, organization:, subscription_external_id: subscription.external_id, thresholds: [10])
+      create_list(:billable_metric_current_usage_amount_alert, 3, organization:, subscription_external_id: subscription.external_id, thresholds: [10])
 
       Bullet.start_request
 

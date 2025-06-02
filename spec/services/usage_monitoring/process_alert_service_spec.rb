@@ -7,7 +7,7 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
     subject(:result) { described_class.call(alert:, subscription:, current_metrics:) }
 
     let(:organization) { create(:organization) }
-    let(:alert) { create(:usage_amount_alert, recurring_threshold: 35, thresholds: [10, 20], previous_value: 4, code: "test", organization:, subscription_external_id: subscription.external_id) }
+    let(:alert) { create(:usage_current_amount_alert, recurring_threshold: 35, thresholds: [10, 20], previous_value: 4, code: "test", organization:, subscription_external_id: subscription.external_id) }
     let(:subscription) { create(:subscription, organization:) }
 
     context "when no thresholds are crossed" do

@@ -929,9 +929,9 @@ CREATE TYPE public.tax_status AS ENUM (
 --
 
 CREATE TYPE public.usage_monitoring_alert_types AS ENUM (
-    'usage_amount',
-    'billable_metric_usage_amount',
-    'billable_metric_usage_units',
+    'current_usage_amount',
+    'billable_metric_current_usage_amount',
+    'billable_metric_current_usage_units',
     'lifetime_usage_amount'
 );
 
@@ -8415,6 +8415,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250602075710'),
 ('20250526133654'),
 ('20250526111147'),
 ('20250522134155'),

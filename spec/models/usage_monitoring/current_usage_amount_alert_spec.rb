@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe UsageMonitoring::UsageAmountAlert, type: :model do
-  let(:alert) { create(:usage_amount_alert) }
+RSpec.describe UsageMonitoring::CurrentUsageAmountAlert, type: :model do
+  let(:alert) { create(:usage_current_amount_alert) }
   let(:subscription) { create(:subscription) }
 
   describe "#find_value" do

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module UsageMonitoring
-  class UsageAmountAlert < Alert
+  class CurrentUsageAmountAlert < Alert
     def find_value(current_usage)
       current_usage.amount_cents
     end

@@ -16,7 +16,7 @@ RSpec.describe ::V1::UsageMonitoring::AlertSerializer do
     expect(payload["subscription_external_id"]).to eq("ext-id")
     expect(payload["name"]).to eq("General Alert")
     expect(payload["code"]).to eq("yolo")
-    expect(payload["alert_type"]).to eq("usage_amount")
+    expect(payload["alert_type"]).to eq("current_usage_amount")
     expect(payload["thresholds"]).to eq([
       {"code" => "warn10", "value" => "10.0", "recurring" => false},
       {"code" => "warn12", "value" => "12.0", "recurring" => false},
@@ -27,8 +27,8 @@ RSpec.describe ::V1::UsageMonitoring::AlertSerializer do
     expect(payload["billable_metric"]).to be_nil
   end
 
-  context "with billable_metric_usage_amount alert" do
-    let(:alert) { create(:billable_metric_usage_amount_alert) }
+  context "with billable_metric_current_usage_amount alert" do
+    let(:alert) { create(:billable_metric_current_usage_amount_alert) }
 
     it "has the billable_metric_id the object" do
       payload = result["alert"]["billable_metric"]

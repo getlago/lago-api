@@ -19,7 +19,7 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
   describe "validations" do
     context "when type requires billable_metric_id" do
       it do
-        alert = build(:billable_metric_usage_amount_alert, billable_metric_id: nil)
+        alert = build(:billable_metric_current_usage_amount_alert, billable_metric_id: nil)
         expect(alert).to be_invalid
         expect(alert.errors[:billable_metric]).to eq ["value_is_mandatory"]
       end
@@ -28,7 +28,7 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
     context "when code is not unique for a subscription" do
       it "raises an error" do
         expect {
-          create(:billable_metric_usage_amount_alert, code: "my-code", subscription_external_id: alert.subscription_external_id, organization: alert.organization)
+          create(:billable_metric_current_usage_amount_alert, code: "my-code", subscription_external_id: alert.subscription_external_id, organization: alert.organization)
         }.to raise_error(ActiveRecord::RecordNotUnique)
       end
     end
@@ -36,8 +36,8 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
 
   describe ".find_sti_class" do
     it "returns correct constant for known alert types" do
-      expect(described_class.find_sti_class("usage_amount")).to eq(UsageMonitoring::UsageAmountAlert)
-      expect(described_class.find_sti_class("billable_metric_usage_amount")).to eq(UsageMonitoring::BillableMetricUsageAmountAlert)
+      expect(described_class.find_sti_class("current_usage_amount")).to eq(UsageMonitoring::CurrentUsageAmountAlert)
+      expect(described_class.find_sti_class("billable_metric_current_usage_amount")).to eq(UsageMonitoring::BillableMetricCurrentUsageAmountAlert)
     end
 
     it "raises KeyError for unknown alert type" do
@@ -47,11 +47,11 @@ RSpec.describe UsageMonitoring::Alert, type: :model do
 
   describe ".sti_name" do
     it "returns correct sti_name for subclasses" do
-      stub_const("UsageMonitoring::UsageAmountAlert", Class.new(described_class))
-      stub_const("UsageMonitoring::BillableMetricUsageAmountAlert", Class.new(described_class))
+      stub_const("UsageMonitoring::CurrentUsageAmountAlert", Class.new(described_class))
+      stub_const("UsageMonitoring::BillableMetricCurrentUsageAmountAlert", Class.new(described_class))
 
-      expect(UsageMonitoring::UsageAmountAlert.sti_name).to eq("usage_amount")
-      expect(UsageMonitoring::BillableMetricUsageAmountAlert.sti_name).to eq("billable_metric_usage_amount")
+      expect(UsageMonitoring::CurrentUsageAmountAlert.sti_name).to eq("current_usage_amount")
+      expect(UsageMonitoring::BillableMetricCurrentUsageAmountAlert.sti_name).to eq("billable_metric_current_usage_amount")
     end
   end
 

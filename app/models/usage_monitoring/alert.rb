@@ -8,15 +8,15 @@ module UsageMonitoring
     self.inheritance_column = :alert_type
 
     STI_MAPPING = {
-      "usage_amount" => "UsageMonitoring::UsageAmountAlert",
-      "billable_metric_usage_amount" => "UsageMonitoring::BillableMetricUsageAmountAlert",
-      "billable_metric_usage_units" => "UsageMonitoring::BillableMetricUsageUnitsAlert",
+      "current_usage_amount" => "UsageMonitoring::CurrentUsageAmountAlert",
+      "billable_metric_current_usage_amount" => "UsageMonitoring::BillableMetricCurrentUsageAmountAlert",
+      "billable_metric_current_usage_units" => "UsageMonitoring::BillableMetricCurrentUsageUnitsAlert",
 
       "lifetime_usage_amount" => "UsageMonitoring::LifetimeUsageAmountAlert"
     }
 
-    CURRENT_USAGE_TYPES = %w[usage_amount billable_metric_usage_amount billable_metric_usage_units]
-    BILLABLE_METRIC_TYPES = %w[billable_metric_usage_amount billable_metric_usage_units]
+    CURRENT_USAGE_TYPES = %w[current_usage_amount billable_metric_current_usage_amount billable_metric_current_usage_units]
+    BILLABLE_METRIC_TYPES = %w[billable_metric_current_usage_amount billable_metric_current_usage_units]
 
     default_scope -> { kept }
 

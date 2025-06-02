@@ -40,7 +40,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     })
     subscription = customer.subscriptions.sole
 
-    create_alert(subscription_external_id, {alert_type: :usage_amount, code: :simple, thresholds: [
+    create_alert(subscription_external_id, {alert_type: :current_usage_amount, code: :simple, thresholds: [
       {value: 15_00, code: :warn},
       {value: 30_00, code: :warn},
       {value: 50_00, code: :alert},
@@ -48,7 +48,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     ]})
     alert = UsageMonitoring::Alert.find(json[:alert][:lago_id])
 
-    create_alert(subscription_external_id, {alert_type: :billable_metric_usage_amount, billable_metric_code: bm_2.code, code: :bm,
+    create_alert(subscription_external_id, {alert_type: :billable_metric_current_usage_amount, billable_metric_code: bm_2.code, code: :bm,
       thresholds: [
         {value: 15_00, code: :warn},
         {value: 30_00, code: :warn},
@@ -99,8 +99,8 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
 
     expect(alert.triggered_alerts.count).to eq 2
     expect(alert_on_bm.triggered_alerts.count).to eq 1
-    expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "usage_amount" }).to eq 2
-    expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "billable_metric_usage_amount" }).to eq 1
+    expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "current_usage_amount" }).to eq 2
+    expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "billable_metric_current_usage_amount" }).to eq 1
   end
 
   context "with recurring thresholds" do
@@ -111,7 +111,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
         plan_code: plan.code
       })
       subscription = customer.subscriptions.sole
-      create_alert(subscription_external_id, {alert_type: :usage_amount, code: :simple, thresholds: [
+      create_alert(subscription_external_id, {alert_type: :current_usage_amount, code: :simple, thresholds: [
         {value: 15_00, code: :warn},
         {value: 30_00, code: :warn},
         {value: 10_00, code: :alert, recurring: true}
@@ -144,7 +144,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     end
   end
 
-  context "with billable_metric_usage_units alert" do
+  context "with billable_metric_current_usage_units alert" do
     it do
       create_subscription({
         external_customer_id: customer.external_id,
@@ -153,7 +153,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
       })
 
       create_alert(subscription_external_id, {
-        alert_type: :billable_metric_usage_units,
+        alert_type: :billable_metric_current_usage_units,
         code: :bm_units,
         billable_metric_code: billable_metric.code,
         thresholds: [

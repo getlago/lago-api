@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 module UsageMonitoring
-  class BillableMetricUsageAmountAlert < Alert
+  class BillableMetricCurrentUsageUnitsAlert < Alert
     def find_value(current_usage)
       charge_ids = current_usage.fees.map(&:charge_id)
       matching_charge_ids = Charge.where(id: charge_ids, billable_metric_id: billable_metric_id).ids
-      current_usage.fees.select { |fee| matching_charge_ids.include? fee.charge_id }.map(&:amount_cents).max
+      current_usage.fees.select { |fee| matching_charge_ids.include? fee.charge_id }.map(&:units).max
     end
   end
 end

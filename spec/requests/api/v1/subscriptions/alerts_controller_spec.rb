@@ -74,7 +74,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
       {
         code: "test",
         name: "New Alert",
-        alert_type: "usage_amount",
+        alert_type: "current_usage_amount",
         thresholds: [
           {code: :notice, value: 1000},
           {code: :warn, value: 5000},
@@ -101,7 +101,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
 
     context "when code already exists for this subscription" do
       it do
-        create(:billable_metric_usage_amount_alert, organization:, code: params[:code], subscription_external_id: external_id)
+        create(:billable_metric_current_usage_amount_alert, organization:, code: params[:code], subscription_external_id: external_id)
 
         subject
         expect(json).to eq({
@@ -152,18 +152,18 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
       let(:params) do
         {
           code: "bm",
-          alert_type: "billable_metric_usage_amount",
+          alert_type: "billable_metric_current_usage_amount",
           billable_metric_code: "bm_code",
           thresholds: [{code: :alert, value: 1000, recurring: true}]
         }
       end
 
-      it "creates a billable_metric_usage_amount alert" do
+      it "creates a billable_metric_current_usage_amount alert" do
         create(:billable_metric, code: "bm_code", organization:)
         subject
         expect(json[:alert]).to include({
           lago_id: be_present,
-          alert_type: "billable_metric_usage_amount",
+          alert_type: "billable_metric_current_usage_amount",
           code: "bm"
         })
       end
@@ -242,7 +242,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
 
     context "when code already exists for this subscription" do
       it "does not update the alert" do
-        create(:billable_metric_usage_amount_alert, organization:, code: params[:code], subscription_external_id: external_id)
+        create(:billable_metric_current_usage_amount_alert, organization:, code: params[:code], subscription_external_id: external_id)
 
         subject
         expect(json).to eq({
@@ -261,7 +261,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
       let(:params) do
         {
           code: "test",
-          alert_type: "billable_metric_usage_amount",
+          alert_type: "billable_metric_current_usage_amount",
           billable_metric_code: create(:billable_metric, organization:).code
         }
       end
@@ -278,7 +278,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
     end
 
     context "with billable_metric" do
-      let(:alert) { create(:billable_metric_usage_amount_alert, :processed, code:, subscription_external_id: external_id, organization:) }
+      let(:alert) { create(:billable_metric_current_usage_amount_alert, :processed, code:, subscription_external_id: external_id, organization:) }
       let(:params) do
         {
           code: "bm",
@@ -292,7 +292,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
         subject
         expect(json[:alert]).to include({
           lago_id: alert.id,
-          alert_type: "billable_metric_usage_amount",
+          alert_type: "billable_metric_current_usage_amount",
           code: "bm",
           billable_metric: hash_including({code: "bm_code"})
         })
