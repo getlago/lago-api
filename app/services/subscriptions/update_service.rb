@@ -8,6 +8,12 @@ module Subscriptions
       super
     end
 
+    activity_loggable(
+      action: "subscription.updated",
+      record: -> { subscription },
+      condition: -> { !subscription.starting_in_the_future? }
+    )
+
     def call
       return result.not_found_failure!(resource: "subscription") unless subscription
       unless valid?(

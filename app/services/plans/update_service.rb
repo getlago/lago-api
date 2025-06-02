@@ -10,7 +10,8 @@ module Plans
 
     activity_loggable(
       action: "plan.updated",
-      record: -> { plan }
+      record: -> { plan },
+      condition: -> { plan.parent_id.nil? }
     )
 
     def call

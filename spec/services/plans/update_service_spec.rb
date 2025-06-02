@@ -139,10 +139,25 @@ RSpec.describe Plans::UpdateService, type: :service do
       expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
     end
 
-    it "produces an activity log" do
-      described_class.call(plan:, params: update_args)
+    context "with activity logs" do
+      context "when no parent" do
+        it "produces" do
+          described_class.call(plan:, params: update_args)
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated")
+          expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated")
+        end
+      end
+
+      context "when plan is a children" do
+        let(:parent_id) { plan.id }
+        let(:child_plan) { create(:plan, organization:, parent_id:) }
+
+        it "does not produce" do
+          described_class.call(plan: child_plan, params: update_args)
+
+          expect(Utils::ActivityLog).not_to have_received(:produce)
+        end
+      end
     end
 
     context "with cascade option" do
