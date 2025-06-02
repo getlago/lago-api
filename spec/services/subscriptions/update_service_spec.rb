@@ -44,7 +44,8 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     end
 
     it "produces an activity log" do
-      update_service.call
+      described_class.call(subscription:, params:)
+
       expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.updated")
     end
 
