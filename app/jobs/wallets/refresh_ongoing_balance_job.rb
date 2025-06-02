@@ -7,6 +7,7 @@ module Wallets
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
     retry_on ActiveRecord::StaleObjectError, wait: :polynomially_longer, attempts: 6
+    retry_on BaseService::TooManyProviderRequestsFailure, wait: :exponentially_longer, attempts: 25
 
     def perform(wallet)
       return unless wallet.ready_to_be_refreshed?
