@@ -83,7 +83,7 @@ module Invoices
 
       total_amount = credit_amount + refund_amount
 
-      if total_amount > creditable_amount_cents
+      if total_amount > available_credit_amount
         return result.single_validation_failure!(
           field: :credit_refund_amount,
           error_code: "total_amount_exceeds_invoice_amount"
