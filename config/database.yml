@@ -83,6 +83,12 @@ production:
     prepared_statements: <%= ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
     schema_search_path: <%= ENV.fetch('POSTGRES_SCHEMA', 'public') %>
     database_tasks: false
+  events_replica:
+    <<: *default
+    url: <%= ENV['DATABASE_REPLICA_URL'] %>
+    pool: <%= ENV.fetch('DATABASE_POOL', 10) %>
+    prepared_statements: <%= ENV.fetch('DATABASE_PREPARED_STATEMENTS', true) %>
+    replica: true
   clickhouse:
     adapter: clickhouse
     database: <%= ENV['LAGO_CLICKHOUSE_DATABASE'] %>
