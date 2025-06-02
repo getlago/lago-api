@@ -11,7 +11,7 @@ module Subscriptions
     activity_loggable(
       action: "subscription.updated",
       record: -> { subscription },
-      condition: -> { !subscription.starting_in_the_future? }
+      condition: -> { !subscription&.starting_in_the_future? }
     )
 
     def call
@@ -45,7 +45,6 @@ module Subscriptions
 
         after_commit do
           SendWebhookJob.perform_later("subscription.updated", subscription)
-          Utils::ActivityLog.produce(subscription, "subscription.updated")
         end
 
         if subscription.should_sync_hubspot_subscription?

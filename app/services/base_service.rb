@@ -237,7 +237,7 @@ class BaseService
     LagoTracer.in_span("#{name}#call") do
       instance = new(*, **)
 
-      if instance.produce_activity_log?
+      if instance.try(:produce_activity_log?)
         instance.call_with_activity_log(&)
       else
         instance.call(&)
