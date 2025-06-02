@@ -71,7 +71,7 @@ RSpec.describe Webhooks::SendHttpService, type: :service do
           service.call
           expect(webhook.reload.retries).to eq 3
           expect(SendHttpWebhookJob).not_to have_received(:set)
-          expect(Webhooks::NotifyFailureService).to have_received(:call).with(webhook:)
+          expect(Webhooks::NotifyFailureService).not_to have_received(:call).with(webhook:)
         end
       end
     end

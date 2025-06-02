@@ -29,7 +29,8 @@ module Webhooks
       mark_webhook_as_failed(e)
 
       if webhook.retries >= ENV.fetch("LAGO_WEBHOOK_ATTEMPTS", 3).to_i
-        Webhooks::NotifyFailureService.call(webhook: webhook)
+        # Revert until completely removed or fixed
+        # Webhooks::NotifyFailureService.call(webhook: webhook)
       else
         SendHttpWebhookJob.set(wait: wait_value).perform_later(webhook)
       end
