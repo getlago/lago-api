@@ -5,6 +5,15 @@ module Utils
     class << self
       IGNORED_FIELDS = %i[updated_at].freeze
       IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity].freeze
+      SERIALIZED_INCLUDED_OBJECTS = {
+        billing_entity: %i[taxes],
+        credit_note: %i[items applied_taxes error_details],
+        customer: %i[taxes integration_customers applicable_invoice_custom_sections],
+        invoice: %i[customer integration_customers billing_periods subscriptions fees credits metadata applied_taxes error_details applied_invoice_custom_sections],
+        plan: %i[charges usage_thresholds taxes minimum_commitment],
+        subscription: %i[plan],
+        wallet: %i[recurring_transaction_rules]
+      }.freeze
 
       def produce(object, activity_type, activity_id: SecureRandom.uuid, changes: nil)
         return yield if object.nil? && block_given?
@@ -73,7 +82,10 @@ module Utils
       end
 
       def object_serialized(object)
-        "V1::#{object.class.name}Serializer".constantize.new(object).serialize
+        serializer = "V1::#{object.class.name}Serializer".constantize
+        root_name = object.class.name.underscore.to_sym
+
+        serializer.new(object, root_name:, includes: SERIALIZED_INCLUDED_OBJECTS[root_name] || []).serialize
       end
 
       def activity_object_changes(object_changes, activity_type)

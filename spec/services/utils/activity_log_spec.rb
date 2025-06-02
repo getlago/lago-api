@@ -15,7 +15,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
 
   describe ".produce" do
     let(:organization) { create(:organization) }
-    let(:invoice) { create(:invoice, organization:) }
+    let(:coupon) { create(:coupon, organization:) }
     let(:karafka_producer) { instance_double(WaterDrop::Producer) }
 
     before do
@@ -35,7 +35,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
       end
 
       it "produces the event on kafka" do
-        activity_log.produce(invoice, "invoice.created", activity_id: "activity-id") { BaseService::Result.new }
+        activity_log.produce(coupon, "coupon.created", activity_id: "activity-id") { BaseService::Result.new }
 
         expect(karafka_producer).to have_received(:produce_async).with(
           topic: "activity_logs",
@@ -44,25 +44,55 @@ RSpec.describe Utils::ActivityLog, type: :service do
             activity_source: "api",
             api_key_id: api_key.id,
             user_id: nil,
-            activity_type: "invoice.created",
+            activity_type: "coupon.created",
             activity_id: "activity-id",
             logged_at: Time.current.iso8601[...-1],
             created_at: Time.current.iso8601[...-1],
-            resource_id: invoice.id,
-            resource_type: "Invoice",
+            resource_id: coupon.id,
+            resource_type: "Coupon",
             organization_id: organization.id,
-            activity_object: V1::InvoiceSerializer.new(invoice).serialize,
+            activity_object: V1::CouponSerializer.new(coupon).serialize,
             activity_object_changes: {},
-            external_customer_id: invoice.customer.external_id,
+            external_customer_id: nil,
             external_subscription_id: nil
           }.to_json
         )
       end
 
+      context "when the object is a wallet transaction" do
+        let(:wallet) { create(:wallet, organization:) }
+        let(:wallet_transaction) { create(:wallet_transaction, wallet:, organization:) }
+
+        it "uses wallet as resource" do
+          activity_log.produce(wallet_transaction, "wallet_transaction.created", activity_id: "activity-id") { BaseService::Result.new }
+
+          expect(karafka_producer).to have_received(:produce_async).with(
+            topic: "activity_logs",
+            key: "#{organization.id}--activity-id",
+            payload: {
+              activity_source: "api",
+              api_key_id: api_key.id,
+              user_id: nil,
+              activity_type: "wallet_transaction.created",
+              activity_id: "activity-id",
+              logged_at: Time.current.iso8601[...-1],
+              created_at: Time.current.iso8601[...-1],
+              resource_id: wallet.id,
+              resource_type: "Wallet",
+              organization_id: organization.id,
+              activity_object: V1::WalletTransactionSerializer.new(wallet_transaction).serialize,
+              activity_object_changes: {},
+              external_customer_id: wallet.customer.external_id,
+              external_subscription_id: nil
+            }.to_json
+          )
+        end
+      end
+
       context "when the object is deleted" do
         it "does not set activity_object_changes" do
           allow(CurrentContext).to receive(:source).and_return(nil)
-          activity_log.produce(invoice, "invoice.deleted", activity_id: "activity-id") { BaseService::Result.new }
+          activity_log.produce(coupon, "coupon.deleted", activity_id: "activity-id") { BaseService::Result.new }
 
           expect(karafka_producer).to have_received(:produce_async).with(
             topic: "activity_logs",
@@ -71,16 +101,16 @@ RSpec.describe Utils::ActivityLog, type: :service do
               activity_source: "system",
               api_key_id: api_key.id,
               user_id: nil,
-              activity_type: "invoice.deleted",
+              activity_type: "coupon.deleted",
               activity_id: "activity-id",
               logged_at: Time.current.iso8601[...-1],
               created_at: Time.current.iso8601[...-1],
-              resource_id: invoice.id,
-              resource_type: "Invoice",
+              resource_id: coupon.id,
+              resource_type: "Coupon",
               organization_id: organization.id,
-              activity_object: V1::InvoiceSerializer.new(invoice).serialize,
+              activity_object: V1::CouponSerializer.new(coupon).serialize,
               activity_object_changes: {},
-              external_customer_id: invoice.customer.external_id,
+              external_customer_id: nil,
               external_subscription_id: nil
             }.to_json
           )
@@ -89,7 +119,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
 
       context "when the object is nil" do
         it "does not produce the event" do
-          activity_log.produce(nil, "invoice.created") { BaseService::Result.new }
+          activity_log.produce(nil, "coupon.created") { BaseService::Result.new }
           expect(karafka_producer).not_to have_received(:produce_async)
         end
       end
@@ -102,7 +132,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
       end
 
       it "does not produce message" do
-        activity_log.produce(invoice, "invoice.created") { BaseService::Result.new }
+        activity_log.produce(coupon, "coupon.created") { BaseService::Result.new }
         expect(karafka_producer).not_to have_received(:produce_async)
       end
     end
