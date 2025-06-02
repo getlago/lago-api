@@ -20,8 +20,16 @@ module DailyUsages
 
         next if subscription.daily_usages.where(usage_date: datetime.to_date - 1.day).exists?
 
+        ds = Subscriptions::DatesService.new_instance(subscription, date, current_usage: true)
+
+        time_to_freeze = if ds.previous_beginning_of_period.to_date == date
+          (datetime - 1.day).end_of_day
+        else
+          datetime + 1.second
+        end
+
         Timecop.thread_safe = true
-        Timecop.freeze(datetime + 5.minutes) do
+        Timecop.freeze(time_to_freeze) do
           usage = Invoices::CustomerUsageService.call(
             customer: subscription.customer,
             subscription: subscription,

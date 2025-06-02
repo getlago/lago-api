@@ -49,8 +49,8 @@ module DailyUsages
 
     def invoice_usage(subscription, invoice_subscription)
       OpenStruct.new(
-        from_datetime: invoice_subscription.from_datetime,
-        to_datetime: invoice_subscription.to_datetime,
+        from_datetime: invoice_subscription.charges_from_datetime,
+        to_datetime: invoice_subscription.charges_to_datetime,
         issuing_date: invoice.issuing_date.iso8601,
         currency: invoice.currency,
         amount_cents: invoice.fees_amount_cents,
@@ -66,8 +66,8 @@ module DailyUsages
 
     def existing_daily_usage(invoice_subscription)
       DailyUsage.find_by(
-        from_datetime: invoice_subscription.from_datetime,
-        to_datetime: invoice_subscription.to_datetime,
+        from_datetime: invoice_subscription.charges_from_datetime,
+        to_datetime: invoice_subscription.charges_to_datetime,
         usage_date: invoice_subscription.charges_to_datetime.to_date,
         subscription_id: invoice_subscription.subscription_id
       )
