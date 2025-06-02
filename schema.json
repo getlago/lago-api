@@ -160,11 +160,11 @@
               "args": []
             },
             {
-              "name": "apiKeyId",
+              "name": "apiKey",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "ID",
+                "kind": "OBJECT",
+                "name": "SanitizedApiKey",
                 "ofType": null
               },
               "isDeprecated": false,
