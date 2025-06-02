@@ -12,6 +12,7 @@ RSpec.describe PaymentReceipts::GeneratePdfAndNotifyJob, type: :job do
     allow(PaymentReceipts::GeneratePdfService).to receive(:new)
       .with(payment_receipt:, context: "api")
       .and_return(generate_service)
+    allow(generate_service).to receive(:produce_activity_log?).and_return(true)
     allow(generate_service).to receive(:call_with_activity_log)
       .and_return(result)
     allow(PaymentReceiptMailer).to receive(:with)
