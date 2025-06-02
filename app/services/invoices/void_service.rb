@@ -112,7 +112,7 @@ module Invoices
           invoice: invoice,
           reason: :other,
           description: "Credit note created due to voided invoice",
-          credit_amount_cents: remaining_amount,
+          credit_amount_cents: remaining_estimate.credit_note.credit_amount_cents,
           items: remaining_items
         )
 
