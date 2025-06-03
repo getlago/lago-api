@@ -20,10 +20,12 @@ module Invoices
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
       return result.not_allowed_failure!(code: "not_voidable") if !invoice.voidable? && !explicit_void_intent?
-      return result.single_validation_failure!(
-        field: :credit_refund_amount,
-        error_code: "total_amount_exceeds_invoice_amount"
-      ) unless validate_credit_note_amounts!
+      unless validate_credit_note_amounts!
+        return result.single_validation_failure!(
+          field: :credit_refund_amount,
+          error_code: "total_amount_exceeds_invoice_amount"
+        )
+      end
 
       ActiveRecord::Base.transaction do
         invoice.payment_overdue = false if invoice.payment_overdue?
