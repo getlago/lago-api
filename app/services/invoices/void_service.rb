@@ -133,7 +133,7 @@ module Invoices
       items = invoice.fees.map do |fee|
         {
           fee_id: fee.id,
-          amount_cents: (fee.amount_cents * ratio).round
+          amount_cents: (fee.amount_cents * ratio)
         }
       end
 
