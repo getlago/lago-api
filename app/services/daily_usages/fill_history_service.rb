@@ -4,9 +4,10 @@ require "timecop"
 
 module DailyUsages
   class FillHistoryService < BaseService
-    def initialize(subscription:, from_datetime:)
+    def initialize(subscription:, from_datetime:, to_datetime: nil)
       @subscription = subscription
       @from_datetime = from_datetime
+      @to_datetime = to_datetime
 
       super
     end
@@ -87,7 +88,7 @@ module DailyUsages
       result
     end
 
-    attr_reader :subscription, :from_datetime
+    attr_reader :subscription, :from_datetime, :to_datetime
     delegate :organization, to: :subscription
 
     def from
@@ -99,7 +100,7 @@ module DailyUsages
     end
 
     def to
-      @to ||= (subscription.terminated_at || Time.current).to_date
+      @to ||= (to_datetime || subscription.terminated_at || Time.current).to_date
     end
   end
 end
