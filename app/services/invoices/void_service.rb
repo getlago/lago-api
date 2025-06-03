@@ -107,15 +107,20 @@ module Invoices
 
       remaining_amount = invoice.reload.creditable_amount_cents
       if remaining_amount.positive?
-        remaining_estimate = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: remaining_amount)
-        remaining_items = remaining_estimate.success? ? remaining_estimate.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents} } : []
+
+        items = invoice.fees.map do |fee|
+          {
+            fee_id: fee.id,
+            amount_cents: fee.creditable_amount_cents
+          }
+        end
 
         credit_note_to_void = CreditNotes::CreateService.call(
           invoice: invoice,
           reason: :other,
           description: "Credit note created due to voided invoice",
-          credit_amount_cents: remaining_estimate.credit_note.credit_amount_cents,
-          items: remaining_items
+          credit_amount_cents: remaining_amount,
+          items: items
         )
 
         if credit_note_to_void.success?
@@ -133,7 +138,7 @@ module Invoices
       items = invoice.fees.map do |fee|
         {
           fee_id: fee.id,
-          amount_cents: (fee.amount_cents * ratio)
+          amount_cents: (fee.precise_amount_cents * ratio)
         }
       end
 
