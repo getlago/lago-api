@@ -28,6 +28,10 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService, type: :service do
           expect(result).to be_success
           expect(subscriptions_result).to match_array subscriptions
         end
+
+        it "does not persist any changes to the subscriptions" do
+          expect { subject }.not_to change { subscriptions.map { |s| s.reload.attributes } }
+        end
       end
 
       context "when subscription has a next subscription" do
@@ -46,21 +50,9 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService, type: :service do
           context "when next plan is same price or more expensive (upgrade)" do
             let(:amount_cents) { current_plan.amount_cents + 100 }
 
-            it "returns array containing terminated current and adjusted next subscription" do
+            it "returns the subscriptions as is" do
               expect(result).to be_success
-              expect(subscriptions_result.count).to eq(2)
-
-              expect(subscriptions_result.first).to have_attributes(
-                id: subscription.id,
-                status: "terminated",
-                terminated_at: Time.current
-              )
-
-              expect(subscriptions_result.second).to have_attributes(
-                id: next_subscription.id,
-                status: "active",
-                started_at: Time.current
-              )
+              expect(subscriptions_result).to match_array subscriptions
             end
 
             it "does not persist any changes to the subscriptions" do
@@ -103,15 +95,9 @@ RSpec.describe Invoices::Preview::FindSubscriptionsService, type: :service do
           context "when next plan is same price or more expensive (upgrade)" do
             let(:amount_cents) { current_plan.amount_cents + 100 }
 
-            it "returns array containing only terminated current subscription" do
+            it "returns the subscriptions as is" do
               expect(result).to be_success
-              expect(subscriptions_result.count).to eq(1)
-
-              expect(subscriptions_result.first).to have_attributes(
-                id: subscription.id,
-                status: "terminated",
-                terminated_at: Time.current
-              )
+              expect(subscriptions_result).to match_array subscriptions
             end
 
             it "does not persist any changes to the subscriptions" do
