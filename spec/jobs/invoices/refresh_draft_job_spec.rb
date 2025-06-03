@@ -14,7 +14,7 @@ RSpec.describe Invoices::RefreshDraftJob, type: :job do
     allow(Invoices::RefreshDraftService).to receive(:new).with(invoice:).and_return(refresh_service)
     allow(refresh_service).to receive(:call).and_return(result)
 
-    described_class.perform_now(invoice)
+    described_class.perform_now(invoice:)
 
     expect(Invoices::RefreshDraftService).to have_received(:new)
     expect(refresh_service).to have_received(:call)
@@ -25,7 +25,7 @@ RSpec.describe Invoices::RefreshDraftJob, type: :job do
     allow(refresh_service).to receive(:call)
 
     invoice.update ready_to_be_refreshed: false
-    described_class.perform_now(invoice)
+    described_class.perform_now(invoice:)
 
     expect(Invoices::RefreshDraftService).not_to have_received(:new)
     expect(refresh_service).not_to have_received(:call)
@@ -65,7 +65,7 @@ RSpec.describe Invoices::RefreshDraftJob, type: :job do
     end
 
     it "does not throw an error when it is a tax error" do
-      expect { described_class.perform_now(invoice) }.not_to raise_error
+      expect { described_class.perform_now(invoice:) }.not_to raise_error
     end
   end
 end
