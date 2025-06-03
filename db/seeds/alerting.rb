@@ -32,9 +32,9 @@ def create_customer_with_sub(ext_id, plan:, organization:)
   )
 end
 
-sub = create_customer_with_sub("alerting-#{SecureRandom.hex}", plan:, organization:)
+subscription = create_customer_with_sub("alerting-#{SecureRandom.hex}", plan:, organization:)
 
-UsageMonitoring::CreateAlertService.call(organization:, subscription: sub, params: {
+UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
   alert_type: "current_usage_amount",
   code: "default",
   name: "Default Alert",
@@ -45,15 +45,15 @@ UsageMonitoring::CreateAlertService.call(organization:, subscription: sub, param
   ]
 })
 
-UsageMonitoring::CreateAlertService.call(organization:, subscription: sub, params: {
+alert = UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
   alert_type: "lifetime_usage_amount",
   code: "total",
   thresholds: [
     {code: "info", value: 1000_00}
   ]
-})
+}).alert
 
-UsageMonitoring::CreateAlertService.call(organization:, subscription: sub, params: {
+bm_alert = UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
   alert_type: "billable_metric_current_usage_amount",
   billable_metric: ops_bm,
   code: "ops",
@@ -63,3 +63,30 @@ UsageMonitoring::CreateAlertService.call(organization:, subscription: sub, param
     {value: 10_00, recurring: true}
   ]
 })
+
+triggered_alert = UsageMonitoring::TriggeredAlert.create!(alert:, organization:, subscription:,
+  current_value: 51,
+  previous_value: 8,
+  crossed_thresholds: [
+    {code: nil, value: 10, recurring: false}, {code: :warn, value: 25, recurring: false}, {code: :alert, value: 50, recurring: false}
+  ],
+  triggered_at: 2.months.ago)
+SendWebhookJob.perform_later("alert.triggered", triggered_alert)
+
+triggered_alert = UsageMonitoring::TriggeredAlert.create!(alert:, organization:, subscription:,
+  current_value: 88,
+  previous_value: 234,
+  crossed_thresholds: [
+    {code: :alert, value: 100, recurring: false}, {code: :alert, value: 150, recurring: true}, {code: :alert, value: 200, recurring: true}
+  ],
+  triggered_at: 11.days.ago)
+SendWebhookJob.perform_later("alert.triggered", triggered_alert)
+
+triggered_alert = UsageMonitoring::TriggeredAlert.create!(alert: bm_alert, organization:, subscription:,
+  current_value: 8,
+  previous_value: 0,
+  crossed_thresholds: [
+    {code: nil, value: 5, recurring: false}
+  ],
+  triggered_at: 4.days.ago)
+SendWebhookJob.perform_later("alert.triggered", triggered_alert)
