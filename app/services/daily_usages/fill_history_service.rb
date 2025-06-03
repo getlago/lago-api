@@ -100,7 +100,11 @@ module DailyUsages
     end
 
     def to
-      @to ||= (to_datetime || subscription.terminated_at || Time.current).to_date
+      @to ||= if subscription.terminated?
+        subscription.terminated_at.to_date
+      else
+        (to_datetime || Time.current).to_date
+      end
     end
   end
 end
