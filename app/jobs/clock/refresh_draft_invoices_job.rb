@@ -6,7 +6,7 @@ module Clock
 
     def perform
       Invoice.ready_to_be_refreshed.with_active_subscriptions.find_each do |invoice|
-        Invoices::RefreshDraftJob.perform_later(invoice)
+        Invoices::RefreshDraftJob.perform_later(invoice:)
       end
     end
   end

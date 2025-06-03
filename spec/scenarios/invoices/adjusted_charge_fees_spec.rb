@@ -85,7 +85,7 @@ describe "Adjusted Charge Fees Scenario", :scenarios, type: :request, transactio
       travel_to(Time.zone.parse("2023-08-20T12:12")) do
         invoice = customer.invoices.order(created_at: :desc).first
 
-        Invoices::RefreshDraftJob.perform_later(invoice)
+        Invoices::RefreshDraftJob.perform_later(invoice:)
         perform_all_enqueued_jobs
 
         expect(invoice.reload.status).to eq("draft")
@@ -157,7 +157,7 @@ describe "Adjusted Charge Fees Scenario", :scenarios, type: :request, transactio
       travel_to(Time.zone.parse("2023-08-20T12:12")) do
         invoice = customer.invoices.order(created_at: :desc).first
 
-        Invoices::RefreshDraftJob.perform_later(invoice)
+        Invoices::RefreshDraftJob.perform_later(invoice:)
         perform_all_enqueued_jobs
 
         expect(invoice.reload.status).to eq("draft")
