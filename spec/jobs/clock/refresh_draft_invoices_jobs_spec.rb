@@ -18,7 +18,7 @@ describe Clock::RefreshDraftInvoicesJob, job: true do
     context "when not ready to be refreshed" do
       it "does not call the refresh service" do
         described_class.perform_now
-        expect(Invoices::RefreshDraftJob).not_to have_been_enqueued.with(invoice)
+        expect(Invoices::RefreshDraftJob).not_to have_been_enqueued.with(invoice:)
       end
     end
 
@@ -28,7 +28,7 @@ describe Clock::RefreshDraftInvoicesJob, job: true do
 
       it "does not call the refresh service" do
         described_class.perform_now
-        expect(Invoices::RefreshDraftJob).not_to have_been_enqueued.with(invoice)
+        expect(Invoices::RefreshDraftJob).not_to have_been_enqueued.with(invoice:)
       end
     end
 
@@ -37,7 +37,7 @@ describe Clock::RefreshDraftInvoicesJob, job: true do
 
       it "calls the refresh service" do
         described_class.perform_now
-        expect(Invoices::RefreshDraftJob).to have_been_enqueued.with(invoice)
+        expect(Invoices::RefreshDraftJob).to have_been_enqueued.with(invoice:)
       end
     end
   end

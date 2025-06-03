@@ -12,7 +12,7 @@ module Invoices
 
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
-    def perform(invoice)
+    def perform(invoice:)
       # if this has already been set to false, we can skip the job
       return unless invoice.ready_to_be_refreshed?
 
