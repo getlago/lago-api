@@ -98,8 +98,8 @@ module Invoices
         invoice: invoice,
         reason: :other,
         description: "Credit note created due to voided invoice",
-        credit_amount_cents: estimate_result.credit_note.credit_amount_cents - estimate_result.credit_note.refund_amount_cents,
-        refund_amount_cents: estimate_result.credit_note.refund_amount_cents,
+        credit_amount_cents: estimate_result.credit_note.credit_amount_cents - refund_amount,
+        refund_amount_cents: refund_amount,
         items: items
       )
 
