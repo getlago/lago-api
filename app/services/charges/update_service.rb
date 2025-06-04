@@ -40,23 +40,23 @@ module Charges
         result.charge = charge
 
         # In cascade mode it is allowed only to change properties
-        return result if cascade
+        unless cascade
+          tax_codes = params.delete(:tax_codes)
+          if tax_codes
+            taxes_result = Charges::ApplyTaxesService.call(charge:, tax_codes:)
+            taxes_result.raise_if_error!
+          end
 
-        tax_codes = params.delete(:tax_codes)
-        if tax_codes
-          taxes_result = Charges::ApplyTaxesService.call(charge:, tax_codes:)
-          taxes_result.raise_if_error!
-        end
+          # NOTE: charges cannot be edited if plan is attached to a subscription
+          unless plan.attached_to_subscriptions?
+            invoiceable = params.delete(:invoiceable)
+            min_amount_cents = params.delete(:min_amount_cents)
 
-        # NOTE: charges cannot be edited if plan is attached to a subscription
-        unless plan.attached_to_subscriptions?
-          invoiceable = params.delete(:invoiceable)
-          min_amount_cents = params.delete(:min_amount_cents)
+            charge.invoiceable = invoiceable if License.premium? && !invoiceable.nil?
+            charge.min_amount_cents = min_amount_cents || 0 if License.premium?
 
-          charge.invoiceable = invoiceable if License.premium? && !invoiceable.nil?
-          charge.min_amount_cents = min_amount_cents || 0 if License.premium?
-
-          charge.update!(params)
+            charge.update!(params)
+          end
         end
       end
 
