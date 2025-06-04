@@ -463,7 +463,6 @@ DROP INDEX IF EXISTS public.index_credit_note_items_on_credit_note_id;
 DROP INDEX IF EXISTS public.index_coupons_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_coupons_on_organization_id;
 DROP INDEX IF EXISTS public.index_coupons_on_deleted_at;
-DROP INDEX IF EXISTS public.index_coupons_on_code;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_plan_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_organization_id;
 DROP INDEX IF EXISTS public.index_coupon_targets_on_deleted_at;
@@ -5096,13 +5095,6 @@ CREATE INDEX index_coupon_targets_on_plan_id ON public.coupon_targets USING btre
 
 
 --
--- Name: index_coupons_on_code; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_coupons_on_code ON public.coupons USING btree (code);
-
-
---
 -- Name: index_coupons_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8423,7 +8415,6 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-('20250604123050'),
 ('20250602075710'),
 ('20250526133654'),
 ('20250526111147'),
