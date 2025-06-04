@@ -5,6 +5,7 @@ en:
       messages:
         blank: value_is_mandatory
         country_code_invalid: not_a_valid_country_code
+        graduated_percentage_requires_premium_license: graduated_percentage_requires_premium_license
         greater_than: value_is_out_of_range
         greater_than_or_equal_to: value_is_out_of_range
         inclusion: value_is_invalid
@@ -43,7 +44,6 @@ en:
         payment_request_is_already_succeeded: payment_request_is_already_succeeded
         present: value_must_be_blank
         required: relation_must_exist
-        requires_premium_license: requires_premium_license
         taken: value_already_exist
         too_long: value_is_too_long
         unsupported_value: unsupported_value

@@ -563,7 +563,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           aggregate_failures do
             expect(result).not_to be_success
             expect(result.error).to be_a(BaseService::ValidationFailure)
-            expect(result.error.messages[:charge_model]).to eq(["value_is_mandatory"])
+            expect(result.error.messages[:charge_model]).to eq(["graduated_percentage_requires_premium_license"])
           end
         end
 

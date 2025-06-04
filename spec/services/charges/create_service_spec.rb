@@ -51,7 +51,7 @@ RSpec.describe Charges::CreateService, type: :service do
         it "returns an error" do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:charge_model]).to eq(["requires_premium_license"])
+          expect(result.error.messages[:charge_model]).to eq(["graduated_percentage_requires_premium_license"])
         end
 
         it "does not create charge" do

@@ -86,6 +86,8 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
       }
     end
 
+    around { |test| lago_premium!(&test) }
+
     it "calculates graduated percentage charge details" do
       expected_details = {
         graduated_percentage_ranges: [

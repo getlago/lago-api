@@ -1336,6 +1336,8 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
     let(:aggregation_type) { "sum_agg" }
     let(:field_name) { "amount" }
 
+    around { |test| lago_premium!(&test) }
+
     it "creates an pay_in_advance fee" do
       ### 24 january: Create subscription.
       jan24 = DateTime.new(2023, 1, 24)

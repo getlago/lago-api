@@ -139,7 +139,7 @@ class Charge < ApplicationRecord
 
   def charge_model_allowance
     if graduated_percentage? && !License.premium?
-      errors.add(:charge_model, :requires_premium_license)
+      errors.add(:charge_model, :graduated_percentage_requires_premium_license)
     end
   end
 end

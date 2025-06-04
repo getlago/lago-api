@@ -645,7 +645,7 @@ RSpec.describe Charge, type: :model do
     subject { charge.valid? }
 
     describe "of charge model" do
-      let(:error) { charge.errors.where(:charge_model, :requires_premium_license) }
+      let(:error) { charge.errors.where(:charge_model, :graduated_percentage_requires_premium_license) }
       let(:charge) { build_stubbed(:charge, charge_model:, properties:) }
       let(:properties) { attributes_for("#{charge_model}_charge")[:properties] }
 

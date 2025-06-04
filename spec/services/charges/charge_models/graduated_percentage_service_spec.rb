@@ -46,6 +46,8 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     )
   end
 
+  around { |test| lago_premium!(&test) }
+
   context "when aggregation is 0" do
     let(:aggregation) { 0 }
     let(:aggregation_count) { 0 }
