@@ -47,10 +47,7 @@ module Invoices
         end
 
         if generate_credit_note
-          create_credit_note_result = create_credit_note
-          unless create_credit_note_result.success?
-            Rails.logger.warn("Creating credit note for invoice #{invoice.id} failed: #{create_credit_note_result.error}")
-          end
+          create_credit_notes!
         end
       end
 
@@ -90,13 +87,13 @@ module Invoices
       true
     end
 
-    def create_credit_note
+    def create_credit_notes!
       total_amount = credit_amount + refund_amount
 
       estimate_result = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: total_amount)
       items = estimate_result.success? ? estimate_result.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents} } : []
 
-      result = CreditNotes::CreateService.call(
+      result = CreditNotes::CreateService.call!(
         invoice: invoice,
         reason: :other,
         description: "Credit note created due to voided invoice #{invoice.id}",
@@ -115,7 +112,7 @@ module Invoices
           }
         end
 
-        credit_note_to_void = CreditNotes::CreateService.call(
+        credit_note_to_void = CreditNotes::CreateService!.call(
           invoice: invoice,
           reason: :other,
           description: "Credit note created due to voided invoice #{invoice.id}",
@@ -124,7 +121,7 @@ module Invoices
         )
 
         if credit_note_to_void.success?
-          CreditNotes::VoidService.call(credit_note: credit_note_to_void.credit_note)
+          CreditNotes::VoidService.call!(credit_note: credit_note_to_void.credit_note)
         end
       end
 
@@ -142,7 +139,7 @@ module Invoices
         }
       end
 
-      CreditNotes::EstimateService.call(invoice: invoice, items: items)
+      CreditNotes::EstimateService.call!(invoice: invoice, items: items)
     end
   end
 end
