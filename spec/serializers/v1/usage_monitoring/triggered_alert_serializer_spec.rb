@@ -18,8 +18,10 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
 
       payload = result["triggered_alert"]
       expect(payload["lago_id"]).to eq(triggered_alert.id)
+      expect(payload["lago_organization_id"]).to eq(triggered_alert.organization_id)
       expect(payload["lago_alert_id"]).to eq(triggered_alert.alert.id)
       expect(payload["lago_subscription_id"]).to eq(triggered_alert.subscription.id)
+      expect(payload["subscription_external_id"]).to eq("ext-id")
       expect(payload["billable_metric_code"]).to be_nil
       expect(payload["alert_name"]).to eq("General Alert")
       expect(payload["alert_code"]).to eq("first")
