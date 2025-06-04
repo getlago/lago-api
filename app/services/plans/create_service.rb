@@ -114,12 +114,12 @@ module Plans
         organization_id: plan.organization_id,
         billable_metric_id: args[:billable_metric_id],
         invoice_display_name: args[:invoice_display_name],
-        charge_model: charge_model(args),
+        charge_model: args[:charge_model],
         pay_in_advance: args[:pay_in_advance] || false,
         prorated: args[:prorated] || false
       )
 
-      properties = args[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge_model(args))
+      properties = args[:properties].presence || Charges::BuildDefaultPropertiesService.call(args[:charge_model])
       charge.properties = Charges::FilterChargeModelPropertiesService.call(
         charge:,
         properties:
@@ -141,13 +141,6 @@ module Plans
 
       charge.save!
       charge
-    end
-
-    def charge_model(args)
-      model = args[:charge_model]&.to_sym
-      return if model == :graduated_percentage && !License.premium?
-
-      model
     end
 
     def track_plan_created(plan)

@@ -640,4 +640,56 @@ RSpec.describe Charge, type: :model do
       end
     end
   end
+
+  describe "validations" do
+    subject { charge.valid? }
+
+    describe "of charge model" do
+      let(:error) { charge.errors.where(:charge_model, :requires_premium_license) }
+      let(:charge) { build_stubbed(:charge, charge_model:, properties:) }
+      let(:properties) { attributes_for("#{charge_model}_charge")[:properties] }
+
+      context "when premium" do
+        around { |test| lago_premium!(&test) }
+
+        before { subject }
+
+        context "when charge model is graduated percentage" do
+          let(:charge_model) { :graduated_percentage }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+
+        context "when charge model is non graduated percentage" do
+          let(:charge_model) { described_class::CHARGE_MODELS.excluding(:graduated_percentage).sample }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+      end
+
+      context "when freemium" do
+        before { subject }
+
+        context "when charge model is graduated percentage" do
+          let(:charge_model) { :graduated_percentage }
+
+          it "adds an error" do
+            expect(error).to be_present
+          end
+        end
+
+        context "when charge model is non graduated percentage" do
+          let(:charge_model) { described_class::CHARGE_MODELS.excluding(:graduated_percentage).sample }
+
+          it "does not add an error" do
+            expect(error).not_to be_present
+          end
+        end
+      end
+    end
+  end
 end
