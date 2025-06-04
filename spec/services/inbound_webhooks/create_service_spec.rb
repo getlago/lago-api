@@ -23,8 +23,7 @@ RSpec.describe InboundWebhooks::CreateService, type: :service do
   let(:validation_payload_result) { BaseService::Result.new }
 
   let(:event) do
-    path = Rails.root.join("spec/fixtures/stripe/payment_intent_event.json")
-    JSON.parse(File.read(path))
+    JSON.parse(get_stripe_fixtures("payment_intent_event.json"))
   end
 
   before do

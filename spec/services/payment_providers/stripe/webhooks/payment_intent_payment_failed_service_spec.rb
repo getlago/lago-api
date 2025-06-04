@@ -8,10 +8,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
   let(:organization) { create(:organization) }
 
-  let(:event_json) do
-    path = Rails.root.join("spec/fixtures/stripe/#{fixtures_filename}")
-    File.read(path)
-  end
+  let(:event_json) { get_stripe_fixtures(fixtures_filename) }
 
   context "when payment intent event" do
     let(:fixtures_filename) { "payment_intent_event_failed.json" }

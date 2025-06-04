@@ -54,6 +54,8 @@ rescue ActiveRecord::PendingMigrationError
   FileUtils.cd(Rails.root) { system("bin/rails db:migrate:primary RAILS_ENV=test") }
 end
 
+ENV["STRIPE_API_VERSION"] ||= "2020-08-27"
+
 RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods
   config.include GraphQLHelper, type: :graphql
@@ -62,6 +64,7 @@ RSpec.configure do |config|
   config.include ScenariosHelper
   config.include LicenseHelper
   config.include PdfHelper
+  config.include StripeHelper
   config.include QueuesHelper
   config.include ActiveSupport::Testing::TimeHelpers
   config.include ActiveStorageValidations::Matchers

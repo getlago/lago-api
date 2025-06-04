@@ -42,11 +42,11 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
   let(:webhooks_sent) { [] }
 
   let(:stripe_customer_response) do
-    File.read("spec/fixtures/stripe/customer_retrieve_response.json")
+    get_stripe_fixtures("customer_retrieve_response.json")
   end
   let(:stripe_payment_method_response) do
     JSON.parse(
-      File.read("spec/fixtures/stripe/retrieve_payment_method.json"),
+      get_stripe_fixtures("retrieve_payment_method.json"),
       symbolize_names: true
     ).merge!({
       id: stripe_pm_id,
@@ -54,7 +54,7 @@ describe "Dunning Campaign v1", :scenarios, type: :request do
     })
   end
   let(:stripe_payment_intent_response) do
-    File.read("spec/fixtures/stripe/payment_intent_failed_card_declined.json")
+    get_stripe_fixtures("payment_intent_failed_card_declined.json")
   end
 
   def build_stripe_payment_intent_response
