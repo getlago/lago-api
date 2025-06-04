@@ -99,7 +99,7 @@ module Invoices
       result = CreditNotes::CreateService.call(
         invoice: invoice,
         reason: :other,
-        description: "Credit note created due to voided invoice",
+        description: "Credit note created due to voided invoice #{invoice.id}",
         credit_amount_cents: estimate_result.credit_note.credit_amount_cents - refund_amount,
         refund_amount_cents: refund_amount,
         items: items
@@ -118,7 +118,7 @@ module Invoices
         credit_note_to_void = CreditNotes::CreateService.call(
           invoice: invoice,
           reason: :other,
-          description: "Credit note created due to voided invoice",
+          description: "Credit note created due to voided invoice #{invoice.id}",
           credit_amount_cents: remaining_amount,
           items: items
         )
