@@ -112,7 +112,7 @@ module Invoices
           }
         end
 
-        credit_note_to_void = CreditNotes::CreateService!.call(
+        credit_note_to_void = CreditNotes::CreateService.call!(
           invoice: invoice,
           reason: :other,
           description: "Credit note created due to voided invoice #{invoice.id}",
