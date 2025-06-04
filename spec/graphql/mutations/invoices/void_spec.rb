@@ -44,4 +44,42 @@ RSpec.describe Mutations::Invoices::Void, type: :graphql do
       end
     end
   end
+
+  context "when passing credit note parameters" do
+    let(:credit_amount) { 0 }
+    let(:refund_amount) { 0 }
+
+    it "calls the void service with all parameters" do
+      expect(::Invoices::VoidService).to receive(:call).with(
+        invoice: instance_of(Invoice),
+        params: hash_including(
+          generate_credit_note: true,
+          credit_amount: credit_amount,
+          refund_amount: refund_amount
+        )
+      ).and_call_original
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            id: invoice.id,
+            generateCreditNote: true,
+            creditAmount: credit_amount,
+            refundAmount: refund_amount
+          }
+        }
+      )
+
+      result_data = result["data"]["voidInvoice"]
+
+      aggregate_failures do
+        expect(result_data["id"]).to be_present
+        expect(result_data["status"]).to eq("voided")
+      end
+    end
+  end
 end
