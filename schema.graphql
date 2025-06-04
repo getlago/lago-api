@@ -24,7 +24,7 @@ type ActivityLog {
   activityObjectChanges: JSON
   activitySource: ActivitySourceEnum!
   activityType: ActivityTypeEnum!
-  apiKeyId: ID
+  apiKey: SanitizedApiKey
   createdAt: ISO8601DateTime!
   externalCustomerId: String
   externalSubscriptionId: String
