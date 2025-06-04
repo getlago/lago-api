@@ -90,6 +90,8 @@ module Invoices
     def create_credit_notes!
       total_amount = credit_amount + refund_amount
 
+      return result if total_amount.zero?
+
       estimate_result = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: total_amount)
       items = estimate_result.success? ? estimate_result.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents} } : []
 
