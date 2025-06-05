@@ -19,7 +19,11 @@ module Api
         return not_found_error(resource: "billing_entity") if entity.blank?
 
         render(
-          json: ::V1::BillingEntitySerializer.new(entity, root_name: "billing_entity", includes: [:taxes])
+          json: ::V1::BillingEntitySerializer.new(
+            entity,
+            root_name: "billing_entity",
+            includes: [:taxes, :selected_invoice_custom_sections]
+          )
         )
       end
 
@@ -52,7 +56,7 @@ module Api
             json: ::V1::BillingEntitySerializer.new(
               result.billing_entity,
               root_name: "billing_entity",
-              includes: [:taxes]
+              includes: [:taxes, :selected_invoice_custom_sections]
             )
           )
         else
@@ -120,7 +124,8 @@ module Api
             :invoice_grace_period,
             :document_locale
           ],
-          tax_codes: []
+          tax_codes: [],
+          invoice_custom_section_codes: []
         )
       end
     end

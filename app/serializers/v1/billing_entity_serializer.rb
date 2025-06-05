@@ -35,6 +35,7 @@ module V1
       }
 
       payload = payload.merge(taxes) if include?(:taxes)
+      payload = payload.merge(selected_invoice_custom_sections) if include?(:selected_invoice_custom_sections)
 
       payload
     end
@@ -46,6 +47,14 @@ module V1
         model.taxes,
         ::V1::TaxSerializer,
         collection_name: "taxes"
+      ).serialize
+    end
+
+    def selected_invoice_custom_sections
+      ::CollectionSerializer.new(
+        model.selected_invoice_custom_sections,
+        ::V1::InvoiceCustomSectionSerializer,
+        collection_name: "selected_invoice_custom_sections"
       ).serialize
     end
   end

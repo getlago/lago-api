@@ -281,6 +281,56 @@ RSpec.describe BillingEntities::UpdateService do
           expect(result.billing_entity.selected_invoice_custom_sections).to be_empty
         end
       end
+
+      context "when invoice_custom_section_codes are provided" do
+        let(:params) do
+          {invoice_custom_section_codes: [invoice_custom_section_1.code, invoice_custom_section_2.code]}
+        end
+
+        it "updates the billing_entity" do
+          result = update_service.call
+
+          expect(result.billing_entity.selected_invoice_custom_sections).to contain_exactly(invoice_custom_section_1, invoice_custom_section_2)
+        end
+
+        context "when removing a section" do
+          let(:params) { {invoice_custom_section_codes: [invoice_custom_section_1.code]} }
+
+          before do
+            create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: invoice_custom_section_2)
+          end
+
+          it "removes the section" do
+            result = update_service.call
+
+            expect(result.billing_entity.selected_invoice_custom_sections).to contain_exactly(invoice_custom_section_1)
+          end
+        end
+
+        context "when adding a section" do
+          let(:params) { {invoice_custom_section_codes: [invoice_custom_section_1.code, invoice_custom_section_2.code]} }
+
+          before do
+            create(:billing_entity_applied_invoice_custom_section, billing_entity:, invoice_custom_section: invoice_custom_section_2)
+          end
+
+          it "adds the section" do
+            result = update_service.call
+
+            expect(result.billing_entity.selected_invoice_custom_sections).to contain_exactly(invoice_custom_section_1, invoice_custom_section_2)
+          end
+        end
+
+        context "when removing all sections" do
+          let(:params) { {invoice_custom_section_cods: []} }
+
+          it "removes all sections" do
+            result = update_service.call
+
+            expect(result.billing_entity.selected_invoice_custom_sections).to be_empty
+          end
+        end
+      end
     end
 
     context "when billing_entity is not provided" do
