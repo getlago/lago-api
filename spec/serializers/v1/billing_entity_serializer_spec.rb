@@ -5,9 +5,15 @@ require "rails_helper"
 RSpec.describe V1::BillingEntitySerializer, type: :serializer do
   subject(:serializer) { described_class.new(billing_entity, root_name: "billing_entity", includes: includes_options) }
 
-  let(:billing_entity) { create(:billing_entity) }
+  let(:organization) { create(:organization) }
+  let(:billing_entity) { create(:billing_entity, organization:) }
   let(:result) { JSON.parse(serializer.to_json) }
   let(:includes_options) { nil }
+  let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
+
+  before do
+    create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section:)
+  end
 
   it "serializes the billing entity" do
     billing_entity_serialized = result["billing_entity"]
@@ -41,6 +47,17 @@ RSpec.describe V1::BillingEntitySerializer, type: :serializer do
     expect(billing_entity_serialized.fetch("eu_tax_management")).to eq(billing_entity.eu_tax_management)
     expect(billing_entity_serialized.fetch("logo_url")).to eq(billing_entity.logo_url)
     expect(billing_entity_serialized["taxes"]).to be_nil
+    expect(billing_entity_serialized["selected_invoice_custom_sections"]).to be_nil
+  end
+
+  context "when including invoice custom sections" do
+    let(:includes_options) { [:selected_invoice_custom_sections] }
+
+    it "serializes the applicable invoice custom sections" do
+      billing_entity_serialized = result["billing_entity"]
+      expect(billing_entity_serialized["selected_invoice_custom_sections"].count).to eq(1)
+      expect(billing_entity_serialized["selected_invoice_custom_sections"].first.fetch("lago_id")).to eq(invoice_custom_section.id)
+    end
   end
 
   context "when including taxes" do

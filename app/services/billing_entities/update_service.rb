@@ -73,7 +73,7 @@ module BillingEntities
           BillingEntities::Taxes::ManageTaxesService.call!(billing_entity:, tax_codes: params[:tax_codes])
         end
 
-        handle_invoice_custom_sections if params.key?(:invoice_custom_section_ids)
+        handle_invoice_custom_sections if params.key?(:invoice_custom_section_ids) || params.key?(:invoice_custom_section_codes)
 
         assign_premium_attributes
         handle_base64_logo if params.key?(:logo)
@@ -128,7 +128,7 @@ module BillingEntities
 
     def handle_invoice_custom_sections
       existing_section_ids = billing_entity.selected_invoice_custom_sections.ids
-      new_section_ids = params[:invoice_custom_section_ids]
+      new_section_ids = params[:invoice_custom_section_ids] || InvoiceCustomSection.where(code: params[:invoice_custom_section_codes]).ids
 
       billing_entity.applied_invoice_custom_sections.where.not(invoice_custom_section_id: new_section_ids).destroy_all
 

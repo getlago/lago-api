@@ -40,6 +40,7 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
       subject
       expect(response).to be_successful
       expect(json[:billing_entity][:lago_id]).to eq(billing_entity1.id)
+      expect(json[:billing_entity]).to have_key :selected_invoice_custom_sections
     end
 
     context "when the billing entity has applied taxes" do
@@ -282,6 +283,27 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
       expect(json[:billing_entity][:document_locale]).to eq("es")
       expect(json[:billing_entity][:invoice_grace_period]).to eq(10)
       expect(json[:billing_entity][:logo_url]).to match(%r{.*/rails/active_storage/blobs/redirect/.*/logo})
+    end
+
+    context "when updating the applicable invoice custom sections" do
+      let(:update_params) do
+        {
+          billing_entity: {
+            invoice_custom_section_codes: [custom_section.code]
+          }
+        }
+      end
+
+      let(:custom_section) { create(:invoice_custom_section, organization:) }
+
+      it "updates the applicable invoice custom sections" do
+        subject
+
+        expect(response).to be_successful
+        expect(billing_entity1.reload.selected_invoice_custom_sections.count).to eq(1)
+        expect(billing_entity1.selected_invoice_custom_sections.first.code).to eq(custom_section.code)
+        expect(json[:billing_entity][:selected_invoice_custom_sections].count).to eq(1)
+      end
     end
 
     context "when updating billing_entity taxes" do
