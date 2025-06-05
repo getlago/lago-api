@@ -38,7 +38,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
             taxes { id rate }
             properties {
               amount
-              groupedBy
+              pricingGroupKeys
               freeUnits
               packageSize
               fixedAmount
