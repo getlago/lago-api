@@ -826,6 +826,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       let(:credit_amount) { 0 }
       let(:refund_amount) { 0 }
       let(:params) { {generate_credit_note: true, credit_amount: credit_amount, refund_amount: refund_amount} }
+
       around { |test| lago_premium!(&test) }
 
       it "calls the void service with all parameters" do
