@@ -199,7 +199,7 @@ RSpec.describe Api::V1::AppliedCouponsController, type: :request do
       end
 
       context "when no applied coupons match the coupon code" do
-        let(:params) { {coupon_code: "non_existent_code"} }
+        let(:params) { {coupon_code: ["non_existent_code"]} }
 
         it "returns an empty array" do
           subject
