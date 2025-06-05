@@ -28,8 +28,7 @@ module PaymentProviders
           # NOTE: Stripe customer was not created from lago
           return result unless metadata&.key?(:lago_customer_id)
 
-          # NOTE: Customer does not belong to this lago instance or
-          #       exists but does not belong to the organizations
+          # NOTE: Customer does not exist or exists but does not belong to the organizations
           #       (Happens when the Stripe API key is shared between organizations)
           return result if Customer.find_by(id: metadata[:lago_customer_id], organization_id: organization.id).nil?
 

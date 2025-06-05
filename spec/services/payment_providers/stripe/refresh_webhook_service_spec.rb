@@ -17,17 +17,16 @@ RSpec.describe PaymentProviders::Stripe::RefreshWebhookService do
       }
     end
     let(:stripe_api_response) do
-      json = get_stripe_fixtures("webhook_endpoint_update.json")
-      hash = JSON.parse(json)
-      hash["url"] = url
-      hash
+      get_stripe_fixtures("webhook_endpoint_update_response.json") do |h|
+        h["url"] = url
+      end
     end
 
     before do
       stub_const("ENV", ENV.to_h.merge("LAGO_API_URL" => "https://billing.example.com"))
       stub_request(:post, "https://api.stripe.com/v1/webhook_endpoints/#{payment_provider.webhook_id}")
         .with(body: expected_request_body)
-        .and_return(status: 200, body: stripe_api_response.to_json)
+        .and_return(status: 200, body: stripe_api_response)
     end
 
     it "registers a webhook on stripe" do
