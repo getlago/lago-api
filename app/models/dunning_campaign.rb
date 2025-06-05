@@ -44,7 +44,7 @@ class DunningCampaign < ApplicationRecord
     )
 
     # NOTE: Reset last attempt on customers falling back to the billing_entity campaign
-    billing_entities.map(&:reset_customers_last_dunning_campaign_attempt)
+    billing_entities.includes(:customers).map(&:reset_customers_last_dunning_campaign_attempt)
   end
 end
 
