@@ -90,7 +90,7 @@ module Invoices
     end
 
     def create_credit_notes!
-        total_amount = credit_amount + refund_amount
+      total_amount = credit_amount + refund_amount
 
       unless total_amount.zero?
         estimate_result = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: total_amount)
@@ -133,7 +133,7 @@ module Invoices
       invoice.fees.map do |fee|
         {
           fee_id: fee.id,
-          amount_cents: (fee.precise_amount_cents * ratio)
+          amount_cents: (fee.amount_cents * ratio)
         }
       end
     end
