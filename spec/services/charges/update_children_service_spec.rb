@@ -130,7 +130,7 @@ RSpec.describe Charges::UpdateChildrenService, type: :service do
         allow(Charges::UpdateService).to receive(:call!).and_call_original
       end
 
-      it "calls the service" do
+      it "does not call the update service" do
         update_service.call
 
         expect(Charges::UpdateService).not_to have_received(:call!)
