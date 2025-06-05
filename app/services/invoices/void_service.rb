@@ -42,12 +42,14 @@ module Invoices
           CreditNotes::RecreditService.call!(credit:) if credit.credit_note_id.present?
         end
 
-        invoice.wallet_transactions.outbound.each do |wallet_transaction|
-          WalletTransactions::RecreditService.call!(wallet_transaction:)
-        end
-
+        # when generate_credit_note, we count the wallet value on the creditable value
+        # so we don't need to recredit the wallet
         if generate_credit_note
           create_credit_notes!
+        else
+          invoice.wallet_transactions.outbound.each do |wallet_transaction|
+            WalletTransactions::RecreditService.call!(wallet_transaction:)
+          end
         end
       end
 
