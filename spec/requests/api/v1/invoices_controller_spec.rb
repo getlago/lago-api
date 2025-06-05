@@ -825,10 +825,11 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     context "when passing credit note parameters" do
       let(:credit_amount) { 0 }
       let(:refund_amount) { 0 }
-      let(:params) { { generate_credit_note: true, credit_amount: credit_amount, refund_amount: refund_amount } }
+      let(:params) { {generate_credit_note: true, credit_amount: credit_amount, refund_amount: refund_amount} }
+      around { |test| lago_premium!(&test) }
 
       it "calls the void service with all parameters" do
-        expect(Invoices::VoidService).to receive(:call).with(
+        allow(Invoices::VoidService).to receive(:call).with(
           invoice: instance_of(Invoice),
           params: hash_including(
             generate_credit_note: true,
@@ -838,6 +839,15 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         ).and_call_original
 
         subject
+
+        expect(Invoices::VoidService).to have_received(:call).with(
+          invoice: instance_of(Invoice),
+          params: hash_including(
+            generate_credit_note: true,
+            credit_amount: credit_amount,
+            refund_amount: refund_amount
+          )
+        )
         expect(response).to have_http_status(:success)
         expect(json[:invoice][:lago_id]).to eq(invoice.id)
         expect(json[:invoice][:status]).to eq("voided")
