@@ -50,7 +50,7 @@ RSpec.describe Mutations::Invoices::Void, type: :graphql do
     let(:refund_amount) { 0 }
 
     it "calls the void service with all parameters" do
-      expect(::Invoices::VoidService).to receive(:call).with(
+      allow(::Invoices::VoidService).to receive(:call).with(
         invoice: instance_of(Invoice),
         params: hash_including(
           generate_credit_note: true,
@@ -72,6 +72,15 @@ RSpec.describe Mutations::Invoices::Void, type: :graphql do
             refundAmount: refund_amount
           }
         }
+      )
+
+      expect(::Invoices::VoidService).to have_received(:call).with(
+        invoice: instance_of(Invoice),
+        params: hash_including(
+          generate_credit_note: true,
+          credit_amount: credit_amount,
+          refund_amount: refund_amount
+        )
       )
 
       result_data = result["data"]["voidInvoice"]
