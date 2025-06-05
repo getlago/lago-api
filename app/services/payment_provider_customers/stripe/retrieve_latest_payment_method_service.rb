@@ -43,7 +43,7 @@ module PaymentProviderCustomers
       def request_options
         {
           api_key:,
-          stripe_version: "2024-09-30.acacia" # temporarily hardcoded until Lago fixes version
+          stripe_version: ::Stripe.api_version || "2024-09-30.acacia" # TODO: Remove once Stripe.api_version is fully locked
         }
       end
 

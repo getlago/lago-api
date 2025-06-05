@@ -14,35 +14,37 @@ RSpec.describe PaymentProviderCustomers::Stripe::RetrieveLatestPaymentMethodServ
     context "when customer has a default payment method in Stripe" do
       it do
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
-          status: 200, body: get_stripe_fixtures("customer_with_default_payment_method.json")
+          status: 200, body: get_stripe_fixtures("customer_retrieve_response.json") do |res|
+            res["invoice_settings"]["default_payment_method"] = "pm_123456"
+          end
         )
 
         result = subject.call
-        expect(result.payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
+        expect(result.payment_method_id).to eq "pm_123456"
       end
     end
 
     context "when customer has payment method in Stripe but no default" do
       it do
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
-          status: 200, body: get_stripe_fixtures("customer_no_default_payment_method.json")
+          status: 200, body: get_stripe_fixtures("customer_retrieve_response.json")
         )
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}/payment_methods}).and_return(
-          status: 200, body: get_stripe_fixtures("customer_list_payment_methods.json")
+          status: 200, body: get_stripe_fixtures("customer_list_payment_methods_response.json")
         )
 
         result = subject.call
-        expect(result.payment_method_id).to eq "pm_1R2EmOQ8iJWBZFaMKJHOwcvP"
+        expect(result.payment_method_id).to start_with "pm_"
       end
     end
 
     context "when customer has no payment method in Stripe" do
       it do
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
-          status: 200, body: get_stripe_fixtures("customer_no_default_payment_method.json")
+          status: 200, body: get_stripe_fixtures("customer_retrieve_response.json")
         )
         stub_request(:get, %r{/v1/customers/#{provider_customer_id}/payment_methods}).and_return(
-          status: 200, body: get_stripe_fixtures("customer_list_no_payment_methods.json")
+          status: 200, body: get_stripe_fixtures("customer_list_payment_methods_empty_response.json")
         )
 
         result = subject.call

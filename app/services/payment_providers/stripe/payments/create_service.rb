@@ -78,8 +78,9 @@ module PaymentProviders
           end
 
           # NOTE: Retrieve list of existing payment_methods
-          payment_method = ::Stripe::PaymentMethod.list(
-            {customer: provider_customer.provider_customer_id},
+          payment_method = ::Stripe::Customer.list_payment_methods(
+            provider_customer.provider_customer_id,
+            {},
             {api_key: payment_provider.secret_key}
           ).first
           provider_customer.update!(payment_method_id: payment_method&.id)

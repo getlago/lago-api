@@ -336,10 +336,10 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           context "when customer has a default payment method on Stripe" do
             it do
               stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
-                status: 200, body: get_stripe_fixtures("customer_no_default_payment_method.json")
+                status: 200, body: get_stripe_fixtures("customer_retrieve_response.json")
               )
               stub_request(:get, %r{/v1/customers/#{provider_customer_id}/payment_methods}).and_return(
-                status: 200, body: get_stripe_fixtures("customer_list_no_payment_methods.json")
+                status: 200, body: get_stripe_fixtures("customer_list_payment_methods_empty_response.json")
               )
 
               subject
@@ -352,7 +352,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
         context "when the authorization failed (card declined)" do
           it do
-            stripe_card_declined = get_stripe_fixtures("payment_intent_authorization_failed.json")
+            stripe_card_declined = get_stripe_fixtures("payment_intent_authorization_failed_response.json")
             stub_request(:post, %r{/v1/payment_intents}).and_return(
               status: 402,
               body: stripe_card_declined,

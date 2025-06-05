@@ -1,16 +1,23 @@
 {
-  "id": "cus_Rw5Qso78STEap3",
+  "id": "cus_SR8o2vcGRkVb6v",
   "object": "customer",
-  "address": null,
+  "address": {
+    "city": null,
+    "country": "FR",
+    "line1": null,
+    "line2": null,
+    "postal_code": null,
+    "state": null
+  },
   "balance": 0,
-  "created": 1741878032,
+  "created": 1749040499,
   "currency": null,
   "default_source": null,
   "delinquent": false,
   "description": null,
   "discount": null,
-  "email": "awdawd@desf.com",
-  "invoice_prefix": "D0821665",
+  "email": null,
+  "invoice_prefix": "23RAT06I",
   "invoice_settings": {
     "custom_fields": null,
     "default_payment_method": null,
@@ -19,10 +26,10 @@
   },
   "livemode": false,
   "metadata": {
-    "customer_id": "cust_new_auth_no_card",
-    "lago_customer_id": "e4674f68-a7ba-4ce8-95e9-981f346b49d7"
+    "customer_id": "cust_2025-06-04T12:34:59Z--d2ac6d",
+    "lago_customer_id": "2c0f0f00-c378-4915-8ea4-c26304e1968a"
   },
-  "name": "Julien FTP Stripe",
+  "name": "Integration Test UPDATED 2025-06-04T12:35:09Z",
   "next_invoice_sequence": 1,
   "phone": null,
   "preferred_locales": [],

@@ -32,7 +32,7 @@ describe "Invoice Payments Scenarios", :scenarios, type: :request do
     stub_request(:post, "https://api.stripe.com/v1/payment_intents")
       .and_return(
         status: 402,
-        body: get_stripe_fixtures("payment_intent_failed_card_declined.json")
+        body: get_stripe_fixtures("payment_intent_card_declined_response.json")
       )
   end
 

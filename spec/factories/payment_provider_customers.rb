@@ -5,7 +5,7 @@ FactoryBot.define do
     customer
     organization { customer.organization }
 
-    provider_customer_id { SecureRandom.uuid }
+    provider_customer_id { "cus_#{SecureRandom.hex}" }
     provider_payment_methods { %w[card sepa_debit] }
   end
 

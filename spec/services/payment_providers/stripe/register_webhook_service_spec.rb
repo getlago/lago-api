@@ -11,23 +11,24 @@ RSpec.describe PaymentProviders::Stripe::RegisterWebhookService do
   describe ".call" do
     let(:url) { "#{ENV["LAGO_API_URL"]}/webhooks/stripe/#{organization.id}?code=stripe_sandbox" }
     let(:expected_request_body) do
-      {
+      params = {
         enabled_events: PaymentProviders::StripeProvider::WEBHOOKS_EVENTS,
-        url: url
+        url:
       }
+      params[:api_version] = ::Stripe.api_version if ::Stripe.api_version
+      params
     end
     let(:stripe_api_response) do
-      json = get_stripe_fixtures("webhook_endpoint_create.json")
-      hash = JSON.parse(json)
-      hash["url"] = url
-      hash
+      get_stripe_fixtures("webhook_endpoint_create_response.json") do |h|
+        h["url"] = url
+      end
     end
 
     before do
       stub_const("ENV", ENV.to_h.merge("LAGO_API_URL" => "https://billing.example.com"))
       stub_request(:post, "https://api.stripe.com/v1/webhook_endpoints")
         .with(body: expected_request_body)
-        .and_return(status: 200, body: stripe_api_response.to_json)
+        .and_return(status: 200, body: stripe_api_response)
     end
 
     it "registers a webhook on stripe" do

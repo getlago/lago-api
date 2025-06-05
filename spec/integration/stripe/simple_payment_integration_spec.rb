@@ -24,8 +24,8 @@ describe "Stripe Payment for Real", :scenarios, type: :request do
   before do
     raise "You need to set the SPEC_STRIPE_SECRET_KEY environment variable" unless api_key
 
-    Stripe.api_version = ENV["STRIPE_API_VERSION"]
-    Stripe.api_key = api_key
+    ::Stripe.api_version = ENV["STRIPE_API_VERSION"]
+    ::Stripe.api_key = api_key
     WebMock.disable_net_connect!(allow: "api.stripe.com")
 
     # Setting up the stripe payment providers, which register the webhook endpoint

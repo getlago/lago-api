@@ -23,6 +23,7 @@ module ApiHelper
 
   def json
     return response.body unless response.media_type.include?("json")
+    return {} if response.body.blank? # handle `head(:ok)`
 
     JSON.parse(response.body, symbolize_names: true)
   end

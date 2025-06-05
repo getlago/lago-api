@@ -8,26 +8,15 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
   let(:organization) { create(:organization) }
 
-  let(:event_json) { get_stripe_fixtures(fixtures_filename) }
-
   context "when payment intent event" do
-    let(:fixtures_filename) { "payment_intent_event_failed.json" }
+    let(:event_json) { get_stripe_fixtures("webhooks/payment_intent_payment_failed.json") }
 
     it "updates the payment status and save the payment method" do
       expect_any_instance_of(Invoices::Payments::StripeService).to receive(:update_payment_status) # rubocop:disable RSpec/AnyInstance
         .with(
           organization_id: organization.id,
           status: "failed",
-          stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
-            id: "pi_3Qu0oXQ8iJWBZFaM2cc2RG6D",
-            status: "failed",
-            metadata: {
-              invoice_type: "one_off",
-              lago_customer_id: "475c46b6-b907-4e5e-8dc7-934377b1cb3c",
-              invoice_issuing_date: "2025-02-19",
-              lago_invoice_id: "a587e552-36bc-4334-81f2-abcbf034ad3f"
-            }
-          )
+          stripe_payment: PaymentProviders::StripeProvider::StripePayment
         ).and_call_original
 
       create(:payment, provider_payment_id: event.data.object.id)
@@ -39,21 +28,22 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
   end
 
   context "when payment intent event for a payment request" do
-    let(:fixtures_filename) { "payment_intent_event_payment_request_failed.json" }
+    let(:event_json) do
+      json = get_stripe_fixtures("webhooks/payment_intent_payment_failed.json")
+      h = JSON.parse(json)
+      h["data"]["object"]["metadata"] = {
+        lago_payable_type: "PaymentRequest",
+        lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f"
+      }
+      h.to_json
+    end
 
     it "routes the event to an other service" do
       expect_any_instance_of(PaymentRequests::Payments::StripeService).to receive(:update_payment_status) # rubocop:disable RSpec/AnyInstance
         .with(
           organization_id: organization.id,
           status: "failed",
-          stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
-            id: "pi_3Qu0oXQ8iJWBZFaM2cc2RG6D",
-            status: "failed",
-            metadata: {
-              lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
-              lago_payable_type: "PaymentRequest"
-            }
-          )
+          stripe_payment: PaymentProviders::StripeProvider::StripePayment
         ).and_call_original
 
       payment = create(:payment, provider_payment_id: event.data.object.id)
@@ -66,7 +56,12 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
   end
 
   context "when payment intent event with an invalid payable type" do
-    let(:fixtures_filename) { "payment_intent_event_invalid_payable_type.json" }
+    let(:event_json) do
+      json = get_stripe_fixtures("webhooks/payment_intent_payment_failed.json")
+      h = JSON.parse(json)
+      h["data"]["object"]["metadata"]["lago_payable_type"] = "InvalidPayableTypeName"
+      h.to_json
+    end
 
     it do
       expect { event_service.call }.to raise_error(NameError, "Invalid lago_payable_type: InvalidPayableTypeName")

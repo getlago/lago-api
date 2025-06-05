@@ -23,7 +23,7 @@ RSpec.describe InboundWebhooks::CreateService, type: :service do
   let(:validation_payload_result) { BaseService::Result.new }
 
   let(:event) do
-    JSON.parse(get_stripe_fixtures("payment_intent_event.json"))
+    JSON.parse(get_stripe_fixtures("webhooks/payment_intent_succeeded.json"))
   end
 
   before do
