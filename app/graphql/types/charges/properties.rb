@@ -5,7 +5,6 @@ module Types
     class Properties < Types::BaseObject
       # NOTE: Standard and Package charge model
       field :amount, String, null: true
-      field :grouped_by, [String], null: true # TODO(pricing_group_keys): remove after deprecation of grouped_by
       field :pricing_group_keys, [String], null: true
 
       # NOTE: Graduated charge model
