@@ -313,10 +313,8 @@ module Fees
     def aggregation_filters(charge_filter: nil)
       filters = {}
 
-      if charge.supports_grouped_by?
-        model = charge_filter.presence || charge
-        filters[:grouped_by] = model.pricing_group_keys if model.pricing_group_keys.present?
-      end
+      model = charge_filter.presence || charge
+      filters[:grouped_by] = model.pricing_group_keys if model.pricing_group_keys.present?
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)
