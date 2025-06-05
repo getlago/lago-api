@@ -18,7 +18,7 @@ module Charges
           Charges::UpdateService.call!(
             charge: child_charge,
             params:,
-            cascade_options:{
+            cascade_options: {
               cascade: true,
               parent_filters: charge.filters.map(&:attributes),
               equal_properties: charge.equal_properties?(child_charge)
