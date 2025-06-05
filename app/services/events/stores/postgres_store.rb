@@ -18,7 +18,7 @@ module Events
             .where(numeric_condition)
         end
 
-        scope = with_grouped_by_values(scope) if grouped_by_values?
+        scope = apply_grouped_by_values(scope) if grouped_by_values?
         filters_scope(scope)
       end
 
@@ -359,13 +359,13 @@ module Events
             )
           end.join(" AND ")
         end
-        sql = conditions.compact_blank.map { "(#{_1})" }.join(" OR ")
+        sql = conditions.compact_blank.map { "(#{it})" }.join(" OR ")
         scope = scope.where.not(sql) if sql.present?
 
         scope
       end
 
-      def with_grouped_by_values(scope)
+      def apply_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
           scope = if grouped_by_value.present?
             scope.where("events.properties @> ?", {grouped_by.to_s => grouped_by_value.to_s}.to_json)
@@ -395,7 +395,7 @@ module Events
       end
 
       def sanitized_grouped_by
-        grouped_by.map { sanitized_property_name(_1) }
+        grouped_by.map { sanitized_property_name(it) }
       end
 
       # NOTE: Compute pro-rata of the duration in days between the datetimes over the duration of the billing period

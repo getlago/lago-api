@@ -18,7 +18,7 @@ module Events
           scope = scope.where("events_enriched.timestamp <= ?", to_datetime) if to_datetime
           scope = scope.limit_by(1, "events_enriched.transaction_id")
 
-          scope = with_grouped_by_values(scope) if grouped_by_values?
+          scope = apply_grouped_by_values(scope) if grouped_by_values?
           filters_scope(scope)
         end
       end
@@ -526,7 +526,7 @@ module Events
         scope
       end
 
-      def with_grouped_by_values(scope)
+      def apply_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
           scope = if grouped_by_value.present?
             scope.where("events_enriched.properties[?] = ?", grouped_by, grouped_by_value)
