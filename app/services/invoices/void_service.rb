@@ -115,7 +115,7 @@ module Invoices
           reason: :other,
           description: "Credit note created due to voided invoice #{invoice.id}",
           credit_amount_cents: estimate_result.credit_note.credit_amount_cents,
-          items: estimate_result.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents}}
+          items: estimate_result.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents} }
         )
 
         if credit_note_to_void.success?
