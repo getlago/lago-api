@@ -244,6 +244,20 @@ RSpec.describe BillableMetrics::Aggregations::MaxService, type: :service do
 
       expect(result.event_aggregation).to eq([0, 0, 0, 0, 12])
     end
+
+    context "with grouped_by_values" do
+      let(:event) { events.first }
+
+      before do
+        event.update!(properties: event.properties.merge(scheme: "visa"))
+      end
+
+      it "takes the groups into account" do
+        result = max_service.per_event_aggregation(grouped_by_values: {"scheme" => "visa"})
+
+        expect(result.event_aggregation).to eq([event.properties["total_count"]])
+      end
+    end
   end
 
   describe ".grouped_by_aggregation" do

@@ -777,6 +777,35 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         expect(result.event_aggregation).to eq([1])
         expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([21.fdiv(31).ceil(5)])
       end
+
+      context "with grouped_by_values" do
+        before do
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: added_at,
+            properties: {unique_id: SecureRandom.uuid, scheme: "visa"}
+          )
+
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 20.days,
+            properties: {unique_id: "111"}
+          )
+        end
+
+        it "takes the groups into account" do
+          result = unique_count_service.per_event_aggregation(grouped_by_values: {"scheme" => "visa"})
+
+          expect(result.event_aggregation).to eq([1])
+          expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([21.fdiv(31).ceil(5)])
+        end
+      end
     end
 
     context "with persisted metrics removed in the period" do

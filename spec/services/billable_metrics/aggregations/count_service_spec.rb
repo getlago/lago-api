@@ -167,6 +167,18 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
 
       expect(result.event_aggregation).to eq([1, 1, 1, 1])
     end
+
+    context "with grouped_by_values" do
+      before do
+        event_list.first.update!(properties: {"scheme" => "visa"})
+      end
+
+      it "takes the groups into account" do
+        result = count_service.per_event_aggregation(grouped_by_values: {"scheme" => "visa"})
+
+        expect(result.event_aggregation).to eq([1])
+      end
+    end
   end
 
   describe ".grouped_by_aggregation" do

@@ -126,7 +126,10 @@ module Charges
         # NOTE: when performing aggregation for pay in advance, we have to ignore the current event
         #       for computing the diff between event included and excluded
         #       see app/services/charges/apply_pay_in_advance_charge_model_service.rb:18
-        aggregation_result.aggregator.per_event_aggregation(exclude_event: properties[:exclude_event]).event_aggregation
+        aggregation_result.aggregator.per_event_aggregation(
+          exclude_event: properties[:exclude_event],
+          grouped_by_values: grouped_by
+        ).event_aggregation
       end
 
       def compute_amount_with_transaction_min_max

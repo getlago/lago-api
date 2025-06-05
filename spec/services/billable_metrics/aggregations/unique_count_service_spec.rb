@@ -768,5 +768,17 @@ RSpec.describe BillableMetrics::Aggregations::UniqueCountService, type: :service
 
       expect(result.event_aggregation).to eq([1])
     end
+
+    context "with grouped_by_values" do
+      before do
+        unique_count_event.update!(properties: unique_count_event.properties.merge(scheme: "visa"))
+      end
+
+      it "takes the groups into account" do
+        result = count_service.per_event_aggregation(grouped_by_values: {"scheme" => "visa"})
+
+        expect(result.event_aggregation).to eq([1])
+      end
+    end
   end
 end

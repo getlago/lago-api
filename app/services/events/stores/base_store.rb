@@ -27,6 +27,8 @@ module Events
 
       def with_grouped_by_values(grouped_by_values, &block)
         previous_grouped_by_values = @grouped_by_values
+        return yield block if grouped_by_values.nil?
+
         @grouped_by_values = grouped_by_values
         yield block
       ensure

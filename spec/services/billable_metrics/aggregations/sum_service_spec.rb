@@ -761,6 +761,20 @@ RSpec.describe BillableMetrics::Aggregations::SumService, type: :service, transa
 
       expect(result.event_aggregation).to eq([12, 12, 12, 12])
     end
+
+    context "with grouped_by_values" do
+      let(:event) { latest_events.first }
+
+      before do
+        event.update!(properties: event.properties.merge(scheme: "visa"))
+      end
+
+      it "takes the groups into account" do
+        result = sum_service.per_event_aggregation(grouped_by_values: {"scheme" => "visa"})
+
+        expect(result.event_aggregation).to eq([12])
+      end
+    end
   end
 
   describe ".grouped_by aggregation" do
