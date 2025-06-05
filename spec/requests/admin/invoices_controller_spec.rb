@@ -14,7 +14,8 @@ RSpec.describe Admin::InvoicesController, type: [:request, :admin] do
     allow(Invoices::GeneratePdfService).to receive(:new)
       .with(invoice:, context: "admin")
       .and_return(generate_service)
-    allow(generate_service).to receive(:call)
+    allow(generate_service).to receive(:produce_activity_log?).and_return(true)
+    allow(generate_service).to receive(:call_with_activity_log)
       .and_return(result)
   end
 

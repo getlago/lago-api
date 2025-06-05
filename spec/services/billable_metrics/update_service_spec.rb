@@ -3,8 +3,6 @@
 require "rails_helper"
 
 RSpec.describe BillableMetrics::UpdateService, type: :service do
-  subject(:update_service) { described_class.new(billable_metric:, params:) }
-
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
@@ -25,9 +23,13 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
   end
   let(:filters) { nil }
 
-  describe "#call" do
-    it "updates the billable metric", aggregate_failures: true do
-      result = update_service.call
+  describe ".call" do
+    before do
+      allow(Utils::ActivityLog).to receive(:produce).and_call_original
+    end
+
+    it "updates the billable metric" do
+      result = described_class.call(billable_metric:, params:)
       expect(result).to be_success
 
       metric = result.billable_metric
@@ -42,6 +44,12 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       )
     end
 
+    it "produces an activity log" do
+      described_class.call(billable_metric:, params:)
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(billable_metric, "billable_metric.updated")
+    end
+
     context "with filters arguments" do
       let(:filters) do
         [
@@ -53,7 +61,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
 
       it "updates billable metric's filters" do
-        expect { update_service.call }.to change { billable_metric.filters.reload.count }.from(0).to(1)
+        expect { described_class.call(billable_metric:, params:) }.to change { billable_metric.filters.reload.count }.from(0).to(1)
       end
     end
 
@@ -68,13 +76,11 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       end
 
       it "returns an error" do
-        result = update_service.call
+        result = described_class.call(billable_metric:, params:)
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
       end
     end
 
@@ -82,13 +88,11 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       let(:billable_metric) { nil }
 
       it "returns an error" do
-        result = update_service.call
+        result = described_class.call(billable_metric:, params:)
 
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.error_code).to eq("billable_metric_not_found")
-        end
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.error_code).to eq("billable_metric_not_found")
       end
     end
 
@@ -96,7 +100,7 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
       let(:params) { {aggregation_type: "custom_agg"} }
 
       it "returns a forbidden failure" do
-        result = update_service.call
+        result = described_class.call(billable_metric:, params:)
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
@@ -109,25 +113,23 @@ RSpec.describe BillableMetrics::UpdateService, type: :service do
 
       before { charge }
 
-      it "updates only name and description", aggregate_failures: true do
-        result = update_service.call
+      it "updates only name and description" do
+        result = described_class.call(billable_metric:, params:)
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          expect(result.billable_metric).to have_attributes(
-            name: "New Metric",
-            description: "New metric description"
-          )
+        expect(result.billable_metric).to have_attributes(
+          name: "New Metric",
+          description: "New metric description"
+        )
 
-          expect(result.billable_metric).not_to have_attributes(
-            code: "new_metric",
-            aggregation_type: "sum_agg",
-            field_name: "field_value",
-            rounding_function: "ceil",
-            rounding_precision: 2
-          )
-        end
+        expect(result.billable_metric).not_to have_attributes(
+          code: "new_metric",
+          aggregation_type: "sum_agg",
+          field_name: "field_value",
+          rounding_function: "ceil",
+          rounding_precision: 2
+        )
       end
     end
   end

@@ -8,6 +8,12 @@ module Subscriptions
       super
     end
 
+    activity_loggable(
+      action: "subscription.updated",
+      record: -> { subscription },
+      condition: -> { !subscription&.starting_in_the_future? }
+    )
+
     def call
       return result.not_found_failure!(resource: "subscription") unless subscription
       unless valid?(
@@ -37,7 +43,9 @@ module Subscriptions
       else
         subscription.save!
 
-        after_commit { SendWebhookJob.perform_later("subscription.updated", subscription) }
+        after_commit do
+          SendWebhookJob.perform_later("subscription.updated", subscription)
+        end
 
         if subscription.should_sync_hubspot_subscription?
           Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)

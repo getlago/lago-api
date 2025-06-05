@@ -26,6 +26,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
     before do
       wallet_transaction
       subscription
+      allow(Utils::ActivityLog).to receive(:produce)
     end
 
     it "creates an invoice" do
@@ -62,6 +63,12 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       expect do
         invoice_service.call
       end.to have_enqueued_job(SendWebhookJob)
+    end
+
+    it "produces an activity log" do
+      invoice = invoice_service.call.invoice
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.paid_credit_added")
     end
 
     it_behaves_like "syncs invoice" do

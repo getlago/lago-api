@@ -9,6 +9,11 @@ module Wallets
       super
     end
 
+    activity_loggable(
+      action: "wallet.updated",
+      record: -> { wallet }
+    )
+
     def call
       return result.not_found_failure!(resource: "wallet") unless wallet
       return result unless valid_expiration_at?(expiration_at: params[:expiration_at])

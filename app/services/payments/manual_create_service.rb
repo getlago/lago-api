@@ -8,6 +8,11 @@ module Payments
       super
     end
 
+    activity_loggable(
+      action: "payment.recorded",
+      record: -> { result.payment }
+    )
+
     def call
       check_preconditions
       return result if result.error

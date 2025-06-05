@@ -60,16 +60,21 @@ module Invoices
       fill_daily_usage
 
       if tax_error?(fee_result)
-        SendWebhookJob.perform_later("invoice.drafted", invoice) if grace_period?
+        if grace_period?
+          SendWebhookJob.perform_later("invoice.drafted", invoice)
+          Utils::ActivityLog.produce(invoice, "invoice.drafted")
+        end
 
         return result
       end
 
       if grace_period?
         SendWebhookJob.perform_later("invoice.drafted", invoice)
+        Utils::ActivityLog.produce(invoice, "invoice.drafted")
       else
         unless invoice.closed? # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
           SendWebhookJob.perform_later("invoice.created", invoice)
+          Utils::ActivityLog.produce(invoice, "invoice.created")
           GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_finalized_email?)
           Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?

@@ -132,6 +132,7 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
       before do
         allow(Stripe::Refund).to receive(:create)
           .and_raise(::Stripe::InvalidRequestError.new(error_message, {}, code: error_message))
+        allow(Utils::ActivityLog).to receive(:produce)
       end
 
       it "delivers an error webhook" do
@@ -151,6 +152,12 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
               error_code: "error"
             }
           )
+      end
+
+      it "produces an activity log" do
+        stripe_service.create
+
+        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failure")
       end
 
       context "when error is about non refundable payment method" do
@@ -345,7 +352,10 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
     end
 
     context "when status is failed" do
-      before { stripe_customer }
+      before do
+        stripe_customer
+        allow(Utils::ActivityLog).to receive(:produce)
+      end
 
       it "delivers an error webhook" do
         result = stripe_service.update_status(
@@ -371,6 +381,15 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
               }
             )
         end
+      end
+
+      it "produces an activity log" do
+        stripe_service.update_status(
+          provider_refund_id: refund.provider_refund_id,
+          status: "failed"
+        )
+
+        expect(Utils::ActivityLog).to have_received(:produce).with(credit_note, "credit_note.refund_failure")
       end
     end
   end

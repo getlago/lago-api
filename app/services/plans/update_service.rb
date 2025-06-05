@@ -8,6 +8,12 @@ module Plans
       super
     end
 
+    activity_loggable(
+      action: "plan.updated",
+      record: -> { plan },
+      condition: -> { plan&.parent_id.nil? }
+    )
+
     def call
       return result.not_found_failure!(resource: "plan") unless plan
 

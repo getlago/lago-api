@@ -3,6 +3,9 @@
 class BaseService
   include AfterCommitEverywhere
 
+  # rubocop:disable ThreadSafety/ClassAndModuleAttributes
+  class_attribute :activity_log_config, instance_writer: false, default: nil
+  # rubocop:enable ThreadSafety/ClassAndModuleAttributes
   class FailedResult < StandardError
     attr_reader :result, :original_error
 
@@ -226,9 +229,19 @@ class BaseService
 
   Result = LegacyResult
 
+  def self.activity_loggable(action:, record:, condition: -> { true })
+    self.activity_log_config = {action:, record:, condition:}
+  end
+
   def self.call(*, **, &)
     LagoTracer.in_span("#{name}#call") do
-      new(*, **).call(&)
+      instance = new(*, **)
+
+      if instance.try(:produce_activity_log?)
+        instance.call_with_activity_log(&)
+      else
+        instance.call(&)
+      end
     end
   end
 
@@ -257,6 +270,27 @@ class BaseService
 
   def call_async(**args, &block)
     raise NotImplementedError
+  end
+
+  def produce_activity_log?
+    return false if activity_log_config.nil?
+
+    instance_exec(&self.class.activity_log_config[:condition])
+  end
+
+  def call_with_activity_log(&block)
+    action = self.class.activity_log_config[:action]
+
+    case action
+    when /updated/
+      record = instance_exec(&self.class.activity_log_config[:record])
+      Utils::ActivityLog.produce(record, action) { call(&block) }
+    else
+      call(&block).tap do |result|
+        record = instance_exec(&self.class.activity_log_config[:record])
+        Utils::ActivityLog.produce(record, action) { result }
+      end
+    end
   end
 
   protected

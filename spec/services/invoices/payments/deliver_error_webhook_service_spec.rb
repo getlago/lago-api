@@ -19,12 +19,22 @@ RSpec.describe Invoices::Payments::DeliverErrorWebhookService, type: :service do
     context "when invoice is visible?" do
       let(:invoice) { create(:invoice, invoice_type: :subscription, status: :finalized) }
 
+      before do
+        allow(Utils::ActivityLog).to receive(:produce)
+      end
+
       it "enqueues a job to send an invoice payment failure webhook" do
         expect do
           webhook_service.call_async
         end.to have_enqueued_job(SendWebhookJob).once.and(
           have_enqueued_job(SendWebhookJob).with("invoice.payment_failure", invoice, params)
         )
+      end
+
+      it "produces an activity log" do
+        webhook_service.call_async
+
+        expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.payment_failure")
       end
     end
 
@@ -39,9 +49,14 @@ RSpec.describe Invoices::Payments::DeliverErrorWebhookService, type: :service do
     end
 
     context "when the invoice is credit?" do
-      let(:fee) { create(:fee, fee_type: :credit, invoice: invoice, invoiceable: create(:wallet_transaction)) }
+      let(:invoiceable) { create(:wallet_transaction) }
+      let(:fee) { create(:fee, fee_type: :credit, invoice: invoice, invoiceable:) }
 
-      before { fee }
+      before do
+        allow(Utils::ActivityLog).to receive(:produce)
+
+        fee
+      end
 
       context "when the invoice is open?" do
         let(:invoice) { create(:invoice, :credit, status: :open) }
@@ -51,6 +66,12 @@ RSpec.describe Invoices::Payments::DeliverErrorWebhookService, type: :service do
             webhook_service.call_async
           end.to have_enqueued_job(SendWebhookJob).once
             .and(have_enqueued_job(SendWebhookJob).with("wallet_transaction.payment_failure", WalletTransaction, params))
+        end
+
+        it "produces an activity log" do
+          webhook_service.call_async
+
+          expect(Utils::ActivityLog).to have_received(:produce).with(invoiceable, "wallet_transaction.payment_failure")
         end
       end
 
@@ -62,6 +83,12 @@ RSpec.describe Invoices::Payments::DeliverErrorWebhookService, type: :service do
             webhook_service.call_async
           end.to have_enqueued_job(SendWebhookJob).with("wallet_transaction.payment_failure", WalletTransaction, params)
             .and(have_enqueued_job(SendWebhookJob).with("invoice.payment_failure", invoice, params))
+        end
+
+        it "produces an activity log" do
+          webhook_service.call_async
+
+          expect(Utils::ActivityLog).to have_received(:produce).with(invoiceable, "wallet_transaction.payment_failure")
         end
       end
     end

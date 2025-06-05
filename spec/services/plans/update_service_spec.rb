@@ -114,6 +114,7 @@ RSpec.describe Plans::UpdateService, type: :service do
   describe "call" do
     before do
       applied_tax
+      allow(Utils::ActivityLog).to receive(:produce)
     end
 
     it "updates a plan" do
@@ -136,6 +137,27 @@ RSpec.describe Plans::UpdateService, type: :service do
       create(:invoice_subscription, invoice:, subscription:)
 
       expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+    end
+
+    context "with activity logs" do
+      context "when no parent" do
+        it "produces" do
+          described_class.call(plan:, params: update_args)
+
+          expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated")
+        end
+      end
+
+      context "when plan is a children" do
+        let(:parent_id) { plan.id }
+        let(:child_plan) { create(:plan, organization:, parent_id:) }
+
+        it "does not produce" do
+          described_class.call(plan: child_plan, params: update_args)
+
+          expect(Utils::ActivityLog).not_to have_received(:produce)
+        end
+      end
     end
 
     context "with cascade option" do

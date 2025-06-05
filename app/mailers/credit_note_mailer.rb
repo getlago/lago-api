@@ -37,6 +37,6 @@ class CreditNoteMailer < ApplicationMailer
   def ensure_pdf
     credit_note = params[:credit_note]
 
-    CreditNotes::GenerateService.new(credit_note:).call
+    CreditNotes::GenerateService.call(credit_note:)
   end
 end
