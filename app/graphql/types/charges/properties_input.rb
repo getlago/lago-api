@@ -5,7 +5,8 @@ module Types
     class PropertiesInput < Types::BaseInputObject
       # NOTE: Standard and Package charge model
       argument :amount, String, required: false
-      argument :grouped_by, [String], required: false
+      argument :grouped_by, [String], required: false  # TODO(pricing_group_keys): remove after deprecation of grouped_by
+      argument :pricing_group_keys, [String], required: false
 
       # NOTE: Graduated charge model
       argument :graduated_ranges, [Types::Charges::GraduatedRangeInput], required: false

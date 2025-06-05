@@ -49,6 +49,10 @@ class ChargeFilter < ApplicationRecord
     end
   end
 
+  def pricing_group_keys
+    properties["pricing_group_keys"].presence || properties["grouped_by"]
+  end
+
   private
 
   def validate_properties

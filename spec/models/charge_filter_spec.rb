@@ -424,4 +424,22 @@ RSpec.describe ChargeFilter, type: :model do
       )
     end
   end
+
+  describe "#pricing_group_keys" do
+    subject(:charge_filter) { build(:charge_filter, properties:) }
+
+    let(:properties) { {"amount_cents" => "1000", :pricing_group_keys => ["user_id"]} }
+
+    it "returns the pricing group keys" do
+      expect(charge_filter.pricing_group_keys).to eq(["user_id"])
+    end
+
+    context "with grouped_by property" do
+      let(:properties) { {"amount_cents" => "1000", :grouped_by => ["user_id"]} }
+
+      it "returns the pricing group keys" do
+        expect(charge_filter.pricing_group_keys).to eq(["user_id"])
+      end
+    end
+  end
 end

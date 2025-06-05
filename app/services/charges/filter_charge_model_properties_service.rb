@@ -35,7 +35,14 @@ module Charges
       attributes += charge_model_attributes || []
 
       sliced_attributes = properties.slice(*attributes)
-      sliced_attributes[:grouped_by].reject!(&:empty?) if charge.supports_grouped_by? && sliced_attributes[:grouped_by].present?
+
+      if charge.supports_grouped_by?
+        # TODO(pricing_group_keys):
+        # - Remove this condition when grouped will be implemented for all charge models
+        # - Deprecate grouped_by attribute
+        sliced_attributes[:grouped_by].reject!(&:empty?) if sliced_attributes[:grouped_by].present?
+        sliced_attributes[:pricing_group_keys].reject!(&:empty?) if sliced_attributes[:pricing_group_keys].present?
+      end
       sliced_attributes
     end
 
@@ -43,7 +50,8 @@ module Charges
       case charge_model&.to_sym
       when :standard
         attributes = %i[amount]
-        attributes << :grouped_by if properties[:grouped_by].present?
+        attributes << :grouped_by if properties[:grouped_by].present? && properties[:pricing_group_keys].blank?
+        attributes << :pricing_group_keys if properties[:pricing_group_keys].present?
 
         attributes
       when :graduated
@@ -64,9 +72,9 @@ module Charges
       when :volume
         %i[volume_ranges]
       when :dynamic
-        if properties[:grouped_by].present?
-          [:grouped_by]
-        end
+        attributes = []
+        attributes << :grouped_by if properties[:grouped_by].present? && properties[:pricing_group_keys].blank?
+        attributes << :pricing_group_keys if properties[:pricing_group_keys].present?
       end
     end
   end

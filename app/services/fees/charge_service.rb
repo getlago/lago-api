@@ -39,8 +39,7 @@ module Fees
 
       ActiveRecord::Base.transaction do
         result.fees.reject! { |f| !should_persit_fee?(f, result.fees) }
-
-        return result if context == :invoice_preview
+        next if context == :invoice_preview
 
         result.fees.each do |fee|
           fee.save!
@@ -304,8 +303,10 @@ module Fees
     def aggregation_filters(charge_filter: nil)
       filters = {}
 
-      properties = charge_filter&.properties || charge.properties
-      filters[:grouped_by] = properties["grouped_by"] if charge.supports_grouped_by? && properties["grouped_by"].present?
+      if charge.supports_grouped_by?
+        model = charge_filter.presence || charge
+        filters[:grouped_by] = model.pricing_group_keys if model.pricing_group_keys.present?
+      end
 
       if charge_filter.present?
         result = ChargeFilters::MatchingAndIgnoredService.call(charge:, filter: charge_filter)

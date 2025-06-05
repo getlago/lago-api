@@ -5,7 +5,8 @@ require "rails_helper"
 RSpec.describe ::V1::ChargeFilterSerializer do
   subject(:serializer) { described_class.new(charge_filter, root_name: "filter") }
 
-  let(:charge_filter) { create(:charge_filter) }
+  let(:charge_filter) { create(:charge_filter, properties:) }
+  let(:properties) { {"amount" => "1000"} }
   let(:filter) { create(:billable_metric_filter) }
 
   let(:filter_value) do
@@ -30,6 +31,27 @@ RSpec.describe ::V1::ChargeFilterSerializer do
           filter.key => filter_value.values
         }
       )
+    end
+  end
+
+  # TODO(pricing_group_keys): remove after deprecation of grouped_by
+  context "with grouped_by" do
+    let(:properties) { {"amount" => "1000", "grouped_by" => ["user_id"]} }
+
+    it "serializes the grouped_by properties" do
+      result = JSON.parse(serializer.to_json)
+      expect(result["filter"]["properties"]["grouped_by"]).to eq(["user_id"])
+      expect(result["filter"]["properties"]["pricing_group_keys"]).to eq(["user_id"])
+    end
+  end
+
+  context "with pricing_group_keys" do
+    let(:properties) { {"amount" => "1000", "pricing_group_keys" => ["user_id"]} }
+
+    it "serializes the grouped_by properties" do
+      result = JSON.parse(serializer.to_json)
+      expect(result["filter"]["properties"]["grouped_by"]).to eq(["user_id"])
+      expect(result["filter"]["properties"]["pricing_group_keys"]).to eq(["user_id"])
     end
   end
 end

@@ -8,6 +8,7 @@ RSpec.describe Types::Charges::Properties do
   it do
     expect(subject).to have_field(:amount).of_type("String")
     expect(subject).to have_field(:grouped_by).of_type("[String!]")
+    expect(subject).to have_field(:pricing_group_keys).of_type("[String!]")
 
     expect(subject).to have_field(:graduated_ranges).of_type("[GraduatedRange!]")
 
