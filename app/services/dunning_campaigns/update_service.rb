@@ -104,7 +104,7 @@ module DunningCampaigns
       organization.reset_customers_last_dunning_campaign_attempt
 
       new_applied_dunning_campaign = dunning_campaign.applied_to_organization ? dunning_campaign : nil
-      organization.default_billing_entity.update(applied_dunning_campaign: new_applied_dunning_campaign)
+      organization.default_billing_entity.update!(applied_dunning_campaign: new_applied_dunning_campaign)
 
       new_applied_dunning_campaign = dunning_campaign.applied_to_organization ? dunning_campaign : nil
       organization.default_billing_entity.update!(applied_dunning_campaign: new_applied_dunning_campaign)
