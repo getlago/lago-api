@@ -6,7 +6,7 @@ module Charges
 
     def perform(params:, old_parent_attrs:, old_parent_filters_attrs:)
       charge = Charge.find_by(id: old_parent_attrs["id"])
-      Charges::UpdateChildrenService.call!(charge:, params:, old_parent_attrs:, old_parent_filters_attrs: )
+      Charges::UpdateChildrenService.call!(charge:, params:, old_parent_attrs:, old_parent_filters_attrs:)
     end
   end
 end
