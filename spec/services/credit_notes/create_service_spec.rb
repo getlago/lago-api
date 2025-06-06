@@ -574,6 +574,35 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
     end
 
+    context "when invoice is voided" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          currency: "EUR",
+          total_amount_cents: 24,
+          payment_status: :pending,
+          taxes_rate: 20,
+          version_number: 2,
+          status: :voided
+        )
+      end
+
+      it "creates a credit note with finalized status instead of voided" do
+        result = create_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          
+          credit_note = result.credit_note
+          expect(credit_note.invoice).to eq(invoice)
+          expect(credit_note.status).to eq("finalized")
+          expect(invoice.status).to eq("voided")
+        end
+      end
+    end
+
     context "when 'preview' context provided" do
       subject(:result) { create_service.call }
 
