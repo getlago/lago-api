@@ -121,21 +121,12 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
             }
           ))
 
-        allow(Stripe::PaymentMethod).to receive(:list)
-          .and_return(Stripe::ListObject.construct_from(
-            data: [
-              {
-                id: "pm_123456",
-                object: "payment_method",
-                card: {brand: "visa"},
-                created: 1_656_422_973,
-                customer: "cus_123456",
-                livemode: false,
-                metadata: {},
-                type: "card"
-              }
-            ]
-          ))
+        allow(Stripe::Customer).to receive(:list_payment_methods).and_call_original
+        stub_request(:get, %r{/v1/customers/#{stripe_customer.provider_customer_id}/payment_methods}).and_return(
+          status: 200, body: get_stripe_fixtures("customer_list_payment_methods_response.json") do |h|
+            h[:data][0][:id] = "pm_123456"
+          end
+        )
       end
 
       it "retrieves the payment method" do
@@ -146,14 +137,16 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
         expect(customer.stripe_customer.provider_customer_id).to eq(stripe_customer.provider_customer_id)
         expect(customer.stripe_customer.payment_method_id).to eq("pm_123456")
 
-        expect(Stripe::PaymentMethod).to have_received(:list)
+        expect(Stripe::Customer).to have_received(:list_payment_methods).with(stripe_customer.provider_customer_id, {}, anything)
         expect(Stripe::PaymentIntent).to have_received(:create)
       end
     end
 
     context "with card error on stripe" do
       let(:payment_response) do
-        get_stripe_fixtures("payment_intent_card_declined_response.json")
+        get_stripe_fixtures("payment_intent_card_declined_response.json") do |h|
+          h["error"]["payment_intent"]["id"] = "pi_declined"
+        end
       end
 
       let(:customer) { create(:customer, organization:, payment_provider_code: code) }
@@ -184,7 +177,7 @@ RSpec.describe PaymentProviders::Stripe::Payments::CreateService, type: :service
         expect(result.error_code).to eq("card_declined")
         expect(result.payment.status).to eq("failed")
         expect(result.payment.payable_payment_status).to eq("failed")
-        expect(payment.reload.provider_payment_id).to eq("pi_3RECBrEODpjARzFD0ML00Ti8")
+        expect(payment.reload.provider_payment_id).to eq("pi_declined")
       end
     end
 

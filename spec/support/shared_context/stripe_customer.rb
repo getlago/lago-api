@@ -8,26 +8,25 @@ RSpec.shared_context "with Stripe configured for customer" do
   let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider: stripe_provider, provider_customer_id: stripe_cus_id) }
 
   let(:stripe_customer_response) do
-    get_stripe_fixtures("customer_retrieve_response.json")
+    get_stripe_fixtures("customer_retrieve_response.json") do |h|
+      h["invoice_settings"]["default_payment_method"] = stripe_pm_id
+    end
   end
   let(:stripe_payment_method_response) do
-    JSON.parse(
-      get_stripe_fixtures("retrieve_payment_method.json"),
-      symbolize_names: true
-    ).merge!({
-      id: stripe_pm_id,
-      customer: stripe_cus_id
-    })
+    get_stripe_fixtures("retrieve_payment_method_response.json") do |h|
+      h["id"] = stripe_pm_id
+      h["customer"] = stripe_cus_id
+    end
   end
 
   before do
     customer.update! payment_provider: :stripe, payment_provider_code: stripe_provider.code
     stripe_customer
 
-    stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_customer.provider_customer_id}")
+    stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_cus_id}")
       .and_return(status: 200, body: stripe_customer_response)
-    stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_customer.provider_customer_id}/payment_methods/pm_123456")
-      .and_return(status: 200, body: stripe_payment_method_response.to_json)
+    stub_request(:get, "https://api.stripe.com/v1/customers/#{stripe_cus_id}/payment_methods/#{stripe_pm_id}")
+      .and_return(status: 200, body: stripe_payment_method_response)
 
     WebMock.after_request do |request_signature, response|
       if request_signature.uri.path.match?(%r{/v1/payment_intents})

@@ -84,9 +84,11 @@ module ScenariosHelper
 
   ### Subscriptions
 
-  def create_subscription(params)
+  def create_subscription(params, authorization = nil)
+    payload = {subscription: params}
+    payload[:authorization] = authorization if authorization
     api_call do
-      post_with_token(organization, "/api/v1/subscriptions", {subscription: params})
+      post_with_token(organization, "/api/v1/subscriptions", payload)
     end
   end
 
@@ -142,6 +144,12 @@ module ScenariosHelper
         create_invoice_params[:fees].push(fee_addon_params)
       end
       post_with_token(organization, "/api/v1/invoices", {invoice: create_invoice_params})
+    end
+  end
+
+  def retry_invoice_payment(invoice_id)
+    api_call do
+      post_with_token(organization, "/api/v1/invoices/#{invoice_id}/retry_payment")
     end
   end
 
