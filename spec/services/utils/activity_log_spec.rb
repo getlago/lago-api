@@ -123,6 +123,39 @@ RSpec.describe Utils::ActivityLog, type: :service do
           expect(karafka_producer).not_to have_received(:produce_async)
         end
       end
+
+      context "when membership does not belong to the organization" do
+        before do
+          membership.update!(organization_id: create(:organization).id)
+          allow(CurrentContext).to receive(:api_key_id).and_return(nil)
+          allow(CurrentContext).to receive(:membership).and_return("organization_id/#{membership.id}")
+        end
+
+        it "does not set user_id" do
+          activity_log.produce(coupon, "coupon.created", activity_id: "activity-id") { BaseService::Result.new }
+
+          expect(karafka_producer).to have_received(:produce_async).with(
+            topic: "activity_logs",
+            key: "#{organization.id}--activity-id",
+            payload: {
+              activity_source: "api",
+              api_key_id: nil,
+              user_id: nil,
+              activity_type: "coupon.created",
+              activity_id: "activity-id",
+              logged_at: Time.current.iso8601[...-1],
+              created_at: Time.current.iso8601[...-1],
+              resource_id: coupon.id,
+              resource_type: "Coupon",
+              organization_id: organization.id,
+              activity_object: V1::CouponSerializer.new(coupon).serialize,
+              activity_object_changes: {},
+              external_customer_id: nil,
+              external_subscription_id: nil
+            }.to_json
+          )
+        end
+      end
     end
 
     context "when kafka is not configured" do
