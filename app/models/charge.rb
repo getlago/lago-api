@@ -43,6 +43,7 @@ class Charge < ApplicationRecord
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
   validates :charge_model, presence: true
 
+  validate :charge_model_allowance
   validate :validate_pay_in_advance
   validate :validate_regroup_paid_fees
   validate :validate_prorated
@@ -134,6 +135,12 @@ class Charge < ApplicationRecord
     return if billable_metric.custom_agg?
 
     errors.add(:charge_model, :invalid_aggregation_type_or_charge_model)
+  end
+
+  def charge_model_allowance
+    if graduated_percentage? && !License.premium?
+      errors.add(:charge_model, :graduated_percentage_requires_premium_license)
+    end
   end
 end
 
