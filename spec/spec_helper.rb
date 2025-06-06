@@ -70,6 +70,10 @@ RSpec.configure do |config|
   config.include ActiveStorageValidations::Matchers
   config.include Karafka::Testing::RSpec::Helpers
 
+  # NOTE: these files make real API calls and should be excluded from build
+  #       run them manually when needed
+  config.exclude_pattern = "spec/integration/**/*_integration_spec.rb"
+
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [Rails.root.join("spec/fixtures").to_s]
 
