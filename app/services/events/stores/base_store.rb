@@ -25,6 +25,16 @@ module Events
         grouped_by_values.present?
       end
 
+      def with_grouped_by_values(grouped_by_values, &block)
+        previous_grouped_by_values = @grouped_by_values
+        return yield block if grouped_by_values.nil?
+
+        @grouped_by_values = grouped_by_values
+        yield block
+      ensure
+        @grouped_by_values = previous_grouped_by_values
+      end
+
       def events(force_from: false)
         raise NotImplementedError
       end

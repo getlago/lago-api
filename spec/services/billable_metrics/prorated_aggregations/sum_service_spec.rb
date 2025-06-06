@@ -572,6 +572,24 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       expect(result.event_aggregation).to eq([5, 12, 12])
       expect(result.event_prorated_aggregation.map { |el| el.round(5) }).to eq([5, 2.32258, 2.32258])
     end
+
+    context "with grouped_by_values" do
+      let(:old_event) { old_events.first }
+      let(:latest_event) { latest_events.last }
+
+      before do
+        latest_event.update!(properties: latest_event.properties.merge(scheme: "visa"))
+        old_event.update!(properties: old_event.properties.merge(scheme: "visa"))
+      end
+
+      it "takes the groups into account" do
+        sum_service.options = {}
+        result = sum_service.per_event_aggregation(grouped_by_values: {"scheme" => "visa"})
+
+        expect(result.event_aggregation).to eq([5, 12])
+        expect(result.event_prorated_aggregation.map { |el| el.round(5) }).to eq([5, 2.32258])
+      end
+    end
   end
 
   describe ".grouped_by aggregation" do

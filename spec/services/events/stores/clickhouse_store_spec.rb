@@ -36,6 +36,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
   let(:grouped_by) { nil }
   let(:grouped_by_values) { nil }
+  let(:with_grouped_by_values) { nil }
   let(:matching_filters) { {} }
   let(:ignored_filters) { [] }
 
@@ -48,8 +49,10 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       if i.even?
         matching_filters.each { |key, values| properties[key] = values.first }
 
-        if grouped_by_values.present?
-          grouped_by_values.each { |grouped_by, value| properties[grouped_by] = value }
+        applied_grouped_by_values = grouped_by_values || with_grouped_by_values
+
+        if applied_grouped_by_values.present?
+          applied_grouped_by_values.each { |grouped_by, value| properties[grouped_by] = value }
         elsif grouped_by.present?
           grouped_by.each do |group|
             properties[group] = "#{Faker::Fantasy::Tolkien.character.delete("'")}_#{i}"
@@ -118,6 +121,16 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
 
       it "returns a list of events" do
         expect(event_store.count).to eq(2) # 1st event is ignored
+      end
+    end
+  end
+
+  describe "#with_grouped_by_values" do
+    let(:with_grouped_by_values) { {"region" => "europe"} }
+
+    it "applies the grouped_by_values in the block" do
+      event_store.with_grouped_by_values(with_grouped_by_values) do
+        expect(event_store.count).to eq(3)
       end
     end
   end

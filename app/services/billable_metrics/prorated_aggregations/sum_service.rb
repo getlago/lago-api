@@ -99,14 +99,19 @@ module BillableMetrics
         event_store.prorated_events_values(period_duration)
       end
 
-      def per_event_aggregation(exclude_event: false)
+      def per_event_aggregation(exclude_event: false, grouped_by_values: nil)
         recurring_result = recurring_value
         recurring_aggregation = recurring_result ? [BigDecimal(recurring_result)] : []
         recurring_prorated_aggregation = recurring_result ? [BigDecimal(recurring_result) * persisted_pro_rata] : []
 
-        Result.new.tap do |result|
-          result.event_aggregation = recurring_aggregation + base_aggregator.compute_per_event_aggregation(exclude_event:)
-          result.event_prorated_aggregation = recurring_prorated_aggregation + compute_per_event_prorated_aggregation
+        ProratedPerEventAggregationResult.new.tap do |result|
+          result.event_aggregation = recurring_aggregation +
+            base_aggregator.per_event_aggregation(exclude_event:, grouped_by_values:).event_aggregation
+
+          event_store.with_grouped_by_values(grouped_by_values) do
+            result.event_prorated_aggregation = recurring_prorated_aggregation +
+              compute_per_event_prorated_aggregation
+          end
         end
       end
 
@@ -143,11 +148,12 @@ module BillableMetrics
         )
       end
 
-      def recurring_value
-        previous_charge_fee_units = previous_charge_fee&.units
+      def recurring_value(grouped_by_values: nil)
+        previous_charge_fee_units = previous_charge_fee(grouped_by_values:)&.units
         return previous_charge_fee_units if previous_charge_fee_units
 
-        recurring_value_before_first_fee = persisted_event_store_instance.sum
+        store = persisted_event_store_instance
+        recurring_value_before_first_fee = store.with_grouped_by_values(grouped_by_values) { store.sum }
 
         ((recurring_value_before_first_fee || 0) <= 0) ? nil : recurring_value_before_first_fee
       end

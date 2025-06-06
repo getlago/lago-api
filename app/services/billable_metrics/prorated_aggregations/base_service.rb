@@ -3,6 +3,8 @@
 module BillableMetrics
   module ProratedAggregations
     class BaseService < BillableMetrics::Aggregations::BaseService
+      ProratedPerEventAggregationResult = BaseResult[:event_aggregation, :event_prorated_aggregation]
+
       def compute_pay_in_advance_aggregation(aggregation_without_proration:)
         return BigDecimal(0) unless event
         return BigDecimal(0) if event.properties.blank?
@@ -111,7 +113,7 @@ module BillableMetrics
 
       attr_reader :base_aggregator
 
-      def previous_charge_fee
+      def previous_charge_fee(grouped_by_values: nil)
         subscription_ids = customer.subscriptions
           .where(external_id: subscription.external_id)
           .pluck(:id)
@@ -121,6 +123,7 @@ module BillableMetrics
           .where(charge: {prorated: true})
           .where(subscription_id: subscription_ids, fee_type: :charge, charge_filter_id: charge_filter&.id)
           .where("CAST(fees.properties->>'charges_to_datetime' AS timestamp) < ?", boundaries[:to_datetime])
+          .where(grouped_by: grouped_by_values.presence || {})
           .order(created_at: :desc)
           .first
       end

@@ -11,8 +11,14 @@ module Charges
 
       def compute_amount
         full_units = per_event_aggregation_result.event_aggregation
-        prorated_units = per_event_aggregation_result.event_prorated_aggregation
+
+        prorated_units = if per_event_aggregation_result.respond_to?(:event_prorated_aggregation)
+          per_event_aggregation_result.event_prorated_aggregation
+        else
+          []
+        end
         units_count = prorated_units.count
+
         index = 0
         overflow = 0
         full_sum = 0
@@ -122,7 +128,9 @@ module Charges
       end
 
       def per_event_aggregation_result
-        @per_event_aggregation_result ||= aggregation_result.aggregator.per_event_aggregation
+        @per_event_aggregation_result ||= aggregation_result.aggregator.per_event_aggregation(
+          grouped_by_values: grouped_by
+        )
       end
 
       def prorated_coefficient(prorated_value, full_value)
