@@ -4,10 +4,11 @@ require "timecop"
 
 module DailyUsages
   class FillHistoryService < BaseService
-    def initialize(subscription:, from_datetime:, to_datetime: nil)
+    def initialize(subscription:, from_datetime:, to_datetime: nil, sandbox: false)
       @subscription = subscription
       @from_datetime = from_datetime
       @to_datetime = to_datetime
+      @sandbox = sandbox
 
       super
     end
@@ -19,7 +20,7 @@ module DailyUsages
         datetime = date.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day.utc
         datetime = date.beginning_of_day.utc if datetime < date # Handle last day for timezone with positive offset
 
-        next if subscription.daily_usages.where(usage_date: datetime.to_date - 1.day).exists?
+        next if !sandbox && subscription.daily_usages.where(usage_date: datetime.to_date - 1.day).exists?
 
         ds = Subscriptions::DatesService.new_instance(subscription, date, current_usage: true)
 
@@ -38,6 +39,7 @@ module DailyUsages
             with_cache: false,
             max_to_datetime: datetime
           ).raise_if_error!.usage
+          next if sandbox
 
           if previous_daily_usage.present? && previous_daily_usage.from_datetime != usage.from_datetime
             # NOTE: A new billing period was started, the diff should contains the complete current usage
@@ -88,7 +90,7 @@ module DailyUsages
       result
     end
 
-    attr_reader :subscription, :from_datetime, :to_datetime
+    attr_reader :subscription, :from_datetime, :to_datetime, :sandbox
     delegate :organization, to: :subscription
 
     def from
