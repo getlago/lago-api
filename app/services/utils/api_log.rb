@@ -47,7 +47,7 @@ module Utils
 
       def response_data(response)
         {
-          request_response: JSON.parse(response.body),
+          request_response: JSON.parse(response.body.presence || "{}"),
           request_http_status: response.status
         }
       end
