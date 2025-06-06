@@ -20,7 +20,7 @@ module Invoices
       return result.not_found_failure!(resource: "invoice") unless invoice
       return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
       return result.not_allowed_failure!(code: "not_voidable") if !invoice.voidable? && !explicit_void_intent?
-      unless validate_credit_note_amounts!
+      unless valid_credit_note_amounts?
         return result.single_validation_failure!(
           field: :credit_refund_amount,
           error_code: "total_amount_exceeds_invoice_amount"
@@ -79,7 +79,7 @@ module Invoices
       params.key?(:generate_credit_note)
     end
 
-    def validate_credit_note_amounts!
+    def valid_credit_note_amounts?
       return true unless generate_credit_note
 
       return false if credit_amount > invoice.creditable_amount_cents
