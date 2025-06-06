@@ -85,10 +85,8 @@ RSpec.describe Mutations::Invoices::Void, type: :graphql do
 
       result_data = result["data"]["voidInvoice"]
 
-      aggregate_failures do
-        expect(result_data["id"]).to be_present
-        expect(result_data["status"]).to eq("voided")
-      end
+      expect(result_data["id"]).to be_present
+      expect(result_data["status"]).to eq("voided")
     end
   end
 end
