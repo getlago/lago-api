@@ -3,11 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Charges::UpdateChildrenService, type: :service do
-  subject(:update_service) { described_class.new(charge:, params:) }
+  subject(:update_service) { described_class.new(charge:, params:, old_parent_attrs:, old_parent_filters_attrs:) }
 
   let(:billable_metric) { create(:billable_metric) }
   let(:organization) { billable_metric.organization }
   let(:plan) { create(:plan, organization:) }
+  let(:old_parent_attrs) { charge&.attributes }
+  let(:old_parent_filters_attrs) { charge&.filters&.map(&:attributes) }
   let(:charge) do
     create(
       :standard_charge,

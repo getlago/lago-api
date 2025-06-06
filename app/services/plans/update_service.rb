@@ -110,7 +110,14 @@ module Plans
       return unless cascade?
       return if plan.children.empty?
 
-      Charges::UpdateChildrenJob.perform_later(charge:, params: payload_charge.deep_stringify_keys)
+      old_parent_attrs = charge.attributes
+      old_parent_filters_attrs = charge.filters.map(&:attributes)
+
+      Charges::UpdateChildrenJob.perform_later(
+        params: payload_charge.deep_stringify_keys,
+        old_parent_attrs:,
+        old_parent_filters_attrs:
+      )
     end
 
     def cascade?

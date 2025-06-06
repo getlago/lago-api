@@ -4,9 +4,11 @@ module Charges
   class UpdateChildrenService < BaseService
     Result = BaseResult[:charge]
 
-    def initialize(charge:, params:)
+    def initialize(charge:, params:, old_parent_attrs:, old_parent_filters_attrs:)
       @charge = charge
       @params = params
+      @old_parent = Charge.new(old_parent_attrs)
+      @parent_filters = old_parent_filters_attrs
       super
     end
 
@@ -20,8 +22,8 @@ module Charges
             params:,
             cascade_options: {
               cascade: true,
-              parent_filters: charge.filters.map(&:attributes),
-              equal_properties: charge.equal_properties?(child_charge)
+              parent_filters:,
+              equal_properties: old_parent.equal_properties?(child_charge)
             }
           )
         end
@@ -33,6 +35,6 @@ module Charges
 
     private
 
-    attr_reader :charge, :params
+    attr_reader :charge, :params, :old_parent, :parent_filters
   end
 end
