@@ -91,9 +91,6 @@ GEM
     activejob (8.0.2)
       activesupport (= 8.0.2)
       globalid (>= 0.3.6)
-    activejob-traceable (0.4.2)
-      activejob
-      activesupport
     activejob-uniqueness (0.4.0)
       activejob (>= 4.2, < 8.1)
       redlock (>= 2.0, < 3)
@@ -961,7 +958,6 @@ PLATFORMS
 DEPENDENCIES
   aasm
   active_storage_validations
-  activejob-traceable
   activejob-uniqueness
   adyen-ruby-api-library
   after_commit_everywhere
