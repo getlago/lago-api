@@ -88,10 +88,12 @@ RSpec.describe DunningCampaign, type: :model do
         .and change { customer.last_dunning_campaign_attempt_at }.from(last_dunning_campaign_attempt_at).to(nil)
     end
 
-    context "when applied to organization" do
-      subject(:dunning_campaign) { create(:dunning_campaign, applied_to_organization: true) }
+    context "when applied to billing entity" do
+      subject(:dunning_campaign) { create(:dunning_campaign) }
 
-      it "resets last attempt on customers falling back to the organization campaign" do
+      before { organization.default_billing_entity.update!(applied_dunning_campaign: dunning_campaign) }
+
+      it "resets last attempt on customers falling back to the billing_entity campaign" do
         customer = create(
           :customer,
           organization:,

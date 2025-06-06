@@ -120,6 +120,15 @@ class BillingEntity < ApplicationRecord
     ENV["LAGO_FROM_EMAIL"]
   end
 
+  def reset_customers_last_dunning_campaign_attempt
+    customers
+      .falling_back_to_default_dunning_campaign
+      .update_all( # rubocop:disable Rails/SkipsModelValidations
+        last_dunning_campaign_attempt: 0,
+        last_dunning_campaign_attempt_at: nil
+      )
+  end
+
   private
 
   def generate_document_number_prefix
