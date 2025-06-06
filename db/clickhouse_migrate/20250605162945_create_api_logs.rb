@@ -12,6 +12,7 @@ class CreateApiLogs < ActiveRecord::Migration[7.1]
       t.string :request_id, null: false
       t.string :organization_id, null: false
       t.string :api_key_id, null: false
+      t.string :api_version, null: false
 
       t.string :client, null: false
       t.string :request_body, null: false, map: true

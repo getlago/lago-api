@@ -7,6 +7,7 @@ class CreateApiLogsMv < ActiveRecord::Migration[7.0]
         request_id,
         organization_id,
         api_key_id,
+        api_version,
         client,
         request_body,
         request_response,
