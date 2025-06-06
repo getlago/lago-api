@@ -36,9 +36,9 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
     end
 
     it "produces an activity log" do
-      payment_receipt = described_class.call(payment_receipt:, context:).payment_receipt
+      receipt = described_class.call(payment_receipt:, context:).payment_receipt
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(payment_receipt, "payment_receipt.generated")
+      expect(Utils::ActivityLog).to have_received(:produce).with(receipt, "payment_receipt.generated")
     end
 
     context "with not found payment receipt" do
