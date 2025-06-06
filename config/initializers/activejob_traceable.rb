@@ -10,7 +10,7 @@ ActiveJob::Traceable.tracing_info_getter = lambda do
 end
 
 ActiveJob::Traceable.tracing_info_setter = lambda do |attributes|
-  return unless attributes
+  attributes ||= {}
 
   CurrentContext.membership = attributes[:membership]
   CurrentContext.source = attributes[:source]
