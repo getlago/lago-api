@@ -56,7 +56,6 @@ gem "gocardless_pro", "~> 2.34"
 gem "stripe"
 
 # Analytics
-gem "activejob-traceable"
 gem "analytics-ruby", "~> 2.4.0", require: "segment/analytics"
 
 # Logging

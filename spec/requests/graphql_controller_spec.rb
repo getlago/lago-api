@@ -20,6 +20,11 @@ RSpec.describe GraphqlController, type: :request do
       GQL
     end
 
+    before do
+      allow(CurrentContext).to receive(:source=)
+      allow(CurrentContext).to receive(:api_key_id=)
+    end
+
     it "returns GraphQL response" do
       post "/graphql",
         params: {
@@ -33,8 +38,9 @@ RSpec.describe GraphqlController, type: :request do
         }
 
       expect(response.status).to be(200)
-      expect(CurrentContext.source).to eq "graphql"
-      expect(CurrentContext.api_key_id).to be_nil
+      expect(CurrentContext).to have_received(:source=).with("graphql")
+      expect(CurrentContext).to have_received(:api_key_id=).with(nil)
+
       json = JSON.parse(response.body)
       expect(json["data"]["loginUser"]["token"]).to be_present
       expect(json["data"]["loginUser"]["user"]["id"]).to eq(user.id)

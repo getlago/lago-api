@@ -20,13 +20,18 @@ RSpec.describe Api::BaseController, type: :controller do
 
   let(:api_key) { create(:api_key) }
 
+  before do
+    allow(CurrentContext).to receive(:source=)
+    allow(CurrentContext).to receive(:api_key_id=)
+  end
+
   it "sets the context source to api" do
     request.headers["Authorization"] = "Bearer #{api_key.value}"
 
     get :index
 
-    expect(CurrentContext.source).to eq "api"
-    expect(CurrentContext.api_key_id).to eq api_key.id
+    expect(CurrentContext).to have_received(:source=).with("api")
+    expect(CurrentContext).to have_received(:api_key_id=).with(api_key.id)
   end
 
   describe "#authenticate" do
