@@ -68,7 +68,7 @@ module Api
       end
 
       def index_filters
-        params.permit(:external_customer_id, :status)
+        params.permit(:external_customer_id, :status, coupon_code: [])
       end
 
       def resource_name
