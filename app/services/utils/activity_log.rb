@@ -48,7 +48,7 @@ module Utils
           payload: {
             activity_source:,
             api_key_id: CurrentContext.api_key_id,
-            user_id:,
+            user_id: user_id(object),
             activity_type:,
             activity_id:,
             logged_at: current_time,
@@ -70,11 +70,14 @@ module Utils
         CurrentContext.source || "system"
       end
 
-      def user_id
+      def user_id(object)
         return nil if CurrentContext.api_key_id.present?
         return nil if CurrentContext.membership.blank?
 
-        Membership.find_by(id: CurrentContext.membership.split("/").last)&.user_id
+        Membership.find_by(
+          organization_id: organization_id(object),
+          id: CurrentContext.membership.split("/").last
+        )&.user_id
       end
 
       def activity_object(object, activity_type)
