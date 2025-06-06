@@ -6,6 +6,7 @@ RSpec.describe DunningCampaigns::CreateService, type: :service, aggregate_failur
   subject(:create_service) { described_class.new(organization:, params:) }
 
   let(:organization) { create :organization }
+  let(:billing_entity) { organization.default_billing_entity }
   let(:params) do
     {
       name: "Dunning Campaign",
@@ -83,11 +84,12 @@ RSpec.describe DunningCampaigns::CreateService, type: :service, aggregate_failur
             create(:dunning_campaign, organization:, applied_to_organization: true)
           end
 
-          before { dunning_campaign_2 }
+          before { billing_entity.update!(applied_dunning_campaign: dunning_campaign_2) }
 
           it "does not change previous dunning campaign applied_to_organization" do
             expect { create_service.call }
               .not_to change(dunning_campaign_2.reload, :applied_to_organization)
+            expect(billing_entity.applied_dunning_campaign).to eq(dunning_campaign_2)
           end
         end
 
@@ -106,13 +108,19 @@ RSpec.describe DunningCampaigns::CreateService, type: :service, aggregate_failur
               create(:dunning_campaign, organization:, applied_to_organization: true)
             end
 
-            before { dunning_campaign_2 }
+            before { billing_entity.update!(applied_dunning_campaign: dunning_campaign_2) }
 
             it "removes applied_to_organization from previous dunning campaign" do
               expect { create_service.call }
                 .to change { dunning_campaign_2.reload.applied_to_organization }
                 .from(true)
                 .to(false)
+            end
+
+            it "changes applied_dunning_campaign_id on the default billing entity" do
+              result = create_service.call
+              expect(result).to be_success
+              expect(billing_entity.reload.applied_dunning_campaign).to eq(result.dunning_campaign)
             end
           end
 

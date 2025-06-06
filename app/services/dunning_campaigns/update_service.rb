@@ -103,6 +103,9 @@ module DunningCampaigns
 
       organization.reset_customers_last_dunning_campaign_attempt
 
+      new_applied_dunning_campaign = dunning_campaign.applied_to_organization ? dunning_campaign : nil
+      organization.default_billing_entity.update!(applied_dunning_campaign: new_applied_dunning_campaign)
+
       customers_fallback_campaign.update_all( # rubocop:disable Rails/SkipsModelValidations
         last_dunning_campaign_attempt_at: nil,
         last_dunning_campaign_attempt: 0
