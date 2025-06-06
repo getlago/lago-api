@@ -581,10 +581,9 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           organization:,
           customer:,
           currency: "EUR",
-          total_amount_cents: 24,
-          payment_status: :pending,
-          taxes_rate: 20,
-          version_number: 2,
+          fees_amount_cents: 1000,
+          total_amount_cents: 1000,
+          payment_status: :succeeded,
           status: :voided
         )
       end
@@ -594,7 +593,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
 
         aggregate_failures do
           expect(result).to be_success
-          
+
           credit_note = result.credit_note
           expect(credit_note.invoice).to eq(invoice)
           expect(credit_note.status).to eq("finalized")
