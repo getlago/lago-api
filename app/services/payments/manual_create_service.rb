@@ -36,7 +36,7 @@ module Payments
 
         params = {total_paid_amount_cents:}
         params[:payment_status] = "succeeded" if total_paid_amount_cents == invoice.total_amount_cents
-        Invoices::UpdateService.call!(invoice:, params:)
+        Invoices::UpdateService.call!(invoice:, params:, webhook_notification: true)
       end
 
       after_commit do
