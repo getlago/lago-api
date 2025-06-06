@@ -16,6 +16,13 @@ module Invoices
         return result.not_found_failure!(resource: "organization") unless organization
         return result.not_found_failure!(resource: "customer") unless customer
 
+        if context != :proposal && customer.new_record?
+          return result.single_validation_failure!(
+            error_code: "must_be_persisted",
+            field: :customer
+          )
+        end
+
         if [:termination, :plan_change].include?(context)
           if customer_subscriptions.size > 1
             return result.single_validation_failure!(
@@ -42,9 +49,9 @@ module Invoices
             params:
           )
         when :projection
-          self.class::Result.new.tap do |r|
-            r.subscriptions = customer_subscriptions
-          end
+          FindSubscriptionsService.call(
+            subscriptions: customer_subscriptions
+          )
         end
       end
 
@@ -62,7 +69,7 @@ module Invoices
         elsif target_plan_code
           :plan_change
         else
-          :projection # Preview for existing subscriptions without any modifications
+          :projection # Preview for existing subscriptions including their next subscriptions
         end
       end
 
