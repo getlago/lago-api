@@ -9,17 +9,13 @@ module PaymentReceipts
       super
     end
 
-    activity_loggable(
-      action: "payment_receipt.generated",
-      record: -> { payment_receipt }
-    )
-
     def call
       return result.not_found_failure!(resource: "payment_receipt") if payment_receipt.blank?
 
       if should_generate_pdf?
         generate_pdf
         SendWebhookJob.perform_later("payment_receipt.generated", payment_receipt)
+        Utils::ActivityLog.produce(payment_receipt, "payment_receipt.generated")
       end
 
       result.payment_receipt = payment_receipt

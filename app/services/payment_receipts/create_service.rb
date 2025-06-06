@@ -11,11 +11,6 @@ module PaymentReceipts
       super
     end
 
-    activity_loggable(
-      action: "payment_receipt.created",
-      record: -> { result.payment_receipt }
-    )
-
     def call
       return result.not_found_failure!(resource: "payment") unless payment
       return result.forbidden_failure! unless organization.issue_receipts_enabled?
@@ -30,6 +25,7 @@ module PaymentReceipts
       result.payment_receipt = PaymentReceipt.create!(payment:, organization:, billing_entity:)
 
       SendWebhookJob.perform_later("payment_receipt.created", result.payment_receipt)
+      Utils::ActivityLog.produce(result.payment_receipt, "payment_receipt.created")
       GeneratePdfAndNotifyJob.perform_later(payment_receipt: result.payment_receipt, email: should_deliver_email?)
 
       result
