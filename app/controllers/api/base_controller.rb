@@ -11,6 +11,7 @@ module Api
     before_action :track_api_key_usage
     before_action :authorize
     include Trackable
+    include ApiLoggable
 
     rescue_from ActionController::ParameterMissing, with: :bad_request_error
 
