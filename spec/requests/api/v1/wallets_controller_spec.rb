@@ -288,6 +288,33 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
     end
+
+    context "with limitations" do
+      let(:create_params) do
+        {
+          external_customer_id: customer.external_id,
+          rate_amount: "1",
+          name: "Wallet1",
+          currency: "EUR",
+          paid_credits: "10",
+          granted_credits: "10",
+          expiration_at:,
+          applies_to: {
+            fee_types: %w[charge]
+          }
+        }
+      end
+
+      it "returns a success" do
+        subject
+
+        limitations = json[:wallet][:applies_to]
+
+        expect(response).to have_http_status(:success)
+        expect(limitations).to be_present
+        expect(limitations[:fee_types]).to eq(%w[charge])
+      end
+    end
   end
 
   describe "PUT /api/v1/wallets/:id" do
@@ -336,6 +363,28 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         subject
         expect(response).to have_http_status(:not_found)
         expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
+      end
+    end
+
+    context "with limitations" do
+      let(:update_params) do
+        {
+          name: "wallet1",
+          applies_to: {
+            fee_types: %w[charge]
+          }
+        }
+      end
+
+      it "updates a wallet" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:wallet][:lago_id]).to eq(wallet.id)
+        expect(json[:wallet][:name]).to eq(update_params[:name])
+        expect(json[:wallet][:applies_to][:fee_types]).to eq(%w[charge])
+
+        expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
       end
     end
 

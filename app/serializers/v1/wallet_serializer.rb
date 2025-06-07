@@ -27,6 +27,7 @@ module V1
       }
 
       payload.merge!(recurring_transaction_rules) if include?(:recurring_transaction_rules)
+      payload.merge!(limitations) if include?(:limitations)
 
       payload
     end
@@ -39,6 +40,14 @@ module V1
         ::V1::Wallets::RecurringTransactionRuleSerializer,
         collection_name: "recurring_transaction_rules"
       ).serialize
+    end
+
+    def limitations
+      {
+        applies_to: {
+          fee_types: model.allowed_fee_types
+        }
+      }
     end
   end
 end
