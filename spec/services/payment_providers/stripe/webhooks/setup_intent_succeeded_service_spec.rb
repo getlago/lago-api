@@ -38,6 +38,20 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
       )
     end
 
+    context "when stripe fails to set default_payment_method", aggregate_failures: true do
+      before do
+        allow(Stripe::Customer).to receive(:update).and_raise(::Stripe::InvalidRequestError.new("test error", {}))
+      end
+
+      it "raises a service failure error" do
+        result = webhook_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.message).to eq("stripe_error: test error")
+      end
+    end
+
     context "when stripe customer is not found", aggregate_failures: true do
       let(:provider_customer_id) { "cus_InvaLid" }
 
