@@ -2644,7 +2644,6 @@ input CreateInvoiceCustomSectionInput {
   details: String
   displayName: String
   name: String!
-  selected: Boolean
 }
 
 """
@@ -5416,7 +5415,6 @@ type InvoiceCustomSection {
   id: ID!
   name: String!
   organization: Organization
-  selected: Boolean!
 }
 
 """
@@ -10004,7 +10002,6 @@ input UpdateInvoiceCustomSectionInput {
   displayName: String
   id: ID!
   name: String
-  selected: Boolean
 }
 
 """
