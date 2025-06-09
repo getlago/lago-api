@@ -7,6 +7,7 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 1000, pay_in_advance: true) }
+
   around { |test| lago_premium!(&test) }
 
   before do
@@ -31,7 +32,7 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
       expect(invoice).to be_present
       expect(invoice).to be_finalized
 
-      void_invoice(invoice, { generate_credit_note: true , credit_amount: 1200, refund_amount: 0 })
+      void_invoice(invoice, {generate_credit_note: true, credit_amount: 1200, refund_amount: 0})
 
       invoice.reload
       expect(invoice).to be_voided
@@ -44,7 +45,7 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
       expect(credit_note.credit_amount_cents).to eq(1200)
       expect(credit_note.refund_amount_cents).to eq(0)
       expect(credit_note.total_amount_cents).to eq(1200)
-      expect(credit_note.status).to eq('finalized')
+      expect(credit_note.status).to eq("finalized")
     end
   end
 
@@ -71,10 +72,10 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
         params: {invoice_id: invoice.id, amount_cents: invoice.total_amount_cents, reference: "payment_ref_1"}
       )
 
-      void_invoice(invoice, { generate_credit_note: true, credit_amount: 0, refund_amount: invoice.total_amount_cents })
+      void_invoice(invoice, {generate_credit_note: true, credit_amount: 0, refund_amount: invoice.total_amount_cents})
 
       invoice.reload
-      expect(invoice.payment_status).to eq('succeeded')
+      expect(invoice.payment_status).to eq("succeeded")
       expect(invoice).to be_voided
       expect(invoice.voided_at).to be_present
       expect(invoice.credit_notes.count).to eq(1)
@@ -84,7 +85,7 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
       expect(credit_note.credit_amount_cents).to eq(0)
       expect(credit_note.refund_amount_cents).to eq(invoice.total_amount_cents)
       expect(credit_note.total_amount_cents).to eq(invoice.total_amount_cents)
-      expect(credit_note.status).to eq('finalized')
+      expect(credit_note.status).to eq("finalized")
     end
   end
 
@@ -112,26 +113,26 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
       )
 
       invoice.reload
-      expect(invoice.payment_status).to eq('pending')
+      expect(invoice.payment_status).to eq("pending")
 
       total_amount = invoice.total_amount_cents
       partial_amount = total_amount / 2
       credit_amount = partial_amount - 300
       refund_amount = 300
 
-      void_invoice(invoice, { generate_credit_note: true, credit_amount: credit_amount, refund_amount: refund_amount })
+      void_invoice(invoice, {generate_credit_note: true, credit_amount: credit_amount, refund_amount: refund_amount})
 
       invoice.reload
       expect(invoice).to be_voided
       expect(invoice.voided_at).to be_present
       expect(invoice.credit_notes.count).to eq(2)
-      
+
       first_credit_note = invoice.credit_notes.order(created_at: :asc).first
       expect(first_credit_note).to be_present
       expect(first_credit_note.credit_amount_cents).to eq(credit_amount)
       expect(first_credit_note.refund_amount_cents).to eq(refund_amount)
       expect(first_credit_note.total_amount_cents).to eq(partial_amount)
-      expect(first_credit_note.status).to eq('finalized')
+      expect(first_credit_note.status).to eq("finalized")
       expect(first_credit_note.credit_status).to eq("available")
       expect(first_credit_note).not_to be_voided
 
@@ -139,7 +140,7 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
       expect(second_credit_note).to be_present
       expect(second_credit_note.total_amount_cents).to eq(total_amount - partial_amount)
       expect(second_credit_note.refund_amount_cents).to eq(0)
-      expect(second_credit_note.status).to eq('finalized')
+      expect(second_credit_note.status).to eq("finalized")
       expect(second_credit_note.credit_status).to eq("voided")
       expect(second_credit_note).to be_voided
     end
