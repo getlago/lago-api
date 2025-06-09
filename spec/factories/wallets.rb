@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :wallet do
     customer
+    organization { customer&.organization || association(:organization) }
     name { Faker::Name.name }
     status { "active" }
     rate_amount { "1.00" }

@@ -7,6 +7,7 @@ FactoryBot.define do
     end
 
     charge_filter
+    organization { charge_filter&.organization || association(:organization) }
     billable_metric_filter_id { billable_metric_filter.id }
     values { [billable_metric_filter.values.sample] }
   end

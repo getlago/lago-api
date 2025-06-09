@@ -4,6 +4,7 @@ FactoryBot.define do
   factory :webhook do
     association :webhook_endpoint, factory: :webhook_endpoint
     association :object, factory: :invoice
+    organization { webhook_endpoint&.organization || object&.organization || association(:organization) }
 
     payload { Faker::Types.rb_hash(number: 3) }
     webhook_type { "invoice.created" }

@@ -4,6 +4,7 @@ FactoryBot.define do
   factory :netsuite_mapping, class: "IntegrationMappings::NetsuiteMapping" do
     association :integration, factory: :netsuite_integration
     association :mappable, factory: :add_on
+    organization { integration&.organization || association(:organization) }
 
     settings do
       {
@@ -17,6 +18,7 @@ FactoryBot.define do
   factory :xero_mapping, class: "IntegrationMappings::XeroMapping" do
     association :integration, factory: :xero_integration
     association :mappable, factory: :add_on
+    organization { integration&.organization || association(:organization) }
 
     settings do
       {

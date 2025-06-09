@@ -4,6 +4,7 @@ FactoryBot.define do
   factory :subscription do
     customer
     plan
+    organization { customer&.organization || plan&.organization || association(:organization) }
     status { :active }
     external_id { SecureRandom.uuid }
     started_at { 1.day.ago }

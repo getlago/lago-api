@@ -4,6 +4,7 @@ FactoryBot.define do
   factory :refund do
     credit_note
     payment
+    organization { credit_note&.organization || payment&.organization || association(:organization) }
     association :payment_provider, factory: :stripe_provider
     association :payment_provider_customer, factory: :stripe_customer
 

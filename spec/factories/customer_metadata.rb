@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :customer_metadata, class: "Metadata::CustomerMetadata" do
     customer
+    organization { customer&.organization || association(:organization) }
 
     key { "lead_name" }
     value { "John Doe" }

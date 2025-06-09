@@ -6,6 +6,7 @@ FactoryBot.define do
       charge { create(:standard_charge) }
     end
 
+    organization { charge&.organization || association(:organization) }
     charge_id { charge.id }
     properties { charge.properties }
   end

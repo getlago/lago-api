@@ -4,6 +4,7 @@ FactoryBot.define do
   factory :invoice_subscription do
     subscription
     invoice
+    organization { subscription&.organization || invoice&.organization || association(:organization) }
 
     recurring { false }
 
