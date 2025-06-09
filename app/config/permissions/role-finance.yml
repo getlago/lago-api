@@ -89,6 +89,8 @@ billing_entities:
   emails:
     view: true
     update: true
+  dunning_campaigns:
+    update: true
 payment_requests:
   view: true
   create: true

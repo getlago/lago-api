@@ -13,6 +13,7 @@ module Types
 
     field :billing_entity_apply_taxes, mutation: Mutations::BillingEntities::ApplyTaxes
     field :billing_entity_remove_taxes, mutation: Mutations::BillingEntities::RemoveTaxes
+    field :billing_entity_update_applied_dunning_campaign, mutation: Mutations::BillingEntities::UpdateAppliedDunningCampaign
     field :create_billing_entity, mutation: Mutations::BillingEntities::Create
     field :destroy_billing_entity, mutation: Mutations::BillingEntities::Destroy
     field :update_billing_entity, mutation: Mutations::BillingEntities::Update
