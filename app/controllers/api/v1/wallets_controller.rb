@@ -106,6 +106,9 @@ module Api
               :key,
               :value
             ]
+          ],
+          applies_to: [
+            fee_types: []
           ]
         )
       end
@@ -135,6 +138,9 @@ module Api
               :key,
               :value
             ]
+          ],
+          applies_to: [
+            fee_types: []
           ]
         )
       end
@@ -148,7 +154,7 @@ module Api
           json: ::V1::WalletSerializer.new(
             wallet,
             root_name: "wallet",
-            includes: %i[recurring_transaction_rules]
+            includes: %i[recurring_transaction_rules limitations]
           )
         )
       end
