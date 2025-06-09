@@ -124,6 +124,12 @@ module ScenariosHelper
     end
   end
 
+  def void_invoice(invoice, params = {})
+    post_with_token(organization, "/api/v1/invoices/#{invoice.id}/void", params)
+    perform_all_enqueued_jobs
+    invoice.reload
+  end
+
   def create_one_off_invoice(customer, addons, taxes: [], units: 1)
     api_call do
       create_invoice_params = {
