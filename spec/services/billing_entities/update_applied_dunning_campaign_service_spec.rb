@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService, type: :service do
-  subject(:update_service) { described_class.new(billing_entity:, dunning_campaign:) }
+  subject(:update_service) { described_class.new(billing_entity:, applied_dunning_campaign_id:) }
 
   let(:billing_entity) { create(:billing_entity) }
   let(:organization) { billing_entity.organization }
@@ -25,7 +25,7 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService, type: :serv
       end
 
       context "when updating applied dunning campaign to nil" do
-        let(:dunning_campaign) { nil }
+        let(:applied_dunning_campaign_id) { nil }
 
         context "when billing entity has no applied dunning campaign" do
           it "does not update the billing entity" do
@@ -66,14 +66,21 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService, type: :serv
       end
 
       context "when dunning campaign is provided" do
-        let(:dunning_campaign) { dunning_campaign_2 }
+        let(:applied_dunning_campaign_id) { dunning_campaign_2.id }
+
+        it "returns success" do
+          result = update_service.call
+          expect(result).to be_success
+          expect(result.billing_entity).to eq(billing_entity)
+          expect(result.billing_entity.applied_dunning_campaign).to eq(dunning_campaign_2)
+        end
 
         context "when billing entity has no applied dunning campaign" do
           it "sets the new dunning campaign" do
             expect { update_service.call }
               .to change { billing_entity.reload.applied_dunning_campaign }
               .from(nil)
-              .to(dunning_campaign)
+              .to(dunning_campaign_2)
           end
 
           it "resets only fallback customers of this billing entity attempts" do
@@ -133,12 +140,24 @@ RSpec.describe BillingEntities::UpdateAppliedDunningCampaignService, type: :serv
       let(:billing_entity) { nil }
       let(:organization) { create(:organization) }
       let(:dunning_campaign) { dunning_campaign_1 }
+      let(:applied_dunning_campaign_id) { dunning_campaign_1.id }
 
       it "returns a not found failure" do
         result = update_service.call
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::NotFoundFailure)
         expect(result.error.message).to eq("billing_entity_not_found")
+      end
+    end
+
+    context "when dunning campaign is not found" do
+      let(:applied_dunning_campaign_id) { "nonexistent-id" }
+
+      it "returns a not found failure" do
+        result = update_service.call
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.message).to eq("dunning_campaign_not_found")
       end
     end
   end
