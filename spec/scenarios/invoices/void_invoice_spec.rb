@@ -66,31 +66,16 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
       expect(invoice).to be_present
       expect(invoice).to be_finalized
 
-      travel_to(DateTime.new(2023, 1, 5)) do
-        Payments::ManualCreateService.call(
-          organization:,
-          params: {invoice_id: invoice.id, amount_cents: invoice.total_amount_cents, reference: "payment_ref_1"}
-        )
-      end
+      Payments::ManualCreateService.call(
+        organization:,
+        params: {invoice_id: invoice.id, amount_cents: invoice.total_amount_cents, reference: "payment_ref_1"}
+      )
 
-      void_invoice(invoice, { generate_credit_note: true , credit_amount: 0, refund_amount: 1200 })
+      void_invoice(invoice, { generate_credit_note: true, credit_amount: 0, refund_amount: invoice.total_amount_cents })
 
       invoice.reload
       expect(invoice.payment_status).to eq('succeeded')
-
-      void_invoice(
-        invoice,
-        {
-          generate_credit_note: true,
-          credit_amount: 0,
-          refund_amount: invoice.total_amount_cents
-        }
-      )
-
-
-      invoice.reload
       expect(invoice).to be_voided
-      pp invoice
       expect(invoice.voided_at).to be_present
       expect(invoice.credit_notes.count).to eq(1)
 
@@ -100,6 +85,77 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
       expect(credit_note.refund_amount_cents).to eq(invoice.total_amount_cents)
       expect(credit_note.total_amount_cents).to eq(invoice.total_amount_cents)
       expect(credit_note.status).to eq('finalized')
+    end
+  end
+
+  xcontext "when voiding an invoice with partial credit and refund" do
+    it "creates a partial credit note and a voided credit note for the remaining amount" do
+      # Create a subscription
+      travel_to(DateTime.new(2023, 1, 1)) do
+        create_subscription(
+          {
+            external_customer_id: customer.external_id,
+            external_id: "sub_partial_#{customer.external_id}",
+            plan_code: plan.code
+          }
+        )
+      end
+
+      subscription = customer.subscriptions.first
+      invoice = subscription.invoices.first
+      expect(invoice).to be_present
+      expect(invoice).to be_finalized
+
+      # Add a payment to the invoice
+      travel_to(DateTime.new(2023, 3, 5)) do
+        Payments::ManualCreateService.call(
+          organization:,
+          params: {invoice_id: invoice.id, amount_cents: 300, reference: "payment_ref_partial"}
+        )
+      end
+
+      invoice.reload
+      expect(invoice.payment_status).to eq('succeeded')
+
+      # Calculate partial amounts for credit and refund
+      total_amount = invoice.total_amount_cents
+      partial_amount = total_amount / 2 # Use half of the total amount
+      credit_amount = partial_amount - 300 # Credit part minus what we'll refund
+      refund_amount = 300 # Refund the payment we made
+
+      # Void the invoice with partial credit note generation
+      void_invoice(
+        invoice, 
+        {
+          generate_credit_note: true,
+          credit_amount: credit_amount,
+          refund_amount: refund_amount
+        }
+      )
+
+      # Verify the invoice is voided
+      invoice.reload
+      expect(invoice).to be_voided
+      expect(invoice.voided_at).to be_present
+
+      # Verify credit notes are generated with the correct amounts
+      expect(invoice.credit_notes.count).to eq(2)
+      
+      # First credit note should be for the specified partial amount
+      first_credit_note = invoice.credit_notes.order(created_at: :asc).first
+      expect(first_credit_note).to be_present
+      expect(first_credit_note.credit_amount_cents).to eq(credit_amount)
+      expect(first_credit_note.refund_amount_cents).to eq(refund_amount)
+      expect(first_credit_note.total_amount_cents).to eq(partial_amount)
+      expect(first_credit_note.status).to eq('finalized')
+      expect(first_credit_note).not_to be_voided
+
+      # Second credit note should be for the remaining amount and should be voided
+      second_credit_note = invoice.credit_notes.order(created_at: :asc).last
+      expect(second_credit_note).to be_present
+      expect(second_credit_note.total_amount_cents).to eq(total_amount - partial_amount)
+      expect(second_credit_note.status).to eq('voided')
+      expect(second_credit_note).to be_voided
     end
   end
 end
