@@ -406,7 +406,7 @@ class Invoice < ApplicationRecord
   end
 
   def force_void!
-    update!(status: "voided", ready_for_payment_processing: false)
+    update!(status: "voided", ready_for_payment_processing: false, voided_at: Time.current)
   end
 
   private
