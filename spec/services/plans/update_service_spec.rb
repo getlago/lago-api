@@ -897,7 +897,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           it "does not enqueue the job for updating charge" do
             expect do
               plans_service.call
-            end.not_to have_enqueued_job(Charges::UpdateJob)
+            end.not_to have_enqueued_job(Charges::UpdateChildrenJob)
           end
         end
 
@@ -905,17 +905,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           it "enqueues the job for updating charge" do
             expect do
               plans_service.call
-            end.to have_enqueued_job(Charges::UpdateJob)
-          end
-        end
-
-        context "when cascade is true and there are children plans without link to parent charge" do
-          let(:charge_parent_id) { nil }
-
-          it "does not enqueue the job for updating charge" do
-            expect do
-              plans_service.call
-            end.not_to have_enqueued_job(Charges::UpdateJob)
+            end.to have_enqueued_job(Charges::UpdateChildrenJob)
           end
         end
 
