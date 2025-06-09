@@ -11,8 +11,8 @@ RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign, type: :
   let(:applied_dunning_campaign) { create(:dunning_campaign, organization:) }
   let(:mutation) do
     <<~GQL
-      mutation UpdateAppliedDunningCampaign($input: UpdateAppliedDunningCampaignInput!) {
-        updateAppliedDunningCampaign(input: $input) {
+      mutation($input: BillingEntityUpdateAppliedDunningCampaignInput!) {
+        billingEntityUpdateAppliedDunningCampaign(input: $input) {
           id
           appliedDunningCampaign {
             id
@@ -41,7 +41,7 @@ RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign, type: :
         }
       )
 
-      data = result["data"]["updateAppliedDunningCampaign"]
+      data = result["data"]["billingEntityUpdateAppliedDunningCampaign"]
       expect(data["id"]).to eq(billing_entity.id.to_s)
       expect(data["appliedDunningCampaign"]["id"]).to eq(dunning_campaign.id.to_s)
     end
@@ -60,7 +60,7 @@ RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign, type: :
         }
       )
 
-      data = result["data"]["updateAppliedDunningCampaign"]
+      data = result["data"]["billingEntityUpdateAppliedDunningCampaign"]
 
       expect(data["id"]).to eq(billing_entity.id.to_s)
       expect(data["appliedDunningCampaign"]).to be_nil

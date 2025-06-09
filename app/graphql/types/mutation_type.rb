@@ -11,12 +11,11 @@ module Types
     field :destroy_billable_metric, mutation: Mutations::BillableMetrics::Destroy
     field :update_billable_metric, mutation: Mutations::BillableMetrics::Update
 
-    field :billing_entity_apply_dunning_campaign, mutation: Mutations::BillingEntities::UpdateAppliedDunningCampaign
     field :billing_entity_apply_taxes, mutation: Mutations::BillingEntities::ApplyTaxes
     field :billing_entity_remove_taxes, mutation: Mutations::BillingEntities::RemoveTaxes
+    field :billing_entity_update_applied_dunning_campaign, mutation: Mutations::BillingEntities::UpdateAppliedDunningCampaign
     field :create_billing_entity, mutation: Mutations::BillingEntities::Create
     field :destroy_billing_entity, mutation: Mutations::BillingEntities::Destroy
-    field :update_applied_dunning_campaign, mutation: Mutations::BillingEntities::UpdateAppliedDunningCampaign
     field :update_billing_entity, mutation: Mutations::BillingEntities::Update
 
     field :create_adjusted_fee, mutation: Mutations::AdjustedFees::Create
