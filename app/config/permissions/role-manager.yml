@@ -90,7 +90,7 @@ billing_entities:
     view: false
     update: false
   dunning_campaigns:
-    manage: false
+    update: false
 payment_requests:
   view: true
   create: true

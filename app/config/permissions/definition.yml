@@ -116,7 +116,7 @@ billing_entities:
     view:
     update:
   dunning_campaigns:
-    manage:
+    update:
 payment_requests:
   view: true
   create:

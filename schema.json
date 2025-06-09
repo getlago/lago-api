@@ -35023,7 +35023,7 @@
               "args": []
             },
             {
-              "name": "billingEntitiesDunningCampaignsManage",
+              "name": "billingEntitiesDunningCampaignsUpdate",
               "description": null,
               "type": {
                 "kind": "NON_NULL",

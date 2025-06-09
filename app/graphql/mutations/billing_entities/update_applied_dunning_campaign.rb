@@ -6,7 +6,7 @@ module Mutations
       include AuthenticableApiUser
       include RequiredOrganization
 
-      REQUIRED_PERMISSION = "billing_entities:dunning_campaigns:manage"
+      REQUIRED_PERMISSION = "billing_entities:dunning_campaigns:update"
 
       graphql_name "BillingEntityUpdateAppliedDunningCampaign"
       description "Updates the applied dunning campaign for a billing entity"

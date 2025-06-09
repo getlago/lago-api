@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign, type: :graphql do
-  let(:required_permission) { "billing_entities:dunning_campaigns:manage" }
+  let(:required_permission) { "billing_entities:dunning_campaigns:update" }
   let(:membership) { create(:membership, organization:) }
   let(:organization) { create(:organization) }
   let(:billing_entity) { create(:billing_entity, organization:, applied_dunning_campaign:) }
@@ -24,7 +24,7 @@ RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign, type: :
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "billing_entities:dunning_campaigns:manage"
+  it_behaves_like "requires permission", "billing_entities:dunning_campaigns:update"
 
   context "when the user has the required permission" do
     it "changes the applied dunning campaign successfully" do

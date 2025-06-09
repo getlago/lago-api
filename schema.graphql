@@ -7346,7 +7346,7 @@ type Permissions {
   billableMetricsView: Boolean!
   billingEntitiesCreate: Boolean!
   billingEntitiesDelete: Boolean!
-  billingEntitiesDunningCampaignsManage: Boolean!
+  billingEntitiesDunningCampaignsUpdate: Boolean!
   billingEntitiesEmailsUpdate: Boolean!
   billingEntitiesEmailsView: Boolean!
   billingEntitiesInvoicesUpdate: Boolean!
