@@ -76,6 +76,7 @@ ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_90d93bd016;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_909197908c;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_8fa6f0d920;
+ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS fk_rails_8e0c3d0c5b;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_8c18828b53;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
@@ -175,6 +176,7 @@ ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_252
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_25232a0ec3;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_2496c105ed;
 ALTER TABLE IF EXISTS ONLY public.taxes DROP CONSTRAINT IF EXISTS fk_rails_23975f5a47;
+ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS fk_rails_22bb2c0770;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_22af6c6d28;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_2259c88f26;
 ALTER TABLE IF EXISTS ONLY public.cached_aggregations DROP CONSTRAINT IF EXISTS fk_rails_21eb389927;
@@ -514,6 +516,9 @@ DROP INDEX IF EXISTS public.index_billable_metric_filters_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_usage_threshold_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_applied_usage_thresholds_on_invoice_id;
+DROP INDEX IF EXISTS public.index_applied_pricing_units_on_pricing_unitable;
+DROP INDEX IF EXISTS public.index_applied_pricing_units_on_pricing_unit_id;
+DROP INDEX IF EXISTS public.index_applied_pricing_units_on_organization_id;
 DROP INDEX IF EXISTS public.index_applied_invoice_custom_sections_on_organization_id;
 DROP INDEX IF EXISTS public.index_applied_invoice_custom_sections_on_invoice_id;
 DROP INDEX IF EXISTS public.index_applied_coupons_on_organization_id;
@@ -653,6 +658,7 @@ ALTER TABLE IF EXISTS ONLY public.billable_metrics DROP CONSTRAINT IF EXISTS bil
 ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS billable_metric_filters_pkey;
 ALTER TABLE IF EXISTS ONLY public.ar_internal_metadata DROP CONSTRAINT IF EXISTS ar_internal_metadata_pkey;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS applied_usage_thresholds_pkey;
+ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS applied_pricing_units_pkey;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS applied_invoice_custom_sections_pkey;
 ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS applied_coupons_pkey;
 ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS applied_add_ons_pkey;
@@ -767,6 +773,7 @@ DROP TABLE IF EXISTS public.billable_metrics;
 DROP TABLE IF EXISTS public.billable_metric_filters;
 DROP TABLE IF EXISTS public.ar_internal_metadata;
 DROP TABLE IF EXISTS public.applied_usage_thresholds;
+DROP TABLE IF EXISTS public.applied_pricing_units;
 DROP TABLE IF EXISTS public.applied_invoice_custom_sections;
 DROP TABLE IF EXISTS public.applied_coupons;
 DROP TABLE IF EXISTS public.applied_add_ons;
@@ -1154,6 +1161,22 @@ CREATE TABLE public.applied_invoice_custom_sections (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     organization_id uuid
+);
+
+
+--
+-- Name: applied_pricing_units; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.applied_pricing_units (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    pricing_unit_id uuid NOT NULL,
+    organization_id uuid NOT NULL,
+    pricing_unitable_type character varying NOT NULL,
+    pricing_unitable_id uuid NOT NULL,
+    conversion_rate numeric(40,15) DEFAULT 0.0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -3693,6 +3716,14 @@ ALTER TABLE ONLY public.applied_invoice_custom_sections
 
 
 --
+-- Name: applied_pricing_units applied_pricing_units_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_pricing_units
+    ADD CONSTRAINT applied_pricing_units_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: applied_usage_thresholds applied_usage_thresholds_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4744,6 +4775,27 @@ CREATE INDEX index_applied_invoice_custom_sections_on_invoice_id ON public.appli
 --
 
 CREATE INDEX index_applied_invoice_custom_sections_on_organization_id ON public.applied_invoice_custom_sections USING btree (organization_id);
+
+
+--
+-- Name: index_applied_pricing_units_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_applied_pricing_units_on_organization_id ON public.applied_pricing_units USING btree (organization_id);
+
+
+--
+-- Name: index_applied_pricing_units_on_pricing_unit_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_applied_pricing_units_on_pricing_unit_id ON public.applied_pricing_units USING btree (pricing_unit_id);
+
+
+--
+-- Name: index_applied_pricing_units_on_pricing_unitable; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_applied_pricing_units_on_pricing_unitable ON public.applied_pricing_units USING btree (pricing_unitable_type, pricing_unitable_id);
 
 
 --
@@ -7091,6 +7143,14 @@ ALTER TABLE ONLY public.invoices_taxes
 
 
 --
+-- Name: applied_pricing_units fk_rails_22bb2c0770; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_pricing_units
+    ADD CONSTRAINT fk_rails_22bb2c0770 FOREIGN KEY (pricing_unit_id) REFERENCES public.pricing_units(id);
+
+
+--
 -- Name: taxes fk_rails_23975f5a47; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7883,6 +7943,14 @@ ALTER TABLE ONLY public.usage_thresholds
 
 
 --
+-- Name: applied_pricing_units fk_rails_8e0c3d0c5b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.applied_pricing_units
+    ADD CONSTRAINT fk_rails_8e0c3d0c5b FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: commitments_taxes fk_rails_8fa6f0d920; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8425,6 +8493,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250609121102'),
 ('20250602075710'),
 ('20250530112903'),
 ('20250526134136'),

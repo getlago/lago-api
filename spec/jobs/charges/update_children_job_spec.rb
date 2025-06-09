@@ -6,6 +6,7 @@ RSpec.describe Charges::UpdateChildrenJob, type: :job do
   let(:charge) { create(:standard_charge) }
   let(:old_parent_attrs) { charge.attributes }
   let(:old_parent_filters_attrs) { charge.filters.map(&:attributes) }
+  let(:old_parent_applied_pricing_unit_attrs) { charge.filters.map(&:attributes) }
   let(:params) do
     {
       properties: {}
@@ -15,11 +16,12 @@ RSpec.describe Charges::UpdateChildrenJob, type: :job do
   before do
     allow(Charges::UpdateChildrenService)
       .to receive(:call!)
-      .with(charge:, params:, old_parent_attrs:, old_parent_filters_attrs:).and_call_original
+      .with(charge:, params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
+      .and_call_original
   end
 
   it "calls the service" do
-    described_class.perform_now(params:, old_parent_attrs:, old_parent_filters_attrs:)
+    described_class.perform_now(params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
 
     expect(Charges::UpdateChildrenService).to have_received(:call!)
   end

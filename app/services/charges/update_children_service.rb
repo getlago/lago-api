@@ -4,11 +4,16 @@ module Charges
   class UpdateChildrenService < BaseService
     Result = BaseResult[:charge]
 
-    def initialize(charge:, params:, old_parent_attrs:, old_parent_filters_attrs:)
+    def initialize(charge:, params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
       @charge = charge
       @params = params
-      @old_parent = Charge.new(old_parent_attrs)
       @parent_filters = old_parent_filters_attrs
+      @old_parent = Charge.new(old_parent_attrs)
+
+      if old_parent_applied_pricing_unit_attrs.present?
+        @old_parent.build_applied_pricing_unit(old_parent_applied_pricing_unit_attrs)
+      end
+
       super
     end
 
@@ -23,7 +28,8 @@ module Charges
             cascade_options: {
               cascade: true,
               parent_filters:,
-              equal_properties: old_parent.equal_properties?(child_charge)
+              equal_properties: old_parent.equal_properties?(child_charge),
+              equal_applied_pricing_unit_rate: old_parent.equal_applied_pricing_unit_rate?(child_charge)
             }
           )
         end

@@ -10,6 +10,9 @@ RSpec.describe Charge, type: :model do
   it { is_expected.to belong_to(:organization).optional }
   it { is_expected.to have_many(:filters).dependent(:destroy) }
 
+  it { is_expected.to have_one(:applied_pricing_unit) }
+  it { is_expected.to have_one(:pricing_unit).through(:applied_pricing_unit) }
+
   describe "#validate_graduated" do
     subject(:charge) do
       build(:graduated_charge, properties: charge_properties)
@@ -689,6 +692,47 @@ RSpec.describe Charge, type: :model do
             expect(error).not_to be_present
           end
         end
+      end
+    end
+  end
+
+  describe "#equal_applied_pricing_unit_rate?" do
+    subject { charge.equal_applied_pricing_unit_rate?(another_charge) }
+
+    let(:charge) { build(:standard_charge, applied_pricing_unit:) }
+
+    let(:another_charge) do
+      build(
+        :standard_charge,
+        applied_pricing_unit: build(:applied_pricing_unit)
+      )
+    end
+
+    context "when has associated applied pricing unit" do
+      let(:applied_pricing_unit) { build(:applied_pricing_unit, conversion_rate:) }
+
+      context "when charges conversion rate is equal" do
+        let(:conversion_rate) { another_charge.applied_pricing_unit.conversion_rate }
+
+        it "returns true" do
+          expect(subject).to be true
+        end
+      end
+
+      context "when charges conversion rate is not equal" do
+        let(:conversion_rate) { another_charge.applied_pricing_unit.conversion_rate - 0.5 }
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+    end
+
+    context "when has no associated applied pricing unit" do
+      let(:applied_pricing_unit) { nil }
+
+      it "returns false" do
+        expect(subject).to be false
       end
     end
   end

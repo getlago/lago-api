@@ -1141,12 +1141,10 @@ RSpec.describe Plans::UpdateService, type: :service do
 
       it "updates only name description and new charges" do
         result = plans_service.call
-
         updated_plan = result.plan
-        aggregate_failures do
-          expect(updated_plan.name).to eq("Updated plan name")
-          expect(plan.charges.count).to eq(2)
-        end
+
+        expect(updated_plan.name).to eq("Updated plan name")
+        expect(plan.charges.count).to eq(2)
       end
     end
   end

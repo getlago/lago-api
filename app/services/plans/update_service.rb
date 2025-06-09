@@ -118,11 +118,13 @@ module Plans
 
       old_parent_attrs = charge.attributes
       old_parent_filters_attrs = charge.filters.map(&:attributes)
+      old_parent_applied_pricing_unit_attrs = charge.applied_pricing_unit&.attributes
 
       Charges::UpdateChildrenJob.perform_later(
         params: payload_charge.deep_stringify_keys,
         old_parent_attrs:,
-        old_parent_filters_attrs:
+        old_parent_filters_attrs:,
+        old_parent_applied_pricing_unit_attrs:
       )
     end
 

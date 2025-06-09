@@ -46,6 +46,8 @@ module Charges
 
         charge.save!
 
+        AppliedPricingUnits::CreateService.call!(charge:, params: params[:applied_pricing_unit])
+
         if params[:tax_codes]
           taxes_result = Charges::ApplyTaxesService.call(charge:, tax_codes: params[:tax_codes])
           taxes_result.raise_if_error!

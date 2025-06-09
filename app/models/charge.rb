@@ -12,6 +12,9 @@ class Charge < ApplicationRecord
   belongs_to :billable_metric, -> { with_discarded }
   belongs_to :parent, class_name: "Charge", optional: true
 
+  has_one :applied_pricing_unit, as: :pricing_unitable
+  has_one :pricing_unit, through: :applied_pricing_unit
+
   has_many :children, class_name: "Charge", foreign_key: :parent_id, dependent: :nullify
   has_many :fees
   has_many :filters, dependent: :destroy, class_name: "ChargeFilter"
@@ -66,6 +69,12 @@ class Charge < ApplicationRecord
 
   def equal_properties?(charge)
     charge_model == charge.charge_model && properties == charge.properties
+  end
+
+  def equal_applied_pricing_unit_rate?(another_charge)
+    return false unless applied_pricing_unit && another_charge.applied_pricing_unit
+
+    applied_pricing_unit.conversion_rate == another_charge.applied_pricing_unit.conversion_rate
   end
 
   # NOTE: If same charge is NOT included in upgraded plan we still want to bill it. However if new plan is using
