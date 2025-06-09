@@ -10,7 +10,7 @@ RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign, type: :
   let(:dunning_campaign) { create(:dunning_campaign, organization:) }
   let(:applied_dunning_campaign) { create(:dunning_campaign, organization:) }
   let(:mutation) do
-    <<~GRAPHQL
+    <<~GQL
       mutation UpdateAppliedDunningCampaign($input: UpdateAppliedDunningCampaignInput!) {
         updateAppliedDunningCampaign(input: $input) {
           id
@@ -19,7 +19,7 @@ RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign, type: :
           }
         }
       }
-    GRAPHQL
+    GQL
   end
 
   it_behaves_like "requires current user"
