@@ -118,9 +118,7 @@ module Invoices
           items: estimate_result.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents} }
         )
 
-        if credit_note_to_void.success?
-          CreditNotes::VoidService.call!(credit_note: credit_note_to_void.credit_note)
-        end
+        CreditNotes::VoidService.call!(credit_note: credit_note_to_void.credit_note)
       end
 
       result
