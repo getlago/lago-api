@@ -8,47 +8,36 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
   let(:event) { ::Stripe::Event.construct_from(JSON.parse(event_json)) }
   let(:organization) { create(:organization) }
 
-  let(:event_json) do
-    get_stripe_fixtures("webhooks/payment_intent_succeeded-#{fixtures_version}.json")
-  end
-
   before do
     allow(::Payments::SetPaymentMethodAndCreateReceiptJob).to receive(:perform_later)
       .and_invoke(->(args) { ::Payments::SetPaymentMethodAndCreateReceiptJob.perform_now(**args) })
   end
 
-  ["2020-08-27", "2022-11-15", "2024-09-30.acacia"].each do |fixtures_version|
+  ["2020-08-27", "2024-09-30.acacia", "2025-04-30.basil"].each do |fixtures_version|
     context "when payment intent event (api_version: #{fixtures_version})" do
-      let(:fixtures_version) { fixtures_version }
       let(:invoice) { create(:invoice, organization:) }
+      let(:event_json) { get_stripe_fixtures("webhooks/payment_intent_succeeded.json", version: fixtures_version) }
+
+      before do
+        stub_request(:get, %r{/v1/payment_methods/pm_}).and_return(
+          status: 200, body: get_stripe_fixtures("retrieve_payment_method_response.json", version: fixtures_version)
+        )
+      end
 
       it "updates the payment status and save the payment method" do
         expect_any_instance_of(Invoices::Payments::StripeService).to receive(:update_payment_status) # rubocop:disable RSpec/AnyInstance
           .with(
             organization_id: organization.id,
             status: "succeeded",
-            stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
-              id: "pi_3R3dvoQ8iJWBZFaM0uu1G1rx",
-              status: "succeeded",
-              metadata: {
-                invoice_type: "one_off",
-                lago_customer_id: "e4674f68-a7ba-4ce8-95e9-981f346b49d7",
-                invoice_issuing_date: "2025-03-17",
-                lago_invoice_id: "5ccdc601-18a5-4f22-a8e7-a53ca18e1f00"
-              }
-            )
+            stripe_payment: PaymentProviders::StripeProvider::StripePayment
           ).and_call_original
 
         payment = create(:payment, provider_payment_id: event.data.object.id, payable: invoice)
 
-        stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
-          status: 200, body: get_stripe_fixtures("retrieve_payment_method.json")
-        )
-
         result = event_service.call
 
         expect(result).to be_success
-        expect(payment.reload.provider_payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
+        expect(payment.reload.provider_payment_method_id).to start_with "pm_"
         expect(payment.reload.provider_payment_method_data).to eq({
           "type" => "card",
           "brand" => "visa",
@@ -60,10 +49,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         customer = create(:customer, organization:)
         payable = create(:invoice, customer:, issuing_date: "2025-03-17", organization:)
         create(:payment, payable:, provider_payment_id: event.data.object.id)
-
-        stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
-          status: 200, body: get_stripe_fixtures("retrieve_payment_method.json")
-        )
 
         expect { event_service.call }.not_to have_enqueued_job(PaymentReceipts::CreateJob)
       end
@@ -77,10 +62,6 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           payable = create(:invoice, customer:, issuing_date: "2025-03-17", organization:)
           create(:payment, payable:, provider_payment_id: event.data.object.id)
 
-          stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
-            status: 200, body: get_stripe_fixtures("retrieve_payment_method.json")
-          )
-
           expect { event_service.call }.to have_enqueued_job(PaymentReceipts::CreateJob)
         end
       end
@@ -89,7 +70,13 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
 
   context "when payment intent event for a payment request" do
     let(:event_json) do
-      get_stripe_fixtures("payment_intent_event_payment_request.json")
+      get_stripe_fixtures("webhooks/payment_intent_succeeded.json") do |h|
+        h["data"]["object"]["id"] = "pi_12345"
+        h["data"]["object"]["metadata"] = {
+          lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
+          lago_payable_type: "PaymentRequest"
+        }
+      end
     end
 
     context "when issue_receipts_enabled is true" do
@@ -102,7 +89,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
             organization_id: organization.id,
             status: "succeeded",
             stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
-              id: "pi_3Qu0oXQ8iJWBZFaM2cc2RG6D",
+              id: "pi_12345",
               status: "succeeded",
               metadata: {
                 lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
@@ -114,8 +101,8 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         payment = create(:payment, provider_payment_id: event.data.object.id)
         create(:payment_request, customer: create(:customer, organization:), payments: [payment])
 
-        stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
-          status: 200, body: get_stripe_fixtures("retrieve_payment_method.json")
+        stub_request(:get, %r{/v1/payment_methods/pm_}).and_return(
+          status: 200, body: get_stripe_fixtures("retrieve_payment_method_response.json")
         )
 
         expect { event_service.call }.to have_enqueued_job(PaymentReceipts::CreateJob)
@@ -128,7 +115,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
           organization_id: organization.id,
           status: "succeeded",
           stripe_payment: PaymentProviders::StripeProvider::StripePayment.new(
-            id: "pi_3Qu0oXQ8iJWBZFaM2cc2RG6D",
+            id: "pi_12345",
             status: "succeeded",
             metadata: {
               lago_payment_request_id: "a587e552-36bc-4334-81f2-abcbf034ad3f",
@@ -140,14 +127,14 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
       payment = create(:payment, provider_payment_id: event.data.object.id)
       create(:payment_request, customer: create(:customer, organization:), payments: [payment])
 
-      stub_request(:get, %r{/v1/payment_methods/pm_1R2DFsQ8iJWBZFaMw3LLbR0r$}).and_return(
-        status: 200, body: get_stripe_fixtures("retrieve_payment_method.json")
+      stub_request(:get, %r{/v1/payment_methods/pm_}).and_return(
+        status: 200, body: get_stripe_fixtures("retrieve_payment_method_response.json")
       )
 
       result = event_service.call
 
       expect(result).to be_success
-      expect(payment.reload.provider_payment_method_id).to eq "pm_1R2DFsQ8iJWBZFaMw3LLbR0r"
+      expect(payment.reload.provider_payment_method_id).to start_with "pm_"
       expect(payment.reload.provider_payment_method_data).to eq({
         "type" => "card",
         "brand" => "visa",
@@ -183,7 +170,12 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
 
   context "when payment intent event with an invalid payable type" do
     let(:event_json) do
-      get_stripe_fixtures("payment_intent_event_invalid_payable_type.json")
+      get_stripe_fixtures("webhooks/payment_intent_succeeded.json") do |h|
+        h["data"]["object"]["id"] = "pi_12345"
+        h["data"]["object"]["metadata"] = {
+          lago_payable_type: "InvalidPayableTypeName"
+        }
+      end
     end
 
     it do

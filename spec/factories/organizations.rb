@@ -24,6 +24,10 @@ FactoryBot.define do
       end
     end
 
+    trait :premium do
+      premium_integrations { Organization::PREMIUM_INTEGRATIONS }
+    end
+
     trait :with_invoice_custom_sections do
       after :create do |org|
         sections = create_list(:invoice_custom_section, 3, organization: org)

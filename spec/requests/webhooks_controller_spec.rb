@@ -10,7 +10,7 @@ RSpec.describe WebhooksController, type: :request do
     let(:event_type) { "payment_intent.succeeded" }
 
     let(:event) do
-      JSON.parse(get_stripe_fixtures("payment_intent_event.json"))
+      JSON.parse(get_stripe_fixtures("webhooks/payment_intent_succeeded.json"))
     end
 
     let(:payload) { event.merge(code:) }
