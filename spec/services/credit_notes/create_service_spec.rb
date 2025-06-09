@@ -590,15 +590,12 @@ RSpec.describe CreditNotes::CreateService, type: :service do
 
       it "creates a credit note with finalized status instead of voided" do
         result = create_service.call
+        expect(result).to be_success
 
-        aggregate_failures do
-          expect(result).to be_success
-
-          credit_note = result.credit_note
-          expect(credit_note.invoice).to eq(invoice)
-          expect(credit_note.status).to eq("finalized")
-          expect(invoice.status).to eq("voided")
-        end
+        credit_note = result.credit_note
+        expect(credit_note.invoice).to eq(invoice)
+        expect(credit_note.status).to eq("finalized")
+        expect(invoice.status).to eq("voided")
       end
     end
 
