@@ -18,7 +18,7 @@ module BillingEntities
       billing_entity.update!(applied_dunning_campaign: dunning_campaign)
       result.billing_entity = billing_entity
       result
-    rescue ActiveRecord::RecordNotFound => e
+    rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "dunning_campaign")
     end
 

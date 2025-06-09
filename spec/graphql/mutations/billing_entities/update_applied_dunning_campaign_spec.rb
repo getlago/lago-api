@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "rails_helper"
 
 RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign, type: :graphql do
@@ -8,7 +10,7 @@ RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign, type: :
   let(:dunning_campaign) { create(:dunning_campaign, organization:) }
   let(:applied_dunning_campaign) { create(:dunning_campaign, organization:) }
   let(:mutation) do
-    <<~graphql
+    <<~GRAPHQL
       mutation UpdateAppliedDunningCampaign($input: UpdateAppliedDunningCampaignInput!) {
         updateAppliedDunningCampaign(input: $input) {
           id
@@ -17,22 +19,17 @@ RSpec.describe Mutations::BillingEntities::UpdateAppliedDunningCampaign, type: :
           }
         }
       }
-    graphql
+    GRAPHQL
   end
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "billing_entities:dunning_campaigns:manage"
 
-  before do
-    allow_any_instance_of(Mutations::BillingEntities::UpdateAppliedDunningCampaign)
-      .to receive(:current_organization).and_return(organization)
-  end
-
   context "when the user has the required permission" do
     it "changes the applied dunning campaign successfully" do
       result = execute_graphql(
-      current_user: membership.user,
+        current_user: membership.user,
         current_organization: membership.organization,
         permissions: required_permission,
         query: mutation,

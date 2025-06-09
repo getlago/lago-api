@@ -8,8 +8,8 @@ module Mutations
 
       REQUIRED_PERMISSION = "billing_entities:dunning_campaigns:manage"
 
-      argument :billing_entity_id, ID, required: true
       argument :applied_dunning_campaign_id, String, required: false
+      argument :billing_entity_id, ID, required: true
 
       type Types::BillingEntities::Object
 
