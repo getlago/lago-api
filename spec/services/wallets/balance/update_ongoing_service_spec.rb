@@ -36,16 +36,19 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
 
   describe "#call" do
     it "updates wallet balance" do
-      create(:invoice, :draft, customer:, organization:, total_amount_cents: 150)
+      freeze_time do
+        create(:invoice, :draft, customer:, organization:, total_amount_cents: 150)
 
-      expect { update_service.call }
-        .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(550)
-        .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(5.5)
-        .and change(wallet, :ongoing_balance_cents).from(800).to(450)
-        .and change(wallet, :credits_ongoing_balance).from(8.0).to(4.5)
-        .and change(wallet, :ready_to_be_refreshed).from(true).to(false)
+        expect { update_service.call }
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(550)
+          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(5.5)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(450)
+          .and change(wallet, :credits_ongoing_balance).from(8.0).to(4.5)
+          .and change(wallet, :ready_to_be_refreshed).from(true).to(false)
+          .and change(wallet, :last_balance_sync_at).from(nil).to(Time.current)
 
-      expect(wallet).not_to be_depleted_ongoing_balance
+        expect(wallet).not_to be_depleted_ongoing_balance
+      end
     end
 
     context "when depleted ongoing balance" do
