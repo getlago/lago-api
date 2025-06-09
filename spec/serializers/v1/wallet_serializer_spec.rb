@@ -3,9 +3,12 @@
 require "rails_helper"
 
 RSpec.describe ::V1::WalletSerializer do
-  subject(:serializer) { described_class.new(wallet, root_name: "wallet", includes: %i[limitations]) }
+  subject(:serializer) { described_class.new(wallet, root_name: "wallet", includes: %i[limitations recurring_transaction_rules]) }
 
   let(:wallet) { create(:wallet, allowed_fee_types: %w[charge]) }
+  let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
+
+  before { recurring_transaction_rule }
 
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)
@@ -33,7 +36,8 @@ RSpec.describe ::V1::WalletSerializer do
         "consumed_credits" => wallet.consumed_credits.to_s,
         "invoice_requires_successful_payment" => wallet.invoice_requires_successful_payment
       )
-      expect(result["wallet"]["applies_to"]["fee_types"]).to include("charge")
+      expect(result["wallet"]["applies_to"]["fee_types"]).to eq(%w[charge])
+      expect(result["wallet"]["recurring_transaction_rules"].first["lago_id"]).to eq(recurring_transaction_rule.id)
     end
   end
 end
