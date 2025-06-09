@@ -19,57 +19,10 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
 
   before { stripe_customer }
 
-  describe "#call" do
-    context "when stripe customer id is nil" do
-      let(:event_json) { get_stripe_fixtures("webhooks/setup_intent_succeeded.json") }
-
-      it "returns an empty result" do
-        result = webhook_service.call
-
-        expect(result).to be_success
-        expect(result.payment_method).to be_nil
-      end
-    end
-
-    context "when provider customer id is set" do
-      let(:event_json) do
-        get_stripe_fixtures("webhooks/setup_intent_succeeded.json") do |h|
-          h[:data][:object][:customer] = "cus_123" if h[:data][:object][:customer].nil?
-        end
-      end
-
-      it "updates provider default payment method" do
-        allow(Stripe::Customer).to receive(:update).and_return(true)
-
-        result = webhook_service.call
-
-        expect(result).to be_success
-        expect(result.payment_method_id).to start_with("pm_")
-        expect(result.payment_method_id).to eq(payment_method_id)
-        expect(result.stripe_customer).to eq(stripe_customer)
-        expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
-
-        expect(Stripe::Customer).to have_received(:update).with(
-          provider_customer_id,
-          {invoice_settings: {default_payment_method: payment_method_id}},
-          {api_key: stripe_provider.secret_key}
-        )
-      end
-    end
-
-    context "when stripe customer is not found" do
-      let(:event_json) do
-        get_stripe_fixtures("webhooks/setup_intent_succeeded.json") do |h|
-          h[:data][:object][:customer] = "cus_666" if h[:data][:object][:customer].nil?
-          h[:data][:object][:metadata] = metadata
-        end
-      end
-      let(:stripe_customer) do
-        create(:stripe_customer, payment_provider: stripe_provider, customer:, provider_customer_id: "cus_123")
-      end
-
-      context "when metadata is empty" do
-        let(:metadata) { {} }
+  ["2020-08-27", "2025-04-30.basil"].each do |version|
+    describe "#call" do
+      context "when stripe customer id is nil" do
+        let(:event_json) { get_stripe_fixtures("webhooks/setup_intent_succeeded.json", version:) }
 
         it "returns an empty result" do
           result = webhook_service.call
@@ -79,27 +32,76 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
         end
       end
 
-      context "when customer in metadata exists in another organization" do
-        let(:customer) { create(:customer, organization: create(:organization)) }
-        let(:metadata) { {lago_customer_id: customer.id} }
+      context "when provider customer id is set" do
+        let(:event_json) do
+          get_stripe_fixtures("webhooks/setup_intent_succeeded.json", version:) do |h|
+            h[:data][:object][:customer] = "cus_123" if h[:data][:object][:customer].nil?
+          end
+        end
 
-        it "returns an empty result" do
+        it "updates provider default payment method" do
+          allow(Stripe::Customer).to receive(:update).and_return(true)
+
           result = webhook_service.call
 
           expect(result).to be_success
-          expect(result.payment_method).to be_nil
+          expect(result.payment_method_id).to start_with("pm_")
+          expect(result.payment_method_id).to eq(payment_method_id)
+          expect(result.stripe_customer).to eq(stripe_customer)
+          expect(result.stripe_customer.payment_method_id).to eq(payment_method_id)
+
+          expect(Stripe::Customer).to have_received(:update).with(
+            provider_customer_id,
+            {invoice_settings: {default_payment_method: payment_method_id}},
+            {api_key: stripe_provider.secret_key}
+          )
         end
       end
 
-      context "when customer in metadata exists in this org but has a different provider_customer_id" do
-        let(:metadata) { {lago_customer_id: customer.id} }
+      context "when stripe customer is not found" do
+        let(:event_json) do
+          get_stripe_fixtures("webhooks/setup_intent_succeeded.json", version:) do |h|
+            h[:data][:object][:customer] = "cus_666" if h[:data][:object][:customer].nil?
+            h[:data][:object][:metadata] = metadata
+          end
+        end
+        let(:stripe_customer) do
+          create(:stripe_customer, payment_provider: stripe_provider, customer:, provider_customer_id: "cus_123")
+        end
 
-        it "returns a not found error" do
-          result = webhook_service.call
+        context "when metadata is empty" do
+          let(:metadata) { {} }
 
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.message).to eq("stripe_customer_not_found")
+          it "returns an empty result" do
+            result = webhook_service.call
+
+            expect(result).to be_success
+            expect(result.payment_method).to be_nil
+          end
+        end
+
+        context "when customer in metadata exists in another organization" do
+          let(:customer) { create(:customer, organization: create(:organization)) }
+          let(:metadata) { {lago_customer_id: customer.id} }
+
+          it "returns an empty result" do
+            result = webhook_service.call
+
+            expect(result).to be_success
+            expect(result.payment_method).to be_nil
+          end
+        end
+
+        context "when customer in metadata exists in this org but has a different provider_customer_id" do
+          let(:metadata) { {lago_customer_id: customer.id} }
+
+          it "returns a not found error" do
+            result = webhook_service.call
+
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.message).to eq("stripe_customer_not_found")
+          end
         end
       end
     end
