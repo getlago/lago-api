@@ -52,7 +52,7 @@ type ActivityLogCollection {
 """
 Activity log resource
 """
-union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | Invoice | Plan | Subscription | Wallet
+union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | Invoice | PaymentRequest | Plan | Subscription | Wallet
 
 """
 Activity Logs source enums
@@ -8419,6 +8419,11 @@ enum ResourceTypeEnum {
   Invoice
   """
   invoice
+
+  """
+  PaymentRequest
+  """
+  payment_request
 
   """
   Plan

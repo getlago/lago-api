@@ -33,7 +33,8 @@ module Clickhouse
       billing_entity: "BillingEntity",
       subscription: "Subscription",
       wallet: "Wallet",
-      coupon: "Coupon"
+      coupon: "Coupon",
+      payment_request: "PaymentRequest"
     }.freeze
 
     ACTIVITY_TYPES = {

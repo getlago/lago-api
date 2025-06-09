@@ -356,6 +356,11 @@
             },
             {
               "kind": "OBJECT",
+              "name": "PaymentRequest",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
               "name": "Plan",
               "ofType": null
             },
@@ -43932,6 +43937,12 @@
             {
               "name": "coupon",
               "description": "Coupon",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payment_request",
+              "description": "PaymentRequest",
               "isDeprecated": false,
               "deprecationReason": null
             }
