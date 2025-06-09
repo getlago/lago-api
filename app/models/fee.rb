@@ -224,6 +224,7 @@ end
 #  payment_status                      :integer          default("pending"), not null
 #  precise_amount_cents                :decimal(40, 15)  default(0.0), not null
 #  precise_coupons_amount_cents        :decimal(30, 5)   default(0.0), not null
+#  precise_credit_notes_amount_cents   :decimal(30, 5)   default(0.0), not null
 #  precise_unit_amount                 :decimal(30, 15)  default(0.0), not null
 #  properties                          :jsonb            not null
 #  refunded_at                         :datetime
