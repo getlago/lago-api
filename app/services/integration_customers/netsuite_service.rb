@@ -12,6 +12,11 @@ module IntegrationCustomers
     end
 
     def create
+      if existing_integration_customer.present?
+        result.integration_customer = existing_integration_customer
+        return result
+      end
+
       create_result = Integrations::Aggregator::Contacts::CreateService.call(integration:, customer:, subsidiary_id:)
       return create_result if create_result.error
 
@@ -32,5 +37,13 @@ module IntegrationCustomers
     private
 
     attr_reader :integration, :customer, :subsidiary_id, :params
+
+    def existing_integration_customer
+      @existing_integration_customer ||= IntegrationCustomers::BaseCustomer.find_by(
+        customer:,
+        integration:,
+        type: "IntegrationCustomers::NetsuiteCustomer"
+      )
+    end
   end
 end
