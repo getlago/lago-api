@@ -55,7 +55,6 @@ ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_ba128983c2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_b50dc82c1e;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b283a89721;
-ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_b0b711aa27;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_ac146c9541;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_ab16de0b32;
@@ -326,7 +325,6 @@ DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_payment_request_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_invoice_id;
-DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_status;
 DROP INDEX IF EXISTS public.index_invoices_on_sequential_id;
 DROP INDEX IF EXISTS public.index_invoices_on_self_billed;
@@ -1146,7 +1144,8 @@ CREATE TABLE public.applied_coupons (
     frequency integer DEFAULT 0 NOT NULL,
     frequency_duration integer,
     frequency_duration_remaining integer,
-    organization_id uuid
+    organization_id uuid,
+    voided_at timestamp(6) without time zone
 );
 
 
@@ -2537,7 +2536,6 @@ CREATE TABLE public.invoices (
     billing_entity_id uuid NOT NULL,
     billing_entity_sequential_id integer,
     finalized_at timestamp without time zone,
-    voided_invoice_id uuid,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -6169,13 +6167,6 @@ CREATE INDEX index_invoices_on_status ON public.invoices USING btree (status);
 
 
 --
--- Name: index_invoices_on_voided_invoice_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_invoices_on_voided_invoice_id ON public.invoices USING btree (voided_invoice_id);
-
-
---
 -- Name: index_invoices_payment_requests_on_invoice_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8159,14 +8150,6 @@ ALTER TABLE ONLY public.daily_usages
 
 
 --
--- Name: invoices fk_rails_b0b711aa27; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.invoices
-    ADD CONSTRAINT fk_rails_b0b711aa27 FOREIGN KEY (voided_invoice_id) REFERENCES public.invoices(id);
-
-
---
 -- Name: billing_entities_invoice_custom_sections fk_rails_b283a89721; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8541,7 +8524,6 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-('20250610141701'),
 ('20250609121102'),
 ('20250602145535'),
 ('20250602075710'),
@@ -8584,6 +8566,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250515083935'),
 ('20250515083802'),
 ('20250515083649'),
+('20250513164054'),
 ('20250513153630'),
 ('20250513153629'),
 ('20250513153628'),
