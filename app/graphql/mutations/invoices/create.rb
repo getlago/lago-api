@@ -25,7 +25,8 @@ module Mutations
           customer:,
           currency: args[:currency],
           fees: args[:fees],
-          timestamp: Time.current.to_i
+          timestamp: Time.current.to_i,
+          voided_invoice_id: args[:voided_invoice_id]
         )
 
         result.success? ? result.invoice : result_error(result)
