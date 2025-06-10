@@ -1399,8 +1399,8 @@ RSpec.describe Invoice, type: :model do
     end
   end
 
-  describe "#force_void!" do
-    subject(:force_void_call) { invoice.force_void! }
+  describe "#mark_as_voided!" do
+    subject(:force_void_call) { invoice.mark_as_voided! }
 
     context "when invoice is finalized" do
       let(:invoice) { build(:invoice, status: :finalized, ready_for_payment_processing: true) }
