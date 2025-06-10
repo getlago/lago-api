@@ -356,6 +356,11 @@
             },
             {
               "kind": "OBJECT",
+              "name": "PaymentRequest",
+              "ofType": null
+            },
+            {
+              "kind": "OBJECT",
               "name": "Plan",
               "ofType": null
             },
@@ -655,6 +660,12 @@
             {
               "name": "applied_coupon_deleted",
               "description": "applied_coupon.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payment_request_created",
+              "description": "payment_request.created",
               "isDeprecated": false,
               "deprecationReason": null
             }
@@ -43932,6 +43943,12 @@
             {
               "name": "coupon",
               "description": "Coupon",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "payment_request",
+              "description": "PaymentRequest",
               "isDeprecated": false,
               "deprecationReason": null
             }

@@ -15,7 +15,8 @@ module Types
         Types::BillingEntities::Object,
         Types::Subscriptions::Object,
         Types::Wallets::Object,
-        Types::Coupons::Object
+        Types::Coupons::Object,
+        Types::PaymentRequests::Object
 
       def self.resolve_type(object, _context)
         case object.class.to_s
@@ -37,6 +38,8 @@ module Types
           Types::Wallets::Object
         when "Coupon"
           Types::Coupons::Object
+        when "PaymentRequest"
+          Types::PaymentRequests::Object
         else
           raise "Unexpected activity log resource type: #{object.inspect}"
         end

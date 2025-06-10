@@ -19,7 +19,8 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
       Types::BillingEntities::Object,
       Types::Subscriptions::Object,
       Types::Wallets::Object,
-      Types::Coupons::Object
+      Types::Coupons::Object,
+      Types::PaymentRequests::Object
     )
   end
 
@@ -33,6 +34,7 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
     let(:subscription) { create(:subscription) }
     let(:wallet) { create(:wallet) }
     let(:coupon) { create(:coupon) }
+    let(:payment_request) { create(:payment_request) }
 
     it "returns Types::BillableMetrics::Object for BillableMetric objects" do
       expect(subject.resolve_type(billable_metric, {})).to eq(Types::BillableMetrics::Object)
@@ -72,6 +74,10 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
 
     it "raises an error for unexpected types" do
       expect { subject.resolve_type("Unexpected", {}) }.to raise_error(StandardError)
+    end
+
+    it "returns Types::PaymentRequests::Object for PaymentRequest objects" do
+      expect(subject.resolve_type(payment_request, {})).to eq(Types::PaymentRequests::Object)
     end
   end
 end
