@@ -405,13 +405,7 @@ class Invoice < ApplicationRecord
     fees.any? && should_finalize_invoice
   end
 
-  def force_void!
-    update!(status: "voided", ready_for_payment_processing: false, voided_at: Time.current)
-  end
-
   def mark_as_voided!
-    return void! if may_void?
-
     update!(status: "voided", ready_for_payment_processing: false, voided_at: Time.current)
   end
 

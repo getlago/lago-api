@@ -29,8 +29,7 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice.payment_overdue = false if invoice.payment_overdue?
-        invoice.mark_as_voided!
-
+        mark_as_voided!
         flag_lifetime_usage_for_refresh
 
         invoice.credits.each do |credit|
@@ -66,6 +65,16 @@ module Invoices
     private
 
     attr_reader :invoice, :params, :generate_credit_note, :credit_amount, :refund_amount
+
+    # If we're in the legacy flow (without a credit note), follow the standard voiding rules via the state machine.
+    # If we're in the new flow (with a credit note), force the invoice into a voided state, even if it's not voidable.
+    def mark_as_voided!
+      if generate_credit_note
+        invoice.mark_as_voided!
+      else
+        invoice.void!
+      end
+    end
 
     def flag_lifetime_usage_for_refresh
       LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
