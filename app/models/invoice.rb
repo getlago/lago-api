@@ -20,6 +20,9 @@ class Invoice < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
   belongs_to :billing_entity, optional: true
+  belongs_to :voided_invoice, class_name: "Invoice", optional: true
+
+  has_one :regenerated_invoice, class_name: "Invoice", foreign_key: :voided_invoice_id
 
   has_many :fees
   has_many :credits
