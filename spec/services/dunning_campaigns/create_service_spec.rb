@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe DunningCampaigns::CreateService, type: :service, aggregate_failures: true do
+RSpec.describe DunningCampaigns::CreateService, type: :service do
   subject(:create_service) { described_class.new(organization:, params:) }
 
   let(:organization) { create :organization }
@@ -79,43 +79,35 @@ RSpec.describe DunningCampaigns::CreateService, type: :service, aggregate_failur
           end
         end
 
-        context "with a previous dunning campaign set as applied_to_organization" do
+        context "with a previous dunning campaign set as applied on default billing entity" do
           let(:dunning_campaign_2) do
-            create(:dunning_campaign, organization:, applied_to_organization: true)
+            create(:dunning_campaign, organization:)
           end
 
           before { billing_entity.update!(applied_dunning_campaign: dunning_campaign_2) }
 
-          it "does not change previous dunning campaign applied_to_organization" do
+          it "does not change previous dunning campaign applied on default billing entity" do
             expect { create_service.call }
-              .not_to change(dunning_campaign_2.reload, :applied_to_organization)
-            expect(billing_entity.applied_dunning_campaign).to eq(dunning_campaign_2)
+              .not_to change(billing_entity, :applied_dunning_campaign)
           end
         end
 
         context "with applied_to_organization true" do
           let(:applied_to_organization) { true }
 
-          it "updates the dunning campaign" do
+          it "updates the default billing entity with applieddunning campaign" do
             result = create_service.call
 
             expect(result).to be_success
-            expect(result.dunning_campaign.applied_to_organization).to eq(true)
+            expect(organization.default_billing_entity.applied_dunning_campaign).to eq(result.dunning_campaign)
           end
 
-          context "with a previous dunning campaign set as applied_to_organization" do
+          context "with a previous dunning campaign set as applied on default billing entity" do
             let(:dunning_campaign_2) do
-              create(:dunning_campaign, organization:, applied_to_organization: true)
+              create(:dunning_campaign, organization:)
             end
 
             before { billing_entity.update!(applied_dunning_campaign: dunning_campaign_2) }
-
-            it "removes applied_to_organization from previous dunning campaign" do
-              expect { create_service.call }
-                .to change { dunning_campaign_2.reload.applied_to_organization }
-                .from(true)
-                .to(false)
-            end
 
             it "changes applied_dunning_campaign_id on the default billing entity" do
               result = create_service.call

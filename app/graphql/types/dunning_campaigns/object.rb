@@ -34,12 +34,12 @@ module Types
               applied_dunning_campaign_id = :campaign_id
               OR (
                 applied_dunning_campaign_id IS NULL
-                AND billing_entity_id = :billing_entity_id
+                AND billing_entity_id IN (:billing_entity_ids)
               )
             )
           SQL
           campaign_id: object.id,
-          billing_entity_id: object.billing_entities.ids
+          billing_entity_ids: object.billing_entities.ids
         ).count
       end
       # rubocop:enable GraphQL/ResolverMethodLength
