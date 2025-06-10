@@ -446,7 +446,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
 
           it "resets the defaulting customers last dunning campaign attempt fields" do
             expect { result }.to change { customer_defaulting.reload.last_dunning_campaign_attempt }.to(0)
-              .and change { customer_defaulting.last_dunning_campaign_attempt_at }.to(nil)
+              .and change(customer_defaulting, :last_dunning_campaign_attempt_at).to(nil)
           end
 
           it "does not reset the customers from another billing entity last dunning campaign attempt fields" do
