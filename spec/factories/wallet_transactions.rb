@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :wallet_transaction do
     wallet
+    organization { wallet&.organization || association(:organization) }
     transaction_type { "inbound" }
     status { "settled" }
     amount { "1.00" }

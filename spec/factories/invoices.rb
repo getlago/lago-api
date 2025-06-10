@@ -4,7 +4,7 @@ FactoryBot.define do
   factory :invoice do
     customer
     # TODO: change building invoices from billing_entity by default
-    organization
+    organization { customer&.organization || association(:organization) }
 
     issuing_date { Time.zone.now - 1.day }
     payment_due_date { issuing_date }

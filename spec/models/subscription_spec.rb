@@ -383,7 +383,7 @@ RSpec.describe Subscription, type: :model do
   describe "#invoice_name" do
     subject(:subscription_invoice_name) { subscription.invoice_name }
 
-    let(:subscription) { build_stubbed(:subscription, plan:, name:) }
+    let(:subscription) { build(:subscription, plan:, name:, organization: plan.organization) }
 
     context "when plan invoice display name is blank" do
       let(:plan) { build_stubbed(:plan, invoice_display_name: [nil, ""].sample) }
@@ -626,13 +626,13 @@ RSpec.describe Subscription, type: :model do
   describe "#next_subscription" do
     subject { subscription.next_subscription }
 
-    let(:subscription) { build_stubbed(:subscription, next_subscriptions:) }
+    let(:subscription) { build(:subscription, next_subscriptions:, organization: plan.organization) }
 
     let(:next_subscriptions) do
       [
-        build_stubbed(:subscription, :canceled),
-        build_stubbed(:subscription, created_at: 1.day.ago),
-        build_stubbed(:subscription, created_at: 2.days.ago)
+        build(:subscription, :canceled, organization: plan.organization),
+        build(:subscription, created_at: 1.day.ago, organization: plan.organization),
+        build(:subscription, created_at: 2.days.ago, organization: plan.organization)
       ]
     end
 

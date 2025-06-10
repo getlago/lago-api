@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :usage_threshold do
     plan
+    organization { plan&.organization || association(:organization) }
     threshold_display_name { Faker::Name.name }
     amount_cents { 100 }
     recurring { false }

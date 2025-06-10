@@ -4,6 +4,8 @@ FactoryBot.define do
   factory :fee_applied_tax, class: "Fee::AppliedTax" do
     fee
     tax
+    organization { fee&.organization || tax&.organization || association(:organization) }
+
     tax_code { tax&.code.presence || "vat-#{SecureRandom.uuid}" }
     tax_description { "French Standard VAT" }
     tax_name { "VAT" }
