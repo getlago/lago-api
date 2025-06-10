@@ -175,8 +175,7 @@ module Invoices
               cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
                 subscription:,
                 charge:,
-                to_datetime: boundaries[:charges_to_datetime],
-                cache: !organization.clickhouse_events_store?
+                to_datetime: boundaries[:charges_to_datetime]
               )
 
               Fees::ChargeService
