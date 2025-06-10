@@ -662,6 +662,12 @@
               "description": "applied_coupon.deleted",
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "payment_request_created",
+              "description": "payment_request.created",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },

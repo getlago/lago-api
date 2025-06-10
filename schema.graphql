@@ -218,6 +218,11 @@ enum ActivityTypeEnum {
   payment_recorded
 
   """
+  payment_request.created
+  """
+  payment_request_created
+
+  """
   plan.created
   """
   plan_created
