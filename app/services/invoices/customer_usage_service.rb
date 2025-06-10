@@ -98,7 +98,6 @@ module Invoices
         subscription:,
         charge:,
         to_datetime: boundaries[:charges_to_datetime],
-        # NOTE: Will be turned on for clickhouse in the future
         cache: with_cache
       )
 
