@@ -5,6 +5,7 @@ module DunningCampaigns
     def initialize(organization:, dunning_campaign:, params:)
       @dunning_campaign = dunning_campaign
       @organization = organization
+      @default_billing_entity = organization.default_billing_entity
       @params = params
 
       super
@@ -17,6 +18,7 @@ module DunningCampaigns
       ActiveRecord::Base.transaction do
         dunning_campaign.assign_attributes(permitted_attributes)
         handle_thresholds if params.key?(:thresholds)
+        # TODO: remove this when FE is released and we handle applied on billing entity
         handle_applied_to_organization_update if params.key?(:applied_to_organization)
 
         dunning_campaign.save!
@@ -30,7 +32,7 @@ module DunningCampaigns
 
     private
 
-    attr_reader :dunning_campaign, :organization, :params
+    attr_reader :dunning_campaign, :organization, :params, :default_billing_entity
 
     def permitted_attributes
       params.slice(:name, :bcc_emails, :code, :description, :days_between_attempts, :max_attempts)
@@ -92,24 +94,11 @@ module DunningCampaigns
     end
 
     def handle_applied_to_organization_update
-      dunning_campaign.applied_to_organization = params[:applied_to_organization]
+      new_dunning_campaign_id = params[:applied_to_organization] ? dunning_campaign.id : nil
+      return if default_billing_entity.applied_dunning_campaign_id == new_dunning_campaign_id
 
-      return unless dunning_campaign.applied_to_organization_changed?
-
-      organization
-        .dunning_campaigns
-        .applied_to_organization
-        .update_all(applied_to_organization: false) # rubocop:disable Rails/SkipsModelValidations
-
-      organization.default_billing_entity.reset_customers_last_dunning_campaign_attempt
-
-      new_applied_dunning_campaign = dunning_campaign.applied_to_organization ? dunning_campaign : nil
-      organization.default_billing_entity.update!(applied_dunning_campaign: new_applied_dunning_campaign)
-
-      customers_fallback_campaign.update_all( # rubocop:disable Rails/SkipsModelValidations
-        last_dunning_campaign_attempt_at: nil,
-        last_dunning_campaign_attempt: 0
-      )
+      default_billing_entity.update!(applied_dunning_campaign_id: new_dunning_campaign_id)
+      default_billing_entity.reset_customers_last_dunning_campaign_attempt
     end
   end
 end

@@ -40,7 +40,14 @@ class DunningCampaignsQuery < BaseQuery
   end
 
   def with_applied_to_organization(scope)
-    scope.where(applied_to_organization: filters.applied_to_organization)
+    if filters.applied_to_organization
+      scope.joins(:billing_entities).where(billing_entities: {id: organization.default_billing_entity.id})
+    else
+      scope.left_joins(:billing_entities).where(
+        "billing_entities.id IS NULL OR billing_entities.id != ?",
+        organization.default_billing_entity.id
+      )
+    end
   end
 
   def with_currency_threshold(scope)
