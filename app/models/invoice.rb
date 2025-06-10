@@ -195,7 +195,7 @@ class Invoice < ApplicationRecord
     invoice_subscription(subscription_id).fees
   end
 
-  def progressive_billing_credits(subscription)
+  def progressive_billing_credits_for_subscription(subscription)
     credits.where(
       progressive_billing_invoice_id: subscription.invoices.progressive_billing.select(:id)
     )

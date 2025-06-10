@@ -188,7 +188,7 @@
               = MoneyHelper.format(total_amount)
         - else
           - if progressive_billing_credit_amount_cents.positive?
-            - credits = progressive_billing_credits(invoice_subscription.subscription).all
+            - credits = progressive_billing_credits_for_subscription(invoice_subscription.subscription).all
             - if credits.present?
               tr
                 td.body-2
