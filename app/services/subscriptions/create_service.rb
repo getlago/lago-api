@@ -37,7 +37,14 @@ module Subscriptions
           .call(customer:, currency: plan.amount_currency)
           .raise_if_error!
 
-        result.subscription = handle_subscription
+        customer.with_lock do
+          # Refresh current_subscription inside the lock to avoid stale data
+          @current_subscription = editable_subscriptions.where(id: params[:subscription_id])
+            .or(editable_subscriptions.where(external_id:))
+            .first
+
+          result.subscription = handle_subscription
+        end
       end
 
       result
