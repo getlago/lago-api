@@ -209,7 +209,7 @@ module Events
                   .select(
                     "timestamp, \
                     value AS property, \
-                    coalesce(NULLIF(events_enriched.sorted_properties['operation_type'], ''), 'add') AS operation_type"
+                    coalesce(NULLIF(events_enriched.properties.operation_type, ''), 'add') AS operation_type"
                   )
                   .to_sql
               })
@@ -229,7 +229,7 @@ module Events
                   "#{groups.join(", ")}, \
                   timestamp, \
                   value AS property, \
-                  coalesce(NULLIF(events_enriched.sorted_properties['operation_type'], ''), 'add') AS operation_type"
+                  coalesce(NULLIF(events_enriched.properties.operation_type, ''), 'add') AS operation_type"
                 ).to_sql
             })
           SQL

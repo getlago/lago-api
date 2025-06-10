@@ -8,9 +8,9 @@ module Events
 
       def events(force_from: false, ordered: false)
         with_retry do
-          scope = ::Clickhouse::EventsEnriched.where(external_subscription_id: subscription.external_id)
-            .where(organization_id: subscription.organization.id)
+          scope = ::Clickhouse::EventsEnriched.where(organization_id: subscription.organization.id)
             .where(code:)
+            .where(external_subscription_id: subscription.external_id)
 
           scope = scope.order(timestamp: :asc) if ordered
 
@@ -26,8 +26,8 @@ module Events
       def distinct_codes
         with_retry do
           ::Clickhouse::EventsEnriched
-            .where(external_subscription_id: subscription.external_id)
             .where(organization_id: subscription.organization.id)
+            .where(external_subscription_id: subscription.external_id)
             .where("events_enriched.timestamp >= ?", from_datetime)
             .where("events_enriched.timestamp <= ?", to_datetime)
             .pluck("DISTINCT(code)")
@@ -120,7 +120,7 @@ module Events
       def active_unique_property?(event)
         previous_event = with_retry do
           events
-            .where("events_enriched.properties[?] = ?", aggregation_property, event.properties[aggregation_property])
+            .where("events_enriched.properties.? = ?", aggregation_property, event.properties[aggregation_property])
             .where("events_enriched.timestamp < ?", event.timestamp)
             .order(timestamp: :desc)
             .first
@@ -510,13 +510,13 @@ module Events
 
       def filters_scope(scope)
         matching_filters.each do |key, values|
-          scope = scope.where("events_enriched.properties[?] IN ?", key.to_s, values)
+          scope = scope.where("events_enriched.properties.? IN ?", key.to_s, values)
         end
 
         conditions = ignored_filters.map do |filters|
           filters.map do |key, values|
             ActiveRecord::Base.sanitize_sql_for_conditions(
-              ["(coalesce(events_enriched.properties[?], '') IN (?))", key.to_s, values.map(&:to_s)]
+              ["(coalesce(events_enriched.properties.?, '') IN (?))", key.to_s, values.map(&:to_s)]
             )
           end.join(" AND ")
         end
@@ -529,9 +529,9 @@ module Events
       def apply_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
           scope = if grouped_by_value.present?
-            scope.where("events_enriched.properties[?] = ?", grouped_by, grouped_by_value)
+            scope.where("events_enriched.properties.? = ?", grouped_by, grouped_by_value)
           else
-            scope.where("COALESCE(events_enriched.properties[?], '') = ''", grouped_by)
+            scope.where("COALESCE(events_enriched.properties.?, '') = ''", grouped_by)
           end
         end
 
@@ -540,7 +540,7 @@ module Events
 
       def sanitized_property_name(property = aggregation_property)
         ActiveRecord::Base.sanitize_sql_for_conditions(
-          ["events_enriched.properties[?]", property]
+          ["events_enriched.properties.?", property]
         )
       end
 
