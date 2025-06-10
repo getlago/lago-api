@@ -4,6 +4,7 @@ class DunningCampaign < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
   self.discard_column = :deleted_at
+  self.ignored_columns += %w[applied_to_organization]
 
   ORDERS = %w[name code].freeze
 
