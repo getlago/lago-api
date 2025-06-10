@@ -569,6 +569,7 @@ end
 #  organization_id                         :uuid             not null
 #  organization_sequential_id              :integer          default(0), not null
 #  sequential_id                           :integer
+#  voided_invoice_id                       :uuid
 #
 # Indexes
 #
@@ -585,10 +586,12 @@ end
 #  index_invoices_on_self_billed                                   (self_billed)
 #  index_invoices_on_sequential_id                                 (sequential_id)
 #  index_invoices_on_status                                        (status)
+#  index_invoices_on_voided_invoice_id                             (voided_invoice_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (voided_invoice_id => invoices.id)
 #
