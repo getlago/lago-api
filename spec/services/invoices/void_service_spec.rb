@@ -7,7 +7,6 @@ RSpec.describe Invoices::VoidService, type: :service do
 
   let(:params) { {} }
 
-
   describe "#call" do
     context "when invoice is nil" do
       let(:invoice) { nil }
@@ -187,8 +186,9 @@ RSpec.describe Invoices::VoidService, type: :service do
         end
       end
     end
+
     describe "when generate credit note is true" do
-      let(:params) { { generate_credit_note: true } }
+      let(:params) { {generate_credit_note: true} }
 
       context "when invoice is nil" do
         let(:invoice) { nil }
