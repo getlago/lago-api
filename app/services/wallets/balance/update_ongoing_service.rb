@@ -7,7 +7,7 @@ module Wallets
         super
 
         @wallet = wallet
-        update_params[:last_balance_sync_at] = Time.current
+        update_params[:last_ongoing_balance_sync_at] = Time.current
         @update_params = update_params
       end
 

@@ -2877,7 +2877,8 @@ CREATE TABLE public.wallets (
     lock_version integer DEFAULT 0 NOT NULL,
     ready_to_be_refreshed boolean DEFAULT false NOT NULL,
     organization_id uuid,
-    allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL
+    allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
+    last_ongoing_balance_sync_at timestamp without time zone
 );
 
 
@@ -8603,6 +8604,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250611072251'),
 ('20250610063400'),
 ('20250609121102'),
 ('20250602145535'),

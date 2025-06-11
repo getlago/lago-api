@@ -45,7 +45,8 @@ RSpec.describe Wallets::Balance::UpdateOngoingService, type: :service do
           .and change(wallet, :ongoing_balance_cents).from(800).to(450)
           .and change(wallet, :credits_ongoing_balance).from(8.0).to(4.5)
           .and change(wallet, :ready_to_be_refreshed).from(true).to(false)
-          .and change(wallet, :last_balance_sync_at).from(nil).to(Time.current)
+          .and change(wallet, :last_ongoing_balance_sync_at).from(nil).to(Time.current)
+          .and not_change(wallet, :last_balance_sync_at)
 
         expect(wallet).not_to be_depleted_ongoing_balance
       end
