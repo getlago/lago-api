@@ -13,7 +13,7 @@ module V1
         request_origin: model.request_origin,
         request_http_method: model.request_http_method,
         request_http_status: model.request_http_status,
-        logged_at: model.logged_at.iso8601, 
+        logged_at: model.logged_at.iso8601,
         created_at: model.created_at.iso8601
       }
     end

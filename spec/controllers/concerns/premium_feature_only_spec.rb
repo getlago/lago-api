@@ -31,7 +31,7 @@ RSpec.describe PremiumFeatureOnly, type: :controller do
   context "when premium usage" do
     around { |test| lago_premium!(&test) }
 
-    it "returns a forbidden error" do
+    it "does not block the request" do
       get :index
 
       expect(response).to have_http_status(:success)

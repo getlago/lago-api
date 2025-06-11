@@ -96,6 +96,24 @@ RSpec.describe ApiLogsQuery, type: :query, clickhouse: true do
       filters = {http_statuses: ["other"]}
       expect(described_class.call(organization:, pagination:, filters:).api_logs).to be_empty
     end
+
+    context "when succeeded" do
+      it "returns expected api logs" do
+        filters = {http_statuses: ["succeeded"]}
+        expect(described_class.call(organization:, pagination:, filters:).api_logs.first.request_id).to eq(api_log.request_id)
+      end
+    end
+
+    context "when failed" do
+      let(:failed_api_log) { create(:clickhouse_api_log, organization:, http_status: 404) }
+
+      before { failed_api_log }
+
+      it "returns expected api logs" do
+        filters = {http_statuses: ["failed"]}
+        expect(described_class.call(organization:, pagination:, filters:).api_logs.first.request_id).to eq(failed_api_log.request_id)
+      end
+    end
   end
 
   context "with api_version filter" do
@@ -112,6 +130,25 @@ RSpec.describe ApiLogsQuery, type: :query, clickhouse: true do
 
       filters = {request_paths: ["other"]}
       expect(described_class.call(organization:, pagination:, filters:).api_logs).to be_empty
+    end
+
+    context "with a resource name" do
+      let(:create_bm) { create(:clickhouse_api_log, organization:, request_path: "/v1/billable_metrics/") }
+      let(:edit_bm) { create(:clickhouse_api_log, organization:, request_path: "/v1/billable_metrics/111222333") }
+
+      before do
+        create_bm
+        edit_bm
+      end
+
+      it "returns expected api logs" do
+        filters = {request_paths: ["billable_metrics"]}
+        api_logs = described_class.call(organization:, pagination:, filters:).api_logs
+
+        expect(api_logs.count).to eq(2)
+        expect(api_logs.first.id).to eq(create_bm.id)
+        expect(api_logs.last.id).to eq(edit_bm.id)
+      end
     end
   end
 end
