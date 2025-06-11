@@ -9,8 +9,8 @@ module Resolvers
 
     description "Query a single customer of an organization"
 
-    argument :id, ID, required: false, description: "Lago ID of the customer"
     argument :external_id, ID, required: false, description: "External ID of the customer"
+    argument :id, ID, required: false, description: "Lago ID of the customer"
 
     type Types::Customers::Object, null: true
 

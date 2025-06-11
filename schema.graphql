@@ -8178,9 +8178,14 @@ type Query {
   """
   subscription(
     """
-    Uniq ID of the subscription
+    External ID of the subscription
     """
-    id: ID!
+    externalId: ID
+
+    """
+    Lago ID of the subscription
+    """
+    id: ID
   ): Subscription
 
   """

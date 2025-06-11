@@ -39032,8 +39032,8 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "id",
-                  "description": "Lago ID of the customer",
+                  "name": "externalId",
+                  "description": "External ID of the customer",
                   "type": {
                     "kind": "SCALAR",
                     "name": "ID",
@@ -39044,8 +39044,8 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "externalId",
-                  "description": "External ID of the customer",
+                  "name": "id",
+                  "description": "Lago ID of the customer",
                   "type": {
                     "kind": "SCALAR",
                     "name": "ID",
@@ -42533,16 +42533,24 @@
               "deprecationReason": null,
               "args": [
                 {
-                  "name": "id",
-                  "description": "Uniq ID of the subscription",
+                  "name": "externalId",
+                  "description": "External ID of the subscription",
                   "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
+                  "name": "id",
+                  "description": "Lago ID of the subscription",
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
