@@ -5,14 +5,11 @@ class ApiLogsQuery < BaseQuery
   Filters = BaseFilters[
     :from_date,
     :to_date,
-    :user_emails,
-    :request_statuses,
     :http_methods,
     :http_statuses,
     :api_version,
-    :path_regex,
     :api_key_ids,
-    :request_ids
+    :request_paths
   ]
 
   MAX_AGE = 30.days
@@ -23,14 +20,13 @@ class ApiLogsQuery < BaseQuery
 
     api_logs = with_logged_at_range(api_logs) if filters.from_date || filters.to_date
     api_logs = with_api_key_ids(api_logs) if filters.api_key_ids.present?
-    api_logs = with_http_status(api_logs) if filters.http_statuses.present?
+    api_logs = with_http_statuses(api_logs) if filters.http_statuses.present?
     api_logs = with_http_methods(api_logs) if filters.http_methods.present?
-    api_logs = with_request_statuses(api_logs) if filters.request_statuses.present?
     api_logs = with_api_version(api_logs) if filters.api_version.present?
-    api_logs = with_regex_path(api_logs) if filters.path_regex.present?
+    api_logs = with_request_paths(api_logs) if filters.request_paths.present?
 
     Clickhouse::ApiLog.transaction do
-      Clickhouse::ApiLog.connection.execute("SELECT 1 SETTINGS max_execution_time=5000") if filters.path_regex.present?
+      Clickhouse::ApiLog.connection.execute("SELECT 1 SETTINGS max_execution_time=5000") if filters.request_paths.present?
 
       api_logs = paginate(api_logs)
       result.api_logs = api_logs
@@ -41,8 +37,8 @@ class ApiLogsQuery < BaseQuery
   private
 
   def with_logged_at_range(scope)
-    scope = scope.where(logged_at: from_date..) if filters.from_date
-    scope = scope.where(logged_at: ..to_date) if filters.to_date
+    scope = scope.where(logged_at: filters.from_date..) if filters.from_date
+    scope = scope.where(logged_at: ..filters.to_date) if filters.to_date
     scope
   end
 
@@ -50,17 +46,15 @@ class ApiLogsQuery < BaseQuery
     scope.where(api_key_id: filters.api_key_ids)
   end
 
-  def with_http_status(scope)
-    scope.where(request_http_status: filters.http_statuses)
-  end
-
   def with_http_methods(scope)
-    scope.where(request_http_method: filters.http_methods)
+    scope.where(http_method: filters.http_methods)
   end
 
-  def with_request_statuses(scope)
-    scope = scope.where("request_http_status <= ?", 399) if filters.request_statuses.present? && filters.request_statuses.include?("success")
-    scope = scope.where("request_http_status > ?", 399) if filters.request_statuses.present? && filters.request_statuses.include?("failed")
+  def with_http_statuses(scope)
+    scope = scope.where("http_status <= ?", 399) if filters.http_statuses.include?("succeeded")
+    scope = scope.where("http_status > ?", 399) if filters.http_statuses.include?("failed")
+    # TODO: Improve that to return nothing if filters.http_statuses is not a valid value
+    scope = scope.where(http_status: filters.http_statuses) if %w[succeeded failed].exclude?(filters.http_statuses)
     scope
   end
 
@@ -68,12 +62,7 @@ class ApiLogsQuery < BaseQuery
     scope.where(api_version: filters.api_version)
   end
 
-  def with_regex_path(scope)
-    scope.where("match(request_path, ?)", filters.path_regex)
-  end
-
-  def with_user_emails(scope)
-    user_ids = organization.users.where(email: filters.user_emails).pluck(:id)
-    scope.where(user_id: user_ids)
+  def with_request_paths(scope)
+    scope.where("match(request_path, ?)", filters.request_paths)
   end
 end

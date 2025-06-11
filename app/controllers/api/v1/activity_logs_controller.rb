@@ -4,7 +4,7 @@ module Api
   module V1
     class ActivityLogsController < Api::BaseController
       include PremiumFeatureOnly
-      skip_api_tracking!
+      skip_audit_logs!
 
       def index
         result = ActivityLogsQuery.call(

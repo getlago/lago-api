@@ -29,17 +29,17 @@ end
 #
 # Table name: api_logs
 #
-#  api_version      :string           not null
-#  client           :string           not null
-#  http_method      :Enum8('get' = 1, not null
-#  http_status      :integer          not null
-#  logged_at        :datetime         not null
-#  request_body     :string           not null
-#  request_origin   :string           not null
-#  request_path     :string           not null
-#  request_response :string
-#  created_at       :datetime         not null
-#  api_key_id       :string           not null
-#  organization_id  :string           not null
-#  request_id       :string           not null
+#  api_version         :string           not null
+#  client              :string           not null
+#  logged_at           :datetime         not null
+#  request_body        :string           not null
+#  request_http_method :Enum8('get' = 1, not null
+#  request_http_status :integer          not null
+#  request_origin      :string           not null
+#  request_path        :string           not null
+#  request_response    :string
+#  created_at          :datetime         not null
+#  api_key_id          :string           not null
+#  organization_id     :string           not null
+#  request_id          :string           not null
 #

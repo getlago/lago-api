@@ -8,17 +8,17 @@ module ApiLoggable
   end
 
   module ClassMethods
-    def skip_api_tracking!
-      @skip_api_tracking = true
+    def skip_audit_logs!
+      @skip_audit_logs = true
     end
 
-    def skip_api_tracking?
-      !!@skip_api_tracking
+    def skip_audit_logs?
+      !!@skip_audit_logs
     end
   end
 
   def produce_api_log?
-    request.get? || self.class.skip_api_tracking?
+    request.get? || self.class.skip_audit_logs?
   end
 
   private
