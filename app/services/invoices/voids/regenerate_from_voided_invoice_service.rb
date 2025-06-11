@@ -1,8 +1,8 @@
-frozen_string_literal: true
+# frozen_string_literal: true
 
 module Invoices
   module Voids
-    class RegenerateInvoiceFromVoidedService < BaseService
+    class RegenerateFromVoidedInvoiceService < BaseService
 
       def initialize(voided_invoice_id:)
         @voided_invoice_id = voided_invoice_id
