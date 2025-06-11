@@ -142,6 +142,18 @@ module Api
         end
       end
 
+      def regenerate
+        voided_invoice = current_organization.invoices.voided.find_by(id: params[:id])
+        return not_found_error(resource: "invoice") unless voided_invoice
+
+        result = Invoices::Voids::RegenerateFromVoidedInvoiceService.call(voided_invoice_id: voided_invoice.id)
+        if result.success?
+          render_invoice(result.invoice)
+        else
+          render_error_response(result)
+        end
+      end
+
       def lose_dispute
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
 
