@@ -7782,9 +7782,14 @@ type Query {
   """
   customer(
     """
-    Uniq ID of the customer
+    External ID of the customer
     """
-    id: ID!
+    externalId: ID
+
+    """
+    Lago ID of the customer
+    """
+    id: ID
   ): Customer
 
   """
