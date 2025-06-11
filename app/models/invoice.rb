@@ -596,5 +596,4 @@ end
 #  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (organization_id => organizations.id)
-#  fk_rails_...  (voided_invoice_id => invoices.id)
 #
