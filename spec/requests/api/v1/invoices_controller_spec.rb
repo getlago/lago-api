@@ -822,6 +822,47 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     end
   end
 
+  describe "POST /api/v1/invoices/:id/regenerate" do
+    subject { post_with_token(organization, "/api/v1/invoices/#{voided_invoice_id}/regenerate") }
+
+    let(:voided_invoice) { create(:invoice, status: :voided, customer:, organization:) }
+    let(:regenerated_invoice) { create(:invoice, customer:, organization:, voided_invoice:) }
+    let(:voided_invoice_id) { voided_invoice.id }
+
+    context "when the service call fails" do
+      before do
+        result = BaseService::Result.new
+        result.error = "Failed to regenerate invoice"
+        allow(Invoices::Voids::RegenerateFromVoidedInvoiceService)
+          .to receive(:call)
+          .with(voided_invoice_id:)
+          .and_return(result)
+      end
+
+      it "returns an error" do
+        subject
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+    end
+
+    context "when the service call succeeds" do
+      before do
+        result = BaseService::Result.new
+        result.invoice = regenerated_invoice
+        allow(Invoices::Voids::RegenerateFromVoidedInvoiceService)
+          .to receive(:call)
+          .with(voided_invoice_id:)
+          .and_return(result)
+      end
+
+      it "returns the invoice" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json.dig(:invoice, :lago_id)).to eq(regenerated_invoice.id)
+      end
+    end
+  end
+
   describe "POST /api/v1/invoices/:id/lose_dispute" do
     subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/lose_dispute") }
 
