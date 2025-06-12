@@ -70,7 +70,17 @@ module Credits
     end
 
     def compute_amount
-      [balance_cents, invoice.total_amount_cents].min
+      if wallet.limited_fee_types?
+        applicable_fees = invoice.fees.where(fee_type: wallet.allowed_fee_types)
+
+        total = 0
+        applicable_fees.each do |f|
+          total += f.sub_total_excluding_taxes_amount_cents + f.taxes_amount_cents - f.precise_credit_notes_amount_cents
+        end
+        [balance_cents, total].min
+      else
+        [balance_cents, invoice.total_amount_cents].min
+      end
     end
   end
 end

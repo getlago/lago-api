@@ -452,6 +452,49 @@ RSpec.describe Credits::AppliedCouponService do
           end
         end
 
+        context "with multiple fees and progressive billing credits already applied" do
+          let(:fee3) { create(:fee, amount_cents: base_amount_cents / 3, invoice:, subscription:) }
+          let(:fee1) do
+            create(
+              :charge_fee,
+              charge:,
+              amount_cents: base_amount_cents / 6,
+              invoice:,
+              subscription:,
+              precise_coupons_amount_cents: 15 # weighted prog. billing credits
+            )
+          end
+          let(:fee2) do
+            create(
+              :charge_fee,
+              charge:,
+              amount_cents: base_amount_cents / 2,
+              invoice:,
+              subscription:,
+              precise_coupons_amount_cents: 45 # weighted prog.billing credits
+            )
+          end
+
+          before { fee3 }
+
+          it "creates a credit" do
+            result = credit_service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.credit.amount_cents).to eq(12)
+              expect(result.credit.amount_currency).to eq("EUR")
+              expect(result.credit.invoice).to eq(invoice)
+              expect(result.credit.applied_coupon).to eq(applied_coupon)
+              expect(result.credit.before_taxes).to eq(true)
+
+              expect(fee1.reload.precise_coupons_amount_cents).to eq(18)
+              expect(fee2.reload.precise_coupons_amount_cents).to eq(54)
+              expect(fee3.reload.precise_coupons_amount_cents).to eq(0)
+            end
+          end
+        end
+
         context "when plan limitation does not applies" do
           let(:charge) { create(:standard_charge, plan:) }
 
