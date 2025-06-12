@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  mount Sidekiq::Web, at: "/sidekiq" if defined? Sidekiq::Web
+  mount Sidekiq::Web, at: "/sidekiq" if ENV["LAGO_SIDEKIQ_WEB"] == "true" && defined? Sidekiq::Web
   mount Karafka::Web::App, at: "/karafka" if ENV["LAGO_KARAFKA_WEB"]
   mount GraphiQL::Rails::Engine, at: "/graphiql", graphql_path: "/graphql" if Rails.env.development?
 
