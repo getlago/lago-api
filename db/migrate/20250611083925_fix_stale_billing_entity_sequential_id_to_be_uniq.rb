@@ -2,9 +2,8 @@
 
 class FixStaleBillingEntitySequentialIdToBeUniq < ActiveRecord::Migration[8.0]
   class Invoice < ApplicationRecord
-  end
-
-  class BillingEntity < ApplicationRecord
+    scope :non_self_billed, -> { where.not(self_billed: true) }
+    scope :with_generated_number, -> { where.not(generated_number: nil) }
   end
 
   def up
@@ -24,7 +23,6 @@ class FixStaleBillingEntitySequentialIdToBeUniq < ActiveRecord::Migration[8.0]
       # rubocop:disable Rails/SkipsModelValidations
       Invoice.where(billing_entity_id: billing_entity.id)
         .non_self_billed.with_generated_number
-        .where.not(billing_entity_sequential_id: nil)
         .where(billing_entity_sequential_id: duplicates)
         .update_all("billing_entity_sequential_id = NULL")
       # rubocop:enable Rails/SkipsModelValidations
@@ -47,7 +45,6 @@ class FixStaleBillingEntitySequentialIdToBeUniq < ActiveRecord::Migration[8.0]
       # find the highest billing_entity_sequential_id for the billing_entity
       existing_max_number = Invoice.where(billing_entity_id: billing_entity.id)
         .non_self_billed.with_generated_number
-        .where.not(billing_entity_sequential_id: nil)
         .maximum(:billing_entity_sequential_id)
 
       if duplicates.max >= existing_max_number
