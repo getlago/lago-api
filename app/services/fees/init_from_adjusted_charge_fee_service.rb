@@ -32,7 +32,11 @@ module Fees
       units = adjusted_fee.units
       amount_details = adjusted_fee.adjusted_units? ? amount_result.amount_details : {}
 
-      if adjusted_fee.adjusted_units?
+      if charge.applied_pricing_unit
+        amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
+          .to_fiat_currency_cents(currency)
+          .values_at(:amount_cents, :precise_amount_cents, :unit_amount_cents, :precise_unit_amount)
+      elsif adjusted_fee.adjusted_units?
         rounded_amount = amount_result.amount.round(currency.exponent)
         precise_amount_cents = amount_result.amount * currency.subunit_to_unit.to_d
         amount_cents = rounded_amount * currency.subunit_to_unit
@@ -70,7 +74,8 @@ module Fees
         amount_details:,
         invoice_display_name: adjusted_fee.invoice_display_name,
         grouped_by: adjusted_fee.grouped_by,
-        charge_filter_id: charge_filter&.id
+        charge_filter_id: charge_filter&.id,
+        pricing_unit_usage:
       )
     end
 
@@ -90,6 +95,31 @@ module Fees
       @amount_result = Charges::ChargeModelFactory
         .new_instance(charge:, aggregation_result:, properties:)
         .apply
+    end
+
+    def pricing_unit_usage
+      return @pricing_unit_usage if defined?(@pricing_unit_usage)
+
+      unless charge.applied_pricing_unit
+        @pricing_unit_usage = nil
+        return
+      end
+
+      @pricing_unit_usage = if adjusted_fee.adjusted_units?
+        PricingUnitUsage.build_from_aggregation(amount_result, charge.applied_pricing_unit)
+      else
+        unit_precise_amount_cents = adjusted_fee.unit_precise_amount_cents
+        precise_amount_cents = adjusted_fee.units * unit_precise_amount_cents
+
+        PricingUnitUsage.new(
+          pricing_unit: charge.pricing_unit,
+          short_name: charge.pricing_unit.short_name,
+          conversion_rate: charge.applied_pricing_unit.conversion_rate,
+          amount_cents: precise_amount_cents.round,
+          precise_amount_cents:,
+          unit_amount_cents: unit_precise_amount_cents.round
+        )
+      end
     end
   end
 end
