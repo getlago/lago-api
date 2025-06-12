@@ -11,7 +11,7 @@ class CreatePricingUnitUsages < ActiveRecord::Migration[8.0]
       t.bigint :amount_cents, null: false
       t.decimal :precise_amount_cents, precision: 40, scale: 15, default: 0.0, null: false
       t.bigint :unit_amount_cents, default: 0, null: false
-      t.decimal :conversion_rate, precision: 40, scale: 15, default: "0.0", null: false
+      t.decimal :conversion_rate, precision: 40, scale: 15, default: 0.0, null: false
 
       t.timestamps
     end
