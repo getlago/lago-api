@@ -167,7 +167,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
       end
 
-      context "when customer has an applied dunning campaign overwriting organization's default campaign" do
+      context "when customer has an applied dunning campaign overwriting billing entity's default campaign" do
         let(:customer) do
           create(
             :customer,
@@ -179,7 +179,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
 
         let(:customer_dunning_campaign) do
-          create(:dunning_campaign, organization:, applied_to_organization: false)
+          create(:dunning_campaign, organization:)
         end
 
         let(:customer_dunning_campaign_threshold) do
@@ -270,7 +270,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       end
 
       let(:dunning_campaign) do
-        create(:dunning_campaign, organization:, applied_to_organization: false)
+        create(:dunning_campaign, organization:)
       end
 
       let(:dunning_campaign_threshold) do
@@ -401,7 +401,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
     end
 
     context "when neither billing_entity nor customer has an applied dunning campaign" do
-      let(:dunning_campaign) { create :dunning_campaign, organization:, applied_to_organization: false }
+      let(:dunning_campaign) { create :dunning_campaign, organization: }
 
       let(:dunning_campaign_threshold) do
         create(

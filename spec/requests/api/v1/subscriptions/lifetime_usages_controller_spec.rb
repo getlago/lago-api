@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Api::V1::LifetimeUsagesController, type: :request do
+RSpec.describe Api::V1::Subscriptions::LifetimeUsagesController, type: :request do
   let!(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:) }
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }

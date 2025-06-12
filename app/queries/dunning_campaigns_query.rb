@@ -39,8 +39,17 @@ class DunningCampaignsQuery < BaseQuery
     DunningCampaign::ORDERS.include?(@order) ? @order : DEFAULT_ORDER
   end
 
+  # TODO: remove this method when we not apply dunning campaign on organization anymore
+  # will we need a way to filter by billing_entity_id?
   def with_applied_to_organization(scope)
-    scope.where(applied_to_organization: filters.applied_to_organization)
+    if filters.applied_to_organization
+      scope.joins(:billing_entities).where(billing_entities: {id: organization.default_billing_entity.id})
+    else
+      scope.left_joins(:billing_entities).where(
+        "billing_entities.id IS NULL OR billing_entities.id != ?",
+        organization.default_billing_entity.id
+      )
+    end
   end
 
   def with_currency_threshold(scope)

@@ -79,9 +79,13 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
         let(:tax_codes) { ["tax_code_1", "TAX_CODE_2"] }
 
         it "matches tax codes case-insensitively" do
-          service.call
+          result = service.call
 
-          expect(billing_entity.taxes).to eq([tax1, tax2])
+          expect(result).to be_success
+          expect(result.taxes).to eq([tax1, tax2])
+          expect(result.applied_taxes.count).to eq(2)
+
+          expect(billing_entity.applied_taxes.pluck(:organization_id).uniq).to eq([organization.id])
         end
       end
     end
@@ -94,9 +98,13 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
       end
 
       it "removes taxes from the billing entity" do
-        service.call
+        result = service.call
 
-        expect(billing_entity.taxes).to be_empty
+        expect(result).to be_success
+        expect(result.taxes).to be_empty
+        expect(result.applied_taxes).to be_empty
+
+        expect(billing_entity.applied_taxes).to be_empty
       end
     end
 
@@ -108,9 +116,13 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
       end
 
       it "removes taxes from the billing entity" do
-        service.call
+        result = service.call
 
-        expect(billing_entity.taxes).to be_empty
+        expect(result).to be_success
+        expect(result.taxes).to be_empty
+        expect(result.applied_taxes).to be_empty
+
+        expect(billing_entity.applied_taxes).to be_empty
       end
     end
 

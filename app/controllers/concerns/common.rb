@@ -8,10 +8,9 @@ module Common
   def valid_date?(date)
     return false unless date
 
-    parsed_date = Date._strptime(date)
-
-    return false unless parsed_date
-
+    Date.strptime(date)
     true
+  rescue Date::Error
+    false
   end
 end

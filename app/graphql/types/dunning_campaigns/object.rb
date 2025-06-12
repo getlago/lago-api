@@ -21,6 +21,10 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      def applied_to_organization
+        object.organization.default_billing_entity.applied_dunning_campaign_id == object.id
+      end
+
       # rubocop:disable GraphQL/ResolverMethodLength
       def customers_count
         Customer.where(
@@ -30,18 +34,12 @@ module Types
               applied_dunning_campaign_id = :campaign_id
               OR (
                 applied_dunning_campaign_id IS NULL
-                AND organization_id = :organization_id
-                AND EXISTS (
-                  SELECT 1
-                  FROM dunning_campaigns
-                  WHERE id = :campaign_id
-                  AND applied_to_organization = true
-                )
+                AND billing_entity_id IN (:billing_entity_ids)
               )
             )
           SQL
           campaign_id: object.id,
-          organization_id: object.organization_id
+          billing_entity_ids: object.billing_entities.ids
         ).count
       end
       # rubocop:enable GraphQL/ResolverMethodLength

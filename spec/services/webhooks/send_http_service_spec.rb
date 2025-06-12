@@ -40,7 +40,6 @@ RSpec.describe Webhooks::SendHttpService, type: :service do
         LagoHttpClient::HttpError.new(403, error_body.to_json, "")
       )
       allow(SendHttpWebhookJob).to receive(:set).and_return(class_double(SendHttpWebhookJob, perform_later: nil))
-      allow(Webhooks::NotifyFailureService).to receive(:call).and_call_original
     end
 
     it "creates a failed webhook" do
@@ -71,7 +70,6 @@ RSpec.describe Webhooks::SendHttpService, type: :service do
           service.call
           expect(webhook.reload.retries).to eq 3
           expect(SendHttpWebhookJob).not_to have_received(:set)
-          expect(Webhooks::NotifyFailureService).not_to have_received(:call).with(webhook:)
         end
       end
     end

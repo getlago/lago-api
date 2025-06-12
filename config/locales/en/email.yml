@@ -74,13 +74,3 @@ en:
         total_amount_due: The total amount due is %{amount}.
     powered_by: Powered by
     questions: Questions? Contact us at
-    webhook:
-      failure_notification:
-        action_text: Please check your webhook endpoint and ensure it's able to receive webhooks from Lago.
-        greetings: Hello
-        intro: We were unable to deliver a webhook to your endpoint after %{retries} attempts.
-        lago_team: The Lago Team
-        main_cta_label: View failed webhooks
-        subject: "[ALERT] Webhook delivery failed for %{org_name}"
-        thanks: Thanks,
-        total_failed_text: There are currently %{count} failed webhooks in the last hour.

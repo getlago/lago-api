@@ -19,8 +19,9 @@ class Fee < ApplicationRecord
   belongs_to :billing_entity
 
   has_one :adjusted_fee, dependent: :nullify
-  has_one :customer, through: :subscription
   has_one :billable_metric, -> { with_discarded }, through: :charge
+  has_one :customer, through: :subscription
+  has_one :pricing_unit_usage, dependent: :destroy
   has_one :true_up_fee, class_name: "Fee", foreign_key: :true_up_parent_fee_id, dependent: :destroy
 
   has_many :credit_note_items, dependent: :destroy

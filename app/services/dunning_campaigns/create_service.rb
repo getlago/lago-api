@@ -22,7 +22,6 @@ module DunningCampaigns
         end
 
         dunning_campaign = organization.dunning_campaigns.create!(
-          applied_to_organization: params[:applied_to_organization],
           code: params[:code],
           bcc_emails: Array.wrap(params[:bcc_emails]),
           days_between_attempts: params[:days_between_attempts],

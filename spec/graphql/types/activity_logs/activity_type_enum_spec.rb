@@ -47,6 +47,7 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         coupon_deleted
         applied_coupon_created
         applied_coupon_deleted
+        payment_request_created
       ]
     )
   end

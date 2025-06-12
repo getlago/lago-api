@@ -3,7 +3,7 @@
 FactoryBot.define do
   factory :alert, class: "UsageMonitoring::Alert" do
     association :organization
-    subscription_external_id { create(:subscription, organization_id: organization.id).external_id }
+    subscription_external_id { create(:subscription, organization: organization).external_id }
     name { "General Alert" }
     sequence(:code) { |n| "default#{n}" }
     alert_type { "current_usage_amount" }

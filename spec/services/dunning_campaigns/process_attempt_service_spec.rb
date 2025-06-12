@@ -150,9 +150,12 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
         create(
           :dunning_campaign,
           organization:,
-          applied_to_organization: true,
           days_between_attempts: 10
         )
+      end
+
+      before do
+        billing_entity.update!(applied_dunning_campaign: dunning_campaign)
       end
 
       it "does nothing" do

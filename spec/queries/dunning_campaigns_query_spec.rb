@@ -14,11 +14,13 @@ RSpec.describe DunningCampaignsQuery, type: :query do
   let(:order) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
+  let(:default_billing_entity) { organization.default_billing_entity }
+  let(:billing_entity) { create(:billing_entity, organization:) }
   let(:dunning_campaign_first) do
-    create(:dunning_campaign, organization:, name: "defgh", code: "11", applied_to_organization: true)
+    create(:dunning_campaign, organization:, name: "defgh", code: "11")
   end
   let(:dunning_campaign_second) do
-    create(:dunning_campaign, organization:, name: "abcde", code: "22", applied_to_organization: false)
+    create(:dunning_campaign, organization:, name: "abcde", code: "22")
   end
 
   let(:dunning_campaign_third) do
@@ -26,20 +28,23 @@ RSpec.describe DunningCampaignsQuery, type: :query do
       :dunning_campaign,
       organization:,
       name: "presuv",
-      code: "33",
-      applied_to_organization: false
+      code: "33"
     )
+  end
+  let(:dunning_campaign_fourth) do
+    create(:dunning_campaign, organization:, name: "qwerty", code: "44")
   end
 
   before do
-    dunning_campaign_first
+    default_billing_entity.update!(applied_dunning_campaign: dunning_campaign_first)
+    billing_entity.update!(applied_dunning_campaign: dunning_campaign_fourth)
     dunning_campaign_second
     dunning_campaign_third
   end
 
   it "returns all dunning campaigns ordered by name asc" do
     expect(result.dunning_campaigns).to eq(
-      [dunning_campaign_second, dunning_campaign_first, dunning_campaign_third]
+      [dunning_campaign_second, dunning_campaign_first, dunning_campaign_third, dunning_campaign_fourth]
     )
   end
 
@@ -51,14 +56,13 @@ RSpec.describe DunningCampaignsQuery, type: :query do
         id: "00000000-0000-0000-0000-000000000000",
         name: dunning_campaign_first.name,
         code: "22",
-        applied_to_organization: false,
         created_at: dunning_campaign_first.created_at
       )
     end
 
     it "returns a consistent list" do
       expect(result).to be_success
-      expect(returned_ids.count).to eq(3)
+      expect(returned_ids.count).to eq(4)
       expect(returned_ids).to include(dunning_campaign_first.id)
       expect(returned_ids).to include(dunning_campaign_second.id)
       expect(returned_ids.index(dunning_campaign_first.id)).to be > returned_ids.index(dunning_campaign_second.id)
@@ -70,12 +74,12 @@ RSpec.describe DunningCampaignsQuery, type: :query do
 
     it "applies the pagination" do
       expect(result).to be_success
-      expect(result.dunning_campaigns.count).to eq(1)
+      expect(result.dunning_campaigns.count).to eq(2)
       expect(result.dunning_campaigns.current_page).to eq(2)
       expect(result.dunning_campaigns.prev_page).to eq(1)
       expect(result.dunning_campaigns.next_page).to be_nil
       expect(result.dunning_campaigns.total_pages).to eq(2)
-      expect(result.dunning_campaigns.total_count).to eq(3)
+      expect(result.dunning_campaigns.total_count).to eq(4)
     end
   end
 
@@ -90,8 +94,8 @@ RSpec.describe DunningCampaignsQuery, type: :query do
   context "with applied_to_organization is false" do
     let(:filters) { {applied_to_organization: false} }
 
-    it "returns second and third campaigns" do
-      expect(result.dunning_campaigns).to eq([dunning_campaign_second, dunning_campaign_third])
+    it "returns second, third and fourth campaigns" do
+      expect(result.dunning_campaigns).to eq([dunning_campaign_second, dunning_campaign_third, dunning_campaign_fourth])
     end
   end
 
@@ -166,7 +170,7 @@ RSpec.describe DunningCampaignsQuery, type: :query do
 
     it "returns the dunning campaigns ordered by code" do
       expect(result.dunning_campaigns).to eq(
-        [dunning_campaign_first, dunning_campaign_second, dunning_campaign_third]
+        [dunning_campaign_first, dunning_campaign_second, dunning_campaign_third, dunning_campaign_fourth]
       )
     end
   end

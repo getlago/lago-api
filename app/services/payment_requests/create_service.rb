@@ -36,6 +36,7 @@ module PaymentRequests
 
       after_commit do
         SendWebhookJob.perform_later("payment_request.created", payment_request)
+        Utils::ActivityLog.produce(payment_request, "payment_request.created")
 
         payment_result = PaymentRequests::Payments::CreateService.call_async(payable: payment_request)
         PaymentRequestMailer.with(payment_request:).requested.deliver_later unless payment_result.success?

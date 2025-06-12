@@ -50,14 +50,14 @@ RSpec.describe Resolvers::DunningCampaignResolver, type: :graphql do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "dunning_campaigns:view"
 
-  it "returns a single dunning campaign", :aggregate_failures do
+  it "returns a single dunning campaign" do
     dunning_campaign_response = result["data"]["dunningCampaign"]
 
     expect(dunning_campaign_response).to include(
       {
         "id" => dunning_campaign.id,
         "customersCount" => 0,
-        "appliedToOrganization" => dunning_campaign.applied_to_organization,
+        "appliedToOrganization" => organization.default_billing_entity.applied_dunning_campaign_id == dunning_campaign.id,
         "bccEmails" => dunning_campaign.bcc_emails,
         "code" => dunning_campaign.code,
         "daysBetweenAttempts" => dunning_campaign.days_between_attempts,
@@ -74,24 +74,32 @@ RSpec.describe Resolvers::DunningCampaignResolver, type: :graphql do
     )
   end
 
-  context "when the campaign is the organization's default campaign" do
-    let(:dunning_campaign) { create(:dunning_campaign, organization:, applied_to_organization: true) }
+  context "when the campaign is applied on 2 out of 3 billing entities of the organization" do
+    let(:dunning_campaign) { create(:dunning_campaign, organization:) }
     let(:another_dunning_campaign) { create(:dunning_campaign, organization:) }
+    let(:billing_entity_2) { create(:billing_entity, organization:) }
+    let(:billing_entity_3) { create(:billing_entity, organization:) }
 
     before do
       create(:customer, organization:, exclude_from_dunning_campaign: true)
       create(:customer, organization:, applied_dunning_campaign: dunning_campaign)
       create(:customer, organization:, applied_dunning_campaign: another_dunning_campaign)
       create(:customer, organization:)
+      create(:customer, organization:, billing_entity: billing_entity_2)
+      create(:customer, organization:, billing_entity: billing_entity_3)
+
+      organization.default_billing_entity.update!(applied_dunning_campaign: dunning_campaign)
+      billing_entity_2.update!(applied_dunning_campaign: dunning_campaign)
+      billing_entity_3.update!(applied_dunning_campaign: another_dunning_campaign)
     end
 
-    it "includes all customers defaulting to organizations default in customers_count" do
-      expect(result["data"]["dunningCampaign"]["customersCount"]).to eq(2)
+    it "includes all customers defaulting to billing entities with the campaign applied in customers_count" do
+      expect(result["data"]["dunningCampaign"]["customersCount"]).to eq(3)
     end
   end
 
-  context "when the campaign is not the organization's default campaign" do
-    let(:dunning_campaign) { create(:dunning_campaign, organization:, applied_to_organization: false) }
+  context "when the campaign is not applied on any billing entity" do
+    let(:dunning_campaign) { create(:dunning_campaign, organization:) }
     let(:another_dunning_campaign) { create(:dunning_campaign, organization:) }
 
     before do

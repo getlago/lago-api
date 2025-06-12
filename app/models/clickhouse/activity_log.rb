@@ -33,7 +33,8 @@ module Clickhouse
       billing_entity: "BillingEntity",
       subscription: "Subscription",
       wallet: "Wallet",
-      coupon: "Coupon"
+      coupon: "Coupon",
+      payment_request: "PaymentRequest"
     }.freeze
 
     ACTIVITY_TYPES = {
@@ -77,7 +78,8 @@ module Clickhouse
       coupon_updated: "coupon.updated",
       coupon_deleted: "coupon.deleted",
       applied_coupon_created: "applied_coupon.created",
-      applied_coupon_deleted: "applied_coupon.deleted"
+      applied_coupon_deleted: "applied_coupon.deleted",
+      payment_request_created: "payment_request.created"
     }
 
     before_save :ensure_activity_id

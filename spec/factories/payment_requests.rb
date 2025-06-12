@@ -11,5 +11,15 @@ FactoryBot.define do
     payment_status { "pending" }
     ready_for_payment_processing { true }
     payment_attempts { 0 }
+
+    transient do
+      invoices { [] }
+    end
+
+    after(:create) do |payment_request, evaluator|
+      evaluator.invoices.each do |invoice|
+        create(:payment_request_applied_invoice, payment_request:, invoice:)
+      end
+    end
   end
 end
