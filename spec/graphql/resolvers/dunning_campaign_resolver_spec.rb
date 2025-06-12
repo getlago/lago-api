@@ -74,7 +74,7 @@ RSpec.describe Resolvers::DunningCampaignResolver, type: :graphql do
     )
   end
 
-  context "when the campaign is applied on 2 out of 3 billing enitties of the organization" do
+  context "when the campaign is applied on 2 out of 3 billing entities of the organization" do
     let(:dunning_campaign) { create(:dunning_campaign, organization:) }
     let(:another_dunning_campaign) { create(:dunning_campaign, organization:) }
     let(:billing_entity_2) { create(:billing_entity, organization:) }

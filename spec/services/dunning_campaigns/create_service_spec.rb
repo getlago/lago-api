@@ -95,7 +95,7 @@ RSpec.describe DunningCampaigns::CreateService, type: :service do
         context "with applied_to_organization true" do
           let(:applied_to_organization) { true }
 
-          it "updates the default billing entity with applieddunning campaign" do
+          it "updates the default billing entity with applied_dunning_campaign" do
             result = create_service.call
 
             expect(result).to be_success
