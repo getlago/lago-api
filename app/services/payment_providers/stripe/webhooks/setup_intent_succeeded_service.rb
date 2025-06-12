@@ -9,6 +9,7 @@ module PaymentProviders
         def call
           return result if stripe_customer_id.nil?
           return handle_missing_customer unless stripe_customer
+          return result unless valid_payment_method?
 
           update_stripe_customer_default_payment_method
           result.payment_method_id = payment_method_id
@@ -38,6 +39,13 @@ module PaymentProviders
 
         def payment_method_id
           event.data.object.payment_method
+        end
+
+        def valid_payment_method?
+          ::Stripe::PaymentMethod.retrieve(
+            payment_method_id,
+            {api_key: stripe_payment_provider.secret_key}
+          ).customer.present?
         end
 
         def update_stripe_customer_default_payment_method
