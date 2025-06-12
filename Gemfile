@@ -52,6 +52,7 @@ gem "graphql-pagination"
 
 # Payment processing
 gem "adyen-ruby-api-library"
+gem "flutterwave_sdk"
 gem "gocardless_pro", "~> 2.34"
 gem "stripe"
 
@@ -72,7 +73,7 @@ gem "opentelemetry-exporter-otlp"
 gem "opentelemetry-instrumentation-all"
 gem "opentelemetry-sdk"
 
-gem "stackprof", require: false
+gem "stackprof", require: false, platforms: [:ruby, :mri]
 gem "sentry-rails"
 gem "sentry-ruby"
 gem "sentry-sidekiq"
