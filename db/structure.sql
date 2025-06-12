@@ -45,6 +45,7 @@ ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf70
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_caeb5a3949;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_c71f4b2026;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_c64033bcb0;
+ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_bff25bb1bb;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
@@ -56,6 +57,7 @@ ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_b50dc82c1e;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b283a89721;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
+ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_aea6422e6a;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_ac146c9541;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_ab16de0b32;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_aaa12f7d3e;
@@ -115,6 +117,7 @@ ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS fk_rails_651eadaaa4;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails_64267aab58;
 ALTER TABLE IF EXISTS ONLY public.subscriptions DROP CONSTRAINT IF EXISTS fk_rails_63d3df128b;
+ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_63ca8e33c5;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_63ac282e70;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_63683837a2;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62d18ea517;
@@ -275,6 +278,9 @@ DROP INDEX IF EXISTS public.index_quantified_events_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_quantified_events_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_pricing_units_on_organization_id;
 DROP INDEX IF EXISTS public.index_pricing_units_on_code_and_organization_id;
+DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_pricing_unit_id;
+DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_organization_id;
+DROP INDEX IF EXISTS public.index_pricing_unit_usages_on_fee_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id_and_tax_id;
 DROP INDEX IF EXISTS public.index_plans_taxes_on_plan_id;
@@ -595,6 +601,7 @@ ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS refunds_pkey
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS recurring_transaction_rules_pkey;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS quantified_events_pkey;
 ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS pricing_units_pkey;
+ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS pricing_unit_usages_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS payments_pkey;
@@ -687,6 +694,7 @@ DROP TABLE IF EXISTS public.refunds;
 DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.quantified_events;
 DROP TABLE IF EXISTS public.pricing_units;
+DROP TABLE IF EXISTS public.pricing_unit_usages;
 DROP TABLE IF EXISTS public.payments;
 DROP TABLE IF EXISTS public.payment_requests;
 DROP TABLE IF EXISTS public.payment_receipts;
@@ -3369,6 +3377,25 @@ CREATE TABLE public.payments (
 
 
 --
+-- Name: pricing_unit_usages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pricing_unit_usages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    fee_id uuid NOT NULL,
+    pricing_unit_id uuid NOT NULL,
+    short_name character varying NOT NULL,
+    amount_cents bigint NOT NULL,
+    precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
+    unit_amount_cents bigint DEFAULT 0 NOT NULL,
+    conversion_rate numeric(40,15) DEFAULT 0.0 NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: pricing_units; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4255,6 +4282,14 @@ ALTER TABLE ONLY public.plans
 
 ALTER TABLE ONLY public.plans_taxes
     ADD CONSTRAINT plans_taxes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pricing_unit_usages pricing_unit_usages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_unit_usages
+    ADD CONSTRAINT pricing_unit_usages_pkey PRIMARY KEY (id);
 
 
 --
@@ -6516,6 +6551,27 @@ CREATE INDEX index_plans_taxes_on_tax_id ON public.plans_taxes USING btree (tax_
 
 
 --
+-- Name: index_pricing_unit_usages_on_fee_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pricing_unit_usages_on_fee_id ON public.pricing_unit_usages USING btree (fee_id);
+
+
+--
+-- Name: index_pricing_unit_usages_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pricing_unit_usages_on_organization_id ON public.pricing_unit_usages USING btree (organization_id);
+
+
+--
+-- Name: index_pricing_unit_usages_on_pricing_unit_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_pricing_unit_usages_on_pricing_unit_id ON public.pricing_unit_usages USING btree (pricing_unit_id);
+
+
+--
 -- Name: index_pricing_units_on_code_and_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7669,6 +7725,14 @@ ALTER TABLE ONLY public.applied_invoice_custom_sections
 
 
 --
+-- Name: pricing_unit_usages fk_rails_63ca8e33c5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_unit_usages
+    ADD CONSTRAINT fk_rails_63ca8e33c5 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: subscriptions fk_rails_63d3df128b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8141,6 +8205,14 @@ ALTER TABLE ONLY public.charges_taxes
 
 
 --
+-- Name: pricing_unit_usages fk_rails_aea6422e6a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_unit_usages
+    ADD CONSTRAINT fk_rails_aea6422e6a FOREIGN KEY (fee_id) REFERENCES public.fees(id);
+
+
+--
 -- Name: daily_usages fk_rails_b07fc711f7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8226,6 +8298,14 @@ ALTER TABLE ONLY public.customers
 
 ALTER TABLE ONLY public.active_storage_attachments
     ADD CONSTRAINT fk_rails_c3b3935057 FOREIGN KEY (blob_id) REFERENCES public.active_storage_blobs(id);
+
+
+--
+-- Name: pricing_unit_usages fk_rails_c545103d57; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pricing_unit_usages
+    ADD CONSTRAINT fk_rails_c545103d57 FOREIGN KEY (pricing_unit_id) REFERENCES public.pricing_units(id);
 
 
 --
@@ -8523,6 +8603,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250610063400'),
 ('20250609121102'),
 ('20250602145535'),
 ('20250602075710'),

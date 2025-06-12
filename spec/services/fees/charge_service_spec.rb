@@ -630,21 +630,67 @@ RSpec.describe Fees::ChargeService do
             )
           end
 
-          it "creates fees" do
-            result = charge_subscription_service.call
-            expect(result).to be_success
-            expect(result.fees.first).to have_attributes(
-              id: String,
-              invoice_id: invoice.id,
-              charge_id: charge.id,
-              amount_cents: 2000,
-              precise_amount_cents: 2000.0,
-              taxes_precise_amount_cents: 0.0,
-              amount_currency: "EUR",
-              units: 1,
-              unit_amount_cents: 2000,
-              precise_unit_amount: 20
-            )
+          context "without pricing unit on the charge" do
+            it "creates fees" do
+              result = charge_subscription_service.call
+              expect(result).to be_success
+              expect(result.fees.first).to have_attributes(
+                id: String,
+                invoice_id: invoice.id,
+                charge_id: charge.id,
+                amount_cents: 2000,
+                precise_amount_cents: 2000.0,
+                taxes_precise_amount_cents: 0.0,
+                amount_currency: "EUR",
+                units: 1,
+                unit_amount_cents: 2000,
+                precise_unit_amount: 20
+              )
+            end
+
+            it "does not create pricing unit usage" do
+              expect { charge_subscription_service.call }.not_to change(PricingUnitUsage, :count)
+            end
+          end
+
+          context "with pricing unit on the charge" do
+            before do
+              create(
+                :applied_pricing_unit,
+                organization: subscription.organization,
+                conversion_rate: 0.25,
+                pricing_unitable: charge
+              )
+            end
+
+            it "creates fees" do
+              result = charge_subscription_service.call
+              expect(result).to be_success
+              expect(result.fees.first).to have_attributes(
+                id: String,
+                invoice_id: invoice.id,
+                charge_id: charge.id,
+                amount_cents: 500,
+                precise_amount_cents: 500.0,
+                taxes_precise_amount_cents: 0.0,
+                amount_currency: "EUR",
+                units: 1,
+                unit_amount_cents: 500,
+                precise_unit_amount: 5
+              )
+            end
+
+            it "creates pricing unit usage" do
+              result = charge_subscription_service.call
+              expect(result).to be_success
+              expect(result.fees.first.pricing_unit_usage)
+                .to be_persisted
+                .and have_attributes(
+                  amount_cents: 2000,
+                  precise_amount_cents: 2000.0,
+                  unit_amount_cents: 2000
+                )
+            end
           end
         end
       end
@@ -1750,13 +1796,13 @@ RSpec.describe Fees::ChargeService do
         )
       end
 
-      it "creates expected fees for count_agg aggregation type" do
-        billable_metric.update!(aggregation_type: :count_agg)
-        result = charge_subscription_service.call
-        expect(result).to be_success
-        created_fees = result.fees
+      context "without pricing unit on the charge" do
+        it "creates expected fees for count_agg aggregation type" do
+          billable_metric.update!(aggregation_type: :count_agg)
+          result = charge_subscription_service.call
+          expect(result).to be_success
+          created_fees = result.fees
 
-        aggregate_failures do
           expect(created_fees.count).to eq(3)
           expect(created_fees).to all(
             have_attributes(
@@ -1784,6 +1830,73 @@ RSpec.describe Fees::ChargeService do
             unit_amount_cents: 4,
             precise_unit_amount: 0.04
           )
+        end
+
+        it "does not create pricing unit usage" do
+          expect { charge_subscription_service.call }.not_to change(PricingUnitUsage, :count)
+        end
+      end
+
+      context "with pricing unit on the charge" do
+        before do
+          create(
+            :applied_pricing_unit,
+            organization: subscription.organization,
+            conversion_rate: 2,
+            pricing_unitable: charge
+          )
+        end
+
+        it "creates expected fees for count_agg aggregation type" do
+          billable_metric.update!(aggregation_type: :count_agg)
+          result = charge_subscription_service.call
+          expect(result).to be_success
+          created_fees = result.fees
+
+          expect(created_fees.count).to eq(3)
+          expect(created_fees).to all(
+            have_attributes(
+              invoice_id: invoice.id,
+              charge_id: charge.id,
+              amount_currency: "EUR"
+            )
+          )
+
+          expect(created_fees.first).to have_attributes(
+            charge_filter: europe_filter,
+            amount_cents: 6,
+            precise_amount_cents: 6.0,
+            taxes_precise_amount_cents: 0.0,
+            units: 2,
+            unit_amount_cents: 2,
+            precise_unit_amount: 0.02
+          )
+
+          expect(created_fees.first.pricing_unit_usage)
+            .to be_persisted
+            .and have_attributes(
+              amount_cents: 3,
+              precise_amount_cents: 3.0,
+              unit_amount_cents: 1
+            )
+
+          expect(created_fees.second).to have_attributes(
+            charge_filter: usa_filter,
+            amount_cents: 8,
+            precise_amount_cents: 8.0,
+            taxes_precise_amount_cents: 0.0,
+            units: 1,
+            unit_amount_cents: 8,
+            precise_unit_amount: 0.08
+          )
+
+          expect(created_fees.second.pricing_unit_usage)
+            .to be_persisted
+            .and have_attributes(
+              amount_cents: 4,
+              precise_amount_cents: 4.0,
+              unit_amount_cents: 4
+            )
         end
       end
     end
