@@ -11,7 +11,7 @@ class FixStaleBillingEntitySequentialIdToBeUniq < ActiveRecord::Migration[8.0]
     # BillingEntities::ChangeInvoiceNumberingService -- if we switch from per_customer 
     # to per_billing_entity, we'll recalculate the billing_entity_sequential_id
     BillingEntity.where(document_numbering: 'per_customer').find_each do |billing_entity|
-      # do we want to update all or only duplicated?
+      # find invoices with duplicated billing_entity_sequential_id
       duplicates = Invoice.where(billing_entity_id: billing_entity.id)
         .non_self_billed.with_generated_number
         .where.not(billing_entity_sequential_id: nil)
@@ -20,6 +20,7 @@ class FixStaleBillingEntitySequentialIdToBeUniq < ActiveRecord::Migration[8.0]
         .pluck(:billing_entity_sequential_id)
       next if duplicates.empty?
 
+      # update the billing_entity_sequential_id to NULL for the duplicated invoices
       Invoice.where(billing_entity_id: billing_entity.id)
         .non_self_billed.with_generated_number
         .where.not(billing_entity_sequential_id: nil)
