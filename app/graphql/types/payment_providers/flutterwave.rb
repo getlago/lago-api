@@ -9,10 +9,10 @@ module Types
       field :id, ID, null: false
       field :name, String, null: false
 
-      field :public_key, ObfuscatedStringType, null: true, permission: "organization:integrations:view"
-      field :secret_key, ObfuscatedStringType, null: true, permission: "organization:integrations:view"
       field :encryption_key, ObfuscatedStringType, null: true, permission: "organization:integrations:view"
       field :production, Boolean, null: true, permission: "organization:integrations:view"
+      field :public_key, ObfuscatedStringType, null: true, permission: "organization:integrations:view"
+      field :secret_key, ObfuscatedStringType, null: true, permission: "organization:integrations:view"
       field :success_redirect_url, String, null: true, permission: "organization:integrations:view"
     end
   end
