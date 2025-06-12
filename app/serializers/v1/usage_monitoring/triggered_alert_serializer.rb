@@ -10,6 +10,7 @@ module V1
           lago_alert_id: alert.id,
           lago_subscription_id: model.subscription_id,
           subscription_external_id: alert.subscription_external_id,
+          customer_external_id: model.subscription.customer.external_id,
           billable_metric_code: alert.billable_metric&.code,
           alert_name: alert.name,
           alert_code: alert.code,
