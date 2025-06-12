@@ -101,4 +101,27 @@ FactoryBot.define do
       flow_id { SecureRandom.uuid[0..19] }
     end
   end
+
+  factory :flutterwave_provider, class: "PaymentProviders::FlutterwaveProvider" do
+    organization
+    type { "PaymentProviders::FlutterwaveProvider" }
+    name { "Flutterwave" }
+    code { "flutterwave_#{SecureRandom.uuid}" }
+
+    secrets do
+      {public_key:, secret_key:, encryption_key:}.to_json
+    end
+
+    settings do
+      {success_redirect_url:, production:}
+    end
+
+    transient do
+      public_key { "FLWPUBK-#{SecureRandom.uuid}" }
+      secret_key { "FLWSECK-#{SecureRandom.uuid}" }
+      encryption_key { SecureRandom.uuid }
+      success_redirect_url { Faker::Internet.url }
+      production { false }
+    end
+  end
 end
