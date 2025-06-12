@@ -4,7 +4,7 @@ module ApiLoggable
   extend ActiveSupport::Concern
 
   included do
-    around_action :produce_api_log, unless: :produce_api_log?
+    around_action :produce_api_log, if: :produce_api_log?
 
     # rubocop:disable ThreadSafety/ClassAndModuleAttributes
     class_attribute :skip_audit_logs, instance_writer: false, default: false
@@ -22,7 +22,7 @@ module ApiLoggable
   end
 
   def produce_api_log?
-    request.get? || skip_audit_logs?
+    !(request.get? || skip_audit_logs?)
   end
 
   private

@@ -55,11 +55,10 @@ module Api
         {
           from_date: params[:from_date],
           to_date: params[:to_date],
-          request_statuses: params[:request_statuses],
           http_methods: params[:http_methods],
-          http_statuses: params[:http_statuses]&.map(&:to_i),
+          http_statuses: params[:http_statuses],
           api_version: params[:api_version],
-          path_regex: params[:path_regex]
+          request_paths: params[:request_paths]
         }
       end
     end
