@@ -64,6 +64,7 @@ gem "lograge"
 gem "logstash-event"
 
 # HTTP and Multipart support
+gem "httparty"
 gem "multipart-post"
 gem "mutex_m"
 
