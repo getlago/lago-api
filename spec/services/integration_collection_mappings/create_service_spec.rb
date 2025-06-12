@@ -29,6 +29,7 @@ RSpec.describe IntegrationCollectionMappings::CreateService, type: :service do
           IntegrationCollectionMappings::NetsuiteCollectionMapping.order(:created_at).last
 
         aggregate_failures do
+          expect(integration_collection_mapping.organization).to eq(organization)
           expect(integration_collection_mapping.mapping_type).to eq("fallback_item")
           expect(integration_collection_mapping.integration_id).to eq(integration.id)
           expect(integration_collection_mapping.tax_nexus).to eq(create_args[:tax_nexus])

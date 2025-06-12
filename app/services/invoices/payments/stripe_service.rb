@@ -84,6 +84,7 @@ module Invoices
         increment_payment_attempts
 
         payment = Payment.find_or_initialize_by(
+          organization: @invoice.organization,
           payable: @invoice,
           payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,
