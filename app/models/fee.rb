@@ -137,7 +137,6 @@ class Fee < ApplicationRecord
     base_clause = "#{invoice_name} #{filter_display_name}".downcase
 
     return base_clause unless charge?
-    return base_clause unless charge.supports_grouped_by?
     return base_clause if grouped_by.blank?
 
     "#{invoice_name} #{grouped_by.values.join} #{filter_display_name}".downcase

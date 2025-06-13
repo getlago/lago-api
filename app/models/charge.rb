@@ -59,10 +59,6 @@ class Charge < ApplicationRecord
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
 
-  def supports_grouped_by?
-    standard? || dynamic?
-  end
-
   def pricing_group_keys
     properties["pricing_group_keys"].presence || properties["grouped_by"]
   end
