@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class CreateCustomerAppliedInvoiceCustomSectionRecords < ActiveRecord::Migration[8.0]
+  class InvoiceCustomSectionSelection < ApplicationRecord; end
+
   def up
     Customer::AppliedInvoiceCustomSection.insert_all( # rubocop:disable Rails/SkipsModelValidations
       InvoiceCustomSectionSelection
