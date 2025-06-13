@@ -13,6 +13,10 @@ class CreateBillingEntityInvoiceCustomSectionsRecords < ActiveRecord::Migration[
     scope :active, -> { where(archived_at: nil).order(created_at: :asc) }
   end
 
+  class BillingEntity::AppliedInvoiceCustomSection < ApplicationRecord
+    self.table_name = "billing_entities_invoice_custom_sections"
+  end
+
   def up
     BillingEntity::AppliedInvoiceCustomSection.insert_all( # rubocop:disable Rails/SkipsModelValidations
       InvoiceCustomSectionSelection
