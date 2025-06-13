@@ -51,12 +51,12 @@ class ApiLogsQuery < BaseQuery
   end
 
   def with_http_statuses(scope)
-    if (filters.http_statuses & %w[succeeded failed]).empty?
-      # TODO: Improve that to return nothing if filters.http_statuses is not a valid value
-      scope = scope.where(http_status: filters.http_statuses)
-    else
+    if (filters.http_statuses & %w[succeeded failed]).any?
       scope = scope.where("http_status <= ?", 399) if filters.http_statuses.include?("succeeded")
       scope = scope.where("http_status > ?", 399) if filters.http_statuses.include?("failed")
+    else
+      # TODO: Improve that to return nothing if filters.http_statuses is not a valid value
+      scope = scope.where(http_status: filters.http_statuses)
     end
     scope
   end
