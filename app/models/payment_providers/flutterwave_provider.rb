@@ -4,7 +4,7 @@ module PaymentProviders
   class FlutterwaveProvider < BaseProvider
     FlutterwavePayment = Data.define(:id, :status, :metadata)
 
-    SUCCESS_REDIRECT_URL = "https://flutterwave.com/"
+    SUCCESS_REDIRECT_URL = "https://www.flutterwave.com/ng"
     API_VERSION = "v3"
     BASE_URL = "https://api.flutterwave.com/v3"
     SANDBOX_URL = "https://ravesandboxapi.flutterwave.com/v3"
