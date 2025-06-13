@@ -17,12 +17,39 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
     create(:stripe_customer, payment_provider: stripe_provider, customer:, provider_customer_id:)
   end
 
-  before { stripe_customer }
+  before do
+    stripe_customer
+
+    stub_request(:get, "https://api.stripe.com/v1/payment_methods/#{payment_method_id}")
+      .to_return(status: 200, body: payment_method, headers: {})
+  end
 
   ["2020-08-27", "2025-04-30.basil"].each do |version|
+    let(:payment_method) { get_stripe_fixtures("retrieve_payment_method_response.json", version:) }
+
     describe "#call" do
       context "when stripe customer id is nil" do
         let(:event_json) { get_stripe_fixtures("webhooks/setup_intent_succeeded.json", version:) }
+
+        it "returns an empty result" do
+          result = webhook_service.call
+
+          expect(result).to be_success
+          expect(result.payment_method).to be_nil
+        end
+      end
+
+      context "when payment method has no customer" do
+        let(:event_json) do
+          get_stripe_fixtures("webhooks/setup_intent_succeeded.json", version:) do |h|
+            h[:data][:object][:customer] = "cus_123" if h[:data][:object][:customer].nil?
+          end
+        end
+        let(:payment_method) do
+          get_stripe_fixtures("retrieve_payment_method_response.json", version:) do |h|
+            h[:customer] = nil
+          end
+        end
 
         it "returns an empty result" do
           result = webhook_service.call
