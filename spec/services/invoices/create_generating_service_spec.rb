@@ -62,6 +62,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
       it "creates an invoice" do
         result = create_service.call do |invoice|
           invoice.invoice_subscriptions.create!(
+            organization: customer.organization,
             subscription:,
             recurring:,
             from_datetime: datetime.beginning_of_month,

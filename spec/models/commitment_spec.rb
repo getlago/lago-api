@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe Commitment, type: :model do
   it { is_expected.to belong_to(:plan) }
+  it { is_expected.to belong_to(:organization) }
   it { is_expected.to have_many(:applied_taxes).dependent(:destroy) }
   it { is_expected.to have_many(:taxes) }
 

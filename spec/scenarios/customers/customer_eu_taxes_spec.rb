@@ -68,7 +68,7 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
       # Nothing changes and no API call is made
       create_or_update_customer(external_id: "user_it_123", tax_identification_number: "IT123")
       expect(Customer.find_by(external_id: "user_it_123").taxes.reload.sole.code).to eq "lago_eu_it_standard"
-      expect(webhooks_sent.first { _1["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
+      expect(webhooks_sent.first { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "valid" => false,
         "valid_format" => false
       })
@@ -80,7 +80,7 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
       mock_vies_check!("IT12345678901")
       create_or_update_customer(external_id: "user_it_123", tax_identification_number: "IT12345678901")
       expect(Customer.find_by(external_id: "user_it_123").taxes.reload.sole.code).to eq "lago_eu_reverse_charge"
-      expect(webhooks_sent.first { _1["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
+      expect(webhooks_sent.first { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "countryCode" => "IT",
         "vatNumber" => "IT12345678901"
       })
@@ -128,7 +128,7 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
       create_or_update_customer(external_id: "user_fr_123", tax_identification_number: vat_number)
 
       expect(Customer.find_by(external_id: "user_fr_123").taxes.reload.sole.code).to eq "lago_eu_fr_standard"
-      expect(webhooks_sent.first { _1["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
+      expect(webhooks_sent.first { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "valid" => false,
         "valid_format" => true,
         "error" => "The VIES web service returned the error: rate limit exceeded"
@@ -208,7 +208,8 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
     it "does not affect the customer taxes" do
       enable_eu_tax_management!
       billable_metric = create(:billable_metric, organization:, field_name: "item_id")
-      create(:standard_charge, :pay_in_advance, billable_metric:, plan:, taxes: [Tax.find_by(code: "lago_eu_fr_standard")])
+      charge = create(:standard_charge, :pay_in_advance, billable_metric:, plan:)
+      create(:charge_applied_tax, charge:, tax: Tax.find_by(code: "lago_eu_fr_standard"))
 
       mock_vies_check!("IT12345678901")
       create_or_update_customer(italian_attributes.merge(
