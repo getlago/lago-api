@@ -64,9 +64,9 @@ RSpec.describe Utils::ApiLog, type: :service do
             request_body: {parameters: [1, 2, 3, 4]},
             request_path: "/api/v1/customers",
             request_origin: "https://lago.test",
-            request_http_method: :post,
+            http_method: :post,
             request_response: {"success" => true},
-            request_http_status: 200,
+            http_status: 200,
             logged_at: Time.current.iso8601[...-1],
             created_at: Time.current.iso8601[...-1]
           }.to_json
