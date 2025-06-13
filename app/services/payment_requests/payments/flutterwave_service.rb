@@ -4,6 +4,7 @@ module PaymentRequests
   module Payments
     class FlutterwaveService < BaseService
       include Customers::PaymentProviderFinder
+      include Updatable
 
       def initialize(payable:)
         @payable = payable
@@ -18,6 +19,38 @@ module PaymentRequests
         deliver_error_webhook(e)
 
         result.service_failure!(code: "action_script_runtime_error", message: e.message)
+      end
+
+      def update_payment_status(organization_id:, status:, flutterwave_payment:)
+        payment = if flutterwave_payment.metadata[:payment_type] == "one-time"
+          create_payment(flutterwave_payment)
+        else
+          Payment.find_by(provider_payment_id: flutterwave_payment.id)
+        end
+        return result.not_found_failure!(resource: "flutterwave_payment") unless payment
+
+        result.payment = payment
+        result.payable = payment.payable
+        return result if payment.payable.payment_succeeded?
+
+        payment.status = status
+
+        payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
+        payment.payable_payment_status = payable_payment_status
+        payment.save!
+
+        update_payable_payment_status(payment_status: payable_payment_status)
+        update_invoices_payment_status(payment_status: payable_payment_status)
+        update_invoices_paid_amount_cents(payment_status: payable_payment_status)
+        reset_customer_dunning_campaign_status(payable_payment_status)
+
+        PaymentRequestMailer.with(payment_request: payment.payable).requested.deliver_later if result.payable.payment_failed?
+
+        result
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
+      rescue BaseService::FailedResult => e
+        result.fail_with_error!(e)
       end
 
       private
@@ -118,6 +151,57 @@ module PaymentRequests
 
       def flutterwave_customer
         @flutterwave_customer ||= customer.flutterwave_customer
+      end
+
+      def create_payment(flutterwave_payment)
+        @payable = PaymentRequest.find(flutterwave_payment.metadata[:lago_payable_id])
+
+        payable.increment_payment_attempts!
+
+        Payment.new(
+          organization_id: payable.organization_id,
+          payable:,
+          payment_provider_id: flutterwave_payment_provider.id,
+          payment_provider_customer_id: customer.flutterwave_customer.id,
+          amount_cents: payable.total_amount_cents,
+          amount_currency: payable.currency.upcase,
+          provider_payment_id: flutterwave_payment.id
+        )
+      end
+
+      def update_payable_payment_status(payment_status:, deliver_webhook: true)
+        UpdateService.call(
+          payable: result.payable,
+          params: {
+            payment_status:,
+            ready_for_payment_processing: !payment_status_succeeded?(payment_status)
+          },
+          webhook_notification: deliver_webhook
+        ).raise_if_error!
+      end
+
+      def update_invoices_payment_status(payment_status:, deliver_webhook: true)
+        payable.invoices.each do |invoice|
+          Invoices::UpdateService.call(
+            invoice:,
+            params: {
+              payment_status:,
+              ready_for_payment_processing: !payment_status_succeeded?(payment_status)
+            },
+            webhook_notification: deliver_webhook
+          ).raise_if_error!
+        end
+      end
+
+      def payment_status_succeeded?(payment_status)
+        payment_status.to_sym == :succeeded
+      end
+
+      def reset_customer_dunning_campaign_status(payment_status)
+        return unless payment_status_succeeded?(payment_status)
+        return unless payable.try(:dunning_campaign)
+
+        customer.reset_dunning_campaign!
       end
     end
   end
