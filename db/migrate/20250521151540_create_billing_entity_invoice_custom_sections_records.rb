@@ -1,6 +1,18 @@
 # frozen_string_literal: true
 
 class CreateBillingEntityInvoiceCustomSectionsRecords < ActiveRecord::Migration[8.0]
+  class InvoiceCustomSectionSelection < ApplicationRecord
+    belongs_to :organization, optional: true
+  end
+
+  class Organization < ApplicationRecord
+    has_one :default_billing_entity, -> { active.order(created_at: :asc) }, class_name: "BillingEntity"
+  end
+
+  class BillingEntity < ApplicationRecord
+    scope :active, -> { where(archived_at: nil).order(created_at: :asc) }
+  end
+
   def up
     BillingEntity::AppliedInvoiceCustomSection.insert_all( # rubocop:disable Rails/SkipsModelValidations
       InvoiceCustomSectionSelection
