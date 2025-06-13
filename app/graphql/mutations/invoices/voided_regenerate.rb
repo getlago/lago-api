@@ -11,6 +11,7 @@ module Mutations
       description "Regenerate an invoice from a voided invoice"
 
       argument :voided_invoice_id, ID, required: true
+      argument :fees, [Types::FeeType], required: true
 
       field :invoice, Types::InvoiceType, null: true
       field :errors, [String], null: false
