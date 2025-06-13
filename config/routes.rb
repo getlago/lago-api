@@ -81,7 +81,6 @@ Rails.application.routes.draw do
         put :refresh, on: :member
         put :finalize, on: :member
         put :sync_salesforce_id, on: :member
-        post :regenerate, on: :member
       end
       resources :payment_receipts, only: %i[index show]
       resources :payment_requests, only: %i[create index]

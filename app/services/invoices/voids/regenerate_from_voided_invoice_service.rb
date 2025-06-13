@@ -4,21 +4,39 @@ module Invoices
   module Voids
     class RegenerateFromVoidedInvoiceService < BaseService
 
-      def initialize(voided_invoice_id:)
+      def initialize(voided_invoice_id:, fees_ids: [])
         @voided_invoice_id = voided_invoice_id
+        @fees = fees
 
         super
       end
 
       def call
+        # PENDING: [25-06-12] - voided_invoice_id is mandatory until Raffi says otherwise.
         voided_invoice = Invoice.find_by(id: voided_invoice_id)
         return result.not_found_failure!(resource: "invoice") unless voided_invoice
+
+        # We need to find the fees in the voided invoice to copy the taxes from them.
+        # Perhaps we can use a more sofisticated approach to find the fees in the voided invoice.
+        fees = voided_invoice.fees.where(id: fees_ids)
+        return result.not_found_failure!(resource: "fees") unless fees.size == fees_ids.size
 
         ActiveRecord::Base.transaction do
           renegerated_invoice = create_generating_invoice(voided_invoice)
           result.invoice = renegerated_invoice
 
-          copy_fees(voided_invoice, renegerated_invoice)
+          # Duplicate each fee and copy its attributes
+          fees.each do |fee|
+            new_fee = fee.dup
+            new_fee.invoice = renegerated_invoice
+            new_fee.save!
+
+            # Copy applied taxes from the original fee
+            copy_applied_taxes(fee, new_fee)
+          end
+
+          # Finalize the invoice with the new fees
+          finalize_invoice(renegerated_invoice)
         end
 
         result
@@ -30,13 +48,13 @@ module Invoices
 
       private
 
-      attr_reader :voided_invoice_id
+      attr_reader :voided_invoice_id, :fees
 
       def create_generating_invoice(voided_invoice)
         invoice_result = Invoices::CreateGeneratingService.call(
-          customer: voided_invoice.customer,
-          # Associate the voided invoice with the generating invoice
           voided_invoice: voided_invoice,
+          customer: voided_invoice.customer,
+          # TODO: [25-06-13] - Validade with Raffi if we should use always :one_off or copy the invoice type from the voided invoice.
           invoice_type: :one_off,
           currency: voided_invoice.currency,
           datetime: Time.current
@@ -44,46 +62,6 @@ module Invoices
         invoice_result.raise_if_error!
 
         invoice_result.invoice
-      end
-
-      def copy_fees(voided_invoice, renegerated_invoice)
-        voided_invoice.fees.each do |source_fee|
-          # Create a new fee with the same attributes as the source fee
-          new_fee = Fee.new(
-            invoice: renegerated_invoice,
-            organization_id: source_fee.organization_id,
-            billing_entity_id: source_fee.billing_entity_id,
-            subscription_id: source_fee.subscription_id,
-            charge_id: source_fee.charge_id,
-            add_on_id: source_fee.add_on_id,
-            applied_add_on_id: source_fee.applied_add_on_id,
-            charge_filter_id: source_fee.charge_filter_id,
-            group_id: source_fee.group_id,
-            invoiceable_type: source_fee.invoiceable_type,
-            invoiceable_id: source_fee.invoiceable_id,
-            amount_cents: source_fee.amount_cents,
-            amount_currency: source_fee.amount_currency,
-            precise_amount_cents: source_fee.precise_amount_cents,
-            units: source_fee.units,
-            total_aggregated_units: source_fee.total_aggregated_units,
-            unit_amount_cents: source_fee.unit_amount_cents,
-            precise_unit_amount: source_fee.precise_unit_amount,
-            events_count: source_fee.events_count,
-            payment_status: :pending,
-            fee_type: source_fee.fee_type,
-            invoice_display_name: source_fee.invoice_display_name,
-            description: source_fee.description,
-            properties: source_fee.properties,
-            grouped_by: source_fee.grouped_by,
-            taxes_amount_cents: 0,
-            taxes_precise_amount_cents: 0.to_d,
-            amount_details: source_fee.amount_details
-          )
-
-          new_fee.save!
-
-          copy_applied_taxes(source_fee, new_fee)
-        end
       end
 
       def copy_applied_taxes(source_fee, new_fee)
