@@ -106,14 +106,12 @@ FactoryBot.define do
     organization
     type { "PaymentProviders::FlutterwaveProvider" }
     name { "Flutterwave" }
-    code { "flutterwave_#{SecureRandom.uuid}" }
-
-    secrets do
+    code { "flutterwave_#{SecureRandom.uuid}" }    secrets do
       {public_key:, secret_key:, encryption_key:}.to_json
     end
 
     settings do
-      {success_redirect_url:, production:}
+      {success_redirect_url:, production:, webhook_secret:}
     end
 
     transient do
@@ -122,6 +120,7 @@ FactoryBot.define do
       encryption_key { SecureRandom.uuid }
       success_redirect_url { Faker::Internet.url }
       production { false }
+      webhook_secret { SecureRandom.hex(32) }
     end
   end
 end

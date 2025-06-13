@@ -3,10 +3,10 @@
 module Types
   module PaymentProviders
     class Object < Types::BaseUnion
-      graphql_name "PaymentProvider"      
+      graphql_name "PaymentProvider"
 
-      
-  
+
+
       possible_types Types::PaymentProviders::Adyen,
         Types::PaymentProviders::Gocardless,
         Types::PaymentProviders::Stripe,
@@ -14,8 +14,8 @@ module Types
         Types::PaymentProviders::Flutterwave,
         Types::PaymentProviders::Moneyhash
 
-      
-        def self.resolve_type(object, _context)
+
+      def self.resolve_type(object, _context)
         case object.class.to_s
         when "PaymentProviders::AdyenProvider"
           Types::PaymentProviders::Adyen
