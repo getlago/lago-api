@@ -20,7 +20,10 @@ module Resolvers
       end
 
       return current_organization.subscriptions.find(id) if id.present?
-      current_organization.subscriptions.find_by!(external_id:)
+
+      current_organization.subscriptions
+        .order("terminated_at DESC NULLS FIRST, started_at DESC")
+        .find_by!(external_id:)
     rescue ActiveRecord::RecordNotFound
       not_found_error(resource: "subscription")
     end

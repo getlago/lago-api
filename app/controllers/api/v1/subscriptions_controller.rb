@@ -126,10 +126,12 @@ module Api
       end
 
       def show
-        subscription = current_organization.subscriptions.find_by(
-          external_id: params[:external_id],
-          status: params[:status] || :active
-        )
+        subscription = current_organization.subscriptions
+          .order("terminated_at DESC NULLS FIRST, started_at DESC")
+          .find_by(
+            external_id: params[:external_id],
+            status: params[:status] || :active
+          )
         return not_found_error(resource: "subscription") unless subscription
 
         render_subscription(subscription)
