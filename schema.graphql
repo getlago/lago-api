@@ -10361,6 +10361,7 @@ type Wallet {
   invoiceRequiresSuccessfulPayment: Boolean!
   lastBalanceSyncAt: ISO8601DateTime
   lastConsumedCreditAt: ISO8601DateTime
+  lastOngoingBalanceSyncAt: ISO8601DateTime
   name: String
   ongoingBalanceCents: BigInt!
   ongoingUsageBalanceCents: BigInt!

@@ -28,6 +28,7 @@ module Types
 
       field :last_balance_sync_at, GraphQL::Types::ISO8601DateTime, null: true
       field :last_consumed_credit_at, GraphQL::Types::ISO8601DateTime, null: true
+      field :last_ongoing_balance_sync_at, GraphQL::Types::ISO8601DateTime, null: true
 
       field :activity_logs, [Types::ActivityLogs::Object], null: true
       field :recurring_transaction_rules, [Types::Wallets::RecurringTransactionRules::Object], null: true
