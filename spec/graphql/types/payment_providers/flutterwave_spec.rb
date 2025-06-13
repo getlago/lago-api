@@ -15,5 +15,6 @@ RSpec.describe Types::PaymentProviders::Flutterwave do
     expect(subject).to have_field(:encryption_key).of_type("ObfuscatedString").with_permission("organization:integrations:view")
     expect(subject).to have_field(:production).of_type("Boolean").with_permission("organization:integrations:view")
     expect(subject).to have_field(:success_redirect_url).of_type("String").with_permission("organization:integrations:view")
+    expect(subject).to have_field(:webhook_secret).of_type("String").with_permission("organization:integrations:view")
   end
 end

@@ -4,6 +4,7 @@ module Types
   module PaymentProviders
     class FlutterwaveInput < BaseInputObject
       description "Flutterwave input arguments"
+
       argument :code, String, required: true
       argument :encryption_key, String, required: true
       argument :name, String, required: true

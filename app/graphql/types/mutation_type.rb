@@ -54,7 +54,7 @@ module Types
     field :destroy_add_on, mutation: Mutations::AddOns::Destroy
     field :update_add_on, mutation: Mutations::AddOns::Update
 
-    
+
     field :add_adyen_payment_provider, mutation: Mutations::PaymentProviders::Adyen::Create
     field :add_cashfree_payment_provider, mutation: Mutations::PaymentProviders::Cashfree::Create
     field :add_flutterwave_payment_provider, mutation: Mutations::PaymentProviders::Flutterwave::Create

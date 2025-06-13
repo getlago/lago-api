@@ -19,7 +19,9 @@ module PaymentProviders
     validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
 
     secrets_accessors :public_key, :secret_key, :encryption_key
-    settings_accessors :production
+    settings_accessors :production, :webhook_secret
+
+    before_create :generate_webhook_secret
 
     def payment_type
       "flutterwave"
@@ -31,6 +33,12 @@ module PaymentProviders
 
     def production?
       ActiveModel::Type::Boolean.new.cast(production)
+    end
+
+    private
+
+    def generate_webhook_secret
+      self.webhook_secret = SecureRandom.hex(32) if webhook_secret.blank?
     end
   end
 end
