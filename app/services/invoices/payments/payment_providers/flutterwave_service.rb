@@ -21,6 +21,33 @@ module Invoices
           result.service_failure!(code: "action_script_runtime_error", message: e.message)
         end
 
+        def update_payment_status(organization_id:, status:, flutterwave_payment:)
+          payment = if flutterwave_payment.metadata[:payment_type] == "one-time"
+            create_payment(flutterwave_payment)
+          else
+            Payment.find_by(provider_payment_id: flutterwave_payment.id)
+          end
+          return result.not_found_failure!(resource: "flutterwave_payment") unless payment
+
+          result.payment = payment
+          result.invoice = payment.payable
+          return result if payment.payable.payment_succeeded?
+
+          payment.status = status
+
+          payable_payment_status = payment.payment_provider&.determine_payment_status(payment.status)
+          payment.payable_payment_status = payable_payment_status
+          payment.save!
+
+          update_invoice_payment_status(payment_status: payable_payment_status)
+
+          result
+        rescue ActiveRecord::RecordInvalid => e
+          result.record_validation_failure!(record: e.record)
+        rescue BaseService::FailedResult => e
+          result.fail_with_error!(e)
+        end
+
         private
 
         attr_reader :invoice
@@ -115,6 +142,47 @@ module Invoices
 
         def flutterwave_customer
           @flutterwave_customer ||= customer.flutterwave_customer
+        end
+
+        def create_payment(flutterwave_payment)
+          @invoice = Invoice.find_by(id: flutterwave_payment.metadata[:lago_invoice_id])
+
+          increment_payment_attempts
+
+          Payment.new(
+            organization_id: @invoice.organization_id,
+            payable: @invoice,
+            payment_provider_id: flutterwave_payment_provider.id,
+            payment_provider_customer_id: customer.flutterwave_customer.id,
+            amount_cents: @invoice.total_due_amount_cents,
+            amount_currency: @invoice.currency,
+            provider_payment_id: flutterwave_payment.id
+          )
+        end
+
+        def increment_payment_attempts
+          invoice.update!(payment_attempts: invoice.payment_attempts + 1)
+        end
+
+        def update_invoice_payment_status(payment_status:, deliver_webhook: true)
+          @invoice = result.invoice
+
+          params = {
+            payment_status:,
+            ready_for_payment_processing: payment_status.to_sym != :succeeded
+          }
+
+          if payment_status.to_sym == :succeeded
+            total_paid_amount_cents = invoice.payments.where(payable_payment_status: :succeeded).sum(:amount_cents)
+            params[:total_paid_amount_cents] = total_paid_amount_cents
+          end
+
+          result = Invoices::UpdateService.call(
+            invoice:,
+            params:,
+            webhook_notification: deliver_webhook
+          )
+          result.raise_if_error!
         end
       end
     end
