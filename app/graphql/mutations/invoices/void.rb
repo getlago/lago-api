@@ -11,14 +11,19 @@ module Mutations
       graphql_name "VoidInvoice"
       description "Void an invoice"
 
-      argument :id, ID, required: true
+      input_object_class Types::Invoices::VoidInvoiceInput
 
       type Types::Invoices::Object
 
       def resolve(**args)
+        invoice = current_organization.invoices.visible.find_by(id: args[:id])
+        params = args.slice(:generate_credit_note, :refund_amount, :credit_amount)
+
         result = ::Invoices::VoidService.call(
-          invoice: current_organization.invoices.visible.find_by(id: args[:id])
+          invoice: invoice,
+          params: params
         )
+
         result.success? ? result.invoice : result_error(result)
       end
     end

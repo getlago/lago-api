@@ -757,12 +757,13 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   end
 
   describe "POST /api/v1/invoices/:id/void" do
-    subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/void") }
+    subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/void", params) }
 
     let!(:invoice) { create(:invoice, status:, payment_status:, customer:, organization:) }
     let(:invoice_id) { invoice.id }
     let(:status) { :finalized }
     let(:payment_status) { :pending }
+    let(:params) { {} }
 
     context "when invoice does not exist" do
       let(:invoice_id) { SecureRandom.uuid }
@@ -818,6 +819,39 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           expect(response).to have_http_status(:success)
           expect(json[:invoice][:lago_id]).to eq(invoice.id)
         end
+      end
+    end
+
+    context "when passing credit note parameters" do
+      let(:credit_amount) { 0 }
+      let(:refund_amount) { 0 }
+      let(:params) { {generate_credit_note: true, credit_amount: credit_amount, refund_amount: refund_amount} }
+
+      around { |test| lago_premium!(&test) }
+
+      it "calls the void service with all parameters" do
+        allow(Invoices::VoidService).to receive(:call).with(
+          invoice: instance_of(Invoice),
+          params: hash_including(
+            generate_credit_note: true,
+            credit_amount: credit_amount,
+            refund_amount: refund_amount
+          )
+        ).and_call_original
+
+        subject
+
+        expect(Invoices::VoidService).to have_received(:call).with(
+          invoice: instance_of(Invoice),
+          params: hash_including(
+            generate_credit_note: true,
+            credit_amount: credit_amount,
+            refund_amount: refund_amount
+          )
+        )
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice][:lago_id]).to eq(invoice.id)
+        expect(json[:invoice][:status]).to eq("voided")
       end
     end
   end
