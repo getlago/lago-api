@@ -203,6 +203,8 @@ class Customer < ApplicationRecord
       gocardless_customer
     when :cashfree
       cashfree_customer
+    when :flutterwave
+      flutterwave_customer
     when :adyen
       adyen_customer
     when :moneyhash

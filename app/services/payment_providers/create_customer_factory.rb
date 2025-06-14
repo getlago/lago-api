@@ -4,7 +4,9 @@ module PaymentProviders
   class CreateCustomerFactory
     def self.new_instance(provider:, customer:, payment_provider_id:, params:, async: true)
       service_class(provider:).new(customer:, payment_provider_id:, params:, async:)
-    end    def self.service_class(provider:)
+    end
+
+    def self.service_class(provider:)
       case provider
       when "adyen"
         PaymentProviders::Adyen::Customers::CreateService
