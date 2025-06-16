@@ -55,14 +55,14 @@ module Utils
         request_body: request.params.except(:controller, :action, :format),
         request_path: request.path,
         request_origin: request.base_url,
-        request_http_method: request.method_symbol
+        http_method: request.method_symbol
       }
     end
 
     def response_data
       {
-        request_response: JSON.parse(response.body.presence || "{}"),
-        request_http_status: response.status
+        request_response: response.body.present? ? JSON.parse(response.body) : nil,
+        http_status: response.status
       }
     end
 
