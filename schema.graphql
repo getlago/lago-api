@@ -514,6 +514,19 @@ type AppliedCoupon {
   terminatedAt: ISO8601DateTime!
 }
 
+type AppliedPricingUnit {
+  conversionRate: Float!
+  createdAt: ISO8601DateTime!
+  id: ID!
+  pricingUnit: PricingUnit!
+  updatedAt: ISO8601DateTime!
+}
+
+input AppliedPricingUnitInput {
+  code: String!
+  conversionRate: Float!
+}
+
 interface AppliedTax {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
@@ -770,6 +783,7 @@ type CashfreeProvider {
 }
 
 type Charge {
+  appliedPricingUnit: AppliedPricingUnit
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
@@ -818,6 +832,7 @@ type ChargeFilterUsage {
 scalar ChargeFilterValues
 
 input ChargeInput {
+  appliedPricingUnit: AppliedPricingUnitInput
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
   filters: [ChargeFilterInput!]

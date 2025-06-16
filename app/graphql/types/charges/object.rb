@@ -23,6 +23,7 @@ module Types
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :applied_pricing_unit, Types::AppliedPricingUnits::Object, null: true
       field :taxes, [Types::Taxes::Object]
 
       def properties
