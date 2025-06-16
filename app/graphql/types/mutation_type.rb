@@ -182,6 +182,9 @@ module Types
     field :rotate_api_key, mutation: Mutations::ApiKeys::Rotate
     field :update_api_key, mutation: Mutations::ApiKeys::Update
 
+    field :create_pricing_unit, mutation: Mutations::PricingUnits::Create
+    field :update_pricing_unit, mutation: Mutations::PricingUnits::Update
+
     field :create_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Create
     field :destroy_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Destroy
     field :update_invoice_custom_section, mutation: Mutations::InvoiceCustomSections::Update

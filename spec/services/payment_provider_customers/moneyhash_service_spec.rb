@@ -42,7 +42,7 @@ RSpec.describe PaymentProviderCustomers::MoneyhashService, type: :service do
 
         allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
         allow(lago_client).to receive(:post_with_response).and_return(response)
-        allow(response).to receive(:body).and_return(checkout_url_response.to_json.to_s)
+        allow(response).to receive(:body).and_return(checkout_url_response.to_json)
       end
 
       it "creates the moneyhash customer, checkout_url, and sends a success webhook" do

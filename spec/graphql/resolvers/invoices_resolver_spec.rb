@@ -420,7 +420,7 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
 
         expect(invoices_response["collection"].count).to eq(2)
 
-        expect(invoices_response["collection"].map { _1["id"] }).to contain_exactly(invoice_first.id, invoice_second.id)
+        expect(invoices_response["collection"].map { it["id"] }).to contain_exactly(invoice_first.id, invoice_second.id)
 
         expect(invoices_response["metadata"]["currentPage"]).to eq(1)
         expect(invoices_response["metadata"]["totalCount"]).to eq(2)
