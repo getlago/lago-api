@@ -15,7 +15,7 @@ RSpec.describe Resolvers::ApiKeysResolver, type: :graphql do
   let(:query) do
     <<~GQL
       query {
-        apiKeys(limit: 1, page: 1) {
+        apiKeys {
           collection { id value createdAt }
           metadata { currentPage, totalCount totalPages }
         }
