@@ -33,6 +33,7 @@ module Types
       field :adjusted_fee_type, Types::AdjustedFees::AdjustedFeeTypeEnum, null: true
 
       field :charge_filter, Types::ChargeFilters::Object, null: true
+      field :pricing_unit_usage, Types::PricingUnitUsages::Object, null: true
 
       def item_type
         object.fee_type
