@@ -22,6 +22,7 @@ fr:
     breakdown_for_days: "%{breakdown_duration} sur %{breakdown_total_duration} jours"
     breakdown_of: Détails de consommation de %{fee_filter_display_name}
     clabe: CLABE
+    conversion_rate: Taux de conversion
     country: Pays
     coupons: Réduction(s)
     credit_notes: Avoir(s)
