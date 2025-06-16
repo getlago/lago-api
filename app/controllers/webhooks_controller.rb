@@ -36,6 +36,25 @@ class WebhooksController < ApplicationController
     head(:ok)
   end
 
+  def flutterwave
+    result = PaymentProviders::Flutterwave::HandleIncomingWebhookService.call(
+      organization_id: params[:organization_id],
+      code: params[:code].presence,
+      body: request.body.read,
+      signature: request.headers["verif-hash"]
+    )
+
+    unless result.success?
+      if result.error.is_a?(BaseService::ServiceFailure) && result.error.code == "webhook_error"
+        return head(:bad_request)
+      end
+
+      result.raise_if_error!
+    end
+
+    head(:ok)
+  end
+
   def gocardless
     result = PaymentProviders::Gocardless::HandleIncomingWebhookService.call(
       organization_id: params[:organization_id],
