@@ -69,7 +69,7 @@ RSpec.describe Resolvers::OrganizationResolver, type: :graphql do
         expect(data["apiKey"]).to eq(organization.api_keys.first.value)
         expect(data["webhookUrl"]).to eq(organization.webhook_endpoints.first.webhook_url)
         expect(data["billingConfiguration"]["invoiceFooter"]).to eq(organization.invoice_footer)
-        expect(data["emailSettings"]).to eq(organization.email_settings.map { _1.tr(".", "_") })
+        expect(data["emailSettings"]).to eq(organization.email_settings.map { it.tr(".", "_") })
         expect(data["taxes"]).to eq []
       end
     end
