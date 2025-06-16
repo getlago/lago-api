@@ -17,6 +17,8 @@ class Subscription < ApplicationRecord
   has_many :fees
   has_many :daily_usages
   has_many :usage_thresholds, through: :plan
+  has_many :fixed_charges, through: :plan
+  has_many :add_ons, through: :fixed_charges
 
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
