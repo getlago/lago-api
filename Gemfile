@@ -119,6 +119,10 @@ group :development, :test do
   gem "pry"
   gem "knapsack_pro", "~> 8.1"
 
+  gem "database_cleaner-active_record"
+  gem "rspec-graphql_matchers"
+  gem "shoulda-matchers"
+
   gem "i18n-tasks", git: "https://github.com/glebm/i18n-tasks.git", require: false
   gem "rubocop-rails", require: false
   gem "rubocop-graphql", require: false
@@ -128,10 +132,7 @@ group :development, :test do
 end
 
 group :test do
-  gem "database_cleaner-active_record"
   gem "guard-rspec", require: false
-  gem "rspec-graphql_matchers"
-  gem "shoulda-matchers"
   gem "karafka-testing"
 end
 

@@ -4,6 +4,7 @@ class DunningCampaign < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
   self.discard_column = :deleted_at
+  self.ignored_columns += %w[applied_to_organization]
 
   ORDERS = %w[name code].freeze
 
@@ -52,18 +53,17 @@ end
 #
 # Table name: dunning_campaigns
 #
-#  id                      :uuid             not null, primary key
-#  applied_to_organization :boolean          default(FALSE), not null
-#  bcc_emails              :string           default([]), is an Array
-#  code                    :string           not null
-#  days_between_attempts   :integer          default(1), not null
-#  deleted_at              :datetime
-#  description             :text
-#  max_attempts            :integer          default(1), not null
-#  name                    :string           not null
-#  created_at              :datetime         not null
-#  updated_at              :datetime         not null
-#  organization_id         :uuid             not null
+#  id                    :uuid             not null, primary key
+#  bcc_emails            :string           default([]), is an Array
+#  code                  :string           not null
+#  days_between_attempts :integer          default(1), not null
+#  deleted_at            :datetime
+#  description           :text
+#  max_attempts          :integer          default(1), not null
+#  name                  :string           not null
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  organization_id       :uuid             not null
 #
 # Indexes
 #

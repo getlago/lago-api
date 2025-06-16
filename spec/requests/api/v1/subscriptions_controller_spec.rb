@@ -577,6 +577,39 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         )
       end
     end
+
+    context "when there are multiple terminated subscriptions" do
+      let(:subscription) do
+        create(:subscription, customer:, plan:, status: :terminated, terminated_at: 10.days.ago)
+      end
+
+      let(:matching_subscription) do
+        create(
+          :subscription,
+          customer:,
+          plan:,
+          external_id: subscription.external_id,
+          terminated_at: 5.days.ago,
+          status: :terminated
+        )
+      end
+
+      let(:params) { {status: "terminated"} }
+
+      before do
+        matching_subscription
+      end
+
+      it "returns the latest terminated subscription" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:subscription]).to include(
+          lago_id: matching_subscription.id,
+          external_id: matching_subscription.external_id
+        )
+      end
+    end
   end
 
   describe "GET /api/v1/subscriptions" do

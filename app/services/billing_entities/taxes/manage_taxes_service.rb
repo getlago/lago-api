@@ -3,7 +3,8 @@
 module BillingEntities
   module Taxes
     class ManageTaxesService < BaseService
-      Result = BaseResult[:taxes]
+      Result = BaseResult[:taxes, :applied_taxes]
+
       def initialize(billing_entity:, tax_codes:)
         @billing_entity = billing_entity
         @tax_codes = tax_codes || []
@@ -32,10 +33,15 @@ module BillingEntities
 
         if taxes.count != unique_tax_codes.count
           result.not_found_failure!(resource: "tax")
+          return
+        end
+
+        billing_entity.applied_taxes = taxes.map do |tax|
+          BillingEntity::AppliedTax.new(billing_entity:, tax:, organization:)
         end
 
         result.taxes = taxes
-        billing_entity.taxes = taxes
+        result.applied_taxes = billing_entity.applied_taxes
       end
     end
   end

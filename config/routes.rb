@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  mount Sidekiq::Web, at: "/sidekiq" if defined? Sidekiq::Web
+  mount Sidekiq::Web, at: "/sidekiq" if ENV["LAGO_SIDEKIQ_WEB"] == "true" && defined? Sidekiq::Web
   mount Karafka::Web::App, at: "/karafka" if ENV["LAGO_KARAFKA_WEB"]
   mount GraphiQL::Rails::Engine, at: "/graphiql", graphql_path: "/graphql" if Rails.env.development?
 
@@ -40,7 +40,7 @@ Rails.application.routes.draw do
       end
 
       resources :subscriptions, only: %i[create update show index], param: :external_id do
-        resource :lifetime_usage, only: %i[show update]
+        resource :lifetime_usage, only: %i[show update], controller: "subscriptions/lifetime_usages"
         resources :alerts, only: %i[create index update show destroy], param: :code, controller: "subscriptions/alerts"
       end
       delete "/subscriptions/:external_id", to: "subscriptions#terminate", as: :terminate

@@ -63,16 +63,6 @@ FactoryBot.define do
       organization { create(:organization, :with_invoice_custom_sections) }
     end
 
-    trait :with_custom_invoice_custom_section_selections do
-      after :create do |customer|
-        customer.invoice_custom_section_selections = create_list(:invoice_custom_section, 3, organization: customer.organization)
-      end
-    end
-
-    trait :with_skipped_invoice_custom_section_selections do
-      skip_invoice_custom_sections { true }
-    end
-
     trait :with_stripe_payment_provider do
       payment_provider { "stripe" }
       payment_provider_code { Faker::Lorem.word }

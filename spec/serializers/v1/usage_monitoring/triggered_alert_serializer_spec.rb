@@ -6,7 +6,7 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
   subject(:serializer) { described_class.new(triggered_alert, root_name: "triggered_alert") }
 
   let(:triggered_alert) { create(:triggered_alert, alert:, subscription:, triggered_at: DateTime.new(2000, 1, 1, 12, 0, 0)) }
-  let(:subscription) { create(:subscription, external_id: "ext-id") }
+  let(:subscription) { create(:subscription, external_id: "ext-id", customer: create(:customer, external_id: "cust-ext-id")) }
 
   before { triggered_alert }
 
@@ -22,6 +22,7 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
       expect(payload["lago_alert_id"]).to eq(triggered_alert.alert.id)
       expect(payload["lago_subscription_id"]).to eq(triggered_alert.subscription.id)
       expect(payload["subscription_external_id"]).to eq("ext-id")
+      expect(payload["customer_external_id"]).to eq("cust-ext-id")
       expect(payload["billable_metric_code"]).to be_nil
       expect(payload["alert_name"]).to eq("General Alert")
       expect(payload["alert_code"]).to eq("first")
