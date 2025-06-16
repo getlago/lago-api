@@ -17,6 +17,10 @@ plans:
   create:
   update:
   delete:
+pricing_units:
+  view:
+  create:
+  update:
 addons:
   view: true
   create:
