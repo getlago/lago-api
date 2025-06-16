@@ -25,13 +25,9 @@ class ApiLogsQuery < BaseQuery
     api_logs = with_api_version(api_logs) if filters.api_version.present?
     api_logs = with_request_paths(api_logs) if filters.request_paths.present?
 
-    Clickhouse::ApiLog.transaction do
-      Clickhouse::ApiLog.connection.execute("SELECT 1 SETTINGS max_execution_time=5000") if filters.request_paths.present?
-
-      api_logs = paginate(api_logs)
-      result.api_logs = api_logs
-      result
-    end
+    api_logs = paginate(api_logs)
+    result.api_logs = api_logs
+    result
   end
 
   private
@@ -51,7 +47,7 @@ class ApiLogsQuery < BaseQuery
   end
 
   def with_http_statuses(scope)
-    if (filters.http_statuses & %w[succeeded failed]).any?
+    if filters.http_statuses.any? { |s| %w[succeeded failed].include?(s) }
       scope = scope.where("http_status <= ?", 399) if filters.http_statuses.include?("succeeded")
       scope = scope.where("http_status > ?", 399) if filters.http_statuses.include?("failed")
     else
