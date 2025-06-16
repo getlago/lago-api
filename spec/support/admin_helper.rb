@@ -14,8 +14,8 @@ module AdminHelper
     put(path, params: params.to_json, headers:)
   end
 
-  def admin_post(path, params = {}, headers = {})
-    apply_headers(headers)
+  def admin_post(path, params = {}, headers = {}, api_key: false)
+    apply_headers(headers, api_key)
     post(path, params: params.to_json, headers:)
   end
 
@@ -27,9 +27,14 @@ module AdminHelper
 
   private
 
-  def apply_headers(headers)
+  def apply_headers(headers, api_key = false)
     headers["Content-Type"] = "application/json"
     headers["Accept"] = "application/json"
-    headers["Authorization"] = "Bearer 123456"
+    
+    if api_key
+      headers["Authorization"] = "Api-Key admin-secret-key"
+    else
+      headers["Authorization"] = "Bearer 123456"
+    end
   end
 end

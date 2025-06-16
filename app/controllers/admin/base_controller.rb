@@ -14,6 +14,17 @@ module Admin
 
       return unauthorized_error unless auth_header
 
+      # Support both Google Auth and API key authentication
+      if auth_header.start_with?("Bearer ")
+        authenticate_with_google_auth(auth_header)
+      elsif auth_header.start_with?("Api-Key ")
+        authenticate_with_api_key(auth_header)
+      else
+        unauthorized_error
+      end
+    end
+
+    def authenticate_with_google_auth(auth_header)
       token = auth_header.split(" ").second
       payload = Google::Auth::IDTokens.verify_oidc(
         token,
@@ -25,6 +36,17 @@ module Admin
       true
     rescue Google::Auth::IDTokens::SignatureError
       unauthorized_error
+    end
+
+    def authenticate_with_api_key(auth_header)
+      api_key = auth_header.split(" ").second
+      admin_api_key = ENV["LAGO_ADMIN_API_KEY"]
+
+      return unauthorized_error unless admin_api_key.present? && api_key == admin_api_key
+
+      CurrentContext.email = "admin-api@lago.com"
+
+      true
     end
 
     def set_context_source
