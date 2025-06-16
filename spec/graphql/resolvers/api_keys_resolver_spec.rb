@@ -6,7 +6,7 @@ RSpec.describe Resolvers::ApiKeysResolver, type: :graphql do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
-      current_organization: membership.organization,
+      current_organization: organization,
       permissions: required_permission,
       query:
     )
@@ -15,17 +15,18 @@ RSpec.describe Resolvers::ApiKeysResolver, type: :graphql do
   let(:query) do
     <<~GQL
       query {
-        apiKeys(limit: 5) {
+        apiKeys(limit: 1, page: 2) {
           collection { id value createdAt }
-          metadata { currentPage, totalCount }
+          metadata { currentPage, totalCount totalPages }
         }
       }
     GQL
   end
 
-  let(:membership) { create(:membership) }
+  let(:organization) { create(:api_key).organization }
+  let(:membership) { create(:membership, organization:) }
   let(:required_permission) { "developers:keys:manage" }
-  let(:api_key) { membership.organization.api_keys.first }
+  let!(:api_key) { create(:api_key, organization:) }
 
   before { create(:api_key) }
 
@@ -41,8 +42,9 @@ RSpec.describe Resolvers::ApiKeysResolver, type: :graphql do
       expect(api_key_response["collection"].first["value"]).to eq("••••••••" + api_key.value.last(3))
       expect(api_key_response["collection"].first["createdAt"]).to eq(api_key.created_at.iso8601)
 
-      expect(api_key_response["metadata"]["currentPage"]).to eq(1)
-      expect(api_key_response["metadata"]["totalCount"]).to eq(1)
+      expect(api_key_response["metadata"]["currentPage"]).to eq(2)
+      expect(api_key_response["metadata"]["totalCount"]).to eq(2)
+      expect(api_key_response["metadata"]["totalPages"]).to eq(2)
     end
   end
 end
