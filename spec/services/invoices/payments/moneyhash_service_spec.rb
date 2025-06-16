@@ -52,7 +52,7 @@ RSpec.describe Invoices::Payments::MoneyhashService do
     before do
       allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
       allow(lago_client).to receive(:post_with_response).and_return(response)
-      allow(response).to receive(:body).and_return(payment_url_response.to_json.to_s)
+      allow(response).to receive(:body).and_return(payment_url_response.to_json)
 
       moneyhash_provider
       moneyhash_customer
