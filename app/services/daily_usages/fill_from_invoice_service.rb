@@ -25,8 +25,8 @@ module DailyUsages
             subscription: subscription,
             external_subscription_id: subscription.external_id,
             usage: ::V1::Customers::UsageSerializer.new(usage, includes: %i[charges_usage]).serialize,
-            from_datetime: invoice_subscription.charges_from_datetime,
-            to_datetime: invoice_subscription.charges_to_datetime,
+            from_datetime: invoice_subscription.charges_from_datetime.change(usec: 0),
+            to_datetime: invoice_subscription.charges_to_datetime.change(usec: 0),
             refreshed_at: invoice_subscription.timestamp,
             usage_date: invoice_subscription.charges_to_datetime.to_date
           )
@@ -48,14 +48,18 @@ module DailyUsages
     attr_reader :invoice, :subscriptions
 
     def invoice_usage(subscription, invoice_subscription)
+      amount_cents = invoice.fees.charge.sum(:amount_cents)
+      taxes_amount_cents = invoice.fees.charge.sum(:taxes_amount_cents)
+      total_amount_cents = amount_cents + taxes_amount_cents
+
       OpenStruct.new(
-        from_datetime: invoice_subscription.charges_from_datetime,
-        to_datetime: invoice_subscription.charges_to_datetime,
+        from_datetime: invoice_subscription.charges_from_datetime.change(usec: 0),
+        to_datetime: invoice_subscription.charges_to_datetime.change(usec: 0),
         issuing_date: invoice.issuing_date.iso8601,
         currency: invoice.currency,
-        amount_cents: invoice.fees_amount_cents,
-        total_amount_cents: invoice.fees.sum(&:total_amount_cents),
-        taxes_amount_cents: invoice.fees.sum(:taxes_amount_cents),
+        amount_cents:,
+        total_amount_cents:,
+        taxes_amount_cents:,
         fees: invoice.fees.charge.select { |f| f.subscription_id == subscription.id && f.units.positive? }
       )
     end
@@ -66,8 +70,8 @@ module DailyUsages
 
     def existing_daily_usage(invoice_subscription)
       DailyUsage.find_by(
-        from_datetime: invoice_subscription.charges_from_datetime,
-        to_datetime: invoice_subscription.charges_to_datetime,
+        from_datetime: invoice_subscription.charges_from_datetime.change(usec: 0),
+        to_datetime: invoice_subscription.charges_to_datetime.change(usec: 0),
         usage_date: invoice_subscription.charges_to_datetime.to_date,
         subscription_id: invoice_subscription.subscription_id
       )
