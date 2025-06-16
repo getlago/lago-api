@@ -22,7 +22,7 @@ module BillableMetrics
         end
 
         result.pay_in_advance_aggregation = BigDecimal(compute_pay_in_advance_aggregation)
-        result.options = {running_total: running_total(options)}
+        result.options = {running_total: running_total(options, aggregation:)}
         result.count = result.aggregation
         result
       end
@@ -52,6 +52,7 @@ module BillableMetrics
           end
 
           group_result.count = aggregation[:value]
+          group_result.options = {running_total: running_total(options, aggregation: group_result.aggregation)}
           group_result
         end
 
@@ -110,13 +111,13 @@ module BillableMetrics
 
       # NOTE: Return cumulative sum of event count based on the number of free units
       #       (per_events or per_total_aggregation).
-      def running_total(options)
+      def running_total(options, aggregation:)
         free_units_per_events = options[:free_units_per_events].to_i
         free_units_per_total_aggregation = BigDecimal(options[:free_units_per_total_aggregation] || 0)
 
         return [] if free_units_per_events.zero? && free_units_per_total_aggregation.zero?
 
-        (1..result.aggregation).to_a
+        (1..aggregation).to_a
       end
 
       def compute_per_event_aggregation(exclude_event:)

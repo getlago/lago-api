@@ -144,6 +144,7 @@ module BillableMetrics
         empty_result.aggregation = 0
         empty_result.count = 0
         empty_result.current_usage_units = 0
+        empty_result.options = {running_total: []}
 
         result.aggregations = [empty_result]
         result
