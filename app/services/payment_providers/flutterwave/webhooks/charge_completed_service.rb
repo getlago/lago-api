@@ -24,12 +24,11 @@ module PaymentProviders
 
           verified_transaction = verify_transaction
           return result unless verified_transaction
-
-          payment_service_class.new.update_payment_status(
+          payment_service_class.new(nil).update_payment_status(
             organization_id:,
             status: verified_transaction[:status],
             flutterwave_payment: PaymentProviders::FlutterwaveProvider::FlutterwavePayment.new(
-              id: verified_transaction[:id],
+              id: provider_payment_id,
               status: verified_transaction[:status],
               metadata: build_metadata(verified_transaction)
             )
@@ -82,28 +81,27 @@ module PaymentProviders
           payment_provider = payment_provider_result.payment_provider
 
           begin
-            response = http_client(payment_provider).get(
-              "transactions/#{transaction_data["id"]}/verify",
-              headers(payment_provider)
+            verification_url = "#{payment_provider.api_url}/transactions/#{transaction_data["id"]}/verify"
+            client = LagoHttpClient::Client.new(verification_url)
+
+            response = client.get(
+              headers: headers(payment_provider)
             )
 
-            begin
-              if response["status"] == "success" && response["data"]["status"] == "successful"
-                {
-                  id: response["data"]["id"],
-                  status: response["data"]["status"],
-                  amount: response["data"]["amount"],
-                  currency: response["data"]["currency"],
-                  customer: response["data"]["customer"],
-                  reference: response["data"]["tx_ref"]
-                }
-              else
-                Rails.logger.warn("Flutterwave transaction verification failed: #{response}")
-                nil
-              end
-            rescue
-              LagoHttpClient::HttpError => e
+            if response["status"] == "success" && response["data"]["status"] == "successful"
+              {
+                id: response["data"]["id"],
+                status: response["data"]["status"],
+                amount: response["data"]["amount"],
+                currency: response["data"]["currency"],
+                customer: response["data"]["customer"],
+                reference: response["data"]["tx_ref"]
+              }
+            else
+              Rails.logger.warn("Flutterwave transaction verification failed: #{response}")
+              nil
             end
+          rescue LagoHttpClient::HttpError => e
             Rails.logger.error("Error verifying Flutterwave transaction: #{e.message}")
             nil
           end
@@ -116,12 +114,9 @@ module PaymentProviders
             flutterwave_transaction_id: verified_transaction[:id],
             reference: verified_transaction[:reference],
             amount: verified_transaction[:amount],
-            currency: verified_transaction[:currency]
+            currency: verified_transaction[:currency],
+            payment_type: "one-time"
           }
-        end
-
-        def http_client(payment_provider)
-          @http_client ||= LagoHttpClient::Client.new(payment_provider.api_url)
         end
 
         def headers(payment_provider)
