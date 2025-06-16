@@ -57,8 +57,7 @@ module PaymentProviders
         def provider_payment_id
           @provider_payment_id ||= transaction_data.dig("meta", "lago_invoice_id") ||
             transaction_data.dig("meta", "lago_payable_id") ||
-            transaction_data["tx_ref"]&.match(/lago_invoice_(\d+)/)&.captures&.first ||
-            transaction_data["tx_ref"]&.match(/lago_payable_(\d+)/)&.captures&.first
+            transaction_data["tx_ref"]
         end
 
         def payable_type
