@@ -23,6 +23,7 @@ en:
     breakdown_of: Breakdown of %{fee_filter_display_name}
     charges_paid_in_advance: Charges paid in advance
     clabe: CLABE
+    conversion_rate: Conversion rate
     country: Country
     coupons: Coupons
     credit_notes: Credit notes

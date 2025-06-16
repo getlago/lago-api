@@ -39,6 +39,10 @@ class PricingUnitUsage < ApplicationRecord
       precise_unit_amount: adjusted_unit_amount
     }
   end
+
+  def currency
+    PricingUnit.new(short_name:)
+  end
 end
 
 # == Schema Information

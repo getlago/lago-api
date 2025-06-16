@@ -11,3 +11,5 @@ tr.fee
   td.body-2 = FeeDisplayHelper.format_with_precision(self, self.precise_unit_amount)
   td.body-2 == TaxHelper.applied_taxes(self)
   td.body-2 = FeeDisplayHelper.format_amount(self)
+
+== SlimHelper.render('templates/invoices/v4/_conversion_row', self)
