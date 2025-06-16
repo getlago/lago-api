@@ -40,6 +40,10 @@ class FixedCharge < ApplicationRecord
   enum :charge_model, CHARGE_MODELS, default: :standard, null: false
   enum :interval, INTERVALS, default: :monthly, null: false
   enum :billing_period_duration_unit, PERIOD_DURATION_UNIT, default: :month, null: false
+
+  default_scope -> { kept }
+
+  scope :pay_in_advance, -> { where(pay_in_advance: true) }
 end
 
 # == Schema Information
