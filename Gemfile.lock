@@ -255,7 +255,6 @@ GEM
     ffi (1.17.1-x86_64-darwin)
     ffi (1.17.1-x86_64-linux-gnu)
     fiber-storage (1.0.0)
-    flutterwave_sdk (0.1.1)
     formatador (1.1.0)
     fuubar (2.5.1)
       rspec-core (~> 3.0)
@@ -997,7 +996,6 @@ DEPENDENCIES
   dry-validation
   factory_bot_rails
   faker
-  flutterwave_sdk
   fuubar
   gocardless_pro (~> 2.34)
   google-cloud-storage
