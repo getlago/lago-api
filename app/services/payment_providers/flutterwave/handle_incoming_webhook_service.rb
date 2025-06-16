@@ -23,13 +23,11 @@ module PaymentProviders
         )
 
         return payment_provider_result unless payment_provider_result.success?
-
         webhook_secret = payment_provider_result.payment_provider.webhook_secret
         return result.service_failure!(code: "webhook_error", message: "Missing webhook secret") if webhook_secret.blank?
 
-        expected_signature = Digest::SHA256.hexdigest(webhook_secret)
 
-        unless expected_signature == signature
+        unless webhook_secret == signature
           return result.service_failure!(code: "webhook_error", message: "Invalid signature")
         end
 
