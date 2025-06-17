@@ -1613,14 +1613,14 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
     context "with all types of credits" do
       let(:plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 10_000) }
       let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 10) }
-      let(:billable_metric1) { create(:billable_metric, aggregation_type: "count_agg") }
-      let(:billable_metric2) { create(:billable_metric, aggregation_type: "count_agg") }
-      let(:billable_metric3) { create(:billable_metric, aggregation_type: "count_agg") }
-      let(:billable_metric4) { create(:billable_metric, aggregation_type: "count_agg") }
-      let(:coupon1) { create(:coupon, coupon_type: "percentage", limited_billable_metrics: true, percentage_rate: 50.00) }
+      let(:billable_metric1) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:billable_metric2) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:billable_metric3) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:billable_metric4) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:coupon1) { create(:coupon, organization:, coupon_type: "percentage", limited_billable_metrics: true, percentage_rate: 50.00) }
       let(:coupon2) { create(:coupon, organization:) }
       let(:coupon_target) { create(:coupon_billable_metric, coupon: coupon1, billable_metric: billable_metric1) }
-      let(:wallet) { create(:wallet, customer: subscription.customer, balance: "50_000", credits_balance: "50_000", allowed_fee_types: %w[charge]) }
+      let(:wallet) { create(:wallet, organization:, customer: subscription.customer, balance: "50_000", credits_balance: "50_000", allowed_fee_types: %w[charge]) }
       let(:applied_coupon) do
         create(
           :applied_coupon,
@@ -1642,6 +1642,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(
           :standard_charge,
           plan: subscription.plan,
+          organization:,
           charge_model: "standard",
           billable_metric: billable_metric1,
           properties: {amount: "10"}
@@ -1660,6 +1661,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(
           :standard_charge,
           plan: subscription.plan,
+          organization:,
           charge_model: "standard",
           billable_metric: billable_metric2,
           properties: {amount: "20"}
@@ -1678,6 +1680,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(
           :standard_charge,
           plan: subscription.plan,
+          organization:,
           charge_model: "standard",
           billable_metric: billable_metric3,
           properties: {amount: "30"}
@@ -1696,6 +1699,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         create(
           :standard_charge,
           plan: subscription.plan,
+          organization:,
           charge_model: "standard",
           billable_metric: billable_metric4,
           properties: {amount: "40"}
@@ -1713,6 +1717,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:progressive_invoice) do
         create(
           :invoice,
+          :with_subscriptions,
           customer:,
           status: "finalized",
           invoice_type: :progressive_billing,
