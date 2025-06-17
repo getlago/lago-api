@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class OrganizationEventsEmittingService < BaseService
+  class OrganizationEmittingEventsService < BaseService
     def initialize(organization:, billing_at: Time.current)
       @organization = organization
       @today = billing_at
@@ -18,9 +18,8 @@ module Subscriptions
           emitting_subscriptions << subscription
         end
 
-        # emit_fixed_charge_events(emitting_subscriptions)
         Subscriptions::EmitFixedChargesEventsJob.perform_later(subscriptions: emitting_subscriptions)
-        # emit_base_usage_events(emitting_subscriptions)
+        # Subscriptions::EmitBaseUsageEventsJob.perform_later(subscriptions: emitting_subscriptions)
       end
 
       result

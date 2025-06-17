@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class OrganizationEventsEmittingJob < ApplicationJob
+  class OrganizationEmittingEventsJob < ApplicationJob
     queue_as do
       if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_CLOCK"])
         :clock_worker
@@ -13,7 +13,7 @@ module Subscriptions
     unique :until_executed, on_conflict: :log, lock_ttl: 12.hours
 
     def perform(organization:)
-      Subscriptions::OrganizationEventsEmittingService.call!(organization:)
+      Subscriptions::OrganizationEmittingEventsService.call!(organization:)
     end
   end
 end

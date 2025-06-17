@@ -2,7 +2,7 @@
 
 module FixedCharges
   class EmitEventsService < BaseService
-    def initialize(fixed_charge:, subscription:, timestamp:, units: nil)
+    def initialize(fixed_charge:, subscription:, timestamp: Time.current, units: nil)
       @fixed_charge = fixed_charge
       @subscription = subscription
       @timestamp = timestamp

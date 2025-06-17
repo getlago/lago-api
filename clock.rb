@@ -174,9 +174,9 @@ module Clockwork
       .perform_later
   end
 
-  every(1.day, "schedule:emit_fixed_charges_events", at: "01:10") do
-    Clock::EmitFixedChargesEventsJob
-      .set(sentry: {"slug" => "lago_emit_fixed_charges_events", "cron" => "5 0 * * *"})
+  every(1.day, "schedule:emit_default_events", at: "01:10") do
+    Clock::EmitDefaultEventsJob
+      .set(sentry: {"slug" => "lago_emit_default_events", "cron" => "5 0 * * *"})
       .perform_later
   end
 

@@ -428,6 +428,7 @@ DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
+DROP INDEX IF EXISTS public.index_events_on_source;
 DROP INDEX IF EXISTS public.index_events_on_properties;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
@@ -5766,6 +5767,13 @@ CREATE INDEX index_events_on_properties ON public.events USING gin (properties j
 
 
 --
+-- Name: index_events_on_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_source ON public.events USING btree (source);
+
+
+--
 -- Name: index_fees_on_add_on_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8854,6 +8862,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250617142428'),
 ('20250617093232'),
 ('20250617092222'),
 ('20250616152253'),
