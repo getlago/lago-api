@@ -21,11 +21,9 @@ module PaymentProviders
           code:,
           payment_provider_type: "flutterwave"
         )
-
         return payment_provider_result unless payment_provider_result.success?
         webhook_secret = payment_provider_result.payment_provider.webhook_secret
         return result.service_failure!(code: "webhook_error", message: "Missing webhook secret") if webhook_secret.blank?
-
 
         unless webhook_secret == signature
           return result.service_failure!(code: "webhook_error", message: "Invalid signature")

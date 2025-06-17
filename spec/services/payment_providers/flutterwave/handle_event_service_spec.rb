@@ -28,11 +28,14 @@ RSpec.describe PaymentProviders::Flutterwave::HandleEventService do
   describe "#call" do
     context "when event is charge.completed" do
       it "calls the charge completed service" do
-        expect(PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService)
+        allow(PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService)
           .to receive(:call!)
-          .with(organization_id: organization.id, event_json:)
 
         handle_event_service.call
+
+        expect(PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService)
+          .to have_received(:call!)
+          .with(organization_id: organization.id, event_json:)
       end
     end
 
@@ -45,10 +48,13 @@ RSpec.describe PaymentProviders::Flutterwave::HandleEventService do
       end
 
       it "does not call any webhook service" do
-        expect(PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService)
-          .not_to receive(:call!)
+        allow(PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService)
+          .to receive(:call!)
 
         result = handle_event_service.call
+
+        expect(PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService)
+          .not_to have_received(:call!)
         expect(result).to be_success
       end
     end
