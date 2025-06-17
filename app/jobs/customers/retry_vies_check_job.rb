@@ -3,6 +3,11 @@
 module Customers
   class RetryViesCheckJob < ApplicationJob
     queue_as :default
+    sidekiq_options retry: 5
+
+    sidekiq_retry_in do |count|
+      [30.seconds * (2**count), 1.hour].min
+    end
 
     def perform(customer_id)
       customer = Customer.find(customer_id)

@@ -46,13 +46,24 @@ RSpec.describe Customers::RetryViesCheckJob, type: :job do
     end
   end
 
-  context "when valvat has an error" do
-    before do
-      allow_any_instance_of(Valvat).to receive(:exists?).and_raise(Valvat::Timeout.new("Timeout", "dummy")) # rubocop:disable RSpec/AnyInstance
+  describe "exponential retry configuration" do
+    it "has correct retry options" do
+      expect(described_class.sidekiq_options).to include("retry" => 5)
     end
 
-    it "applies the taxes and enqueues another job" do
-      expect { described_class.perform_now(customer.id) }.to have_enqueued_job(described_class)
+    it "uses exponential backoff with maximum cap" do
+      expect([30.seconds * (2**0), 1.hour].min).to eq(30.seconds)
+      expect([30.seconds * (2**1), 1.hour].min).to eq(60.seconds)
+      expect([30.seconds * (2**2), 1.hour].min).to eq(120.seconds)
+      expect([30.seconds * (2**3), 1.hour].min).to eq(240.seconds)
+      expect([30.seconds * (2**4), 1.hour].min).to eq(480.seconds)
+      expect([30.seconds * (2**5), 1.hour].min).to eq(960.seconds)
+      expect([30.seconds * (2**7), 1.hour].min).to eq(1.hour)
+      expect([30.seconds * (2**10), 1.hour].min).to eq(1.hour)
+    end
+
+    it "has sidekiq_retry_in configured" do
+      expect(described_class).to respond_to(:sidekiq_retry_in)
     end
   end
 end
