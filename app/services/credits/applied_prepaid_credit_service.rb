@@ -71,7 +71,7 @@ module Credits
 
     def compute_amount
       if wallet.limited_fee_types?
-        applicable_fees = invoice.fees.where(fee_type: wallet.allowed_fee_types)
+        applicable_fees = invoice.fees.filter { |fee| wallet.allowed_fee_types.include?(fee.fee_type) }
 
         total = 0
         applicable_fees.each do |f|
