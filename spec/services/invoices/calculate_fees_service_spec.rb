@@ -1621,18 +1621,6 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:coupon2) { create(:coupon, organization:) }
       let(:coupon_target) { create(:coupon_billable_metric, coupon: coupon1, billable_metric: billable_metric1) }
       let(:wallet) { create(:wallet, customer: subscription.customer, balance: "50_000", credits_balance: "50_000", allowed_fee_types: %w[charge]) }
-      let(:credit_note) do
-        create(
-          :credit_note,
-          customer: subscription.customer,
-          total_amount_cents: 10,
-          total_amount_currency: plan.amount_currency,
-          balance_amount_cents: 10,
-          balance_amount_currency: plan.amount_currency,
-          credit_amount_cents: 10,
-          credit_amount_currency: plan.amount_currency
-        )
-      end
       let(:applied_coupon) do
         create(
           :applied_coupon,
