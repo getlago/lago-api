@@ -13,9 +13,7 @@ class FixedCharge < ApplicationRecord
 
   has_many :children, class_name: "FixedCharge", foreign_key: :parent_id, dependent: :nullify
   has_many :subscriptions_units_overrides, dependent: :destroy
-
-  # TODO: how link fees to fixed charges new _id or polymorphism?
-  # has_many :fees, as: :invoiceable - will do it without polymorphism
+  has_many :fees
 
   # TODO: applied taxes
   # has_many :applied_taxes, class_name: "FixedCharge::AppliedTax", dependent: :destroy
