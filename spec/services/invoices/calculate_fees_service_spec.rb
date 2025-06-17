@@ -1609,5 +1609,178 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
     end
+
+    context "with all types of credits" do
+      let(:plan) { create(:plan, organization:, interval:, pay_in_advance:, trial_period:, amount_cents: 10_000) }
+      let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 10) }
+      let(:billable_metric1) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:billable_metric2) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:billable_metric3) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:billable_metric4) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+      let(:coupon1) { create(:coupon, organization:, coupon_type: "percentage", limited_billable_metrics: true, percentage_rate: 50.00) }
+      let(:coupon2) { create(:coupon, organization:) }
+      let(:coupon_target) { create(:coupon_billable_metric, coupon: coupon1, billable_metric: billable_metric1) }
+      let(:wallet) { create(:wallet, organization:, customer: subscription.customer, balance: "50_000", credits_balance: "50_000", allowed_fee_types: %w[charge]) }
+      let(:applied_coupon) do
+        create(
+          :applied_coupon,
+          coupon: coupon1,
+          customer: subscription.customer,
+          percentage_rate: 50.00
+        )
+      end
+      let(:applied_coupon2) do
+        create(
+          :applied_coupon,
+          coupon: coupon2,
+          customer: subscription.customer,
+          amount_cents: 1_000
+        )
+      end
+
+      let(:charge1) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          organization:,
+          charge_model: "standard",
+          billable_metric: billable_metric1,
+          properties: {amount: "10"}
+        )
+      end
+      let(:event1) do
+        create(
+          :event,
+          organization: organization,
+          subscription: subscription,
+          code: billable_metric1.code,
+          timestamp: event_timestamp
+        )
+      end
+      let(:charge2) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          organization:,
+          charge_model: "standard",
+          billable_metric: billable_metric2,
+          properties: {amount: "20"}
+        )
+      end
+      let(:event2) do
+        create(
+          :event,
+          organization: organization,
+          subscription: subscription,
+          code: billable_metric2.code,
+          timestamp: event_timestamp
+        )
+      end
+      let(:charge3) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          organization:,
+          charge_model: "standard",
+          billable_metric: billable_metric3,
+          properties: {amount: "30"}
+        )
+      end
+      let(:event3) do
+        create(
+          :event,
+          organization: organization,
+          subscription: subscription,
+          code: billable_metric3.code,
+          timestamp: event_timestamp
+        )
+      end
+      let(:charge4) do
+        create(
+          :standard_charge,
+          plan: subscription.plan,
+          organization:,
+          charge_model: "standard",
+          billable_metric: billable_metric4,
+          properties: {amount: "40"}
+        )
+      end
+      let(:event4) do
+        create(
+          :event,
+          organization: organization,
+          subscription: subscription,
+          code: billable_metric4.code,
+          timestamp: event_timestamp
+        )
+      end
+      let(:progressive_invoice) do
+        create(
+          :invoice,
+          :with_subscriptions,
+          customer:,
+          status: "finalized",
+          invoice_type: :progressive_billing,
+          subscriptions: [subscription],
+          fees_amount_cents: 3_000,
+          issuing_date: timestamp - 5.days,
+          created_at: timestamp - 5.days
+        )
+      end
+      let(:progressive_fee) do
+        create(:charge_fee, amount_cents: 3_000, invoice: progressive_invoice)
+      end
+      let(:credit_note) do
+        create(
+          :credit_note,
+          customer: subscription.customer,
+          total_amount_cents: 1_000,
+          total_amount_currency: plan.amount_currency,
+          balance_amount_cents: 1_000,
+          balance_amount_currency: plan.amount_currency,
+          credit_amount_cents: 1_000,
+          credit_amount_currency: plan.amount_currency
+        )
+      end
+
+      let(:event) { nil }
+
+      before do
+        charge1
+        charge2
+        charge3
+        charge4
+        event1
+        event2
+        event3
+        event4
+        progressive_invoice
+        progressive_fee
+        progressive_invoice.invoice_subscriptions.first.update!(
+          charges_from_datetime: progressive_invoice.issuing_date - 1.month,
+          charges_to_datetime: progressive_invoice.issuing_date,
+          timestamp: progressive_invoice.issuing_date
+        )
+        applied_coupon
+        applied_coupon2
+        coupon_target
+        credit_note
+        wallet
+      end
+
+      it "updates the invoice accordingly" do
+        result = invoice_service.call
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(result.invoice.fees_amount_cents).to eq(20_000)
+          expect(result.invoice.taxes_amount_cents).to eq(1_565)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(15_650)
+          expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(17_215)
+          expect(result.invoice.progressive_billing_credit_amount_cents).to eq(3_000)
+          expect(result.invoice.total_amount_cents).to eq(9_738) # 17_215 - 1_000 (credit note) - 6_477 (wallet)
+        end
+      end
+    end
   end
 end
