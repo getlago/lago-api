@@ -47,8 +47,8 @@ RSpec.describe Resolvers::ApiKeysResolver, type: :graphql do
   context "when pagination is provided" do
     let(:query) do
       <<~GQL
-        query {
-          apiKeys(limit: 2, page: 2) {
+        query($limit: Int, $page: Int) {
+          apiKeys(limit: $limit, page: $page) {
             collection { id value name createdAt }
             metadata { currentPage, totalCount totalPages}
           }
@@ -57,22 +57,39 @@ RSpec.describe Resolvers::ApiKeysResolver, type: :graphql do
     end
 
     before do
-      3.times do |i|
-        create(:api_key, organization: membership.organization, created_at: Time.zone.now - 10.days + i.days, name: "API Key #{i + 1}")
-      end
+      create(:api_key, organization: membership.organization, created_at: 1.day.ago, name: "Older API Key")
+    end
+
+    def fetch_api_keys(page: 1, limit: 1)
+      execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          limit:,
+          page:
+        }
+      )
     end
 
     it "returns a list of api keys" do
-      api_key_response = result["data"]["apiKeys"]
+      [
+        {page: 1, limit: 1, expected_total_pages: 2, expected_api_key_names: ["Older API Key"]},
+        {page: 2, limit: 1, expected_total_pages: 2, expected_api_key_names: ["API Key"]},
+        {page: 1, limit: 2, expected_total_pages: 1, expected_api_key_names: ["Older API Key", "API Key"]}
+      ].each do |test_case|
+        page, limit, expected_total_pages, expected_api_key_names = test_case.values_at(:page, :limit, :expected_total_pages, :expected_api_key_names)
+        api_key_response = fetch_api_keys(page:, limit:)["data"]["apiKeys"]
 
-      collection = api_key_response["collection"]
+        collection = api_key_response["collection"]
+        expect(collection.size).to eq(limit)
+        expect(collection.map { |api_key| api_key["name"] }).to eq(expected_api_key_names)
 
-      expect(collection.size).to eq(2)
-      expect(collection.map { |api_key| api_key["name"] }).to eq(["API Key 3", "API Key"])
-
-      expect(api_key_response["metadata"]["currentPage"]).to eq(2)
-      expect(api_key_response["metadata"]["totalCount"]).to eq(4)
-      expect(api_key_response["metadata"]["totalPages"]).to eq(2)
+        expect(api_key_response["metadata"]["currentPage"]).to eq(page)
+        expect(api_key_response["metadata"]["totalCount"]).to eq(2)
+        expect(api_key_response["metadata"]["totalPages"]).to eq(expected_total_pages)
+      end
     end
   end
 end
