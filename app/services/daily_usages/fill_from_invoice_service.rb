@@ -50,7 +50,7 @@ module DailyUsages
     def invoice_usage(subscription, invoice_subscription)
       in_adv_fees = in_advance_fees(subscription, invoice_subscription)
 
-      fees = in_adv_fees.to_a +
+      fees = in_adv_fees +
         invoice.fees.charge.select { |f| f.subscription_id == subscription.id && f.units.positive? }
 
       amount_cents = in_adv_fees.sum(:amount_cents) + invoice.fees.charge.sum(:amount_cents)

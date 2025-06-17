@@ -230,17 +230,31 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
         )
       end
 
+      let(:in_advance_fee) do
+        create(
+          :charge_fee,
+          subscription:,
+          pay_in_advance: true,
+          pay_in_advance_event_transaction_id: 1,
+          properties: {
+            "charges_from_datetime" => invoice_subscription.charges_from_datetime.iso8601(3),
+            "charges_to_datetime" => invoice_subscription.charges_to_datetime.iso8601(3)
+          }
+        )
+      end
+
       before do
         charge_fee
+        in_advance_fee
         create(:fee, invoice:, subscription:)
       end
 
-      it "includes only fees with positive units belonging to the subscription" do
+      it "includes fees with positive units belonging to the subscription and in advance fees" do
         result = fill_service.send(:invoice_usage, subscription, invoice_subscription)
 
-        expect(result.fees.count).to eq(1)
-        expect(result.fees.first).to eq(charge_fee)
-        expect(result.total_amount_cents).to eq(1100)
+        expect(result.fees.count).to eq(2)
+        expect(result.fees).to contain_exactly(charge_fee, in_advance_fee)
+        expect(result.total_amount_cents).to eq(1302)
       end
     end
   end
