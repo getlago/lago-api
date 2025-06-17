@@ -53,7 +53,6 @@ FactoryBot.define do
         subscriptions { [create(:subscription)] }
       end
 
-      invoice_type { :subscription }
       after :create do |invoice, evaluator|
         evaluator.subscriptions.each do |subscription|
           create(:invoice_subscription, :boundaries, invoice:, subscription:)

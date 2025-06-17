@@ -7,7 +7,7 @@ class Credit < ApplicationRecord
   belongs_to :applied_coupon, optional: true
   belongs_to :credit_note, optional: true
   belongs_to :progressive_billing_invoice, class_name: "Invoice", optional: true
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   has_one :coupon, -> { with_discarded }, through: :applied_coupon
 

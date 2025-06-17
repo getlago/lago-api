@@ -6,7 +6,7 @@ class AddOn
 
     belongs_to :add_on
     belongs_to :tax
-    belongs_to :organization, optional: true
+    belongs_to :organization
   end
 end
 

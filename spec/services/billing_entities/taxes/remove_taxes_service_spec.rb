@@ -15,8 +15,8 @@ RSpec.describe BillingEntities::Taxes::RemoveTaxesService do
       let(:tax2) { create(:tax, organization:, code: "TAX_CODE_2") }
 
       before do
-        billing_entity.applied_taxes.create!(tax: tax1)
-        billing_entity.applied_taxes.create!(tax: tax2)
+        billing_entity.applied_taxes.create!(tax: tax1, organization_id: organization.id)
+        billing_entity.applied_taxes.create!(tax: tax2, organization_id: organization.id)
       end
 
       it "removes the specified taxes from the billing entity" do

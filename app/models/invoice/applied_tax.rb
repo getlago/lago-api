@@ -8,7 +8,7 @@ class Invoice
 
     belongs_to :invoice
     belongs_to :tax, optional: true
-    belongs_to :organization, optional: true
+    belongs_to :organization
 
     monetize :amount_cents,
       :fees_amount_cents,
