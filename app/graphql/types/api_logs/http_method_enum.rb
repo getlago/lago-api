@@ -6,7 +6,7 @@ module Types
       description "Api Logs http method enums"
 
       Clickhouse::ApiLog::HTTP_METHODS.each do |key, value|
-        value key, value:, description: value
+        value key, value:, description: "#{key} request"
       end
     end
   end

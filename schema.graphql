@@ -492,6 +492,39 @@ type ApiKey {
   value: String!
 }
 
+"""
+Base api log
+"""
+type ApiLog {
+  apiKey: SanitizedApiKey
+  apiVersion: String
+  client: String
+  createdAt: ISO8601DateTime
+  httpMethod: HttpMethodEnum
+  httpStatus: Int
+  loggedAt: ISO8601DateTime
+  requestBody: JSON
+  requestId: ID!
+  requestOrigin: String
+  requestPath: String
+  requestResponse: JSON
+}
+
+"""
+ApiLogCollection type
+"""
+type ApiLogCollection {
+  """
+  A collection of paginated ApiLogCollection
+  """
+  collection: [ApiLog!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 type AppliedAddOn {
   addOn: AddOn!
   amountCents: BigInt!
@@ -5165,6 +5198,36 @@ type GroupedChargeUsage {
   units: Float!
 }
 
+"""
+Api Logs http method enums
+"""
+enum HttpMethodEnum {
+  """
+  delete request
+  """
+  delete
+
+  """
+  get request
+  """
+  get
+
+  """
+  post request
+  """
+  post
+
+  """
+  put request
+  """
+  put
+}
+
+"""
+Api Logs HTTP status
+"""
+scalar HttpStatus
+
 type HubspotCustomer {
   externalCustomerId: String
   id: ID!
@@ -7670,6 +7733,11 @@ type Query {
   Query the API keys of current organization
   """
   apiKeys(limit: Int, page: Int): SanitizedApiKeyCollection!
+
+  """
+  Query api logs of an organization
+  """
+  apiLogs(apiKeyIds: [String!], fromDate: ISO8601Date, httpMethods: [HttpMethodEnum!], httpStatuses: [HttpStatus!], limit: Int, page: Int, requestIds: [String!], requestPaths: [String!], toDate: ISO8601Date): ApiLogCollection
 
   """
   Query a single billable metric of an organization
