@@ -14,7 +14,6 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
         :invoice,
         :voided,
         :with_tax_voiding_error,
-        :with_subscriptions,
         customer:,
         organization:,
         subscriptions: [subscription],

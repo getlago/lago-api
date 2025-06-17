@@ -6,6 +6,4 @@ RSpec.describe Fee::AppliedTax, type: :model do
   subject(:applied_tax) { create(:fee_applied_tax) }
 
   it_behaves_like "paper_trail traceable"
-
-  it { is_expected.to belong_to(:organization) }
 end

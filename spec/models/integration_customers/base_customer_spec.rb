@@ -3,17 +3,15 @@
 require "rails_helper"
 
 RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
-  subject(:integration_customer) { described_class.new(integration:, customer:, type:, external_customer_id:, organization:) }
+  subject(:integration_customer) { described_class.new(integration:, customer:, type:, external_customer_id:) }
 
   let(:integration) { create(:netsuite_integration) }
   let(:type) { "IntegrationCustomers::NetsuiteCustomer" }
   let(:customer) { create(:customer) }
-  let(:organization) { customer.organization }
   let(:external_customer_id) { "123" }
 
   it { is_expected.to belong_to(:integration) }
   it { is_expected.to belong_to(:customer) }
-  it { is_expected.to belong_to(:organization) }
 
   describe ".accounting_kind" do
     let(:netsuite_customer) { create(:netsuite_customer) }
@@ -204,13 +202,13 @@ RSpec.describe IntegrationCustomers::BaseCustomer, type: :model do
         end
       end
 
-      context "when it is not unique in scope of type" do
+      context "when it not is unique in scope of type" do
         subject(:another_integration_customer) do
-          described_class.new(integration:, customer:, type:, external_customer_id:, organization: organization)
+          described_class.new(integration:, customer:, type:, external_customer_id:)
         end
 
         before do
-          described_class.create(integration:, customer:, type:, external_customer_id:, organization: organization)
+          described_class.create(integration:, customer:, type:, external_customer_id:)
           another_integration_customer.valid?
         end
 

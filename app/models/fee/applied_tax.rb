@@ -8,7 +8,7 @@ class Fee
 
     belongs_to :fee
     belongs_to :tax, optional: true
-    belongs_to :organization
+    belongs_to :organization, optional: true
   end
 end
 

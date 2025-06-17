@@ -6,7 +6,7 @@ class PaymentRequest
 
     belongs_to :invoice
     belongs_to :payment_request
-    belongs_to :organization
+    belongs_to :organization, optional: true
   end
 end
 

@@ -42,7 +42,6 @@ module Coupons
       credit_amount = AppliedCoupons::AmountService.call(applied_coupon:, base_amount_cents:).amount
       new_credit = Credit.new(
         invoice:,
-        organization_id: invoice.organization_id,
         applied_coupon:,
         amount_cents: credit_amount,
         amount_currency: invoice.currency,

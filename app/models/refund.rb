@@ -7,7 +7,7 @@ class Refund < ApplicationRecord
   belongs_to :credit_note
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, class_name: "PaymentProviderCustomers::BaseCustomer"
-  belongs_to :organization
+  belongs_to :organization, optional: true
 end
 
 # == Schema Information

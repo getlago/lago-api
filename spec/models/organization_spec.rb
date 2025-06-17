@@ -24,17 +24,9 @@ RSpec.describe Organization, type: :model do
   it { is_expected.to have_many(:billing_entities).conditions(archived_at: nil) }
   it { is_expected.to have_many(:all_billing_entities).class_name("BillingEntity") }
   it { is_expected.to have_many(:pricing_units) }
-  it { is_expected.to have_many(:customers) }
-  it { is_expected.to have_many(:subscriptions) }
-  it { is_expected.to have_many(:credit_notes) }
-  it { is_expected.to have_many(:invoices) }
-  it { is_expected.to have_many(:fees) }
-  it { is_expected.to have_many(:applied_coupons) }
-  it { is_expected.to have_many(:wallets) }
-  it { is_expected.to have_many(:wallet_transactions) }
   it { is_expected.to have_one(:default_billing_entity).class_name("BillingEntity") }
   it { is_expected.to have_many(:webhook_endpoints) }
-  it { is_expected.to have_many(:webhooks) }
+  it { is_expected.to have_many(:webhooks).through(:webhook_endpoints) }
   it { is_expected.to have_many(:hubspot_integrations) }
   it { is_expected.to have_many(:netsuite_integrations) }
   it { is_expected.to have_many(:xero_integrations) }

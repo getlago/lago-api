@@ -12,14 +12,12 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
   let(:invoice) do
     create(
       :invoice,
-      :with_subscriptions,
       organization:,
       customer:,
       subscriptions: [subscription],
       currency: "EUR"
     )
   end
-
   let(:credit_note) do
     create(
       :credit_note,
@@ -29,7 +27,6 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
       invoice:
     )
   end
-
   let(:subscription) do
     create(
       :subscription,

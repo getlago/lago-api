@@ -7,5 +7,4 @@ RSpec.describe BillingEntity::AppliedTax, type: :model do
 
   it { is_expected.to belong_to(:billing_entity) }
   it { is_expected.to belong_to(:tax) }
-  it { is_expected.to belong_to(:organization) }
 end

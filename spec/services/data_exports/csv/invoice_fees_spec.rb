@@ -8,7 +8,7 @@ RSpec.describe DataExports::Csv::InvoiceFees do
   end
 
   let(:data_export_part) do
-    data_export.data_export_parts.create(index: 1, object_ids: [invoice.id], organization_id: data_export.organization_id)
+    data_export.data_export_parts.create(index: 1, object_ids: [invoice.id])
   end
 
   let(:resource_query) do

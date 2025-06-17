@@ -11,8 +11,9 @@ class CreditNote < ApplicationRecord
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :invoice
-  belongs_to :organization
+  # TODO: belongs_to :organization, optional: true
 
+  has_one :organization, through: :invoice
   has_one :billing_entity, through: :invoice
 
   has_many :items, class_name: "CreditNoteItem", dependent: :destroy

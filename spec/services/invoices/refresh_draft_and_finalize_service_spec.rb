@@ -14,7 +14,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       create(
         :invoice,
         :draft,
-        :with_subscriptions,
         organization:,
         customer:,
         subscriptions: [subscription],
@@ -291,7 +290,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
         create(
           :invoice,
           :failed,
-          :with_subscriptions,
           customer:,
           subscriptions: [subscription],
           currency: "EUR",

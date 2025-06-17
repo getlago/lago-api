@@ -21,7 +21,6 @@ Invoice.all.find_each do |invoice|
   next if amount.zero?
 
   credit_note = CreditNote.create!(
-    organization_id: invoice.organization_id,
     customer: invoice.customer,
     invoice:,
     credit_amount_cents: amount,
@@ -37,7 +36,6 @@ Invoice.all.find_each do |invoice|
   )
 
   credit_note.items.create!(
-    organization_id: invoice.organization_id,
     fee:,
     amount_cents: amount,
     precise_amount_cents: amount,

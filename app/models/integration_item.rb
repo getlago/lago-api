@@ -4,7 +4,7 @@ class IntegrationItem < ApplicationRecord
   include PaperTrailTraceable
 
   belongs_to :integration, class_name: "Integrations::BaseIntegration"
-  belongs_to :organization
+  belongs_to :organization, optional: true
 
   ITEM_TYPES = [
     :standard,

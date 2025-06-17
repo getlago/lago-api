@@ -5,7 +5,8 @@ class Wallet < ApplicationRecord
   include Currencies
 
   belongs_to :customer, -> { with_discarded }
-  belongs_to :organization
+
+  has_one :organization, through: :customer
 
   has_many :wallet_transactions
   has_many :recurring_transaction_rules
