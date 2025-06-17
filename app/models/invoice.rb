@@ -405,6 +405,10 @@ class Invoice < ApplicationRecord
     fees.any? && should_finalize_invoice
   end
 
+  def force_void!
+    update!(status: "voided", ready_for_payment_processing: false)
+  end
+
   private
 
   def should_assign_sequential_id?
