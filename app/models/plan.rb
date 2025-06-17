@@ -118,23 +118,24 @@ end
 #
 # Table name: plans
 #
-#  id                   :uuid             not null, primary key
-#  amount_cents         :bigint           not null
-#  amount_currency      :string           not null
-#  bill_charges_monthly :boolean
-#  code                 :string           not null
-#  deleted_at           :datetime
-#  description          :string
-#  interval             :integer          not null
-#  invoice_display_name :string
-#  name                 :string           not null
-#  pay_in_advance       :boolean          default(FALSE), not null
-#  pending_deletion     :boolean          default(FALSE), not null
-#  trial_period         :float
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  organization_id      :uuid             not null
-#  parent_id            :uuid
+#  id                         :uuid             not null, primary key
+#  amount_cents               :bigint           not null
+#  amount_currency            :string           not null
+#  bill_charges_monthly       :boolean
+#  bill_fixed_charges_monthly :boolean
+#  code                       :string           not null
+#  deleted_at                 :datetime
+#  description                :string
+#  interval                   :integer          not null
+#  invoice_display_name       :string
+#  name                       :string           not null
+#  pay_in_advance             :boolean          default(FALSE), not null
+#  pending_deletion           :boolean          default(FALSE), not null
+#  trial_period               :float
+#  created_at                 :datetime         not null
+#  updated_at                 :datetime         not null
+#  organization_id            :uuid             not null
+#  parent_id                  :uuid
 #
 # Indexes
 #

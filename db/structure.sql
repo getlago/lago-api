@@ -2353,7 +2353,8 @@ CREATE TABLE public.plans (
     parent_id uuid,
     deleted_at timestamp(6) without time zone,
     pending_deletion boolean DEFAULT false NOT NULL,
-    invoice_display_name character varying
+    invoice_display_name character varying,
+    bill_fixed_charges_monthly boolean
 );
 
 
@@ -8760,7 +8761,9 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250616152253'),
 ('20250613110807'),
+('20250611083925'),
 ('20250610063400'),
 ('20250609121102'),
 ('20250602145535'),
