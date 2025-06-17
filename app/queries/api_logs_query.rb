@@ -9,6 +9,7 @@ class ApiLogsQuery < BaseQuery
     :http_statuses,
     :api_version,
     :api_key_ids,
+    :request_ids,
     :request_paths
   ]
 
@@ -20,6 +21,7 @@ class ApiLogsQuery < BaseQuery
 
     api_logs = with_logged_at_range(api_logs) if filters.from_date || filters.to_date
     api_logs = with_api_key_ids(api_logs) if filters.api_key_ids.present?
+    api_logs = with_request_ids(api_logs) if filters.request_ids.present?
     api_logs = with_http_statuses(api_logs) if filters.http_statuses.present?
     api_logs = with_http_methods(api_logs) if filters.http_methods.present?
     api_logs = with_api_version(api_logs) if filters.api_version.present?
@@ -40,6 +42,10 @@ class ApiLogsQuery < BaseQuery
 
   def with_api_key_ids(scope)
     scope.where(api_key_id: filters.api_key_ids)
+  end
+
+  def with_request_ids(scope)
+    scope.where(request_id: filters.request_ids)
   end
 
   def with_http_methods(scope)
