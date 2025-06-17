@@ -7629,7 +7629,6 @@ type Properties {
   freeUnitsPerTotalAggregation: String
   graduatedPercentageRanges: [GraduatedPercentageRange!]
   graduatedRanges: [GraduatedRange!]
-  groupedBy: [String!]
   packageSize: BigInt
   perTransactionMaxAmount: String
   perTransactionMinAmount: String
@@ -7647,7 +7646,6 @@ input PropertiesInput {
   freeUnitsPerTotalAggregation: String
   graduatedPercentageRanges: [GraduatedPercentageRangeInput!]
   graduatedRanges: [GraduatedRangeInput!]
-  groupedBy: [String!]
   packageSize: BigInt
   perTransactionMaxAmount: String
   perTransactionMinAmount: String

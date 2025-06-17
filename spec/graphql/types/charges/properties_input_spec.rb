@@ -7,7 +7,6 @@ RSpec.describe Types::Charges::PropertiesInput do
 
   it do
     expect(subject).to accept_argument(:amount).of_type("String")
-    expect(subject).to accept_argument(:grouped_by).of_type("[String!]")
     expect(subject).to accept_argument(:pricing_group_keys).of_type("[String!]")
 
     expect(subject).to accept_argument(:graduated_ranges).of_type("[GraduatedRangeInput!]")
