@@ -148,7 +148,7 @@ class Subscription < ApplicationRecord
   def units_override_for(chargeable)
     subscriptions_units_overrides.find_by(
       chargeable.is_a?(Charge) ? { charge: chargeable } : { fixed_charge: chargeable }
-    )
+    )&.units
   end
 
   def downgrade_plan_date

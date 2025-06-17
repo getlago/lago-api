@@ -20,6 +20,7 @@ module Events
       event.metadata = metadata || {}
       event.timestamp = Time.zone.at(params[:timestamp] ? Float(params[:timestamp]) : timestamp)
       event.precise_total_amount_cents = params[:precise_total_amount_cents]
+      event.source = params[:source] || Event.sources[:usage]
 
       expression_result = CalculateExpressionService.call(organization:, event:)
       return result.validation_failure!(errors: expression_result.error.message) unless expression_result.success?

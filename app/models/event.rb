@@ -16,6 +16,14 @@ class Event < EventsRecord
   scope :from_datetime, ->(from_datetime) { where("events.timestamp >= ?", from_datetime) }
   scope :to_datetime, ->(to_datetime) { where("events.timestamp <= ?", to_datetime) }
 
+  EVENT_SOURCES = {l
+    usage: 0,
+    fixed_charge: 1,
+    base_usage: 2
+  }.freeze
+
+  enum :source, EVENT_SOURCES
+
   def api_client
     metadata["user_agent"]
   end
