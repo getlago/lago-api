@@ -47,13 +47,11 @@ module Types
     field :terminate_coupon, mutation: Mutations::Coupons::Terminate
     field :update_coupon, mutation: Mutations::Coupons::Update
 
-    field :create_applied_coupon, mutation: Mutations::AppliedCoupons::Create
-    field :terminate_applied_coupon, mutation: Mutations::AppliedCoupons::Terminate
-
     field :create_add_on, mutation: Mutations::AddOns::Create
+    field :create_applied_coupon, mutation: Mutations::AppliedCoupons::Create
     field :destroy_add_on, mutation: Mutations::AddOns::Destroy
+    field :terminate_applied_coupon, mutation: Mutations::AppliedCoupons::Terminate
     field :update_add_on, mutation: Mutations::AddOns::Update
-
 
     field :add_adyen_payment_provider, mutation: Mutations::PaymentProviders::Adyen::Create
     field :add_cashfree_payment_provider, mutation: Mutations::PaymentProviders::Cashfree::Create
