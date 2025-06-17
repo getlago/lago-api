@@ -155,7 +155,7 @@ module Subscriptions
         interval: :yearly,
         conditions: [
           "DATE_PART('day', (:today#{at_time_zone})) = 1",
-          "plans.bill_charges_monthly = 't'"
+          "plans.bill_charges_monthly = 't' OR plans.bill_fixed_charges_monthly = 't'"
         ]
       )
     end
@@ -292,7 +292,7 @@ module Subscriptions
         billing_time: :anniversary,
         interval: :yearly,
         conditions: [
-          "plans.bill_charges_monthly = 't'",
+          "plans.bill_charges_monthly = 't' OR plans.bill_fixed_charges_monthly = 't'",
           billing_day
         ]
       )
