@@ -18,6 +18,7 @@ module Types
       argument :filters, [Types::ChargeFilters::Input], required: false
       argument :properties, Types::Charges::PropertiesInput, required: false
 
+      argument :applied_pricing_unit, Types::AppliedPricingUnits::Input, required: false
       argument :tax_codes, [String], required: false
     end
   end

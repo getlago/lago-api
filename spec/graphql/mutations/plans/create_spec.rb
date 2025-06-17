@@ -36,6 +36,11 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
             chargeModel,
             billableMetric { id name code }
             taxes { id code rate }
+            appliedPricingUnit {
+              id
+              conversionRate
+              pricingUnit { id code name }
+            }
             properties {
               amount,
               freeUnits,
@@ -81,6 +86,7 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
   end
 
   let(:tax) { create(:tax, organization:) }
+  let(:pricing_unit) { create(:pricing_unit, organization:) }
 
   around { |test| lago_premium!(&test) }
 
@@ -117,6 +123,10 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               chargeModel: "standard",
               properties: {amount: "100.00"},
               taxCodes: [charge_tax.code],
+              appliedPricingUnit: {
+                code: pricing_unit.code,
+                conversionRate: 2.5
+              },
               filters: [
                 {
                   invoiceDisplayName: "Payment Method",
@@ -228,78 +238,82 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
 
     result_data = result["data"]["createPlan"]
 
-    aggregate_failures do
-      expect(result_data["id"]).to be_present
-      expect(result_data["name"]).to eq("New Plan")
-      expect(result_data["invoiceDisplayName"]).to eq("New Plan Invoice Name")
-      expect(result_data["code"]).to eq("new_plan")
-      expect(result_data["interval"]).to eq("monthly")
-      expect(result_data["payInAdvance"]).to eq(false)
-      expect(result_data["amountCents"]).to eq("200")
-      expect(result_data["taxes"][0]["code"]).to eq(plan_tax.code)
-      expect(result_data["charges"].count).to eq(6)
-      expect(result_data["usageThresholds"].count).to eq(3)
+    expect(result_data["id"]).to be_present
+    expect(result_data["name"]).to eq("New Plan")
+    expect(result_data["invoiceDisplayName"]).to eq("New Plan Invoice Name")
+    expect(result_data["code"]).to eq("new_plan")
+    expect(result_data["interval"]).to eq("monthly")
+    expect(result_data["payInAdvance"]).to eq(false)
+    expect(result_data["amountCents"]).to eq("200")
+    expect(result_data["taxes"][0]["code"]).to eq(plan_tax.code)
+    expect(result_data["charges"].count).to eq(6)
+    expect(result_data["usageThresholds"].count).to eq(3)
 
-      standard_charge = result_data["charges"][0]
-      expect(standard_charge["properties"]["amount"]).to eq("100.00")
-      expect(standard_charge["chargeModel"]).to eq("standard")
-      expect(standard_charge["taxes"].count).to eq(1)
-      expect(standard_charge["taxes"].first["code"]).to eq(charge_tax.code)
+    standard_charge = result_data["charges"][0]
+    expect(standard_charge["properties"]["amount"]).to eq("100.00")
+    expect(standard_charge["chargeModel"]).to eq("standard")
+    expect(standard_charge["taxes"].count).to eq(1)
+    expect(standard_charge["taxes"].first["code"]).to eq(charge_tax.code)
 
-      filter = standard_charge["filters"].first
-      expect(filter["invoiceDisplayName"]).to eq("Payment Method")
-      expect(filter["properties"]["amount"]).to eq("100.00")
-      expect(filter["values"]).to eq("payment_method" => %w[card sepa])
+    applied_pricing_unit = standard_charge["appliedPricingUnit"]
+    expect(applied_pricing_unit).to be_present
+    expect(applied_pricing_unit["conversionRate"]).to eq(2.5)
+    expect(applied_pricing_unit["pricingUnit"]["code"]).to eq(pricing_unit.code)
+    expect(applied_pricing_unit["pricingUnit"]["name"]).to eq(pricing_unit.name)
 
-      package_charge = result_data["charges"][1]
-      expect(package_charge["chargeModel"]).to eq("package")
-      package_properties = package_charge["properties"]
-      expect(package_properties["amount"]).to eq("300.00")
-      expect(package_properties["freeUnits"]).to eq("10")
-      expect(package_properties["packageSize"]).to eq("10")
+    filter = standard_charge["filters"].first
+    expect(filter["invoiceDisplayName"]).to eq("Payment Method")
+    expect(filter["properties"]["amount"]).to eq("100.00")
+    expect(filter["values"]).to eq("payment_method" => %w[card sepa])
 
-      percentage_charge = result_data["charges"][2]
-      expect(percentage_charge["chargeModel"]).to eq("percentage")
-      percentage_properties = percentage_charge["properties"]
-      expect(percentage_properties["rate"]).to eq("0.25")
-      expect(percentage_properties["fixedAmount"]).to eq("2")
-      expect(percentage_properties["freeUnitsPerEvents"]).to eq("5")
-      expect(percentage_properties["freeUnitsPerTotalAggregation"]).to eq("50")
+    package_charge = result_data["charges"][1]
+    expect(package_charge["chargeModel"]).to eq("package")
+    package_properties = package_charge["properties"]
+    expect(package_properties["amount"]).to eq("300.00")
+    expect(package_properties["freeUnits"]).to eq("10")
+    expect(package_properties["packageSize"]).to eq("10")
 
-      graduated_charge = result_data["charges"][3]
-      expect(graduated_charge["chargeModel"]).to eq("graduated")
-      expect(graduated_charge["properties"]["graduatedRanges"].count).to eq(2)
+    percentage_charge = result_data["charges"][2]
+    expect(percentage_charge["chargeModel"]).to eq("percentage")
+    percentage_properties = percentage_charge["properties"]
+    expect(percentage_properties["rate"]).to eq("0.25")
+    expect(percentage_properties["fixedAmount"]).to eq("2")
+    expect(percentage_properties["freeUnitsPerEvents"]).to eq("5")
+    expect(percentage_properties["freeUnitsPerTotalAggregation"]).to eq("50")
 
-      volume_charge = result_data["charges"][4]
-      expect(volume_charge["chargeModel"]).to eq("volume")
-      expect(volume_charge["properties"]["volumeRanges"].count).to eq(2)
+    graduated_charge = result_data["charges"][3]
+    expect(graduated_charge["chargeModel"]).to eq("graduated")
+    expect(graduated_charge["properties"]["graduatedRanges"].count).to eq(2)
 
-      graduated_percentage_charge = result_data["charges"][5]
-      expect(graduated_percentage_charge["chargeModel"]).to eq("graduated_percentage")
-      expect(graduated_percentage_charge["properties"]["graduatedPercentageRanges"].count).to eq(2)
+    volume_charge = result_data["charges"][4]
+    expect(volume_charge["chargeModel"]).to eq("volume")
+    expect(volume_charge["properties"]["volumeRanges"].count).to eq(2)
 
-      expect(result_data["minimumCommitment"]).to include(
-        "invoiceDisplayName" => minimum_commitment_invoice_display_name,
-        "amountCents" => minimum_commitment_amount_cents.to_s
-      )
-      expect(result_data["minimumCommitment"]["taxes"].count).to eq(1)
+    graduated_percentage_charge = result_data["charges"][5]
+    expect(graduated_percentage_charge["chargeModel"]).to eq("graduated_percentage")
+    expect(graduated_percentage_charge["properties"]["graduatedPercentageRanges"].count).to eq(2)
 
-      thresholds = result_data["usageThresholds"].sort_by { |threshold| threshold["thresholdDisplayName"] }
-      expect(thresholds).to include hash_including(
-        "thresholdDisplayName" => "Threshold 1",
-        "amountCents" => "100",
-        "recurring" => false
-      )
-      expect(thresholds).to include hash_including(
-        "thresholdDisplayName" => "Threshold 2",
-        "amountCents" => "200",
-        "recurring" => false
-      )
-      expect(thresholds).to include hash_including(
-        "thresholdDisplayName" => "Threshold 3 Recurring",
-        "amountCents" => "1",
-        "recurring" => true
-      )
-    end
+    expect(result_data["minimumCommitment"]).to include(
+      "invoiceDisplayName" => minimum_commitment_invoice_display_name,
+      "amountCents" => minimum_commitment_amount_cents.to_s
+    )
+    expect(result_data["minimumCommitment"]["taxes"].count).to eq(1)
+
+    thresholds = result_data["usageThresholds"].sort_by { |threshold| threshold["thresholdDisplayName"] }
+    expect(thresholds).to include hash_including(
+      "thresholdDisplayName" => "Threshold 1",
+      "amountCents" => "100",
+      "recurring" => false
+    )
+    expect(thresholds).to include hash_including(
+      "thresholdDisplayName" => "Threshold 2",
+      "amountCents" => "200",
+      "recurring" => false
+    )
+    expect(thresholds).to include hash_including(
+      "thresholdDisplayName" => "Threshold 3 Recurring",
+      "amountCents" => "1",
+      "recurring" => true
+    )
   end
 end

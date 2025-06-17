@@ -514,6 +514,19 @@ type AppliedCoupon {
   terminatedAt: ISO8601DateTime!
 }
 
+type AppliedPricingUnit {
+  conversionRate: Float!
+  createdAt: ISO8601DateTime!
+  id: ID!
+  pricingUnit: PricingUnit!
+  updatedAt: ISO8601DateTime!
+}
+
+input AppliedPricingUnitInput {
+  code: String!
+  conversionRate: Float!
+}
+
 interface AppliedTax {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
@@ -770,6 +783,7 @@ type CashfreeProvider {
 }
 
 type Charge {
+  appliedPricingUnit: AppliedPricingUnit
   billableMetric: BillableMetric!
   chargeModel: ChargeModelEnum!
   createdAt: ISO8601DateTime!
@@ -818,6 +832,7 @@ type ChargeFilterUsage {
 scalar ChargeFilterValues
 
 input ChargeInput {
+  appliedPricingUnit: AppliedPricingUnitInput
   billableMetricId: ID!
   chargeModel: ChargeModelEnum!
   filters: [ChargeFilterInput!]
@@ -4886,6 +4901,7 @@ type Fee implements InvoiceItem {
   itemName: String!
   itemType: String!
   preciseUnitAmount: Float!
+  pricingUnitUsage: PricingUnitUsage
   subscription: Subscription
   succeededAt: ISO8601DateTime
   taxesAmountCents: BigInt!
@@ -7590,6 +7606,18 @@ type PricingUnitCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type PricingUnitUsage {
+  amountCents: BigInt!
+  conversionRate: Float!
+  createdAt: ISO8601DateTime!
+  id: ID!
+  preciseAmountCents: Float!
+  pricingUnit: PricingUnit!
+  shortName: String!
+  unitAmountCents: BigInt!
+  updatedAt: ISO8601DateTime!
 }
 
 type Properties {
