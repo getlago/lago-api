@@ -19,6 +19,7 @@ class Subscription < ApplicationRecord
   has_many :usage_thresholds, through: :plan
   has_many :fixed_charges, through: :plan
   has_many :add_ons, through: :fixed_charges
+  has_many :subscriptions_units_overrides, dependent: :destroy
 
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
@@ -142,6 +143,12 @@ class Subscription < ApplicationRecord
 
     # NOTE: We want unique external id per organization.
     errors.add(:external_id, :value_already_exist)
+  end
+
+  def units_override_for(chargeable)
+    subscriptions_units_overrides.find_by(
+      chargeable.is_a?(Charge) ? { charge: chargeable } : { fixed_charge: chargeable }
+    )
   end
 
   def downgrade_plan_date
