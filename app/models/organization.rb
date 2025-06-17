@@ -29,13 +29,13 @@ class Organization < ApplicationRecord
   has_many :plans
   has_many :pricing_units
   has_many :customers
-  has_many :subscriptions
+  has_many :subscriptions, through: :customers
   has_many :invoices
-  has_many :credit_notes
-  has_many :fees
+  has_many :credit_notes, through: :invoices
+  has_many :fees, through: :subscriptions
   has_many :events
   has_many :coupons
-  has_many :applied_coupons
+  has_many :applied_coupons, through: :coupons
   has_many :add_ons
   has_many :daily_usages
   has_many :invites
@@ -43,10 +43,10 @@ class Organization < ApplicationRecord
   has_many :payment_providers, class_name: "PaymentProviders::BaseProvider"
   has_many :payment_requests
   has_many :taxes
-  has_many :wallets
-  has_many :wallet_transactions
+  has_many :wallets, through: :customers
+  has_many :wallet_transactions, through: :wallets
   has_many :webhook_endpoints
-  has_many :webhooks
+  has_many :webhooks, through: :webhook_endpoints
   has_many :cached_aggregations
   has_many :data_exports
   has_many :error_details

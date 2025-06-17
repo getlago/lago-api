@@ -13,14 +13,12 @@ RSpec.describe Mutations::Invoices::FinalizeAll, type: :graphql do
     create(
       :invoice,
       :draft,
-      :with_subscriptions,
       organization:,
       customer:,
       subscriptions: [subscription],
       currency: "EUR"
     )
   end
-
   let(:subscription) do
     create(
       :subscription,

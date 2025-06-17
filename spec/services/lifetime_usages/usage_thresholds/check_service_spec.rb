@@ -16,10 +16,10 @@ RSpec.describe LifetimeUsages::UsageThresholds::CheckService, type: :service do
 
   def create_thresholds(subscription, amounts:, recurring: nil)
     amounts.each do |amount|
-      subscription.plan.usage_thresholds.create!(amount_cents: amount, organization:)
+      subscription.plan.usage_thresholds.create!(amount_cents: amount)
     end
     if recurring
-      subscription.plan.usage_thresholds.create!(amount_cents: recurring, recurring: true, organization:)
+      subscription.plan.usage_thresholds.create!(amount_cents: recurring, recurring: true)
     end
   end
 

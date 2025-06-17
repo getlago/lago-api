@@ -7,7 +7,9 @@ class Webhook < ApplicationRecord
 
   belongs_to :webhook_endpoint
   belongs_to :object, polymorphic: true, optional: true
-  belongs_to :organization
+
+  # TODO: belongs_to :organization, optional: true
+  has_one :organization, through: :webhook_endpoint
 
   enum :status, STATUS
 

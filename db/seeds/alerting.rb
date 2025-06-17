@@ -16,14 +16,9 @@ ops_bm = BillableMetric.find_or_create_by!(
   field_name: "ops_count"
 )
 
-Charge.create_with(
-  organization:,
-  charge_model: "standard",
-  amount_currency: "EUR",
-  properties: {
-    amount: "500"
-  }
-).find_or_create_by!(plan:, billable_metric: ops_bm)
+Charge.create_with(charge_model: "standard", amount_currency: "EUR", properties: {
+  amount: "500"
+}).find_or_create_by!(plan:, billable_metric: ops_bm)
 
 def create_customer_with_sub(ext_id, plan:, organization:)
   customer = FactoryBot.create(:customer, organization:, external_id: "cust_#{ext_id}")
@@ -33,8 +28,7 @@ def create_customer_with_sub(ext_id, plan:, organization:)
     status: :active,
     billing_time: :calendar,
     plan:,
-    external_id: "sub_#{ext_id}",
-    organization:
+    external_id: "sub_#{ext_id}"
   )
 end
 

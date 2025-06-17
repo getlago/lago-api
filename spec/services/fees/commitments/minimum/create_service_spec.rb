@@ -65,7 +65,7 @@ RSpec.describe Fees::Commitments::Minimum::CreateService do
         let(:taxes_amount_cents) { (commitment_fee.amount_cents * commitment_tax.rate / 100.to_f).round }
 
         before do
-          create(:commitment_applied_tax, commitment: plan.minimum_commitment, tax: commitment_tax)
+          plan.minimum_commitment.taxes << commitment_tax
         end
 
         it "creates a commitment fee" do

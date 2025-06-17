@@ -9,9 +9,9 @@ ApiKey.find_or_create_by!(organization:)
 webhook_endpoint = WebhookEndpoint.find_or_create_by!(organization:, webhook_url: "http://test.lago.dev/webhook")
 
 3.times do
-  FactoryBot.create(:webhook, :succeeded, organization:, webhook_endpoint:)
-  FactoryBot.create(:webhook, :succeeded_with_retries, organization:, webhook_endpoint:)
-  FactoryBot.create(:webhook, :failed, organization:, webhook_endpoint:)
-  FactoryBot.create(:webhook, :failed_with_retries, organization:, webhook_endpoint:)
-  FactoryBot.create(:webhook, :pending, organization:, webhook_endpoint:)
+  FactoryBot.create(:webhook, :succeeded, webhook_endpoint:)
+  FactoryBot.create(:webhook, :succeeded_with_retries, webhook_endpoint:)
+  FactoryBot.create(:webhook, :failed, webhook_endpoint:)
+  FactoryBot.create(:webhook, :failed_with_retries, webhook_endpoint:)
+  FactoryBot.create(:webhook, :pending, webhook_endpoint:)
 end

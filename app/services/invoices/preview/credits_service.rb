@@ -37,7 +37,6 @@ module Invoices
 
         credit = Credit.new(
           invoice:,
-          organization_id: invoice.organization_id,
           credit_note:,
           amount_cents: credit_amount,
           amount_currency: invoice.currency,

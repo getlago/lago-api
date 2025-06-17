@@ -9,7 +9,7 @@ module IntegrationMappings
 
     belongs_to :integration, class_name: "Integrations::BaseIntegration"
     belongs_to :mappable, polymorphic: true
-    belongs_to :organization
+    belongs_to :organization, optional: true
 
     MAPPABLE_TYPES = %i[AddOn BillableMetric].freeze
 

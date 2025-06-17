@@ -7,7 +7,6 @@ RSpec.describe UsageThreshold, type: :model do
 
   it_behaves_like "paper_trail traceable"
 
-  it { is_expected.to belong_to(:organization) }
   it { is_expected.to have_many(:applied_usage_thresholds) }
   it { is_expected.to have_many(:invoices).through(:applied_usage_thresholds) }
 

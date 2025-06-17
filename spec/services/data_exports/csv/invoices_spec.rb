@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe DataExports::Csv::Invoices do
   let(:data_export) { create :data_export, :processing, resource_query:, organization: }
 
-  let(:data_export_part) { data_export.data_export_parts.create(object_ids: [invoice.id], index: 1, organization:) }
+  let(:data_export_part) { data_export.data_export_parts.create(object_ids: [invoice.id], index: 1) }
 
   let(:resource_query) do
     {

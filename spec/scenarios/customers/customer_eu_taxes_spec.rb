@@ -208,8 +208,7 @@ describe "Add customer-specific taxes", :scenarios, type: :request do
     it "does not affect the customer taxes" do
       enable_eu_tax_management!
       billable_metric = create(:billable_metric, organization:, field_name: "item_id")
-      charge = create(:standard_charge, :pay_in_advance, billable_metric:, plan:)
-      create(:charge_applied_tax, charge:, tax: Tax.find_by(code: "lago_eu_fr_standard"))
+      create(:standard_charge, :pay_in_advance, billable_metric:, plan:, taxes: [Tax.find_by(code: "lago_eu_fr_standard")])
 
       mock_vies_check!("IT12345678901")
       create_or_update_customer(italian_attributes.merge(

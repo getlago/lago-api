@@ -14,7 +14,6 @@ RSpec.describe Invoices::RetryService, type: :service do
         :invoice,
         :failed,
         :with_tax_error,
-        :subscription,
         customer:,
         organization:,
         subscriptions: [subscription],

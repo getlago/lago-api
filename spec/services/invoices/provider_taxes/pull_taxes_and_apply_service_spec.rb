@@ -15,7 +15,6 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         :invoice,
         :pending,
         :with_tax_error,
-        :with_subscriptions,
         customer:,
         billing_entity:,
         organization:,

@@ -341,10 +341,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       let(:params) { {invoice_number: matching_credit_note.invoice.number} }
       let!(:matching_credit_note) { create(:credit_note, customer:) }
 
-      before do
-        invoice = create(:invoice, customer:, number: "FOO-01")
-        create(:credit_note, customer:, invoice:)
-      end
+      before { create(:credit_note, customer:) }
 
       it "returns credit notes with matching invoice number" do
         subject
@@ -452,10 +449,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       let(:params) { {search_term: matching_credit_note.invoice.number} }
       let!(:matching_credit_note) { create(:credit_note, customer:) }
 
-      before do
-        invoice = create(:invoice, customer:, number: "FOO-01")
-        create(:credit_note, customer:, invoice:)
-      end
+      before { create(:credit_note, customer:) }
 
       it "returns credit notes matching the search terms" do
         subject
