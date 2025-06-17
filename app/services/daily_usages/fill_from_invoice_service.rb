@@ -48,8 +48,13 @@ module DailyUsages
     attr_reader :invoice, :subscriptions
 
     def invoice_usage(subscription, invoice_subscription)
-      amount_cents = invoice.fees.charge.sum(:amount_cents)
-      taxes_amount_cents = invoice.fees.charge.sum(:taxes_amount_cents)
+      in_adv_fees = in_advance_fees(subscription, invoice_subscription)
+
+      fees = in_adv_fees.to_a +
+        invoice.fees.charge.select { |f| f.subscription_id == subscription.id && f.units.positive? }
+
+      amount_cents = in_adv_fees.sum(:amount_cents) + invoice.fees.charge.sum(:amount_cents)
+      taxes_amount_cents = in_adv_fees.sum(:taxes_amount_cents) + invoice.fees.charge.sum(:taxes_amount_cents)
       total_amount_cents = amount_cents + taxes_amount_cents
 
       OpenStruct.new(
@@ -60,7 +65,21 @@ module DailyUsages
         amount_cents:,
         total_amount_cents:,
         taxes_amount_cents:,
-        fees: invoice.fees.charge.select { |f| f.subscription_id == subscription.id && f.units.positive? }
+        fees:
+      )
+    end
+
+    def in_advance_fees(subscription, invoice_subscription)
+      Fee.charge.where(
+        subscription_id: subscription.id
+      ).where.not(
+        pay_in_advance_event_transaction_id: nil
+      ).where(
+        pay_in_advance: true
+      ).where(
+        "(properties->>'charges_from_datetime')::timestamptz = ?", invoice_subscription.charges_from_datetime&.iso8601(3)
+      ).where(
+        "(properties->>'charges_to_datetime')::timestamptz = ?", invoice_subscription.charges_to_datetime&.iso8601(3)
       )
     end
 

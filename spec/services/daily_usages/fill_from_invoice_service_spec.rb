@@ -244,4 +244,84 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
       end
     end
   end
+
+  describe "#in_advance_fees" do
+    subject(:in_advance_fees) { fill_service.send(:in_advance_fees, subscription, invoice_subscription) }
+
+    context "when invoice_subscription times have only seconds" do
+      let(:timestamp) { Time.zone.parse("2024-12-01T00:00:00") }
+      let(:end_timestamp) { Time.zone.parse("2024-12-31T23:59:59") }
+
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription: subscription,
+          invoice: invoice,
+          timestamp: timestamp,
+          from_datetime: timestamp,
+          to_datetime: end_timestamp,
+          charges_from_datetime: timestamp,
+          charges_to_datetime: end_timestamp
+        )
+      end
+
+      before do
+        create(
+          :charge_fee,
+          subscription: subscription,
+          pay_in_advance: true,
+          pay_in_advance_event_transaction_id: 1,
+          properties: {
+            "charges_from_datetime" => invoice_subscription.charges_from_datetime.iso8601,
+            "charges_to_datetime" => invoice_subscription.charges_to_datetime.iso8601
+          }
+        )
+      end
+
+      it "returns the matching in-advance fee" do
+        fees = in_advance_fees.to_a
+
+        expect(fees.count).to eq(1)
+        expect(fees.first.subscription_id).to eq(subscription.id)
+      end
+    end
+
+    context "when invoice_subscription times have miliseconds" do
+      let(:timestamp) { Time.zone.parse("2024-12-01T00:00:00.000") }
+      let(:end_timestamp) { Time.zone.parse("2024-12-31T23:59:59.000") }
+
+      let(:invoice_subscription) do
+        create(
+          :invoice_subscription,
+          subscription: subscription,
+          invoice: invoice,
+          timestamp: timestamp,
+          from_datetime: timestamp,
+          to_datetime: end_timestamp,
+          charges_from_datetime: timestamp,
+          charges_to_datetime: end_timestamp
+        )
+      end
+
+      before do
+        create(
+          :charge_fee,
+          subscription: subscription,
+          pay_in_advance: true,
+          pay_in_advance_event_transaction_id: 1,
+          properties: {
+            "charges_from_datetime" => invoice_subscription.charges_from_datetime.iso8601(3),
+            "charges_to_datetime" => invoice_subscription.charges_to_datetime.iso8601(3)
+          }
+        )
+      end
+
+      it "returns the matching in-advance fee" do
+        fees = in_advance_fees.to_a
+
+        expect(fees.count).to eq(1)
+        expect(fees.first.subscription_id).to eq(subscription.id)
+      end
+    end
+  end
 end
