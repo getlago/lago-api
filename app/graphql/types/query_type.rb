@@ -18,6 +18,7 @@ module Types
     field :api_key, resolver: Resolvers::ApiKeyResolver
     field :api_keys, resolver: Resolvers::ApiKeysResolver
     field :api_logs, resolver: Resolvers::ApiLogsResolver
+    field :api_log, resolver: Resolvers::ApiLogResolver
     field :billable_metric, resolver: Resolvers::BillableMetricResolver
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
     field :billing_entities, resolver: Resolvers::BillingEntitiesResolver

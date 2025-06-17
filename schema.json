@@ -38619,6 +38619,35 @@
               ]
             },
             {
+              "name": "apiLog",
+              "description": "Query a single api log of an organization",
+              "type": {
+                "kind": "OBJECT",
+                "name": "ApiLog",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "requestId",
+                  "description": "Uniq ID of the api log",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "apiLogs",
               "description": "Query api logs of an organization",
               "type": {

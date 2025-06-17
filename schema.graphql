@@ -7735,6 +7735,16 @@ type Query {
   apiKeys(limit: Int, page: Int): SanitizedApiKeyCollection!
 
   """
+  Query a single api log of an organization
+  """
+  apiLog(
+    """
+    Uniq ID of the api log
+    """
+    requestId: ID!
+  ): ApiLog
+
+  """
   Query api logs of an organization
   """
   apiLogs(apiKeyIds: [String!], fromDate: ISO8601Date, httpMethods: [HttpMethodEnum!], httpStatuses: [HttpStatus!], limit: Int, page: Int, requestIds: [String!], requestPaths: [String!], toDate: ISO8601Date): ApiLogCollection
