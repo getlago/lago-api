@@ -16,7 +16,7 @@ class Event < EventsRecord
   scope :from_datetime, ->(from_datetime) { where("events.timestamp >= ?", from_datetime) }
   scope :to_datetime, ->(to_datetime) { where("events.timestamp <= ?", to_datetime) }
 
-  EVENT_SOURCES = {l
+  EVENT_SOURCES = {
     usage: 0,
     fixed_charge: 1,
     base_usage: 2
