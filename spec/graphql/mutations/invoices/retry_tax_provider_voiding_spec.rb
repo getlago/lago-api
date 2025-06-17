@@ -14,12 +14,14 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding, type: :graphql do
       :invoice,
       :voided,
       :with_tax_voiding_error,
+      :subscription,
       organization:,
       customer:,
       subscriptions: [subscription],
       currency: "EUR"
     )
   end
+
   let(:subscription) do
     create(
       :subscription,

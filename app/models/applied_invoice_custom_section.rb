@@ -2,7 +2,7 @@
 
 class AppliedInvoiceCustomSection < ApplicationRecord
   belongs_to :invoice
-  belongs_to :organization, optional: true
+  belongs_to :organization
 end
 
 # == Schema Information

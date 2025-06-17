@@ -23,13 +23,14 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       organization:,
       currency: "EUR",
       issuing_date: Time.zone.at(timestamp).to_date,
-      customer: subscription.customer
+      customer:
     )
   end
 
   let(:subscription) do
     create(
       :subscription,
+      organization:,
       plan:,
       customer:,
       billing_time:,
@@ -64,7 +65,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
   let(:invoice_subscriptions) { [invoice_subscription] }
 
-  let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
+  let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
   let(:timestamp) { Time.zone.now.beginning_of_month }
   let(:started_at) { Time.zone.now - 2.years }
   let(:created_at) { started_at }
@@ -146,6 +147,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         let(:progressive_invoice) do
           create(
             :invoice,
+            :with_subscriptions,
             customer:,
             status: "finalized",
             invoice_type: :progressive_billing,
@@ -262,6 +264,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             :standard_charge,
             :pay_in_advance,
             plan: subscription.plan,
+            organization:,
             charge_model: "standard",
             invoiceable: true
           )
@@ -287,6 +290,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             :standard_charge,
             :pay_in_advance,
             plan: subscription.plan,
+            organization:,
             charge_model: "standard",
             invoiceable: true,
             billable_metric:
@@ -310,6 +314,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             :standard_charge,
             :pay_in_advance,
             plan: subscription.plan,
+            organization:,
             charge_model: "standard",
             invoiceable: false
           )
@@ -328,7 +333,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
       context "when charge is pay_in_advance, recurring and not invoiceable" do
         let(:billable_metric) do
-          create(:billable_metric, aggregation_type: "unique_count_agg", recurring: true, field_name: "item_id")
+          create(:billable_metric, organization:, aggregation_type: "unique_count_agg", recurring: true, field_name: "item_id")
         end
         let(:charge) do
           create(
@@ -354,6 +359,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           create(
             :standard_charge,
             plan: subscription.plan,
+            organization:,
             charge_model: "standard",
             invoiceable: false
           )
@@ -423,7 +429,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
             plan: subscription.plan,
             charge_model: "standard",
             invoiceable: false,
-            billable_metric: create(:billable_metric, aggregation_type: "unique_count_agg", recurring: true, field_name: "item_id")
+            billable_metric: create(:billable_metric, organization:, aggregation_type: "unique_count_agg", recurring: true, field_name: "item_id")
           )
         end
 

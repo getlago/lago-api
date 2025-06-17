@@ -127,13 +127,9 @@ RSpec.describe Api::V1::PaymentsController, type: :request do
     end
 
     context "when payment for a payment request exits" do
-      let(:payment_request) { create(:payment_request, customer:, organization:) }
+      let(:payment_request) { create(:payment_request, customer:, organization:, invoices: [invoice]) }
       let(:payment) { create(:payment, payable: payment_request) }
       let(:id) { payment.id }
-
-      before do
-        create(:payment_request_applied_invoice, invoice:, payment_request:)
-      end
 
       include_examples "requires API permission", "payment", "read"
 
