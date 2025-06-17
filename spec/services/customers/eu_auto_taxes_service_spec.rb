@@ -55,7 +55,7 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
 
       context "when VIES check raises an error" do
         before do
-          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/ AnyInstance
+          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
             .and_raise(Valvat::RateLimitError.new("rate limit reached", nil))
           customer.update!(country: "DE")
         end

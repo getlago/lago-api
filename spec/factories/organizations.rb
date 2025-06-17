@@ -30,8 +30,7 @@ FactoryBot.define do
 
     trait :with_invoice_custom_sections do
       after :create do |org|
-        sections = create_list(:invoice_custom_section, 3, organization: org)
-        org.invoice_custom_section_selections = sections
+        create_list(:invoice_custom_section, 3, organization: org)
       end
     end
 

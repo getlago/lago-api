@@ -5,8 +5,7 @@ class Wallet < ApplicationRecord
   include Currencies
 
   belongs_to :customer, -> { with_discarded }
-
-  has_one :organization, through: :customer
+  belongs_to :organization
 
   has_many :wallet_transactions
   has_many :recurring_transaction_rules
@@ -71,6 +70,7 @@ end
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
 #  last_balance_sync_at                :datetime
 #  last_consumed_credit_at             :datetime
+#  last_ongoing_balance_sync_at        :datetime
 #  lock_version                        :integer          default(0), not null
 #  name                                :string
 #  ongoing_balance_cents               :bigint           default(0), not null

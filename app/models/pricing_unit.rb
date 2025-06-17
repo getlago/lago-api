@@ -2,6 +2,7 @@
 
 class PricingUnit < ApplicationRecord
   belongs_to :organization
+  has_many :pricing_unit_usages, dependent: :destroy
 
   validates :name, :code, :short_name, presence: true
   validates :code, uniqueness: {scope: :organization_id}

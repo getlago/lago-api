@@ -2,6 +2,7 @@
 
 FactoryBot.define do
   factory :api_key do
+    name { "API Key" }
     organization { association(:organization, api_keys: []) }
 
     trait :expired do

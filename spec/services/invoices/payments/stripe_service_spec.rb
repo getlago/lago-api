@@ -234,6 +234,7 @@ RSpec.describe Invoices::Payments::StripeService, type: :service do
 
         aggregate_failures do
           expect(result).to be_success
+          expect(result.payment.organization).to eq(organization)
           expect(result.payment.status).to eq("succeeded")
           expect(result.payment.payable_payment_status).to eq("succeeded")
           expect(result.invoice.reload).to have_attributes(

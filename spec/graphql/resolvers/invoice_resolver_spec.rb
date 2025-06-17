@@ -81,6 +81,20 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
               }
               filters { invoiceDisplayName values }
             }
+            pricingUnitUsage {
+              id
+              amountCents
+              conversionRate
+              preciseAmountCents
+              shortName
+              unitAmountCents
+              pricingUnit {
+                id
+                code
+                name
+                shortName
+              }
+            }
           }
         }
       }
@@ -144,6 +158,46 @@ RSpec.describe Resolvers::InvoiceResolver, type: :graphql do
 
     fee = result["data"]["invoice"]["invoiceSubscriptions"][0]["fees"][0]
     expect(fee["chargeFilter"]["values"][billable_metric_filter.key]).to eq(charge_filter_value.values)
+  end
+
+  it "includes pricing unit usage when available" do
+    pricing_unit = create(:pricing_unit, organization:)
+    billable_metric = create(:billable_metric, organization:)
+    charge = create(:standard_charge, billable_metric:)
+    applied_pricing_unit = create(:applied_pricing_unit, pricing_unit:, conversion_rate: 2.5)
+
+    pricing_unit_usage = build(
+      :pricing_unit_usage,
+      pricing_unit:,
+      organization:,
+      short_name: pricing_unit.short_name,
+      conversion_rate: applied_pricing_unit.conversion_rate,
+      amount_cents: 40,
+      precise_amount_cents: 40.0,
+      unit_amount_cents: 20
+    )
+
+    fee_with_usage = create(:fee, subscription:, invoice:, charge:, amount_cents: 100, organization:, pricing_unit_usage:)
+
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query:,
+      variables: {id: invoice.id}
+    )
+
+    fees = result["data"]["invoice"]["fees"]
+    fee_data = fees.find { |f| f["id"] == fee_with_usage.id }
+
+    expect(fee_data["pricingUnitUsage"]).to be_present
+    expect(fee_data["pricingUnitUsage"]["amountCents"]).to eq(pricing_unit_usage.amount_cents.to_s)
+    expect(fee_data["pricingUnitUsage"]["preciseAmountCents"]).to eq(pricing_unit_usage.precise_amount_cents)
+    expect(fee_data["pricingUnitUsage"]["unitAmountCents"]).to eq(pricing_unit_usage.unit_amount_cents.to_s)
+    expect(fee_data["pricingUnitUsage"]["conversionRate"]).to eq(pricing_unit_usage.conversion_rate)
+    expect(fee_data["pricingUnitUsage"]["shortName"]).to eq(pricing_unit_usage.short_name)
+    expect(fee_data["pricingUnitUsage"]["pricingUnit"]["code"]).to eq(pricing_unit.code)
+    expect(fee_data["pricingUnitUsage"]["pricingUnit"]["name"]).to eq(pricing_unit.name)
   end
 
   context "when invoice is not found" do

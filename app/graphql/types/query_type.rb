@@ -76,6 +76,8 @@ module Types
     field :payments, resolver: Resolvers::PaymentsResolver
     field :plan, resolver: Resolvers::PlanResolver
     field :plans, resolver: Resolvers::PlansResolver
+    field :pricing_unit, resolver: Resolvers::PricingUnitResolver
+    field :pricing_units, resolver: Resolvers::PricingUnitsResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver

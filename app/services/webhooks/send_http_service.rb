@@ -2,6 +2,8 @@
 
 module Webhooks
   class SendHttpService < ::BaseService
+    Result = BaseResult
+
     def initialize(webhook:)
       @webhook = webhook
 
@@ -15,6 +17,8 @@ module Webhooks
       response = http_client.post_with_response(webhook.payload, webhook.generate_headers)
 
       mark_webhook_as_succeeded(response)
+
+      result
     rescue LagoHttpClient::HttpError,
       Net::OpenTimeout,
       Net::ReadTimeout,
@@ -28,12 +32,11 @@ module Webhooks
       EOFError => e
       mark_webhook_as_failed(e)
 
-      if webhook.retries >= ENV.fetch("LAGO_WEBHOOK_ATTEMPTS", 3).to_i
-        # Revert until completely removed or fixed
-        # Webhooks::NotifyFailureService.call(webhook: webhook)
-      else
+      if webhook.retries < ENV.fetch("LAGO_WEBHOOK_ATTEMPTS", 3).to_i
         SendHttpWebhookJob.set(wait: wait_value).perform_later(webhook)
       end
+
+      result
     end
 
     private

@@ -21,6 +21,7 @@ module IntegrationCollectionMappings
         mapping_type: params[:mapping_type]
       )
 
+      integration_collection_mapping.organization = integration.organization
       integration_collection_mapping.external_id = params[:external_id] if params.key?(:external_id)
       if params.key?(:external_account_code)
         integration_collection_mapping.external_account_code = params[:external_account_code]

@@ -48,17 +48,21 @@ FactoryBot.define do
       status { :pending }
     end
 
-    trait :subscription do
+    trait :with_subscriptions do
       transient do
         subscriptions { [create(:subscription)] }
       end
 
-      invoice_type { :subscription }
       after :create do |invoice, evaluator|
         evaluator.subscriptions.each do |subscription|
           create(:invoice_subscription, :boundaries, invoice:, subscription:)
         end
       end
+    end
+
+    trait :subscription do
+      invoice_type { :subscription }
+      with_subscriptions
     end
 
     trait :self_billed do

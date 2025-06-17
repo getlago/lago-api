@@ -153,7 +153,7 @@ module Events
           <<-SQL
             SELECT *
             FROM (
-                VALUES #{values.map { "(#{_1})" }.join(", ")}
+                VALUES #{values.map { "(#{it})" }.join(", ")}
             ) AS t(#{group_names}, timestamp, difference, created_at)
           SQL
         end
@@ -179,7 +179,7 @@ module Events
           <<-SQL
             SELECT *
             FROM (
-              VALUES #{values.map { "(#{_1})" }.join(", ")}
+              VALUES #{values.map { "(#{it})" }.join(", ")}
             ) AS t(#{group_names}, timestamp, difference, created_at)
           SQL
         end

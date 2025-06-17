@@ -32,7 +32,7 @@ Sidekiq.configure_server do |config|
   config.on(:startup) do
     Sidekiq.logger.info "Starting liveness server on #{LIVENESS_PORT}"
     Thread.start do
-      server = TCPServer.new("localhost", LIVENESS_PORT)
+      server = TCPServer.new("0.0.0.0", LIVENESS_PORT)
       loop do
         Thread.start(server.accept) do |socket|
           request = socket.gets

@@ -39,7 +39,7 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
         let(:tax3) { create(:tax, organization:, code: "TAX_CODE_3") }
 
         before do
-          billing_entity.taxes << tax3
+          create(:billing_entity_applied_tax, billing_entity:, tax: tax3)
         end
 
         it "removes the other tax and applies the new ones" do
@@ -79,9 +79,13 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
         let(:tax_codes) { ["tax_code_1", "TAX_CODE_2"] }
 
         it "matches tax codes case-insensitively" do
-          service.call
+          result = service.call
 
-          expect(billing_entity.taxes).to eq([tax1, tax2])
+          expect(result).to be_success
+          expect(result.taxes).to eq([tax1, tax2])
+          expect(result.applied_taxes.count).to eq(2)
+
+          expect(billing_entity.applied_taxes.pluck(:organization_id).uniq).to eq([organization.id])
         end
       end
     end
@@ -90,13 +94,18 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
       let(:tax_codes) { [] }
 
       before do
-        billing_entity.taxes = [tax1, tax2]
+        create(:billing_entity_applied_tax, billing_entity:, tax: tax1)
+        create(:billing_entity_applied_tax, billing_entity:, tax: tax2)
       end
 
       it "removes taxes from the billing entity" do
-        service.call
+        result = service.call
 
-        expect(billing_entity.taxes).to be_empty
+        expect(result).to be_success
+        expect(result.taxes).to be_empty
+        expect(result.applied_taxes).to be_empty
+
+        expect(billing_entity.applied_taxes).to be_empty
       end
     end
 
@@ -104,13 +113,18 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
       let(:tax_codes) { nil }
 
       before do
-        billing_entity.taxes = [tax1, tax2]
+        create(:billing_entity_applied_tax, billing_entity:, tax: tax1)
+        create(:billing_entity_applied_tax, billing_entity:, tax: tax2)
       end
 
       it "removes taxes from the billing entity" do
-        service.call
+        result = service.call
 
-        expect(billing_entity.taxes).to be_empty
+        expect(result).to be_success
+        expect(result.taxes).to be_empty
+        expect(result.applied_taxes).to be_empty
+
+        expect(billing_entity.applied_taxes).to be_empty
       end
     end
 

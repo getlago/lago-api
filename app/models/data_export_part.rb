@@ -2,7 +2,7 @@
 
 class DataExportPart < ApplicationRecord
   belongs_to :data_export
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   scope :completed, -> { where(completed: true) }
 end

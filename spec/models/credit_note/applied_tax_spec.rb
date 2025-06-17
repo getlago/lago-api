@@ -8,6 +8,7 @@ RSpec.describe CreditNote::AppliedTax, type: :model do
   describe "associations" do
     it { is_expected.to belong_to(:credit_note) }
     it { is_expected.to belong_to(:tax).optional }
+    it { is_expected.to belong_to(:organization) }
   end
 
   it_behaves_like "paper_trail traceable"

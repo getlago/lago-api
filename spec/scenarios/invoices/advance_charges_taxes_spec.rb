@@ -61,8 +61,8 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
           expect(created_fee.amount_cents).to eq((21 - i) * 100)
           expect(created_fee.taxes_rate).to eq(tax_rate_1 + tax_rate_2)
           expect(created_fee.applied_taxes.count).to eq(2)
-          expect(created_fee.applied_taxes.find { _1.tax_code == "tax-1" }.amount_cents).to eq (created_fee.amount_cents * tax_rate_1 / 100).round
-          expect(created_fee.applied_taxes.find { _1.tax_code == "tax-2" }.amount_cents).to eq (created_fee.amount_cents * tax_rate_2 / 100).round
+          expect(created_fee.applied_taxes.find { it.tax_code == "tax-1" }.amount_cents).to eq (created_fee.amount_cents * tax_rate_1 / 100).round
+          expect(created_fee.applied_taxes.find { it.tax_code == "tax-2" }.amount_cents).to eq (created_fee.amount_cents * tax_rate_2 / 100).round
         end
       end
 
@@ -99,8 +99,8 @@ describe "Advance Charges Invoices Scenarios", :scenarios, type: :request do
             total_tax_2 += applied_tax.amount_cents
           end
         end
-        expect(advance_charges_invoice.applied_taxes.find { _1.tax_code == "tax-1" }.amount_cents).to eq total_tax_1
-        expect(advance_charges_invoice.applied_taxes.find { _1.tax_code == "tax-2" }.amount_cents).to eq total_tax_2
+        expect(advance_charges_invoice.applied_taxes.find { it.tax_code == "tax-1" }.amount_cents).to eq total_tax_1
+        expect(advance_charges_invoice.applied_taxes.find { it.tax_code == "tax-2" }.amount_cents).to eq total_tax_2
       end
     end
   end

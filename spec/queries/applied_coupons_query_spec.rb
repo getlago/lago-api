@@ -11,45 +11,44 @@ RSpec.describe AppliedCouponsQuery, type: :query do
   let(:pagination) { nil }
   let(:filters) { {} }
 
-  let(:customer) { create(:customer, organization:) }
-  let(:coupon) { create(:coupon, organization:) }
+  let(:customer_1) { create(:customer, organization:) }
+  let(:coupon_1) { create(:coupon, organization:) }
+  let(:customer_2) { create(:customer, organization:) }
+  let(:coupon_2) { create(:coupon, organization:) }
 
-  let(:applied_coupon) { create(:applied_coupon, coupon:, customer:) }
-
-  before { applied_coupon }
+  let!(:applied_coupon_1) { create(:applied_coupon, coupon: coupon_1, customer: customer_1) }
+  let!(:applied_coupon_2) { create(:applied_coupon, coupon: coupon_2, customer: customer_2) }
 
   it "returns a list of applied_coupons" do
     expect(result).to be_success
-    expect(result.applied_coupons.count).to eq(1)
-    expect(result.applied_coupons).to eq([applied_coupon])
+    expect(result.applied_coupons.count).to eq(2)
+    expect(result.applied_coupons).to eq([applied_coupon_2, applied_coupon_1])
   end
 
   context "when applied coupons have the same values for the ordering criteria" do
-    let(:applied_coupon_2) do
+    let!(:applied_coupon_3) do
       create(
         :applied_coupon,
-        coupon:,
-        customer:,
+        coupon: coupon_2,
+        customer: customer_2,
         id: "00000000-0000-0000-0000-000000000000",
-        created_at: applied_coupon.created_at
+        created_at: applied_coupon_2.created_at
       )
     end
 
-    before { applied_coupon_2 }
-
     it "returns a consistent list" do
       expect(result).to be_success
-      expect(result.applied_coupons.count).to eq(2)
-      expect(result.applied_coupons).to eq([applied_coupon_2, applied_coupon])
+      expect(result.applied_coupons.count).to eq(3)
+      expect(result.applied_coupons).to eq([applied_coupon_3, applied_coupon_2, applied_coupon_1])
     end
   end
 
   context "when customer is deleted" do
-    let(:customer) { create(:customer, :deleted, organization:) }
+    let(:customer_1) { create(:customer, :deleted, organization:) }
 
     it "filters the applied_coupons" do
       expect(result).to be_success
-      expect(result.applied_coupons.count).to eq(0)
+      expect(result.applied_coupons.count).to eq(1)
     end
   end
 
@@ -64,11 +63,12 @@ RSpec.describe AppliedCouponsQuery, type: :query do
   end
 
   context "with customer filter" do
-    let(:filters) { {external_customer_id: customer.external_id} }
+    let(:filters) { {external_customer_id: customer_1.external_id} }
 
     it "applies the filter" do
       expect(result).to be_success
       expect(result.applied_coupons.count).to eq(1)
+      expect(result.applied_coupons).to eq([applied_coupon_1])
     end
   end
 
@@ -78,6 +78,25 @@ RSpec.describe AppliedCouponsQuery, type: :query do
     it "applies the filter" do
       expect(result).to be_success
       expect(result.applied_coupons.count).to eq(0)
+    end
+  end
+
+  context "with coupon code filter" do
+    let(:filters) { {coupon_code: [coupon_2.code]} }
+
+    it "applies the filter for multiple codes" do
+      expect(result).to be_success
+      expect(result.applied_coupons.count).to eq(1)
+      expect(result.applied_coupons).to match_array([applied_coupon_2])
+    end
+
+    context "when coupon code is not found" do
+      let(:filters) { {coupon_code: "nonexistent"} }
+
+      it "returns an empty list" do
+        expect(result).to be_success
+        expect(result.applied_coupons.count).to eq(0)
+      end
     end
   end
 end

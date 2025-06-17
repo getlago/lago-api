@@ -12,7 +12,7 @@ module ApiKeys
     end
 
     def self.expire_all_cache(organization)
-      organization.api_keys.each { expire_cache(_1.value) }
+      organization.api_keys.each { expire_cache(it.value) }
     end
 
     def call
