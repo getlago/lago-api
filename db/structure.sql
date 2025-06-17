@@ -1901,7 +1901,8 @@ CREATE TABLE public.events (
     deleted_at timestamp(6) without time zone,
     external_customer_id character varying,
     external_subscription_id character varying,
-    precise_total_amount_cents numeric(40,15)
+    precise_total_amount_cents numeric(40,15),
+    source integer DEFAULT 0 NOT NULL
 )
 WITH (autovacuum_vacuum_scale_factor='0.005');
 
