@@ -99,10 +99,9 @@ Rails.application.routes.draw do
       end
     end
   end
-
   resources :webhooks, only: [] do
     post "stripe/:organization_id", to: "webhooks#stripe", on: :collection, as: :stripe
-    
+
     post "cashfree/:organization_id", to: "webhooks#cashfree", on: :collection, as: :cashfree
     post "flutterwave/:organization_id", to: "webhooks#flutterwave", on: :collection, as: :flutterwave
     post "gocardless/:organization_id", to: "webhooks#gocardless", on: :collection, as: :gocardless
