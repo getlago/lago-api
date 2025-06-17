@@ -45,4 +45,14 @@ RSpec.describe Customers::RetryViesCheckJob, type: :job do
         .with(customer: customer, tax_codes: ["lago_eu_fr_standard"])
     end
   end
+
+  context "when valvat has an error" do
+    before do
+      allow_any_instance_of(Valvat).to receive(:exists?).and_raise(Valvat::Timeout.new("Timeout", "dummy")) # rubocop:disable RSpec/AnyInstance
+    end
+
+    it "applies the taxes and enqueues another job" do
+      expect { described_class.perform_now(customer.id) }.to have_enqueued_job(described_class)
+    end
+  end
 end
