@@ -34,7 +34,9 @@ module Customers
     def check_vies
       return nil if customer.tax_identification_number.blank?
 
-      response = Valvat.new(customer.tax_identification_number).exists?(detail: true)
+      # Just errors extended from Valvat::Lookup are raised, while Maintenances are not.
+      # https://github.com/yolk/valvat/blob/master/README.md#handling-of-maintenance-errors
+      response = Valvat.new(customer.tax_identification_number).exists?(detail: true, raise_error: true)
 
       after_commit { SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: response.presence || error_vies_check) }
 
