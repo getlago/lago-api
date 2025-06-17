@@ -2,8 +2,7 @@
 
 class SubscriptionsUnitsOverride < ApplicationRecord
   belongs_to :subscription
-  belongs_to :fixed_charge, optional: true
-  belongs_to :charge, optional: true
+  belongs_to :fixed_charge
 
   validates :units, presence: true
 end
