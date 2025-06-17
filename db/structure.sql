@@ -260,6 +260,7 @@ DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organizatio
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_taxes_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_units_overrides_on_subscription_id;
+DROP INDEX IF EXISTS public.index_subscriptions_units_overrides_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_units_overrides_on_fixed_charge_id;
 DROP INDEX IF EXISTS public.index_subscriptions_units_overrides_on_charge_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_status;
@@ -3588,7 +3589,8 @@ CREATE TABLE public.subscriptions_units_overrides (
     fixed_charge_id uuid,
     charge_id uuid,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -6951,6 +6953,13 @@ CREATE INDEX index_subscriptions_units_overrides_on_fixed_charge_id ON public.su
 
 
 --
+-- Name: index_subscriptions_units_overrides_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_units_overrides_on_organization_id ON public.subscriptions_units_overrides USING btree (organization_id);
+
+
+--
 -- Name: index_subscriptions_units_overrides_on_subscription_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8863,6 +8872,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250617164346'),
 ('20250617142428'),
 ('20250617093232'),
 ('20250617092222'),
