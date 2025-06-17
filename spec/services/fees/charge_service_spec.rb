@@ -17,6 +17,7 @@ RSpec.describe Fees::ChargeService do
   let(:subscription) do
     create(
       :subscription,
+      organization:,
       status: :active,
       started_at: Time.zone.parse("2022-03-15"),
       customer:

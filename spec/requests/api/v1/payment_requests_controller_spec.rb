@@ -97,9 +97,8 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
       let(:customer) { create(:customer, organization:) }
 
       it "returns customer's payment requests", :aggregate_failures do
-        first_payment_request = create(:payment_request, customer:)
         invoice = create(:invoice, customer:)
-        create(:payment_request_applied_invoice, invoice:, payment_request: first_payment_request)
+        first_payment_request = create(:payment_request, customer:, invoices: [invoice])
         create(:payment_request)
 
         subject

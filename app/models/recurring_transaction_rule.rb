@@ -4,7 +4,7 @@ class RecurringTransactionRule < ApplicationRecord
   include PaperTrailTraceable
 
   belongs_to :wallet
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   STATUSES = [
     :active,

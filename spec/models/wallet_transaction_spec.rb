@@ -7,6 +7,7 @@ RSpec.describe WalletTransaction, type: :model do
     it { is_expected.to belong_to(:wallet) }
     it { is_expected.to belong_to(:invoice).optional }
     it { is_expected.to belong_to(:credit_note).optional }
+    it { is_expected.to belong_to(:organization) }
   end
 
   describe "enums" do
