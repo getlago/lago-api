@@ -36,6 +36,7 @@ module Invoices
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription, boundaries)
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
+          create_fixed_charges_fees(subscription, boundaries)
           create_recurring_non_invoiceable_fees(subscription, boundaries) if should_create_recurring_non_invoiceable_fees?(subscription)
           create_minimum_commitment_true_up_fee(invoice_subscription) if should_create_minimum_commitment_true_up_fee?(invoice_subscription)
         end
@@ -119,6 +120,28 @@ module Invoices
           bypass_aggregation = !received_event_codes.include?(charge.billable_metric.code)
           Fees::ChargeService.call(invoice:, charge:, subscription:, boundaries:, context:, bypass_aggregation:).raise_if_error!
         end
+    end
+
+    def create_fixed_charges_fees(subscription, boundaries)
+      return unless charge_boundaries_valid?(boundaries)
+
+      subscription
+        .fixed_charges
+        .find_each do |fixed_charge|
+        next unless should_create_fixed_charge_fee?(fixed_charge, subscription)
+
+        Fees::FixedChargeService.call!(
+          invoice:,
+          fixed_charge:,
+          subscription:,
+          boundaries:,
+          context:,
+        )
+      end
+    end
+
+    def should_create_fixed_charge_fee?(fixed_charge, subscription)
+      true
     end
 
     def should_not_create_charge_fee?(charge, subscription)
