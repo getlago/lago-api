@@ -41,7 +41,8 @@ module Customers
       after_commit { SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: response.presence || error_vies_check) }
 
       response
-    rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester, Valvat::MemberStateUnavailable => e
+    rescue Valvat::RateLimitError, Valvat::Timeout, Valvat::BlockedError, Valvat::InvalidRequester,
+      Valvat::ServiceUnavailable, Valvat::MemberStateUnavailable => e
       after_commit do
         SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: error_vies_check.merge(error: e.message))
         # Enqueue a job to retry the VIES check after a delay

@@ -91,6 +91,30 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
         end
 
         it "enqueues RetryViesCheckJob" do
+          eu_tax_service.call
+          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(25.seconds.from_now..35.seconds.from_now).with(customer.id).once
+        end
+      end
+
+      context "when VIES check raises ServiceUnavailable error" do
+        before do
+          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
+            .and_raise(Valvat::ServiceUnavailable.new("service unavailable", nil))
+          customer.update!(country: "DE")
+        end
+
+        it "returns the default tax code" do
+          result = eu_tax_service.call
+
+          expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
+            valid: false,
+            valid_format: true,
+            error: "The  web service returned the error: service unavailable"
+          }).once
+        end
+
+        it "enqueues RetryViesCheckJob" do
           spy = class_double(Customers::RetryViesCheckJob, perform_later: true).as_null_object
           allow(Customers::RetryViesCheckJob).to receive(:set).with(wait: 30.seconds).and_return(spy)
 
