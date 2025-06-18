@@ -63,12 +63,13 @@ module Api
                 :usage_thresholds,
                 :taxes,
                 :minimum_commitment,
+                :fixed_charges,
                 charges: {filters: {values: :billable_metric_filter}}
               ),
               ::V1::PlanSerializer,
               collection_name: "plans",
               meta: pagination_metadata(result.plans),
-              includes: %i[charges usage_thresholds taxes minimum_commitment]
+              includes: %i[charges fixed_charges usage_thresholds taxes minimum_commitment]
             )
           )
         else
@@ -90,7 +91,9 @@ module Api
           :trial_period,
           :pay_in_advance,
           :bill_charges_monthly,
+          :bill_fixed_charges_monthly,
           :cascade_updates,
+          :fixed_charges_affect_immediately,
           tax_codes: [],
           minimum_commitment: [
             :id,
@@ -122,6 +125,18 @@ module Api
             },
             {tax_codes: []}
           ],
+          fixed_charges: [
+            :id,
+            :invoice_display_name,
+            :add_on_id,
+            :charge_model,
+            :pay_in_advance,
+            :prorated,
+            :units,
+            {
+              properties: {}
+            }
+          ],
           usage_thresholds: [
             :id,
             :threshold_display_name,
@@ -136,7 +151,7 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: "plan",
-            includes: %i[charges usage_thresholds taxes minimum_commitment]
+            includes: %i[charges fixed_charges usage_thresholds taxes minimum_commitment]
           )
         )
       end

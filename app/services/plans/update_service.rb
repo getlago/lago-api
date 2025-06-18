@@ -33,12 +33,20 @@ module Plans
         plan.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
         plan.trial_period = params[:trial_period] if params.key?(:trial_period)
         plan.bill_charges_monthly = bill_charges_monthly?
+        plan.bill_fixed_charges_monthly = bill_fixed_charges_monthly?
       end
 
       if params[:charges].present?
         metric_ids = params[:charges].map { |c| c[:billable_metric_id] }.uniq
         if metric_ids.present? && organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
           return result.not_found_failure!(resource: "billable_metrics")
+        end
+      end
+
+      if params[:fixed_charges].present?
+        add_on_ids = params[:fixed_charges].map { |c| c[:add_on_id] }.uniq
+        if add_on_ids.present? && organization.add_ons.where(id: add_on_ids).count != add_on_ids.count
+          return result.not_found_failure!(resource: "add_ons")
         end
       end
 
@@ -51,6 +59,7 @@ module Plans
         end
 
         process_charges(plan, params[:charges]) if params[:charges]
+        process_fixed_charges(plan, params[:fixed_charges]) if params[:fixed_charges]
 
         if params.key?(:usage_thresholds) && License.premium?
           Plans::UpdateUsageThresholdsService.call(plan:, usage_thresholds_params: params[:usage_thresholds])
@@ -86,6 +95,12 @@ module Plans
       return unless params[:interval]&.to_sym == :yearly
 
       params[:bill_charges_monthly] || false
+    end
+
+    def bill_fixed_charges_monthly?
+      return unless params[:interval]&.to_sym == :yearly
+
+      params[:bill_fixed_charges_monthly] || false
     end
 
     def cascade_subscription_fee_update(old_amount_cents)
@@ -125,6 +140,35 @@ module Plans
         old_parent_attrs:,
         old_parent_filters_attrs:,
         old_parent_applied_pricing_unit_attrs:
+      )
+    end
+
+    def cascade_fixed_charge_creation(fixed_charge, payload_fixed_charge, fixed_charges_affect_immediately)
+      return unless cascade?
+      return if plan.children.empty?
+
+      FixedCharges::CreateChildrenJob.perform_later(fixed_charge:, payload: payload_fixed_charge)
+    end
+
+    def cascade_fixed_charge_removal(fixed_charge)
+      return unless cascade?
+      return if plan.children.empty?
+
+      FixedCharges::DestroyChildrenJob.perform_later(fixed_charge.id)
+    end
+
+    def cascade_fixed_charge_update(fixed_charge, payload_fixed_charge, fixed_charges_affect_immediately)
+      return unless cascade?
+      return if plan.children.empty?
+
+      old_parent_attrs = fixed_charge.attributes
+      old_parent_properties_attrs = fixed_charge.properties
+
+      FixedCharges::UpdateChildrenJob.perform_later(
+        params: payload_fixed_charge.deep_stringify_keys,
+        old_parent_attrs:,
+        old_parent_properties_attrs:,
+        fixed_charges_affect_immediately:
       )
     end
 
@@ -187,6 +231,28 @@ module Plans
       end
     end
 
+    def process_fixed_charges(plan, params_fixed_charges)
+      fixed_charges_affect_immediately = ActiveModel::Type::Boolean.new.cast(params[:fixed_charges_affect_immediately])
+      created_fixed_charges_ids = []
+
+      hash_fixed_charges = params_fixed_charges.map { |c| c.to_h.deep_symbolize_keys }
+      hash_fixed_charges.each do |payload_fixed_charge|
+        fixed_charge = plan.fixed_charges.find_by(id: payload_fixed_charge[:id])
+
+        if fixed_charge
+          cascade_fixed_charge_update(fixed_charge, payload_fixed_charge, fixed_charges_affect_immediately)
+          FixedCharges::UpdateService.call(fixed_charge:, params: payload_fixed_charge, fixed_charges_affect_immediately:).raise_if_error!
+
+          next
+        end
+
+        create_fixed_charge_result = FixedCharges::CreateService.call!(plan:, params: payload_fixed_charge, fixed_charges_affect_immediately:)
+
+        after_commit { cascade_fixed_charge_creation(create_fixed_charge_result.fixed_charge, payload_fixed_charge, fixed_charges_affect_immediately) }
+        created_fixed_charges_ids.push(create_fixed_charge_result.fixed_charge.id)
+      end
+
+    end
     # NOTE: We should remove pending subscriptions
     #       if plan has been downgraded but amount cents became less than downgraded value. This pending subscription
     #       is not relevant in this case and downgrade should be ignored
