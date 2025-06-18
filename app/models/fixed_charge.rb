@@ -5,6 +5,9 @@ class FixedCharge < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
+  # NOTE: These columns were removed in the scoping phase.
+  self.ignored_columns = %i[recurring billing_period_duration billing_period_duration_unit interval]
+
   belongs_to :organization
   # TODO: We create plan on organization, it will not have billing_entity....
   # and fixed charge belong to plan, so it won't have billing_entity
@@ -33,7 +36,7 @@ class FixedCharge < ApplicationRecord
 
   CHARGE_MODELS = {
     standard: "standard",
-    graduated: "graduated",
+    graduated: "graduated"
   }
 
   # INTERVALS = {

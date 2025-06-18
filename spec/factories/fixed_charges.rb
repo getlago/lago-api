@@ -1,19 +1,27 @@
 FactoryBot.define do
   factory :fixed_charge do
-    organization { nil }
-    billing_entity { nil }
-    plan { nil }
-    add_on { nil }
-    parent { nil }
-    charge_model { "MyString" }
-    properties { "" }
-    invoice_display_name { "MyString" }
-    pay_in_advance { false }
-    prorated { false }
-    recurring { false }
-    billing_period_duration { 1 }
-    billing_period_duration_unit { "MyString" }
-    trial_period { 1 }
+    organization { plan&.organization || association(:organization) }
+    billing_entity { organization&.default_billing_entity || association(:billing_entity) }
+    plan
+    add_on
+    invoice_display_name { Faker::Fantasy::Tolkien.location }
+    trial_period { 0 }
     untis { 1 }
+    pay_in_advance { false }
+
+    trait :standard do
+      charge_model { "standard" }
+      properties do
+        {}
+      end
+    end
+
+    trait :pay_in_advance do
+      pay_in_advance { true }
+    end
+
+    trait :prorated do
+      prorated { true }
+    end
   end
 end
