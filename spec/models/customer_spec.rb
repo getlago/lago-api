@@ -71,84 +71,96 @@ RSpec.describe Customer, type: :model do
     end
 
     describe "of email" do
-      let(:customer) { build_stubbed(:customer, email:) }
+      let(:customer) { build_stubbed(:customer, email: "invalid @example.com") }
       let(:error) { customer.errors.where(:email, :invalid_email_format) }
 
-      before { customer.valid? }
-
-      context "when there is only one email" do
-        context "when email is nil" do
-          let(:email) { nil }
-
-          it "does not add an error" do
-            expect(error).not_to be_present
-          end
-        end
-
-        context "when email is empty string" do
-          let(:email) { "" }
-
-          it "does not add an error" do
-            expect(error).not_to be_present
-          end
-        end
-
-        context "when email is valid" do
-          let(:email) { "test@test-test.com" }
-
-          it "does not add an error" do
-            expect(error).not_to be_present
-          end
-        end
-
-        context "when email is invalid" do
-          let(:email) { "test@test- test.com" }
-
-          it "adds an error" do
-            expect(error).to be_present
-          end
+      context "when email is not changed" do
+        it "does not add an error" do
+          customer.valid?
+          expect(error).not_to be_present
         end
       end
 
-      context "when there are multiple comma-separated emails" do
-        context "when emails are valid" do
-          let(:email) { "test@test-test.com, test2@test.com" }
+      context "when email is changed" do
+        before do
+          customer.email = email
+          customer.valid?
+        end
 
-          it "does not add an error" do
-            expect(error).not_to be_present
+        context "when there is only one email" do
+          context "when email is nil" do
+            let(:email) { nil }
+
+            it "does not add an error" do
+              expect(error).not_to be_present
+            end
+          end
+
+          context "when email is empty string" do
+            let(:email) { "" }
+
+            it "does not add an error" do
+              expect(error).not_to be_present
+            end
+          end
+
+          context "when email is valid" do
+            let(:email) { "test@test-test.com" }
+
+            it "does not add an error" do
+              expect(error).not_to be_present
+            end
+          end
+
+          context "when email is invalid" do
+            let(:email) { "test@test- test.com" }
+
+            it "adds an error" do
+              expect(error).to be_present
+            end
           end
         end
 
-        context "when emails are not valid" do
-          context "when one of the emails is blank" do
-            let(:email) { "test@test- test.com, test2@test.com," }
+        context "when there are multiple comma-separated emails" do
+          context "when emails are valid" do
+            let(:email) { "test@test-test.com, test2@test.com" }
 
-            it "adds an error" do
-              expect(error).to be_present
+            it "does not add an error" do
+              expect(error).not_to be_present
             end
           end
 
-          context "when first one is invalid" do
-            let(:email) { "test@test- test.com, test2@test.com" }
+          context "when emails are not valid" do
+            context "when one of the emails is blank" do
+              let(:email) { "test@test- test.com, test2@test.com," }
 
-            it "adds an error" do
-              expect(error).to be_present
+              it "adds an error" do
+                expect(error).to be_present
+              end
             end
-          end
 
-          context "when second one is invalid" do
-            let(:email) { "test@test-test.com, test2@te st.com" }
+            context "when first one is invalid" do
+              let(:email) { "test@test- test.com, test2@test.com" }
 
-            it "adds an error" do
-              expect(error).to be_present
+              it "adds an error" do
+                expect(error).to be_present
+              end
             end
-          end
 
-          context "when both are invalid" do
-            let(:email) { "test@test -test.com, test2@te st.com" }
+            context "when second one is invalid" do
+              let(:email) { "test@test-test.com, test2@te st.com" }
 
-            it "adds an error" do
-              expect(error).to be_present
+              it "adds an error" do
+                expect(error).to be_present
+              end
+            end
+
+            context "when both are invalid" do
+              let(:email) { "test@test -test.com, test2@te st.com" }
+
+              it "adds an error" do
+                expect(error).to be_present
+              end
             end
           end
         end
