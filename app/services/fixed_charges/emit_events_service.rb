@@ -2,17 +2,23 @@
 
 module FixedCharges
   class EmitEventsService < BaseService
+    Result = BaseResult[:event]
+
     def initialize(fixed_charge:, subscription:, timestamp: Time.current, units: nil)
       @fixed_charge = fixed_charge
       @subscription = subscription
       @timestamp = timestamp
       @units = units || subscription.units_override_for(fixed_charge) || fixed_charge.units
+      
+      super
     end
 
     def call
-      return if units.zero?
+      return result if units.zero?
 
-      create_event(units)
+      events_result = create_event(units)
+      result.event = events_result.event
+      result
     end
 
     private
@@ -20,17 +26,21 @@ module FixedCharges
     attr_reader :fixed_charge, :subscription, :timestamp, :units
 
     def create_event(units)
-      Events::CreateService.call(
+      Events::CreateService.call!(
         organization: subscription.organization,
         params: {
-          code: fixed_charge.code,
-          transaction_id: "#{strftime(timestamp)}/#{fixed_charge.id}/#{subscription.id}",
+          code: fixed_charge.add_on.code,
+          transaction_id: "#{timestamp.strftime('%d-%m-%Y')}/#{fixed_charge.id}/#{subscription.id}",
           external_subscription_id: subscription.external_id,
           properties: {
             units: units
           },
-          timestamp: timestamp,
           source: Event.sources[:fixed_charge]
+        },
+        timestamp: timestamp,
+        metadata: {
+          fixed_charge_id: fixed_charge.id,
+          subscription_id: subscription.id
         }
       )
     end

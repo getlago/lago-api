@@ -143,6 +143,35 @@ module Plans
       )
     end
 
+    def cascade_fixed_charge_creation(fixed_charge, payload_fixed_charge)
+      return unless cascade?
+      return if plan.children.empty?
+
+      FixedCharges::CreateChildrenJob.perform_later(fixed_charge:, payload: payload_fixed_charge)
+    end
+
+    def cascade_fixed_charge_removal(fixed_charge)
+      return unless cascade?
+      return if plan.children.empty?
+
+      FixedCharges::DestroyChildrenJob.perform_later(fixed_charge.id)
+    end
+
+    def cascade_fixed_charge_update(fixed_charge, payload_fixed_charge, fixed_charges_affect_immediately)
+      return unless cascade?
+      return if plan.children.empty?
+
+      old_parent_attrs = fixed_charge.attributes
+      old_parent_properties_attrs = fixed_charge.properties
+
+      FixedCharges::UpdateChildrenJob.perform_later(
+        params: payload_fixed_charge.deep_stringify_keys,
+        old_parent_attrs:,
+        old_parent_properties_attrs:,
+        fixed_charges_affect_immediately:
+      )
+    end
+
     def cascade?
       ActiveModel::Type::Boolean.new.cast(params[:cascade_updates])
     end
@@ -203,6 +232,7 @@ module Plans
     end
 
     def process_fixed_charges(plan, params_fixed_charges)
+      fixed_charges_affect_immediately = ActiveModel::Type::Boolean.new.cast(params[:fixed_charges_affect_immediately])
       created_fixed_charges_ids = []
 
       hash_fixed_charges = params_fixed_charges.map { |c| c.to_h.deep_symbolize_keys }
@@ -210,8 +240,8 @@ module Plans
         fixed_charge = plan.fixed_charges.find_by(id: payload_fixed_charge[:id])
 
         if fixed_charge
-          cascade_fixed_charge_update(fixed_charge, payload_fixed_charge)
-          FixedCharges::UpdateService.call(fixed_charge:, params: payload_fixed_charge).raise_if_error!
+          cascade_fixed_charge_update(fixed_charge, payload_fixed_charge, fixed_charges_affect_immediately)
+          FixedCharges::UpdateService.call(fixed_charge:, params: payload_fixed_charge, fixed_charges_affect_immediately:).raise_if_error!
 
           next
         end

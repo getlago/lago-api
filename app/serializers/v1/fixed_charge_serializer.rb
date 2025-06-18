@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module V1
-  class FixedChargeSerializer < BaseSerializer
+  class FixedChargeSerializer < ModelSerializer
     def serialize
       payload = {
         lago_id: model.id,

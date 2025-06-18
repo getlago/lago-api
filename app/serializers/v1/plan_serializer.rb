@@ -43,6 +43,14 @@ module V1
       ).serialize
     end
 
+    def fixed_charges
+      ::CollectionSerializer.new(
+        model.fixed_charges,
+        ::V1::FixedChargeSerializer,
+        collection_name: "fixed_charges"
+      ).serialize
+    end
+
     def usage_thresholds
       ::CollectionSerializer.new(
         model.usage_thresholds,

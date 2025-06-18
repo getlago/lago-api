@@ -63,12 +63,13 @@ module Api
                 :usage_thresholds,
                 :taxes,
                 :minimum_commitment,
+                :fixed_charges,
                 charges: {filters: {values: :billable_metric_filter}}
               ),
               ::V1::PlanSerializer,
               collection_name: "plans",
               meta: pagination_metadata(result.plans),
-              includes: %i[charges usage_thresholds taxes minimum_commitment]
+              includes: %i[charges fixed_charges usage_thresholds taxes minimum_commitment]
             )
           )
         else
@@ -92,6 +93,7 @@ module Api
           :bill_charges_monthly,
           :bill_fixed_charges_monthly,
           :cascade_updates,
+          :fixed_charges_affect_immediately,
           tax_codes: [],
           minimum_commitment: [
             :id,
