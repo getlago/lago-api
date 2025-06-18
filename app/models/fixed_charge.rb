@@ -24,24 +24,24 @@ class FixedCharge < ApplicationRecord
 
   CHARGE_MODELS = {
     standard: "standard",
-    graduated: "graduated",
+    graduated: "graduated"
   }
 
-  INTERVALS = {
-    weekly: "weekly",
-    monthly: "monthly",
-    yearly: "yearly",
-    quarterly: "quarterly"
-  }
+  # INTERVALS = {
+  #   weekly: "weekly",
+  #   monthly: "monthly",
+  #   yearly: "yearly",
+  #   quarterly: "quarterly"
+  # }
 
-  PERIOD_DURATION_UNIT = {
-    day: "day",
-    month: "month"
-  }
+  # PERIOD_DURATION_UNIT = {
+  #   day: "day",
+  #   month: "month"
+  # }
 
   enum :charge_model, CHARGE_MODELS, default: :standard, null: false
-  enum :interval, INTERVALS, default: :monthly, null: false
-  enum :billing_period_duration_unit, PERIOD_DURATION_UNIT, default: :month, null: false
+  # enum :interval, INTERVALS, default: :monthly, null: false
+  # enum :billing_period_duration_unit, PERIOD_DURATION_UNIT, default: :month, null: false
 
   default_scope -> { kept }
 
@@ -52,26 +52,22 @@ end
 #
 # Table name: fixed_charges
 #
-#  id                           :uuid             not null, primary key
-#  billing_period_duration      :integer
-#  billing_period_duration_unit :enum             default("month"), not null
-#  charge_model                 :enum             default("standard"), not null
-#  deleted_at                   :datetime
-#  interval                     :enum             default("monthly"), not null
-#  invoice_display_name         :string
-#  pay_in_advance               :boolean          default(FALSE), not null
-#  properties                   :jsonb            not null
-#  prorated                     :boolean          default(FALSE), not null
-#  recurring                    :boolean          default(TRUE), not null
-#  trial_period                 :integer          default(0), not null
-#  untis                        :integer          default(0), not null
-#  created_at                   :datetime         not null
-#  updated_at                   :datetime         not null
-#  add_on_id                    :uuid             not null
-#  billing_entity_id            :uuid             not null
-#  organization_id              :uuid             not null
-#  parent_id                    :uuid
-#  plan_id                      :uuid             not null
+#  id                   :uuid             not null, primary key
+#  charge_model         :enum             default("standard"), not null
+#  deleted_at           :datetime
+#  invoice_display_name :string
+#  pay_in_advance       :boolean          default(FALSE), not null
+#  properties           :jsonb            not null
+#  prorated             :boolean          default(FALSE), not null
+#  trial_period         :integer          default(0), not null
+#  untis                :integer          default(0), not null
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  add_on_id            :uuid             not null
+#  billing_entity_id    :uuid             not null
+#  organization_id      :uuid             not null
+#  parent_id            :uuid
+#  plan_id              :uuid             not null
 #
 # Indexes
 #
