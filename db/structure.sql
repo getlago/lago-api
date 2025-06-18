@@ -407,7 +407,6 @@ DROP INDEX IF EXISTS public.index_fixed_charges_on_plan_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_parent_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_organization_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_deleted_at;
-DROP INDEX IF EXISTS public.index_fixed_charges_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_organization_id;
@@ -8850,6 +8849,8 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250618104849'),
+('20250618102602'),
 ('20250617164346'),
 ('20250617142428'),
 ('20250617093232'),
