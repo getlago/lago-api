@@ -48,7 +48,6 @@ ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_c71
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_c64033bcb0;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
-ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_c00d9c3fcc;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_bff25bb1bb;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
@@ -2982,24 +2981,18 @@ CREATE VIEW public.exports_wallets AS
 CREATE TABLE public.fixed_charges (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
-    billing_entity_id uuid NOT NULL,
     plan_id uuid NOT NULL,
     add_on_id uuid NOT NULL,
     parent_id uuid,
     charge_model public.fixed_charges_charge_model DEFAULT 'standard'::public.fixed_charges_charge_model NOT NULL,
-    "interval" public.fixed_charges_interval DEFAULT 'monthly'::public.fixed_charges_interval NOT NULL,
     properties jsonb DEFAULT '{}'::jsonb NOT NULL,
     invoice_display_name character varying,
     pay_in_advance boolean DEFAULT false NOT NULL,
     prorated boolean DEFAULT false NOT NULL,
-    recurring boolean DEFAULT true NOT NULL,
-    billing_period_duration integer,
-    billing_period_duration_unit public.fixed_charges_billing_period_duration_unit DEFAULT 'month'::public.fixed_charges_billing_period_duration_unit NOT NULL,
-    trial_period integer DEFAULT 0 NOT NULL,
-    untis integer DEFAULT 0 NOT NULL,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    units integer DEFAULT 1
 );
 
 
@@ -5917,13 +5910,6 @@ CREATE INDEX index_fixed_charges_on_add_on_id ON public.fixed_charges USING btre
 
 
 --
--- Name: index_fixed_charges_on_billing_entity_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_fixed_charges_on_billing_entity_id ON public.fixed_charges USING btree (billing_entity_id);
-
-
---
 -- Name: index_fixed_charges_on_deleted_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8543,14 +8529,6 @@ ALTER TABLE ONLY public.charge_filter_values
 
 ALTER TABLE ONLY public.customers
     ADD CONSTRAINT fk_rails_bff25bb1bb FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
-
-
---
--- Name: fixed_charges fk_rails_c00d9c3fcc; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.fixed_charges
-    ADD CONSTRAINT fk_rails_c00d9c3fcc FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
 
 
 --

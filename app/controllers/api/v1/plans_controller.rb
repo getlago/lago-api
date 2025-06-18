@@ -90,6 +90,7 @@ module Api
           :trial_period,
           :pay_in_advance,
           :bill_charges_monthly,
+          :bill_fixed_charges_monthly,
           :cascade_updates,
           tax_codes: [],
           minimum_commitment: [
@@ -122,6 +123,18 @@ module Api
             },
             {tax_codes: []}
           ],
+          fixed_charges: [
+            :id,
+            :invoice_display_name,
+            :add_on_id,
+            :charge_model,
+            :pay_in_advance,
+            :prorated,
+            :units,
+            {
+              properties: {}
+            }
+          ],
           usage_thresholds: [
             :id,
             :threshold_display_name,
@@ -136,7 +149,7 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: "plan",
-            includes: %i[charges usage_thresholds taxes minimum_commitment]
+            includes: %i[charges fixed_charges usage_thresholds taxes minimum_commitment]
           )
         )
       end

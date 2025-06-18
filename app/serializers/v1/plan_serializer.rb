@@ -16,6 +16,7 @@ module V1
         trial_period: model.trial_period,
         pay_in_advance: model.pay_in_advance,
         bill_charges_monthly: model.bill_charges_monthly,
+        bill_fixed_charges_monthly: model.bill_fixed_charges_monthly,
         customers_count: 0,
         active_subscriptions_count: 0,
         draft_invoices_count: 0,
@@ -23,6 +24,7 @@ module V1
       }
 
       payload.merge!(charges) if include?(:charges)
+      payload.merge!(fixed_charges) if include?(:fixed_charges)
       payload.merge!(usage_thresholds) if include?(:usage_thresholds)
       payload.merge!(taxes) if include?(:taxes)
       payload.merge!(minimum_commitment) if include?(:minimum_commitment) && model.minimum_commitment

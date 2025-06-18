@@ -24,7 +24,8 @@ module Plans
         amount_cents: args[:amount_cents],
         amount_currency: args[:amount_currency],
         trial_period: args[:trial_period],
-        bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil
+        bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil,
+        bill_fixed_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_fixed_charges_monthly] || false : nil
       )
 
       # Validates billable metrics
@@ -32,6 +33,14 @@ module Plans
         metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
         if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
           return result.not_found_failure!(resource: "billable_metrics")
+        end
+      end
+
+      # Validates fixed charges
+      if args[:fixed_charges].present?
+        add_on_ids = args[:fixed_charges].map { |c| c[:add_on_id] }.uniq
+        if add_on_ids.present? && plan.organization.add_ons.where(id: add_on_ids).count != add_on_ids.count
+          return result.not_found_failure!(resource: "add_ons")
         end
       end
 
@@ -59,6 +68,12 @@ module Plans
               taxes_result = Charges::ApplyTaxesService.call(charge: new_charge, tax_codes: charge[:tax_codes])
               taxes_result.raise_if_error!
             end
+          end
+        end
+
+        if args[:fixed_charges].present?
+          args[:fixed_charges].each do |fixed_charge|
+            new_fixed_charge = create_fixed_charge(plan, fixed_charge)
           end
         end
 
@@ -170,6 +185,28 @@ module Plans
           parent_id: plan.parent_id
         }
       )
+    end
+
+    def create_fixed_charge(plan, args)
+      fixed_charge = plan.fixed_charges.new(
+        organization_id: plan.organization_id,
+        add_on_id: args[:add_on_id],
+        invoice_display_name: args[:invoice_display_name],
+        charge_model: args[:charge_model],
+        pay_in_advance: args[:pay_in_advance] || false,
+        prorated: args[:prorated] || false,
+        units: args[:units] || 1
+      )
+
+      properties = args[:properties].presence || FixedCharges::BuildDefaultPropertiesService.call(args[:charge_model])
+      fixed_charge.properties = FixedCharges::FilterChargeModelPropertiesService.call(
+        fixed_charge:,
+        properties:
+      ).properties
+
+      fixed_charge.save!
+
+      fixed_charge
     end
   end
 end
