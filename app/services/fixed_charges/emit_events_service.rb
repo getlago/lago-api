@@ -30,7 +30,7 @@ module FixedCharges
         organization: subscription.organization,
         params: {
           code: fixed_charge.add_on.code,
-          transaction_id: "#{timestamp.strftime('%d-%m-%Y')}/#{fixed_charge.id}/#{subscription.id}",
+          transaction_id: "#{timestamp.strftime('%d-%m-%Y')}/#{fixed_charge.id}/#{subscription.id}/#{SecureRandom.hex(4)}",
           external_subscription_id: subscription.external_id,
           properties: {
             units: units

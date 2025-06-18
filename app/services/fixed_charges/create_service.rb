@@ -2,9 +2,10 @@
 
 module FixedCharges
   class CreateService < BaseService
-    def initialize(plan:, params:)
+    def initialize(plan:, params:, fixed_charges_affect_immediately:)
       @plan = plan
       @params = params
+      @fixed_charges_affect_immediately = fixed_charges_affect_immediately
 
       super
     end
@@ -20,7 +21,8 @@ module FixedCharges
           charge_model: params[:charge_model],
           parent_id: params[:parent_id],
           pay_in_advance: params[:pay_in_advance] || false,
-          prorated: params[:prorated] || false
+          prorated: params[:prorated] || false,
+          units: params[:units]
         )
 
         properties = params[:properties].presence || FixedCharges::BuildDefaultPropertiesService.call(fixed_charge.charge_model)
@@ -30,6 +32,7 @@ module FixedCharges
         ).properties
 
         fixed_charge.save!
+        issue_unit_events(fixed_charge.units) if fixed_charges_affect_immediately
         result.fixed_charge = fixed_charge
       end
 
@@ -42,6 +45,12 @@ module FixedCharges
 
     private
 
-    attr_reader :plan, :params
+    attr_reader :plan, :params, :fixed_charges_affect_immediately
+
+    def issue_unit_events(units)
+      plan.subscriptions.active.find_each do |subscription|
+        FixedCharges::EmitEventsService.call!(fixed_charge:, subscription:, units:)
+      end
+    end
   end
 end

@@ -143,7 +143,7 @@ module Plans
       )
     end
 
-    def cascade_fixed_charge_creation(fixed_charge, payload_fixed_charge)
+    def cascade_fixed_charge_creation(fixed_charge, payload_fixed_charge, fixed_charges_affect_immediately)
       return unless cascade?
       return if plan.children.empty?
 
@@ -246,9 +246,9 @@ module Plans
           next
         end
 
-        create_fixed_charge_result = FixedCharges::CreateService.call!(plan:, params: payload_fixed_charge)
+        create_fixed_charge_result = FixedCharges::CreateService.call!(plan:, params: payload_fixed_charge, fixed_charges_affect_immediately:)
 
-        after_commit { cascade_fixed_charge_creation(create_fixed_charge_result.fixed_charge, payload_fixed_charge) }
+        after_commit { cascade_fixed_charge_creation(create_fixed_charge_result.fixed_charge, payload_fixed_charge, fixed_charges_affect_immediately) }
         created_fixed_charges_ids.push(create_fixed_charge_result.fixed_charge.id)
       end
 
