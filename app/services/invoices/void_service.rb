@@ -18,6 +18,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
+      return result.forbidden_failure! if generate_credit_note && !License.premium?
       return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
       return result.not_allowed_failure!(code: "not_voidable") if !invoice.voidable? && !explicit_void_intent?
       unless valid_credit_note_amounts?
