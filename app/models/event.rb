@@ -16,6 +16,14 @@ class Event < EventsRecord
   scope :from_datetime, ->(from_datetime) { where("events.timestamp >= ?", from_datetime) }
   scope :to_datetime, ->(to_datetime) { where("events.timestamp <= ?", to_datetime) }
 
+  EVENT_SOURCES = {
+    usage: 0,
+    fixed_charge: 1,
+    base_usage: 2
+  }.freeze
+
+  enum :source, EVENT_SOURCES
+
   def api_client
     metadata["user_agent"]
   end
@@ -70,6 +78,7 @@ end
 #  metadata                   :jsonb            not null
 #  precise_total_amount_cents :decimal(40, 15)
 #  properties                 :jsonb            not null
+#  source                     :integer          default("usage"), not null
 #  timestamp                  :datetime
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
@@ -90,5 +99,6 @@ end
 #  index_events_on_organization_id_and_code                 (organization_id,code)
 #  index_events_on_organization_id_and_timestamp            (organization_id,timestamp) WHERE (deleted_at IS NULL)
 #  index_events_on_properties                               (properties) USING gin
+#  index_events_on_source                                   (source)
 #  index_unique_transaction_id                              (organization_id,external_subscription_id,transaction_id) UNIQUE
 #

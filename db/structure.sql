@@ -260,6 +260,7 @@ DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organizatio
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_taxes_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_units_overrides_on_subscription_id;
+DROP INDEX IF EXISTS public.index_subscriptions_units_overrides_on_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_units_overrides_on_fixed_charge_id;
 DROP INDEX IF EXISTS public.index_subscriptions_units_overrides_on_charge_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_status;
@@ -428,6 +429,7 @@ DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
+DROP INDEX IF EXISTS public.index_events_on_source;
 DROP INDEX IF EXISTS public.index_events_on_properties;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
@@ -1900,7 +1902,8 @@ CREATE TABLE public.events (
     deleted_at timestamp(6) without time zone,
     external_customer_id character varying,
     external_subscription_id character varying,
-    precise_total_amount_cents numeric(40,15)
+    precise_total_amount_cents numeric(40,15),
+    source integer DEFAULT 0 NOT NULL
 )
 WITH (autovacuum_vacuum_scale_factor='0.005');
 
@@ -3586,7 +3589,8 @@ CREATE TABLE public.subscriptions_units_overrides (
     fixed_charge_id uuid,
     charge_id uuid,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid
 );
 
 
@@ -5766,6 +5770,13 @@ CREATE INDEX index_events_on_properties ON public.events USING gin (properties j
 
 
 --
+-- Name: index_events_on_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_source ON public.events USING btree (source);
+
+
+--
 -- Name: index_fees_on_add_on_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6939,6 +6950,13 @@ CREATE INDEX index_subscriptions_units_overrides_on_charge_id ON public.subscrip
 --
 
 CREATE INDEX index_subscriptions_units_overrides_on_fixed_charge_id ON public.subscriptions_units_overrides USING btree (fixed_charge_id);
+
+
+--
+-- Name: index_subscriptions_units_overrides_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subscriptions_units_overrides_on_organization_id ON public.subscriptions_units_overrides USING btree (organization_id);
 
 
 --
@@ -8854,11 +8872,12 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250617164346'),
+('20250617142428'),
 ('20250617093232'),
 ('20250617092222'),
 ('20250616152253'),
 ('20250613110807'),
-('20250611083925'),
 ('20250610063400'),
 ('20250609121102'),
 ('20250602145535'),
