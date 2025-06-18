@@ -36,6 +36,8 @@ module Customers
 
       # Just errors extended from Valvat::Lookup are raised, while Maintenances are not.
       # https://github.com/yolk/valvat/blob/master/README.md#handling-of-maintenance-errors
+      # Check the Unavailable sheet per UE country.
+      # https://ec.europa.eu/taxation_customs/vies/#/help
       response = Valvat.new(customer.tax_identification_number).exists?(detail: true, raise_error: true)
 
       after_commit { SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: response.presence || error_vies_check) }
@@ -46,7 +48,7 @@ module Customers
       after_commit do
         SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: error_vies_check.merge(error: e.message))
         # Enqueue a job to retry the VIES check after a delay
-        RetryViesCheckJob.set(wait: 30.seconds).perform_later(customer.id)
+        RetryViesCheckJob.set(wait: 15.minutes).perform_later(customer.id)
       end
       nil
     end
