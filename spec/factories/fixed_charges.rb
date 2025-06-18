@@ -5,10 +5,9 @@ FactoryBot.define do
     plan
     add_on
     invoice_display_name { Faker::Fantasy::Tolkien.location }
-    billing_period_duration { 1 }
-    billing_period_duration_unit { "month" }
     trial_period { 0 }
     untis { 1 }
+    pay_in_advance { false }
 
     trait :standard do
       charge_model { "standard" }
@@ -23,10 +22,6 @@ FactoryBot.define do
 
     trait :prorated do
       prorated { true }
-    end
-
-    trait :recurring do
-      recurring { true }
     end
   end
 end

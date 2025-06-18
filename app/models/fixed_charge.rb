@@ -5,6 +5,9 @@ class FixedCharge < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
+  # NOTE: These columns were removed in the scoping phase.
+  self.ignored_columns = %i[recurring billing_period_duration billing_period_duration_unit interval]
+
   belongs_to :organization
   belongs_to :billing_entity
   belongs_to :add_on
