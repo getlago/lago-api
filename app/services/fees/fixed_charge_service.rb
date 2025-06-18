@@ -16,4 +16,5 @@ module Fees
     def call
       result
     end
-end 
+  end
+end
