@@ -83,20 +83,12 @@ module Charges
     delegate :plan, to: :charge
 
     def cascade_pricing_group_keys
-      pricing_group_keys = params.dig(:properties, :pricing_group_keys)
-      grouped_by = params.dig(:properties, :grouped_by)
+      pricing_group_keys = params.dig(:properties, :pricing_group_keys) || params.dig(:properties, :grouped_by)
 
       if pricing_group_keys
         charge.properties["pricing_group_keys"] = pricing_group_keys
         charge.properties.delete("grouped_by")
-      end
-
-      if !pricing_group_keys && grouped_by
-        charge.properties["pricing_group_keys"] = grouped_by
-        charge.properties.delete("grouped_by")
-      end
-
-      if !pricing_group_keys && !grouped_by && charge.pricing_group_keys
+      elsif charge.pricing_group_keys.present?
         charge.properties.delete("pricing_group_keys")
         charge.properties.delete("grouped_by")
       end
