@@ -40,13 +40,21 @@ RSpec.describe Charges::FilterChargeModelPropertiesService, type: :service do
     context "with standard charge_model" do
       let(:charge_model) { "standard" }
 
-      it { expect(filter_service.call.properties.keys).to include("amount", "grouped_by") }
+      it "filters the properties" do
+        properties = filter_service.call.properties
+        expect(properties.keys).to include("amount", "pricing_group_keys")
+        expect(properties["amount"]).to eq(100)
+        expect(properties["pricing_group_keys"]).to eq(["location"])
+      end
 
       # TODO(pricing_group_keys): remove after deprecation
       context "when grouped_by contains empty string" do
         let(:properties) { {amount: 100, grouped_by: ["", ""]} }
 
-        it { expect(filter_service.call.properties[:grouped_by]).to be_empty }
+        it "set grouped_by to nil" do
+          expect(filter_service.call.properties[:grouped_by]).to be_nil
+          expect(filter_service.call.properties[:pricing_group_keys]).to be_empty
+        end
       end
 
       context "when pricing_group_keys contains empty string" do

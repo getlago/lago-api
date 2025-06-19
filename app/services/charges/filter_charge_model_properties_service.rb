@@ -37,8 +37,12 @@ module Charges
       sliced_attributes = properties.slice(*attributes)
 
       # TODO(pricing_group_keys):Deprecate grouped_by attribute
-      sliced_attributes[:grouped_by].reject!(&:empty?) if sliced_attributes[:grouped_by].present?
-      sliced_attributes[:pricing_group_keys].reject!(&:empty?) if sliced_attributes[:pricing_group_keys].present?
+      grouped_by = sliced_attributes[:grouped_by]
+      pricing_group_keys = sliced_attributes[:pricing_group_keys]
+
+      pricing_group_keys = grouped_by if grouped_by.present? && pricing_group_keys.blank?
+      sliced_attributes[:pricing_group_keys] = pricing_group_keys.reject(&:empty?) if pricing_group_keys.present?
+      sliced_attributes.delete(:grouped_by)
 
       sliced_attributes
     end
