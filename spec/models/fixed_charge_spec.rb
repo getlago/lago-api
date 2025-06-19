@@ -1,5 +1,11 @@
 require 'rails_helper'
 
 RSpec.describe FixedCharge, type: :model do
-  pending "add some examples to (or delete) #{__FILE__}"
+  let(:fixed_charge) { create(:fixed_charge) }
+
+  describe "#code" do
+    it "returns the add_on code" do
+      expect(fixed_charge.code).to eq(fixed_charge.add_on.code)
+    end
+  end
 end

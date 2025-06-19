@@ -17,6 +17,7 @@ class Fee < ApplicationRecord
   belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
   belongs_to :organization
   belongs_to :billing_entity
+  belongs_to :fixed_charge, -> { with_discarded }, optional: true
 
   has_one :adjusted_fee, dependent: :nullify
   has_one :billable_metric, -> { with_discarded }, through: :charge
@@ -83,6 +84,7 @@ class Fee < ApplicationRecord
   def item_id
     return billable_metric.id if charge?
     return add_on.id if add_on?
+    return fixed_charge.add_on.id if fixed_charge?
     return invoiceable_id if credit?
 
     subscription_id
@@ -91,6 +93,7 @@ class Fee < ApplicationRecord
   def item_type
     return BillableMetric.name if charge?
     return AddOn.name if add_on?
+    return AddOn.name if fixed_charge?
     return WalletTransaction.name if credit?
 
     Subscription.name
@@ -99,6 +102,7 @@ class Fee < ApplicationRecord
   def item_code
     return billable_metric.code if charge?
     return add_on.code if add_on?
+    return fixed_charge.code if fixed_charge?
     return fee_type if credit?
 
     subscription.plan.code
@@ -107,6 +111,7 @@ class Fee < ApplicationRecord
   def item_name
     return billable_metric.name if charge?
     return add_on.name if add_on?
+    return fixed_charge.add_on.name if fixed_charge?
     return fee_type if credit?
 
     subscription.plan.name
@@ -115,6 +120,7 @@ class Fee < ApplicationRecord
   def item_description
     return billable_metric.description if charge?
     return add_on.description if add_on?
+    return fixed_charge.add_on.description if fixed_charge?
     return fee_type if credit?
 
     subscription.plan.description
@@ -124,6 +130,7 @@ class Fee < ApplicationRecord
     return invoice_display_name if invoice_display_name.present?
     return charge.invoice_display_name.presence || billable_metric.name if charge?
     return add_on.invoice_name if add_on?
+    return fixed_charge.invoice_display_name.presence || fixed_charge.add_on.name if fixed_charge?
     return fee_type if credit?
 
     subscription.plan.invoice_display_name

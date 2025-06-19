@@ -31,7 +31,6 @@ ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAIN
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_de6b3c3138;
-ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_dd7e076158;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_dd342449a6;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_db9140d0fd;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_d9ffb8b4a1;
@@ -111,7 +110,6 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRA
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_6e148ccbb1;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_6d465e6b10;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaigns DROP CONSTRAINT IF EXISTS fk_rails_6c720a8ccd;
-ALTER TABLE IF EXISTS ONLY public.invoice_custom_section_selections DROP CONSTRAINT IF EXISTS fk_rails_6b1e3d1159;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_699cd1384f;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_68754484c0;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_67d4eb3c92;
@@ -913,7 +911,8 @@ CREATE TYPE public.fixed_charges_billing_period_duration_unit AS ENUM (
 
 CREATE TYPE public.fixed_charges_charge_model AS ENUM (
     'standard',
-    'gradutated'
+    'gradutated',
+    'graduated'
 );
 
 
@@ -3216,12 +3215,12 @@ CREATE TABLE public.invites (
 
 CREATE TABLE public.invoice_custom_section_selections (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_custom_section_id uuid NOT NULL,
     organization_id uuid,
     customer_id uuid,
+    invoice_custom_section_id uuid NOT NULL,
+    billing_entity_id uuid,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    billing_entity_id uuid
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -8019,14 +8018,6 @@ ALTER TABLE ONLY public.billing_entities_invoice_custom_sections
 
 
 --
--- Name: invoice_custom_section_selections fk_rails_6b1e3d1159; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.invoice_custom_section_selections
-    ADD CONSTRAINT fk_rails_6b1e3d1159 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
-
-
---
 -- Name: dunning_campaigns fk_rails_6c720a8ccd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8659,14 +8650,6 @@ ALTER TABLE ONLY public.invites
 
 
 --
--- Name: invoice_custom_section_selections fk_rails_dd7e076158; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.invoice_custom_section_selections
-    ADD CONSTRAINT fk_rails_dd7e076158 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
-
-
---
 -- Name: coupon_targets fk_rails_de6b3c3138; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8849,6 +8832,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250619173922'),
 ('20250618104849'),
 ('20250618102602'),
 ('20250617164346'),

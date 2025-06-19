@@ -8,6 +8,7 @@ RSpec.describe Fee, type: :model do
   it { is_expected.to have_one(:customer).through(:subscription) }
   it { is_expected.to have_one(:pricing_unit_usage).dependent(:destroy) }
   it { is_expected.to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy) }
+  it { is_expected.to belong_to(:fixed_charge).optional }
 
   describe "#item_code" do
     context "when it is a subscription fee" do
@@ -34,6 +35,15 @@ RSpec.describe Fee, type: :model do
       it "returns add on code" do
         expect(described_class.new(applied_add_on:, fee_type: "add_on").item_code)
           .to eq(applied_add_on.add_on.code)
+      end
+    end
+
+    context "when it is a fixed charge fee" do
+      let(:fixed_charge) { create(:fixed_charge) }
+
+      it "returns fixed charge code" do
+        expect(described_class.new(fixed_charge:, fee_type: "fixed_charge").item_code)
+          .to eq(fixed_charge.code)
       end
     end
 
@@ -106,6 +116,27 @@ RSpec.describe Fee, type: :model do
         end
       end
 
+      context "when it is a fixed charge fee" do
+        let(:fee) { build(:fee, fixed_charge:, fee_type: "fixed_charge", invoice_display_name:) }
+        let(:fixed_charge) { create(:fixed_charge, invoice_display_name: fixed_charge_invoice_display_name) }
+
+        context "when fixed charge has invoice display name present" do
+          let(:fixed_charge_invoice_display_name) { Faker::Fantasy::Tolkien.location }
+
+          it "returns fixed charge invoice display name" do
+            expect(fee_invoice_name).to eq(fixed_charge.invoice_display_name)
+          end
+        end
+
+        context "when fixed charge has invoice display name blank" do
+          let(:fixed_charge_invoice_display_name) { [nil, ""].sample }
+
+          it "returns related add on name" do
+            expect(fee_invoice_name).to eq(fixed_charge.add_on.name)
+          end
+        end
+      end
+
       context "when it is a credit fee" do
         let(:fee) { build(:fee, fee_type: "credit", invoice_display_name:) }
 
@@ -165,6 +196,15 @@ RSpec.describe Fee, type: :model do
       end
     end
 
+    context "when it is a fixed charge fee" do
+      let(:fixed_charge) { create(:fixed_charge) }
+
+      it "returns related add on name" do
+        expect(described_class.new(fixed_charge:, fee_type: "fixed_charge").item_name)
+          .to eq(fixed_charge.add_on.name)
+      end
+    end
+
     context "when it is a credit fee" do
       it "returns 'credit'" do
         expect(described_class.new(fee_type: "credit").item_name).to eq("credit")
@@ -206,6 +246,15 @@ RSpec.describe Fee, type: :model do
       it "returns add on description" do
         expect(described_class.new(applied_add_on:, fee_type: "add_on").item_description)
           .to eq(applied_add_on.add_on.description)
+      end
+    end
+
+    context "when it is a fixed charge fee" do
+      let(:fixed_charge) { create(:fixed_charge) }
+
+      it "returns related add on description" do
+        expect(described_class.new(fixed_charge:, fee_type: "fixed_charge").item_description)
+          .to eq(fixed_charge.add_on.description)
       end
     end
 
@@ -253,6 +302,15 @@ RSpec.describe Fee, type: :model do
       end
     end
 
+    context "when it is a fixed charge fee" do
+      let(:fixed_charge) { create(:fixed_charge) }
+
+      it "returns fixed charge" do
+        expect(described_class.new(fixed_charge:, fee_type: "fixed_charge").item_type)
+          .to eq("FixedCharge")
+      end
+    end
+
     context "when it is a credit fee" do
       it "returns wallet transaction" do
         expect(described_class.new(fee_type: "credit").item_type).to eq("WalletTransaction")
@@ -294,6 +352,15 @@ RSpec.describe Fee, type: :model do
       it "returns the add on id" do
         expect(described_class.new(applied_add_on:, fee_type: "add_on").item_id)
           .to eq(applied_add_on.add_on_id)
+      end
+    end
+
+    context "when it is a fixed charge fee" do
+      let(:fixed_charge) { create(:fixed_charge) }
+
+      it "returns the fixed charge id" do
+        expect(described_class.new(fixed_charge:, fee_type: "fixed_charge").item_id)
+          .to eq(fixed_charge.id)
       end
     end
 

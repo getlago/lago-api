@@ -25,7 +25,7 @@ module BillableMetrics
 
         BillableMetrics::Aggregations::MaxService
 
-      when :sum_agg
+      when :sum_agg ## use this for the fixed charges
         if charge.prorated?
           BillableMetrics::ProratedAggregations::SumService
         else

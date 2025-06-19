@@ -1,12 +1,23 @@
 # frozen_string_literal: true
 
+# NOTE: by default invoicable is true (only option) -> create invoice along with the fixed charge.
+# NOTE: all fixed charges are recurring.
+
 class FixedCharge < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
   self.discard_column = :deleted_at
 
   # NOTE: These columns were removed in the scoping phase.
-  self.ignored_columns = %i[recurring billing_period_duration billing_period_duration_unit interval]
+  self.ignored_columns = %i[
+    billing_period_duration
+    billing_period_duration_unit
+    trial_period
+    recurring
+    interval
+    untis
+    billing_entity_id
+  ]
 
   belongs_to :organization
   # TODO: We create plan on organization, it will not have billing_entity....
@@ -19,16 +30,6 @@ class FixedCharge < ApplicationRecord
   has_many :children, class_name: "FixedCharge", foreign_key: :parent_id, dependent: :nullify
   has_many :subscriptions_units_overrides, dependent: :destroy
   has_many :fees
-
-  ignored_columns = %i[
-    billing_period_duration
-    billing_period_duration_unit
-    trial_period
-    recurring
-    interval
-    untis
-    billing_entity_id
-  ]
 
   # TODO: applied taxes
   # has_many :applied_taxes, class_name: "FixedCharge::AppliedTax", dependent: :destroy
@@ -58,6 +59,10 @@ class FixedCharge < ApplicationRecord
   default_scope -> { kept }
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
+  
+  def code
+    add_on.code
+  end
 end
 
 # == Schema Information

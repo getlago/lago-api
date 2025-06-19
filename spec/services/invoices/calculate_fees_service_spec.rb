@@ -99,9 +99,14 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
   let(:event_timestamp) { [date_service.charges_to_datetime - 2.days, started_at].max }
 
+  let(:fixed_charge) do
+    create(:fixed_charge, :standard, plan:)
+  end
+
   before do
     tax
     charge
+    fixed_charge
     invoice_subscriptions
     event
 
@@ -117,7 +122,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       let(:subscription_at) { started_at }
       let(:billing_time) { :anniversary }
 
-      it "creates subscription and charge fees" do
+      it "creates subscription, charge and fixed charge fees" do
         result = invoice_service.call
 
         aggregate_failures do
@@ -127,6 +132,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           expect(invoice.payment_status).to eq("pending")
           expect(invoice.fees.subscription.count).to eq(1)
           expect(invoice.fees.charge.count).to eq(1)
+          expect(invoice.fees.fixed_charge.count).to eq(1)
 
           invoice_subscription = invoice.invoice_subscriptions.first
           expect(invoice_subscription).to have_attributes(
@@ -367,6 +373,12 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
 
             expect(Fee.charge.count).to eq(0)
           end
+        end
+      end
+
+      xcontext "when fixed charge is pay in advance" do
+        let(:fixed_charge) do
+          create(:fixed_charge, :pay_in_advance, plan: subscription.plan, charge_model: "standard")
         end
       end
     end
