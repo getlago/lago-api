@@ -6,10 +6,7 @@ plan = Plan.create_with(
   interval: "monthly", pay_in_advance: false, amount_cents: 49_00, amount_currency: "EUR"
 ).find_or_create_by!(organization:, name: "Premium Plan", code: "premium_plan")
 
-sub = Subscription.find_by(
-  # organization:,
-  external_id: "sub_entitlement_80554965"
-)
+sub = Subscription.find_by(organization:, external_id: "sub_entitlement_80554965")
 if sub.nil?
   customer = Customer.create!(
     organization:,
@@ -44,7 +41,7 @@ seats.privileges.delete_all
 max = seats.privileges.create!(organization:, code: "max", name: "Maximum", value_type: "integer")
 max_admins = seats.privileges.create!(organization:, code: "max_admins", name: "Max Admins", value_type: "integer")
 
-FeatureEntitlement.where(organization:, feature: seats, plan:).delete_all
+FeatureEntitlement.where(organization:, feature: seats).delete_all
 fe = FeatureEntitlement.create!(organization:, feature: seats, plan:)
 FeatureEntitlementValue.create!(organization:, feature_entitlement: fe, privilege: max, value: 20) # Plan defaults
 FeatureEntitlementValue.create!(organization:, feature_entitlement: fe, privilege: max_admins, value: 3) # Plan defaults
@@ -81,4 +78,5 @@ support = Feature.create_with(
 
 FeatureEntitlement.where(organization:, feature: support, plan:).delete_all
 FeatureEntitlement.create!(organization:, feature: support, plan:)
+SubscriptionFeatureRemoval.where(organization:, feature: support).delete_all
 SubscriptionFeatureRemoval.create!(organization:, feature: support, subscription_external_id: sub.external_id)
