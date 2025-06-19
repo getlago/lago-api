@@ -19,6 +19,7 @@ class CreateFeatures < ActiveRecord::Migration[8.0]
       t.string :code, null: false
       t.string :name
       t.string :value_type, null: false, default: "string"
+      t.jsonb :config, null: false, default: {}
       t.datetime :deleted_at # INDEX?
       t.timestamps
 
@@ -49,10 +50,10 @@ class CreateFeatures < ActiveRecord::Migration[8.0]
       t.index [:privilege_id, :feature_entitlement_id], where: "deleted_at IS NULL"
     end
 
-    create_table :subscription_feature_removals, id: :uuid do |t|
+    create_table :subscription_feature_entitlement_removals, id: :uuid do |t|
       t.references :organization, null: false, foreign_key: true, type: :uuid
       t.references :feature, null: false, foreign_key: true, type: :uuid
-      t.string :subscription_external_id, null: false, index: true
+      t.string :subscription_external_id, null: false, index: true # OR SUBSCRIPTION_ID
       t.datetime :deleted_at # INDEX?
       t.timestamps
 

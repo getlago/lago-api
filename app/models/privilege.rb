@@ -11,6 +11,7 @@ end
 #
 #  id              :uuid             not null, primary key
 #  code            :string           not null
+#  config          :jsonb            not null
 #  deleted_at      :datetime
 #  name            :string
 #  value_type      :string           default("string"), not null

@@ -6,7 +6,7 @@ plan = Plan.create_with(
   interval: "monthly", pay_in_advance: false, amount_cents: 49_00, amount_currency: "EUR"
 ).find_or_create_by!(organization:, name: "Premium Plan", code: "premium_plan")
 
-sub = Subscription.find_by(organization:, external_id: "sub_entitlement_80554965")
+sub = Subscription.find_by(external_id: "sub_entitlement_80554965")
 if sub.nil?
   customer = Customer.create!(
     organization:,
@@ -29,7 +29,7 @@ if sub.nil?
   )
 end
 
-# SEATS
+# SEATS - feature with privilege and subscription overrides
 seats = Feature.create_with(
   name: "Number of seats",
   description: "Number of users of the account"
@@ -40,6 +40,7 @@ seats.privileges.delete_all
 
 max = seats.privileges.create!(organization:, code: "max", name: "Maximum", value_type: "integer")
 max_admins = seats.privileges.create!(organization:, code: "max_admins", name: "Max Admins", value_type: "integer")
+seats.privileges.create!(organization:, code: "root", name: "Allow root user", value_type: "boolean")
 
 FeatureEntitlement.where(organization:, feature: seats).delete_all
 fe = FeatureEntitlement.create!(organization:, feature: seats, plan:)
@@ -48,7 +49,7 @@ FeatureEntitlementValue.create!(organization:, feature_entitlement: fe, privileg
 fe_sub = FeatureEntitlement.create!(organization:, feature: seats, subscription_external_id: sub.external_id)
 FeatureEntitlementValue.create!(organization:, privilege: max, feature_entitlement: fe_sub, value: 99) # Subscription override
 
-# Analytics API
+# Feature in the plan, without any privilege
 analytics_api_feature = Feature.create_with(
   name: "Analytics API",
   description: "Access to all analytics data via REST API"
@@ -59,7 +60,7 @@ analytics_api_feature.privileges.delete_all
 FeatureEntitlement.where(organization:, feature: analytics_api_feature, plan:).delete_all
 FeatureEntitlement.create!(organization:, feature: analytics_api_feature, plan:)
 
-# Salesforce
+# Feature not in the plan but added to the subscription
 salesforce = Feature.create_with(
   name: "Salesforce Integration"
 ).find_or_create_by!(organization:, code: "salesforce")
@@ -71,12 +72,12 @@ FeatureEntitlement.create!(organization:, feature: salesforce, subscription_exte
 
 pp max_admins, max, salesforce
 
-# Premium Support
+# Feature attached to the plan but removed from the subscription
 support = Feature.create_with(
   name: "Premium Support"
 ).find_or_create_by!(organization:, code: "premium_support")
 
 FeatureEntitlement.where(organization:, feature: support, plan:).delete_all
 FeatureEntitlement.create!(organization:, feature: support, plan:)
-SubscriptionFeatureRemoval.where(organization:, feature: support).delete_all
-SubscriptionFeatureRemoval.create!(organization:, feature: support, subscription_external_id: sub.external_id)
+SubscriptionFeatureEntitlementRemoval.where(organization:, feature: support).delete_all
+SubscriptionFeatureEntitlementRemoval.create!(organization:, feature: support, subscription_external_id: sub.external_id)

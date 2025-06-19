@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class SubscriptionFeatureRemoval < ApplicationRecord
+class SubscriptionFeatureEntitlementRemoval < ApplicationRecord
   belongs_to :organization
   belongs_to :feature
 end
