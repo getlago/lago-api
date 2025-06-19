@@ -78,8 +78,8 @@ module Invoices
     end
 
     def generate_credit_note_allowed?
-      return true unless generate_credit_note   # nothing requested
-      License.premium?                          # licence check
+      return true unless generate_credit_note
+      License.premium?
     end
 
     def flag_lifetime_usage_for_refresh

@@ -47,9 +47,9 @@ RSpec.describe Mutations::Invoices::Void, type: :graphql do
 
   context "when passing credit note parameters" do
     around { |test| lago_premium!(&test) }
+
     let(:credit_amount) { 0 }
     let(:refund_amount) { 0 }
-
 
     it "calls the void service with all parameters" do
       allow(::Invoices::VoidService).to receive(:call).with(
