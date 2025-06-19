@@ -1,20 +1,26 @@
 # frozen_string_literal: true
 
-class Entitlement < ApplicationRecord
-  self.table_name = "entitlements_view"
+class SubscriptionEntitlement < ApplicationRecord
+  self.table_name = "subscription_entitlements_view"
 
   belongs_to :feature
+  belongs_to :privilege
+
+  def self.for_subscription(subscription)
+    where(subscription_external_id: subscription.external_id)
+      .or(where(plan_id: subscription.plan.parent_id || subscription.plan.id))
+  end
 
   def readonly?
     true
   end
 
-  def plan_value_casted
-    cast_value(plan_value, value_type)
+  def privilege_plan_value_casted
+    cast_value(privilege_plan_value, value_type)
   end
 
-  def override_value_casted
-    cast_value(override_value, value_type)
+  def privilege_override_value_casted
+    cast_value(privilege_override_value, value_type)
   end
 
   private
@@ -35,13 +41,11 @@ end
 
 # == Schema Information
 #
-# Table name: entitlements_view
+# Table name: subscription_entitlements_view
 #
-#  privilege_code           :string
-#  privilege_name           :string
 #  privilege_override_value :string
 #  privilege_plan_value     :string
-#  privilege_value_type     :string
+#  removed                  :boolean
 #  feature_entitlement_id   :uuid
 #  feature_id               :uuid
 #  plan_id                  :uuid
