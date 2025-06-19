@@ -43,6 +43,8 @@ module ChargeFilters
             end
 
             if parent_filter.blank? || parent_filter_properties(parent_filter) != filter.properties
+              # Make sure that pricing group keys are cascaded even if properties are overridden
+              cascade_pricing_group_keys!(filter, filter_param)
               filter.touch # rubocop:disable Rails/SkipsModelValidations
               result.filters << filter
 
@@ -140,6 +142,28 @@ module ChargeFilters
       end
 
       @inherited_filter_ids
+    end
+
+    def cascade_pricing_group_keys!(filter, params)
+      pricing_group_keys = params.dig(:properties, :pricing_group_keys)
+      grouped_by = params.dig(:properties, :grouped_by)
+
+      if pricing_group_keys
+        filter.properties["pricing_group_keys"] = pricing_group_keys
+        filter.properties.delete("grouped_by")
+      end
+
+      if !pricing_group_keys && grouped_by
+        filter.properties["pricing_group_keys"] = grouped_by
+        filter.properties.delete("grouped_by")
+      end
+
+      if !pricing_group_keys && !grouped_by && filter.pricing_group_keys.present?
+        filter.properties.delete("pricing_group_keys")
+        filter.properties.delete("grouped_by")
+      end
+
+      filter.save!
     end
   end
 end
