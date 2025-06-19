@@ -204,6 +204,7 @@ RSpec.describe Invoices::VoidService, type: :service do
 
       context "when the invoice is voided" do
         around { |test| lago_premium!(&test) }
+
         let(:invoice) { create(:invoice, status: :voided) }
 
         it "returns a failure" do
