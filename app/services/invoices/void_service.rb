@@ -18,7 +18,7 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
-      return result.forbidden_failure! if generate_credit_note && !License.premium?
+      return result.forbidden_failure! unless generate_credit_note_allowed?
       return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
       return result.not_allowed_failure!(code: "not_voidable") if !invoice.voidable? && !explicit_void_intent?
       unless valid_credit_note_amounts?
@@ -75,6 +75,11 @@ module Invoices
       else
         invoice.void!
       end
+    end
+
+    def generate_credit_note_allowed?
+      return true unless generate_credit_note   # nothing requested
+      License.premium?                          # licence check
     end
 
     def flag_lifetime_usage_for_refresh
