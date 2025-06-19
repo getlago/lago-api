@@ -48,7 +48,7 @@ module Customers
       after_commit do
         SendWebhookJob.perform_later("customer.vies_check", customer, vies_check: error_vies_check.merge(error: e.message))
         # Enqueue a job to retry the VIES check after a delay
-        RetryViesCheckJob.set(wait: 15.minutes).perform_later(customer.id)
+        RetryViesCheckJob.set(wait: 5.minutes).perform_later(customer.id)
       end
       nil
     end

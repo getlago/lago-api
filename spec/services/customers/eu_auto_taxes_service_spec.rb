@@ -92,7 +92,8 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
 
         it "enqueues RetryViesCheckJob" do
           eu_tax_service.call
-          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(14.minutes.from_now..16.minutes.from_now).with(customer.id).once
+
+          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
         end
       end
 
@@ -115,13 +116,9 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
         end
 
         it "enqueues RetryViesCheckJob" do
-          spy = class_double(Customers::RetryViesCheckJob, perform_later: true).as_null_object
-          allow(Customers::RetryViesCheckJob).to receive(:set).with(wait: 15.minutes).and_return(spy)
-
           eu_tax_service.call
 
-          expect(Customers::RetryViesCheckJob).to have_received(:set).with(wait: 15.minutes)
-          expect(spy).to have_received(:perform_later).with(customer.id)
+          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
         end
       end
 
