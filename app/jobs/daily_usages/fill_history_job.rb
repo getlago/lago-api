@@ -3,8 +3,8 @@
 module DailyUsages
   class FillHistoryJob < ApplicationJob
     queue_as do
-      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_USAGES_BACKFILL"])
-        :usages_backfill
+      if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_ANALYTICS"])
+        :analytics
       else
         :long_running
       end

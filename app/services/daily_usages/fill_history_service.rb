@@ -83,13 +83,7 @@ module DailyUsages
           .first
 
         if invoice.present?
-          queue = if ActiveModel::Type::Boolean.new.cast(ENV["SIDEKIQ_USAGES_BACKFILL"])
-            :usages_backfill
-          else
-            :long_running
-          end
-
-          DailyUsages::FillFromInvoiceJob.set(queue:).perform_later(invoice:, subscriptions: [subscription])
+          DailyUsages::FillFromInvoiceJob.perform_later(invoice:, subscriptions: [subscription])
         end
       end
 

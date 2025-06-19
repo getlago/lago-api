@@ -2,7 +2,7 @@ concurrency: 10
 timeout: 25
 retry: 1
 queues:
-  - usages_backfill
+  - analytics
 
 production:
   concurrency: <%= ENV.fetch('SIDEKIQ_CONCURRENCY', 10) %>
