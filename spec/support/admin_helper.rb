@@ -19,6 +19,12 @@ module AdminHelper
     post(path, params: params.to_json, headers:)
   end
 
+  def admin_post_without_bearer(path, params = {}, headers = {})
+    apply_headers(headers)
+    headers.delete("Authorization")
+    post(path, params: params.to_json, headers:)
+  end
+
   def json
     return response.body unless response.media_type.include?("json")
 
