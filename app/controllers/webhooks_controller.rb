@@ -41,7 +41,7 @@ class WebhooksController < ApplicationController
       organization_id: params[:organization_id],
       code: params[:code].presence,
       body: request.body.read,
-      signature: request.headers["verif-hash"]
+      secret: request.headers["verif-hash"]
     )
 
     unless result.success?
