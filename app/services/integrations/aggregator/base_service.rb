@@ -60,7 +60,6 @@ module Integrations
           if provider == provider_name.to_s
             raise BaseService::ThrottlingError.new(provider_name:) \
               unless Throttling.for(provider_name.to_sym).check(:client, throttle_key)
-            end
           end
         end
       end
