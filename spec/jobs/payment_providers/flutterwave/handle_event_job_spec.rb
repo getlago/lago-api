@@ -6,7 +6,7 @@ RSpec.describe PaymentProviders::Flutterwave::HandleEventJob do
   subject(:handle_event_job) { described_class.new }
 
   let(:organization) { create(:organization) }
-  let(:event_json) { { event: "charge.completed", data: {} }.to_json }
+  let(:event_json) { {event: "charge.completed", data: {}}.to_json }
 
   describe "#perform" do
     it "calls the HandleEventService" do
