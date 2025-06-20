@@ -60,16 +60,17 @@ module Invoices
         parsed_response["data"]["link"]
       end
 
-      def create_checkout_session body = {
-        amount: invoice.total_amount_cents / 100.0,
-        tx_ref: invoice.id,
-        currency: invoice.currency.upcase,
-        redirect_url: success_redirect_url,
-        customer: customer_params,
-        customizations: customizations_params,
-        configuration: configuration_params,
-        meta: meta_params
-      }
+      def create_checkout_session
+        body = {
+          amount: Money.from_cents(invoice.total_amount_cents, invoice.currency).to_f,
+          tx_ref: invoice.id,
+          currency: invoice.currency.upcase,
+          redirect_url: success_redirect_url,
+          customer: customer_params,
+          customizations: customizations_params,
+          configuration: configuration_params,
+          meta: meta_params
+        }
         http_client.post_with_response(body, headers)
       end
 
