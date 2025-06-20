@@ -14,7 +14,7 @@ module Admin
 
       if auth_header&.start_with?("Bearer ")
         begin
-          token   = auth_header.split(" ").second
+          token = auth_header.split(" ").second
           payload = Google::Auth::IDTokens.verify_oidc(
             token,
             aud: ENV["GOOGLE_AUTH_CLIENT_ID"]
@@ -28,7 +28,7 @@ module Admin
       end
 
       # Fallback to X-Admin-API-Key header
-      key_header   = request.headers["X-Admin-API-Key"]
+      key_header = request.headers["X-Admin-API-Key"]
       expected_key = ENV["ADMIN_API_KEY"]
 
       if key_header.present? && expected_key.present? && ActiveSupport::SecurityUtils.secure_compare(key_header, expected_key)
