@@ -151,4 +151,17 @@ RSpec.describe ApiLogsQuery, type: :query, clickhouse: true do
       end
     end
   end
+
+  context "with request_ids filter" do
+    let(:filler_api_log) { create(:clickhouse_api_log, organization:, http_status: 404) }
+    let(:sorted_ids) { [api_log.request_id, filler_api_log.request_id].sort }
+
+    it "returns expected api logs" do
+      filters = {request_ids: sorted_ids}
+      expect(described_class.call(organization:, pagination:, filters:).api_logs.map(&:request_id).sort).to eq(sorted_ids)
+
+      filters = {request_ids: ["other"]}
+      expect(described_class.call(organization:, pagination:, filters:).api_logs).to be_empty
+    end
+  end
 end
