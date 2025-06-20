@@ -8270,7 +8270,7 @@ type Query {
   """
   Query the pricing units of current organization
   """
-  pricingUnits(limit: Int, page: Int): PricingUnitCollection!
+  pricingUnits(limit: Int, page: Int, searchTerm: String): PricingUnitCollection!
 
   """
   Query a single subscription of an organization

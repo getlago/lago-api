@@ -6,16 +6,17 @@ RSpec.describe Resolvers::PricingUnitsResolver, type: :graphql do
   subject(:result) do
     execute_graphql(
       current_user: membership.user,
-      current_organization: membership.organization,
+      current_organization: organization,
       permissions: required_permission,
-      query:
+      query:,
+      variables: {searchTerm: "token"}
     )
   end
 
   let(:query) do
     <<~GQL
-      query {
-        pricingUnits(page: 2, limit: 1) {
+      query($searchTerm: String) {
+        pricingUnits(page: 2, limit: 1, searchTerm: $searchTerm) {
           collection { id name code shortName description createdAt }
           metadata {
             currentPage
@@ -28,20 +29,22 @@ RSpec.describe Resolvers::PricingUnitsResolver, type: :graphql do
   end
 
   let(:membership) { create(:membership) }
+  let(:organization) { membership.organization }
   let(:required_permission) { "pricing_units:view" }
-  let(:pricing_unit) { create(:pricing_unit, organization: membership.organization) }
+  let(:pricing_unit) { create(:pricing_unit, name: "Cloud token", organization:) }
 
   before do
-    create(:pricing_unit, organization: membership.organization)
+    create(:pricing_unit, name: "Compute token", organization:)
     pricing_unit
-    create(:pricing_unit, organization: membership.organization)
+    create(:pricing_unit, code: "token", organization:)
+    create(:pricing_unit, organization:)
   end
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "pricing_units:view"
 
-  it "returns a list of pricing units" do
+  it "returns a list of pricing units matching search term" do
     pricing_units_response = result["data"]["pricingUnits"]
 
     expect(pricing_units_response["collection"].first["id"]).to eq(pricing_unit.id)
