@@ -36,6 +36,13 @@ RSpec.describe EmailValidator do
   end
 
   [
+    # Leading and trailing comma
+    ",user@domain.com,",
+    "user@domain.com,,",
+    ",user@domain.com,,",
+    "user@domain.com,,",
+    "user@domain.com,,",
+
     # Unicode
     "with.uniçode@example.com",
 
