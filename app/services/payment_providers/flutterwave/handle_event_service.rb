@@ -20,7 +20,11 @@ module PaymentProviders
 
         return result unless service_class
 
-        service_class.call!(organization_id: organization.id, event_json:)
+        begin
+          service_class.call!(organization_id: organization.id, event_json:)
+        rescue => e
+          Rails.logger.error("Flutterwave event processing error: #{e.message}")
+        end
 
         result
       end
