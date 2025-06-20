@@ -20,6 +20,7 @@ class Invoice < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
   belongs_to :billing_entity, optional: true
+  belongs_to :voided_invoice, class_name: "Invoice", optional: true
 
   has_many :fees
   has_many :credits
@@ -573,6 +574,7 @@ end
 #  organization_id                         :uuid             not null
 #  organization_sequential_id              :integer          default(0), not null
 #  sequential_id                           :integer
+#  voided_invoice_id                       :uuid
 #
 # Indexes
 #
@@ -589,6 +591,7 @@ end
 #  index_invoices_on_self_billed                                   (self_billed)
 #  index_invoices_on_sequential_id                                 (sequential_id)
 #  index_invoices_on_status                                        (status)
+#  index_invoices_on_voided_invoice_id                             (voided_invoice_id)
 #
 # Foreign Keys
 #

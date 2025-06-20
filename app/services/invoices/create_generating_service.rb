@@ -2,7 +2,8 @@
 
 module Invoices
   class CreateGeneratingService < BaseService
-    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil) # rubocop:disable Metrics/ParameterLists
+     # rubocop:disable Metrics/ParameterLists
+    def initialize(customer:, invoice_type:, datetime:, currency:, charge_in_advance: false, skip_charges: false, invoice_id: nil)
       @customer = customer
       @invoice_type = invoice_type
       @currency = currency
@@ -13,6 +14,7 @@ module Invoices
 
       super
     end
+    # rubocop:enable Metrics/ParameterLists
 
     def call
       return result.forbidden_failure! if customer.partner_account? && !organization.revenue_share_enabled?
