@@ -373,7 +373,7 @@ RSpec.describe WebhooksController, type: :request do
       result
     end
 
-    before do      
+    before do
       allow(PaymentProviders::Flutterwave::HandleIncomingWebhookService).to receive(:call)
         .with(
           organization_id: organization.id,
