@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+# NOTE: This service is a copy of the GraduatedService in the Charges namespace.
+# Instead of duplicating the code, we could extract the charge models to its own scope
+# and use it from both namespaces.
 module FixedCharges
   module ChargeModels
     class GraduatedService < FixedCharges::ChargeModels::BaseService

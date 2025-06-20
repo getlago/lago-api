@@ -24,7 +24,6 @@ RSpec.describe FixedCharges::ChargeModels::StandardService, type: :service do
 
   before do
     aggregation_result.aggregation = aggregation
-    aggregation_result.count = 1
   end
 
   it "applies the model to the values" do
