@@ -100,7 +100,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
   let(:event_timestamp) { [date_service.charges_to_datetime - 2.days, started_at].max }
 
   let(:fixed_charge) do
-    create(:fixed_charge, :standard, plan:)
+    create(:fixed_charge, :standard, plan:, properties: {amount: "10"}, units: 1)
   end
 
   before do

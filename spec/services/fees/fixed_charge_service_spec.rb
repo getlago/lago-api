@@ -13,8 +13,9 @@ RSpec.describe Fees::FixedChargeService, type: :service do
     )
   end
 
-  let(:customer) { create(:customer) }
-  let(:organization) { customer.organization }
+  let(:organization) { create(:organization) }
+  let(:billing_entity) { create(:billing_entity, organization:) }
+  let(:customer) { create(:customer, billing_entity:, organization:) }
   let(:context) { :finalize }
 
   let(:subscription) do
@@ -22,7 +23,8 @@ RSpec.describe Fees::FixedChargeService, type: :service do
       :subscription,
       status: :active,
       started_at: Time.zone.parse("2022-03-15"),
-      customer:
+      customer:,
+      organization:
     )
   end
 
@@ -47,7 +49,8 @@ RSpec.describe Fees::FixedChargeService, type: :service do
     create(
       :fixed_charge,
       plan: subscription.plan,
-      properties: {amount: "20"}
+      properties: {amount: "20"},
+      organization:
     )
   end
 
@@ -59,7 +62,6 @@ RSpec.describe Fees::FixedChargeService, type: :service do
     it "creates a fixed charge fee" do
       result = fixed_charge_service.call
 
-      aggregate_failures do
         expect(result).to be_success
         expect(result.fees.count).to eq(1)
 
@@ -70,14 +72,15 @@ RSpec.describe Fees::FixedChargeService, type: :service do
           fee_type: "fixed_charge",
           units: 1,
           amount_cents: 2000,
-          amount_currency: subscription.plan.amount_currency
+          amount_currency: subscription.plan.amount_currency,
+          organization_id: organization.id,
+          billing_entity_id: billing_entity.id
         )
-      end
     end
 
     context "when fixed charge has zero units" do
       before do
-        fixed_charge.update!(untis: 0)
+        fixed_charge.update!(units: 0)
       end
 
       it "does not create a fee" do
@@ -108,10 +111,7 @@ RSpec.describe Fees::FixedChargeService, type: :service do
       end
 
       it "does not create a new fee" do
-        result = fixed_charge_service.call
-
-        expect(result).to be_success
-        expect(result.fees.count).to eq(0)
+        expect { fixed_charge_service.call }.not_to change(Fee, :count)
       end
     end
 
@@ -126,7 +126,8 @@ RSpec.describe Fees::FixedChargeService, type: :service do
               {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "1"},
               {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
             ]
-          }
+          },
+          units: 16
         )
       end
 
@@ -134,7 +135,8 @@ RSpec.describe Fees::FixedChargeService, type: :service do
         result = fixed_charge_service.call
 
         expect(result).to be_success
-        expect(result.fees.first.amount_cents).to eq(1100) # 1 * 2 + 1 = 3, then * 100 for cents
+        # 10 * 2 + 1 + 6 * 1 = 27, then * 100 for cents
+        expect(result.fees.first.amount_cents).to eq(2700)
       end
     end
   end

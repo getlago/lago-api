@@ -3,6 +3,9 @@
 class SubscriptionsUnitsOverride < ApplicationRecord
   belongs_to :subscription
   belongs_to :fixed_charge
+  belongs_to :organization
+
+  # should this belongs to a billing entity?
 
   validates :units, presence: true
 end

@@ -41,6 +41,9 @@ module Fees
     def init_fees
       result.fees = []
 
+      # TODO: for units we should consider the events for this fixed charge instead of the subscription units override
+      # as we should bill the units "consumed" by the customer over the billing period not the current value of the units.
+      # Does this make sense?
       units = subscription.units_override_for(fixed_charge) || fixed_charge.units
       return result if units.zero?
 
@@ -62,10 +65,11 @@ module Fees
       unit_amount_cents = charge_model_result.unit_amount * currency.subunit_to_unit
 
       fee = Fee.new(
-        subscription:,
         fixed_charge:,
-        organization_id: subscription.organization_id,
-        billing_entity_id: subscription.billing_entity_id,
+        invoice:,
+        subscription:,
+        organization_id: fixed_charge.organization_id,
+        billing_entity_id: subscription.customer.billing_entity_id,
         amount_cents:,
         precise_amount_cents:,
         amount_currency: currency.iso_code,
