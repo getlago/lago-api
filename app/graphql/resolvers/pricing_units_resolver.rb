@@ -11,11 +11,18 @@ module Resolvers
 
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
+    argument :search_term, String, required: false
 
     type Types::PricingUnits::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil)
-      current_organization.pricing_units.order(created_at: :asc).page(page).per(limit)
+    def resolve(page: nil, limit: nil, search_term: nil)
+      result = ::PricingUnitsQuery.call(
+        organization: current_organization,
+        search_term:,
+        pagination: {page:, limit:}
+      )
+
+      result.pricing_units
     end
   end
 end
