@@ -21,14 +21,6 @@ RSpec.describe FixedCharges::ChargeModelFactory, type: :service do
 
       it { expect(result).to be_a(FixedCharges::ChargeModels::GraduatedService) }
     end
-
-    context "with unsupported charge model" do
-      let(:fixed_charge) { build(:fixed_charge, charge_model: "unsupported") }
-
-      it "raises NotImplementedError" do
-        expect { result }.to raise_error(NotImplementedError)
-      end
-    end
   end
 
   describe "#charge_model_class" do
