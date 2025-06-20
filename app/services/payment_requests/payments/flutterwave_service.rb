@@ -67,7 +67,7 @@ module PaymentRequests
 
       def create_checkout_session
         body = {
-          amount: payable.total_amount_cents / 100.0,
+          amount: Money.from_cents(payable.total_amount_cents, payable.currency).to_f,
           tx_ref: "lago_payment_request_#{payable.id}",
           currency: payable.currency.upcase,
           redirect_url: success_redirect_url,
@@ -137,14 +137,13 @@ module PaymentRequests
 
       def deliver_error_webhook(http_error)
         return unless payable.organization.webhook_endpoints.any?
-
         SendWebhookJob.perform_later(
           "payment_request.payment_failure",
           payable,
           provider_customer_id: flutterwave_customer&.provider_customer_id,
           provider_error: {
             message: http_error.message,
-            error_code: http_error.code
+            error_code: http_error.error_code
           }
         )
       end

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe PaymentProviders::Flutterwave::HandleIncomingWebhookService do
-  subject(:webhook_service) { described_class.new(organization_id:, body:, signature:, code:) }
+  subject(:webhook_service) { described_class.new(organization_id:, body:, secret:, code:) }
 
   let(:organization) { create(:organization) }
   let(:organization_id) { organization.id }
@@ -11,7 +11,7 @@ RSpec.describe PaymentProviders::Flutterwave::HandleIncomingWebhookService do
   let(:webhook_secret) { "webhook_secret_hash" }
   let(:code) { flutterwave_provider.code }
   let(:body) { payload.to_json }
-  let(:signature) { Digest::SHA256.hexdigest(webhook_secret) }
+  let(:secret) { webhook_secret }
 
   let(:payload) do
     {
@@ -35,7 +35,7 @@ RSpec.describe PaymentProviders::Flutterwave::HandleIncomingWebhookService do
   end
 
   describe "#call" do
-    context "when signature is valid" do
+    context "when secret is valid" do
       it "enqueues the webhook processing job" do
         expect { webhook_service.call }.to have_enqueued_job(PaymentProviders::Flutterwave::HandleEventJob)
       end
@@ -47,25 +47,30 @@ RSpec.describe PaymentProviders::Flutterwave::HandleIncomingWebhookService do
       end
     end
 
-    context "when signature is invalid" do
-      let(:signature) { "invalid_signature" }
+    context "when secret is invalid" do
+      let(:secret) { "invalid_secret" }
 
       it "returns service failure" do
         result = webhook_service.call
         expect(result).not_to be_success
         expect(result.error.code).to eq("webhook_error")
-        expect(result.error.message).to eq("Invalid signature")
+        expect(result.error.message).to eq("webhook_error: Invalid webhook secret")
       end
     end
 
     context "when webhook secret is missing" do
       let(:webhook_secret) { nil }
+      let(:secret) { nil }
+
+      before do
+        flutterwave_provider.update!(settings: flutterwave_provider.settings.merge("webhook_secret" => nil))
+      end
 
       it "returns service failure" do
         result = webhook_service.call
         expect(result).not_to be_success
         expect(result.error.code).to eq("webhook_error")
-        expect(result.error.message).to eq("Missing webhook secret")
+        expect(result.error.message).to eq("webhook_error: Webhook secret is missing")
       end
     end
 
