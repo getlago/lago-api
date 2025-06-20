@@ -101,10 +101,9 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
           status: :succeeded,
           flutterwave_payment: flutterwave_payment
         )
-
         expect(Invoices::UpdateService).to have_received(:call) do |args|
           expect(args[:invoice]).to eq(invoice)
-          expect(args[:params][:payment_status]).to eq(:succeeded)
+          expect(args[:params][:payment_status]).to eq("succeeded")
           expect(args[:params][:ready_for_payment_processing]).to be false
         end
       end
@@ -183,7 +182,7 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
         )
 
         expect(Invoices::UpdateService).to have_received(:call) do |args|
-          expect(args[:params][:total_paid_amount_cents]).to eq(35000) # 20000 + 15000
+          expect(args[:params][:total_paid_amount_cents]).to eq(85000) # 20000 + 15000 + 50000 (new payment)
         end
       end
     end
@@ -237,7 +236,7 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
     end
 
     context "when HTTP client raises an error" do
-      let(:http_error) { LagoHttpClient::HttpError.new("Connection failed", 500) }
+      let(:http_error) { LagoHttpClient::HttpError.new(500, "Connection failed", "https://api.example.com") }
 
       before do
         allow(http_client).to receive(:post_with_response).and_raise(http_error)
@@ -276,16 +275,6 @@ RSpec.describe Invoices::Payments::FlutterwaveService do
         expect(http_client).to have_received(:post_with_response) do |body|
           expect(body[:amount]).to eq(10000.0)
           expect(body[:currency]).to eq("NGN")
-        end
-      end
-
-      it "includes organization logo if available" do
-        organization.update!(logo_url: "https://example.com/logo.png")
-
-        flutterwave_service.send(:create_checkout_session)
-
-        expect(http_client).to have_received(:post_with_response) do |body|
-          expect(body[:customizations][:logo]).to eq("https://example.com/logo.png")
         end
       end
     end

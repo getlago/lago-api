@@ -32,7 +32,7 @@ RSpec.describe PaymentProviderCustomers::FlutterwaveService do
       result = flutterwave_service.generate_checkout_url
 
       expect(result).not_to be_success
-      expect(result.error).to be_a(BaseService::NotAllowedFailure)
+      expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
       expect(result.error.code).to eq("feature_not_supported")
     end
 
@@ -41,7 +41,7 @@ RSpec.describe PaymentProviderCustomers::FlutterwaveService do
         result = flutterwave_service.generate_checkout_url(send_webhook: false)
 
         expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::NotAllowedFailure)
+        expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
         expect(result.error.code).to eq("feature_not_supported")
       end
     end
