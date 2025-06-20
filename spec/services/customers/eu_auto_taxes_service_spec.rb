@@ -72,6 +72,56 @@ RSpec.describe Customers::EuAutoTaxesService, type: :service do
         end
       end
 
+      context "when VIES check raises MemberStateUnavailable error" do
+        before do
+          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
+            .and_raise(Valvat::MemberStateUnavailable.new("member state unavailable", nil))
+          customer.update!(country: "DE")
+        end
+
+        it "returns the default tax code" do
+          result = eu_tax_service.call
+
+          expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
+            valid: false,
+            valid_format: true,
+            error: "The  web service returned the error: member state unavailable"
+          }).once
+        end
+
+        it "enqueues RetryViesCheckJob" do
+          eu_tax_service.call
+
+          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
+        end
+      end
+
+      context "when VIES check raises ServiceUnavailable error" do
+        before do
+          allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
+            .and_raise(Valvat::ServiceUnavailable.new("service unavailable", nil))
+          customer.update!(country: "DE")
+        end
+
+        it "returns the default tax code" do
+          result = eu_tax_service.call
+
+          expect(result.tax_code).to eq("lago_eu_de_standard")
+          expect(SendWebhookJob).to have_been_enqueued.with("customer.vies_check", customer, vies_check: {
+            valid: false,
+            valid_format: true,
+            error: "The  web service returned the error: service unavailable"
+          }).once
+        end
+
+        it "enqueues RetryViesCheckJob" do
+          eu_tax_service.call
+
+          expect(Customers::RetryViesCheckJob).to have_been_enqueued.at(4.minutes.from_now..6.minutes.from_now).with(customer.id).once
+        end
+      end
+
       context "when eu_tax_management is false" do
         let(:organization) { create(:organization, country: "IT", eu_tax_management: false) }
         let(:billing_entity) { create(:billing_entity, organization:, country: "FR", eu_tax_management: false) }
