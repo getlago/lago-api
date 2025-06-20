@@ -26,7 +26,6 @@ module PaymentProviders
       flutterwave_provider.code = args[:code] if args.key?(:code)
       flutterwave_provider.name = args[:name] if args.key?(:name)
       flutterwave_provider.save!
-
       if payment_provider_code_changed?(flutterwave_provider, old_code, args)
         flutterwave_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
       end
@@ -35,12 +34,6 @@ module PaymentProviders
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
-    end
-
-    private
-
-    def payment_provider_code_changed?(provider, old_code, args)
-      old_code != args[:code]
     end
   end
 end
