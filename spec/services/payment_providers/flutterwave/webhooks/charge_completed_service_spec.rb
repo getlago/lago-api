@@ -89,7 +89,6 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       .and_return(double(success?: true, payment_provider: flutterwave_provider)) # rubocop:disable RSpec/VerifiedDoubles
   end
 
-
   describe "#call" do
     context "when transaction status is successful" do
       let(:http_client) { instance_double(LagoHttpClient::Client) }
