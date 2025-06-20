@@ -137,14 +137,13 @@ module PaymentRequests
 
       def deliver_error_webhook(http_error)
         return unless payable.organization.webhook_endpoints.any?
-
         SendWebhookJob.perform_later(
           "payment_request.payment_failure",
           payable,
           provider_customer_id: flutterwave_customer&.provider_customer_id,
           provider_error: {
             message: http_error.message,
-            error_code: http_error.code
+            error_code: http_error.error_code
           }
         )
       end
