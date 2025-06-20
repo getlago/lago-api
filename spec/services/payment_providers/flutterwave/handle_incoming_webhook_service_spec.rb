@@ -63,7 +63,9 @@ RSpec.describe PaymentProviders::Flutterwave::HandleIncomingWebhookService do
       let(:secret) { nil }
 
       before do
-        flutterwave_provider.update!(settings: flutterwave_provider.settings.merge("webhook_secret" => nil))
+        secrets = JSON.parse(flutterwave_provider.secrets || "{}")
+        secrets.delete("webhook_secret")
+        flutterwave_provider.update!(secrets: secrets.to_json)
       end
 
       it "returns service failure" do
