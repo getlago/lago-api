@@ -135,6 +135,7 @@ module Invoices
         Payment.new(
           organization_id: @invoice.organization_id,
           payable: @invoice,
+          customer:,
           payment_provider_id: flutterwave_payment_provider.id,
           payment_provider_customer_id: customer.flutterwave_customer.id,
           amount_cents: @invoice.total_due_amount_cents,

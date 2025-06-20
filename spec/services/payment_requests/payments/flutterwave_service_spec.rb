@@ -3,18 +3,26 @@
 require "rails_helper"
 
 RSpec.describe PaymentRequests::Payments::FlutterwaveService do
-  subject(:flutterwave_service) { described_class.new(payable: payment_request) }
+  subject(:flutterwave_service) { described_class.new(payment_request) }
 
   let(:organization) { create(:organization, name: "Test Organization") }
   let(:customer) { create(:customer, organization: organization, email: "customer@example.com", name: "John Doe") }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization: organization, secret_key: "FLWSECK_TEST-secret") }
   let(:flutterwave_customer) { create(:flutterwave_customer, customer: customer, payment_provider: flutterwave_provider) }
   let(:invoice) { create(:invoice, organization: organization, customer: customer, total_amount_cents: 50000, currency: "USD") }
-  let(:payment_request) { create(:payment_request, organization: organization, customer: customer, total_amount_cents: 50000, currency: "USD") }
+  let(:payment_request) do
+    create(
+      :payment_request,
+      organization:,
+      customer:,
+      total_amount_cents: 50000,
+      currency: "USD",
+      invoices: [invoice]
+    )
+  end
 
   before do
     flutterwave_customer
-    payment_request.invoices << invoice
   end
 
   describe "#call" do

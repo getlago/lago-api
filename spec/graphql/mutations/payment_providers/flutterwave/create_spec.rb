@@ -51,7 +51,7 @@ RSpec.describe Mutations::PaymentProviders::Flutterwave::Create, type: :graphql 
       expect(result_data["id"]).to be_present
       expect(result_data["code"]).to eq(code)
       expect(result_data["name"]).to eq(name)
-      expect(result_data["secretKey"]).to eq("••••••••…-X")
+      expect(result_data["secretKey"]).to eq("••••••••…x-X")
       expect(result_data["successRedirectUrl"]).to eq(success_redirect_url)
       expect(result_data["webhookSecret"]).to be_present
     end

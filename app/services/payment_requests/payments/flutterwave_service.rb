@@ -6,10 +6,10 @@ module PaymentRequests
       include Customers::PaymentProviderFinder
       include Updatable
 
-      def initialize(payable:)
+      def initialize(payable = nil)
         @payable = payable
 
-        super
+        super(nil)
       end
 
       def call
@@ -160,6 +160,7 @@ module PaymentRequests
         Payment.new(
           organization_id: payable.organization_id,
           payable:,
+          customer:,
           payment_provider_id: flutterwave_payment_provider.id,
           payment_provider_customer_id: customer.flutterwave_customer.id,
           amount_cents: payable.total_amount_cents,

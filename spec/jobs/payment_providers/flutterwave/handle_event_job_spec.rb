@@ -27,7 +27,9 @@ RSpec.describe PaymentProviders::Flutterwave::HandleEventJob do
       after { ENV.delete("SIDEKIQ_PAYMENTS") }
 
       it "uses the payments queue" do
-        expect(described_class.queue_name).to eq("payments")
+        expect {
+          described_class.perform_later(organization:, event: "test")
+        }.to have_enqueued_job.on_queue("payments")
       end
     end
 
@@ -35,7 +37,9 @@ RSpec.describe PaymentProviders::Flutterwave::HandleEventJob do
       before { ENV.delete("SIDEKIQ_PAYMENTS") }
 
       it "uses the providers queue" do
-        expect(described_class.queue_name).to eq("providers")
+        expect {
+          described_class.perform_later(organization:, event: "test")
+        }.to have_enqueued_job.on_queue("providers")
       end
     end
   end
