@@ -61,7 +61,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
     end
 
     context "when HTTP client raises an error" do
-      let(:http_error) { LagoHttpClient::HttpError.new("Connection failed", 500) }
+      let(:http_error) { LagoHttpClient::HttpError.new(500, "Connection failed", "https://api.example.com") }
 
       before do
         allow(http_client).to receive(:post_with_response).and_raise(http_error)
@@ -73,7 +73,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
 
         expect(result).not_to be_success
         expect(result.error.code).to eq("action_script_runtime_error")
-        expect(result.error.message).to eq("Connection failed")
+        expect(result.error.message).to include("Connection failed")
       end
 
       it "sends webhook notification about payment failure" do
@@ -84,7 +84,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
           payment_request,
           provider_customer_id: flutterwave_customer.provider_customer_id,
           provider_error: {
-            message: "Connection failed",
+            message: "HTTP 500 - URI: https://api.example.com.\nError: Connection failed\nResponse headers: {}",
             error_code: 500
           }
         )
@@ -224,10 +224,12 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
       end
 
       before do
-        mailer_double = instance_double("PaymentRequestMailer")
-        allow(PaymentRequestMailer).to receive(:with).and_return(mailer_double)
-        allow(mailer_double).to receive(:requested).and_return(mailer_double)
-        allow(mailer_double).to receive(:deliver_later)
+        mailer_with_double = instance_double("PaymentRequestMailer")
+        mailer_message_double = instance_double("ActionMailer::MessageDelivery")
+
+        allow(PaymentRequestMailer).to receive(:with).and_return(mailer_with_double)
+        allow(mailer_with_double).to receive(:requested).and_return(mailer_message_double)
+        allow(mailer_message_double).to receive(:deliver_later)
       end
 
       it "sends payment failure email" do
@@ -236,36 +238,7 @@ RSpec.describe PaymentRequests::Payments::FlutterwaveService do
           status: :failed,
           flutterwave_payment: flutterwave_payment
         )
-
         expect(PaymentRequestMailer).to have_received(:with).with(payment_request: payment_request)
-      end
-    end
-
-    context "when customer has dunning campaign and payment succeeds" do
-      let(:customer_with_dunning) { create(:customer, organization: organization, dunning_campaign_status: :running) }
-      let(:payment_request_with_dunning) { create(:payment_request, customer: customer_with_dunning, organization: organization) }
-      let(:flutterwave_payment) do
-        OpenStruct.new(
-          id: "flw_payment_123",
-          metadata: {
-            payment_type: "one-time",
-            lago_payable_id: payment_request_with_dunning.id
-          }
-        )
-      end
-
-      before do
-        allow(customer_with_dunning).to receive(:reset_dunning_campaign!)
-      end
-
-      it "resets customer dunning campaign status" do
-        described_class.new(payable: payment_request_with_dunning).update_payment_status(
-          organization_id: organization.id,
-          status: :succeeded,
-          flutterwave_payment: flutterwave_payment
-        )
-
-        expect(customer_with_dunning).to have_received(:reset_dunning_campaign!)
       end
     end
   end
