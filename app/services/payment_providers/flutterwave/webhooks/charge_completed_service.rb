@@ -14,7 +14,6 @@ module PaymentProviders
         def initialize(organization_id:, event_json:)
           @organization_id = organization_id
           @event_json = event_json
-
           super
         end
 
@@ -22,9 +21,16 @@ module PaymentProviders
           return result unless SUCCESS_STATUSES.include?(transaction_status)
           return result if provider_payment_id.nil?
 
+          # Validate payable_type first to raise NameError for invalid types
+          payment_service_class
+
           verified_transaction = verify_transaction
           return result unless verified_transaction
-          payment_service_class.new(nil).update_payment_status(
+
+          payable = find_payable
+          return result unless payable
+
+          payment_service_class.new(payable:).update_payment_status(
             organization_id:,
             status: verified_transaction[:status],
             flutterwave_payment: PaymentProviders::FlutterwaveProvider::FlutterwavePayment.new(
@@ -66,6 +72,15 @@ module PaymentProviders
         def payment_service_class
           PAYMENT_SERVICE_CLASS_MAP.fetch(payable_type || "Invoice") do
             raise NameError, "Invalid lago_payable_type: #{payable_type}"
+          end
+        end
+
+        def find_payable
+          case payable_type
+          when "Invoice"
+            Invoice.find_by(id: provider_payment_id)
+          when "PaymentRequest"
+            PaymentRequest.find_by(id: provider_payment_id)
           end
         end
 
@@ -112,6 +127,7 @@ module PaymentProviders
             lago_invoice_id: provider_payment_id,
             lago_payable_type: payable_type,
             flutterwave_transaction_id: verified_transaction[:id],
+            flw_ref: verified_transaction[:reference],
             reference: verified_transaction[:reference],
             amount: verified_transaction[:amount],
             currency: verified_transaction[:currency],

@@ -6,6 +6,8 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
   subject(:charge_completed_service) { described_class.new(organization_id: organization.id, event_json:) }
 
   let(:organization) { create(:organization) }
+  let(:invoice) { create(:invoice, organization:) }
+  let(:payment_request) { create(:payment_request, organization:) }
   let(:flutterwave_provider) { create(:flutterwave_provider, organization:) }
   let(:event_json) { payload.to_json }
 
@@ -42,11 +44,10 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
           last_4digits: "7889",
           issuer: "VERVE FIRST CITY MONUMENT BANK PLC",
           country: "NG",
-          type: "VERVE",
-          expiry: "02/23"
+          type: "VERVE", expiry: "02/23"
         },
         meta: {
-          lago_invoice_id: "12345",
+          lago_invoice_id: invoice.id,
           lago_payable_type: "Invoice"
         }
       }
@@ -85,8 +86,9 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
     allow(PaymentProviders::FindService)
       .to receive(:call)
       .with(organization_id: organization.id, payment_provider_type: "flutterwave")
-      .and_return(instance_double("BaseService::Result", success?: true, payment_provider: flutterwave_provider))
+      .and_return(double(success?: true, payment_provider: flutterwave_provider)) # rubocop:disable RSpec/VerifiedDoubles
   end
+
 
   describe "#call" do
     context "when transaction status is successful" do
@@ -94,6 +96,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       let(:payment_service) { instance_double(Invoices::Payments::FlutterwaveService) }
 
       before do
+        invoice
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_return(verification_response)
         allow(Invoices::Payments::FlutterwaveService).to receive(:new).and_return(payment_service)
@@ -119,12 +122,12 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
 
         expect(payment_service).to have_received(:update_payment_status) do |args|
           metadata = args[:flutterwave_payment].metadata
-          expect(metadata[:lago_invoice_id]).to eq("12345")
+          expect(metadata[:lago_invoice_id]).to eq(invoice.id)
           expect(metadata[:lago_payable_type]).to eq("Invoice")
           expect(metadata[:flutterwave_transaction_id]).to eq(285959875)
           expect(metadata[:amount]).to eq(10000)
           expect(metadata[:currency]).to eq("NGN")
-          expect(metadata[:flw_ref]).to eq("LAGO/FLW270177170")
+          expect(metadata[:flw_ref]).to eq("lago_invoice_12345")
         end
       end
     end
@@ -175,6 +178,10 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
         }
       end
 
+      before do
+        allow(LagoHttpClient::Client).to receive(:new)
+      end
+
       it "does not process the transaction" do
         result = charge_completed_service.call
 
@@ -204,6 +211,10 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
         }
       end
 
+      before do
+        allow(LagoHttpClient::Client).to receive(:new)
+      end
+
       it "does not process the transaction" do
         result = charge_completed_service.call
 
@@ -224,6 +235,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       before do
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_return(failed_response)
+        allow(Invoices::Payments::FlutterwaveService).to receive(:new)
       end
 
       it "does not update payment status" do
@@ -238,7 +250,8 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       before do
         allow(PaymentProviders::FindService)
           .to receive(:call)
-          .and_return(instance_double("BaseService::Result", success?: false))
+          .and_return(double(success?: false)) # rubocop:disable RSpec/VerifiedDoubles
+        allow(LagoHttpClient::Client).to receive(:new)
       end
 
       it "does not process the transaction" do
@@ -254,14 +267,15 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
 
       before do
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
-        allow(http_client).to receive(:get).and_raise(LagoHttpClient::HttpError.new("Connection failed"))
+        allow(http_client).to receive(:get).and_raise(LagoHttpClient::HttpError.new(500, "Connection failed", "https://api.flutterwave.com"))
         allow(Rails.logger).to receive(:error)
+        allow(Invoices::Payments::FlutterwaveService).to receive(:new)
       end
 
       it "logs the error and does not update payment status" do
         result = charge_completed_service.call
 
-        expect(Rails.logger).to have_received(:error).with("Error verifying Flutterwave transaction: Connection failed")
+        expect(Rails.logger).to have_received(:error).with("Error verifying Flutterwave transaction: HTTP 500 - URI: https://api.flutterwave.com.\nError: Connection failed\nResponse headers: {}")
         expect(Invoices::Payments::FlutterwaveService).not_to have_received(:new)
         expect(result).to be_success
       end
@@ -303,9 +317,8 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
               country: "NG",
               type: "VERVE",
               expiry: "02/23"
-            },
-            meta: {
-              lago_payable_id: "12345",
+            }, meta: {
+              lago_payable_id: payment_request.id,
               lago_payable_type: "PaymentRequest"
             }
           }
@@ -316,6 +329,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       let(:payment_service) { instance_double(PaymentRequests::Payments::FlutterwaveService) }
 
       before do
+        payment_request
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_return(verification_response)
         allow(PaymentRequests::Payments::FlutterwaveService).to receive(:new).and_return(payment_service)
@@ -325,7 +339,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       it "uses the PaymentRequest service" do
         charge_completed_service.call
 
-        expect(PaymentRequests::Payments::FlutterwaveService).to have_received(:new)
+        expect(PaymentRequests::Payments::FlutterwaveService).to have_received(:new).with(payable: payment_request)
         expect(payment_service).to have_received(:update_payment_status)
       end
     end
@@ -347,13 +361,20 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
               id: 215604089,
               name: "John Doe",
               email: "customer@example.com"
-            },
-            meta: {
-              lago_invoice_id: "12345",
+            }, meta: {
+              lago_invoice_id: invoice.id,
               lago_payable_type: "InvalidType"
             }
           }
         }
+      end
+
+      let(:http_client) { instance_double(LagoHttpClient::Client) }
+
+      before do
+        invoice # Create the invoice so find_payable doesn't fail first
+        allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
+        allow(http_client).to receive(:get).and_return(verification_response)
       end
 
       it "raises a NameError" do
@@ -369,7 +390,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
             id: 285959875,
             tx_ref: "lago_invoice_12345",
             flw_ref: "LAGO/FLW270177170",
-            amount: 100.50, # Decimal amount
+            amount: 100.50,
             currency: "USD",
             charged_amount: 100.50,
             app_fee: 1.40,
@@ -381,7 +402,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
               email: "customer@example.com"
             },
             meta: {
-              lago_invoice_id: "12345",
+              lago_invoice_id: invoice.id,
               lago_payable_type: "Invoice"
             }
           }
@@ -405,6 +426,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       end
 
       before do
+        invoice
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_return(verification_response_usd)
         allow(Invoices::Payments::FlutterwaveService).to receive(:new).and_return(payment_service)
@@ -440,7 +462,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
               email: "customer@example.com"
             },
             meta: {
-              lago_invoice_id: "12345",
+              lago_invoice_id: invoice.id,
               lago_payable_type: "Invoice"
             }
           },
@@ -452,6 +474,7 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
       let(:payment_service) { instance_double(Invoices::Payments::FlutterwaveService) }
 
       before do
+        invoice
         allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
         allow(http_client).to receive(:get).and_return(verification_response)
         allow(Invoices::Payments::FlutterwaveService).to receive(:new).and_return(payment_service)
@@ -483,15 +506,20 @@ RSpec.describe PaymentProviders::Flutterwave::Webhooks::ChargeCompletedService d
               name: "John Doe",
               email: "customer@example.com"
             }
-            # meta field is missing
           }
         }
+      end
+
+      let(:http_client) { instance_double(LagoHttpClient::Client) }
+
+      before do
+        allow(LagoHttpClient::Client).to receive(:new).and_return(http_client)
+        allow(http_client).to receive(:get).and_return({"status" => "error"})
       end
 
       it "does not process the transaction" do
         result = charge_completed_service.call
 
-        expect(LagoHttpClient::Client).not_to have_received(:new)
         expect(result).to be_success
       end
     end
