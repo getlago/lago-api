@@ -24,6 +24,7 @@ RSpec.describe PaymentProviders::Flutterwave::HandleEventService do
       }
     }
   end
+
   describe "#call" do
     context "when event is charge.completed" do
       it "calls the charge completed service" do
