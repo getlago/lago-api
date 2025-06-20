@@ -9,6 +9,7 @@ module Types
         Types::PaymentProviders::Gocardless,
         Types::PaymentProviders::Stripe,
         Types::PaymentProviders::Cashfree,
+        Types::PaymentProviders::Flutterwave,
         Types::PaymentProviders::Moneyhash
 
       def self.resolve_type(object, _context)
@@ -21,6 +22,8 @@ module Types
           Types::PaymentProviders::Gocardless
         when "PaymentProviders::CashfreeProvider"
           Types::PaymentProviders::Cashfree
+        when "PaymentProviders::FlutterwaveProvider"
+          Types::PaymentProviders::Flutterwave
         when "PaymentProviders::MoneyhashProvider"
           Types::PaymentProviders::Moneyhash
         else
