@@ -4,17 +4,25 @@ default: &default
 development:
   primary:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] %>
+    host: db
+    username: lago
+    password: changeme
+    database: lago
+    port: 5432
   events:
     <<: *default
-    url: <%= ENV['DATABASE_URL'] %>
+    host: db
+    username: lago
+    password: changeme
+    database: lago
+    port: 5432
   clickhouse:
     adapter: clickhouse
-    database: <%= ENV.fetch('LAGO_CLICKHOUSE_DATABASE', 'default') %>
-    host: <%= ENV.fetch('LAGO_CLICKHOUSE_HOST', 'clickhouse') %>
-    port: <%= ENV.fetch('LAGO_CLICKHOUSE_PORT', 8123) %>
-    username: <%= ENV.fetch('LAGO_CLICKHOUSE_USERNAME', 'default') %>
-    password: <%= ENV.fetch('LAGO_CLICKHOUSE_PASSWORD', 'default') %>
+    database: default
+    host: clickhouse
+    port: 8123
+    username: default
+    password: default
     migrations_paths: db/clickhouse_migrate
     debug: true
     database_tasks: <% if ENV['LAGO_CLICKHOUSE_MIGRATIONS_ENABLED'].present? %> true <% else %> false <% end %>

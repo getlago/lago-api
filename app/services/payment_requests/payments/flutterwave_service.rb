@@ -67,7 +67,7 @@ module PaymentRequests
 
       def create_checkout_session
         body = {
-          amount: payable.total_amount_cents / 100.0,
+          amount: Money.from_cents(payable.total_amount_cents, payable.currency).to_f,
           tx_ref: "lago_payment_request_#{payable.id}",
           currency: payable.currency.upcase,
           redirect_url: success_redirect_url,

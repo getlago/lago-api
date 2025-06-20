@@ -43,5 +43,14 @@ RSpec.describe PaymentProviders::CreateCustomerFactory, type: :service do
         expect(new_instance).to be_instance_of(PaymentProviders::Gocardless::Customers::CreateService)
       end
     end
+
+    context "when provider is flutterwave" do
+      let(:provider) { "flutterwave" }
+      let(:payment_provider_id) { create(:flutterwave_provider, organization: customer.organization).id }
+
+      it "creates an instance of the flutterwave service" do
+        expect(new_instance).to be_instance_of(PaymentProviders::Flutterwave::Customers::CreateService)
+      end
+    end
   end
 end
