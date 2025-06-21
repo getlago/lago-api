@@ -12,11 +12,7 @@ RSpec.describe ::V1::PaymentRequestSerializer do
   end
 
   let(:invoice) { create(:invoice) }
-  let(:payment_request) { create(:payment_request) }
-
-  before do
-    create(:payment_request_applied_invoice, invoice:, payment_request:)
-  end
+  let(:payment_request) { create(:payment_request, invoices: [invoice]) }
 
   it "serializes the object" do
     result = JSON.parse(serializer.to_json)

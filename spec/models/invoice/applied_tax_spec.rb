@@ -7,6 +7,8 @@ RSpec.describe Invoice::AppliedTax, type: :model do
 
   it_behaves_like "paper_trail traceable"
 
+  it { is_expected.to belong_to(:organization) }
+
   describe "#applied_on_whole_invoice?" do
     subject(:applicable_on_whole_invoice) { applied_tax.applied_on_whole_invoice? }
 

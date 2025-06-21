@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe InvoiceSubscription, type: :model do
-  let(:invoice_subscription) do
+  subject(:invoice_subscription) do
     create(
       :invoice_subscription,
       from_datetime:,
@@ -20,6 +20,8 @@ RSpec.describe InvoiceSubscription, type: :model do
   let(:to_datetime) { "2022-01-31 23:59:59" }
   let(:charges_from_datetime) { "2022-01-01 00:00:00" }
   let(:charges_to_datetime) { "2022-01-31 23:59:59" }
+
+  it { is_expected.to belong_to(:organization) }
 
   describe "#fees" do
     it "returns corresponding fees" do

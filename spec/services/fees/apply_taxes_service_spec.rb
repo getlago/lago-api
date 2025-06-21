@@ -22,7 +22,7 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
     tax1
     tax2
     tax3
-    billing_entity.taxes << tax3
+    create(:billing_entity_applied_tax, billing_entity:, tax: tax3)
   end
 
   describe "call" do
@@ -62,7 +62,7 @@ RSpec.describe Fees::ApplyTaxesService, type: :service do
         )
       end
 
-      before { commitment.taxes << tax2 }
+      before { create(:commitment_applied_tax, commitment:, tax: tax2) }
 
       it "creates applied_taxes based on the commitment taxes" do
         result = apply_service.call
