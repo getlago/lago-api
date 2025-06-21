@@ -38,8 +38,7 @@ module Payments
 
     def retrieve_stripe_payment_method_data
       pm = ::Stripe::PaymentMethod.retrieve(provider_payment_method_id, {
-        api_key: payment_provider.secret_key,
-        stripe_version: ::Stripe.api_version || "2024-09-30.acacia" # TODO: Remove once Stripe.api_version is fully locked
+        api_key: payment_provider.secret_key
       })
 
       data = {
