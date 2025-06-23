@@ -68,6 +68,15 @@ class ApiLogsQuery < BaseQuery
   end
 
   def with_request_paths(scope)
-    scope.where("match(request_path, ?)", filters.request_paths)
+    scope.where(
+      filters.request_paths.map do |path|
+        if path.include?("*")
+          like_pattern = path.gsub("*", "%")
+          ActiveRecord::Base.send(:sanitize_sql_array, ["request_path LIKE ?", like_pattern])
+        else
+          ActiveRecord::Base.send(:sanitize_sql_array, ["request_path = ?", path])
+        end
+      end.join(" OR ")
+    )
   end
 end

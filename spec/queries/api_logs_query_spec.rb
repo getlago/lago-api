@@ -124,31 +124,23 @@ RSpec.describe ApiLogsQuery, type: :query, clickhouse: true do
   end
 
   context "with request_paths filter" do
+    let(:api_log) { create(:clickhouse_api_log, request_path: "/v1/billable_metrics/111222333") }
+
     it "returns expected api logs" do
       filters = {request_paths: [api_log.request_path]}
       expect(described_class.call(organization:, pagination:, filters:).api_logs.first.request_id).to eq(api_log.request_id)
 
+      filters = {request_paths: ["/v1/billable_metrics/*"]}
+      expect(described_class.call(organization:, pagination:, filters:).api_logs.first.request_id).to eq(api_log.request_id)
+
+      filters = {request_paths: ["/v1/*/111222333"]}
+      expect(described_class.call(organization:, pagination:, filters:).api_logs.first.request_id).to eq(api_log.request_id)
+
+      filters = {request_paths: ["*billable_metrics*"]}
+      expect(described_class.call(organization:, pagination:, filters:).api_logs.first.request_id).to eq(api_log.request_id)
+
       filters = {request_paths: ["other"]}
       expect(described_class.call(organization:, pagination:, filters:).api_logs).to be_empty
-    end
-
-    context "with a resource name" do
-      let(:create_bm) { create(:clickhouse_api_log, organization:, request_path: "/v1/billable_metrics/") }
-      let(:edit_bm) { create(:clickhouse_api_log, organization:, request_path: "/v1/billable_metrics/111222333") }
-
-      before do
-        create_bm
-        edit_bm
-      end
-
-      it "returns expected api logs" do
-        filters = {request_paths: ["billable_metrics"]}
-        api_logs = described_class.call(organization:, pagination:, filters:).api_logs
-
-        expect(api_logs.count).to eq(2)
-        expect(api_logs.first.id).to eq(create_bm.id)
-        expect(api_logs.last.id).to eq(edit_bm.id)
-      end
     end
   end
 
