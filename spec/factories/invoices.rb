@@ -80,5 +80,11 @@ FactoryBot.define do
         create(:applied_usage_threshold, invoice:, organization: invoice.organization)
       end
     end
+
+    trait :with_fees do
+      after :create do |invoice|
+        create(:fee, invoice:, organization: invoice.organization)
+      end
+    end
   end
 end
