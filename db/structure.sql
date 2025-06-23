@@ -331,6 +331,7 @@ DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_payment_request_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_payment_requests_on_invoice_id;
+DROP INDEX IF EXISTS public.index_invoices_on_voided_invoice_id;
 DROP INDEX IF EXISTS public.index_invoices_on_status;
 DROP INDEX IF EXISTS public.index_invoices_on_sequential_id;
 DROP INDEX IF EXISTS public.index_invoices_on_self_billed;
@@ -2543,6 +2544,7 @@ CREATE TABLE public.invoices (
     billing_entity_id uuid NOT NULL,
     billing_entity_sequential_id integer,
     finalized_at timestamp without time zone,
+    voided_invoice_id uuid,
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
 
@@ -6202,6 +6204,13 @@ CREATE INDEX index_invoices_on_status ON public.invoices USING btree (status);
 
 
 --
+-- Name: index_invoices_on_voided_invoice_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoices_on_voided_invoice_id ON public.invoices USING btree (voided_invoice_id);
+
+
+--
 -- Name: index_invoices_payment_requests_on_invoice_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8605,6 +8614,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250611072251'),
+('20250610173034'),
 ('20250610063400'),
 ('20250609121102'),
 ('20250602145535'),
