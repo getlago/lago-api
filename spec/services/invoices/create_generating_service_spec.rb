@@ -147,4 +147,22 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
       end
     end
   end
+
+  context "when voided invoice id is provided" do
+    let(:voided_invoice) { create(:invoice, customer:, status: :voided) }
+
+    it "creates an invoice with voided invoice id" do
+      service = described_class.new(
+        customer:,
+        invoice_type:,
+        currency:,
+        datetime:,
+        charge_in_advance:,
+        voided_invoice_id: voided_invoice.id
+      )
+      result = service.call
+
+      expect(result.invoice.voided_invoice_id).to eq(voided_invoice.id)
+    end
+  end
 end
