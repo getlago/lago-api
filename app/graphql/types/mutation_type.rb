@@ -101,6 +101,7 @@ module Types
     field :finalize_invoice, mutation: Mutations::Invoices::Finalize
     field :lose_invoice_dispute, mutation: Mutations::Invoices::LoseDispute
     field :refresh_invoice, mutation: Mutations::Invoices::Refresh
+    field :regenerate_from_voided, mutation: Mutations::Invoices::RegenerateFromVoided
     field :retry_all_invoice_payments, mutation: Mutations::Invoices::RetryAllPayments
     field :retry_all_invoices, mutation: Mutations::Invoices::RetryAll
     field :retry_invoice, mutation: Mutations::Invoices::Retry
@@ -108,7 +109,6 @@ module Types
     field :retry_tax_provider_voiding, mutation: Mutations::Invoices::RetryTaxProviderVoiding
     field :update_invoice, mutation: Mutations::Invoices::Update
     field :void_invoice, mutation: Mutations::Invoices::Void
-    field :regenerate_from_voided, mutation: Mutations::Invoices::RegenerateFromVoided
 
     field :download_payment_receipt, mutation: Mutations::PaymentReceipts::Download
 
