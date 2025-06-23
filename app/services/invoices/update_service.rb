@@ -57,17 +57,9 @@ module Invoices
         Invoices::Metadata::UpdateService.call(invoice:, params: params[:metadata]) if params[:metadata]
       end
 
-      if params.key?(:payment_status)
-        handle_prepaid_credits(params[:payment_status])
-        Invoices::UpdateFeesPaymentStatusJob.perform_later(invoice)
-        if old_payment_status != params[:payment_status] && invoice.visible?
-          deliver_webhook
-          Utils::ActivityLog.produce(invoice, "invoice.payment_status_updated")
-        end
-      end
+      schedule_post_processing_jobs(old_payment_status)
 
       result.invoice = invoice
-      Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice:) if invoice.should_update_hubspot_invoice?
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -77,6 +69,30 @@ module Invoices
 
     attr_reader :invoice, :params, :webhook_notification
 
+    def schedule_post_processing_jobs(old_payment_status)
+      if params.key?(:payment_status)
+        handle_prepaid_credits(params[:payment_status])
+        update_fees_payment_status
+        if old_payment_status != params[:payment_status] && invoice.visible?
+          deliver_webhook
+          log_activity
+        end
+      end
+      update_hubspot_invoice if invoice.should_update_hubspot_invoice?
+    end
+
+    def update_fees_payment_status
+      Invoices::UpdateFeesPaymentStatusJob.perform_after_commit(invoice)
+    end
+
+    def update_hubspot_invoice
+      Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_after_commit(invoice:)
+    end
+
+    def log_activity
+      Utils::ActivityLog.produce_after_commit(invoice, "invoice.payment_status_updated")
+    end
+
     def valid_payment_status?(payment_status)
       Invoice::PAYMENT_STATUS.include?(payment_status&.to_sym)
     end
@@ -85,7 +101,7 @@ module Invoices
       return unless invoice.invoice_type&.to_sym == :credit
       return unless %i[succeeded failed].include?(payment_status.to_sym)
 
-      Invoices::PrepaidCreditJob.perform_later(invoice, payment_status.to_sym)
+      Invoices::PrepaidCreditJob.perform_after_commit(invoice, payment_status.to_sym)
     end
 
     def valid_metadata_count?(metadata:)
@@ -98,7 +114,7 @@ module Invoices
     def deliver_webhook
       return unless webhook_notification
 
-      SendWebhookJob.perform_later("invoice.payment_status_updated", invoice)
+      SendWebhookJob.perform_after_commit("invoice.payment_status_updated", invoice)
     end
   end
 end
