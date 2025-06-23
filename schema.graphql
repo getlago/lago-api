@@ -499,15 +499,15 @@ type ApiLog {
   apiKey: SanitizedApiKey
   apiVersion: String
   client: String
-  createdAt: ISO8601DateTime
-  httpMethod: HttpMethodEnum
-  httpStatus: Int
-  loggedAt: ISO8601DateTime
+  createdAt: ISO8601DateTime!
+  httpMethod: HttpMethodEnum!
+  httpStatus: Int!
+  loggedAt: ISO8601DateTime!
   requestBody: JSON
   requestId: ID!
   requestOrigin: String
   requestPath: String
-  requestResponse: JSON
+  requestResponse: JSON!
 }
 
 """
@@ -5232,24 +5232,9 @@ type GroupedChargeUsage {
 Api Logs http method enums
 """
 enum HttpMethodEnum {
-  """
-  delete request
-  """
   delete
-
-  """
-  get request
-  """
   get
-
-  """
-  post request
-  """
   post
-
-  """
-  put request
-  """
   put
 }
 

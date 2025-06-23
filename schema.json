@@ -2336,9 +2336,13 @@
               "name": "createdAt",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601DateTime",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -2348,9 +2352,13 @@
               "name": "httpMethod",
               "description": null,
               "type": {
-                "kind": "ENUM",
-                "name": "HttpMethodEnum",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "HttpMethodEnum",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -2360,9 +2368,13 @@
               "name": "httpStatus",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "Int",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -2372,9 +2384,13 @@
               "name": "loggedAt",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "ISO8601DateTime",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ISO8601DateTime",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -2436,9 +2452,13 @@
               "name": "requestResponse",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "JSON",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "JSON",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -25190,25 +25210,25 @@
           "enumValues": [
             {
               "name": "get",
-              "description": "get request",
+              "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "post",
-              "description": "post request",
+              "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "put",
-              "description": "put request",
+              "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
               "name": "delete",
-              "description": "delete request",
+              "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             }

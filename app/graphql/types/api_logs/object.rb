@@ -9,16 +9,16 @@ module Types
       field :api_key, Types::ApiKeys::SanitizedObject
       field :api_version, String
       field :client, String
-      field :http_method, Types::ApiLogs::HttpMethodEnum
-      field :http_status, Integer
+      field :http_method, Types::ApiLogs::HttpMethodEnum, null: false
+      field :http_status, Integer, null: false
       field :request_body, GraphQL::Types::JSON
       field :request_id, ID, null: false
       field :request_origin, String
       field :request_path, String
-      field :request_response, GraphQL::Types::JSON
+      field :request_response, GraphQL::Types::JSON, null: false
 
-      field :created_at, GraphQL::Types::ISO8601DateTime
-      field :logged_at, GraphQL::Types::ISO8601DateTime
+      field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :logged_at, GraphQL::Types::ISO8601DateTime, null: false
     end
   end
 end
