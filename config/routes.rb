@@ -110,7 +110,7 @@ Rails.application.routes.draw do
 
   namespace :admin do
     resources :memberships, only: %i[create]
-    resources :organizations, only: %i[update]
+    resources :organizations, only: %i[update create]
     resources :invoices do
       post :regenerate, on: :member
     end

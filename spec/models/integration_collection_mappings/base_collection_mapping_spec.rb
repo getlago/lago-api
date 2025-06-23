@@ -12,7 +12,6 @@ RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping, type: :mode
   it_behaves_like "paper_trail traceable"
 
   it { is_expected.to belong_to(:integration) }
-  it { is_expected.to belong_to(:organization) }
 
   it { is_expected.to define_enum_for(:mapping_type).with_values(mapping_types) }
 
@@ -28,15 +27,15 @@ RSpec.describe IntegrationCollectionMappings::BaseCollectionMapping, type: :mode
         end
       end
 
-      context "when it is not unique in scope of integration" do
+      context "when it not is unique in scope of integration" do
         subject(:mapping) do
-          described_class.new(integration:, type:, mapping_type:, organization: integration.organization)
+          described_class.new(integration:, type:, mapping_type:)
         end
 
         let(:integration) { create(:netsuite_integration) }
 
         before do
-          described_class.create(integration:, type:, mapping_type:, organization: integration.organization)
+          described_class.create(integration:, type:, mapping_type:)
           mapping.valid?
         end
 

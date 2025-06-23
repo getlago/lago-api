@@ -13,7 +13,6 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
       create(
         :invoice,
         :voided,
-        :with_subscriptions,
         customer:,
         organization:,
         subscriptions: [subscription],

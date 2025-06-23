@@ -18,6 +18,16 @@ module Utils
       new(*, **, &).produce
     end
 
+    # This method is used to produce an activity log after a commit.
+    #
+    # It is meant to avoid race-conditions where a asynchronous post-processing run before changes are commited to the DB.
+    def self.produce_after_commit(object, activity_type, activity_id: nil, &)
+      AfterCommitEverywhere.after_commit do
+        kwargs = {activity_id:}.compact
+        produce(object, activity_type, **kwargs, &)
+      end
+    end
+
     def initialize(object, activity_type, activity_id: SecureRandom.uuid, &block)
       @object = object
       @activity_type = activity_type

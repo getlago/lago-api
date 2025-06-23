@@ -8,7 +8,7 @@ class CreditNote
 
     belongs_to :credit_note
     belongs_to :tax, optional: true
-    belongs_to :organization
+    belongs_to :organization, optional: true
 
     monetize :amount_cents
     monetize :base_amount_cents, with_model_currency: :amount_currency

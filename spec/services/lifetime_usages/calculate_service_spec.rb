@@ -8,11 +8,12 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
   let(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:, recalculate_current_usage:, recalculate_invoiced_usage:) }
   let(:recalculate_current_usage) { false }
   let(:recalculate_invoiced_usage) { false }
-  let(:subscription) { create(:subscription, customer:, subscription_at:) }
+  let(:subscription) { create(:subscription, customer_id: customer.id, subscription_at:) }
   let(:organization) { customer.organization }
   let(:customer) { create(:customer) }
 
-  let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: "count_agg") }
+  let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription:) }
+  let(:billable_metric) { create(:billable_metric, aggregation_type: "count_agg") }
   let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:, properties: {amount: "10"}) }
   let(:timestamp) { Time.current }
   let(:subscription_at) { timestamp - 6.months }
@@ -22,8 +23,6 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
       2,
       invoice:,
       charge:,
-      customer:,
-      organization:,
       amount_cents: 100,
       precise_coupons_amount_cents: 50
     )
@@ -60,10 +59,11 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
     end
 
     context "with draft invoice" do
-      let(:invoice) { create(:invoice, :draft, :with_subscriptions, customer:, organization:, subscriptions: [subscription]) }
+      let(:invoice) { create(:invoice, :draft, organization:) }
 
       before do
         invoice
+        invoice_subscription
         fees
       end
 
@@ -76,10 +76,11 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
     end
 
     context "with finalized invoice" do
-      let(:invoice) { create(:invoice, :finalized, :with_subscriptions, organization:, subscriptions: [subscription]) }
+      let(:invoice) { create(:invoice, :finalized, organization:) }
 
       before do
         invoice
+        invoice_subscription
         fees
       end
 
@@ -92,10 +93,11 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
     end
 
     context "with finalized invoice and usage" do
-      let(:invoice) { create(:invoice, :finalized, :with_subscriptions, organization:, subscriptions: [subscription]) }
+      let(:invoice) { create(:invoice, :finalized, organization:) }
 
       before do
         invoice
+        invoice_subscription
         fees
         events
         charge
@@ -121,18 +123,20 @@ RSpec.describe LifetimeUsages::CalculateService, type: :service do
       let(:subscription) do
         create(
           :subscription,
-          customer:,
+          customer_id: customer.id,
           subscription_at:,
           previous_subscription:,
           external_id: previous_subscription.external_id
         )
       end
 
-      let(:previous_subscription) { create(:subscription, :terminated, customer:, subscription_at:) }
-      let(:invoice) { create(:invoice, :finalized, :with_subscriptions, customer:, subscriptions: [subscription]) }
+      let(:invoice_subscription) { create(:invoice_subscription, invoice:, subscription: previous_subscription) }
+      let(:previous_subscription) { create(:subscription, :terminated, customer_id: customer.id, subscription_at:) }
+      let(:invoice) { create(:invoice, :finalized, organization:) }
 
       before do
         invoice
+        invoice_subscription
         fees
       end
 

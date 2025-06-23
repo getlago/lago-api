@@ -318,7 +318,7 @@ RSpec.describe Api::V1::BillingEntitiesController, type: :request do
       end
 
       before do
-        create(:billing_entity_applied_tax, billing_entity: billing_entity1, tax: tax1)
+        billing_entity1.taxes << tax1
       end
 
       it "updates the taxes" do

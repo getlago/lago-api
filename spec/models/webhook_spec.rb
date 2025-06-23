@@ -7,7 +7,7 @@ RSpec.describe Webhook, type: :model do
 
   it { is_expected.to belong_to(:webhook_endpoint) }
   it { is_expected.to belong_to(:object).optional }
-  it { is_expected.to belong_to(:organization) }
+  it { is_expected.to have_one(:organization).through(:webhook_endpoint) }
 
   describe "#payload" do
     subject { webhook.payload }

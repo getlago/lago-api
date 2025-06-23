@@ -5,7 +5,7 @@ class InvoiceSubscription < ApplicationRecord
 
   belongs_to :invoice
   belongs_to :subscription
-  belongs_to :organization
+  belongs_to :organization, optional: true
 
   has_one :customer, through: :subscription
 

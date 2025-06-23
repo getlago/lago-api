@@ -6,7 +6,7 @@ class BillingEntity
 
     belongs_to :billing_entity
     belongs_to :tax
-    belongs_to :organization
+    belongs_to :organization, optional: true
 
     validates :tax_id, uniqueness: {scope: :billing_entity_id}
   end

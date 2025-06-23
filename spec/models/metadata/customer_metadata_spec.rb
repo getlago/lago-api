@@ -9,10 +9,8 @@ RSpec.describe Metadata::CustomerMetadata, type: :model do
   let(:key) { "hello" }
   let(:value) { "abcdef" }
   let(:attributes) do
-    {key:, value:, customer:, display_in_invoice: true, organization: customer.organization}
+    {key:, value:, customer:, display_in_invoice: true}
   end
-
-  it { is_expected.to belong_to(:organization) }
 
   describe "key validations" do
     context "when uniqueness condition is satisfied", :tag do

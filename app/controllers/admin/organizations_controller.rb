@@ -18,6 +18,28 @@ module Admin
       )
     end
 
+    def create
+      result = ::Organizations::CreateService
+        .call(name: create_params[:name], document_numbering: "per_organization")
+
+      return render_error_response(result) unless result.success?
+
+      organization = result.organization
+
+      invite_result = ::Invites::CreateService.call(
+        current_organization: organization,
+        email: create_params[:email],
+        role: :admin
+      )
+
+      return render_error_response(invite_result) unless invite_result.success?
+
+      render json: {
+        organization: ::V1::OrganizationSerializer.new(organization).serialize,
+        invite_url: invite_result.invite_url
+      }, status: :created
+    end
+
     private
 
     def organization
@@ -26,6 +48,10 @@ module Admin
 
     def update_params
       params.permit(:name)
+    end
+
+    def create_params
+      params.permit(:name, :email)
     end
   end
 end

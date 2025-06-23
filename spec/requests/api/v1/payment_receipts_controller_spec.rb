@@ -98,10 +98,14 @@ RSpec.describe Api::V1::PaymentReceiptsController, type: :request do
     end
 
     context "when payment for a payment request exists" do
-      let(:payment_request) { create(:payment_request, customer:, organization:, invoices: [invoice]) }
+      let(:payment_request) { create(:payment_request, customer:, organization:) }
       let(:payment) { create(:payment, payable: payment_request) }
       let(:payment_receipt) { create(:payment_receipt, payment:, organization:) }
       let(:id) { payment_receipt.id }
+
+      before do
+        create(:payment_request_applied_invoice, invoice:, payment_request:)
+      end
 
       include_examples "requires API permission", "invoice", "read"
 

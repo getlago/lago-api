@@ -125,7 +125,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
             card_type_filter.key => ["debit"]
           },
           invoice_display_name: "Visa debit domestic card payment",
-          properties: {amount: "20"}
+          properties: {amount: "20", pricing_group_keys: ["region"]}
         }
       ]
     end
@@ -144,7 +144,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       filter2 = charge.filters.find_by(invoice_display_name: "Visa debit domestic card payment")
       expect(filter2).to have_attributes(
         invoice_display_name: "Visa debit domestic card payment",
-        properties: {"amount" => "20"}
+        properties: {"amount" => "20", "pricing_group_keys" => ["region"]}
       )
       expect(filter2.values.count).to eq(3)
       expect(filter2.values.pluck(:values).flatten).to match_array(%w[domestic visa debit])
@@ -217,10 +217,12 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
             scheme_filter.key => ["visa"]
           },
           invoice_display_name: "New display name",
-          properties: {amount: "20"}
+          properties: {amount: "20"}.merge(pricing_group_keys)
         }
       ]
     end
+
+    let(:pricing_group_keys) { {pricing_group_keys: ["region"]} }
 
     before { filter_values }
 
@@ -228,7 +230,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       expect { service }.not_to change(ChargeFilter, :count)
       expect(filter.reload).to have_attributes(
         invoice_display_name: "New display name",
-        properties: {"amount" => "20"}
+        properties: {"amount" => "20", "pricing_group_keys" => ["region"]}
       )
       expect(filter.values.count).to eq(2)
       expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
@@ -331,7 +333,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
 
         expect(filter.reload).to have_attributes(
           invoice_display_name: "New display name",
-          properties: {"amount" => "20"}
+          properties: {"amount" => "20", "pricing_group_keys" => ["region"]}
         )
         expect(filter.values.count).to eq(2)
         expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
@@ -339,6 +341,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
 
       context "when properties are already overridden" do
         let(:properties) { {amount: "755"} }
+        let(:pricing_group_keys) { {} }
         let(:filter_parent) { create(:charge_filter, properties:, charge: charge_parent) }
 
         it "does not update the filter" do
@@ -350,6 +353,43 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
           )
           expect(filter.values.count).to eq(2)
           expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
+        end
+
+        context "when properties contains a pricing_group_keys attribute" do
+          let(:pricing_group_keys) { {pricing_group_keys: ["region"]} }
+
+          it "updates the filter" do
+            expect { service }.not_to change(ChargeFilter, :count)
+
+            expect(filter.reload.pricing_group_keys).to eq(["region"])
+            expect(filter.values.count).to eq(2)
+            expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
+          end
+
+          context "when filters already have a pricing_group_keys value" do
+            let(:filter) { create(:charge_filter, charge:, properties: {amount: "755", pricing_group_keys: ["cloud"]}) }
+
+            it "updates the filter" do
+              expect { service }.not_to change(ChargeFilter, :count)
+
+              expect(filter.reload.pricing_group_keys).to eq(["region"])
+              expect(filter.values.count).to eq(2)
+              expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
+            end
+          end
+        end
+
+        context "when filters already has a pricing_group_keys value" do
+          let(:filter) { create(:charge_filter, charge:, properties: {amount: "755", pricing_group_keys: ["cloud"]}) }
+          let(:pricing_group_keys) { {} }
+
+          it "updates the filter" do
+            expect { service }.not_to change(ChargeFilter, :count)
+
+            expect(filter.reload.pricing_group_keys).to be_nil
+            expect(filter.values.count).to eq(2)
+            expect(filter.values.pluck(:values).flatten).to match_array(%w[domestic visa])
+          end
         end
       end
 

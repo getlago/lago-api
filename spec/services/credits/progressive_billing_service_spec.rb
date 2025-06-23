@@ -43,7 +43,6 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     let(:progressive_billing_invoice) do
       create(
         :invoice,
-        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",
@@ -78,6 +77,26 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
         expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(10)
         expect(subscription_fee2.reload.precise_coupons_amount_cents).to eq(10)
       end
+
+      context "with additional subscription fee" do
+        let(:subscription_fees) { [subscription_fee1, subscription_fee2, subscription_fee3] }
+        let(:subscription_fee1) { create(:charge_fee, invoice:, subscription:, amount_cents: 300) }
+        let(:subscription_fee2) { create(:charge_fee, invoice:, subscription:, amount_cents: 300) }
+        let(:subscription_fee3) { create(:fee, invoice:, subscription:, amount_cents: 400) }
+
+        it "calculate correctly credits and weighted amounts" do
+          result = credit_service.call
+          expect(result.credits.size).to eq(1)
+          credit = result.credits.sole
+
+          expect(credit.amount_cents).to eq(20)
+          expect(invoice.progressive_billing_credit_amount_cents).to eq(20)
+
+          expect(subscription_fee1.reload.precise_coupons_amount_cents).to eq(10)
+          expect(subscription_fee2.reload.precise_coupons_amount_cents).to eq(10)
+          expect(subscription_fee3.reload.precise_coupons_amount_cents).to eq(0)
+        end
+      end
     end
   end
 
@@ -85,7 +104,6 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     let(:progressive_billing_invoice) do
       create(
         :invoice,
-        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",
@@ -100,7 +118,6 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     let(:progressive_billing_invoice2) do
       create(
         :invoice,
-        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",
@@ -146,7 +163,6 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     let(:progressive_billing_invoice) do
       create(
         :invoice,
-        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",
@@ -161,7 +177,6 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     let(:progressive_billing_invoice2) do
       create(
         :invoice,
-        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",
@@ -207,7 +222,6 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     let(:progressive_billing_invoice) do
       create(
         :invoice,
-        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",
@@ -222,7 +236,6 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     let(:progressive_billing_invoice2) do
       create(
         :invoice,
-        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",
@@ -237,7 +250,6 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     let(:progressive_billing_invoice3) do
       create(
         :invoice,
-        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",
@@ -309,7 +321,6 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     let(:progressive_billing_invoice) do
       create(
         :invoice,
-        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",
@@ -351,7 +362,6 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     let(:progressive_billing_invoice) do
       create(
         :invoice,
-        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",
@@ -387,7 +397,6 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
     let(:progressive_billing_invoice) do
       create(
         :invoice,
-        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",

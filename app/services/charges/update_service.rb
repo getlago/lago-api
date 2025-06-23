@@ -19,6 +19,9 @@ module Charges
         charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
         charge.invoice_display_name = params[:invoice_display_name] unless cascade
 
+        # Make sure that pricing group keys are cascaded even if properties are overridden
+        cascade_pricing_group_keys if cascade
+
         if !cascade || cascade_options[:equal_properties]
           properties = params.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
             params[:charge_model]
@@ -78,5 +81,17 @@ module Charges
     attr_reader :charge, :params, :cascade_options, :cascade
 
     delegate :plan, to: :charge
+
+    def cascade_pricing_group_keys
+      pricing_group_keys = params.dig(:properties, :pricing_group_keys) || params.dig(:properties, :grouped_by)
+
+      if pricing_group_keys
+        charge.properties["pricing_group_keys"] = pricing_group_keys
+        charge.properties.delete("grouped_by")
+      elsif charge.pricing_group_keys.present?
+        charge.properties.delete("pricing_group_keys")
+        charge.properties.delete("grouped_by")
+      end
+    end
   end
 end

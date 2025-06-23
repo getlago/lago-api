@@ -3,7 +3,7 @@
 class CreditNoteItem < ApplicationRecord
   belongs_to :credit_note
   belongs_to :fee
-  belongs_to :organization
+  belongs_to :organization, optional: true
 
   monetize :amount_cents
 

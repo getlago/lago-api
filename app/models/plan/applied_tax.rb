@@ -8,7 +8,7 @@ class Plan
 
     belongs_to :plan
     belongs_to :tax
-    belongs_to :organization
+    belongs_to :organization, optional: true
   end
 end
 

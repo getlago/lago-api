@@ -12,18 +12,30 @@ module Admin
     def authenticate
       auth_header = request.headers["Authorization"]
 
-      return unauthorized_error unless auth_header
+      if auth_header&.start_with?("Bearer ")
+        begin
+          token = auth_header.split(" ").second
+          payload = Google::Auth::IDTokens.verify_oidc(
+            token,
+            aud: ENV["GOOGLE_AUTH_CLIENT_ID"]
+          )
 
-      token = auth_header.split(" ").second
-      payload = Google::Auth::IDTokens.verify_oidc(
-        token,
-        aud: ENV["GOOGLE_AUTH_CLIENT_ID"]
-      )
+          CurrentContext.email = payload["email"]
+          return true
+        rescue Google::Auth::IDTokens::SignatureError
+          return unauthorized_error
+        end
+      end
 
-      CurrentContext.email = payload["email"]
+      # Fallback to X-Admin-API-Key header
+      key_header = request.headers["X-Admin-API-Key"]
+      expected_key = ENV["ADMIN_API_KEY"]
 
-      true
-    rescue Google::Auth::IDTokens::SignatureError
+      if key_header.present? && expected_key.present? && ActiveSupport::SecurityUtils.secure_compare(key_header, expected_key)
+        CurrentContext.email = nil
+        return true
+      end
+
       unauthorized_error
     end
 

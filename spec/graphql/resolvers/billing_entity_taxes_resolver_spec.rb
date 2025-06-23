@@ -26,8 +26,7 @@ RSpec.describe Resolvers::BillingEntityTaxesResolver, type: :graphql do
   let(:tax2) { create(:tax, organization: organization) }
 
   before do
-    create(:billing_entity_applied_tax, billing_entity:, tax: tax1, organization:)
-    create(:billing_entity_applied_tax, billing_entity:, tax: tax2, organization:)
+    billing_entity.taxes << [tax1, tax2]
   end
 
   it "returns billing entity taxes" do

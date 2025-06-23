@@ -16,14 +16,9 @@ ops_bm = BillableMetric.find_or_create_by!(
   field_name: "ops_count"
 )
 
-Charge.create_with(
-  organization:,
-  charge_model: "standard",
-  amount_currency: "EUR",
-  properties: {
-    amount: "500"
-  }
-).find_or_create_by!(plan:, billable_metric: ops_bm)
+Charge.create_with(charge_model: "standard", amount_currency: "EUR", properties: {
+  amount: "500"
+}).find_or_create_by!(plan:, billable_metric: ops_bm)
 
 def create_customer_with_sub(ext_id, plan:, organization:)
   customer = FactoryBot.create(:customer, organization:, external_id: "cust_#{ext_id}")
@@ -33,8 +28,7 @@ def create_customer_with_sub(ext_id, plan:, organization:)
     status: :active,
     billing_time: :calendar,
     plan:,
-    external_id: "sub_#{ext_id}",
-    organization:
+    external_id: "sub_#{ext_id}"
   )
 end
 
@@ -51,13 +45,33 @@ UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
   ]
 })
 
-alert = UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
-  alert_type: "lifetime_usage_amount",
-  code: "total",
-  thresholds: [
-    {code: "info", value: 1000_00}
-  ]
-}).alert
+if License.premium?
+  alert = UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
+    alert_type: "lifetime_usage_amount",
+    code: "total",
+    thresholds: [
+      {code: "info", value: 1000_00}
+    ]
+  }).alert
+
+  triggered_alert = UsageMonitoring::TriggeredAlert.create!(alert:, organization:, subscription:,
+    current_value: 51,
+    previous_value: 8,
+    crossed_thresholds: [
+      {code: nil, value: 10, recurring: false}, {code: :warn, value: 25, recurring: false}, {code: :alert, value: 50, recurring: false}
+    ],
+    triggered_at: 2.months.ago)
+  SendWebhookJob.perform_later("alert.triggered", triggered_alert)
+
+  triggered_alert = UsageMonitoring::TriggeredAlert.create!(alert:, organization:, subscription:,
+    current_value: 88,
+    previous_value: 234,
+    crossed_thresholds: [
+      {code: :alert, value: 100, recurring: false}, {code: :alert, value: 150, recurring: true}, {code: :alert, value: 200, recurring: true}
+    ],
+    triggered_at: 11.days.ago)
+  SendWebhookJob.perform_later("alert.triggered", triggered_alert)
+end
 
 bm_alert = UsageMonitoring::CreateAlertService.call(organization:, subscription:, params: {
   alert_type: "billable_metric_current_usage_amount",
@@ -68,25 +82,7 @@ bm_alert = UsageMonitoring::CreateAlertService.call(organization:, subscription:
     {value: 50_00},
     {value: 10_00, recurring: true}
   ]
-})
-
-triggered_alert = UsageMonitoring::TriggeredAlert.create!(alert:, organization:, subscription:,
-  current_value: 51,
-  previous_value: 8,
-  crossed_thresholds: [
-    {code: nil, value: 10, recurring: false}, {code: :warn, value: 25, recurring: false}, {code: :alert, value: 50, recurring: false}
-  ],
-  triggered_at: 2.months.ago)
-SendWebhookJob.perform_later("alert.triggered", triggered_alert)
-
-triggered_alert = UsageMonitoring::TriggeredAlert.create!(alert:, organization:, subscription:,
-  current_value: 88,
-  previous_value: 234,
-  crossed_thresholds: [
-    {code: :alert, value: 100, recurring: false}, {code: :alert, value: 150, recurring: true}, {code: :alert, value: 200, recurring: true}
-  ],
-  triggered_at: 11.days.ago)
-SendWebhookJob.perform_later("alert.triggered", triggered_alert)
+}).alert
 
 triggered_alert = UsageMonitoring::TriggeredAlert.create!(alert: bm_alert, organization:, subscription:,
   current_value: 8,

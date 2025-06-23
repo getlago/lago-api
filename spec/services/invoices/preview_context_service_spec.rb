@@ -20,7 +20,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
     end
 
     before do
-      create(:coupon, organization:) { create(:applied_coupon, coupon: it, customer:) }
+      create(:coupon, organization:) { |coupon| customer.coupons << coupon }
     end
 
     it "assigns customer, plan, and applied coupons to result" do
@@ -251,7 +251,7 @@ RSpec.describe Invoices::PreviewContextService, type: :service do
       let(:customer) { create(:customer, organization:) }
 
       before do
-        create(:coupon, organization:) { create(:applied_coupon, coupon: it, customer:) }
+        create(:coupon, organization:) { |coupon| customer.coupons << coupon }
       end
 
       context "when coupons are provided" do
