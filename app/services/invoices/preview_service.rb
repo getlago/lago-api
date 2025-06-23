@@ -41,6 +41,7 @@ module Invoices
 
       add_subscription_fees
       add_charge_fees
+      # add_fixed_charge_fees
       compute_tax_and_totals
 
       result.invoice = invoice
