@@ -23,6 +23,25 @@ module Events
         end
       end
 
+      def events_sql(force_from: false, ordered: false, select: arel_table[Arel.star])
+        query = arel_table.where(
+          arel_table[:external_subscription_id].eq(subscription.external_id)
+          .and(arel_table[:organization_id].eq(subscription.organization.id)
+          .and(arel_table[:code].eq(code)))
+        )
+
+        query = query.order(arel_table[:timestamp].desc) if ordered
+
+        query = query.where(arel_table[:timestamp].gteq(from_datetime)) if force_from || use_from_boundary
+        query = query.where(arel_table[:timestamp].lteq(to_datetime)) if to_datetime
+        query = query.limit_by(1, "events_enriched.transaction_id")
+
+        query = apply_arel_grouped_by_values(query) if grouped_by_values?
+        query = arel_filters_scope(query)
+
+        query.project(select).to_sql
+      end
+
       def distinct_codes
         with_retry do
           ::Clickhouse::EventsEnriched
@@ -50,16 +69,13 @@ module Events
       end
 
       def grouped_last_event
-        groups = grouped_by.map { |group| sanitized_property_name(group) }
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
+        groups, group_names = grouped_arel_columns
 
         with_retry do
-          cte_sql = events(ordered: true)
-            .select(Arel.sql(
-              (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
-                ["events_enriched.decimal_value AS property", "events_enriched.timestamp"]).join(", ")
-            ))
-            .to_sql
+          cte_sql = events_sql(
+            ordered: true,
+            select: groups + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]]
+          )
 
           sql = <<-SQL
             WITH events AS (#{cte_sql})
@@ -85,7 +101,7 @@ module Events
       def count
         with_retry do
           sql = <<-SQL
-          WITH events AS (#{events.to_sql})
+          WITH events AS (#{events_sql})
 
           SELECT count()
           FROM events
@@ -96,23 +112,22 @@ module Events
       end
 
       def grouped_count
-        groups = grouped_by.map.with_index do |group, index|
-          "#{sanitized_property_name(group)} AS g_#{index}"
-        end
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }
+        groups, group_names = grouped_arel_columns
 
         with_retry do
-          cte_sql = events
-            .select((groups + ["events_enriched.transaction_id"]).join(", "))
+          cte_sql = events_sql(
+            ordered: true,
+            select: groups + [arel_table[:transaction_id]]
+          )
 
           sql = <<-SQL
-          WITH events AS (#{cte_sql.to_sql})
+          WITH events AS (#{cte_sql})
 
           SELECT
-            #{group_names.join(", ")},
+            #{group_names},
             toDecimal128(count(), #{DECIMAL_SCALE})
           FROM events
-          GROUP BY #{group_names.join(",")}
+          GROUP BY #{group_names}
           SQL
 
           prepare_grouped_result(::Clickhouse::EventsEnriched.connection.select_all(sql).rows)
@@ -244,7 +259,7 @@ module Events
       def max
         with_retry do
           sql = <<-SQL
-          WITH events AS (#{events.to_sql})
+          WITH events AS (#{events_sql})
 
           SELECT max(events.decimal_value)
           FROM events
@@ -255,16 +270,13 @@ module Events
       end
 
       def grouped_max
-        groups = grouped_by.map { |group| sanitized_property_name(group) }
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
+        groups, group_names = grouped_arel_columns
 
         with_retry do
-          cte_sql = events
-            .select(Arel.sql(
-              (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
-                ["events_enriched.decimal_value AS property", "events_enriched.timestamp"]).join(", ")
-            ))
-            .to_sql
+          cte_sql = events_sql(
+            ordered: true,
+            select: groups + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]]
+          )
 
           sql = <<-SQL
             WITH events AS (#{cte_sql})
@@ -288,16 +300,13 @@ module Events
       end
 
       def grouped_last
-        groups = grouped_by.map { |group| sanitized_property_name(group) }
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
+        groups, group_names = grouped_arel_columns
 
         with_retry do
-          cte_sql = events(ordered: true)
-            .select(Arel.sql(
-              (groups.map.with_index { |group, index| "#{group} AS g_#{index}" } +
-                ["events_enriched.decimal_value AS property", "events_enriched.timestamp"]).join(", ")
-            ))
-            .to_sql
+          cte_sql = events_sql(
+            ordered: true,
+            select: groups + [arel_table[:decimal_value].as("property"), arel_table[:timestamp]]
+          )
 
           sql = <<-SQL
             WITH events AS (#{cte_sql})
@@ -316,7 +325,7 @@ module Events
       def sum_precise_total_amount_cents
         with_retry do
           sql = <<-SQL
-            WITH events AS (#{events.to_sql})
+            WITH events AS (#{events_sql})
 
             SELECT SUM(events.precise_total_amount_cents)
             FROM events
@@ -327,17 +336,13 @@ module Events
       end
 
       def grouped_sum_precise_total_amount_cents
-        with_retry do
-          groups = grouped_by.map.with_index do |group, index|
-            "#{sanitized_property_name(group)} AS g_#{index}"
-          end
-          group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
+        groups, group_names = grouped_arel_columns
 
-          cte_sql = events
-            .select((groups + [Arel.sql("precise_total_amount_cents as property")]).join(", "))
+        with_retry do
+          cte_sql = events_sql(select: groups + [arel_table[:precise_total_amount_cents].as("property")])
 
           sql = <<-SQL
-            WITH events AS (#{cte_sql.to_sql})
+            WITH events AS (#{cte_sql})
 
             SELECT
               #{group_names},
@@ -353,7 +358,7 @@ module Events
       def sum
         with_retry do
           sql = <<-SQL
-            WITH events AS (#{events.to_sql})
+            WITH events AS (#{events_sql})
 
             SELECT sum(events.decimal_value)
             FROM events
@@ -364,17 +369,13 @@ module Events
       end
 
       def grouped_sum
-        groups = grouped_by.map.with_index do |group, index|
-          "#{sanitized_property_name(group)} AS g_#{index}"
-        end
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
+        groups, group_names = grouped_arel_columns
 
         with_retry do
-          cte_sql = events
-            .select((groups + [Arel.sql("events_enriched.decimal_value AS property")]).join(", "))
+          cte_sql = events_sql(select: groups + [arel_table[:decimal_value].as("property")])
 
           sql = <<-SQL
-          WITH events AS (#{cte_sql.to_sql})
+          WITH events AS (#{cte_sql})
 
           SELECT
             #{group_names},
@@ -395,9 +396,15 @@ module Events
         end
 
         with_retry do
-          cte_sql = events
-            .select(Arel.sql("events_enriched.decimal_value * (#{ratio}) AS prorated_value"))
-            .to_sql
+          cte_sql = events_sql(
+            select: [
+              Arel::Nodes::InfixOperation.new(
+                "*",
+                arel_table[:decimal_value],
+                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
+              ).as("prorated_value")
+            ]
+          )
 
           sql = <<-SQL
             WITH events AS (#{cte_sql})
@@ -411,10 +418,7 @@ module Events
       end
 
       def grouped_prorated_sum(period_duration:, persisted_duration: nil)
-        groups = grouped_by.map.with_index do |group, index|
-          "#{sanitized_property_name(group)} AS g_#{index}"
-        end
-        group_names = groups.map.with_index { |_, index| "g_#{index}" }.join(", ")
+        groups, group_names = grouped_arel_columns
 
         ratio = if persisted_duration
           persisted_duration.fdiv(period_duration)
@@ -423,9 +427,15 @@ module Events
         end
 
         with_retry do
-          cte_sql = events
-            .select((groups + [Arel.sql("events_enriched.decimal_value * (#{ratio}) AS prorated_value")]).join(", "))
-            .to_sql
+          cte_sql = events_sql(
+            select: groups + [
+              Arel::Nodes::InfixOperation.new(
+                "*",
+                arel_table[:decimal_value],
+                Arel::Nodes::Grouping.new(Arel::Nodes::SqlLiteral.new(ratio.to_s))
+              ).as("prorated_value")
+            ]
+          )
 
           sql = <<-SQL
             WITH events AS (#{cte_sql})
@@ -445,9 +455,15 @@ module Events
         date_field = date_in_customer_timezone_sql("events_enriched.timestamp")
 
         with_retry do
-          cte_sql = events
-            .select("toDate(#{date_field}) as day, events_enriched.decimal_value AS property")
-            .to_sql
+          cte_sql = events_sql(
+            select: [
+              Arel::Nodes::NamedFunction.new(
+                "toDate",
+                [Arel::Nodes::SqlLiteral.new(date_field)]
+              ).as("day"),
+              arel_table[:decimal_value].as("property")
+            ]
+          )
 
           sql = <<-SQL
           WITH events AS (#{cte_sql})
@@ -562,6 +578,29 @@ module Events
         scope
       end
 
+      def arel_filters_scope(scope)
+        matching_filters.each do |key, values|
+          scope = scope.where(
+            Arel::Nodes::SqlLiteral.new(sanitized_property_name(key.to_s)).in(values.map(&:to_s))
+          )
+        end
+
+        conditions = ignored_filters.map do |filters|
+          filters.map do |key, values|
+            Arel::Nodes::NamedFunction.new(
+              "COALESCE",
+              [
+                Arel::Nodes::SqlLiteral.new(sanitized_property_name(key.to_s)),
+                Arel::Nodes::SqlLiteral.new("''")
+              ]
+            ).in(values.map(&:to_s))
+          end.inject(&:and)
+        end.inject(&:or)
+        scope.where(conditions.not) if conditions.present?
+
+        scope
+      end
+
       def apply_grouped_by_values(scope)
         grouped_by_values.each do |grouped_by, grouped_by_value|
           scope = if grouped_by_value.present?
@@ -572,6 +611,26 @@ module Events
         end
 
         scope
+      end
+
+      def apply_arel_grouped_by_values(query)
+        grouped_by_values.each do |grouped_by, grouped_by_value|
+          query = if grouped_by_value.present?
+            query.where(Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)).eq(grouped_by_value))
+          else
+            query.where(
+              Arel::Nodes::NamedFunction.new(
+                "COALESCE",
+                [
+                  Arel::Nodes::SqlLiteral.new(sanitized_property_name(grouped_by)),
+                  Arel::Nodes::SqlLiteral.new("''")
+                ]
+              ).eq(Arel::Nodes::SqlLiteral.new("''"))
+            )
+          end
+        end
+
+        query
       end
 
       def sanitized_property_name(property = aggregation_property)
@@ -618,6 +677,19 @@ module Events
 
           result
         end
+      end
+
+      def arel_table
+        @arel_table ||= ::Clickhouse::EventsEnriched.arel_table
+      end
+
+      def grouped_arel_columns
+        [
+          grouped_by.map.with_index do |group, index|
+            Arel::Nodes::SqlLiteral.new(sanitized_property_name(group)).as("g_#{index}")
+          end,
+          grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
+        ]
       end
 
       def with_retry(&)
