@@ -156,4 +156,14 @@ RSpec.describe ApiLogsQuery, type: :query, clickhouse: true do
       expect(described_class.call(organization:, pagination:, filters:).api_logs).to be_empty
     end
   end
+
+  context "with clients filter" do
+    it "returns expected api logs" do
+      filters = {clients: [api_log.client]}
+      expect(described_class.call(organization:, pagination:, filters:).api_logs.first.request_id).to eq(api_log.request_id)
+
+      filters = {clients: ["other"]}
+      expect(described_class.call(organization:, pagination:, filters:).api_logs).to be_empty
+    end
+  end
 end

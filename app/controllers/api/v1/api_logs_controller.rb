@@ -58,7 +58,8 @@ module Api
           http_methods: params[:http_methods],
           http_statuses: params[:http_statuses],
           api_version: params[:api_version],
-          request_paths: params[:request_paths]
+          request_paths: params[:request_paths],
+          clients: params[:clients]
         }
       end
     end

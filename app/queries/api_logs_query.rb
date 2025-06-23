@@ -10,7 +10,8 @@ class ApiLogsQuery < BaseQuery
     :api_version,
     :api_key_ids,
     :request_ids,
-    :request_paths
+    :request_paths,
+    :clients
   ]
 
   MAX_AGE = 30.days
@@ -26,6 +27,7 @@ class ApiLogsQuery < BaseQuery
     api_logs = with_http_methods(api_logs) if filters.http_methods.present?
     api_logs = with_api_version(api_logs) if filters.api_version.present?
     api_logs = with_request_paths(api_logs) if filters.request_paths.present?
+    api_logs = with_clients(api_logs) if filters.clients.present?
 
     api_logs = paginate(api_logs)
     result.api_logs = api_logs
@@ -71,12 +73,16 @@ class ApiLogsQuery < BaseQuery
     scope.where(
       filters.request_paths.map do |path|
         if path.include?("*")
-          like_pattern = path.gsub("*", "%")
+          like_pattern = path.tr("*", "%")
           ActiveRecord::Base.send(:sanitize_sql_array, ["request_path LIKE ?", like_pattern])
         else
           ActiveRecord::Base.send(:sanitize_sql_array, ["request_path = ?", path])
         end
       end.join(" OR ")
     )
+  end
+
+  def with_clients(scope)
+    scope.where(client: filters.clients)
   end
 end
