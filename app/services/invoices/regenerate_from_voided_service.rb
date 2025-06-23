@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Invoices
   class RegenerateFromVoidedService < BaseService
     def initialize(voided_invoice:, fees: nil)
