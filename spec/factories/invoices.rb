@@ -73,5 +73,11 @@ FactoryBot.define do
     trait :invisible do
       status { Invoice::INVISIBLE_STATUS.keys.sample }
     end
+
+    trait :with_fees do
+      after :create do |invoice|
+        create(:fee, invoice:, organization: invoice.organization)
+      end
+    end
   end
 end
