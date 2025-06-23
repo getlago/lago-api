@@ -55,6 +55,8 @@ class ApiLogsQuery < BaseQuery
   end
 
   def with_http_statuses(scope)
+    filters.http_statuses = Array.wrap(filters.http_statuses)
+
     if filters.http_statuses.any? { |s| %w[succeeded failed].include?(s) }
       scope = scope.where("http_status <= ?", 399) if filters.http_statuses.include?("succeeded")
       scope = scope.where("http_status > ?", 399) if filters.http_statuses.include?("failed")

@@ -146,7 +146,7 @@ RSpec.describe Api::V1::ApiLogsController, type: :request, clickhouse: true do
       end
 
       context "when filtering by request_paths" do
-        let(:params) { {request_paths: ["billable_metrics"]} }
+        let(:params) { {request_paths: ["*billable_metrics*"]} }
         let(:bm_api_log) { create(:clickhouse_api_log, organization:, request_path: "/v1/billable_metrics/") }
 
         before { bm_api_log }

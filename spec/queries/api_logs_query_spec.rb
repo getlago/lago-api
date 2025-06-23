@@ -90,7 +90,7 @@ RSpec.describe ApiLogsQuery, type: :query, clickhouse: true do
 
   context "with http_statuses filter" do
     it "returns expected api logs" do
-      filters = {http_statuses: [api_log.http_status]}
+      filters = {http_statuses: api_log.http_status}
       expect(described_class.call(organization:, pagination:, filters:).api_logs.first.request_id).to eq(api_log.request_id)
 
       filters = {http_statuses: ["other"]}
@@ -112,6 +112,13 @@ RSpec.describe ApiLogsQuery, type: :query, clickhouse: true do
       it "returns expected api logs" do
         filters = {http_statuses: ["failed"]}
         expect(described_class.call(organization:, pagination:, filters:).api_logs.first.request_id).to eq(failed_api_log.request_id)
+      end
+    end
+
+    context "when not an array" do
+      it "returns expected api logs" do
+        filters = {http_statuses: 200}
+        expect(described_class.call(organization:, pagination:, filters:).api_logs.first.request_id).to eq(api_log.request_id)
       end
     end
   end
