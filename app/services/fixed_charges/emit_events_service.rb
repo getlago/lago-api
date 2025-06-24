@@ -9,7 +9,7 @@ module FixedCharges
       @subscription = subscription
       @timestamp = timestamp
       @units = units || subscription.units_override_for(fixed_charge) || fixed_charge.units
-      
+
       super
     end
 

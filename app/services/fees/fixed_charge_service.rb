@@ -28,30 +28,24 @@ module Fees
       end
 
       result
+    rescue ActiveRecord::RecordInvalid => e
+      result.record_validation_failure!(record: e.record)
     end
 
     private
 
     attr_accessor :invoice, :fixed_charge, :subscription, :boundaries, :context, :currency
 
-    def already_billed?
-      invoice.fees.fixed_charge.where(fixed_charge:).exists?
-    end
-
     def init_fees
       result.fees = []
 
-      # TODO: for units we should consider the events for this fixed charge instead of the subscription units override
-      # as we should bill the units "consumed" by the customer over the billing period not the current value of the units.
-      # Does this make sense?
-      units = subscription.units_override_for(fixed_charge) || fixed_charge.units
-      return result if units.zero?
+      aggregation_result = FixedCharges::AggregationService.call(
+        fixed_charge:,
+        subscription:,
+        boundaries: boundaries.to_h
+      )
 
-      aggregation_result = BaseService::Result.new
-      aggregation_result.aggregation = units
-      aggregation_result.current_usage_units = units
-      aggregation_result.full_units_number = units
-      aggregation_result.count = 1
+      return result if aggregation_result.aggregation.zero?
 
       charge_model_result = FixedCharges::ChargeModelFactory.new_instance(
         fixed_charge:,
@@ -89,6 +83,28 @@ module Fees
       )
 
       result.fees << fee
+    end
+
+    def already_billed?
+      existing_fees = if invoice
+        invoice.fees.where(fixed_charge_id: fixed_charge.id, subscription_id: subscription.id)
+      else
+        Fee.where(
+          fixed_charge_id: fixed_charge.id,
+          subscription_id: subscription.id,
+          invoice_id: nil,
+          pay_in_advance_event_id: nil
+        ).where(
+          "(properties->>'charges_from_datetime')::timestamptz = ?", boundaries.charges_from_datetime&.iso8601(3)
+        ).where(
+          "(properties->>'charges_to_datetime')::timestamptz = ?", boundaries.charges_to_datetime&.iso8601(3)
+        )
+      end
+
+      return false if existing_fees.blank?
+
+      result.fees = existing_fees
+      true
     end
   end
 end
