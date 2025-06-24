@@ -12,15 +12,15 @@ module Mutations
       graphql_name "RegenerateInvoice"
       description "Regenerate an invoice from a voided invoice"
 
-      argument :fees, [ID], required: false
+      argument :fee_ids, [ID], required: false
       argument :voided_invoice_id, ID, required: true
 
       type Types::Invoices::Object
 
-      def resolve(voided_invoice_id:, fees:)
+      def resolve(voided_invoice_id:, fee_ids:)
         invoice = current_organization.invoices.visible.find_by(id: voided_invoice_id)
 
-        result = ::Invoices::RegenerateFromVoidedService.new(voided_invoice: invoice, fees: fees).call
+        result = ::Invoices::RegenerateFromVoidedService.new(voided_invoice: invoice, fee_ids: fee_ids).call
 
         result.success? ? result.invoice : result_error(result)
       end
