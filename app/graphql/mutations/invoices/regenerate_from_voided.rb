@@ -12,7 +12,7 @@ module Mutations
       graphql_name "RegenerateInvoice"
       description "Regenerate an invoice from a voided invoice"
 
-      argument :fees, [ID], required: true
+      argument :fees, [ID], required: false
       argument :voided_invoice_id, ID, required: true
 
       type Types::Invoices::Object

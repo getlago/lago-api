@@ -18,7 +18,6 @@ module Invoices
       return result.not_allowed_failure!(code: "not_voided") unless voided_invoice.voided?
 
       fee_records = Fee.where(id: fees, organization: voided_invoice.organization)
-      return result.not_found_failure!(resource: "fees") if fee_records.count != fees.count
 
       ActiveRecord::Base.transaction do
         generating_result = Invoices::CreateGeneratingService.call(
@@ -27,34 +26,31 @@ module Invoices
           invoice_type: voided_invoice.invoice_type,
           currency: voided_invoice.currency,
           datetime: Time.current
-        )
-        generating_result.raise_if_error!
+        ) do |invoice|
+          fee_records.each do |fee_record|
+            new_fee = fee_record.dup.tap do |fee|
+              fee.invoice = invoice
+              fee.payment_status = :pending
+              fee.taxes_amount_cents = 0
+              fee.taxes_precise_amount_cents = 0.to_d
+            end
 
-        new_invoice = generating_result.invoice
+            taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
+            taxes_result.raise_if_error!
 
-        fee_records.each do |fee_record|
-          new_fee = fee_record.dup.tap do |fee|
-            fee.invoice = new_invoice
-            fee.organization_id = new_invoice.organization_id
-            fee.billing_entity_id = new_invoice.billing_entity_id
-            fee.amount_currency = new_invoice.currency
-            fee.payment_status = :pending
-            fee.taxes_amount_cents = 0
-            fee.taxes_precise_amount_cents = 0.to_d
+            new_fee.save!
           end
 
-          taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
+          amounts_from_fees_result = Invoices::ComputeAmountsFromFees.call(invoice: invoice)
+          amounts_from_fees_result.raise_if_error!
 
-          taxes_result.raise_if_error!
-
-          new_fee.save!
+          invoice.draft!
         end
 
-        Invoices::ComputeAmountsFromFees.call(invoice: new_invoice)
+        # INVESTIGATE: Since The CreateGeneratingService has it own transaction block we need to handle orphan invoice here in case of error.
+        generating_result.raise_if_error!
 
-        new_invoice.draft!
-
-        result.invoice = new_invoice
+        result.invoice = generating_result.invoice
       end
 
       result
@@ -62,8 +58,6 @@ module Invoices
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
       e.result
-    rescue => e
-      result.fail_with_error!(e, code: "unexpected_error")
     end
 
     private
