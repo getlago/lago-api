@@ -5,7 +5,7 @@ module PaymentProviders
     class RegisterWebhookService < BaseService
       def call
         params = webhook_endpoint_shared_params
-        params[:api_version] = ::Stripe.api_version if ::Stripe.api_version
+        params[:api_version] = ::Stripe.api_version
 
         stripe_webhook = ::Stripe::WebhookEndpoint.create(
           params,
