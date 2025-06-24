@@ -22,13 +22,13 @@ RSpec.describe FeeDisplayHelper do
       }
     end
 
-    context "when it is standard charge fee with grouped_by property" do
-      it "returns valid response" do
+    context "when a standard charge fee has grouped_by property" do
+      it "formats the grouped_by values with bullet points" do
         expect(helper.grouped_by_display(fee)).to eq(" • mercredi • week_01 • 2024")
       end
     end
 
-    context "when missing grouped_by property" do
+    context "when the charge properties are missing the grouped_by property" do
       let(:properties) do
         {
           "amount" => "5"
@@ -40,7 +40,7 @@ RSpec.describe FeeDisplayHelper do
       end
     end
 
-    context "when some values are nil" do
+    context "when some grouped_by values are nil" do
       let(:grouped_by) do
         {
           "key_1" => nil,
@@ -49,9 +49,41 @@ RSpec.describe FeeDisplayHelper do
         }
       end
 
-      it "returns valid response" do
+      it "skips nil values and formats only the present values" do
         expect(helper.grouped_by_display(fee)).to eq(" • week_01 • 2024")
       end
+    end
+  end
+
+  describe ".format_with_precision" do
+    subject { helper.format_with_precision(fee, amount) }
+
+    let(:fee) { create(:fee, amount_currency: "USD") }
+    let(:amount) { "0.12345678" }
+
+    it "returns the rounded amount with currency symbol" do
+      expect(subject).to eq "$0.123457"
+    end
+  end
+
+  describe ".format_as_currency" do
+    subject { helper.format_as_currency(fee, amount) }
+
+    let(:fee) { create(:fee, amount_currency: "USD") }
+    let(:amount) { "10.5" }
+
+    it "returns the amount with the appropriate currency symbol" do
+      expect(subject).to eq "$10.50"
+    end
+  end
+
+  describe ".format_amount" do
+    subject { helper.format_amount(fee) }
+
+    let(:fee) { create(:fee, amount_cents: 1000, amount_currency: "USD") }
+
+    it "returns fee amount with the appropriate currency symbol" do
+      expect(subject).to eq "$10.00"
     end
   end
 end
