@@ -14,7 +14,7 @@ table.invoice-resume-table width="100%"
         td.body-2 = RoundingHelper.round_decimal_part(fee.units)
         td.body-2 = MoneyHelper.format(fee.unit_amount)
         td.body-2 == TaxHelper.applied_taxes(fee)
-        td.body-2 = MoneyHelper.format(fee.amount)
+        td.body-2 = FeeDisplayHelper.format_amount(fee)
 
 table.total-table width="100%"
   tr

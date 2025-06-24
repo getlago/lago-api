@@ -3,7 +3,7 @@
 - if fee.amount.zero? || fee.amount_details.blank?
   == SlimHelper.render('templates/invoices/v4/_default_fee', fee)
 - else
-  tr.charge-name
+  tr.charge-name.fee
     td.body-1
       = fee.invoice_name + FeeDisplayHelper.grouped_by_display(fee)
       - if fee.charge_filter_id?
