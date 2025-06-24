@@ -19,6 +19,7 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
       mutation ($input: RegenerateInvoiceInput!) {
         regenerateFromVoided(input: $input) {
           id
+          status
           fees {
             id
           }
@@ -27,27 +28,65 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
     GQL
   end
 
-  let(:mutation_variables) do
-    {
-      input: {
-        voidedInvoiceId: voided_invoice.id,
-        fees: fees
-      }
-    }
-  end
+  it_behaves_like "requires current user"
+  it_behaves_like "requires current organization"
+  it_behaves_like "requires permission", "invoices:update"
 
-  it "regenerates an invoice from voided invoice" do
+  it "regenerates an invoice from a voided invoice (success)" do
     result = execute_graphql(
       current_organization: organization,
       current_user: user,
       permissions: required_permission,
       query: mutation,
-      variables: mutation_variables
+      variables: {
+        input: {
+          voidedInvoiceId: voided_invoice.id,
+          fees: fees
+        }
+      }
     )
 
-    expect(result["errors"]).to be_nil
+    result_data = result["data"]["regenerateFromVoided"]
+    aggregate_failures do
+      expect(result["errors"]).to be_nil
+      expect(result_data["id"]).to be_present
+      expect(result_data["status"]).to eq("draft")
+      expect(result_data["fees"].length).to eq(1)
+    end
+  end
 
-    invoice_data = result["data"]["regenerateFromVoided"]
-    expect(invoice_data["fees"]).to have(1).item
+  it "returns an error if the invoice is not found or not voided (failure)" do
+    # Invoice inexistente
+    result = execute_graphql(
+      current_organization: organization,
+      current_user: user,
+      permissions: required_permission,
+      query: mutation,
+      variables: {
+        input: {
+          voidedInvoiceId: "non-existent-id",
+          fees: fees
+        }
+      }
+    )
+    expect(result["data"]["regenerateFromVoided"]).to be_nil
+    expect(result["errors"]).to be_present
+
+    # Invoice não voided
+    non_voided_invoice = create(:invoice, status: :finalized, organization: organization, customer: customer)
+    result2 = execute_graphql(
+      current_organization: organization,
+      current_user: user,
+      permissions: required_permission,
+      query: mutation,
+      variables: {
+        input: {
+          voidedInvoiceId: non_voided_invoice.id,
+          fees: fees
+        }
+      }
+    )
+    expect(result2["data"]["regenerateFromVoided"]).to be_nil
+    expect(result2["errors"]).to be_present
   end
 end
