@@ -227,6 +227,63 @@ RSpec.describe Fees::FixedChargeService, type: :service do
       end
     end
 
+    context "with volume charge model" do
+      let(:fixed_charge) do
+        create(
+          :fixed_charge,
+          plan: subscription.plan,
+          charge_model: "volume",
+          properties: {
+            volume_ranges: [
+              {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "10"},
+              {from_value: 101, to_value: 200, per_unit_amount: "1", flat_amount: "15"},
+              {from_value: 201, to_value: nil, per_unit_amount: "0.5", flat_amount: "50"}
+            ]
+          },
+          organization:
+        )
+      end
+
+      let(:event1) do
+        create(
+          :event,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          code: fixed_charge.add_on.code,
+          source: Event.sources[:fixed_charge],
+          properties: {units: 50},
+          metadata: {fixed_charge_id: fixed_charge.id.to_s},
+          timestamp: Time.zone.parse("2022-03-16")
+        )
+      end
+
+      let(:event2) do
+        create(
+          :event,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          code: fixed_charge.add_on.code,
+          source: Event.sources[:fixed_charge],
+          properties: {units: 60},
+          metadata: {fixed_charge_id: fixed_charge.id.to_s},
+          timestamp: Time.zone.parse("2022-03-17")
+        )
+      end
+
+      before do
+        event1
+        event2
+      end
+
+      it "creates a fee with volume calculation" do
+        result = fixed_charge_service.call
+
+        expect(result).to be_success
+        # 110 units total: falls into second tier (101-200), so all 110 units charged at $1 each + $15 flat = $125
+        expect(result.fees.first.amount_cents).to eq(12500)
+      end
+    end
+
     context "when fee already exists" do
       let(:invoice) { create(:invoice, organization:) }
 

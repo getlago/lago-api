@@ -14,9 +14,11 @@ module FixedCharges
         FixedCharges::ChargeModels::StandardService
       when :graduated
         FixedCharges::ChargeModels::GraduatedService
+      when :volume
+        FixedCharges::ChargeModels::VolumeService
       else
         raise(NotImplementedError)
       end
     end
   end
-end 
+end

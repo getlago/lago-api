@@ -37,7 +37,8 @@ class FixedCharge < ApplicationRecord
 
   CHARGE_MODELS = {
     standard: "standard",
-    graduated: "graduated"
+    graduated: "graduated",
+    volume: "volume"
   }
 
   # INTERVALS = {
@@ -59,10 +60,8 @@ class FixedCharge < ApplicationRecord
   default_scope -> { kept }
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
-  
-  def code
-    add_on.code
-  end
+
+  delegate :code, to: :add_on
 end
 
 # == Schema Information

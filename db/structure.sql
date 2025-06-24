@@ -912,7 +912,8 @@ CREATE TYPE public.fixed_charges_billing_period_duration_unit AS ENUM (
 CREATE TYPE public.fixed_charges_charge_model AS ENUM (
     'standard',
     'gradutated',
-    'graduated'
+    'graduated',
+    'volume'
 );
 
 
@@ -8832,6 +8833,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250624160115'),
 ('20250619173922'),
 ('20250618104849'),
 ('20250618102602'),

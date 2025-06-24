@@ -21,6 +21,12 @@ RSpec.describe FixedCharges::ChargeModelFactory, type: :service do
 
       it { expect(result).to be_a(FixedCharges::ChargeModels::GraduatedService) }
     end
+
+    context "with volume charge model" do
+      let(:fixed_charge) { build(:fixed_charge, charge_model: "volume") }
+
+      it { expect(result).to be_a(FixedCharges::ChargeModels::VolumeService) }
+    end
   end
 
   describe "#charge_model_class" do
@@ -38,4 +44,4 @@ RSpec.describe FixedCharges::ChargeModelFactory, type: :service do
       end
     end
   end
-end 
+end

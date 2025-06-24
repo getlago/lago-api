@@ -11,6 +11,7 @@ module FixedCharges
       case charge_model&.to_sym
       when :standard then default_standard_properties
       when :graduated then default_graduated_properties
+      when :volume then default_volume_properties
       end
     end
 
@@ -25,6 +26,19 @@ module FixedCharges
     def default_graduated_properties
       {
         graduated_ranges: [
+          {
+            from_value: 0,
+            to_value: nil,
+            per_unit_amount: "0",
+            flat_amount: "0"
+          }
+        ]
+      }
+    end
+
+    def default_volume_properties
+      {
+        volume_ranges: [
           {
             from_value: 0,
             to_value: nil,

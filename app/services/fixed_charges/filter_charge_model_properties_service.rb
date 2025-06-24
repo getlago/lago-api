@@ -34,6 +34,8 @@ module FixedCharges
         %i[amount]
       when :graduated
         %i[graduated_ranges]
+      when :volume
+        %i[volume_ranges]
       end
     end
   end
