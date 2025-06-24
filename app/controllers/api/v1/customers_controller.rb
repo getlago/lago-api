@@ -35,8 +35,12 @@ module Api
       end
 
       def index
-        billing_entities = current_organization.all_billing_entities.where(code: params[:billing_entity_codes]) if params[:billing_entity_codes].present?
-        return not_found_error(resource: "billing_entity") if params[:billing_entity_codes].present? && billing_entities.count != params[:billing_entity_codes].count
+        filter_params = params.permit(billing_entity_codes: [], account_type: [])
+        billing_entity_codes = filter_params.delete(:billing_entity_codes)
+        if billing_entity_codes.present?
+          billing_entities = current_organization.all_billing_entities.where(code: billing_entity_codes)
+          return not_found_error(resource: "billing_entity") if billing_entities.count != billing_entity_codes.uniq.count
+        end
 
         result = CustomersQuery.call(
           organization: current_organization,
@@ -44,7 +48,7 @@ module Api
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
           },
-          filters: params.slice(:account_type).merge(billing_entity_ids: billing_entities&.ids).permit!
+          filters: filter_params.merge(billing_entity_ids: billing_entities&.ids)
         )
 
         if result.success?

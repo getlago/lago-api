@@ -114,15 +114,14 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(json[:customer][:external_id]).to eq(create_params[:external_id])
 
           billing = json[:customer][:billing_configuration]
-          aggregate_failures do
-            expect(billing).to be_present
-            expect(billing[:payment_provider]).to eq("stripe")
-            expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
-            expect(billing[:provider_customer_id]).to eq("stripe_id")
-            expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:document_locale]).to eq("fr")
-            expect(billing[:provider_payment_methods]).to eq(%w[card])
-          end
+
+          expect(billing).to be_present
+          expect(billing[:payment_provider]).to eq("stripe")
+          expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
+          expect(billing[:provider_customer_id]).to eq("stripe_id")
+          expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:document_locale]).to eq("fr")
+          expect(billing[:provider_payment_methods]).to eq(%w[card])
         end
       end
 
@@ -136,15 +135,14 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(json[:customer][:external_id]).to eq(create_params[:external_id])
 
           billing = json[:customer][:billing_configuration]
-          aggregate_failures do
-            expect(billing).to be_present
-            expect(billing[:payment_provider]).to eq("stripe")
-            expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
-            expect(billing[:provider_customer_id]).to eq("stripe_id")
-            expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:document_locale]).to eq("fr")
-            expect(billing[:provider_payment_methods]).to eq(%w[card sepa_debit])
-          end
+
+          expect(billing).to be_present
+          expect(billing[:payment_provider]).to eq("stripe")
+          expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
+          expect(billing[:provider_customer_id]).to eq("stripe_id")
+          expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:document_locale]).to eq("fr")
+          expect(billing[:provider_payment_methods]).to eq(%w[card sepa_debit])
         end
       end
 
@@ -158,15 +156,14 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(json[:customer][:external_id]).to eq(create_params[:external_id])
 
           billing = json[:customer][:billing_configuration]
-          aggregate_failures do
-            expect(billing).to be_present
-            expect(billing[:payment_provider]).to eq("stripe")
-            expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
-            expect(billing[:provider_customer_id]).to eq("stripe_id")
-            expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:document_locale]).to eq("fr")
-            expect(billing[:provider_payment_methods]).to eq(%w[card])
-          end
+
+          expect(billing).to be_present
+          expect(billing[:payment_provider]).to eq("stripe")
+          expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
+          expect(billing[:provider_customer_id]).to eq("stripe_id")
+          expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:document_locale]).to eq("fr")
+          expect(billing[:provider_payment_methods]).to eq(%w[card])
         end
       end
 
@@ -180,15 +177,14 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(json[:customer][:external_id]).to eq(create_params[:external_id])
 
           billing = json[:customer][:billing_configuration]
-          aggregate_failures do
-            expect(billing).to be_present
-            expect(billing[:payment_provider]).to eq("stripe")
-            expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
-            expect(billing[:provider_customer_id]).to eq("stripe_id")
-            expect(billing[:invoice_grace_period]).to eq(3)
-            expect(billing[:document_locale]).to eq("fr")
-            expect(billing[:provider_payment_methods]).to eq(%w[sepa_debit])
-          end
+
+          expect(billing).to be_present
+          expect(billing[:payment_provider]).to eq("stripe")
+          expect(billing[:payment_provider_code]).to eq(stripe_provider.code)
+          expect(billing[:provider_customer_id]).to eq("stripe_id")
+          expect(billing[:invoice_grace_period]).to eq(3)
+          expect(billing[:document_locale]).to eq("fr")
+          expect(billing[:provider_payment_methods]).to eq(%w[sepa_debit])
         end
       end
     end
@@ -341,10 +337,8 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     it "returns the portal url" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
-        expect(json[:customer][:portal_url]).to include("/customer-portal/")
-      end
+      expect(response).to have_http_status(:success)
+      expect(json[:customer][:portal_url]).to include("/customer-portal/")
     end
 
     context "when customer does not belongs to the organization" do
@@ -370,11 +364,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     it "returns all customers from organization" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:ok)
-        expect(json[:meta][:total_count]).to eq(2)
-        expect(json[:customers][0][:taxes]).not_to be_nil
-      end
+      expect(response).to have_http_status(:ok)
+      expect(json[:meta][:total_count]).to eq(2)
+      expect(json[:customers][0][:taxes]).not_to be_nil
     end
 
     context "with account_type filters" do
@@ -420,6 +412,30 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           expect(json[:code]).to eq("billing_entity_not_found")
         end
       end
+
+      context "with invalid billing entity codes" do
+        let(:params) { {billing_entity_codes: "invalid_code"} }
+
+        it "ignores the parameter" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:customers].count).to eq(3)
+          expect(json[:customers].first[:lago_id]).to eq(customer.id)
+        end
+      end
+
+      context "with two identical billing entity codes" do
+        let(:params) { {billing_entity_codes: [billing_entity.code, billing_entity.code]} }
+
+        it "returns customers for the specified billing entity" do
+          subject
+
+          expect(response).to have_http_status(:ok)
+          expect(json[:customers].count).to eq(1)
+          expect(json[:customers].first[:lago_id]).to eq(customer.id)
+        end
+      end
     end
   end
 
@@ -436,11 +452,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       it "returns the customer" do
         subject
 
-        aggregate_failures do
-          expect(response).to have_http_status(:ok)
-          expect(json[:customer][:lago_id]).to eq(customer.id)
-          expect(json[:customer][:taxes]).not_to be_nil
-        end
+        expect(response).to have_http_status(:ok)
+        expect(json[:customer][:lago_id]).to eq(customer.id)
+        expect(json[:customer][:taxes]).not_to be_nil
       end
     end
 
@@ -470,12 +484,10 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     it "returns deleted customer" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
+      expect(response).to have_http_status(:success)
 
-        expect(json[:customer][:lago_id]).to eq(customer.id)
-        expect(json[:customer][:external_id]).to eq(customer.external_id)
-      end
+      expect(json[:customer][:lago_id]).to eq(customer.id)
+      expect(json[:customer][:external_id]).to eq(customer.external_id)
     end
 
     context "when customer does not exist" do
@@ -515,11 +527,9 @@ RSpec.describe Api::V1::CustomersController, type: :request do
     it "returns the new generated checkout url" do
       subject
 
-      aggregate_failures do
-        expect(response).to have_http_status(:success)
+      expect(response).to have_http_status(:success)
 
-        expect(json[:customer][:checkout_url]).to eq("https://example.com")
-      end
+      expect(json[:customer][:checkout_url]).to eq("https://example.com")
     end
   end
 end
