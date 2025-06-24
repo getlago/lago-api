@@ -2,9 +2,9 @@
 
 module Invoices
   class RegenerateFromVoidedService < BaseService
-    def initialize(voided_invoice:, fees:)
+    def initialize(voided_invoice:, fee_ids:)
       @voided_invoice = voided_invoice
-      @fees = fees
+      @fee_ids = fee_ids
       super
     end
 
@@ -17,7 +17,7 @@ module Invoices
       return result.not_found_failure!(resource: "invoice") unless voided_invoice
       return result.not_allowed_failure!(code: "not_voided") unless voided_invoice.voided?
 
-      fee_records = Fee.where(id: fees, organization: voided_invoice.organization)
+      fees = Fee.where(id: fee_ids, organization: voided_invoice.organization)
 
       ActiveRecord::Base.transaction do
         generating_result = Invoices::CreateGeneratingService.call(
@@ -27,7 +27,7 @@ module Invoices
           currency: voided_invoice.currency,
           datetime: Time.current
         ) do |invoice|
-          fee_records.each do |fee_record|
+          fees.each do |fee_record|
             new_fee = fee_record.dup.tap do |fee|
               fee.invoice = invoice
               fee.payment_status = :pending
@@ -62,6 +62,6 @@ module Invoices
 
     private
 
-    attr_reader :voided_invoice, :fees
+    attr_reader :voided_invoice, :fee_ids
   end
 end

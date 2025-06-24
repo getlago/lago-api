@@ -12,7 +12,7 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
   let(:subscription) { create(:subscription, customer: customer, organization: organization, plan: plan) }
   let(:voided_invoice) { create(:invoice, status: :voided, organization: organization, customer: customer) }
   let!(:fee) { create(:fee, invoice: voided_invoice, subscription: subscription, organization: organization) }
-  let(:fees) { [fee.id] }
+  let(:fee_ids) { [fee.id] }
 
   let(:mutation) do
     <<~GQL
@@ -41,7 +41,7 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
       variables: {
         input: {
           voidedInvoiceId: voided_invoice.id,
-          fees: fees
+          feeIds: fee_ids
         }
       }
     )
@@ -65,7 +65,7 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
       variables: {
         input: {
           voidedInvoiceId: "non-existent-id",
-          fees: fees
+          feeIds: fee_ids
         }
       }
     )
@@ -82,7 +82,7 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
       variables: {
         input: {
           voidedInvoiceId: non_voided_invoice.id,
-          fees: fees
+          feeIds: fee_ids
         }
       }
     )
