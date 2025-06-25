@@ -12,7 +12,16 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
   let(:subscription) { create(:subscription, customer: customer, organization: organization, plan: plan) }
   let(:voided_invoice) { create(:invoice, status: :voided, organization: organization, customer: customer) }
   let!(:fee) { create(:fee, invoice: voided_invoice, subscription: subscription, organization: organization) }
-  let(:fee_ids) { [fee.id] }
+  let(:fees) do
+    [{
+      id: fee.id,
+      add_on_id: nil,
+      description: "Updated description",
+      invoice_display_name: "Updated display name",
+      units: 5.0,
+      unit_amount_cents: 1000
+    }]
+  end
 
   let(:mutation) do
     <<~GQL
@@ -41,7 +50,7 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
       variables: {
         input: {
           voidedInvoiceId: voided_invoice.id,
-          feeIds: fee_ids
+          fees: fees
         }
       }
     )
@@ -56,7 +65,6 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
   end
 
   it "returns an error if the invoice is not found or not voided (failure)" do
-    # Invoice inexistente
     result = execute_graphql(
       current_organization: organization,
       current_user: user,
@@ -65,14 +73,13 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
       variables: {
         input: {
           voidedInvoiceId: "non-existent-id",
-          feeIds: fee_ids
+          fees: fees
         }
       }
     )
     expect(result["data"]["regenerateFromVoided"]).to be_nil
     expect(result["errors"]).to be_present
 
-    # Invoice não voided
     non_voided_invoice = create(:invoice, status: :finalized, organization: organization, customer: customer)
     result2 = execute_graphql(
       current_organization: organization,
@@ -82,7 +89,7 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
       variables: {
         input: {
           voidedInvoiceId: non_voided_invoice.id,
-          feeIds: fee_ids
+          fees: fees
         }
       }
     )

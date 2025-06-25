@@ -3,45 +3,25 @@
 require "rails_helper"
 
 RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
-  subject(:regenerate_service) { described_class.new(voided_invoice:, fee_ids:) }
+  subject(:regenerate_service) { described_class.new(voided_invoice:, fees:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:voided_invoice) { create(:invoice, :voided, organization:, customer:) }
   let(:fee) { create(:fee, invoice: voided_invoice, organization:) }
-  let(:fee_ids) { [fee.id] }
+  let(:fees) do
+    [{
+      id: fee.id,
+      add_on_id: nil,
+      description: "Updated description",
+      invoice_display_name: "Updated display name",
+      units: 5.0,
+      unit_amount_cents: 1000
+    }]
+  end
 
   describe "#call" do
-    context "when voided_invoice is nil" do
-      let(:voided_invoice) { nil }
-      let(:fee_ids) { [] }
-
-      it "returns a not found failure" do
-        result = regenerate_service.call
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::NotFoundFailure)
-          expect(result.error.resource).to eq("invoice")
-        end
-      end
-    end
-
-    context "when voided_invoice is not voided" do
-      let(:voided_invoice) { create(:invoice, organization:, customer:) }
-
-      it "returns a not allowed failure" do
-        result = regenerate_service.call
-
-        aggregate_failures do
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-          expect(result.error.code).to eq("not_voided")
-        end
-      end
-    end
-
-    context "when voided_invoice is valid" do
+    context "when service succeeds" do
       before do
         allow(Fees::ApplyTaxesService).to receive(:call).and_return(BaseResult.new)
         allow(Invoices::ComputeAmountsFromFees).to receive(:call).and_return(BaseResult.new)
@@ -162,7 +142,7 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
       it "applies taxes to each fee" do
         regenerate_service.call
 
-        expect(Fees::ApplyTaxesService).to have_received(:call).with(fee: instance_of(Fee)).at_least(fee_ids.count).times
+        expect(Fees::ApplyTaxesService).to have_received(:call).with(fee: instance_of(Fee)).at_least(fees.count).times
       end
 
       it "computes amounts from fees" do
@@ -187,50 +167,12 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
         expect(result).to be_success
       end
 
-      context "when multiple fees are provided" do
-        let(:fee2) { create(:fee, invoice: voided_invoice, organization:) }
-        let(:fee_ids) { [fee.id, fee2.id] }
-
-        it "applies taxes to each fee individually" do
-          regenerate_service.call
-
-          expect(Fees::ApplyTaxesService).to have_received(:call).with(fee: instance_of(Fee)).at_least(:twice)
-        end
-
-        it "duplicates all specified fees" do
-          result = regenerate_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice.fees.count).to eq(2)
-            expect(result.invoice.fees.pluck(:amount_cents)).to match_array([fee.amount_cents, fee2.amount_cents])
-          end
-        end
-      end
-
-      context "when fees are not found in the organization" do
-        let(:other_organization) { create(:organization) }
-        let(:other_fee) { create(:fee, organization: other_organization) }
-        let(:fee_ids) { [fee.id, other_fee.id] }
-
-        it "only processes fees from the correct organization" do
-          result = regenerate_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice.fees.count).to eq(1)
-            expect(result.invoice.fees.first.amount_cents).to eq(fee.amount_cents)
-          end
-        end
-      end
-
       context "when voided_invoice has different invoice types" do
         context "when invoice_type is subscription" do
           let(:voided_invoice) { create(:invoice, :voided, :subscription, organization:, customer:) }
 
           it "creates a new invoice with subscription type" do
-            fee = create(:fee, invoice: voided_invoice, organization: organization)
-            service = described_class.new(voided_invoice: voided_invoice, fee_ids: [fee.id])
+            service = described_class.new(voided_invoice: voided_invoice, fees: [{id: fee.id}])
             result = service.call
 
             aggregate_failures do
@@ -246,8 +188,7 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
           let(:voided_invoice) { create(:invoice, :voided, :one_off, organization:, customer:) }
 
           it "creates a new invoice with one_off type" do
-            fee = create(:fee, invoice: voided_invoice, organization: organization)
-            service = described_class.new(voided_invoice: voided_invoice, fee_ids: [fee.id])
+            service = described_class.new(voided_invoice: voided_invoice, fees: [{id: fee.id}])
             result = service.call
 
             aggregate_failures do
@@ -263,8 +204,7 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
           let(:voided_invoice) { create(:invoice, :voided, :credit, organization:, customer:) }
 
           it "creates a new invoice with credit type" do
-            fee = create(:fee, invoice: voided_invoice, organization: organization)
-            service = described_class.new(voided_invoice: voided_invoice, fee_ids: [fee.id])
+            service = described_class.new(voided_invoice: voided_invoice, fees: [{id: fee.id}])
             result = service.call
 
             aggregate_failures do
@@ -273,6 +213,37 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
               expect(result.invoice.invoice_type).to eq("credit")
               expect(result.invoice).not_to eq(voided_invoice)
             end
+          end
+        end
+      end
+    end
+
+    context "when service fails" do
+      context "when voided_invoice is nil" do
+        let(:voided_invoice) { nil }
+        let(:fees) { [] }
+
+        it "returns a not found failure" do
+          result = regenerate_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.resource).to eq("invoice")
+          end
+        end
+      end
+
+      context "when voided_invoice is not voided" do
+        let(:voided_invoice) { create(:invoice, organization:, customer:) }
+
+        it "returns a not allowed failure" do
+          result = regenerate_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+            expect(result.error.code).to eq("not_voided")
           end
         end
       end
@@ -331,6 +302,86 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
         end
       end
     end
+
+    context "when handling fees" do
+      before do
+        allow(Fees::ApplyTaxesService).to receive(:call).and_return(BaseResult.new)
+        allow(Invoices::ComputeAmountsFromFees).to receive(:call).and_return(BaseResult.new)
+      end
+
+      context "when multiple fees are provided" do
+        let(:fee2) { create(:fee, invoice: voided_invoice, organization:) }
+        let(:fees) { [{id: fee.id}, {id: fee2.id}] }
+
+        it "applies taxes to each fee individually" do
+          regenerate_service.call
+
+          expect(Fees::ApplyTaxesService).to have_received(:call).with(fee: instance_of(Fee)).at_least(:twice)
+        end
+
+        it "duplicates all specified fees" do
+          result = regenerate_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.invoice.fees.count).to eq(2)
+            expect(result.invoice.fees.pluck(:amount_cents)).to match_array([fee.amount_cents, fee2.amount_cents])
+          end
+        end
+      end
+
+      context "when fees are not found in the organization" do
+        let(:other_organization) { create(:organization) }
+        let(:other_fee) { create(:fee, organization: other_organization) }
+        let(:fees) { [{id: fee.id}, {id: other_fee.id}] }
+
+        it "only processes fees from the correct organization" do
+          result = regenerate_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.invoice.fees.count).to eq(1)
+            expect(result.invoice.fees.first.amount_cents).to eq(fee.amount_cents)
+          end
+        end
+      end
+
+      context "when a new fee is provided (id omitted)" do
+        let(:subscription) { create(:subscription, organization:, customer:) }
+        let(:fees) do
+          [{
+            organization_id: organization.id,
+            billing_entity_id: voided_invoice.billing_entity_id,
+            description: "New fee",
+            units: 2.0,
+            amount_cents: 500,
+            taxes_amount_cents: 50,
+            amount_currency: "EUR",
+            fee_type: "subscription",
+            subscription_id: subscription.id,
+            invoiceable_type: "Subscription",
+            invoiceable_id: subscription.id
+          }]
+        end
+
+        it "creates a new fee on the regenerated invoice" do
+          result = regenerate_service.call
+
+          if result.error
+            puts "Service error: #{result.error.class} - #{result.error.message}"
+          end
+
+          expect(result).to be_success
+          expect(result.invoice.fees.count).to eq(1)
+          new_fee = result.invoice.fees.first
+          expect(new_fee.description).to eq("New fee")
+          expect(new_fee.units).to eq(2.0)
+          expect(new_fee.amount_cents).to eq(500)
+          expect(new_fee.taxes_amount_cents).to eq(50)
+          expect(new_fee.amount_currency).to eq("EUR")
+        end
+      end
+    end
   end
 
   describe "activity logging" do
@@ -339,8 +390,7 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
     end
 
     it "produces an activity log with invoice.regenerated_from_voided action and uses voided_invoice as record" do
-      fee = create(:fee, invoice: voided_invoice, organization: organization)
-      described_class.call(voided_invoice: voided_invoice, fee_ids: [fee.id])
+      described_class.call(voided_invoice: voided_invoice, fees: [{id: fee.id}])
 
       expect(Utils::ActivityLog).to have_received(:produce).with(voided_invoice, "invoice.regenerated_from_voided")
     end

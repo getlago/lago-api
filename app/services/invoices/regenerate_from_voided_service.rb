@@ -2,9 +2,9 @@
 
 module Invoices
   class RegenerateFromVoidedService < BaseService
-    def initialize(voided_invoice:, fee_ids:)
+    def initialize(voided_invoice:, fees:)
       @voided_invoice = voided_invoice
-      @fee_ids = fee_ids
+      @fees = fees
       super
     end
 
@@ -17,7 +17,8 @@ module Invoices
       return result.not_found_failure!(resource: "invoice") unless voided_invoice
       return result.not_allowed_failure!(code: "not_voided") unless voided_invoice.voided?
 
-      fees = Fee.where(id: fee_ids, organization: voided_invoice.organization)
+      existing_fees = voided_invoice.fees.where(id: fees.map { |fee| fee[:id] })
+      new_fees = fees.select { |fee| fee[:id].blank? }
 
       ActiveRecord::Base.transaction do
         generating_result = Invoices::CreateGeneratingService.call(
@@ -27,13 +28,22 @@ module Invoices
           currency: voided_invoice.currency,
           datetime: Time.current
         ) do |invoice|
-          fees.each do |fee_record|
-            new_fee = fee_record.dup.tap do |fee|
+          existing_fees.each do |fee_record|
+            fee_record.dup.tap do |fee|
               fee.invoice = invoice
               fee.payment_status = :pending
               fee.taxes_amount_cents = 0
               fee.taxes_precise_amount_cents = 0.to_d
+
+              fee.save!
+
+              taxes_result = Fees::ApplyTaxesService.call(fee: fee)
+              taxes_result.raise_if_error!
             end
+          end
+
+          new_fees.each do |fee_attributes|
+            new_fee = Fee.create!(fee_attributes.merge(invoice: invoice))
 
             taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
             taxes_result.raise_if_error!
@@ -62,6 +72,6 @@ module Invoices
 
     private
 
-    attr_reader :voided_invoice, :fee_ids
+    attr_reader :voided_invoice, :fees
   end
 end
