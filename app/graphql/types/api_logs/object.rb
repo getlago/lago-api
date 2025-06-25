@@ -19,6 +19,16 @@ module Types
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :logged_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      # TODO: remove this once we have a proper way to handle JSON in Clickhouse
+      # https://github.com/PNixx/clickhouse-activerecord/pull/192
+      def request_body
+        object.request_body.transform_values { |v| JSON.parse(v) }
+      end
+
+      def request_response
+        object.request_response.transform_values { |v| JSON.parse(v) }
+      end
     end
   end
 end
