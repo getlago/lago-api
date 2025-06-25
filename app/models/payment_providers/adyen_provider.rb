@@ -5,6 +5,7 @@ module PaymentProviders
     SUCCESS_REDIRECT_URL = "https://www.adyen.com/"
 
     WEBHOOKS_EVENTS = %w[AUTHORISATION REFUND REFUND_FAILED CHARGEBACK].freeze
+    IGNORED_WEBHOOK_EVENTS = %w[REPORT_AVAILABLE].freeze
 
     PROCESSING_STATUSES = %w[AuthorisedPending Received].freeze
     SUCCESS_STATUSES = %w[Authorised SentForSettle SettleScheduled Settled Refunded].freeze

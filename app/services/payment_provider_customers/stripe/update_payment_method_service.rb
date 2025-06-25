@@ -12,6 +12,7 @@ module PaymentProviderCustomers
 
       def call
         return result.not_found_failure!(resource: "stripe_customer") unless stripe_customer
+        return result.service_failure!(code: :deleted_customer, message: "Customer associated to this stripe customer was deleted") if deleted_customer
 
         stripe_customer.payment_method_id = payment_method_id
         stripe_customer.save!
@@ -26,7 +27,14 @@ module PaymentProviderCustomers
 
       attr_reader :stripe_customer, :payment_method_id
 
-      delegate :customer, to: :stripe_customer
+      def customer
+        @customer ||= stripe_customer.customer
+      end
+
+      def deleted_customer
+        customer.nil? &&
+          Customer.unscoped.where(organization_id: stripe_customer.organization_id, id: stripe_customer.customer_id).where.not(deleted_at: nil).count > 0
+      end
 
       def reprocess_pending_invoices
         invoices = customer.invoices
