@@ -3,7 +3,9 @@
 module Types
   module Invoices
     class FeeInput < BaseInputObject
-      description "Fee input for creating invoice"
+      description "Fee input for creating or updating invoice"
+
+      argument :id, ID, required: false
 
       argument :add_on_id, ID, required: true
       argument :description, String, required: false
