@@ -5,7 +5,16 @@ module Charges
     queue_as "default"
 
     def perform(charge:, payload:)
-      Charges::CreateChildrenService.call!(charge:, payload:)
+      plan = charge.plan
+      return unless plan&.children&.any?
+
+      plan.children.order(created_at: :asc).pluck(:id).each_slice(100) do |child_ids|
+        Charges::CreateChildrenBatchJob.perform_later(
+          child_ids:,
+          charge:,
+          payload:
+        )
+      end
     end
   end
 end
