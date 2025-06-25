@@ -16,7 +16,7 @@ module PaymentProviders
       end
 
       def call
-        if PaymentProviders::AdyenProvider::IGNORED_WEBHOOKS_EVENTS.include?(event["eventCode"])
+        if PaymentProviders::AdyenProvider::IGNORED_WEBHOOK_EVENTS.include?(event["eventCode"])
           return result
         end
 
