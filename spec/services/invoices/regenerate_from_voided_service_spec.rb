@@ -99,8 +99,8 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
 
         aggregate_failures do
           expect(result).to be_success
-          expect(result.invoice.fees.count).to eq(fee_ids.count)
-          expect(result.invoice.fees.first.amount_cents).to eq(fee.amount_cents)
+          expect(result.invoice.fees.count).to eq(1)
+          expect(result.invoice.fees.pluck(:amount_cents)).to match_array([fee.amount_cents])
         end
       end
 
@@ -121,7 +121,7 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
         end
       end
 
-      it "copies important attributes from the original fee" do
+      it "applies updated attributes from the fee input" do
         result = regenerate_service.call
 
         new_fee = result.invoice.fees.first
@@ -129,9 +129,20 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
         aggregate_failures do
           expect(result).to be_success
           expect(new_fee.amount_cents).to eq(fee.amount_cents)
-          expect(new_fee.precise_amount_cents).to eq(fee.precise_amount_cents)
           expect(new_fee.units).to eq(fee.units)
           expect(new_fee.description).to eq(fee.description)
+          expect(new_fee.invoice_display_name).to eq(fee.invoice_display_name)
+        end
+      end
+
+      it "copies other important attributes from the original fee" do
+        result = regenerate_service.call
+
+        new_fee = result.invoice.fees.first
+
+        aggregate_failures do
+          expect(result).to be_success
+          expect(new_fee.precise_amount_cents).to eq(fee.precise_amount_cents)
           expect(new_fee.fee_type).to eq(fee.fee_type)
           expect(new_fee.charge_id).to eq(fee.charge_id)
           expect(new_fee.subscription_id).to eq(fee.subscription_id)
@@ -142,7 +153,6 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
           expect(new_fee.events_count).to eq(fee.events_count)
           expect(new_fee.unit_amount_cents).to eq(fee.unit_amount_cents)
           expect(new_fee.precise_unit_amount).to eq(fee.precise_unit_amount)
-          expect(new_fee.invoice_display_name).to eq(fee.invoice_display_name)
           expect(new_fee.charge_filter_id).to eq(fee.charge_filter_id)
           expect(new_fee.group_id).to eq(fee.group_id)
           expect(new_fee.true_up_parent_fee_id).to eq(fee.true_up_parent_fee_id)
