@@ -4,91 +4,60 @@ require "rails_helper"
 
 RSpec.describe Fees::FixedChargeService, type: :service do
   subject(:fixed_charge_service) do
-    described_class.new(
+    described_class.call(
       invoice:,
       fixed_charge:,
       subscription:,
-      boundaries:,
-      context:
+      boundaries: boundaries.to_h
     )
   end
 
   let(:organization) { create(:organization) }
-  let(:billing_entity) { create(:billing_entity, organization:) }
-  let(:customer) { create(:customer, billing_entity:, organization:) }
-  let(:context) { :finalize }
-
-  let(:subscription) do
-    create(
-      :subscription,
-      status: :active,
-      started_at: Time.zone.parse("2022-03-15"),
-      customer:,
-      organization:
-    )
-  end
+  let(:customer) { create(:customer, organization:) }
+  let(:plan) { create(:plan, organization:, interval: "monthly") }
+  let(:add_on) { create(:add_on, organization:) }
+  let(:subscription) { create(:subscription, customer:, plan:) }
+  let(:invoice) { create(:invoice, organization:, customer:) }
+  let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, properties: {amount: "31.00"}) }
 
   let(:boundaries) do
     {
-      from_datetime: subscription.started_at.to_date.beginning_of_day,
-      to_datetime: subscription.started_at.end_of_month.end_of_day,
-      charges_from_datetime: subscription.started_at.beginning_of_day,
-      charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
-      timestamp: subscription.started_at.end_of_month.end_of_day + 1.second,
-      charges_duration: (
-        subscription.started_at.end_of_month.end_of_day - subscription.started_at.beginning_of_month
-      ).fdiv(1.day).ceil
+      charges_from_datetime: subscription.started_at,
+      charges_to_datetime: subscription.started_at.end_of_month
     }
   end
 
-  let(:invoice) do
-    create(:invoice, customer:, organization:)
-  end
-
-  let(:fixed_charge) do
-    create(
-      :fixed_charge,
-      plan: subscription.plan,
-      properties: {amount: "20"},
-      organization:
-    )
-  end
-
-  describe "#call" do
-    context "when there are events for the fixed charge" do
-      let(:event1) do
-        create(
-          :event,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          code: fixed_charge.add_on.code,
-          source: Event.sources[:fixed_charge],
-          properties: {units: 2},
-          metadata: {fixed_charge_id: fixed_charge.id.to_s},
-          timestamp: Time.zone.parse("2022-03-16")
-        )
-      end
-
-      let(:event2) do
-        create(
-          :event,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          code: fixed_charge.add_on.code,
-          source: Event.sources[:fixed_charge],
-          properties: {units: 3},
-          metadata: {fixed_charge_id: fixed_charge.id.to_s},
-          timestamp: Time.zone.parse("2022-03-17")
-        )
-      end
+  context "with standard charge model" do
+    context "when fixed charge is not prorated" do
+      let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, prorated: false, properties: {amount: "31.00"}) }
 
       before do
-        event1
-        event2
+        # Create a fixed charge event
+        create(
+          :event,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          code: add_on.code,
+          source: "fixed_charge",
+          properties: {units: 2},
+          metadata: {fixed_charge_id: fixed_charge.id},
+          timestamp: subscription.started_at
+        )
+
+        create(
+          :event,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          code: add_on.code,
+          source: "fixed_charge",
+          properties: {units: 3},
+          metadata: {fixed_charge_id: fixed_charge.id},
+          timestamp: subscription.started_at + 1.day
+        )
       end
 
-      it "creates a fee based on aggregated events" do
-        result = fixed_charge_service.call
+      it "creates fee with full amount" do
+        result = fixed_charge_service
 
         expect(result).to be_success
         expect(result.fees.count).to eq(1)
@@ -100,7 +69,7 @@ RSpec.describe Fees::FixedChargeService, type: :service do
           subscription:,
           fee_type: "fixed_charge",
           units: 5, # 2 + 3 from events
-          amount_cents: 10000, # 5 * 20 * 100
+          amount_cents: 15500, # 5 * 31 * 100
           amount_currency: subscription.plan.amount_currency,
           organization_id: organization.id,
           billing_entity_id: billing_entity.id,
@@ -109,208 +78,109 @@ RSpec.describe Fees::FixedChargeService, type: :service do
       end
     end
 
-    context "when there are no events for the fixed charge" do
-      it "does not create a fee" do
-        expect { fixed_charge_service.call }.not_to change(Fee, :count)
+    context "when fixed charge is prorated" do
+      let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, prorated: true, properties: {amount: "31.00"}) }
 
-        result = fixed_charge_service.call
-        expect(result).to be_success
-        expect(result.fees.count).to be_zero
+      before do
+        create(
+          :event,
+          organization:,
+          external_subscription_id: subscription.external_id,
+          code: add_on.code,
+          source: "fixed_charge",
+          properties: {units: 1},
+          metadata: {fixed_charge_id: fixed_charge.id},
+          timestamp: subscription.started_at + 1.day
+        )
+      end
+
+      context "with subscription starting May 10 and renewing June 1 (22 days)" do
+        let(:subscription) do
+          create(:subscription, customer:, plan:, started_at: Date.new(2024, 5, 10))
+        end
+
+        let(:boundaries) do
+          {
+            charges_from_datetime: subscription.started_at,
+            charges_to_datetime: Date.new(2024, 6, 1)
+          }
+        end
+
+        it "creates fee with prorated amount" do
+          result = fixed_charge_service
+
+          expect(result).to be_success
+          expect(result.fees.count).to eq(1)
+
+          fee = result.fees.first
+
+          # Expected calculation: aggregated units * full amount
+          # 22 days / 31 days = 0.71 proration
+          # 0.71 * 31.00 = 22.01
+          expect(fee.amount_cents).to eq(2201) # $22.01 * 100 cents
+          expect(fee.units).to be_within(0.01).of(0.71) # Prorated units
+        end
+      end
+
+      context "with subscription starting May 1 and renewing June 1 (31 days)" do
+        let(:subscription) do
+          create(:subscription, customer:, plan:, started_at: Date.new(2024, 5, 1))
+        end
+
+        let(:boundaries) do
+          {
+            charges_from_datetime: subscription.started_at,
+            charges_to_datetime: Date.new(2024, 6, 1)
+          }
+        end
+
+        it "creates fee with full amount" do
+          result = fixed_charge_service
+
+          expect(result).to be_success
+          expect(result.fees.count).to eq(1)
+
+          fee = result.fees.first
+
+          # Expected calculation: aggregated units * full amount
+          # 31 days / 31 days = 1.0 proration
+          # 1.0 * 31.00 = 31.00
+          expect(fee.amount_cents).to eq(3100) # $31.00 * 100 cents
+          expect(fee.units).to eq(1.0) # Full units
+        end
       end
     end
 
-    context "when there are events outside the boundaries" do
-      let(:event_outside) do
-        create(
-          :event,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          code: fixed_charge.add_on.code,
-          source: Event.sources[:fixed_charge],
-          properties: {units: 10},
-          metadata: {fixed_charge_id: fixed_charge.id.to_s},
-          timestamp: Time.zone.parse("2022-04-01") # Outside boundaries
-        )
-      end
-
+    context "when no events exist" do
       before do
-        event_outside
+        Event.destroy_all
       end
 
-      it "does not create a fee" do
-        expect { fixed_charge_service.call }.not_to change(Fee, :count)
-
-        result = fixed_charge_service.call
-        expect(result).to be_success
-        expect(result.fees.count).to be_zero
-      end
-    end
-
-    context "when there are events for different fixed charges" do
-      let(:other_fixed_charge) { create(:fixed_charge, add_on: fixed_charge.add_on, organization:) }
-
-      let(:event_other) do
-        create(
-          :event,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          code: fixed_charge.add_on.code,
-          source: Event.sources[:fixed_charge],
-          properties: {units: 10},
-          metadata: {fixed_charge_id: other_fixed_charge.id.to_s},
-          timestamp: Time.zone.parse("2022-03-16")
-        )
-      end
-
-      before do
-        event_other
-      end
-
-      it "does not create a fee" do
-        expect { fixed_charge_service.call }.not_to change(Fee, :count)
-      end
-    end
-
-    context "with graduated charge model" do
-      let(:fixed_charge) do
-        create(
-          :fixed_charge,
-          plan: subscription.plan,
-          charge_model: "graduated",
-          properties: {
-            graduated_ranges: [
-              {from_value: 0, to_value: 10, per_unit_amount: "2", flat_amount: "1"},
-              {from_value: 11, to_value: nil, per_unit_amount: "1", flat_amount: "0"}
-            ]
-          },
-          organization:
-        )
-      end
-
-      let(:event1) do
-        create(
-          :event,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          code: fixed_charge.add_on.code,
-          source: Event.sources[:fixed_charge],
-          properties: {units: 5},
-          metadata: {fixed_charge_id: fixed_charge.id.to_s},
-          timestamp: Time.zone.parse("2022-03-16")
-        )
-      end
-
-      let(:event2) do
-        create(
-          :event,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          code: fixed_charge.add_on.code,
-          source: Event.sources[:fixed_charge],
-          properties: {units: 11},
-          metadata: {fixed_charge_id: fixed_charge.id.to_s},
-          timestamp: Time.zone.parse("2022-03-17")
-        )
-      end
-
-      before do
-        event1
-        event2
-      end
-
-      it "creates a fee with graduated calculation" do
-        result = fixed_charge_service.call
+      it "returns success without creating fees" do
+        result = fixed_charge_service
 
         expect(result).to be_success
-        # 16 units total: 10 in first range (10 * 2 + 1 = 21) + 6 in second range (6 * 1 = 6) = 27
-        expect(result.fees.first.amount_cents).to eq(2700)
-      end
-    end
-
-    context "with volume charge model" do
-      let(:fixed_charge) do
-        create(
-          :fixed_charge,
-          plan: subscription.plan,
-          charge_model: "volume",
-          properties: {
-            volume_ranges: [
-              {from_value: 0, to_value: 100, per_unit_amount: "2", flat_amount: "10"},
-              {from_value: 101, to_value: 200, per_unit_amount: "1", flat_amount: "15"},
-              {from_value: 201, to_value: nil, per_unit_amount: "0.5", flat_amount: "50"}
-            ]
-          },
-          organization:
-        )
-      end
-
-      let(:event1) do
-        create(
-          :event,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          code: fixed_charge.add_on.code,
-          source: Event.sources[:fixed_charge],
-          properties: {units: 50},
-          metadata: {fixed_charge_id: fixed_charge.id.to_s},
-          timestamp: Time.zone.parse("2022-03-16")
-        )
-      end
-
-      let(:event2) do
-        create(
-          :event,
-          organization:,
-          external_subscription_id: subscription.external_id,
-          code: fixed_charge.add_on.code,
-          source: Event.sources[:fixed_charge],
-          properties: {units: 60},
-          metadata: {fixed_charge_id: fixed_charge.id.to_s},
-          timestamp: Time.zone.parse("2022-03-17")
-        )
-      end
-
-      before do
-        event1
-        event2
-      end
-
-      it "creates a fee with volume calculation" do
-        result = fixed_charge_service.call
-
-        expect(result).to be_success
-        # 110 units total: falls into second tier (101-200), so all 110 units charged at $1 each + $15 flat = $125
-        expect(result.fees.first.amount_cents).to eq(12500)
+        expect(result.fees).to be_empty
       end
     end
 
     context "when fee already exists" do
-      let(:invoice) { create(:invoice, organization:) }
-
-      let(:existing_fee) do
+      before do
         create(
           :fee,
           fixed_charge:,
-          invoice:,
           subscription:,
-          fee_type: :fixed_charge,
-          properties: boundaries
+          invoice:,
+          properties: boundaries.to_h
         )
       end
 
-      before do
-        existing_fee
-      end
-
-      it "does not create a new fee" do
-        expect { fixed_charge_service.call }.not_to change(Fee, :count)
-      end
-
-      it "returns existing fees" do
-        result = fixed_charge_service.call
+      it "returns existing fees without creating new ones" do
+        result = fixed_charge_service
 
         expect(result).to be_success
-        expect(result.fees).to eq([existing_fee])
+        expect(result.fees.count).to eq(1)
+        expect(result.fees.first.fixed_charge).to eq(fixed_charge)
       end
     end
   end

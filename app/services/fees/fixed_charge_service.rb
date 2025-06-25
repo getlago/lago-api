@@ -39,7 +39,12 @@ module Fees
     def init_fees
       result.fees = []
 
-      aggregation_result = FixedCharges::AggregationService.call(
+      # Use prorated aggregation service if the fixed charge is prorated
+      aggregation_service = fixed_charge.prorated? ?
+        FixedCharges::ProratedAggregationService :
+        FixedCharges::AggregationService
+
+      aggregation_result = aggregation_service.call(
         fixed_charge:,
         subscription:,
         boundaries: boundaries.to_h

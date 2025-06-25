@@ -9,7 +9,10 @@ module FixedCharges
       protected
 
       def compute_amount
-        (units * BigDecimal(properties["amount"]))
+        # Simple calculation: aggregated units * full amount
+        # For prorated charges, the aggregated units are already prorated
+        # For non-prorated charges, the aggregated units are the full units
+        units * BigDecimal(properties["amount"])
       end
 
       def unit_amount
@@ -20,4 +23,4 @@ module FixedCharges
       end
     end
   end
-end 
+end
