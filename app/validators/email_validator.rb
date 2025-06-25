@@ -8,6 +8,10 @@ class EmailValidator < ActiveModel::EachValidator
   protected
 
   def valid?(value)
-    value&.match(Regex::EMAIL)
+    return false if value.blank?
+
+    emails = value.split(",").map(&:strip)
+
+    emails.all? { |email| email.match?(Regex::EMAIL) }
   end
 end
