@@ -25209,12 +25209,6 @@
           "inputFields": null,
           "enumValues": [
             {
-              "name": "get",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "post",
               "description": null,
               "isDeprecated": false,

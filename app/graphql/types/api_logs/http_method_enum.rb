@@ -5,7 +5,7 @@ module Types
     class HttpMethodEnum < Types::BaseEnum
       description "Api Logs http method enums"
 
-      Clickhouse::ApiLog::HTTP_METHODS.each do |key, value|
+      Clickhouse::ApiLog::HTTP_METHODS.keys.without(:get).each do |key|
         value key
       end
     end
