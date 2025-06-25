@@ -9,7 +9,8 @@ RSpec.describe Charges::UpdateChildrenService, type: :service do
       params:,
       old_parent_attrs:,
       old_parent_filters_attrs:,
-      old_parent_applied_pricing_unit_attrs:
+      old_parent_applied_pricing_unit_attrs:,
+      child_ids:
     )
   end
 
@@ -42,6 +43,7 @@ RSpec.describe Charges::UpdateChildrenService, type: :service do
   let(:child_plan) { create(:plan, organization:, parent_id:) }
   let(:parent_id) { plan.id }
   let(:charge_parent_id) { charge.id }
+  let(:child_ids) { [child_charge&.id] }
   let(:child_charge) do
     create(
       :standard_charge,
@@ -53,7 +55,7 @@ RSpec.describe Charges::UpdateChildrenService, type: :service do
   end
   let(:params) do
     {
-      id: child_charge&.id,
+      id: charge&.id,
       billable_metric_id: billable_metric.id,
       charge_model: "standard",
       pay_in_advance: true,
