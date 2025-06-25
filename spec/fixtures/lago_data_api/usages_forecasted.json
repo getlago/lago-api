@@ -1,0 +1,30 @@
+[
+    {
+        "organization_id": "2537afc4-0e7c-4abb-89b7-d9b28c35780b",
+        "start_of_period_dt": "2025-06-23",
+        "end_of_period_dt": "2025-06-23",
+        "amount_currency": "EUR",
+        "units": 100,
+        "amount_cents": 1000,
+        "units_forecast_10th_percentile": 20,
+        "units_forecast_50th_percentile": 30,
+        "units_forecast_90th_percentile": 50,
+        "amount_cents_forecast_10th_percentile": 200,
+        "amount_cents_forecast_50th_percentile": 300,
+        "amount_cents_forecast_90th_percentile": 500
+    },
+    {
+        "organization_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "start_of_period_dt": "2025-05-23",
+        "end_of_period_dt": "2025-05-23",
+        "amount_currency": "EUR",
+        "units": 200,
+        "amount_cents": 2000,
+        "units_forecast_10th_percentile": 40,
+        "units_forecast_50th_percentile": 60,
+        "units_forecast_90th_percentile": 100,
+        "amount_cents_forecast_10th_percentile": 400,
+        "amount_cents_forecast_50th_percentile": 600,
+        "amount_cents_forecast_90th_percentile": 1000
+    }
+]
