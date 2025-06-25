@@ -3,7 +3,7 @@
 module V1
   class SubscriptionEntitlementCollectionSerializer < CollectionSerializer
     def serialize_models
-      collection.reject(&:removed).group_by(&:feature).transform_values do
+      collection.reject(&:removed).group_by(&:feature_id).transform_values do
         it.filter_map do
           next unless it.privilege
           PrivilegeWithValue.new(

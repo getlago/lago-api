@@ -23,7 +23,7 @@ class FeatureEntitlement < ApplicationRecord
   # default_scope { where(deleted_at: nil) }
   #
   # scope :for_organization, ->(organization) { where(organization: organization) }
-  # scope :for_plan, ->(plan) { where(plan: plan, subscription: nil) }
+  # scope :for_plan, ->(plan) { where(plan: plan, subscription_external_id: nil) }
   # scope :for_subscription, ->(subscription) { where(subscription: subscription, plan: nil) }
   # scope :with_deleted, -> { unscoped }
   # scope :only_deleted, -> { unscoped.where.not(deleted_at: nil) }

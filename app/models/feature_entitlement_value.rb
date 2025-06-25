@@ -1,9 +1,14 @@
 # frozen_string_literal: true
 
 class FeatureEntitlementValue < ApplicationRecord
+  include Discard::Model
+  self.discard_column = :deleted_at
+
   belongs_to :organization
   belongs_to :feature_entitlement
   belongs_to :privilege
+
+  default_scope -> { kept }
 end
 
 # == Schema Information

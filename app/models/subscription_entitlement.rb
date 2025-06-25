@@ -20,12 +20,25 @@ end
 #
 # Table name: subscription_entitlements_view
 #
-#  privilege_override_value :string
-#  privilege_plan_value     :string
-#  removed                  :boolean
-#  feature_entitlement_id   :uuid
-#  feature_id               :uuid
-#  plan_id                  :uuid
-#  privilege_id             :uuid
-#  subscription_external_id :string
+#  feature_code                           :string
+#  feature_deleted_at                     :datetime
+#  feature_description                    :text
+#  feature_name                           :string
+#  privilege_code                         :string
+#  privilege_config                       :jsonb
+#  privilege_deleted_at                   :datetime
+#  privilege_name                         :string
+#  privilege_override_value               :string
+#  privilege_plan_value                   :string
+#  privilege_value_type                   :string
+#  removed                                :boolean
+#  feature_id                             :uuid
+#  organization_id                        :uuid
+#  override_feature_entitlement_id        :uuid
+#  override_feature_entitlement_values_id :uuid
+#  plan_feature_entitlement_id            :uuid
+#  plan_feature_entitlement_values_id     :uuid
+#  plan_id                                :uuid
+#  privilege_id                           :uuid
+#  subscription_external_id               :string
 #
