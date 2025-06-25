@@ -23,11 +23,20 @@ module Types
       # TODO: remove this once we have a proper way to handle JSON in Clickhouse
       # https://github.com/PNixx/clickhouse-activerecord/pull/192
       def request_body
-        object.request_body.transform_values { |v| JSON.parse(v) }
+        deep_json_parser(object.request_body)
       end
 
       def request_response
-        object.request_response.transform_values { |v| JSON.parse(v) }
+        deep_json_parser(object.request_response)
+      end
+
+      def deep_json_parser(attribute)
+        attribute.transform_values do |value|
+          parsed = value.is_a?(String) ? JSON.parse(value) : value
+          (parsed.is_a?(Array) || parsed.is_a?(Hash)) ? parsed : value
+        rescue JSON::ParserError
+          value
+        end
       end
     end
   end
