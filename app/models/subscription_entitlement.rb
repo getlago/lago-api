@@ -14,6 +14,33 @@ class SubscriptionEntitlement < ApplicationRecord
   def readonly?
     true
   end
+
+  def privilege_value_casted
+    privilege_override_value_casted || privilege_plan_value_casted
+  end
+
+  def privilege_plan_value_casted
+    cast_value(privilege_plan_value, privilege_value_type)
+  end
+
+  def privilege_override_value_casted
+    cast_value(privilege_override_value, privilege_value_type)
+  end
+
+  private
+
+  def cast_value(raw_value, type)
+    return nil if raw_value.nil?
+
+    case type
+    when "integer"
+      raw_value.to_i
+    when "boolean"
+      ActiveModel::Type::Boolean.new.cast(raw_value)
+    else
+      raw_value.to_s
+    end
+  end
 end
 
 # == Schema Information
