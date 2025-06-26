@@ -5,11 +5,12 @@ module Charges
     Result = BaseResult[:charge_amount_cents, :subscription_amount_cents, :total_amount_cents]
     AggregationResult = Struct.new(:aggregation, :total_aggregated_units, :current_usage_units, :full_units_number)
 
-    def initialize(billable_metric:, subscription:, date:, units:)
-      @billable_metric = billable_metric
+    def initialize(subscription:, units:, charge:, charge_filter: nil)
       @subscription = subscription
-      @date = date
       @units = units
+      @charge = charge
+      @charge_filter = charge_filter
+      @billable_metric = charge&.billable_metric
 
       super
     end
@@ -23,16 +24,17 @@ module Charges
 
     private
 
-    attr_reader :billable_metric, :subscription, :date, :units
+    attr_reader :subscription, :units, :billable_metric, :charge, :charge_filter
 
     delegate :plan, to: :subscription
     delegate :customer, to: :subscription
 
     def calculate_charge_amount
-      charge = subscription.plan.charges.find_by(billable_metric:)
       return 0 unless charge
 
-      properties = charge.properties.presence || Charges::BuildDefaultPropertiesService.call(charge.charge_model)
+      properties = charge_filter&.properties ||
+        charge.properties.presence ||
+        Charges::BuildDefaultPropertiesService.call(charge.charge_model)
 
       filtered_properties = Charges::FilterChargeModelPropertiesService.call(charge:, properties:).properties
 

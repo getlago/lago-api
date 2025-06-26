@@ -5,10 +5,9 @@ require "rails_helper"
 RSpec.describe Charges::CalculatePriceService do
   subject(:calculate_price_service) do
     described_class.new(
-      billable_metric:,
       subscription:,
-      date:,
-      units:
+      units:,
+      charge:
     )
   end
 
@@ -17,11 +16,12 @@ RSpec.describe Charges::CalculatePriceService do
   let(:plan) { create(:plan, organization:, amount_cents: 1000) }
   let(:subscription) { create(:subscription, customer:, plan:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
-  let(:date) { Time.current }
   let(:units) { 5 }
 
   describe "#call" do
     context "when there is no charge for the billable metric" do
+      let(:charge) { nil }
+
       it "returns only the subscription amount" do
         result = calculate_price_service.call
 
@@ -79,14 +79,16 @@ RSpec.describe Charges::CalculatePriceService do
 
     context "when there is a package charge" do
       let(:charge) do
-        create(:package_charge,
+        create(
+          :package_charge,
           plan:,
           billable_metric:,
           properties: {
             package_size: 2,
             amount: "10",
             free_units: 1
-          })
+          }
+        )
       end
 
       before { charge }
