@@ -8,7 +8,7 @@ alwaysApply: true
 When creating a service class:
 - the class always extend BaseService using `<`
 - the class name should always end with `Service`
-- the class should always be placed in `api/app/services/**/*.rb`
+- the class should always be placed in `app/services/**/*.rb`
 - Service class takes named arguments via the constructor and arguments are stored in instance variables.
 - Each instance variable should have a private attr_reader declared
 - Service class have one and only one public method named `call` and it never accepts arguments
@@ -44,3 +44,16 @@ end
 
 # Models
 - New models must directly belong to an organization. Store the `organization_id` in the table, don't use `through:`
+
+# Webhooks
+
+To create a webhook:
+- A webhook name is typically `resource.action`, for example: `customer.updated` or `alert.triggered`. Use other webhooks as example to follow.
+- Create a service in `app/services/webhooks/`, typically named `Webhooks::ResourceActionService` like `Webhooks::CustomerUpdatedService`
+- A service must define at least the following methods:
+    - `current_organization` - how to get the organization from the model
+    - `object_serializer` which typically calls a serializer class
+    - `webhook_type` always the name like `resource.action`
+    - `object_type` which is the object serialized. Reuse this method in the serializer `root_name` param
+- Add the mapping `name` => Service class to the `SendWebhookJob::WEBHOOK_SERVICES` hash
+- Write a test for the webhook class
