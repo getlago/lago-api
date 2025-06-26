@@ -16,9 +16,9 @@ FactoryBot.define do
         billing_entity { nil }
       end
 
-      before(:create) do |tax, evaluator|
+      after(:create) do |tax, evaluator|
         billing_entity = evaluator.billing_entity || tax.organization.default_billing_entity
-        billing_entity.taxes << tax
+        create(:billing_entity_applied_tax, tax:, billing_entity:, organization: tax.organization)
       end
     end
   end

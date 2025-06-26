@@ -6,7 +6,7 @@ class Charge
 
     belongs_to :charge
     belongs_to :tax
-    belongs_to :organization, optional: true
+    belongs_to :organization
   end
 end
 

@@ -5,6 +5,7 @@ require "rails_helper"
 RSpec.describe RecurringTransactionRule, type: :model do
   describe "associations" do
     it { is_expected.to belong_to(:wallet) }
+    it { is_expected.to belong_to(:organization) }
   end
 
   describe "enums" do

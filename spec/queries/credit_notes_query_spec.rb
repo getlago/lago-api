@@ -202,7 +202,10 @@ RSpec.describe CreditNotesQuery, type: :query do
 
     let!(:matching_credit_note) { create(:credit_note, customer:) }
 
-    before { create(:credit_note, customer:) }
+    before do
+      invoice = create(:invoice, customer:, number: "FOO-01")
+      create(:credit_note, customer:, invoice:)
+    end
 
     it "returns credit notes with matching invoice number" do
       expect(result).to be_success
@@ -413,7 +416,10 @@ RSpec.describe CreditNotesQuery, type: :query do
       let(:search_term) { matching_credit_note.number.first(10) }
       let!(:matching_credit_note) { create(:credit_note, customer:) }
 
-      before { create(:credit_note, customer:) }
+      before do
+        invoice = create(:invoice, customer:, number: "FOO-01")
+        create(:credit_note, customer:, invoice:)
+      end
 
       it "returns credit notes by partially matching number" do
         expect(result).to be_success

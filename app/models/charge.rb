@@ -7,7 +7,7 @@ class Charge < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
-  belongs_to :organization, optional: true
+  belongs_to :organization
   belongs_to :plan, -> { with_discarded }, touch: true
   belongs_to :billable_metric, -> { with_discarded }
   belongs_to :parent, class_name: "Charge", optional: true

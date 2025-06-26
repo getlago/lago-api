@@ -39,7 +39,7 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
         let(:tax3) { create(:tax, organization:, code: "TAX_CODE_3") }
 
         before do
-          billing_entity.taxes << tax3
+          create(:billing_entity_applied_tax, billing_entity:, tax: tax3)
         end
 
         it "removes the other tax and applies the new ones" do
@@ -94,7 +94,8 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
       let(:tax_codes) { [] }
 
       before do
-        billing_entity.taxes = [tax1, tax2]
+        create(:billing_entity_applied_tax, billing_entity:, tax: tax1)
+        create(:billing_entity_applied_tax, billing_entity:, tax: tax2)
       end
 
       it "removes taxes from the billing entity" do
@@ -112,7 +113,8 @@ RSpec.describe BillingEntities::Taxes::ManageTaxesService do
       let(:tax_codes) { nil }
 
       before do
-        billing_entity.taxes = [tax1, tax2]
+        create(:billing_entity_applied_tax, billing_entity:, tax: tax1)
+        create(:billing_entity_applied_tax, billing_entity:, tax: tax2)
       end
 
       it "removes taxes from the billing entity" do

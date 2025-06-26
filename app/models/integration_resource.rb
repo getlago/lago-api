@@ -5,7 +5,7 @@ class IntegrationResource < ApplicationRecord
 
   belongs_to :syncable, polymorphic: true
   belongs_to :integration, class_name: "Integrations::BaseIntegration"
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   RESOURCE_TYPES = %i[invoice sales_order_deprecated payment credit_note subscription].freeze
 
