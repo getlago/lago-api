@@ -27,7 +27,7 @@ RSpec.describe Mutations::PricingUnits::Update, type: :graphql do
   let!(:membership) { create(:membership) }
   let(:input_params) { {id: pricing_unit.id, name:, shortName: short_name, description:} }
   let(:name) { "Updated Name" }
-  let(:short_name) { "Updated Short Name" }
+  let(:short_name) { "CR" }
   let(:description) { "Updated Description" }
 
   it_behaves_like "requires current user"

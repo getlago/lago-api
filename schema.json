@@ -5439,6 +5439,18 @@
               "deprecationReason": null
             },
             {
+              "name": "appliedPricingUnit",
+              "description": null,
+              "type": {
+                "kind": "INPUT_OBJECT",
+                "name": "AppliedPricingUnitOverrideInput",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "filters",
               "description": null,
               "type": {
@@ -5476,18 +5488,6 @@
               "type": {
                 "kind": "SCALAR",
                 "name": "BigInt",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "appliedPricingUnit",
-              "description": null,
-              "type": {
-                "kind": "INPUT_OBJECT",
-                "name": "AppliedPricingUnitOverrideInput",
                 "ofType": null
               },
               "defaultValue": null,
