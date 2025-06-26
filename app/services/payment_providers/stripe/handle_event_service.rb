@@ -9,7 +9,7 @@ module PaymentProviders
         "payment_intent.payment_failed" => PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedService,
         "customer.updated" => PaymentProviders::Stripe::Webhooks::CustomerUpdatedService,
         "charge.dispute.closed" => PaymentProviders::Stripe::Webhooks::ChargeDisputeClosedService,
-        "payment_intent.canceled" =>  PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedService
+        "payment_intent.canceled" => PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedService
       }.freeze
 
       def initialize(organization:, event_json:)
