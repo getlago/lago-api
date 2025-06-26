@@ -36,6 +36,10 @@ RSpec.describe Api::V1::EventsController, type: :request do
       expect(json[:event][:external_subscription_id]).to eq(subscription.external_id)
     end
 
+    it "does not create an audit log", clickhouse: true do
+      expect { subject }.not_to change(Clickhouse::ApiLog, :count)
+    end
+
     context "with duplicated transaction_id" do
       let!(:event) { create(:event, organization:, external_subscription_id: subscription.external_id) }
 
