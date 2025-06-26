@@ -66,5 +66,19 @@ RSpec.describe PaymentProviderCustomers::Stripe::UpdatePaymentMethodService, typ
         end
       end
     end
+
+    context "when customer is deleted" do
+      let(:customer) { create(:customer, organization:, deleted_at: Time.current) }
+
+      it "Fails with deleted_customer error" do
+        stripe_customer.reload
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq(:deleted_customer)
+        expect(result.error.message).to include("Customer associated to this stripe customer was deleted")
+      end
+    end
   end
 end
