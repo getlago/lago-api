@@ -3,7 +3,7 @@
 module Charges
   class CalculatePriceService < BaseService
     Result = BaseResult[:charge_amount_cents, :subscription_amount_cents, :total_amount_cents]
-    AggregationResult = Struct.new(:aggregation, :total_aggregated_units, :current_usage_units, :full_units_number)
+    AggregationResult = Struct.new(:aggregation, :total_aggregated_units, :current_usage_units, :full_units_number, :precise_total_amount_cents, :custom_aggregation, :options)
 
     def initialize(subscription:, units:, charge:, charge_filter: nil)
       @subscription = subscription
@@ -48,7 +48,7 @@ module Charges
     end
 
     def aggregation_result
-      AggregationResult.new(units, units, units, units)
+      AggregationResult.new(units, units, units, units, 0, nil, running_total: [])
     end
   end
 end
