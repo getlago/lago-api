@@ -6,8 +6,8 @@ class Subscription < ApplicationRecord
   belongs_to :customer, -> { with_discarded }
   belongs_to :plan, -> { with_discarded }
   belongs_to :previous_subscription, class_name: "Subscription", optional: true
+  belongs_to :organization
 
-  has_one :organization, through: :customer
   has_one :billing_entity, through: :customer
   has_many :next_subscriptions, class_name: "Subscription", foreign_key: :previous_subscription_id
   has_many :events

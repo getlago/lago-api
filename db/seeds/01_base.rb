@@ -43,6 +43,7 @@ plan = Plan.create_with(
 )
 
 Charge.create_with(
+  organization:,
   charge_model: "standard",
   amount_currency: "EUR",
   properties: {
@@ -54,6 +55,7 @@ Charge.create_with(
 )
 
 Charge.create_with(
+  organization:,
   charge_model: "standard",
   amount_currency: "EUR",
   properties: {
@@ -90,6 +92,7 @@ Charge.create_with(
   subscription_at = (Time.current - 6.months).beginning_of_month
 
   sub = Subscription.create_with(
+    organization:,
     started_at: subscription_at,
     subscription_at:,
     status: :active,
