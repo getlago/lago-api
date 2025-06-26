@@ -33,11 +33,11 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
 
       it "updates the payment status and save the payment method" do
         expect_any_instance_of(Invoices::Payments::StripeService).to receive(:update_payment_status) # rubocop:disable RSpec/AnyInstance
-         .with(
-           organization_id: organization.id,
-           status: "failed",
-           stripe_payment: PaymentProviders::StripeProvider::StripePayment
-         ).and_call_original
+          .with(
+            organization_id: organization.id,
+            status: "failed",
+            stripe_payment: PaymentProviders::StripeProvider::StripePayment
+          ).and_call_original
 
         create(:payment, provider_payment_id: event.data.object.id)
 
