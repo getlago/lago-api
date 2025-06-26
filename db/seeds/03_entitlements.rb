@@ -81,3 +81,19 @@ FeatureEntitlement.where(organization:, feature: support, plan:).delete_all
 FeatureEntitlement.create!(organization:, feature: support, plan:)
 SubscriptionFeatureEntitlementRemoval.where(organization:, feature: support).delete_all
 SubscriptionFeatureEntitlementRemoval.create!(organization:, feature: support, subscription_external_id: sub.external_id)
+
+# Feature with Select
+sso = Feature.create_with(
+  name: "SSO"
+).find_or_create_by!(organization:, code: "sso")
+sso.privileges.delete_all
+
+provider = sso.privileges.create!(organization:,
+  code: "provider",
+  name: "Provider Name",
+  value_type: "select",
+  config: {select_options: %w[okta ad google custom]})
+
+FeatureEntitlement.where(organization:, feature: sso, plan:).delete_all
+fe = FeatureEntitlement.create!(organization:, feature: sso, plan:)
+FeatureEntitlementValue.create!(organization:, feature_entitlement: fe, privilege: provider, value: "okta")

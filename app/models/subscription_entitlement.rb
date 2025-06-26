@@ -6,9 +6,9 @@ class SubscriptionEntitlement < ApplicationRecord
   belongs_to :feature
   belongs_to :privilege
 
-  def self.for_subscription(subscription)
-    where(subscription_external_id: subscription.external_id)
-      .or(where(plan_id: subscription.plan.parent_id || subscription.plan.id))
+  scope :for_subscription, ->(sub) do
+    where(subscription_external_id: sub.external_id)
+      .or(where(plan_id: sub.plan.parent_id || sub.plan.id))
   end
 
   def readonly?
