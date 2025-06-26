@@ -81,6 +81,12 @@ FactoryBot.define do
     trait :with_fees do
       after :create do |invoice|
         create(:fee, invoice:, organization: invoice.organization)
+
+    trait :progressive_billing_invoice do
+      invoice_type { :progressive_billing }
+      with_subscriptions
+      after :create do |invoice|
+        create(:applied_usage_threshold, invoice:, organization: invoice.organization)
       end
     end
   end
