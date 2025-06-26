@@ -11,6 +11,7 @@ module PaymentProviders
       setup_intent.succeeded
       payment_intent.payment_failed
       payment_intent.succeeded
+      payment_intent.canceled
       payment_method.detached
       charge.refund.updated
       customer.updated
