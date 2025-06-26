@@ -28,6 +28,25 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentPaymentFailedSer
       end
     end
 
+    context "when payment intent is canceled" do
+      let(:event_json) { get_stripe_fixtures("webhooks/payment_intent_canceled.json", version:) }
+
+      it "updates the payment status and save the payment method" do
+        expect_any_instance_of(Invoices::Payments::StripeService).to receive(:update_payment_status) # rubocop:disable RSpec/AnyInstance
+         .with(
+           organization_id: organization.id,
+           status: "failed",
+           stripe_payment: PaymentProviders::StripeProvider::StripePayment
+         ).and_call_original
+
+        create(:payment, provider_payment_id: event.data.object.id)
+
+        result = event_service.call
+
+        expect(result).to be_success
+      end
+    end
+
     context "when payment intent event for a payment request" do
       let(:event_json) do
         get_stripe_fixtures("webhooks/payment_intent_payment_failed.json", version:) do |h|

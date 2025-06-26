@@ -1,0 +1,87 @@
+{
+  "id": "evt_3ReJRxFVEM9lDzyM2KeeBI2H",
+  "object": "event",
+  "api_version": "2020-08-27",
+  "created": 1750958405,
+  "data": {
+    "object": {
+      "id": "pi_3ReJRxFVEM9lDzyM2Jr1Zl9L",
+      "object": "payment_intent",
+      "amount": 410000,
+      "amount_capturable": 0,
+      "amount_details": {
+        "tip": {
+        }
+      },
+      "amount_received": 0,
+      "application": null,
+      "application_fee_amount": null,
+      "automatic_payment_methods": null,
+      "canceled_at": 1750958405,
+      "cancellation_reason": null,
+      "capture_method": "automatic_async",
+      "charges": {
+        "object": "list",
+        "data": [
+        ],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/charges?payment_intent=pi_3ReJRxFVEM9lDzyM2Jr1Zl9L"
+      },
+      "client_secret": "pi_3ReJRxFVEM9lDzyM2Jr1Zl9L_secret_kZmTD2mQpBB2p0zOYLff89gbg",
+      "confirmation_method": "automatic",
+      "created": 1750958341,
+      "currency": "usd",
+      "customer": "cus_SZSMR33xjdtWkr",
+      "description": "miguel - Invoice MIG-9823-202506-024",
+      "invoice": null,
+      "last_payment_error": null,
+      "latest_charge": null,
+      "livemode": false,
+      "metadata": {
+        "invoice_type": "subscription",
+        "lago_customer_id": "1e45239c-84f7-4e3d-b2ca-477c993d5002",
+        "lago_payment_id": "6e3c1b20-3d31-4e5a-ac30-994ec5d7e49b",
+        "lago_payable_type": "Invoice",
+        "lago_billing_entity_id": "e1a39714-0608-41bf-86d8-74140c109823",
+        "lago_payable_id": "695572ae-150a-436b-b384-743e9a0ad611",
+        "invoice_issuing_date": "2025-06-26",
+        "lago_invoice_id": "695572ae-150a-436b-b384-743e9a0ad611",
+        "lago_organization_id": "e1a39714-0608-41bf-86d8-74140c109823"
+      },
+      "next_action": null,
+      "on_behalf_of": null,
+      "payment_method": "pm_1ReJRxFVEM9lDzyM3chPi6Wl",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "customer_balance": {
+          "bank_transfer": {
+            "type": "us_bank_transfer"
+          },
+          "funding_type": "bank_transfer"
+        }
+      },
+      "payment_method_types": [
+        "customer_balance"
+      ],
+      "processing": null,
+      "receipt_email": null,
+      "review": null,
+      "setup_future_usage": null,
+      "shipping": null,
+      "source": null,
+      "statement_descriptor": null,
+      "statement_descriptor_suffix": null,
+      "status": "canceled",
+      "transfer_data": null,
+      "transfer_group": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 5,
+  "request": {
+    "id": "req_1CgEFQz0GbM3WM",
+    "idempotency_key": "25fa8939-2034-4655-8481-f2c61c4b8f1f"
+  },
+  "type": "payment_intent.canceled"
+}
