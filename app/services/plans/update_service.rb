@@ -182,7 +182,7 @@ module Plans
       args_charges_ids = args_charges.map { |c| c[:id] }.compact
       charges_ids = plan.charges.pluck(:id) - args_charges_ids - created_charges_ids
       plan.charges.where(id: charges_ids).find_each do |charge|
-        cascade_charge_removal(charge)
+        after_commit { cascade_charge_removal(charge) }
         Charges::DestroyService.call(charge:)
       end
     end

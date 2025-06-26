@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::CreateChildrenJob, type: :job do
+RSpec.describe Charges::CreateChildrenBatchJob, type: :job do
   let(:billable_metric) { create(:billable_metric) }
   let(:plan) { create(:plan, organization: billable_metric.organization) }
   let(:child_plan) { create(:plan, organization: billable_metric.organization, parent_id: plan.id) }
@@ -19,14 +19,14 @@ RSpec.describe Charges::CreateChildrenJob, type: :job do
   end
 
   before do
-    allow(Charges::CreateChildrenBatchJob).to receive(:perform_later)
+    allow(Charges::CreateChildrenService).to receive(:call!)
       .with(child_ids:, charge:, payload: params)
       .and_call_original
   end
 
-  it "calls the batch job" do
-    described_class.perform_now(charge:, payload: params)
+  it "calls the batch service" do
+    described_class.perform_now(child_ids:, charge:, payload: params)
 
-    expect(Charges::CreateChildrenBatchJob).to have_received(:perform_later).once
+    expect(Charges::CreateChildrenService).to have_received(:call!)
   end
 end
