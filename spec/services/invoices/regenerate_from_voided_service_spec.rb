@@ -9,6 +9,7 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
   let(:customer) { create(:customer, organization:) }
   let(:voided_invoice) { create(:invoice, :voided, organization:, customer:) }
   let(:fee) { create(:fee, invoice: voided_invoice, organization:) }
+  let(:subscription) { create(:subscription, organization:, customer:) }
   let(:fees) do
     [{
       id: fee.id,
@@ -18,6 +19,23 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
       units: 5.0,
       unit_amount_cents: 1000
     }]
+  end
+
+  # Helper method for new fee configuration
+  def new_fee_config(description: "New fee", units: 2.0, amount_cents: 500)
+    {
+      organization_id: organization.id,
+      billing_entity_id: voided_invoice.billing_entity_id,
+      description: description,
+      units: units,
+      amount_cents: amount_cents,
+      taxes_amount_cents: 0,
+      amount_currency: "EUR",
+      fee_type: "subscription",
+      subscription_id: subscription.id,
+      invoiceable_type: "Subscription",
+      invoiceable_id: subscription.id
+    }
   end
 
   describe "#call" do
@@ -301,6 +319,70 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
           end
         end
       end
+
+      context "when ActiveRecord::RecordInvalid is raised" do
+        before do
+          allow(Fees::ApplyTaxesService).to receive(:call).and_return(BaseResult.new)
+          allow(Invoices::ComputeAmountsFromFees).to receive(:call).and_return(BaseResult.new)
+          allow_any_instance_of(Fee).to receive(:save!).and_raise(ActiveRecord::RecordInvalid.new(fee))
+        end
+
+        it "returns a record validation failure" do
+          result = regenerate_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+          end
+        end
+      end
+
+      context "when fees with invalid IDs are provided" do
+        let(:fees) { [{id: "invalid_id"}] }
+
+        before do
+          allow(Fees::ApplyTaxesService).to receive(:call).and_return(BaseResult.new)
+          allow(Invoices::ComputeAmountsFromFees).to receive(:call).and_return(BaseResult.new)
+        end
+
+        it "creates an invoice without the invalid fees" do
+          result = regenerate_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.invoice.fees.count).to eq(0)
+          end
+        end
+      end
+
+      context "when new fee has invalid attributes" do
+        let(:fees) do
+          [{
+            organization_id: organization.id,
+            billing_entity_id: voided_invoice.billing_entity_id,
+            description: nil, # Invalid: description cannot be nil
+            units: -1, # Invalid: units cannot be negative
+            amount_cents: 500,
+            taxes_amount_cents: 0,
+            amount_currency: "EUR",
+            fee_type: "subscription"
+          }]
+        end
+
+        before do
+          allow(Fees::ApplyTaxesService).to receive(:call).and_return(BaseResult.new)
+          allow(Invoices::ComputeAmountsFromFees).to receive(:call).and_return(BaseResult.new)
+        end
+
+        it "returns a record validation failure" do
+          result = regenerate_service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ValidationFailure)
+          end
+        end
+      end
     end
 
     context "when handling fees" do
@@ -347,22 +429,7 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
       end
 
       context "when a new fee is provided (id omitted)" do
-        let(:subscription) { create(:subscription, organization:, customer:) }
-        let(:fees) do
-          [{
-            organization_id: organization.id,
-            billing_entity_id: voided_invoice.billing_entity_id,
-            description: "New fee",
-            units: 2.0,
-            amount_cents: 500,
-            taxes_amount_cents: 50,
-            amount_currency: "EUR",
-            fee_type: "subscription",
-            subscription_id: subscription.id,
-            invoiceable_type: "Subscription",
-            invoiceable_id: subscription.id
-          }]
-        end
+        let(:fees) { [new_fee_config] }
 
         it "creates a new fee on the regenerated invoice" do
           result = regenerate_service.call
@@ -377,8 +444,27 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
           expect(new_fee.description).to eq("New fee")
           expect(new_fee.units).to eq(2.0)
           expect(new_fee.amount_cents).to eq(500)
-          expect(new_fee.taxes_amount_cents).to eq(50)
+          expect(new_fee.taxes_amount_cents).to eq(0)
           expect(new_fee.amount_currency).to eq("EUR")
+        end
+      end
+
+      context "when mixing existing and new fees" do
+        let(:fees) do
+          [
+            {id: fee.id}, # Existing fee
+            new_fee_config # New fee
+          ]
+        end
+
+        it "processes both existing and new fees correctly" do
+          result = regenerate_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.invoice.fees.count).to eq(2)
+            expect(result.invoice.fees.pluck(:description)).to include(fee.description, "New fee")
+          end
         end
       end
     end

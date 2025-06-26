@@ -4,14 +4,10 @@ require "rails_helper"
 
 RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
   let(:required_permission) { "invoices:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:user) { membership.user }
-  let(:plan) { create(:plan, organization: organization) }
-  let(:customer) { create(:customer, organization: organization) }
-  let(:subscription) { create(:subscription, customer: customer, organization: organization, plan: plan) }
-  let(:voided_invoice) { create(:invoice, status: :voided, organization: organization, customer: customer) }
-  let!(:fee) { create(:fee, invoice: voided_invoice, subscription: subscription, organization: organization) }
+  let(:organization) { create(:organization) }
+  let(:user) { create(:user, organization: organization) }
+  let(:voided_invoice) { create(:invoice, :voided, organization: organization) }
+  let!(:fee) { create(:fee, invoice: voided_invoice, organization: organization) }
   let(:fees) do
     [{
       id: fee.id,
