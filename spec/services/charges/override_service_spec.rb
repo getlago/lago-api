@@ -5,8 +5,7 @@ require "rails_helper"
 RSpec.describe Charges::OverrideService, type: :service do
   subject(:override_service) { described_class.new(charge:, params:) }
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:organization) { create(:organization) }
 
   describe "#call" do
     let(:billable_metric) { create(:billable_metric, organization:) }
@@ -15,6 +14,7 @@ RSpec.describe Charges::OverrideService, type: :service do
     let(:charge) do
       create(
         :standard_charge,
+        organization:,
         billable_metric:,
         properties: {amount: "300"}
       )
@@ -42,7 +42,7 @@ RSpec.describe Charges::OverrideService, type: :service do
     context "when lago premium" do
       around { |test| lago_premium!(&test) }
 
-      it "creates a charge based on the given charge", :aggregate_failures do
+      it "creates a charge based on the given charge" do
         applied_tax = create(:charge_applied_tax, charge:)
 
         expect(charge.taxes).to contain_exactly(applied_tax.tax)
@@ -129,7 +129,7 @@ RSpec.describe Charges::OverrideService, type: :service do
 
         before { filter_values }
 
-        it "creates a charge based on the given charge", :aggregate_failures do
+        it "creates a charge based on the given charge" do
           expect { override_service.call }.to change(Charge, :count).by(1)
 
           charge = Charge.order(:created_at).last
@@ -147,6 +147,41 @@ RSpec.describe Charges::OverrideService, type: :service do
             billable_metric_filter_id: billable_metric_filter.id,
             values: [billable_metric_filter.values.first]
           )
+        end
+      end
+
+      context "with applied pricing unit" do
+        let(:params) do
+          {
+            id: charge.id,
+            plan_id: plan.id,
+            min_amount_cents: 1000,
+            properties: {amount: "200"},
+            tax_codes: [tax.code],
+            applied_pricing_unit: {
+              conversion_rate: 5
+            }
+          }
+        end
+
+        before do
+          create(
+            :applied_pricing_unit,
+            pricing_unitable: charge,
+            conversion_rate: 1.1,
+            pricing_unit: create(:pricing_unit, organization:)
+          )
+        end
+
+        it "creates a charge based on the given charge" do
+          result = override_service.call
+
+          expect(result).to be_success
+          expect(result.charge.applied_pricing_unit.conversion_rate).to eq 5
+        end
+
+        it "does not change parent charge" do
+          expect { override_service.call }.not_to change { charge.reload.attributes }
         end
       end
     end

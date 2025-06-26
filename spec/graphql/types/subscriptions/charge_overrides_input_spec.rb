@@ -6,6 +6,7 @@ RSpec.describe Types::Subscriptions::ChargeOverridesInput do
   subject { described_class }
 
   it do
+    expect(subject).to accept_argument(:applied_pricing_unit).of_type("AppliedPricingUnitOverrideInput")
     expect(subject).to accept_argument(:billable_metric_id).of_type("ID!")
     expect(subject).to accept_argument(:id).of_type("ID")
     expect(subject).to accept_argument(:filters).of_type("[ChargeFilterInput!]")

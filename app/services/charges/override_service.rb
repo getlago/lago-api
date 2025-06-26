@@ -35,6 +35,19 @@ module Charges
           filters_result.raise_if_error!
         end
 
+        if charge.applied_pricing_unit
+          conversion_rate = params.dig(:applied_pricing_unit, :conversion_rate).presence
+          conversion_rate ||= charge.applied_pricing_unit.conversion_rate
+
+          AppliedPricingUnits::CreateService.call!(
+            charge: new_charge,
+            params: {
+              code: charge.pricing_unit.code,
+              conversion_rate:
+            }
+          )
+        end
+
         if params.key?(:tax_codes)
           taxes_result = Charges::ApplyTaxesService.call(charge: new_charge, tax_codes: params[:tax_codes])
           taxes_result.raise_if_error!
