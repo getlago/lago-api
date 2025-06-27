@@ -128,6 +128,7 @@ RSpec.describe Plans::CreateService, type: :service do
         .to change(Plan, :count).by(1)
 
       plan = Plan.order(:created_at).last
+      expect(SendWebhookJob).to have_been_enqueued.with("plan.created", plan)
       expect(plan.taxes.pluck(:code)).to eq([plan_tax.code])
       expect(plan.invoice_display_name).to eq(plan_invoice_display_name)
     end
