@@ -88,7 +88,7 @@ module ChargeFilters
         # NOTE: remove old filters that were not created or updated
         remove_query = charge.filters
         remove_query = remove_query.where(id: inherited_filter_ids) if cascade_updates && parent_filters
-        remove_query.where.not(id: result.filters.map(&:id)).find_each do
+        remove_query.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
           remove_filter(it)
         end
       end
@@ -115,7 +115,7 @@ module ChargeFilters
     def remove_all
       ActiveRecord::Base.transaction do
         if cascade_updates
-          charge.filters.where(id: inherited_filter_ids).find_each { remove_filter(it) }
+          charge.filters.where(id: inherited_filter_ids).unscope(:order).find_each { remove_filter(it) }
         else
           charge.filters.each { remove_filter(it) }
         end
@@ -134,7 +134,7 @@ module ChargeFilters
 
       return @inherited_filter_ids if parent_filters.blank? || !cascade_updates
 
-      parent_filters.find_each do |pf|
+      parent_filters.unscope(:order).find_each do |pf|
         value = pf.to_h_with_discarded.sort
 
         match = filters.find do |f|
