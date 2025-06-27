@@ -18,7 +18,7 @@ end
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  charge_id       :uuid             not null
-#  organization_id :uuid
+#  organization_id :uuid             not null
 #  tax_id          :uuid             not null
 #
 # Indexes

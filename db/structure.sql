@@ -1381,7 +1381,7 @@ CREATE TABLE public.charge_filter_values (
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
     "values" character varying[] DEFAULT '{}'::character varying[] NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1397,7 +1397,7 @@ CREATE TABLE public.charge_filters (
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
     invoice_display_name character varying,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1422,7 +1422,7 @@ CREATE TABLE public.charges (
     invoice_display_name character varying,
     regroup_paid_fees integer,
     parent_id uuid,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1436,7 +1436,7 @@ CREATE TABLE public.charges_taxes (
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1452,7 +1452,7 @@ CREATE TABLE public.commitments (
     invoice_display_name character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1466,7 +1466,7 @@ CREATE TABLE public.commitments_taxes (
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1482,7 +1482,7 @@ CREATE TABLE public.coupon_targets (
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
     billable_metric_id uuid,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1528,7 +1528,7 @@ CREATE TABLE public.credit_note_items (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     precise_amount_cents numeric(30,5) NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1566,7 +1566,7 @@ CREATE TABLE public.credit_notes (
     precise_coupons_adjustment_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     precise_taxes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
     taxes_rate double precision DEFAULT 0.0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1587,7 +1587,7 @@ CREATE TABLE public.credit_notes_taxes (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     base_amount_cents bigint DEFAULT 0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1606,7 +1606,7 @@ CREATE TABLE public.credits (
     before_taxes boolean DEFAULT false NOT NULL,
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     progressive_billing_invoice_id uuid,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1622,7 +1622,7 @@ CREATE TABLE public.customer_metadata (
     display_in_invoice boolean DEFAULT false NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1710,7 +1710,7 @@ CREATE TABLE public.customers_taxes (
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -8613,6 +8613,32 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250627124153'),
+('20250627124152'),
+('20250627124144'),
+('20250627124143'),
+('20250627124130'),
+('20250627124129'),
+('20250627124119'),
+('20250627124118'),
+('20250627124056'),
+('20250627124055'),
+('20250627124049'),
+('20250627124048'),
+('20250627124040'),
+('20250627124039'),
+('20250627124034'),
+('20250627124033'),
+('20250627124029'),
+('20250627124028'),
+('20250627124023'),
+('20250627124022'),
+('20250627124017'),
+('20250627124016'),
+('20250627124008'),
+('20250627124007'),
+('20250627123959'),
+('20250627123958'),
 ('20250627091213'),
 ('20250627091212'),
 ('20250627091011'),

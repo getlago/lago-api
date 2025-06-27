@@ -36,7 +36,7 @@ end
 #  updated_at           :datetime         not null
 #  credit_note_id       :uuid             not null
 #  fee_id               :uuid
-#  organization_id      :uuid
+#  organization_id      :uuid             not null
 #
 # Indexes
 #

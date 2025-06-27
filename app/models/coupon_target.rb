@@ -23,7 +23,7 @@ end
 #  updated_at         :datetime         not null
 #  billable_metric_id :uuid
 #  coupon_id          :uuid             not null
-#  organization_id    :uuid
+#  organization_id    :uuid             not null
 #  plan_id            :uuid
 #
 # Indexes
