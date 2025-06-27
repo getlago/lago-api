@@ -4,6 +4,7 @@ class Organization < ApplicationRecord
   include PaperTrailTraceable
   include OrganizationTimezone
   include Currencies
+  include Organizations::Auths
 
   self.ignored_columns += [:clickhouse_aggregation]
 
@@ -263,6 +264,7 @@ end
 #  document_numbering           :integer          default("per_customer"), not null
 #  email                        :string
 #  email_settings               :string           default([]), not null, is an Array
+#  enabled_auths                :string           default(["password", "google_oauth"]), not null, is an Array
 #  eu_tax_management            :boolean          default(FALSE)
 #  finalize_zero_amount_invoice :boolean          default(TRUE), not null
 #  hmac_key                     :string           not null
