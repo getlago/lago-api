@@ -1229,7 +1229,7 @@ CREATE TABLE public.billable_metric_filters (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1341,7 +1341,7 @@ CREATE TABLE public.billing_entities_taxes (
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -8613,6 +8613,10 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250627091213'),
+('20250627091212'),
+('20250627091011'),
+('20250627091010'),
 ('20250627084852'),
 ('20250627084430'),
 ('20250626175249'),
