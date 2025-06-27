@@ -46,7 +46,7 @@ module BillableMetricFilters
         end
 
         # NOTE: discard all filters that were not created or updated
-        billable_metric.filters.where.not(id: result.filters.map(&:id)).find_each do
+        billable_metric.filters.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
           discard_filter(it)
         end
       end
