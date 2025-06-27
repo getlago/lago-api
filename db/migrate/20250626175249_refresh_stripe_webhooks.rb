@@ -5,7 +5,7 @@ class RefreshStripeWebhooks < ActiveRecord::Migration[7.1]
   disable_ddl_transaction!
 
   def up
-    PaymentProviders::StripeProvider.unscoped.find_each do |stripe_provider|
+    PaymentProviders::StripeProvider.find_each do |stripe_provider|
       next unless stripe_provider.secret_key
 
       PaymentProviders::Stripe::RefreshWebhookJob.perform_later(stripe_provider)
