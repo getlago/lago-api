@@ -10,19 +10,32 @@ RSpec.describe PricingUnitsQuery, type: :query do
   let(:search_term) { nil }
 
   context "when no filters applied" do
-    let!(:pricing_units) { create_pair(:pricing_unit, organization:) }
+    let!(:pricing_units) do
+      [
+        create(:pricing_unit, name: "Beta", organization:),
+        create(:pricing_unit, name: "Alpha", organization:, created_at: 2.days.ago),
+        create(:pricing_unit, name: "Alpha", organization:, created_at: 1.day.ago)
+      ]
+    end
 
     before { create(:pricing_unit) }
 
-    it "returns all pricing units for the organization ordered by created at desc" do
+    it "returns all pricing units for the organization ordered by name asc, created_at desc" do
       expect(result).to be_success
-      expect(result.pricing_units.pluck(:id)).to eq pricing_units.reverse.pluck(:id)
+      expect(result.pricing_units.pluck(:id)).to eq pricing_units.reverse.map(&:id)
     end
   end
 
   context "when pagination options provided" do
     let(:pagination) { {page: 2, limit: 1} }
-    let!(:pricing_units) { create_list(:pricing_unit, 3, organization:) }
+
+    let!(:pricing_units) do
+      [
+        create(:pricing_unit, name: "Beta", organization:),
+        create(:pricing_unit, name: "Alpha", organization:, created_at: 2.days.ago),
+        create(:pricing_unit, name: "Alpha", organization:, created_at: 1.day.ago)
+      ]
+    end
 
     it "returns paginated pricing units" do
       expect(result).to be_success
@@ -76,8 +89,8 @@ RSpec.describe PricingUnitsQuery, type: :query do
 
     let!(:matching_pricing_units) do
       [
-        create(:pricing_unit, name: "Compute token", organization:),
         create(:pricing_unit, name: "Cloud token", organization:),
+        create(:pricing_unit, name: "Compute token", organization:),
         create(:pricing_unit, name: "Token", organization:)
       ]
     end

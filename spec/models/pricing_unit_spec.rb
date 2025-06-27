@@ -11,6 +11,7 @@ RSpec.describe PricingUnit, type: :model do
   it { is_expected.to validate_presence_of(:code) }
   it { is_expected.to validate_presence_of(:short_name) }
   it { is_expected.to validate_length_of(:description).is_at_most(600) }
+  it { is_expected.to validate_length_of(:short_name).is_at_most(3) }
   it { is_expected.to validate_uniqueness_of(:code).scoped_to(:organization_id) }
 
   describe "#exponent" do

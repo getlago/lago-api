@@ -7,6 +7,7 @@ class PricingUnit < ApplicationRecord
   validates :name, :code, :short_name, presence: true
   validates :code, uniqueness: {scope: :organization_id}
   validates :description, length: {maximum: 600}, allow_nil: true
+  validates :short_name, length: {maximum: 3}, allow_nil: true
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[code name]

@@ -560,6 +560,10 @@ input AppliedPricingUnitInput {
   conversionRate: Float!
 }
 
+input AppliedPricingUnitOverrideInput {
+  conversionRate: Float!
+}
+
 interface AppliedTax {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
@@ -892,6 +896,7 @@ enum ChargeModelEnum {
 }
 
 input ChargeOverridesInput {
+  appliedPricingUnit: AppliedPricingUnitOverrideInput
   billableMetricId: ID!
   filters: [ChargeFilterInput!]
   id: ID

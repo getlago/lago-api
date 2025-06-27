@@ -31,13 +31,13 @@ RSpec.describe Resolvers::PricingUnitsResolver, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:required_permission) { "pricing_units:view" }
-  let(:pricing_unit) { create(:pricing_unit, name: "Cloud token", organization:) }
+  let(:pricing_unit) { create(:pricing_unit, name: "Compute token", organization:) }
 
   before do
-    create(:pricing_unit, name: "Compute token", organization:)
+    create(:pricing_unit, name: "Cloud token", organization:)
     pricing_unit
     create(:pricing_unit, code: "token", organization:)
-    create(:pricing_unit, organization:)
+    create(:pricing_unit, name: "coin", code: "coin", organization:)
   end
 
   it_behaves_like "requires current user"
