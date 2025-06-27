@@ -1201,7 +1201,7 @@ CREATE TABLE public.applied_usage_thresholds (
     lifetime_usage_amount_cents bigint DEFAULT 0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -8613,6 +8613,8 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250627084852'),
+('20250627084430'),
 ('20250626175249'),
 ('20250611083925'),
 ('20250611072251'),
