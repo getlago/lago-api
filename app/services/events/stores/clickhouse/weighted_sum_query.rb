@@ -57,7 +57,7 @@ module Events
 
         attr_reader :store
 
-        delegate :events, :charges_duration, :sanitized_property_name, to: :store
+        delegate :charges_duration, :events_sql, :arel_table, :grouped_arel_columns, to: :store
 
         def events_cte_sql
           <<~SQL
@@ -65,9 +65,13 @@ module Events
               (#{initial_value_sql})
               UNION ALL
               (#{
-                events(ordered: true)
-                  .select("timestamp, events_enriched.decimal_value AS difference")
-                  .to_sql
+                events_sql(
+                  ordered: true,
+                  select: [
+                    arel_table[:timestamp].as("timestamp"),
+                    arel_table[:decimal_value].as("difference")
+                  ]
+                )
               })
               UNION ALL
               (#{end_of_period_value_sql})
@@ -114,18 +118,20 @@ module Events
         end
 
         def grouped_events_cte_sql(initial_values)
-          groups = store.grouped_by.map.with_index do |group, index|
-            "#{sanitized_property_name(group)} AS g_#{index}"
-          end
+          groups, _ = grouped_arel_columns
 
           <<-SQL
             WITH events_data AS (
               (#{grouped_initial_value_sql(initial_values)})
               UNION ALL
               (#{
-                events(ordered: true)
-                  .select("#{groups.join(", ")}, timestamp, events_enriched.decimal_value AS difference")
-                  .to_sql
+                events_sql(
+                  ordered: true,
+                  select: groups + [
+                    arel_table[:timestamp].as("timestamp"),
+                    arel_table[:decimal_value].as("difference")
+                  ]
+                )
               })
               UNION ALL
               (#{grouped_end_of_period_value_sql(initial_values)})
