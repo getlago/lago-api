@@ -462,4 +462,84 @@ RSpec.describe Organization, type: :model do
       expect(organization.timezone).to eq("Europe/London")
     end
   end
+
+  describe "enabled auths" do
+    let(:organization) { create(:organization) }
+
+    before do
+      organization
+    end
+
+    it "creates with default values" do
+      expect(organization.enabled_auths.count).to eq(Organization::FREE_AUTHS.count)
+      expect(organization.enabled_auths).to eq(Organization::FREE_AUTHS)
+    end
+
+    Organization::FREE_AUTHS.each do |auth|
+      context "when FREE AUTH #{auth}" do
+        it "is enabled by default" do
+          expect(organization.enabled_auths).to include(auth)
+        end
+
+        it "can be disabled" do
+          expect(organization.send(:"disable_#{auth}_auth!")).to be_truthy
+          expect(organization.send(:"#{auth}_enabled_auth?")).to be_falsey
+        end
+
+        it "can be enabled" do
+          expect(organization.send(:"enable_#{auth}_auth!")).to be_truthy
+          expect(organization.send(:"#{auth}_enabled_auth?")).to be_truthy
+        end
+      end
+    end
+
+    Organization::PREMIUM_AUTHS.each do |auth|
+      context "when PREMIUM AUTH #{auth}" do
+        it "is not enabled by default" do
+          expect(organization.enabled_auths).not_to include(auth)
+        end
+
+        context "with free organization" do
+          it "cant be enabled" do
+            expect(organization.send(:"enable_#{auth}_auth!")).to be_falsey
+            expect(organization.send(:"#{auth}_enabled_auth?")).to be_falsey
+          end
+        end
+
+        context "with premium organization" do
+          around { |test| lago_premium!(&test) }
+
+          it "can be enabled" do
+            expect(organization.send(:"enable_#{auth}_auth!")).to be_truthy
+            expect(organization.send(:"#{auth}_enabled_auth?")).to be_truthy
+          end
+
+          it "can be disabled" do
+            organization.send(:"enable_#{auth}_auth!")
+            expect(organization.send(:"disable_#{auth}_auth!")).to be_truthy
+            expect(organization.send(:"#{auth}_enabled_auth?")).to be_falsey
+          end
+        end
+      end
+    end
+
+    context "when disabling auths" do
+      it "cant disable all" do
+        expect do
+          organization.enabled_auths.dup.each do |auth|
+            organization.send(:"disable_#{auth}_auth!")
+          end
+        end.to raise_error(ActiveRecord::RecordInvalid)
+      end
+    end
+
+    context "when invalid auth" do
+      it "cant save" do
+        expect do
+          organization.enabled_auths = ["strange"]
+          organization.save!
+        end.to raise_error(ActiveRecord::RecordInvalid)
+      end
+    end
+  end
 end

@@ -2129,6 +2129,7 @@ CREATE TABLE public.organizations (
     finalize_zero_amount_invoice boolean DEFAULT true NOT NULL,
     clickhouse_events_store boolean DEFAULT false NOT NULL,
     hmac_key character varying NOT NULL,
+    enabled_auths character varying[] DEFAULT '{password,google_oauth}'::character varying[] NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -8613,6 +8614,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250627182912'),
 ('20250627084852'),
 ('20250627084430'),
 ('20250626175249'),
