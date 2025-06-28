@@ -36,4 +36,11 @@ FactoryBot.define do
 
     provider_customer_id { SecureRandom.uuid }
   end
+  factory :flutterwave_customer, class: "PaymentProviderCustomers::FlutterwaveCustomer" do
+    customer
+    organization { customer.organization }
+    payment_provider { association(:flutterwave_provider, organization: organization) }
+
+    provider_customer_id { SecureRandom.uuid }
+  end
 end

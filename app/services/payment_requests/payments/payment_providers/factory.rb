@@ -16,6 +16,8 @@ module PaymentRequests
             PaymentRequests::Payments::AdyenService
           when "cashfree"
             PaymentRequests::Payments::CashfreeService
+          when "flutterwave"
+            PaymentRequests::Payments::FlutterwaveService
           when "gocardless"
             PaymentRequests::Payments::GocardlessService
           when "moneyhash"
