@@ -167,7 +167,7 @@ end
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  billable_metric_id   :uuid
-#  organization_id      :uuid
+#  organization_id      :uuid             not null
 #  parent_id            :uuid
 #  plan_id              :uuid
 #
