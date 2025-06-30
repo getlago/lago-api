@@ -25,7 +25,9 @@ RSpec.describe Integrations::Aggregator::AccountInformationService do
     end
 
     before do
-      allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+      allow(LagoHttpClient::Client).to receive(:new)
+        .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        .and_return(lago_client)
       allow(lago_client).to receive(:get).with(headers:).and_return(aggregator_response)
     end
 
@@ -34,7 +36,7 @@ RSpec.describe Integrations::Aggregator::AccountInformationService do
       account_information = result.account_information
 
       aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(endpoint)
+        expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
         expect(lago_client).to have_received(:get)
         expect(account_information.id).to eq("1234567890")
       end

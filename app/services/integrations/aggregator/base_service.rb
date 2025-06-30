@@ -77,7 +77,7 @@ module Integrations
       end
 
       def http_client
-        LagoHttpClient::Client.new(endpoint_url)
+        LagoHttpClient::Client.new(endpoint_url, retries_on: [OpenSSL::SSL::SSLError])
       end
 
       def endpoint_url

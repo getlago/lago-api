@@ -114,7 +114,9 @@ RSpec.describe Integrations::Aggregator::Taxes::CreditNotes::CreateService do
   end
 
   before do
-    allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+    allow(LagoHttpClient::Client).to receive(:new)
+      .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      .and_return(lago_client)
 
     integration_customer
     integration_collection_mapping1

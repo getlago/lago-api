@@ -32,7 +32,9 @@ RSpec.describe Integrations::Aggregator::CustomObjectService do
     end
 
     before do
-      allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+      allow(LagoHttpClient::Client).to receive(:new)
+        .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        .and_return(lago_client)
       allow(lago_client).to receive(:get).with(headers:, body:).and_return(aggregator_response)
     end
 
@@ -41,7 +43,7 @@ RSpec.describe Integrations::Aggregator::CustomObjectService do
       custom_object = result.custom_object
 
       aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(endpoint)
+        expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
         expect(lago_client).to have_received(:get)
         expect(custom_object.id).to eq("35482707")
         expect(custom_object.objectTypeId).to eq("2-35482707")

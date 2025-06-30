@@ -35,7 +35,7 @@ RSpec.describe Resolvers::Integrations::SubsidiariesResolver, type: :graphql do
 
   before do
     allow(LagoHttpClient::Client).to receive(:new)
-      .with(subsidiaries_endpoint)
+      .with(subsidiaries_endpoint, retries_on: [OpenSSL::SSL::SSLError])
       .and_return(lago_client)
     allow(lago_client).to receive(:get)
       .with(headers:)
