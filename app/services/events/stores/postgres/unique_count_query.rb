@@ -34,39 +34,42 @@ module Events
           SQL
         end
 
-        # as result of this query we want to see daily changes in the units, we're not interested if in one day there were
-        # add; remove; add; remove; add. all we want to see is add 1 unit
-        # then the next day we might have remove; add; remove; add; - so at the end of the dat we still have one active unit
-        # and the total impact of this day is 0
-        # if the next day we have add; add; add; remove; add; remove - the total impact is the unit is removed
-        # that's why we added a grouping by day and calculating the sum of the adjusted_value
         def prorated_query
           <<-SQL
             #{events_cte_sql},
-              event_values AS (
+            event_values AS (
+              SELECT
+                property,
+                operation_type,
+                timestamp,
+                false AS is_ignored
+              FROM (
                 SELECT
+                  timestamp,
                   property,
-                  CASE WHEN SUM(adjusted_value) = 1 THEN 'add' ELSE 'remove' END AS operation_type,
-                  DATE(timestamp) AS timestamp,
-                  SUM(adjusted_value) AS adjusted_value
-                FROM (
-                  SELECT
-                    timestamp,
-                    property,
-                    operation_type,
-                    #{operation_value_sql} AS adjusted_value
-                  FROM events_data
-                  ORDER BY timestamp ASC
-                ) adjusted_event_values
-                WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-                GROUP BY property, DATE(timestamp)
-              )
+                  operation_type,
+                  #{operation_value_sql} AS adjusted_value
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) adjusted_event_values
+              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+              GROUP BY property, operation_type, timestamp
+            ),
+            merged_events AS (
+              SELECT
+                property,
+                operation_type,
+                timestamp,
+                #{is_ignored_sql} AS is_ignored
+              FROM event_values
+              WHERE is_ignored = false
+            )
 
             SELECT COALESCE(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT (#{period_ratio_sql}) AS period_ratio
-              FROM event_values
-              WHERE adjusted_value != 0
+              FROM merged_events
+              WHERE is_ignored = false
             ) cumulated_ratios
           SQL
         end
@@ -334,6 +337,60 @@ module Events
               #{charges_duration || 1}::numeric
             ELSE
               0 -- NOTE: duration was null so usage is null
+            END
+          SQL
+        end
+
+        # The desired behaviour is:
+          # 27th property add
+          # 27th property remove
+          # 27th property add
+
+
+          # 28th property add (operation is 0, so it's already filtered by previous query)
+          # 28th property remove
+          # --- end of unit 0, prorated 2 days
+          # 30th property add
+          # --the result of 30 is 1 -> prorated 1 day
+          # for this we want to have 2 events: 27th-28th and 30th to 30th
+
+          # summary table:
+          # 27th property add not_ignore
+          # 27th property remove ignore
+          # 27th property add ignore
+          # 28th property remove not_ignore
+          # 30th property add not_ignore
+          # So the rule is:
+          # -- for the same day, we look at next event. if it's opposite of current, current can be ignored
+          # -- we look at previous not ignored event. if the operation type matches. we can ignore current
+
+        def is_ignored_sql
+          <<-SQL
+            CASE
+              -- If there are no not-ignored events before, don't ignore this one
+              WHEN LAG(is_ignored, 1) OVER (
+                PARTITION BY property
+                ORDER BY timestamp
+              ) IS NULL
+              THEN false
+              -- Check if next event on same day has opposite operation type
+              WHEN DATE(LEAD(timestamp, 1) OVER (PARTITION BY property ORDER BY timestamp)) = DATE(timestamp)
+                AND (
+                  (operation_type = 'add' AND LEAD(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp) = 'remove')
+                  OR 
+                  (operation_type = 'remove' AND LEAD(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp) = 'add')
+                )
+              THEN true
+              -- Check if previous not ignored event has same operation type
+              WHEN LAG(operation_type, 1) OVER (
+                PARTITION BY property 
+                ORDER BY timestamp
+              ) = operation_type AND LAG(is_ignored, 1) OVER (
+                PARTITION BY property
+                ORDER BY timestamp
+              ) = false
+              THEN true
+              ELSE false
             END
           SQL
         end
