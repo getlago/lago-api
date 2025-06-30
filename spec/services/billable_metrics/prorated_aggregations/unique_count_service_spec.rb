@@ -275,8 +275,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         expect(result.aggregation).to eq(29.fdiv(31).ceil(5))
       end
 
-      context "when added and removed the same day" do
-        let(:added_at) { from_datetime + 1.day }
+      context "when added and removed the same day multiple times" do
+        let(:added_at) { from_datetime + 1.hour }
 
         it "returns a 1 day duration" do
           create(
@@ -284,13 +284,38 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             organization_id: organization.id,
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            timestamp: added_at.end_of_day,
+            timestamp: added_at + 1.hour,
             properties: {
               unique_id: event.properties["unique_id"],
               operation_type: "remove"
             }
           )
 
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: added_at + 2.hour,
+            properties: {
+              unique_id: event.properties["unique_id"],
+              operation_type: "add"
+            }
+          )
+
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: added_at + 3.hour,
+            properties: {
+              unique_id: event.properties["unique_id"],
+              operation_type: "remove"
+            }
+          )
+
+          byebug          
           expect(result.aggregation).to eq(1.fdiv(31).ceil(5))
         end
       end
@@ -313,6 +338,67 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
         expect(result.aggregation).to eq((1 + 21.fdiv(31)).ceil(5))
         expect(result.current_usage_units).to eq(2)
+      end
+
+      context "when added and removed several times a day during multiple days" do
+        it "returns the correct result" do
+          # 1st day: add, add, remove, add, remove, add
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 1.days,
+            properties: {unique_id: SecureRandom.uuid}
+          )
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 1.days + 1.hour,
+            properties: {unique_id: SecureRandom.uuid}
+          )
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 1.days + 2.hour,
+            properties: {unique_id: SecureRandom.uuid, operation_type: "remove"}
+          )
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 1.days + 3.hour,
+            properties: {unique_id: SecureRandom.uuid}
+          )
+
+          # 3rd day: add, remove
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 3.days + 1.hour,
+            properties: {unique_id: SecureRandom.uuid}
+          )
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 3.days + 2.hour,
+            properties: {unique_id: SecureRandom.uuid, operation_type: "remove"}
+          )
+
+          byebug
+
+          expect(result.aggregation).to eq((1 + 3.fdiv(31)).ceil(5))
+          expect(result.current_usage_units).to eq(2)
+        end
       end
     end
 
