@@ -61,13 +61,15 @@ module Events
     end
 
     def post_validate_events
-      ActiveRecord::Base.transaction do
-        result.events.each(&:save!)
+      if organization.postgres_events_store?
+        ActiveRecord::Base.transaction do
+          result.events.each(&:save!)
+        end
       end
 
       result.events.each do |event|
         produce_kafka_event(event)
-        Events::PostProcessJob.perform_later(event:)
+        Events::PostProcessJob.perform_later(event:) if organization.postgres_events_store?
       end
     end
 

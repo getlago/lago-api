@@ -216,6 +216,10 @@ class Organization < ApplicationRecord
     super
   end
 
+  def postgres_events_store?
+    !clickhouse_events_store?
+  end
+
   private
 
   # NOTE: After creating an organization, default document_number_prefix needs to be generated.
