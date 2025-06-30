@@ -1,6 +1,6 @@
 ---
-description: Break the requests into 5 steps: RESEARCH, INNOVATE, PLAN, EXECUTION, REVIEW
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
 RIPER-5 MODE: STRICT OPERATIONAL PROTOCOL

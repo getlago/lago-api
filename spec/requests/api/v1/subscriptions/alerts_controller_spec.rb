@@ -22,9 +22,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
 
     it do
       subject
-      expect(response.status).to eq 404
-      expect(json[:error]).to eq "Not Found"
-      expect(json[:code]).to eq "subscription_not_found"
+      expect(response).to be_not_found_error("subscription")
     end
   end
 
@@ -171,12 +169,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
       context "when billable_metric is not found" do
         it do
           subject
-          expect(response.status).to eq 404
-          expect(json).to eq({
-            status: 404,
-            error: "Not Found",
-            code: "billable_metric_not_found"
-          })
+          expect(response).to be_not_found_error("billable_metric")
         end
       end
     end
@@ -203,12 +196,8 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
       let(:alert) { nil }
 
       it do
-        expect(subject).to eq 404
-        expect(json).to eq({
-          code: "alert_not_found",
-          error: "Not Found",
-          status: 404
-        })
+        subject
+        expect(response).to be_not_found_error("alert")
       end
     end
   end
@@ -301,12 +290,7 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
       context "when billable_metric is not found" do
         it do
           subject
-          expect(response.status).to eq 404
-          expect(json).to eq({
-            status: 404,
-            error: "Not Found",
-            code: "billable_metric_not_found"
-          })
+          expect(response).to be_not_found_error("billable_metric")
         end
       end
     end
@@ -327,12 +311,8 @@ RSpec.describe Api::V1::Subscriptions::AlertsController, type: :request do
       let(:alert) { nil }
 
       it do
-        expect(subject).to eq 404
-        expect(json).to eq({
-          code: "alert_not_found",
-          error: "Not Found",
-          status: 404
-        })
+        subject
+        expect(response).to be_not_found_error("alert")
       end
     end
   end
