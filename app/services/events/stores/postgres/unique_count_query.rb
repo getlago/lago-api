@@ -34,31 +34,39 @@ module Events
           SQL
         end
 
+        # as result of this query we want to see daily changes in the units, we're not interested if in one day there were
+        # add; remove; add; remove; add. all we want to see is add 1 unit
+        # then the next day we might have remove; add; remove; add; - so at the end of the dat we still have one active unit
+        # and the total impact of this day is 0
+        # if the next day we have add; add; add; remove; add; remove - the total impact is the unit is removed
+        # that's why we added a grouping by day and calculating the sum of the adjusted_value
         def prorated_query
           <<-SQL
             #{events_cte_sql},
-            event_values AS (
-              SELECT
-                property,
-                operation_type,
-                timestamp
-              FROM (
+              event_values AS (
                 SELECT
-                  timestamp,
                   property,
-                  operation_type,
-                  #{operation_value_sql} AS adjusted_value
-                FROM events_data
-                ORDER BY timestamp ASC
-              ) adjusted_event_values
-              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, operation_type, timestamp
-            )
+                  CASE WHEN SUM(adjusted_value) = 1 THEN 'add' ELSE 'remove' END AS operation_type,
+                  DATE(timestamp) AS timestamp,
+                  SUM(adjusted_value) AS adjusted_value
+                FROM (
+                  SELECT
+                    timestamp,
+                    property,
+                    operation_type,
+                    #{operation_value_sql} AS adjusted_value
+                  FROM events_data
+                  ORDER BY timestamp ASC
+                ) adjusted_event_values
+                WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+                GROUP BY property, DATE(timestamp)
+              )
 
             SELECT COALESCE(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT (#{period_ratio_sql}) AS period_ratio
               FROM event_values
+              WHERE adjusted_value != 0
             ) cumulated_ratios
           SQL
         end
