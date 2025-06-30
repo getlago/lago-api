@@ -91,7 +91,9 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
       fee_charge
       integration_customer
 
-      allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+      allow(LagoHttpClient::Client).to receive(:new)
+        .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        .and_return(lago_client)
       allow(lago_client).to receive(:post_with_response).and_return(response)
       allow(response).to receive(:body).and_return(body)
     end
@@ -137,7 +139,7 @@ RSpec.describe CreditNotes::ProviderTaxes::ReportService, type: :service do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(LagoHttpClient::Client).to have_received(:new).with(endpoint)
+          expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
           expect(credit_note.reload.integration_resources.where(integration_id: integration.id).count).to eq(0)
         end
       end
