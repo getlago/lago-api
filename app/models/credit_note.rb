@@ -198,7 +198,7 @@ end
 #  updated_at                              :datetime         not null
 #  customer_id                             :uuid             not null
 #  invoice_id                              :uuid             not null
-#  organization_id                         :uuid
+#  organization_id                         :uuid             not null
 #  sequential_id                           :integer          not null
 #
 # Indexes

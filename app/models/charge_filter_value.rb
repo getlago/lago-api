@@ -42,7 +42,7 @@ end
 #  updated_at                :datetime         not null
 #  billable_metric_filter_id :uuid             not null
 #  charge_filter_id          :uuid             not null
-#  organization_id           :uuid
+#  organization_id           :uuid             not null
 #
 # Indexes
 #
