@@ -14,4 +14,18 @@ class FeeDisplayHelper
 
     invoice_subscription.subscription_amount_cents.positive?
   end
+
+  def self.format_with_precision(fee, amount)
+    casted_amount = BigDecimal(amount)
+    MoneyHelper.format_with_precision(casted_amount, fee.currency)
+  end
+
+  def self.format_as_currency(fee, amount)
+    money = amount.to_money(fee.currency)
+    MoneyHelper.format(money)
+  end
+
+  def self.format_amount(fee)
+    MoneyHelper.format(fee.amount)
+  end
 end
