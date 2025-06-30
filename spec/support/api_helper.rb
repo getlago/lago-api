@@ -16,6 +16,11 @@ module ApiHelper
     put(path, params: params.to_json, headers:)
   end
 
+  def patch_with_token(organization, path, params = {}, headers = {})
+    set_headers(organization, headers)
+    patch(path, params: params.to_json, headers:)
+  end
+
   def delete_with_token(organization, path, params = {}, headers = {})
     set_headers(organization, headers)
     delete(path, params: params.to_json, headers:)
