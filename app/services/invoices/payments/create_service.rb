@@ -13,7 +13,7 @@ module Invoices
       end
 
       def call
-        result.invoice = invoice
+        result.invoice = invoice.reload
         return result unless should_process_payment?
 
         unless invoice.total_amount_cents.positive?

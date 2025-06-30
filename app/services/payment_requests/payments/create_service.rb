@@ -16,7 +16,7 @@ module PaymentRequests
       def call
         return result.not_found_failure!(resource: "payment_provider") unless provider
 
-        result.payable = payable
+        result.payable = payable.reload
         return result unless should_process_payment?
 
         unless payable.total_amount_cents.positive?
