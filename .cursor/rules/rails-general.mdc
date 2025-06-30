@@ -4,11 +4,35 @@ globs: app/**/*.rb
 alwaysApply: true
 ---
 
+# General style
+
+- avoid `if/unless` modifier right before the last line.
+  USE
+    ```
+    if something
+        this
+    else
+        that
+    end
+    ```
+  AVOID
+    ```
+    return than unless something
+    this
+    ```
+
+
 # Services
+
+- Creating, updating an deleting model must be done using a dedicated service, unless instructed otherwise.
+For instance, to create an Alert model, you should create a `CreateAlertService` class.
+- Before deleting a model, inspect it to determine if it's soft deletable (it includes `Discard::Model`). If soft deletable, use `model.discard`. Never hard delete a soft deletable model.
+
+
 When creating a service class:
 - the class always extend BaseService using `<`
 - the class name should always end with `Service`
-- the class should always be placed in `api/app/services/**/*.rb`
+- the class should always be placed in `app/services/**/*.rb`
 - Service class takes named arguments via the constructor and arguments are stored in instance variables.
 - Each instance variable should have a private attr_reader declared
 - Service class have one and only one public method named `call` and it never accepts arguments
@@ -16,6 +40,7 @@ When creating a service class:
 - Service class must define a custom Result class following these rules:
   - By default, `Result = BaseResult`
   - If the service must return values, define them using `BaseResult[]`. Example of result returning a customer and a subcription: `Result = BaseResult[:customer, :subscription]`
+
 
 
 # Jobs
@@ -42,5 +67,53 @@ end
 
 ```
 
+# Controllers
+
+- Under `V1` namespace the resource retrieved should always be scoped to the current_organization. Typically, to retrieve Alerts, use `current_organization.alerts.where(...)`
+
+
 # Models
+
 - New models must directly belong to an organization. Store the `organization_id` in the table, don't use `through:`
+
+
+Soft deletion
+- not all models are soft deletable
+- soft deletable models must `include Discard::Model`
+- the soft deletion column is called `deleted_at`
+- soft deletable models must use `default_scope -> { kept }`
+- soft deletable models should be deletable
+- You cannot rely on `dependent: :destroy` if the model is soft deleted, you must call `discard_all!` on relationship manually
+
+# Webhooks
+
+To create a webhook:
+- A webhook name is typically `resource.action`, for example: `customer.updated` or `alert.triggered`. Use other webhooks as example to follow.
+- Create a service in `app/services/webhooks/`, typically named `Webhooks::ResourceActionService` like `Webhooks::CustomerUpdatedService`
+- A service must define at least the following methods:
+    - `current_organization` - how to get the organization from the model
+    - `object_serializer` which typically calls a serializer class
+    - `webhook_type` always the name like `resource.action`
+    - `object_type` which is the object serialized. Reuse this method in the serializer `root_name` param
+- Add the mapping `name` => Service class to the `SendWebhookJob::WEBHOOK_SERVICES` hash
+- Write a test for the webhook class
+
+
+# Query object
+
+- When using ransack with search_params, make sure the attributes are defined in the model class method `self.ransackable_attributes(_auth_object = nil)`
+
+# Testing
+
+- In controller specs, use `get_with_token` and similar method, don't try to mock the token manually
+- to test a "resource not found error" from an `Api::V1` controller, use the custom match `be_not_found_error` like this:
+  `expect(response).to be_not_found_error("alert")`
+- Prefer `expect(...).to have_received()` instead of `expect(...).to receive()`
+- never use `aggregate_failure` in new test. Do not edit existing tests to remove it.
+
+## Factories
+
+- Some factories have been renamed for clarity.
+  - To create Entitlement::Feature model, use `:feature`
+  - To create Entitlement::Privilege model, use `:privilege`
+  - To create Entitlement::Entitlement model, use `:entitlement`

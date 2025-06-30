@@ -13,7 +13,7 @@ RSpec.describe Integrations::Aggregator::SendRestletEndpointService do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
-        .with(endpoint)
+        .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
         .and_return(lago_client)
       allow(lago_client).to receive(:post_with_response)
 
@@ -26,7 +26,7 @@ RSpec.describe Integrations::Aggregator::SendRestletEndpointService do
 
       aggregate_failures do
         expect(LagoHttpClient::Client).to have_received(:new)
-          .with(endpoint)
+          .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
         expect(lago_client).to have_received(:post_with_response) do |payload|
           expect(payload[:restletEndpoint]).to eq("https://example.com")
         end

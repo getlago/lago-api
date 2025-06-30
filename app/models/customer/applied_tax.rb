@@ -20,7 +20,7 @@ end
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  customer_id     :uuid             not null
-#  organization_id :uuid
+#  organization_id :uuid             not null
 #  tax_id          :uuid             not null
 #
 # Indexes

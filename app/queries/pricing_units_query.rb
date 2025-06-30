@@ -6,7 +6,10 @@ class PricingUnitsQuery < BaseQuery
   def call
     pricing_units = base_scope.result
     pricing_units = paginate(pricing_units)
-    pricing_units = apply_consistent_ordering(pricing_units)
+    pricing_units = apply_consistent_ordering(
+      pricing_units,
+      default_order: {name: :asc, created_at: :desc}
+    )
 
     result.pricing_units = pricing_units
     result

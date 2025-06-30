@@ -121,14 +121,15 @@ RSpec.describe Plans::UpdateService, type: :service do
       result = plans_service.call
 
       updated_plan = result.plan
-      aggregate_failures do
-        expect(updated_plan.name).to eq("Updated plan name")
-        expect(updated_plan.invoice_display_name).to eq(plan_invoice_display_name)
-        expect(updated_plan.taxes.pluck(:code)).to eq([tax2.code])
-        expect(plan.charges.count).to eq(2)
-        expect(plan.charges.order(created_at: :asc).first.invoice_display_name).to eq("charge1")
-        expect(plan.charges.order(created_at: :asc).second.invoice_display_name).to eq("charge2")
-      end
+
+      expect(SendWebhookJob).to have_been_enqueued.with("plan.updated", updated_plan)
+
+      expect(updated_plan.name).to eq("Updated plan name")
+      expect(updated_plan.invoice_display_name).to eq(plan_invoice_display_name)
+      expect(updated_plan.taxes.pluck(:code)).to eq([tax2.code])
+      expect(plan.charges.count).to eq(2)
+      expect(plan.charges.order(created_at: :asc).first.invoice_display_name).to eq("charge1")
+      expect(plan.charges.order(created_at: :asc).second.invoice_display_name).to eq("charge2")
     end
 
     it "marks invoices as ready to be refreshed" do

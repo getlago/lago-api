@@ -2,7 +2,7 @@
 
 module Charges
   class UpdateChildrenBatchJob < ApplicationJob
-    queue_as :default
+    queue_as :low_priority
 
     def perform(child_ids:, params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
       Rails.logger.info("Charges::UpdateChildrenBatchJob - Started the execution for parent charge with ID: #{old_parent_attrs["id"]}")

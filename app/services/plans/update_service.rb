@@ -68,6 +68,7 @@ module Plans
 
       plan.invoices.draft.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
 
+      SendWebhookJob.perform_after_commit("plan.updated", plan)
       result.plan = plan.reload
       result
     rescue ActiveRecord::RecordInvalid => e

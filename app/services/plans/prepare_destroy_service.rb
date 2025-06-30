@@ -16,6 +16,8 @@ module Plans
         Plans::DestroyJob.perform_later(plan)
       end
 
+      SendWebhookJob.perform_after_commit("plan.deleted", plan)
+
       result.plan = plan
       result
     end

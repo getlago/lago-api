@@ -83,7 +83,9 @@ RSpec.describe Mutations::Invoices::RetryAll, type: :graphql do
 
     integration_customer
 
-    allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+    allow(LagoHttpClient::Client).to receive(:new)
+      .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      .and_return(lago_client)
     allow(lago_client).to receive(:post_with_response).and_return(response)
     allow(response).to receive(:body).and_return(body)
   end

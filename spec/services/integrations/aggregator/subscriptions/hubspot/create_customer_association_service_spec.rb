@@ -35,7 +35,9 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateCustomerA
     integration_customer
     integration_subscription
 
-    allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+    allow(LagoHttpClient::Client).to receive(:new)
+      .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      .and_return(lago_client)
     allow(lago_client).to receive(:put_with_response).with(params, headers)
   end
 

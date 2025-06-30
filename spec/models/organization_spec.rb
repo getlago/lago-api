@@ -462,4 +462,22 @@ RSpec.describe Organization, type: :model do
       expect(organization.timezone).to eq("Europe/London")
     end
   end
+
+  describe "postgres_events_store?" do
+    let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+    it "returns true if postgres_events_store is true" do
+      expect(organization).not_to be_postgres_events_store
+      expect(organization).to be_clickhouse_events_store
+    end
+
+    context "when clickhouse_events_store is false" do
+      let(:organization) { create(:organization, clickhouse_events_store: false) }
+
+      it "returns false" do
+        expect(organization).not_to be_clickhouse_events_store
+        expect(organization).to be_postgres_events_store
+      end
+    end
+  end
 end

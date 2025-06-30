@@ -49,6 +49,7 @@ module Currencies
     FKP: "Falkland Pound",
     GBP: "British Pound",
     GEL: "Georgian Lari",
+    GHS: "Ghanaian Cedi",
     GIP: "Gibraltar Pound",
     GMD: "Gambian Dalasi",
     GNF: "Guinean Franc",

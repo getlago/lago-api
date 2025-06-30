@@ -5,6 +5,6 @@ FactoryBot.define do
     organization { association(:organization, pricing_units: []) }
     name { [Faker::Emotion.adjective, Faker::Currency.name].join(" ") }
     code { Faker::Lorem.unique.word }
-    short_name { Faker::CryptoCoin.coin_name }
+    short_name { Faker::CryptoCoin.coin_name.first(3) }
   end
 end
