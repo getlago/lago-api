@@ -3292,6 +3292,11 @@ enum CurrencyEnum {
   GEL
 
   """
+  Ghanaian Cedi
+  """
+  GHS
+
+  """
   Gibraltar Pound
   """
   GIP

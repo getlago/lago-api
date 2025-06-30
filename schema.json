@@ -14534,6 +14534,12 @@
               "deprecationReason": null
             },
             {
+              "name": "GHS",
+              "description": "Ghanaian Cedi",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "GIP",
               "description": "Gibraltar Pound",
               "isDeprecated": false,
