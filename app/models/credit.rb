@@ -87,7 +87,7 @@ end
 #  applied_coupon_id              :uuid
 #  credit_note_id                 :uuid
 #  invoice_id                     :uuid
-#  organization_id                :uuid
+#  organization_id                :uuid             not null
 #  progressive_billing_invoice_id :uuid
 #
 # Indexes
