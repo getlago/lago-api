@@ -1748,7 +1748,7 @@ CREATE TABLE public.data_export_parts (
     csv_lines text,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1768,7 +1768,7 @@ CREATE TABLE public.data_exports (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     membership_id uuid,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1784,7 +1784,7 @@ CREATE TABLE public.dunning_campaign_thresholds (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp without time zone,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -8613,6 +8613,12 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250627134933'),
+('20250627134932'),
+('20250627134926'),
+('20250627134925'),
+('20250627134916'),
+('20250627134915'),
 ('20250627124153'),
 ('20250627124152'),
 ('20250627124144'),
