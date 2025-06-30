@@ -108,6 +108,7 @@ class Organization < ApplicationRecord
     multi_entities_pro
     multi_entities_enterprise
     analytics_dashboards
+    forecasted_usage
   ].freeze
   PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
 
