@@ -20,7 +20,7 @@ RSpec.describe FeaturesQuery, type: :service do
       result = subject
 
       expect(result).to be_success
-      expect(result.features).to include(feature1, feature2, feature3)
+      expect(result.features).to contain_exactly(feature1, feature2, feature3)
       expect(result.features).not_to include(other_organization_feature)
     end
 
@@ -82,6 +82,7 @@ RSpec.describe FeaturesQuery, type: :service do
 
         expect(result).to be_success
         expect(result.features.count).to eq(1)
+        expect(result.features.first.code).to eq(feature3.code)
       end
 
       it "returns different results for different pages" do

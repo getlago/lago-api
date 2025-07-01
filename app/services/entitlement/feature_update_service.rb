@@ -42,7 +42,7 @@ module Entitlement
 
     def update_privileges
       params[:privileges].each do |code, privilege_params|
-        privilege = feature.privileges.all.find { it[:code] == code }
+        privilege = feature.privileges.find { it[:code] == code }
         next unless privilege
 
         privilege.name = privilege_params[:name] if privilege_params.key?(:name)

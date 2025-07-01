@@ -95,7 +95,7 @@ module Api
       end
 
       def destroy_privilege
-        feature = current_organization.features.where(code: params[:code]).first
+        feature = current_organization.features.find_by(code: params[:code])
         return not_found_error(resource: "feature") unless feature
 
         privilege = feature.privileges.where(code: params[:privilege_code]).first
