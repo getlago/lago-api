@@ -14,5 +14,6 @@ RSpec.describe Types::Organizations::OrganizationType do
     expect(subject).to have_field(:timezone).of_type("TimezoneEnum")
     expect(subject).to have_field(:default_currency).of_type("CurrencyEnum!")
     expect(subject).to have_field(:can_create_billing_entity).of_type("Boolean!")
+    expect(subject).to have_field(:authentication_methods).of_type("[String!]!")
   end
 end
