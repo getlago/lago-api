@@ -42,7 +42,7 @@ module Events
                 property,
                 operation_type,
                 timestamp,
-                false AS is_ignored
+                ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn
               FROM (
                 SELECT
                   timestamp,
@@ -57,12 +57,42 @@ module Events
             ),
             merged_events AS (
               SELECT
-                property,
-                operation_type,
-                timestamp,
-                #{is_ignored_sql} AS is_ignored
-              FROM event_values
-              WHERE is_ignored = false
+                e.property,
+                e.timestamp,
+                e.operation_type,
+                e.rn,
+                false AS is_ignored,  -- not ignored
+                e.operation_type AS previous_not_ignored_operation_type
+              FROM event_values e
+              WHERE e.rn = 1
+
+              UNION ALL
+              SELECT
+                e.property,
+                e.timestamp,
+                e.operation_type,
+                e.rn,
+                CASE
+                  -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+                  WHEN #{existing_event_opposite_operation_type_sql}
+                  THEN true
+                  -- Check if previous not ignored event has same operation type
+                  WHEN r.previous_not_ignored_operation_type = e.operation_type THEN true
+                  ELSE false
+                END AS is_ignored,
+
+                -- Update previous_not_ignored_operation_type only if not ignored
+                CASE
+                  -- Check if next event on same day has opposite operation type so it nullifies this one at the same day, so we can ignore it
+                  WHEN #{existing_event_opposite_operation_type_sql}
+                  THEN r.previous_not_ignored_operation_type
+                  -- Check if previous not ignored event has same operation type
+                  WHEN e.operation_type = r.previous_not_ignored_operation_type THEN r.previous_not_ignored_operation_type
+                  ELSE e.operation_type
+                END AS previous_not_ignored_operation_type
+              FROM merged_events r
+              JOIN event_values e
+                ON e.property = r.property AND e.rn = r.rn + 1
             )
 
             SELECT COALESCE(SUM(period_ratio), 0) as aggregation
@@ -213,7 +243,7 @@ module Events
         def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
           <<-SQL
-            WITH events_data AS (#{
+            WITH RECURSIVE events_data AS (#{
               events(ordered: true)
                 .select(
                   "timestamp, \
@@ -341,7 +371,7 @@ module Events
           SQL
         end
 
-        # The desired behaviour is:
+        # IS_IGNORED logic for prorated aggregation desired behaviour is:
           # 27th property add
           # 27th property remove
           # 27th property add
@@ -352,7 +382,7 @@ module Events
           # --- end of unit 0, prorated 2 days
           # 30th property add
           # --the result of 30 is 1 -> prorated 1 day
-          # for this we want to have 2 events: 27th-28th and 30th to 30th
+          # for this we want to have only 2 events: 27th-28th and 30th to 30th
 
           # summary table:
           # 27th property add not_ignore
@@ -363,35 +393,18 @@ module Events
           # So the rule is:
           # -- for the same day, we look at next event. if it's opposite of current, current can be ignored
           # -- we look at previous not ignored event. if the operation type matches. we can ignore current
-
-        def is_ignored_sql
+        def existing_event_opposite_operation_type_sql
           <<-SQL
-            CASE
-              -- If there are no not-ignored events before, don't ignore this one
-              WHEN LAG(is_ignored, 1) OVER (
-                PARTITION BY property
-                ORDER BY timestamp
-              ) IS NULL
-              THEN false
-              -- Check if next event on same day has opposite operation type
-              WHEN DATE(LEAD(timestamp, 1) OVER (PARTITION BY property ORDER BY timestamp)) = DATE(timestamp)
-                AND (
-                  (operation_type = 'add' AND LEAD(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp) = 'remove')
-                  OR 
-                  (operation_type = 'remove' AND LEAD(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp) = 'add')
-                )
-              THEN true
-              -- Check if previous not ignored event has same operation type
-              WHEN LAG(operation_type, 1) OVER (
-                PARTITION BY property 
-                ORDER BY timestamp
-              ) = operation_type AND LAG(is_ignored, 1) OVER (
-                PARTITION BY property
-                ORDER BY timestamp
-              ) = false
-              THEN true
-              ELSE false
-            END
+            (
+              SELECT
+                1
+              FROM event_values next_event
+              WHERE next_event.property = e.property
+                AND next_event.rn = e.rn + 1
+                AND DATE(next_event.timestamp) = DATE(e.timestamp)
+                AND next_event.operation_type <> e.operation_type
+              LIMIT 1
+            ) = 1
           SQL
         end
 
