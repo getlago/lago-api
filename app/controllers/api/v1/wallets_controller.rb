@@ -79,68 +79,72 @@ module Api
       private
 
       def input_params
-        params.require(:wallet).permit(
-          :rate_amount,
-          :name,
-          :currency,
-          :paid_credits,
-          :granted_credits,
-          :expiration_at,
-          :invoice_requires_successful_payment,
-          transaction_metadata: [
-            :key,
-            :value
-          ],
-          recurring_transaction_rules: [
-            :granted_credits,
-            :interval,
-            :method,
+        params.expect(
+          wallet: [
+            :rate_amount,
+            :name,
+            :currency,
             :paid_credits,
-            :started_at,
+            :granted_credits,
             :expiration_at,
-            :target_ongoing_balance,
-            :threshold_credits,
-            :trigger,
             :invoice_requires_successful_payment,
             transaction_metadata: [
               :key,
               :value
+            ],
+            recurring_transaction_rules: [
+              :granted_credits,
+              :interval,
+              :method,
+              :paid_credits,
+              :started_at,
+              :expiration_at,
+              :target_ongoing_balance,
+              :threshold_credits,
+              :trigger,
+              :invoice_requires_successful_payment,
+              transaction_metadata: [
+                :key,
+                :value
+              ]
+            ],
+            applies_to: [
+              fee_types: []
             ]
-          ],
-          applies_to: [
-            fee_types: []
           ]
         )
       end
 
       def customer_params
-        params.require(:wallet).permit(:external_customer_id)
+        params.expect(wallet: [:external_customer_id])
       end
 
       def update_params
-        params.require(:wallet).permit(
-          :name,
-          :expiration_at,
-          :invoice_requires_successful_payment,
-          recurring_transaction_rules: [
-            :lago_id,
-            :interval,
-            :method,
-            :started_at,
+        params.expect(
+          wallet: [
+            :name,
             :expiration_at,
-            :target_ongoing_balance,
-            :threshold_credits,
-            :trigger,
-            :paid_credits,
-            :granted_credits,
             :invoice_requires_successful_payment,
-            transaction_metadata: [
-              :key,
-              :value
+            recurring_transaction_rules: [
+              :lago_id,
+              :interval,
+              :method,
+              :started_at,
+              :expiration_at,
+              :target_ongoing_balance,
+              :threshold_credits,
+              :trigger,
+              :paid_credits,
+              :granted_credits,
+              :invoice_requires_successful_payment,
+              transaction_metadata: [
+                :key,
+                :value
+              ]
+            ],
+            applies_to: [
+              fee_types: []
             ]
-          ],
-          applies_to: [
-            fee_types: []
           ]
         )
       end

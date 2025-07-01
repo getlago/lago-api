@@ -63,7 +63,7 @@ module Api
       private
 
       def update_params
-        params.require(:fee).permit(:payment_status)
+        params.expect(fee: [:payment_status])
       end
 
       def render_fee(fee)
@@ -76,7 +76,7 @@ module Api
       end
 
       def index_filters
-        params.permit(
+        params.expect(
           :fee_type,
           :payment_status,
           :external_subscription_id,

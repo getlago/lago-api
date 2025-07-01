@@ -264,36 +264,38 @@ module Api
       def create_params
         return @create_params if defined? @create_params
 
-        @create_params =
-          params.require(:invoice)
-            .permit(
-              :external_customer_id,
-              :currency,
-              :skip_psp,
-              fees: [
-                :add_on_code,
-                :invoice_display_name,
-                :unit_amount_cents,
-                :units,
-                :description,
-                {tax_codes: []}
-              ]
-            ).to_h.deep_symbolize_keys
+        @create_params = params.expect(
+          invoice: [
+            :external_customer_id,
+            :currency,
+            :skip_psp,
+            fees: [
+              :add_on_code,
+              :invoice_display_name,
+              :unit_amount_cents,
+              :units,
+              :description,
+              {tax_codes: []}
+            ]
+          ]
+        )
       end
 
       def update_params
-        params.require(:invoice).permit(
-          :payment_status,
-          metadata: [
-            :id,
-            :key,
-            :value
+        params.expect(
+          invoice: [
+            :payment_status,
+            metadata: [
+              :id,
+              :key,
+              :value
+            ]
           ]
         )
       end
 
       def preview_params
-        params.permit(
+        params.expect(
           :plan_code,
           :billing_time,
           :subscription_at,
@@ -342,11 +344,11 @@ module Api
       end
 
       def void_params
-        params.permit(:generate_credit_note, :refund_amount, :credit_amount)
+        params.expect(:generate_credit_note, :refund_amount, :credit_amount)
       end
 
       def sync_salesforce_id_params
-        params.permit(
+        params.expect(
           :external_id,
           :integration_code
         )

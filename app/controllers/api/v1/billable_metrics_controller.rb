@@ -123,27 +123,31 @@ module Api
       private
 
       def input_params
-        params.require(:billable_metric).permit(
-          :name,
-          :code,
-          :description,
-          :aggregation_type,
-          :weighted_interval,
-          :recurring,
-          :field_name,
-          :expression,
-          :rounding_function,
-          :rounding_precision,
-          filters: [:key, {values: []}]
+        params.expect(
+          billable_metric: [
+            :name,
+            :code,
+            :description,
+            :aggregation_type,
+            :weighted_interval,
+            :recurring,
+            :field_name,
+            :expression,
+            :rounding_function,
+            :rounding_precision,
+            filters: [:key, {values: []}]
+          ]
         )
       end
 
       def expression_event_params
-        params.permit(event: [
-          :code,
-          :timestamp,
-          properties: {}
-        ])
+        params.expect(
+          event: [
+            :code,
+            :timestamp,
+            properties: {}
+          ]
+        )
       end
 
       def resource_name

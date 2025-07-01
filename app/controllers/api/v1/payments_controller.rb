@@ -52,16 +52,18 @@ module Api
       private
 
       def create_params
-        params.require(:payment).permit(
-          :invoice_id,
-          :amount_cents,
-          :reference,
-          :paid_at
+        params.expect(
+          payment: [
+            :invoice_id,
+            :amount_cents,
+            :reference,
+            :paid_at
+          ]
         )
       end
 
       def index_filters
-        params.permit(:invoice_id, :external_customer_id)
+        params.expect(:invoice_id, :external_customer_id)
       end
 
       def render_payment(payment)

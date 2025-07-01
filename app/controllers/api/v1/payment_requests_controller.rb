@@ -50,15 +50,17 @@ module Api
       private
 
       def create_params
-        params.require(:payment_request).permit(
-          :email,
-          :external_customer_id,
-          lago_invoice_ids: []
+        params.expect(
+          payment_request: [
+            :email,
+            :external_customer_id,
+            lago_invoice_ids: []
+          ]
         )
       end
 
       def index_filters
-        params.permit(:external_customer_id)
+        params.expect(:external_customer_id)
       end
 
       def resource_name

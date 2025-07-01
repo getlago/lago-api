@@ -164,8 +164,8 @@ module Api
       private
 
       def create_params
-        params.require(:subscription)
-          .permit(
+        params.expect(
+          subscription: [
             :external_customer_id,
             :plan_code,
             :name,
@@ -175,16 +175,19 @@ module Api
             :subscription_at,
             :ending_at,
             plan_overrides:
-          )
+          ]
+        )
       end
 
       def update_params
-        params.require(:subscription).permit(
-          :name,
-          :subscription_date,
-          :subscription_at,
-          :ending_at,
-          plan_overrides:
+        params.expect(
+          subscription: [
+            :name,
+            :subscription_date,
+            :subscription_at,
+            :ending_at,
+            plan_overrides:
+          ]
         )
       end
 
@@ -233,7 +236,7 @@ module Api
       end
 
       def index_filters
-        params.permit(:external_customer_id, :plan_code, status: [])
+        params.expect(:external_customer_id, :plan_code, status: [])
       end
 
       def render_subscription(subscription)

@@ -75,17 +75,21 @@ module Api
       private
 
       def create_params
-        params.require(:webhook_endpoint).permit(
-          :id,
-          :webhook_url,
-          :signature_algo
+        params.expect(
+          webhook_endpoint: [
+            :id,
+            :webhook_url,
+            :signature_algo
+          ]
         )
       end
 
       def update_params
-        params.require(:webhook_endpoint).permit(
-          :webhook_url,
-          :signature_algo
+        params.expect(
+          webhook_endpoint: [
+            :webhook_url,
+            :signature_algo
+          ]
         )
       end
 

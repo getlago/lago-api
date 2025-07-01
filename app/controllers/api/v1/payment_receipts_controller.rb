@@ -37,7 +37,7 @@ module Api
       private
 
       def index_filters
-        params.permit(:invoice_id)
+        params.expect(:invoice_id)
       end
 
       def render_payment_receipt(payment_receipt)
