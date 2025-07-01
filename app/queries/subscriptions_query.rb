@@ -5,7 +5,8 @@ class SubscriptionsQuery < BaseQuery
   Filters = BaseFilters[:external_customer_id, :plan_code, :status]
 
   def call
-    subscriptions = paginate(organization.subscriptions)
+    subscriptions = base_scope.result
+    subscriptions = paginate(subscriptions)
     subscriptions = subscriptions.where(status: filtered_statuses)
     subscriptions = apply_consistent_ordering(
       subscriptions,
@@ -20,6 +21,32 @@ class SubscriptionsQuery < BaseQuery
 
     result.subscriptions = subscriptions
     result
+  end
+
+  def base_scope
+    Subscription.where(organization:).joins(:customer, :plan)
+      .ransack(search_params:)
+  end
+
+  def search_params
+    return if search_term.blank?
+
+    terms = {
+      m: "or",
+      id_cont: search_term,
+      name_cont: search_term,
+      external_id_cont: search_term
+    }
+
+    return terms if filters.external_customer_id.present?
+
+    terms.merge(
+      customer_name_cont: search_term,
+      customer_firstname_cont: search_term,
+      customer_lastname_cont: search_term,
+      customer_external_id_cont: search_term,
+      customer_email_cont: search_term
+    )
   end
 
   def with_external_customer(scope)
