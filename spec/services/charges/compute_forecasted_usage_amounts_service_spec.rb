@@ -9,13 +9,17 @@ RSpec.describe Charges::ComputeForecastedUsageAmountsService, type: :service do
     subject(:forecasted_usages) { service.send(:forecasted_charges_usages) }
 
     before do
-      allow(DataApi::Usages::ForecastedChargesService).to receive(:call!).and_return(
-        instance_double("DataApi::Usages::ForecastedChargesService", forecasted_charges_usages: [{"id" => 123}])
-      )
+      allow(DataApi::Usages::ForecastedChargesService).to receive(:call!).and_return(result)
+      forecasted_usages
+    end
+
+    let(:result) do
+      BaseService::Result.new.tap do |result|
+        result.forecasted_charges_usages = [{"id" => 123}]
+      end
     end
 
     it "calls DataApi::Usages::ForecastedChargesService with the correct arguments" do
-      forecasted_usages
       expect(DataApi::Usages::ForecastedChargesService).to have_received(:call!).with(
         organization,
         limit: 1000,
