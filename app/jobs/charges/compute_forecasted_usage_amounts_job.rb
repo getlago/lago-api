@@ -7,8 +7,7 @@ module Charges
     # TODO: retry_on ... how many times?
 
     def perform(organization:)
-      # TODO:
-      # Charges::ComputeForecastedUsageAmountsService.call!(organization:)
+      Charges::ComputeForecastedUsageAmountsService.call!(organization:)
     end
   end
 end
