@@ -21,7 +21,6 @@ RSpec.describe FeaturesQuery, type: :service do
 
       expect(result).to be_success
       expect(result.features).to contain_exactly(feature1, feature2, feature3)
-      expect(result.features).not_to include(other_organization_feature)
     end
 
     it "applies pagination" do
@@ -100,8 +99,7 @@ RSpec.describe FeaturesQuery, type: :service do
         result = subject
 
         expect(result).to be_success
-        expect(result.features).to include(feature1)
-        expect(result.features).not_to include(feature2, feature3)
+        expect(result.features).to contain_exactly(feature1)
       end
 
       context "when search term is blank" do
@@ -111,7 +109,7 @@ RSpec.describe FeaturesQuery, type: :service do
           result = subject
 
           expect(result).to be_success
-          expect(result.features).to include(feature1, feature2, feature3)
+          expect(result.features).to contain_exactly(feature1, feature2, feature3)
         end
       end
     end

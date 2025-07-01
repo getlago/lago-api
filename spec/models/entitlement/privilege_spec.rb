@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Entitlement::Privilege, type: :model do
   subject { build(:privilege) }
 
+  it { expect(described_class).to be_soft_deletable }
+
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
@@ -13,22 +15,96 @@ RSpec.describe Entitlement::Privilege, type: :model do
   end
 
   describe "validations" do
-    it { is_expected.to validate_presence_of(:code) }
-    it { is_expected.to validate_presence_of(:value_type) }
-    it { is_expected.to validate_inclusion_of(:value_type).in_array(Entitlement::Privilege::VALUE_TYPES) }
-  end
+    it do
+      expect(subject).to validate_presence_of(:code)
+      expect(subject).to validate_length_of(:code).is_at_most(255)
+      expect(subject).to validate_length_of(:name).is_at_most(255)
+      expect(subject).to validate_presence_of(:value_type)
+      expect(subject).to validate_inclusion_of(:value_type).in_array(Entitlement::Privilege::VALUE_TYPES)
+    end
 
-  describe "soft deletion" do
-    it "can be discarded and undiscarded" do
-      expect(subject.discarded?).to be(false)
+    describe "#validate_config" do
+      before do
+        subject.value_type = "select"
+      end
 
-      subject.discard
-      expect(subject.discarded?).to be(true)
-      expect(subject.deleted_at).not_to be_nil
+      context "when value_type is select" do
+        it "is valid with proper select_options config" do
+          subject.config = {"select_options" => ["option1", "option2"]}
+          expect(subject).to be_valid
+        end
 
-      subject.undiscard
-      expect(subject.discarded?).to be(false)
-      expect(subject.deleted_at).to be_nil
+        it "is invalid with empty select_options array" do
+          subject.config = {"select_options" => []}
+          expect(subject).not_to be_valid
+          expect(subject.errors[:config]).to include("invalid_format")
+        end
+
+        it "is invalid with missing select_options key" do
+          subject.config = {"other_key" => ["option1"]}
+          expect(subject).not_to be_valid
+          expect(subject.errors[:config]).to include("invalid_format")
+        end
+
+        it "is invalid with additional keys alongside select_options" do
+          subject.config = {
+            "select_options" => ["option1"],
+            "extra_key" => "value"
+          }
+          expect(subject).not_to be_valid
+          expect(subject.errors[:config]).to include("invalid_format")
+        end
+
+        it "is invalid with select_options as non-array" do
+          subject.config = {"select_options" => "not_an_array"}
+          expect(subject).not_to be_valid
+          expect(subject.errors[:config]).to include("invalid_format")
+        end
+
+        it "is invalid with select_options not all strings" do
+          subject.config = {"select_options" => ["true", false]}
+          expect(subject).not_to be_valid
+          expect(subject.errors[:config]).to include("invalid_format")
+        end
+
+        it "is invalid with blank config" do
+          subject.config = nil
+          expect(subject).not_to be_valid
+          expect(subject.errors[:config]).to include("invalid_format")
+        end
+      end
+
+      context "when value_type is not select" do
+        %w[integer string boolean].each do |value_type|
+          context "when value_type is #{value_type}" do
+            before do
+              subject.value_type = value_type
+            end
+
+            it "is valid with nil config" do
+              subject.config = nil
+              expect(subject).to be_valid
+            end
+
+            it "is valid with empty hash config" do
+              subject.config = {}
+              expect(subject).to be_valid
+            end
+
+            it "is invalid with any config present" do
+              subject.config = {"some_key" => "some_value"}
+              expect(subject).not_to be_valid
+              expect(subject.errors[:config]).to include("invalid_format")
+            end
+
+            it "is invalid with select_options config" do
+              subject.config = {"select_options" => ["option1"]}
+              expect(subject).not_to be_valid
+              expect(subject.errors[:config]).to include("invalid_format")
+            end
+          end
+        end
+      end
     end
   end
 

@@ -24,7 +24,8 @@ class FeaturesQuery < BaseQuery
     {
       m: "or",
       name_cont: search_term,
-      code_cont: search_term
+      code_cont: search_term,
+      description_cont: search_term
     }
   end
 end

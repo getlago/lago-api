@@ -10,7 +10,9 @@ module Entitlement
     belongs_to :organization
     has_many :privileges, class_name: "Entitlement::Privilege", foreign_key: "entitlement_feature_id", dependent: :destroy
 
-    validates :code, presence: true
+    validates :code, presence: true, length: {maximum: 255}
+    validates :name, length: {maximum: 255}
+    validates :description, length: {maximum: 255}
 
     def self.ransackable_attributes(_auth_object = nil)
       %w[code name description]

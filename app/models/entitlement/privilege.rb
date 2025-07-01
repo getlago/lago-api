@@ -12,8 +12,30 @@ module Entitlement
     belongs_to :organization
     belongs_to :feature, class_name: "Entitlement::Feature", foreign_key: :entitlement_feature_id
 
-    validates :code, presence: true
+    validates :code, presence: true, length: {maximum: 255}
+    validates :name, length: {maximum: 255}
     validates :value_type, presence: true, inclusion: {in: VALUE_TYPES}
+
+    validate :validate_config
+
+    private
+
+    def validate_config
+      errors.add(:config, :invalid_format) unless config_valid?
+    end
+
+    # Config is only used for `select` value_type, and it should contain a list of select_options
+    # All other value_types should have an empty config
+    def config_valid?
+      if value_type == "select"
+        config&.keys == ["select_options"] &&
+          config["select_options"].is_a?(Array) &&
+          !config["select_options"].empty? &&
+          config["select_options"].all? { it.is_a?(String) }
+      else
+        config.blank?
+      end
+    end
   end
 end
 

@@ -52,7 +52,9 @@ Rails.application.routes.draw do
       end
 
       resources :features, param: :code, code: /.*/, only: %i[index show create update destroy] do
-        delete ":privilege_code", to: "features#destroy_privilege", on: :member
+        scope module: :features do
+          resources :privileges, only: %i[destroy], param: :code
+        end
       end
 
       resources :coupons, param: :code, code: /.*/

@@ -9,7 +9,8 @@ module Api
           pagination: {
             page: params[:page],
             limit: params[:per_page] || PER_PAGE
-          }
+          },
+          search_term: params[:search_term]
         )
 
         if result.success?
@@ -94,26 +95,7 @@ module Api
         end
       end
 
-      def destroy_privilege
-        feature = current_organization.features.find_by(code: params[:code])
-        return not_found_error(resource: "feature") unless feature
 
-        privilege = feature.privileges.where(code: params[:privilege_code]).first
-        return not_found_error(resource: "privilege") unless privilege
-
-        result = ::Entitlement::PrivilegeDestroyService.call(privilege:)
-
-        if result.success?
-          render(
-            json: ::V1::Entitlement::FeatureSerializer.new(
-              feature,
-              root_name:
-            )
-          )
-        else
-          render_error_response(result)
-        end
-      end
 
       private
 

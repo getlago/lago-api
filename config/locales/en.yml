@@ -19,6 +19,7 @@ en:
         invalid_expression: invalid_expression
         invalid_fixed_amount: invalid_fixed_amount
         invalid_flat_amount: invalid_flat_amount
+        invalid_format: invalid_format
         invalid_free_units: invalid_free_units
         invalid_free_units_per_events: invalid_free_units_per_events
         invalid_free_units_per_total_aggregation: invalid_free_units_per_total_aggregation
