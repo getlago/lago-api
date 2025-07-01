@@ -327,4 +327,116 @@ RSpec.describe WebhooksController, type: :request do
       end
     end
   end
+
+  describe "POST /flutterwave" do
+    let(:organization) { create(:organization) }
+
+    let(:flutterwave_provider) do
+      create(:flutterwave_provider, organization:)
+    end
+
+    let(:body) do
+      {
+        event: "charge.completed",
+        data: {
+          id: 285959875,
+          tx_ref: "lago_invoice_12345",
+          flw_ref: "LAGO/FLW270177170",
+          amount: 10000,
+          currency: "NGN",
+          charged_amount: 10000,
+          status: "successful",
+          payment_type: "card",
+          customer: {
+            id: 215604089,
+            name: "John Doe",
+            email: "customer@example.com"
+          },
+          card: {
+            first_6digits: "123456",
+            last_4digits: "7889",
+            issuer: "VERVE FIRST CITY MONUMENT BANK PLC",
+            country: "NG",
+            type: "VERVE"
+          },
+          meta: {
+            lago_invoice_id: "12345",
+            lago_payable_type: "Invoice"
+          }
+        }
+      }
+    end
+
+    let(:result) do
+      result = BaseService::Result.new
+      result.body = body
+      result
+    end
+
+    before do
+      allow(PaymentProviders::Flutterwave::HandleIncomingWebhookService).to receive(:call)
+        .with(
+          organization_id: organization.id,
+          code: nil,
+          body: body.to_json,
+          secret: "test_signature"
+        )
+        .and_return(result)
+    end
+
+    it "handles flutterwave webhooks" do
+      post(
+        "/webhooks/flutterwave/#{flutterwave_provider.organization_id}",
+        params: body.to_json,
+        headers: {
+          "Content-Type" => "application/json",
+          "verif-hash" => "test_signature"
+        }
+      )
+
+      expect(response).to have_http_status(:success)
+
+      expect(PaymentProviders::Flutterwave::HandleIncomingWebhookService).to have_received(:call)
+    end
+
+    context "when failing to handle flutterwave event" do
+      let(:result) do
+        BaseService::Result.new.service_failure!(code: "webhook_error", message: "Invalid payload")
+      end
+
+      it "returns bad request status" do
+        post(
+          "/webhooks/flutterwave/#{flutterwave_provider.organization_id}",
+          params: body.to_json,
+          headers: {
+            "Content-Type" => "application/json",
+            "verif-hash" => "test_signature"
+          }
+        )
+
+        expect(response).to have_http_status(:bad_request)
+        expect(PaymentProviders::Flutterwave::HandleIncomingWebhookService).to have_received(:call)
+      end
+    end
+
+    context "when service raises an unexpected error" do
+      before do
+        allow(PaymentProviders::Flutterwave::HandleIncomingWebhookService).to receive(:call)
+          .and_raise(StandardError.new("Unexpected error"))
+      end
+
+      it "raises the error" do
+        expect do
+          post(
+            "/webhooks/flutterwave/#{flutterwave_provider.organization_id}",
+            params: body.to_json,
+            headers: {
+              "Content-Type" => "application/json",
+              "verif-hash" => "test_signature"
+            }
+          )
+        end.to raise_error(StandardError, "Unexpected error")
+      end
+    end
+  end
 end
