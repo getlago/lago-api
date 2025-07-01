@@ -342,14 +342,15 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
       context "when added and removed several times a day during multiple days" do
         it "returns the correct result" do
-          # 1st day: add, add, remove, add, remove, add
+          # 0 day: add (month ago - 1 day)
+          # 1st day: add, add, remove, add
           create(
             :event,
             organization_id: organization.id,
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 1.days,
-            properties: {unique_id: SecureRandom.uuid}
+            properties: {unique_id: event.properties["unique_id"]}
           )
           create(
             :event,
@@ -357,7 +358,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 1.days + 1.hour,
-            properties: {unique_id: SecureRandom.uuid}
+            properties: {unique_id: event.properties["unique_id"]}
           )
           create(
             :event,
@@ -365,7 +366,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 1.days + 2.hour,
-            properties: {unique_id: SecureRandom.uuid, operation_type: "remove"}
+            properties: {unique_id: event.properties["unique_id"], operation_type: "remove"}
           )
           create(
             :event,
@@ -373,7 +374,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 1.days + 3.hour,
-            properties: {unique_id: SecureRandom.uuid}
+            properties: {unique_id: event.properties["unique_id"]}
           )
 
           # 3rd day: add, remove
@@ -383,7 +384,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 3.days + 1.hour,
-            properties: {unique_id: SecureRandom.uuid}
+            properties: {unique_id: event.properties["unique_id"]}
           )
           create(
             :event,
@@ -391,12 +392,12 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
             timestamp: from_datetime + 3.days + 2.hour,
-            properties: {unique_id: SecureRandom.uuid, operation_type: "remove"}
+            properties: {unique_id: event.properties["unique_id"], operation_type: "remove"}
           )
 
           byebug
 
-          expect(result.aggregation).to eq((1 + 3.fdiv(31)).ceil(5))
+          expect(result.aggregation).to eq((4.fdiv(31)).ceil(5))
           expect(result.current_usage_units).to eq(2)
         end
       end
