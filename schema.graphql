@@ -3786,6 +3786,7 @@ type CurrentOrganization {
   adyenPaymentProviders: [AdyenProvider!]
   apiKey: String
   appliedDunningCampaign: DunningCampaign
+  authenticationMethods: [String!]!
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   cashfreePaymentProviders: [CashfreeProvider!]
@@ -7278,6 +7279,7 @@ enum OrderByEnum {
 Safe Organization Type
 """
 type Organization {
+  authenticationMethods: [String!]!
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   defaultCurrency: CurrencyEnum!

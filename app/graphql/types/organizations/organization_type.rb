@@ -20,6 +20,7 @@ module Types
       field :logo_url, String
       field :name, String, null: false
       field :timezone, Types::TimezoneEnum, null: true
+      field :authentication_methods, [String], null: false
 
       field :billing_configuration, Types::Organizations::BillingConfiguration, null: true
 
