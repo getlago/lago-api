@@ -80,6 +80,8 @@ FactoryBot.define do
     trait :with_fees do
       after :create do |invoice|
         create(:fee, invoice:, organization: invoice.organization)
+      end
+    end
 
     trait :progressive_billing_invoice do
       invoice_type { :progressive_billing }
