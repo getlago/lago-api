@@ -4,8 +4,12 @@ module Organizations
   module AuthenticationMethods
     extend ActiveSupport::Concern
 
-    FREE_AUTHENTICATION_METHODS = %w[email_password google_oauth].freeze
-    PREMIUM_AUTHENTICATION_METHODS = %w[okta].freeze
+    EMAIL_PASSWORD = "email_password"
+    GOOGLE_OAUTH = "google_oauth"
+    OKTA = "okta"
+
+    FREE_AUTHENTICATION_METHODS = [EMAIL_PASSWORD, GOOGLE_OAUTH].freeze
+    PREMIUM_AUTHENTICATION_METHODS = [OKTA].freeze
     AUTHENTICATION_METHODS = FREE_AUTHENTICATION_METHODS + PREMIUM_AUTHENTICATION_METHODS
 
     included do

@@ -31,7 +31,8 @@ module Auth
         return result.single_validation_failure!(error_code: "user_does_not_exist")
       end
 
-      UsersService.new.new_token(user)
+      result.user = user
+      generate_token
     rescue Google::Auth::IDTokens::SignatureError
       result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
@@ -77,6 +78,13 @@ module Auth
     end
 
     private
+
+    def generate_token
+      result.token = Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH)
+      result
+    rescue => e
+      result.service_failure!(code: "token_encoding_error", message: e.message)
+    end
 
     def client_id
       @client_id ||= Google::Auth::ClientId.new(ENV["GOOGLE_AUTH_CLIENT_ID"], ENV["GOOGLE_AUTH_CLIENT_SECRET"])
