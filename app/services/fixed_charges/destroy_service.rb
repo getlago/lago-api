@@ -18,7 +18,7 @@ module FixedCharges
 
         deleted_at = Time.current
         # rubocop:disable Rails/SkipsModelValidations
-        fixed_charge.properties.update_all(deleted_at:)
+        fixed_charge.properties.update_all(deleted_at:) # WAT? props are JSON
         # rubocop:enable Rails/SkipsModelValidations
 
         result.fixed_charge = fixed_charge
