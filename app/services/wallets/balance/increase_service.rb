@@ -3,6 +3,8 @@
 module Wallets
   module Balance
     class IncreaseService < BaseService
+      Result = BaseResult[:wallet]
+
       def initialize(wallet:, wallet_transaction:, reset_consumed_credits: false)
         super
 
