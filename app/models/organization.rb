@@ -4,6 +4,7 @@ class Organization < ApplicationRecord
   include PaperTrailTraceable
   include OrganizationTimezone
   include Currencies
+  include Organizations::AuthenticationMethods
 
   self.ignored_columns += [:clickhouse_aggregation]
 
