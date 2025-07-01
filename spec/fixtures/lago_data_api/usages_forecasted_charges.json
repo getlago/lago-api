@@ -1,0 +1,13 @@
+[
+    {
+        "organization_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "created_at": "2025-06-27T06:46:28.300Z",
+        "subscription_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "dt": "2025-06-27",
+        "charge_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "charge_filter_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "units_forecast_10th_percentile": 0,
+        "units_forecast_50th_percentile": 0,
+        "units_forecast_90th_percentile": 0
+    }
+]
