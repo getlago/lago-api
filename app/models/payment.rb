@@ -2,6 +2,7 @@
 
 class Payment < ApplicationRecord
   include PaperTrailTraceable
+  include RansackUuidSearch
 
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
@@ -32,21 +33,29 @@ class Payment < ApplicationRecord
   scope :for_organization, lambda { |organization|
     payables_join = ActiveRecord::Base.sanitize_sql_array([
       <<~SQL,
-        LEFT JOIN invoices
-          ON invoices.id = payments.payable_id
+        LEFT JOIN invoices AS scoped_invoices
+          ON scoped_invoices.id = payments.payable_id
           AND payments.payable_type = 'Invoice'
-          AND invoices.organization_id = :org_id
-          AND invoices.status IN (:visible_statuses)
-        LEFT JOIN payment_requests
-          ON payment_requests.id = payments.payable_id
+          AND scoped_invoices.organization_id = :org_id
+          AND scoped_invoices.status IN (:visible_statuses)
+        LEFT JOIN payment_requests AS scoped_payment_requests
+          ON scoped_payment_requests.id = payments.payable_id
           AND payments.payable_type = 'PaymentRequest'
-          AND payment_requests.organization_id = :org_id
+          AND scoped_payment_requests.organization_id = :org_id
       SQL
       {org_id: organization.id, visible_statuses: Invoice::VISIBLE_STATUS.values}
     ])
     joins(payables_join)
-      .where("invoices.id IS NOT NULL OR payment_requests.id IS NOT NULL")
+      .where("scoped_invoices.id IS NOT NULL OR scoped_payment_requests.id IS NOT NULL")
   }
+
+  def self.ransackable_attributes(_ = nil)
+    %w[id provider_payment_id reference]
+  end
+
+  def self.ransackable_associations(_ = nil)
+    %w[payable]
+  end
 
   def invoices
     payable.payment_invoices

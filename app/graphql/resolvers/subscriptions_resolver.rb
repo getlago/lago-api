@@ -13,14 +13,16 @@ module Resolvers
     argument :page, Integer, required: false
     argument :plan_code, String, required: false
     argument :status, [Types::Subscriptions::StatusTypeEnum], required: false
+    argument :search_term, String, required: false
 
     type Types::Subscriptions::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil, plan_code: nil, status: nil)
+    def resolve(page: nil, limit: nil, plan_code: nil, status: nil, search_term: nil)
       result = SubscriptionsQuery.call(
         organization: current_organization,
         pagination: {page:, limit:},
-        filters: {plan_code:, status:}
+        filters: {plan_code:, status:},
+        search_term:
       )
 
       result.subscriptions
