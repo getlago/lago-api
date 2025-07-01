@@ -81,16 +81,9 @@ class UsersService < BaseService
   private
 
   def generate_token
-    JWT.encode(payload, ENV["SECRET_KEY_BASE"], "HS256")
+    Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
   rescue => e
     result.service_failure!(code: "token_encoding_error", message: e.message)
-  end
-
-  def payload
-    {
-      sub: result.user.id,
-      exp: 3.hours.from_now.to_i
-    }
   end
 
   def track_organization_registered(organization, membership)
