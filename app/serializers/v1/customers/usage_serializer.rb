@@ -10,6 +10,7 @@ module V1
           issuing_date: model.issuing_date,
           currency: model.currency,
           amount_cents: model.amount_cents,
+          projected_amount_cents: model.projected_amount_cents,
           total_amount_cents: model.total_amount_cents,
           taxes_amount_cents: model.taxes_amount_cents,
           lago_invoice_id: nil

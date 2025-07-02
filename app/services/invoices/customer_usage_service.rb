@@ -181,6 +181,7 @@ module Invoices
         issuing_date: invoice.issuing_date.iso8601,
         currency: invoice.currency,
         amount_cents: invoice.fees_amount_cents,
+        projected_amount_cents: invoice.projected_fees_amount_cents,
         total_amount_cents: invoice.total_amount_cents,
         taxes_amount_cents: invoice.taxes_amount_cents,
         fees: invoice.fees
