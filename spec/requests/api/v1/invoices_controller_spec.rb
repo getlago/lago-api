@@ -798,9 +798,8 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       context "when the payment status is succeeded" do
         let(:payment_status) { :succeeded }
 
-        it "returns a method not allowed error" do
-          subject
-          expect(response).to have_http_status(:method_not_allowed)
+        it "voids the invoice" do
+          expect { subject }.to change { invoice.reload.status }.from("finalized").to("voided")
         end
       end
 
@@ -852,6 +851,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(response).to have_http_status(:success)
         expect(json[:invoice][:lago_id]).to eq(invoice.id)
         expect(json[:invoice][:status]).to eq("voided")
+        expect(json[:invoice][:voided_at]).not_to be_nil
       end
     end
   end

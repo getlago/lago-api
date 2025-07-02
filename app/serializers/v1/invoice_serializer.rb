@@ -31,7 +31,8 @@ module V1
         version_number: model.version_number,
         self_billed: model.self_billed,
         created_at: model.created_at.iso8601,
-        updated_at: model.updated_at.iso8601
+        updated_at: model.updated_at.iso8601,
+        voided_at: model.voided_at&.iso8601
       }
 
       payload.merge!(customer) if include?(:customer)
