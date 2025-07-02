@@ -70,6 +70,7 @@ end
 # Controllers
 
 - Under `V1` namespace the resource retrieved should always be scoped to the current_organization. Typically, to retrieve Alerts, use `current_organization.alerts.where(...)`
+- In controller `create` method, return regular 200 status, avoid `status: :created`
 
 
 # Models
@@ -97,7 +98,6 @@ To create a webhook:
     - `object_type` which is the object serialized. Reuse this method in the serializer `root_name` param
 - Add the mapping `name` => Service class to the `SendWebhookJob::WEBHOOK_SERVICES` hash
 - Write a test for the webhook class
-
 
 # Query object
 

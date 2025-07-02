@@ -51,6 +51,12 @@ Rails.application.routes.draw do
         post :evaluate_expression, on: :collection
       end
 
+      resources :features, param: :code, code: /.*/, only: %i[index show create update destroy] do
+        scope module: :features do
+          resources :privileges, only: %i[destroy], param: :code
+        end
+      end
+
       resources :coupons, param: :code, code: /.*/
       resources :credit_notes, only: %i[create update show index] do
         post :download, on: :member
