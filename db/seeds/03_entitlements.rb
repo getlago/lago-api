@@ -33,19 +33,20 @@ seats = Entitlement::Feature.create_with(
   description: "Number of users of the account"
 ).find_or_create_by!(organization:, code: "seats")
 
-# FeatureEntitlementValue.where(privilege: seats.privileges).delete_all
+Entitlement::EntitlementValue.where(organization:, privilege: seats.privileges).delete_all
+Entitlement::Entitlement.where(organization:, feature: seats).delete_all
 seats.privileges.delete_all
 
-_max = seats.privileges.create!(organization:, code: "max", name: "Maximum", value_type: "integer")
-_max_admins = seats.privileges.create!(organization:, code: "max_admins", name: "Max Admins", value_type: "integer")
-_root = seats.privileges.create!(organization:, code: "root", name: "Allow root user", value_type: "boolean")
+max = seats.privileges.create!(organization:, code: "max", name: "Maximum", value_type: "integer")
+max_admins = seats.privileges.create!(organization:, code: "max_admins", name: "Max Admins", value_type: "integer")
+root = seats.privileges.create!(organization:, code: "root", name: "Allow root user", value_type: "boolean")
 
-# FeatureEntitlement.where(organization:, feature: seats).delete_all
-# fe = FeatureEntitlement.create!(organization:, feature: seats, plan:)
-# FeatureEntitlementValue.create!(organization:, feature_entitlement: fe, privilege: max, value: 20) # Plan defaults
-# FeatureEntitlementValue.create!(organization:, feature_entitlement: fe, privilege: max_admins, value: 3) # Plan defaults
+fe = Entitlement::Entitlement.create!(organization:, feature: seats, plan:)
+Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: max, value: 20)
+Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: max_admins, value: 3)
+Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: root, value: true)
 # fe_sub = FeatureEntitlement.create!(organization:, feature: seats, subscription_external_id: sub.external_id)
-# FeatureEntitlementValue.create!(organization:, privilege: max, feature_entitlement: fe_sub, value: 99) # Subscription override
+# FeatureEntitlementValue.create!(organization:, privilege: max, entitlement: fe_sub, value: 99) # Subscription override
 
 # Feature in the plan, without any privilege
 analytics_api_feature = Entitlement::Feature.create_with(
@@ -54,8 +55,8 @@ analytics_api_feature = Entitlement::Feature.create_with(
 ).find_or_create_by!(organization:, code: "analytics_api")
 analytics_api_feature.privileges.delete_all
 
-# FeatureEntitlement.where(organization:, feature: analytics_api_feature, plan:).delete_all
-# FeatureEntitlement.create!(organization:, feature: analytics_api_feature, plan:)
+Entitlement::Entitlement.where(organization:, feature: analytics_api_feature, plan:).delete_all
+Entitlement::Entitlement.create!(organization:, feature: analytics_api_feature, plan:)
 
 # Feature not in the plan but added to the subscription
 salesforce = Entitlement::Feature.create_with(
@@ -63,8 +64,8 @@ salesforce = Entitlement::Feature.create_with(
 ).find_or_create_by!(organization:, code: "salesforce")
 salesforce.privileges.delete_all
 
-# FeatureEntitlement.where(organization:, feature: salesforce).delete_all
-# FeatureEntitlement.create!(organization:, feature: salesforce, subscription_external_id: sub.external_id)
+# Entitlement::Entitlement.where(organization:, feature: salesforce).delete_all
+# Entitlement::Entitlement.create!(organization:, feature: salesforce, subscription_external_id: sub.external_id)
 
 # Feature attached to the plan but removed from the subscription
 _support = Entitlement::Feature.create_with(
@@ -82,12 +83,12 @@ sso = Entitlement::Feature.create_with(
 ).find_or_create_by!(organization:, code: "sso")
 sso.privileges.delete_all
 
-_provider = sso.privileges.create!(organization:,
+provider = sso.privileges.create!(organization:,
   code: "provider",
   name: "Provider Name",
   value_type: "select",
   config: {select_options: %w[okta ad google custom]})
 
-# FeatureEntitlement.where(organization:, feature: sso, plan:).delete_all
-# fe = FeatureEntitlement.create!(organization:, feature: sso, plan:)
-# FeatureEntitlementValue.create!(organization:, feature_entitlement: fe, privilege: provider, value: "okta")
+Entitlement::Entitlement.where(organization:, feature: sso, plan:).delete_all
+fe = Entitlement::Entitlement.create!(organization:, feature: sso, plan:)
+Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: provider, value: "okta")

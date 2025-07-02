@@ -23,7 +23,7 @@ module Entitlement
       result.feature = feature
       result
     rescue ActiveRecord::RecordInvalid => e
-      if e.record.is_a?(Entitlement::Privilege)
+      if e.record.is_a?(Privilege)
         errors = e.record.errors.messages.transform_keys { |key| :"privilege.#{key}" }
         result.validation_failure!(errors:)
       else

@@ -71,6 +71,7 @@ end
 
 - Under `V1` namespace the resource retrieved should always be scoped to the current_organization. Typically, to retrieve Alerts, use `current_organization.alerts.where(...)`
 - In controller `create` method, return regular 200 status, avoid `status: :created`
+- When testing controller, access the response via `json` method, which parsed json and symbolized keys.
 
 
 # Models

@@ -14,7 +14,7 @@ module Entitlement
       return result.not_found_failure!(resource: "organization") unless organization
 
       ActiveRecord::Base.transaction do
-        feature = Entitlement::Feature.create!(
+        feature = Feature.create!(
           organization:,
           code: params[:code],
           name: params[:name],
@@ -30,7 +30,7 @@ module Entitlement
 
       result
     rescue ActiveRecord::RecordInvalid => e
-      if e.record.is_a?(Entitlement::Privilege)
+      if e.record.is_a?(Privilege)
         # because you can get "code" error from feature or privilege, I think prefixing the field name is helpful!
         errors = e.record.errors.messages.transform_keys { |key| :"privilege.#{key}" }
         result.validation_failure!(errors:)

@@ -1,0 +1,202 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
+  subject(:update_service) { described_class.new(organization:, plan:, entitlements_params:) }
+
+  let(:organization) { create(:organization) }
+  let(:plan) { create(:plan, organization:) }
+  let(:feature) { create(:feature, organization:) }
+  let(:privilege) { create(:privilege, feature:, code: "max") }
+  let(:privilege2) { create(:privilege, feature:, code: "max_admins") }
+  let(:entitlement) { create(:entitlement, plan:, feature:) }
+  let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, organization:, value: "10") }
+  let(:entitlements_params) do
+    {
+      feature.code => {
+        privilege.code => 60
+      }
+    }
+  end
+
+  before do
+    privilege
+    privilege2
+    entitlement
+    entitlement_value
+  end
+
+  describe "#call" do
+    subject(:result) { update_service.call }
+
+    it "returns success" do
+      expect(result).to be_success
+    end
+
+    it "updates existing entitlement value" do
+      expect { result }.to change { entitlement_value.reload.value }.from("10").to("60")
+    end
+
+    it "does not create new entitlement" do
+      expect { result }.not_to change(Entitlement::Entitlement, :count)
+    end
+
+    it "does not create new entitlement value" do
+      expect { result }.not_to change(Entitlement::EntitlementValue, :count)
+    end
+
+    it "returns entitlements in the result" do
+      expect(result.entitlements).to include(entitlement)
+    end
+
+    context "when privilege value does not exist" do
+      let(:entitlements_params) do
+        {
+          feature.code => {
+            privilege2.code => 30
+          }
+        }
+      end
+
+      it "creates new entitlement value" do
+        expect { result }.to change(Entitlement::EntitlementValue, :count).by(1)
+      end
+
+      it "creates entitlement value with correct attributes" do
+        result
+        new_value = Entitlement::EntitlementValue.last
+        expect(new_value.entitlement).to eq(entitlement)
+        expect(new_value.privilege).to eq(privilege2)
+        expect(new_value.value).to eq("30")
+      end
+    end
+
+    context "when entitlement does not exist" do
+      let(:new_feature) { create(:feature, organization:) }
+      let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_users") }
+      let(:entitlements_params) do
+        {
+          new_feature.code => {
+            new_privilege.code => 50
+          }
+        }
+      end
+
+      it "creates new entitlement" do
+        expect { result }.to change(Entitlement::Entitlement, :count).by(1)
+      end
+
+      it "creates new entitlement value" do
+        expect { result }.to change(Entitlement::EntitlementValue, :count).by(1)
+      end
+
+      it "creates entitlement with correct attributes" do
+        result
+        new_entitlement = Entitlement::Entitlement.last
+        expect(new_entitlement.plan).to eq(plan)
+        expect(new_entitlement.feature).to eq(new_feature)
+        expect(new_entitlement.organization).to eq(organization)
+      end
+    end
+
+    context "when updating multiple features" do
+      let(:feature2) { create(:feature, organization:) }
+      let(:privilege3) { create(:privilege, organization:, feature: feature2, code: "max_storage") }
+      let(:entitlement2) { create(:entitlement, organization:, plan:, feature: feature2) }
+      let(:entitlement_value2) { create(:entitlement_value, entitlement: entitlement2, privilege: privilege3, organization:, value: "100") }
+      let(:entitlements_params) do
+        {
+          feature.code => {
+            privilege.code => 60
+          },
+          feature2.code => {
+            privilege3.code => 200
+          }
+        }
+      end
+
+      before do
+        entitlement2
+        entitlement_value2
+      end
+
+      it "updates both entitlement values" do
+        result
+        expect(entitlement_value.reload.value).to eq("60")
+        expect(entitlement_value2.reload.value).to eq("200")
+      end
+
+      it "returns both entitlements in the result" do
+        expect(result.entitlements).to include(entitlement, entitlement2)
+      end
+    end
+
+    context "when plan is nil" do
+      let(:update_service) { described_class.new(organization:, plan: nil, entitlements_params:) }
+
+      it "returns not found failure" do
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("plan_not_found")
+      end
+    end
+
+    context "when feature does not exist" do
+      let(:entitlements_params) do
+        {
+          "nonexistent_feature" => {
+            privilege.code => 60
+          }
+        }
+      end
+
+      it "returns not found failure" do
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("feature_not_found")
+      end
+    end
+
+    context "when privilege does not exist" do
+      let(:entitlements_params) do
+        {
+          feature.code => {
+            "nonexistent_privilege" => 60
+          }
+        }
+      end
+
+      it "returns not found failure" do
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("privilege_not_found")
+      end
+    end
+
+    context "when value is invalid for select privilege" do
+      let(:select_privilege) { create(:privilege, organization:, feature:, code: "provider", value_type: "select", config: {"select_options" => ["okta", "ad"]}) }
+      let(:entitlements_params) do
+        {
+          feature.code => {
+            select_privilege.code => "invalid_option"
+          }
+        }
+      end
+
+      it "returns validation failure" do
+        expect(result).not_to be_success
+        expect(result.error.messages[:provider_privilege_value]).to eq ["value_not_in_select_options"]
+      end
+    end
+
+    context "when entitlements_params is empty" do
+      let(:entitlements_params) { {} }
+
+      it "returns success" do
+        expect(result).to be_success
+      end
+
+      it "does not change any entitlement values" do
+        expect { result }.not_to change { entitlement_value.reload.value }
+      end
+    end
+  end
+end
