@@ -88,7 +88,7 @@ Rails.application.routes.draw do
       resources :plans, param: :code, code: /.*/ do
         resources :entitlements, only: %i[index show create update destroy], param: :code, code: /.*/, controller: "plans/entitlements" do
           scope do
-            resources :privileges, only: %i[destroy], param: :code, controller: "plans/entitlements/privileges"
+            resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "plans/entitlements/privileges"
           end
         end
       end

@@ -64,11 +64,10 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
       end
 
       it "creates entitlement value with correct attributes" do
-        result
-        new_value = Entitlement::EntitlementValue.last
-        expect(new_value.entitlement).to eq(entitlement)
-        expect(new_value.privilege).to eq(privilege2)
-        expect(new_value.value).to eq("30")
+        ent_value = result.entitlements.find { it.entitlement_feature_id == feature.id }
+          .values.find { it.entitlement_privilege_id == privilege2.id }
+
+        expect(ent_value.value).to eq("30")
       end
     end
 
@@ -92,11 +91,14 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
       end
 
       it "creates entitlement with correct attributes" do
-        result
-        new_entitlement = Entitlement::Entitlement.last
-        expect(new_entitlement.plan).to eq(plan)
-        expect(new_entitlement.feature).to eq(new_feature)
-        expect(new_entitlement.organization).to eq(organization)
+        ent_value = result.entitlements.find { it.entitlement_feature_id == new_feature.id }
+          .values.find { it.entitlement_privilege_id == new_privilege.id }
+
+        expect(ent_value.value).to eq("50")
+        expect(ent_value.organization).to eq(organization)
+        expect(ent_value.entitlement.plan).to eq(plan)
+        expect(ent_value.entitlement.feature).to eq(new_feature)
+        expect(ent_value.entitlement.organization).to eq(organization)
       end
     end
 
