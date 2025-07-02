@@ -79,49 +79,62 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
       end.to change { Rails.cache.exist?(key) }.from(false).to(true)
     end
 
-    it "initializes an invoice" do
-      result = usage_service.call
+    context "when initializes an invoice" do
+      let(:current_date) { DateTime.parse("2025-06-15") }
+      let(:timestamp) { current_date }
 
-      expect(result).to be_success
-      expect(result.invoice).to be_a(Invoice)
-      expect(result.invoice.organization).to eq(organization)
-      expect(result.invoice.billing_entity).to eq(customer.billing_entity)
-      expect(result.invoice.total_paid_amount_cents).to eq(0)
-      expect(result.invoice.prepaid_credit_amount_cents).to eq(0)
+      it "initializes an invoice" do
+        travel_to(current_date) do
+          result = usage_service.call
 
-      expect(result.usage).to have_attributes(
-        from_datetime: Time.current.beginning_of_month.iso8601,
-        to_datetime: Time.current.end_of_month.iso8601,
-        issuing_date: Time.zone.today.end_of_month.iso8601,
-        currency: "EUR",
-        amount_cents: 2532, # 1266 * 2,
-        taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
-        total_amount_cents: 3038
-      )
-      expect(result.usage.fees.size).to eq(1)
-      expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+          expect(result).to be_success
+          expect(result.invoice).to be_a(Invoice)
+          expect(result.invoice.organization).to eq(organization)
+          expect(result.invoice.billing_entity).to eq(customer.billing_entity)
+          expect(result.invoice.total_paid_amount_cents).to eq(0)
+          expect(result.invoice.prepaid_credit_amount_cents).to eq(0)
+
+          expect(result.usage).to have_attributes(
+            from_datetime: Time.current.beginning_of_month.iso8601,
+            to_datetime: Time.current.end_of_month.iso8601,
+            issuing_date: Time.zone.today.end_of_month.iso8601,
+            currency: "EUR",
+            amount_cents: 2532, # 1266 * 2,
+            projected_amount_cents: 5064,
+            taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
+            total_amount_cents: 3038
+          )
+          expect(result.usage.fees.size).to eq(1)
+          expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+        end
+      end
     end
 
     context "when apply_taxes property is set to false" do
+      let(:current_date) { DateTime.parse("2025-06-15") }
+      let(:timestamp) { current_date }
       let(:apply_taxes) { false }
 
       it "initializes an invoice" do
-        result = usage_service.call
+        travel_to(current_date) do
+          result = usage_service.call
 
-        expect(result).to be_success
-        expect(result.invoice).to be_a(Invoice)
+          expect(result).to be_success
+          expect(result.invoice).to be_a(Invoice)
 
-        expect(result.usage).to have_attributes(
-          from_datetime: Time.current.beginning_of_month.iso8601,
-          to_datetime: Time.current.end_of_month.iso8601,
-          issuing_date: Time.zone.today.end_of_month.iso8601,
-          currency: "EUR",
-          amount_cents: 2532, # 1266 * 2,
-          taxes_amount_cents: 0,
-          total_amount_cents: 2532
-        )
-        expect(result.usage.fees.size).to eq(1)
-        expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+          expect(result.usage).to have_attributes(
+            from_datetime: Time.current.beginning_of_month.iso8601,
+            to_datetime: Time.current.end_of_month.iso8601,
+            issuing_date: Time.zone.today.end_of_month.iso8601,
+            currency: "EUR",
+            amount_cents: 2532, # 1266 * 2,
+            projected_amount_cents: 5064,
+            taxes_amount_cents: 0,
+            total_amount_cents: 2532
+          )
+          expect(result.usage.fees.size).to eq(1)
+          expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+        end
       end
     end
 
@@ -144,6 +157,8 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
       end
 
       context "when there is no error" do
+        let(:current_date) { DateTime.parse("2025-06-15") }
+        let(:timestamp) { current_date }
         before do
           stub_request(:post, endpoint).to_return do |request|
             response = JSON.parse(File.read(
@@ -161,23 +176,26 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
         end
 
         it "initializes an invoice" do
-          result = usage_service.call
+          travel_to(current_date) do
+            result = usage_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
-            expect(result.invoice).to be_a(Invoice)
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.invoice).to be_a(Invoice)
 
-            expect(result.usage).to have_attributes(
-              from_datetime: Time.current.beginning_of_month.iso8601,
-              to_datetime: Time.current.end_of_month.iso8601,
-              issuing_date: Time.zone.today.end_of_month.iso8601,
-              currency: "EUR",
-              amount_cents: 2532, # 1266 * 2,
-              taxes_amount_cents: 253, # 2532 * 0.1
-              total_amount_cents: 2785
-            )
-            expect(result.usage.fees.size).to eq(1)
-            expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+              expect(result.usage).to have_attributes(
+                from_datetime: Time.current.beginning_of_month.iso8601,
+                to_datetime: Time.current.end_of_month.iso8601,
+                issuing_date: Time.zone.today.end_of_month.iso8601,
+                currency: "EUR",
+                amount_cents: 2532, # 1266 * 2,
+                projected_amount_cents: 5064,
+                taxes_amount_cents: 253, # 2532 * 0.1
+                total_amount_cents: 2785
+              )
+              expect(result.usage.fees.size).to eq(1)
+              expect(result.usage.fees.first.charge.invoice_display_name).to eq(charge.invoice_display_name)
+            end
           end
         end
       end
@@ -243,6 +261,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
             issuing_date: "2022-07-06",
             currency: "EUR",
             amount_cents: 2532, # 1266 * 2,
+            projected_amount_cents: 4748,
             taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
             total_amount_cents: 3038
           )

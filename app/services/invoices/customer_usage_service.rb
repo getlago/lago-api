@@ -181,11 +181,17 @@ module Invoices
         issuing_date: invoice.issuing_date.iso8601,
         currency: invoice.currency,
         amount_cents: invoice.fees_amount_cents,
-        projected_amount_cents: invoice.projected_fees_amount_cents,
+        projected_amount_cents: projected_fees_amount_cents,
         total_amount_cents: invoice.total_amount_cents,
         taxes_amount_cents: invoice.taxes_amount_cents,
         fees: invoice.fees
       )
+    end
+
+    def projected_fees_amount_cents
+      calculation_service = ::Customers::FeesUsageCalculationService.new(invoice.fees)
+      ratio = calculation_service.calculate_time_ratio(boundaries[:charges_from_datetime], boundaries[:charges_to_datetime], boundaries[:charges_duration])
+      ratio > 0 ? (invoice.fees_amount_cents / BigDecimal(ratio.to_s)).round.to_i : 0
     end
 
     def customer_provider_taxation?
