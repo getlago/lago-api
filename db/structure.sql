@@ -8872,7 +8872,7 @@ ALTER TABLE ONLY public.integration_collection_mappings
 --
 
 ALTER TABLE ONLY public.payments
-    ADD CONSTRAINT fk_rails_e3a64e537e FOREIGN KEY (customer_id) REFERENCES public.customers(id) NOT VALID;
+    ADD CONSTRAINT fk_rails_e3a64e537e FOREIGN KEY (customer_id) REFERENCES public.customers(id);
 
 
 --
