@@ -40,14 +40,12 @@ class PaymentsQuery < BaseQuery
     }
 
     # Add payable search terms if not filtering by specific invoice
-    unless filters.invoice_id.present?
-      terms.merge!(
-        payable_of_Invoice_type_number_cont: search_term
-      )
+    if filters.invoice_id.blank?
+      terms[:payable_of_Invoice_type_number_cont] = search_term
     end
 
     # Add customer search terms if not filtering by specific customer
-    unless filters.external_customer_id.present?
+    if filters.external_customer_id.blank?
       terms.merge!(
         payable_of_Invoice_type_customer_name_cont: search_term,
         payable_of_Invoice_type_customer_firstname_cont: search_term,
@@ -59,7 +57,7 @@ class PaymentsQuery < BaseQuery
         payable_of_PaymentRequest_type_customer_firstname_cont: search_term,
         payable_of_PaymentRequest_type_customer_lastname_cont: search_term,
         payable_of_PaymentRequest_type_customer_external_id_cont: search_term,
-        payable_of_PaymentRequest_type_customer_email_cont: search_term,
+        payable_of_PaymentRequest_type_customer_email_cont: search_term
       )
     end
 

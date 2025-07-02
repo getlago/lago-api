@@ -2,7 +2,7 @@
 
 class SubscriptionsQuery < BaseQuery
   Result = BaseResult[:subscriptions]
-  Filters = BaseFilters[:external_customer_id, :plan_code, :status]
+  Filters = BaseFilters[:external_customer_id, :plan_code, :status, :customer]
 
   def call
     subscriptions = base_scope.result
@@ -24,7 +24,11 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def base_scope
-    Subscription.where(organization:).joins(:customer, :plan)
+    if organization.present?
+      Subscription.where(organization:)
+    else
+      Subscription.where(customer: filters.customer)
+    end.joins(:customer, :plan)
       .ransack(search_params:)
   end
 
