@@ -301,6 +301,7 @@ DROP INDEX IF EXISTS public.index_payments_on_payable_type_and_payable_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type;
 DROP INDEX IF EXISTS public.index_payments_on_organization_id;
 DROP INDEX IF EXISTS public.index_payments_on_invoice_id;
+DROP INDEX IF EXISTS public.index_payments_on_customer_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_customer_id;
@@ -3434,7 +3435,8 @@ CREATE TABLE public.payments (
     reference character varying,
     provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
     provider_payment_method_id character varying,
-    organization_id uuid
+    organization_id uuid,
+    customer_id uuid NOT NULL
 );
 
 
@@ -6552,6 +6554,13 @@ CREATE INDEX index_payment_requests_on_organization_id ON public.payment_request
 
 
 --
+-- Name: index_payments_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payments_on_customer_id ON public.payments USING btree (customer_id);
+
+
+--
 -- Name: index_payments_on_invoice_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8747,6 +8756,11 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250702163700'),
+('20250702162444'),
+('20250702161535'),
+('20250702160827'),
+('20250702160723'),
 ('20250630180000'),
 ('20250627134933'),
 ('20250627134932'),

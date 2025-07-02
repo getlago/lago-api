@@ -7,10 +7,11 @@ class Payment < ApplicationRecord
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
   belongs_to :organization
+  belongs_to :customer
   belongs_to :payable, polymorphic: true
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
-
+  
   has_many :refunds
   has_many :integration_resources, as: :syncable
   has_one :payment_receipt, dependent: :destroy
@@ -27,35 +28,37 @@ class Payment < ApplicationRecord
   validate :max_invoice_paid_amount_cents, on: :create
   validate :payment_request_succeeded, on: :create
 
-  delegate :customer, to: :payable
-
   enum :payable_payment_status, PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h, validate: {allow_nil: true}
 
   scope :for_organization, lambda { |organization|
     payables_join = ActiveRecord::Base.sanitize_sql_array([
       <<~SQL,
-        LEFT JOIN invoices AS scoped_invoices
-          ON scoped_invoices.id = payments.payable_id
+        LEFT JOIN invoices
+          ON invoices.id = payments.payable_id
           AND payments.payable_type = 'Invoice'
-          AND scoped_invoices.organization_id = :org_id
-          AND scoped_invoices.status IN (:visible_statuses)
-        LEFT JOIN payment_requests AS scoped_payment_requests
-          ON scoped_payment_requests.id = payments.payable_id
+          AND invoices.organization_id = :org_id
+          AND invoices.status IN (:visible_statuses)
+        LEFT JOIN payment_requests
+          ON payment_requests.id = payments.payable_id
           AND payments.payable_type = 'PaymentRequest'
-          AND scoped_payment_requests.organization_id = :org_id
+          AND payment_requests.organization_id = :org_id
       SQL
       {org_id: organization.id, visible_statuses: Invoice::VISIBLE_STATUS.values}
     ])
     joins(payables_join)
-      .where("scoped_invoices.id IS NOT NULL OR scoped_payment_requests.id IS NOT NULL")
+      .where("invoices.id IS NOT NULL OR payment_requests.id IS NOT NULL")
   }
 
   def self.ransackable_attributes(_ = nil)
-    %w[id provider_payment_id reference]
+    %w[id provider_payment_id reference] + _ransackers.keys
   end
 
   def self.ransackable_associations(_ = nil)
-    %w[payable]
+    %w[payable customer]
+  end
+
+  ransacker :invoice_number do
+    Arel.sql("(SELECT invoices.number FROM invoices WHERE invoices.id = payments.payable_id AND payments.payable_type = 'Invoice' LIMIT 1)")
   end
 
   def invoices
@@ -127,6 +130,7 @@ end
 #  status                       :string           not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
+#  customer_id                  :uuid             not null
 #  invoice_id                   :uuid
 #  organization_id              :uuid
 #  payable_id                   :uuid
@@ -137,6 +141,7 @@ end
 #
 # Indexes
 #
+#  index_payments_on_customer_id                                  (customer_id)
 #  index_payments_on_invoice_id                                   (invoice_id)
 #  index_payments_on_organization_id                              (organization_id)
 #  index_payments_on_payable_id_and_payable_type                  (payable_id,payable_type) UNIQUE WHERE ((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))
@@ -148,6 +153,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_provider_id => payment_providers.id)

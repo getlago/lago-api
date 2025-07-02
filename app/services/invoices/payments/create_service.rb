@@ -36,7 +36,8 @@ module Invoices
           payment_provider_customer_id: current_payment_provider_customer.id,
           amount_cents: invoice.total_due_amount_cents,
           amount_currency: invoice.currency,
-          status: "pending"
+          status: "pending",
+          customer_id: invoice.customer_id
         ).find_or_create_by!(
           payable: invoice,
           payable_payment_status: "pending"
