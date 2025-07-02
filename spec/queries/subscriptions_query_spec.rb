@@ -56,6 +56,11 @@ RSpec.describe SubscriptionsQuery, type: :query do
   end
 
   context "with search_term" do
+    let(:subscription) { create(:subscription, customer:, plan:, name: "Test Subscription") }
+    let(:subscription_2) { create(:subscription, customer:, plan:, name: "Test Subscription 2") }
+
+    before { subscription_2 }
+
     context "when search_term is an id" do
       let(:search_term) { subscription.id }
 
@@ -67,12 +72,12 @@ RSpec.describe SubscriptionsQuery, type: :query do
     end
 
     context "when search_term is a name" do
-      let(:search_term) { subscription.name }
+      let(:search_term) { subscription_2.name }
 
       it "returns only subscriptions for the specified name" do
         expect(result).to be_success
         expect(result.subscriptions.count).to eq(1)
-        expect(result.subscriptions).to eq([subscription])
+        expect(result.subscriptions).to eq([subscription_2])
       end
     end
 
@@ -91,8 +96,8 @@ RSpec.describe SubscriptionsQuery, type: :query do
 
       it "returns only subscriptions for the specified customer name" do
         expect(result).to be_success
-        expect(result.subscriptions.count).to eq(1)
-        expect(result.subscriptions).to eq([subscription])
+        expect(result.subscriptions.count).to eq(2)
+        expect(result.subscriptions).to eq([subscription, subscription_2])
       end
     end
 
@@ -101,8 +106,8 @@ RSpec.describe SubscriptionsQuery, type: :query do
 
       it "returns only subscriptions for the specified customer firstname" do
         expect(result).to be_success
-        expect(result.subscriptions.count).to eq(1)
-        expect(result.subscriptions).to eq([subscription])
+        expect(result.subscriptions.count).to eq(2)
+        expect(result.subscriptions).to eq([subscription, subscription_2])
       end
     end
 
@@ -111,8 +116,8 @@ RSpec.describe SubscriptionsQuery, type: :query do
 
       it "returns only subscriptions for the specified customer lastname" do
         expect(result).to be_success
-        expect(result.subscriptions.count).to eq(1)
-        expect(result.subscriptions).to eq([subscription])
+        expect(result.subscriptions.count).to eq(2)
+        expect(result.subscriptions).to eq([subscription, subscription_2])
       end
     end
 
@@ -121,8 +126,8 @@ RSpec.describe SubscriptionsQuery, type: :query do
 
       it "returns only subscriptions for the specified customer external_id" do
         expect(result).to be_success
-        expect(result.subscriptions.count).to eq(1)
-        expect(result.subscriptions).to eq([subscription])
+        expect(result.subscriptions.count).to eq(2)
+        expect(result.subscriptions).to eq([subscription, subscription_2])
       end
     end
   end

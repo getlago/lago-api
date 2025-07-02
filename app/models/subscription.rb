@@ -69,7 +69,7 @@ class Subscription < ApplicationRecord
   end
 
   def self.ransackable_associations(_ = nil)
-    %w[customer]
+    %w[customer plan]
   end
 
   def mark_as_active!(timestamp = Time.current)
