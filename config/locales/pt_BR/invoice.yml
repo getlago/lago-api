@@ -28,7 +28,7 @@ pt_BR:
     credit_notes: Notas de crédito
     date_from: De
     date_to: até
-    details: "Detalhes de %{resource}"
+    details: Detalhes de %{resource}
     document_name: Fatura
     document_tax_name: Nota fiscal
     due_date: Vencimento %{date}
@@ -84,7 +84,7 @@ pt_BR:
     sub_total_with_tax: Subtotal (incl. imposto)
     sub_total_without_tax: Subtotal (excl. imposto)
     subscription: Assinatura
-    subscription_interval: "Assinatura %{plan_interval} - %{plan_name}"
+    subscription_interval: Assinatura %{plan_interval} - %{plan_name}
     swift_code: Código SWIFT
     tax: Imposto
     tax_identification_number: 'ID do Imposto: %{tax_identification_number}'
