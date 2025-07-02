@@ -7,35 +7,62 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
 
   let(:charge) { create(:standard_charge) }
   let(:billable_metric) { charge.billable_metric }
+  let(:from_datetime) { Date.current.beginning_of_month }
+  let(:to_datetime) { Date.current.end_of_month }
+
+  let(:total_days) { (to_datetime - from_datetime).to_i + 1 }
+  let(:charges_duration) { total_days }
+  let(:days_passed) { (Date.current - from_datetime).to_i + 1 }
+  let(:ratio) { days_passed.to_f / charges_duration }
+
+  # Handle recurring vs non-recurring logic
+  let(:is_recurring) { false } # Default to non-recurring for testing
+  let(:expected_projected_units) do
+    if is_recurring
+      BigDecimal("10")
+    else
+      ratio > 0 ? (BigDecimal("10") / BigDecimal(ratio.to_s)).round(2) : BigDecimal('0')
+    end
+  end
+  let(:expected_projected_amount_cents) do
+    if is_recurring
+      100
+    else
+      ratio > 0 ? (100 / BigDecimal(ratio.to_s)).round.to_i : 0
+    end
+  end
 
   let(:usage) do
     [
       OpenStruct.new(
         charge_id: charge.id,
-        billable_metric:,
-        charge:,
-        units: 10,
+        billable_metric: billable_metric,
+        charge: charge,
+        units: "10",
         events_count: 12,
         amount_cents: 100,
         amount_currency: "EUR",
-        invoice_display_name: charge.invoice_display_name,
-        lago_id: billable_metric.id,
-        name: billable_metric.name,
-        code: billable_metric.code,
-        aggregation_type: billable_metric.aggregation_type,
-        grouped_by: {"card_type" => "visa"}
+        properties: {
+          "from_datetime" => from_datetime.to_s,
+          "to_datetime" => to_datetime.to_s,
+          "charges_duration" => charges_duration
+        },
+        grouped_by: {"card_type" => "visa"},
+        charge_filter: nil
       )
     ]
   end
 
   let(:result) { JSON.parse(serializer.to_json) }
 
-  it "serializes the fee" do
+  it "serializes the fee with projected values" do
     aggregate_failures do
       expect(result["charges"].first).to include(
         "units" => "10.0",
+        "projected_units" => expected_projected_units.to_s,
         "events_count" => 12,
         "amount_cents" => 100,
+        "projected_amount_cents" => expected_projected_amount_cents,
         "amount_currency" => "EUR",
         "charge" => {
           "lago_id" => charge.id,
@@ -52,8 +79,10 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         "grouped_usage" => [
           {
             "amount_cents" => 100,
+            "projected_amount_cents" => expected_projected_amount_cents,
             "events_count" => 12,
             "units" => "10.0",
+            "projected_units" => expected_projected_units.to_s,
             "grouped_by" => {"card_type" => "visa"},
             "filters" => []
           }
@@ -63,34 +92,50 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
   end
 
   describe "#filters" do
-    let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
-    let(:charge_filter) { create(:charge_filter, charge:, invoice_display_name: nil) }
-
+    let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric: billable_metric) }
+    let(:charge_filter) { create(:charge_filter, charge: charge, invoice_display_name: nil) }
     let(:usage) do
       Array.new(3) do
         OpenStruct.new(
           charge_id: charge.id,
-          billable_metric:,
-          charge:,
+          billable_metric: billable_metric,
+          charge: charge,
           units: "10.0",
           events_count: 12,
           amount_cents: 100,
           amount_currency: "EUR",
-          invoice_display_name: charge.invoice_display_name,
-          lago_id: billable_metric.id,
-          name: billable_metric.name,
-          code: billable_metric.code,
-          aggregation_type: billable_metric.aggregation_type,
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
           grouped_by: {"card_type" => "visa"},
-          charge_filter:
+          charge_filter: charge_filter
         )
       end
     end
 
-    it "returns filters array" do
+    let(:expected_filter_projected_units) do
+      if is_recurring
+        BigDecimal("30")
+      else
+        ratio > 0 ? (BigDecimal("30") / BigDecimal(ratio.to_s)).round(2) : BigDecimal('0')
+      end
+    end
+    let(:expected_filter_projected_amount_cents) do
+      if is_recurring
+        300
+      else
+        ratio > 0 ? (300 / BigDecimal(ratio.to_s)).round.to_i : 0
+      end
+    end
+
+    it "returns filters array with projected values" do
       expect(result["charges"].first["filters"].first).to include(
         "units" => "30.0",
+        "projected_units" => expected_filter_projected_units.to_s,
         "amount_cents" => 300,
+        "projected_amount_cents" => expected_filter_projected_amount_cents,
         "events_count" => 36,
         "invoice_display_name" => charge_filter.invoice_display_name,
         "values" => {}
@@ -98,11 +143,97 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
 
       expect(result["charges"].first["grouped_usage"].first["filters"].first).to include(
         "units" => "30.0",
+        "projected_units" => expected_filter_projected_units.to_s,
         "amount_cents" => 300,
+        "projected_amount_cents" => expected_filter_projected_amount_cents,
         "events_count" => 36,
         "invoice_display_name" => charge_filter.invoice_display_name,
         "values" => {}
       )
+    end
+  end
+
+  describe "edge cases" do
+    context "when ratio is zero" do
+      let(:from_datetime) { Date.current + 2.days }
+      let(:to_datetime) { Date.current + 1.days }
+      
+      it "handles zero division gracefully" do
+        expect(result["charges"].first).to include(
+          "projected_units" => "0.0",
+          "projected_amount_cents" => 0
+        )
+      end
+    end
+
+    context "when current date is after the period" do
+      let(:from_datetime) { 1.month.ago.beginning_of_month }
+      let(:to_datetime) { 1.month.ago.end_of_month }
+      
+      it "clamps ratio to 1.0" do
+        # When ratio is clamped to 1.0, projected values should equal current values
+        expect(result["charges"].first).to include(
+          "projected_units" => "10.0",
+          "projected_amount_cents" => 100
+        )
+      end
+    end
+  end
+
+  describe "recurring charges" do
+    let(:is_recurring) { true }
+
+    before do
+      allow_any_instance_of(charge.billable_metric.class).to receive(:recurring?).and_return(true)
+    end
+
+    it "does not project values for recurring charges" do
+      expect(result["charges"].first).to include(
+        "units" => "10.0",
+        "projected_units" => "10.0", # Same as current for recurring
+        "projected_amount_cents" => 100 # Same as current for recurring
+      )
+    end
+  end
+
+  describe "edge cases" do
+    context "when current date is before the period" do
+      let(:from_datetime) { 1.day.from_now }
+      let(:to_datetime) { 1.week.from_now }
+
+      it "returns zero projected values" do
+        expect(result["charges"].first).to include(
+          "projected_units" => "0.0",
+          "projected_amount_cents" => 0
+        )
+      end
+    end
+
+    context "when current date is after the period" do
+      let(:from_datetime) { 1.month.ago.beginning_of_month }
+      let(:to_datetime) { 1.month.ago.end_of_month }
+
+      it "returns current values as projected (ratio = 1.0)" do
+        expect(result["charges"].first).to include(
+          "projected_units" => "10.0",
+          "projected_amount_cents" => 100
+        )
+      end
+    end
+
+    context "when charges_duration differs from calculated duration" do
+      let(:charges_duration) { 15 } # Different from actual date range
+
+      it "uses charges_duration for calculations" do
+        expected_ratio = days_passed.to_f / 15
+        expected_units = (BigDecimal("10") / BigDecimal(expected_ratio.to_s)).round(2)
+        expected_amount = (100 / BigDecimal(expected_ratio.to_s)).round.to_i
+
+        expect(result["charges"].first).to include(
+          "projected_units" => expected_units.to_s,
+          "projected_amount_cents" => expected_amount
+        )
+      end
     end
   end
 end
