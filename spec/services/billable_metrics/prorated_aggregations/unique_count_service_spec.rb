@@ -296,7 +296,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             organization_id: organization.id,
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            timestamp: added_at + 2.hour,
+            timestamp: added_at + 2.hours,
             properties: {
               unique_id: event.properties["unique_id"],
               operation_type: "add"
@@ -308,14 +308,13 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             organization_id: organization.id,
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            timestamp: added_at + 3.hour,
+            timestamp: added_at + 3.hours,
             properties: {
               unique_id: event.properties["unique_id"],
               operation_type: "remove"
             }
           )
 
-          byebug          
           expect(result.aggregation).to eq(1.fdiv(31).ceil(5))
         end
       end
@@ -349,7 +348,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             organization_id: organization.id,
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            timestamp: from_datetime + 1.days,
+            timestamp: from_datetime + 1.day,
             properties: {unique_id: event.properties["unique_id"]}
           )
           create(
@@ -357,7 +356,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             organization_id: organization.id,
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            timestamp: from_datetime + 1.days + 1.hour,
+            timestamp: from_datetime + 1.day + 1.hour,
             properties: {unique_id: event.properties["unique_id"]}
           )
           create(
@@ -365,7 +364,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             organization_id: organization.id,
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            timestamp: from_datetime + 1.days + 2.hour,
+            timestamp: from_datetime + 1.day + 2.hours,
             properties: {unique_id: event.properties["unique_id"], operation_type: "remove"}
           )
           create(
@@ -373,7 +372,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             organization_id: organization.id,
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            timestamp: from_datetime + 1.days + 3.hour,
+            timestamp: from_datetime + 1.day + 3.hours,
             properties: {unique_id: event.properties["unique_id"]}
           )
 
@@ -391,11 +390,11 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             organization_id: organization.id,
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            timestamp: from_datetime + 3.days + 2.hour,
+            timestamp: from_datetime + 3.days + 2.hours,
             properties: {unique_id: event.properties["unique_id"], operation_type: "remove"}
           )
 
-          expect(result.aggregation).to eq((4.fdiv(31)).ceil(5))
+          expect(result.aggregation).to eq(4.fdiv(31).ceil(5))
           # NOTE: current_usage_units is 0 because there are no "active" events in the period
           expect(result.current_usage_units).to eq(0)
         end

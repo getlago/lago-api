@@ -372,27 +372,26 @@ module Events
         end
 
         # IS_IGNORED logic for prorated aggregation desired behaviour is:
-          # 27th property add
-          # 27th property remove
-          # 27th property add
+        # 27th property add
+        # 27th property remove
+        # 27th property add
 
+        # 28th property add (operation is 0, so it's already filtered by previous query)
+        # 28th property remove
+        # --- end of unit 0, prorated 2 days
+        # 30th property add
+        # --the result of 30 is 1 -> prorated 1 day
+        # for this we want to have only 2 events: 27th-28th and 30th to 30th
 
-          # 28th property add (operation is 0, so it's already filtered by previous query)
-          # 28th property remove
-          # --- end of unit 0, prorated 2 days
-          # 30th property add
-          # --the result of 30 is 1 -> prorated 1 day
-          # for this we want to have only 2 events: 27th-28th and 30th to 30th
-
-          # summary table:
-          # 27th property add not_ignore
-          # 27th property remove ignore
-          # 27th property add ignore
-          # 28th property remove not_ignore
-          # 30th property add not_ignore
-          # So the rule is:
-          # -- for the same day, we look at next event. if it's opposite of current, current can be ignored
-          # -- we look at previous not ignored event. if the operation type matches. we can ignore current
+        # summary table:
+        # 27th property add not_ignore
+        # 27th property remove ignore
+        # 27th property add ignore
+        # 28th property remove not_ignore
+        # 30th property add not_ignore
+        # So the rule is:
+        # -- for the same day, we look at next event. if it's opposite of current, current can be ignored
+        # -- we look at previous not ignored event. if the operation type matches. we can ignore current
         def existing_event_opposite_operation_type_sql
           <<-SQL
             (
