@@ -4,6 +4,7 @@ module Auth
   class TokenService < BaseService
     THREE_HOURS = 10800
     ALGORITHM = "HS256"
+    LAGO_TOKEN_HEADER = "x-lago-token"
 
     def self.encode(user: nil, user_id: nil, **extra)
       return nil if (user_id || user&.id).blank?

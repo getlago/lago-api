@@ -97,6 +97,10 @@ RSpec.describe GraphqlController, type: :request do
           }
 
         expect(response.status).to be(200)
+<<<<<<< HEAD
+=======
+        expect(response.headers[Auth::TokenService::LAGO_TOKEN_HEADER]).to be_present
+>>>>>>> 7fb398093 (feat(sso-enforcement):have AuthenticableUser use Auth::TokenService)
       end
 
       it "renews the token" do
