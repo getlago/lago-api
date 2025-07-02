@@ -13,6 +13,7 @@ module Entitlement
       return result.not_found_failure!(resource: "privilege") unless privilege
 
       ActiveRecord::Base.transaction do
+        privilege.values.discard_all!
         privilege.discard!
       end
 

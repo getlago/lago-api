@@ -42,5 +42,18 @@ RSpec.describe Entitlement::PrivilegeDestroyService, type: :service do
         expect { subject }.to raise_error(Discard::RecordNotDiscarded)
       end
     end
+
+    context "when privilege has entitlements" do
+      let(:entitlement) { create(:entitlement, feature:) }
+      let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: "10") }
+
+      before do
+        entitlement_value
+      end
+
+      it "discards all related entitlement values" do
+        expect { subject }.to change(Entitlement::EntitlementValue, :count).by(-1)
+      end
+    end
   end
 end

@@ -34,7 +34,7 @@ RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
     end
 
     it "creates entitlement values" do
-      expect { result }.to change { Entitlement::EntitlementValue.count }.by(1)
+      expect { result }.to change(Entitlement::EntitlementValue, :count).by(1)
     end
 
     it "returns the entitlements in the result" do
