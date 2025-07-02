@@ -862,6 +862,8 @@ type ChargeFilterUsage {
   eventsCount: Int!
   id: ID
   invoiceDisplayName: String
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
   units: Float!
   values: ChargeFilterValues!
 }
@@ -914,6 +916,8 @@ type ChargeUsage {
   filters: [ChargeFilterUsage!]
   groupedUsage: [GroupedChargeUsage!]!
   id: ID!
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
   units: Float!
 }
 
@@ -5235,6 +5239,8 @@ type GroupedChargeUsage {
   filters: [ChargeFilterUsage!]
   groupedBy: JSON
   id: ID!
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
   units: Float!
 }
 

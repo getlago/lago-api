@@ -7,9 +7,11 @@ module Types
         graphql_name "GroupedChargeUsage"
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
+        field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
         field :id, ID, null: false
         field :units, GraphQL::Types::Float, null: false
+        field :projected_units, GraphQL::Types::Float, null: false
 
         field :filters, [Types::Customers::Usage::ChargeFilter], null: true
         field :grouped_by, GraphQL::Types::JSON, null: true

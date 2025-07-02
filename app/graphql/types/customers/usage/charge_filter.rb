@@ -9,9 +9,11 @@ module Types
         field :id, ID, null: true, method: :charge_filter_id
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
+        field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
         field :invoice_display_name, String, null: true
         field :units, GraphQL::Types::Float, null: false
+        field :projected_units, GraphQL::Types::Float, null: false
         field :values, Types::ChargeFilters::Values, null: false
 
         def values

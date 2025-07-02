@@ -7,9 +7,11 @@ module Types
         graphql_name "ChargeUsage"
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
+        field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
         field :id, ID, null: false
         field :units, GraphQL::Types::Float, null: false
+        field :projected_units, GraphQL::Types::Float, null: false
 
         field :billable_metric, Types::BillableMetrics::Object, null: false
         field :charge, Types::Charges::Object, null: false
