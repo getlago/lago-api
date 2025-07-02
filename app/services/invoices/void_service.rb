@@ -18,9 +18,8 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless invoice
-      return result.forbidden_failure! unless generate_credit_note_allowed?
       return result.not_allowed_failure!(code: "not_voidable") if invoice.voided?
-      return result.not_allowed_failure!(code: "not_voidable") if !invoice.voidable? && !explicit_void_intent?
+      return result.forbidden_failure! unless generate_credit_note_allowed?
       unless valid_credit_note_amounts?
         return result.single_validation_failure!(
           field: :credit_refund_amount,
@@ -30,7 +29,7 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice.payment_overdue = false if invoice.payment_overdue?
-        mark_as_voided!
+        invoice.void!
         flag_lifetime_usage_for_refresh
 
         invoice.credits.each do |credit|
@@ -67,27 +66,12 @@ module Invoices
 
     attr_reader :invoice, :params, :generate_credit_note, :credit_amount, :refund_amount
 
-    # If we're in the legacy flow (without a credit note), follow the standard voiding rules via the state machine.
-    # If we're in the new flow (with a credit note), force the invoice into a voided state, even if it's not voidable.
-    def mark_as_voided!
-      if generate_credit_note
-        invoice.mark_as_voided!
-      else
-        invoice.void!
-      end
-    end
-
     def generate_credit_note_allowed?
-      return true unless generate_credit_note
       License.premium?
     end
 
     def flag_lifetime_usage_for_refresh
       LifetimeUsages::FlagRefreshFromInvoiceService.call(invoice:).raise_if_error!
-    end
-
-    def explicit_void_intent?
-      params.key?(:generate_credit_note)
     end
 
     def valid_credit_note_amounts?

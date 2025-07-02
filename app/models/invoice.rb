@@ -107,7 +107,7 @@ class Invoice < ApplicationRecord
     end
 
     event :void do
-      transitions from: :finalized, to: :voided, guard: :voidable?, after: :mark_as_ready_for_payment_processing!
+      transitions from: :finalized, to: :voided, after: :remove_ready_for_payment_processing!
     end
   end
 
@@ -331,14 +331,6 @@ class Invoice < ApplicationRecord
     finalized?
   end
 
-  def voidable?
-    if payment_dispute_lost_at? || total_paid_amount_cents > 0 || credit_notes.where.not(credit_status: :voided).any?
-      return false
-    end
-
-    finalized? && (payment_pending? || payment_failed?)
-  end
-
   def all_charges_have_fees?
     return true unless subscription?
 
@@ -405,17 +397,13 @@ class Invoice < ApplicationRecord
     fees.any? && should_finalize_invoice
   end
 
-  def mark_as_voided!
-    update!(status: "voided", ready_for_payment_processing: false, voided_at: Time.current)
-  end
-
   private
 
   def should_assign_sequential_id?
     status_changed_to_finalized?
   end
 
-  def mark_as_ready_for_payment_processing!
+  def remove_ready_for_payment_processing!
     update!(ready_for_payment_processing: false)
   end
 
