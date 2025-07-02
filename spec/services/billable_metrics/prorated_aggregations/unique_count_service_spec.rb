@@ -395,10 +395,9 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             properties: {unique_id: event.properties["unique_id"], operation_type: "remove"}
           )
 
-          byebug
-
           expect(result.aggregation).to eq((4.fdiv(31)).ceil(5))
-          expect(result.current_usage_units).to eq(2)
+          # NOTE: current_usage_units is 0 because there are no "active" events in the period
+          expect(result.current_usage_units).to eq(0)
         end
       end
     end
