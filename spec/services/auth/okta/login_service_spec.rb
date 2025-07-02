@@ -28,6 +28,9 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
         expect(result).to be_success
         expect(result.user.email).to eq("foo@bar.com")
         expect(result.token).to be_present
+
+        decoded = Auth::TokenService.decode(token: result.token)
+        expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::OKTA)
       end
     end
 

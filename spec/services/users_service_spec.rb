@@ -137,6 +137,15 @@ RSpec.describe UsersService, type: :service do
               membership_id: "membership/#{active_membership.id}"
             )
           end
+
+          context "when login succeed" do
+            it "saves the login method in token" do
+              expect(result).to be_success
+
+              decoded = Auth::TokenService.decode(token: result.token)
+              expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+            end
+          end
         end
 
         context "when user has no active membership" do
