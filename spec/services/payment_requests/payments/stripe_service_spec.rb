@@ -301,6 +301,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
         stripe_payment_provider
         stripe_customer
       end
+
       it "creates a payment and updates payment request and invoice payment status", :aggregate_failures do
         expect(result).to be_success
         expect(result.payment.status).to eq(status)
