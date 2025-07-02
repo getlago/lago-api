@@ -143,6 +143,7 @@ module PaymentRequests
 
         Payment.new(
           organization_id: payable.organization_id,
+          customer:,
           payable:,
           customer:,
           payment_provider_id: adyen_payment_provider.id,
