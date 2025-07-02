@@ -67,6 +67,7 @@ module Invoices
     attr_reader :invoice, :params, :generate_credit_note, :credit_amount, :refund_amount
 
     def generate_credit_note_allowed?
+      return true unless generate_credit_note
       License.premium?
     end
 
