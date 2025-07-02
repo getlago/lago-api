@@ -21,7 +21,11 @@ module Types
         end
 
         def amount_cents
-          object.sum(&:amount_cents)
+          usage_calculator.current_amount_cents
+        end
+
+        def projected_amount_cents
+          usage_calculator.projected_amount_cents
         end
 
         def events_count
@@ -29,7 +33,11 @@ module Types
         end
 
         def units
-          object.map { |f| BigDecimal(f.units) }.sum
+          usage_calculator.current_units
+        end
+
+        def projected_units
+          usage_calculator.projected_units
         end
 
         def grouped_by
@@ -40,6 +48,12 @@ module Types
           return [] unless object.first.has_charge_filters?
 
           object.sort_by { |f| f.charge_filter&.display_name.to_s }
+        end
+
+        private
+
+        def usage_calculator
+          @usage_calculator ||= ::Customers::FeesUsageCalculationService.new(object)
         end
       end
     end

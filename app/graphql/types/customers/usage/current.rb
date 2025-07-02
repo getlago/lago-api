@@ -19,6 +19,10 @@ module Types
 
         field :charges_usage, [Types::Customers::Usage::Charge], null: false
 
+        def projected_amount_cents
+          object.projected_fees_amount_cents
+        end
+
         def charges_usage
           object.fees.group_by(&:charge_id).values
         end

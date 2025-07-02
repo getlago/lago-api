@@ -16,12 +16,26 @@ module Types
         field :projected_units, GraphQL::Types::Float, null: false
         field :values, Types::ChargeFilters::Values, null: false
 
+        def projected_units
+          usage_calculator.projected_units
+        end
+
+        def projected_amount_cents
+          usage_calculator.projected_amount_cents
+        end
+
         def values
           object.charge_filter&.to_h || {} # rubocop:disable Lint/RedundantSafeNavigation
         end
 
         def invoice_display_name
           object.charge_filter&.invoice_display_name
+        end
+
+        private
+
+        def usage_calculator
+          @usage_calculator ||= ::Customers::FeesUsageCalculationService.new([object])
         end
       end
     end

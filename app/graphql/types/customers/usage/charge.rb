@@ -23,7 +23,11 @@ module Types
         end
 
         def units
-          object.map { |f| BigDecimal(f.units) }.sum
+          usage_calculator.current_units
+        end
+
+        def projected_units
+          usage_calculator.projected_units
         end
 
         def events_count
@@ -31,7 +35,11 @@ module Types
         end
 
         def amount_cents
-          object.sum(&:amount_cents)
+          usage_calculator.current_amount_cents
+        end
+
+        def projected_amount_cents
+          usage_calculator.projected_amount_cents
         end
 
         def charge
@@ -52,6 +60,12 @@ module Types
           return [] unless object.any? { |f| f.grouped_by.present? }
 
           object.group_by(&:grouped_by).values
+        end
+
+        private
+
+        def usage_calculator
+          @usage_calculator ||= ::Customers::FeesUsageCalculationService.new(object)
         end
       end
     end
