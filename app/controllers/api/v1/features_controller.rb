@@ -95,8 +95,6 @@ module Api
         end
       end
 
-
-
       private
 
       def feature_create_params

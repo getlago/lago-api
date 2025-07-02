@@ -19,7 +19,7 @@ RSpec.describe Entitlement::Feature, type: :model do
       expect(subject).to validate_presence_of(:code)
       expect(subject).to validate_length_of(:code).is_at_most(255)
       expect(subject).to validate_length_of(:name).is_at_most(255)
-      expect(subject).to validate_length_of(:description).is_at_most(255)
+      expect(subject).to validate_length_of(:description).is_at_most(600)
     end
   end
 end

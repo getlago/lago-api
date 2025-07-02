@@ -12,7 +12,7 @@ module Entitlement
 
     validates :code, presence: true, length: {maximum: 255}
     validates :name, length: {maximum: 255}
-    validates :description, length: {maximum: 255}
+    validates :description, length: {maximum: 600}
 
     def self.ransackable_attributes(_auth_object = nil)
       %w[code name description]
