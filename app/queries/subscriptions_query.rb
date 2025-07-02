@@ -28,8 +28,7 @@ class SubscriptionsQuery < BaseQuery
       Subscription.where(organization:)
     else
       Subscription.where(customer: filters.customer)
-    end.joins(:customer, :plan)
-      .ransack(search_params:)
+    end.joins(:customer, :plan).ransack(search_params)
   end
 
   def search_params
@@ -39,7 +38,9 @@ class SubscriptionsQuery < BaseQuery
       m: "or",
       id_cont: search_term,
       name_cont: search_term,
-      external_id_cont: search_term
+      external_id_cont: search_term,
+      plan_name_cont: search_term,
+      plan_code_cont: search_term
     }
 
     return terms if filters.external_customer_id.present?
