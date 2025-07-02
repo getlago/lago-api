@@ -107,7 +107,7 @@ class Invoice < ApplicationRecord
     end
 
     event :void do
-      transitions from: :finalized, to: :voided, after: :remove_ready_for_payment_processing!
+      transitions from: :finalized, to: :voided, after: :handle_void_transition!
     end
   end
 
@@ -403,8 +403,11 @@ class Invoice < ApplicationRecord
     status_changed_to_finalized?
   end
 
-  def remove_ready_for_payment_processing!
-    update!(ready_for_payment_processing: false)
+  def handle_void_transition!
+    update!(
+      ready_for_payment_processing: false,
+      voided_at: Time.current
+    )
   end
 
   def ensure_number
