@@ -11,7 +11,7 @@ class Payment < ApplicationRecord
   belongs_to :payable, polymorphic: true
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
-  
+
   has_many :refunds
   has_many :integration_resources, as: :syncable
   has_one :payment_receipt, dependent: :destroy
