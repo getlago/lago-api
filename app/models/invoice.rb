@@ -409,30 +409,6 @@ class Invoice < ApplicationRecord
     update!(status: "voided", ready_for_payment_processing: false, voided_at: Time.current)
   end
 
-  def ratio
-    return 0 if fees.empty?
-    fee = fees.first
-    from_date = fee.properties["from_datetime"].to_date
-    to_date = fee.properties["to_datetime"].to_date
-    current_date = Date.current
-
-    total_days = (to_date - from_date).to_i + 1
-
-    charges_duration = fee.properties["charges_duration"] || total_days
-
-    return 1.0 if current_date >= to_date
-    return 0.0 if current_date < from_date
-
-    days_passed = (current_date - from_date).to_i + 1
-
-    ratio = days_passed.to_f / charges_duration
-    ratio.clamp(0.0, 1.0)
-  end
-
-  def projected_fees_amount_cents
-    projected_amount_cents = ratio > 0 ? (fees_amount_cents / BigDecimal(ratio.to_s)).round.to_i : 0
-  end
-
   private
 
   def should_assign_sequential_id?
