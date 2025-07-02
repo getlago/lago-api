@@ -112,6 +112,7 @@ module PaymentRequests
 
         Payment.new(
           organization_id: payable.organization_id,
+          customer:,
           payable:,
           customer:,
           payment_provider_id: moneyhash_payment_provider.id,
