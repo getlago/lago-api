@@ -25,7 +25,6 @@ class PaymentsQuery < BaseQuery
   def base_scope
     Payment
       .for_organization(organization)
-      .joins("LEFT JOIN customers AS query_customers ON (query_customers.id = scoped_invoices.customer_id OR query_customers.id = scoped_payment_requests.customer_id)")
       .ransack(search_params)
   end
 
@@ -41,23 +40,17 @@ class PaymentsQuery < BaseQuery
 
     # Add payable search terms if not filtering by specific invoice
     if filters.invoice_id.blank?
-      terms[:payable_of_Invoice_type_number_cont] = search_term
+      terms[:invoice_number_cont] = search_term
     end
 
     # Add customer search terms if not filtering by specific customer
     if filters.external_customer_id.blank?
       terms.merge!(
-        payable_of_Invoice_type_customer_name_cont: search_term,
-        payable_of_Invoice_type_customer_firstname_cont: search_term,
-        payable_of_Invoice_type_customer_lastname_cont: search_term,
-        payable_of_Invoice_type_customer_external_id_cont: search_term,
-        payable_of_Invoice_type_customer_email_cont: search_term,
-
-        payable_of_PaymentRequest_type_customer_name_cont: search_term,
-        payable_of_PaymentRequest_type_customer_firstname_cont: search_term,
-        payable_of_PaymentRequest_type_customer_lastname_cont: search_term,
-        payable_of_PaymentRequest_type_customer_external_id_cont: search_term,
-        payable_of_PaymentRequest_type_customer_email_cont: search_term
+        customer_name_cont: search_term,
+        customer_firstname_cont: search_term,
+        customer_lastname_cont: search_term,
+        customer_external_id_cont: search_term,
+        customer_email_cont: search_term
       )
     end
 
@@ -73,13 +66,13 @@ class PaymentsQuery < BaseQuery
   def filter_by_customer(scope)
     external_customer_id = filters.external_customer_id
 
-    scope.where("query_customers.external_id = :external_customer_id", external_customer_id:)
+    scope.joins(:customer).where("customers.external_id = :external_customer_id", external_customer_id:)
   end
 
   def filter_by_invoice(scope)
     invoice_id = filters.invoice_id
 
-    scope.joins("LEFT JOIN invoices_payment_requests ON invoices_payment_requests.payment_request_id = scoped_payment_requests.id")
-      .where("scoped_invoices.id = :invoice_id OR invoices_payment_requests.invoice_id = :invoice_id", invoice_id:)
+    scope.joins("LEFT JOIN invoices_payment_requests ON invoices_payment_requests.payment_request_id = payments.payable_id")
+      .where("invoices.id = :invoice_id OR invoices_payment_requests.invoice_id = :invoice_id", invoice_id:)
   end
 end

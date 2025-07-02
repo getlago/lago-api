@@ -11,7 +11,7 @@ class Payment < ApplicationRecord
   belongs_to :payable, polymorphic: true
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
-
+  
   has_many :refunds
   has_many :integration_resources, as: :syncable
   has_one :payment_receipt, dependent: :destroy
@@ -33,28 +33,32 @@ class Payment < ApplicationRecord
   scope :for_organization, lambda { |organization|
     payables_join = ActiveRecord::Base.sanitize_sql_array([
       <<~SQL,
-        LEFT JOIN invoices AS scoped_invoices
-          ON scoped_invoices.id = payments.payable_id
+        LEFT JOIN invoices
+          ON invoices.id = payments.payable_id
           AND payments.payable_type = 'Invoice'
-          AND scoped_invoices.organization_id = :org_id
-          AND scoped_invoices.status IN (:visible_statuses)
-        LEFT JOIN payment_requests AS scoped_payment_requests
-          ON scoped_payment_requests.id = payments.payable_id
+          AND invoices.organization_id = :org_id
+          AND invoices.status IN (:visible_statuses)
+        LEFT JOIN payment_requests
+          ON payment_requests.id = payments.payable_id
           AND payments.payable_type = 'PaymentRequest'
-          AND scoped_payment_requests.organization_id = :org_id
+          AND payment_requests.organization_id = :org_id
       SQL
       {org_id: organization.id, visible_statuses: Invoice::VISIBLE_STATUS.values}
     ])
     joins(payables_join)
-      .where("scoped_invoices.id IS NOT NULL OR scoped_payment_requests.id IS NOT NULL")
+      .where("invoices.id IS NOT NULL OR payment_requests.id IS NOT NULL")
   }
 
   def self.ransackable_attributes(_ = nil)
-    %w[id provider_payment_id reference]
+    %w[id provider_payment_id reference] + _ransackers.keys
   end
 
   def self.ransackable_associations(_ = nil)
-    %w[payable]
+    %w[payable customer]
+  end
+
+  ransacker :invoice_number do
+    Arel.sql("(SELECT invoices.number FROM invoices WHERE invoices.id = payments.payable_id AND payments.payable_type = 'Invoice' LIMIT 1)")
   end
 
   def invoices
@@ -126,7 +130,11 @@ end
 #  status                       :string           not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
+<<<<<<< HEAD
 #  customer_id                  :uuid
+=======
+#  customer_id                  :uuid             not null
+>>>>>>> 8826fe16e (Better way to define ransack)
 #  invoice_id                   :uuid
 #  organization_id              :uuid             not null
 #  payable_id                   :uuid
@@ -149,6 +157,7 @@ end
 #
 # Foreign Keys
 #
+#  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_provider_id => payment_providers.id)
