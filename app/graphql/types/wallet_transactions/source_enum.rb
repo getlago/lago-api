@@ -10,4 +10,4 @@ module Types
       end
     end
   end
-end 
+end

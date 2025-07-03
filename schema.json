@@ -43538,30 +43538,6 @@
               ]
             },
             {
-              "name": "walletTransactionSources",
-              "description": "Query wallet transaction sources",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "ENUM",
-                      "name": "WalletTransactionSourceEnum",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
               "name": "walletTransactions",
               "description": "Query wallet transactions",
               "type": {
@@ -54188,6 +54164,22 @@
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "source",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "WalletTransactionSourceEnum",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,

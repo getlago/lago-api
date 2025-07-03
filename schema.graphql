@@ -8328,11 +8328,6 @@ type Query {
   ): WalletTransaction
 
   """
-  Query wallet transaction sources
-  """
-  walletTransactionSources: [WalletTransactionSourceEnum!]!
-
-  """
   Query wallet transactions
   """
   walletTransactions(
@@ -10537,6 +10532,7 @@ type WalletTransaction {
   invoiceRequiresSuccessfulPayment: Boolean!
   metadata: [WalletTransactionMetadataObject!]
   settledAt: ISO8601DateTime
+  source: WalletTransactionSourceEnum!
   status: WalletTransactionStatusEnum!
   transactionStatus: WalletTransactionTransactionStatusEnum!
   transactionType: WalletTransactionTransactionTypeEnum!
