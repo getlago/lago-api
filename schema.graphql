@@ -4129,6 +4129,7 @@ type CustomerUsage {
   currency: CurrencyEnum!
   fromDatetime: ISO8601DateTime!
   issuingDate: ISO8601Date!
+  projectedAmountCents: BigInt!
   taxesAmountCents: BigInt!
   toDatetime: ISO8601DateTime!
   totalAmountCents: BigInt!
