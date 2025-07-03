@@ -276,8 +276,8 @@ RSpec.describe Invoices::UpdateService do
       context "when invoice is invisible" do
         before { invoice.update! status: :open }
 
-        it "delivers a webhook" do
-          expect { result }.not_to have_enqueued_job_after_commit(SendWebhookJob).with("invoice.payment_status_updated", invoice)
+        it "does not deliver a webhook" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
         end
       end
 
@@ -285,12 +285,7 @@ RSpec.describe Invoices::UpdateService do
         let(:invoice) { create(:invoice, payment_status: :succeeded) }
 
         it "does not deliver a webhook" do
-          result
-
-          expect(SendWebhookJob).not_to have_been_enqueued.with(
-            "invoice.payment_status_updated",
-            invoice
-          )
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
         end
       end
     end
