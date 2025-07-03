@@ -13,6 +13,10 @@ module AuthenticableUser
     @current_user ||= User.find_by(id: decoded_token["sub"]) if token && decoded_token
   end
 
+  def login_method
+    @login_method ||= decoded_token["login_method"] if token && decoded_token
+  end
+
   def token
     @token ||= request.headers["Authorization"].to_s.split(" ").last
   end
