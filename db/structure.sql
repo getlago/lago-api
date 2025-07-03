@@ -416,7 +416,6 @@ DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
 DROP INDEX IF EXISTS public.index_events_on_properties;
-DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_events_on_external_subscription_id_with_included;
@@ -587,6 +586,7 @@ DROP INDEX IF EXISTS public.idx_on_billing_entity_id_billing_entity_sequential__
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_724373e5ae;
 DROP INDEX IF EXISTS public.idx_on_amount_cents_plan_id_recurring_888044d66b;
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
+DROP INDEX IF EXISTS public.idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp;
 DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription;
@@ -4550,6 +4550,13 @@ CREATE INDEX idx_enqueued_per_organization ON public.usage_monitoring_subscripti
 
 
 --
+-- Name: idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp ON public.events USING btree (external_subscription_id, organization_id, code, "timestamp") WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: idx_features_code_unique_per_organization; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5737,13 +5744,6 @@ CREATE INDEX index_events_on_organization_id ON public.events USING btree (organ
 --
 
 CREATE INDEX index_events_on_organization_id_and_code ON public.events USING btree (organization_id, code);
-
-
---
--- Name: index_events_on_organization_id_and_timestamp; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_events_on_organization_id_and_timestamp ON public.events USING btree (organization_id, "timestamp") WHERE (deleted_at IS NULL);
 
 
 --
@@ -8747,6 +8747,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250703133126'),
 ('20250630180000'),
 ('20250627134933'),
 ('20250627134932'),
