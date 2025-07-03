@@ -2,19 +2,19 @@
 
 # This matcher ensure that a job is enqueued only after a transaction is committed to ensure no race-condition may
 # happen.
-RSpec::Matchers.define :enqueue_after_commit do |job|
+RSpec::Matchers.define :have_enqueued_job_after_commit do |job|
   supports_block_expectations
-  match do |block|
+  match(notify_expectation_failures: true) do |block|
     ApplicationRecord.transaction do
       block.call
 
-      expect(job).not_to have_been_enqueued
+      expect(job).not_to have_been_enqueued, "Expected #{job} to not have been enqueued before commit, but it was."
     end
 
     args = @args || []
     kwargs = @kwargs || {}
 
-    expect(job).to have_been_enqueued.with(*args, **kwargs)
+    expect(job).to have_been_enqueued.with(*args, **kwargs), "Expected #{job} to have been enqueued with #{args} and #{kwargs}, but it was not."
   end
 
   chain :with do |*args, **kwargs|
