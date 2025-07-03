@@ -84,6 +84,7 @@ module Types
     field :taxes, resolver: Resolvers::TaxesResolver
     field :wallet, resolver: Resolvers::WalletResolver
     field :wallet_transaction, resolver: Resolvers::WalletTransactionResolver
+    field :wallet_transaction_sources, resolver: Resolvers::WalletTransactionSourcesResolver
     field :wallet_transactions, resolver: Resolvers::WalletTransactionsResolver
     field :wallets, resolver: Resolvers::WalletsResolver
     field :webhook, resolver: Resolvers::WebhookResolver
