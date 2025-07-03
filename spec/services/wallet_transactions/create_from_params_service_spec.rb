@@ -63,7 +63,7 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
     end
 
     it "enqueues the BillPaidCreditJob" do
-      expect { create_service }.to have_enqueued_job(BillPaidCreditJob)
+      expect { create_service }.to have_enqueued_job_after_commit(BillPaidCreditJob)
     end
 
     it "updates wallet balance based on granted and voided credits" do
