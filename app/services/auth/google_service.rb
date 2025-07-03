@@ -69,7 +69,8 @@ module Auth
         invite:,
         email: google_oidc["email"],
         token: invite_token,
-        password: SecureRandom.hex
+        password: SecureRandom.hex,
+        login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH
       )
     rescue Google::Auth::IDTokens::SignatureError
       result.single_validation_failure!(error_code: "invalid_google_token")
