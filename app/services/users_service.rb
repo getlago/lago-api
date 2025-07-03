@@ -72,12 +72,6 @@ class UsersService < BaseService
     result
   end
 
-  def new_token(user)
-    result.user = user
-    result.token = generate_token
-    result
-  end
-
   private
 
   def generate_token
