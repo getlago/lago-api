@@ -8312,7 +8312,7 @@ type Query {
   """
   Query payments of an organization
   """
-  payments(externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int): PaymentCollection!
+  payments(externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
 
   """
   Query a single plan of an organization
@@ -8362,7 +8362,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(limit: Int, page: Int, planCode: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(limit: Int, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query a single tax of an organization

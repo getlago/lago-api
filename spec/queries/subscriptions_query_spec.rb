@@ -3,13 +3,14 @@
 require "rails_helper"
 
 RSpec.describe SubscriptionsQuery, type: :query do
-  subject(:result) { described_class.call(organization:, pagination:, filters:) }
+  subject(:result) { described_class.call(organization:, pagination:, filters:, search_term:) }
 
   let(:returned_ids) { result.subscriptions.pluck(:id) }
 
   let(:organization) { create(:organization) }
   let(:pagination) { nil }
   let(:filters) { {} }
+  let(:search_term) { nil }
 
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
@@ -51,6 +52,83 @@ RSpec.describe SubscriptionsQuery, type: :query do
       expect(result).to be_success
       expect(result.subscriptions.count).to eq(0)
       expect(result.subscriptions.current_page).to eq(2)
+    end
+  end
+
+  context "with search_term" do
+    let(:subscription) { create(:subscription, customer:, plan:, name: "Test Subscription") }
+    let(:subscription_2) { create(:subscription, customer:, plan:, name: "Test Subscription 2") }
+
+    before { subscription_2 }
+
+    context "when search_term is an id" do
+      let(:search_term) { subscription.id }
+
+      it "returns only subscriptions for the specified id" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(1)
+        expect(result.subscriptions).to eq([subscription])
+      end
+    end
+
+    context "when search_term is a name" do
+      let(:search_term) { subscription_2.name }
+
+      it "returns only subscriptions for the specified name" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(1)
+        expect(result.subscriptions).to eq([subscription_2])
+      end
+    end
+
+    context "when search_term is an external_id" do
+      let(:search_term) { subscription.external_id }
+
+      it "returns only subscriptions for the specified external_id" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(1)
+        expect(result.subscriptions).to eq([subscription])
+      end
+    end
+
+    context "when search_term is a customer name" do
+      let(:search_term) { customer.name }
+
+      it "returns only subscriptions for the specified customer name" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(2)
+        expect(result.subscriptions).to eq([subscription, subscription_2])
+      end
+    end
+
+    context "when search_term is a customer firstname" do
+      let(:search_term) { customer.firstname }
+
+      it "returns only subscriptions for the specified customer firstname" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(2)
+        expect(result.subscriptions).to eq([subscription, subscription_2])
+      end
+    end
+
+    context "when search_term is a customer lastname" do
+      let(:search_term) { customer.lastname }
+
+      it "returns only subscriptions for the specified customer lastname" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(2)
+        expect(result.subscriptions).to eq([subscription, subscription_2])
+      end
+    end
+
+    context "when search_term is a customer external_id" do
+      let(:search_term) { customer.external_id }
+
+      it "returns only subscriptions for the specified customer external_id" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(2)
+        expect(result.subscriptions).to eq([subscription, subscription_2])
+      end
     end
   end
 

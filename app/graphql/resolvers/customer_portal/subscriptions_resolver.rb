@@ -16,12 +16,13 @@ module Resolvers
 
       def resolve(page: nil, limit: nil, plan_code: nil, status: nil)
         result = SubscriptionsQuery.call(
-          organization: context[:customer_portal_user],
+          organization: nil,
           pagination: {page:, limit:},
           filters: {
             external_customer_id: context[:customer_portal_user].external_id,
             plan_code:,
-            status:
+            status:,
+            customer: context[:customer_portal_user]
           }
         )
 

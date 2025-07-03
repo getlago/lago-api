@@ -85,6 +85,7 @@ module Invoices
 
         payment = Payment.find_or_initialize_by(
           organization: @invoice.organization,
+          customer:,
           payable: @invoice,
           payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,

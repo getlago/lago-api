@@ -30,6 +30,7 @@ module PaymentRequests
 
         payment = Payment.new(
           organization_id: payable.organization_id,
+          customer:,
           payable: payable,
           payment_provider_id: moneyhash_payment_provider.id,
           payment_provider_customer_id: customer.moneyhash_customer.id,
@@ -110,6 +111,7 @@ module PaymentRequests
 
         Payment.new(
           organization_id: payable.organization_id,
+          customer:,
           payable:,
           payment_provider_id: moneyhash_payment_provider.id,
           payment_provider_customer_id: customer.moneyhash_customer.id,

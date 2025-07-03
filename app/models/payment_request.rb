@@ -26,6 +26,14 @@ class PaymentRequest < ApplicationRecord
   monetize :amount_cents
   monetize :total_due_amount_cents, with_model_currency: :currency, allow_nil: true
 
+  def self.ransackable_attributes(_ = nil)
+    %w[id number]
+  end
+
+  def self.ransackable_associations(_ = nil)
+    %w[customer]
+  end
+
   def payment_invoices
     invoices
   end

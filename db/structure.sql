@@ -26,6 +26,7 @@ ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_e3cf54daac;
+ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_e3a64e537e;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
@@ -301,6 +302,7 @@ DROP INDEX IF EXISTS public.index_payments_on_payable_type_and_payable_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type;
 DROP INDEX IF EXISTS public.index_payments_on_organization_id;
 DROP INDEX IF EXISTS public.index_payments_on_invoice_id;
+DROP INDEX IF EXISTS public.index_payments_on_customer_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_customer_id;
@@ -3434,7 +3436,8 @@ CREATE TABLE public.payments (
     reference character varying,
     provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
     provider_payment_method_id character varying,
-    organization_id uuid
+    organization_id uuid,
+    customer_id uuid NOT NULL
 );
 
 
@@ -6552,6 +6555,13 @@ CREATE INDEX index_payment_requests_on_organization_id ON public.payment_request
 
 
 --
+-- Name: index_payments_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payments_on_customer_id ON public.payments USING btree (customer_id);
+
+
+--
 -- Name: index_payments_on_invoice_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8605,6 +8615,14 @@ ALTER TABLE ONLY public.integration_collection_mappings
 
 
 --
+-- Name: payments fk_rails_e3a64e537e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payments
+    ADD CONSTRAINT fk_rails_e3a64e537e FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
 -- Name: usage_monitoring_triggered_alerts fk_rails_e3cf54daac; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8747,6 +8765,11 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250702163700'),
+('20250702162444'),
+('20250702161535'),
+('20250702160827'),
+('20250702160723'),
 ('20250630180000'),
 ('20250627134933'),
 ('20250627134932'),
