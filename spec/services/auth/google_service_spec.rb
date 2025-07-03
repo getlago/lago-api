@@ -137,6 +137,9 @@ RSpec.describe Auth::GoogleService do
         expect(result).to be_success
         expect(result.user).to be_a(User)
         expect(result.token).to be_present
+
+        decoded = Auth::TokenService.decode(token: result.token)
+        expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
       end
     end
 
