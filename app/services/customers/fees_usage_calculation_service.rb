@@ -2,10 +2,14 @@
 
 module Customers
   class FeesUsageCalculationService
-    attr_reader :fees
+    attr_reader :fees, :from_datetime, :to_datetime, :charges_duration_in_days, :amount_cents
 
-    def initialize(fees)
+    def initialize(fees:, from_datetime:, to_datetime:, charges_duration_in_days: nil, amount_cents: nil)
       @fees = fees
+      @from_datetime = from_datetime
+      @to_datetime = to_datetime
+      @charges_duration_in_days = charges_duration_in_days
+      @amount_cents = amount_cents
     end
     
     def current_amount_cents
@@ -13,10 +17,8 @@ module Customers
     end
 
     def projected_amount_cents
-      ratio = calculate_time_ratio(fees.first.properties["from_datetime"], fees.first.properties["to_datetime"])
-
       return current_amount_cents if recurring?
-      ratio > 0 ? (current_amount_cents / BigDecimal(ratio.to_s)).round.to_i : 0
+      time_ratio > 0 ? ((amount_cents || current_amount_cents) / BigDecimal(time_ratio.to_s)).round.to_i : 0
     end
 
     def current_units
@@ -24,16 +26,15 @@ module Customers
     end
 
     def projected_units
-      ratio = calculate_time_ratio(fees.first.properties["from_datetime"], fees.first.properties["to_datetime"])
       current_units = fees.sum { |f| BigDecimal(f.units) }
 
       return current_units if recurring?
-      ratio > 0 ? (current_units / BigDecimal(ratio.to_s)).round(2) : BigDecimal('0')
+      time_ratio > 0 ? (current_units / BigDecimal(time_ratio.to_s)).round(2) : BigDecimal('0')
     end
 
     private
 
-    def calculate_time_ratio(from_datetime, to_datetime, charges_duration_in_days)
+    def time_ratio
       from_date = from_datetime.to_date
       to_date = to_datetime.to_date
       current_date = Date.current

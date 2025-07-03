@@ -35,7 +35,18 @@ module Types
         private
 
         def usage_calculator
-          @usage_calculator ||= ::Customers::FeesUsageCalculationService.new([object])
+          @usage_calculator ||= begin
+            from = object.properties["from_datetime"]
+            to = object.properties["to_datetime"]
+            duration = object.properties["charges_duration"]
+
+            ::Customers::FeesUsageCalculationService.new(
+              fees: [object],
+              from_datetime: from,
+              to_datetime: to,
+              charges_duration_in_days: duration
+            )
+          end
         end
       end
     end
