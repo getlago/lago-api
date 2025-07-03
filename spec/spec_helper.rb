@@ -56,6 +56,18 @@ end
 
 ENV["STRIPE_API_VERSION"] ||= "2020-08-27"
 
+# Monkey patch database cleaner to be compatible with Clickhouse.
+module DatabaseCleaner
+  module ActiveRecord
+    class Deletion
+      def delete_table(connection, table_name)
+        arel = Arel::DeleteManager.new.from(Arel::Table.new(table_name)).where(Arel.sql("1=1"))
+        connection.delete(arel)
+      end
+    end
+  end
+end
+
 RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods
   config.include GraphQLHelper, type: :graphql
@@ -108,10 +120,18 @@ RSpec.configure do |config|
   end
 
   # NOTE: Database cleaner config to turn off/on transactional mode
-  config.before(:suite) do
-    DatabaseCleaner.clean_with(:deletion)
+  config.before(:suite) do |example|
     # No need for `DatabaseCleaner[:active_record, db: EventsRecord].clean_with(:deletion)`
     # because both connections are using the same database.
+    DatabaseCleaner[:active_record].clean_with(:deletion)
+
+    # Clean Clickhouse database if any test is using it.
+    if RSpec.world.all_examples.any? { |ex| ex.metadata[:clickhouse] }
+      WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))
+      DatabaseCleaner[:active_record, db: Clickhouse::BaseRecord].clean_with(:deletion)
+    end
+
+    WebMock.disable_net_connect!
   end
 
   config.include_context "with Time travel enabled", :time_travel
@@ -124,7 +144,6 @@ RSpec.configure do |config|
     end
 
     if example.metadata[:clickhouse]
-      DatabaseCleaner.strategy = :deletion
       WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))
     end
 
@@ -168,6 +187,9 @@ RSpec.configure do |config|
       # If the `deletion` strategy is used for the default connection, we don't need to set it for the `events` connection as they are using the same database.
       DatabaseCleaner::NullStrategy.new
     end
+
+    # Clickhouse doesn't support transaction.
+    DatabaseCleaner[:active_record, db: Clickhouse::BaseRecord].strategy = example.metadata[:clickhouse] ? :deletion : DatabaseCleaner::NullStrategy.new
 
     DatabaseCleaner.cleaning do
       example.run
