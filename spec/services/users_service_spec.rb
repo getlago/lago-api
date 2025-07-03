@@ -226,16 +226,4 @@ RSpec.describe UsersService, type: :service do
       end
     end
   end
-
-  describe "new_token" do
-    let(:user) { create(:user) }
-
-    it "generates a jwt token for the user" do
-      result = user_service.new_token(user)
-
-      expect(result).to be_success
-      expect(result.user).to eq(user)
-      expect(result.token).to be_present
-    end
-  end
 end

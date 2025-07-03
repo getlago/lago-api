@@ -49,7 +49,7 @@ RSpec.describe GraphqlController, type: :request do
 
     context "with JWT token" do
       let(:token) do
-        UsersService.new.new_token(user).token
+        Auth::TokenService.encode(user:)
       end
       let(:near_expiration_token) do
         JWT.encode(
