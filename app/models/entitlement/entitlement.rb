@@ -10,11 +10,7 @@ module Entitlement
     belongs_to :organization
     belongs_to :feature, class_name: "Entitlement::Feature", foreign_key: :entitlement_feature_id
     belongs_to :plan
-
     has_many :values, class_name: "Entitlement::EntitlementValue", foreign_key: :entitlement_entitlement_id, dependent: :destroy
-
-    validates :entitlement_feature_id, presence: true
-    validates :plan_id, presence: true
   end
 end
 

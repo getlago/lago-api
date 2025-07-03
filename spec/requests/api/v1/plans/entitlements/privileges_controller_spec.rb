@@ -54,7 +54,7 @@ RSpec.describe Api::V1::Plans::Entitlements::PrivilegesController, type: :reques
 
       json = JSON.parse(response.body, symbolize_names: true)
       expect(json[:entitlement][:code]).to eq(feature.code)
-      expect(json[:entitlement][:privileges]).to have_key(privilege2.code.to_sym)
+      expect(json[:entitlement][:privileges]).not_to have_key(privilege.code.to_sym)
       expect(json[:entitlement][:privileges][privilege2.code.to_sym][:value]).to eq(entitlement_value2.value)
     end
   end

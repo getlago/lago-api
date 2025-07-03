@@ -77,6 +77,8 @@ end
 # Models
 
 - New models must directly belong to an organization. Store the `organization_id` in the table, don't use `through:`
+- When testing models, to test all associations and group them all in a `describe "associations"` block with a single `it` block
+- When testing models, to test all validations and group them all in a `describe "validations"` block with a single `it` block
 
 
 Soft deletion

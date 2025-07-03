@@ -11,6 +11,7 @@ RSpec.describe Entitlement::Privilege, type: :model do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:feature).class_name("Entitlement::Feature")
+      expect(subject).to have_many(:values).class_name("Entitlement::EntitlementValue").dependent(:destroy)
     end
   end
 

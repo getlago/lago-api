@@ -8,13 +8,23 @@ RSpec.describe V1::Entitlement::PlanEntitlementSerializer do
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
   let(:feature) { create(:feature, organization:, code: "seats") }
+  let(:privilege) { create(:privilege, :integer_type, feature:, organization:) }
+  let(:privilege2) { create(:privilege, :boolean_type, feature:, organization:) }
+  let(:privilege3) { create(:privilege, :string_type, feature:, organization:) }
+  let(:privilege4) { create(:privilege, :select_type, feature:, organization:) }
+
   let(:entitlement) { create(:entitlement, organization:, feature:, plan:) }
-  let(:privilege) { create(:privilege, code: "max", value_type: "integer", feature:, organization:) }
-  let(:entitlement_value) { create(:entitlement_value, value: 30, entitlement:, privilege:, organization:) }
+  let(:entitlement_value) { create(:entitlement_value, value: "30", entitlement:, privilege:, organization:) }
+  let(:entitlement_value2) { create(:entitlement_value, value: "false", entitlement:, privilege: privilege2, organization:) }
+  let(:entitlement_value3) { create(:entitlement_value, value: :str, entitlement:, privilege: privilege3, organization:) }
+  let(:entitlement_value4) { create(:entitlement_value, value: "option1", entitlement:, privilege: privilege4, organization:) }
 
   describe "#serialize" do
     before do
       entitlement_value
+      entitlement_value2
+      entitlement_value3
+      entitlement_value4
     end
 
     it "serializes the entitlement correctly" do
@@ -25,13 +35,14 @@ RSpec.describe V1::Entitlement::PlanEntitlementSerializer do
         name: feature.name,
         description: feature.description
       )
-      expect(result[:privileges]["max"]).to include(
-        code: "max",
-        name: nil,
-        value_type: "integer",
-        value: 30,
-        config: {}
-      )
+      expect(result[:privileges]).to eq({
+        "int" => {code: "int", name: nil, value_type: "integer", value: 30, config: {}},
+        "bool" => {code: "bool", name: nil, value_type: "boolean", value: false, config: {}},
+        "str" => {code: "str", name: nil, value_type: "string", value: "str", config: {}},
+        "opt" => {code: "opt", name: nil, value_type: "select", value: "option1", config: {
+          "select_options" => ["option1", "option2", "option3"]
+        }}
+      })
     end
   end
 end

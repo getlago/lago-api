@@ -15,11 +15,4 @@ RSpec.describe Entitlement::Entitlement, type: :model do
       expect(subject).to have_many(:values).class_name("Entitlement::EntitlementValue").dependent(:destroy)
     end
   end
-
-  describe "validations" do
-    it do
-      expect(subject).to validate_presence_of(:entitlement_feature_id)
-      expect(subject).to validate_presence_of(:plan_id)
-    end
-  end
 end
