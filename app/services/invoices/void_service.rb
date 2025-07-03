@@ -121,14 +121,31 @@ module Invoices
     end
 
     def estimate_credit_note_for_target_credit(invoice:, target_credit_cents:)
-      base_total = invoice.sub_total_including_taxes_amount_cents.to_f
-      ratio = target_credit_cents.to_f / base_total
+      fees = invoice.fees.select { |fee| fee.creditable_amount_cents.positive? }
+      return [] if fees.empty?
 
-      invoice.fees.map do |fee|
+      total_creditable = fees.sum(&:creditable_amount_cents)
+      ratio = [target_credit_cents.to_f / total_creditable, 1.0].min
+
+      items = fees.map do |fee|
         {
           fee_id: fee.id,
-          amount_cents: (fee.amount_cents * ratio)
+          amount_cents: (fee.creditable_amount_cents * ratio).floor
         }
+      end
+
+      adjust_distribution!(items, target_credit_cents)
+
+      items
+    end
+
+    def adjust_distribution!(items, target_total)
+      current_total = items.sum { |i| i[:amount_cents] }
+      delta = target_total - current_total
+
+      delta.abs.times do |i|
+        idx = i % items.length
+        items[idx][:amount_cents] += delta.positive? ? 1 : -1
       end
     end
   end
