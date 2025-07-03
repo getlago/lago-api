@@ -37,8 +37,6 @@ module Types
 
       field :eu_tax_management, Boolean, null: false
 
-      field :authentication_methods, [String], null: false
-
       # TODO: Also check if Nango ENV var is set in order to lock/unlock this feature
       #       This would enable us to use premium add_on logic on OSS version
       field :premium_integrations, [Types::Integrations::PremiumIntegrationTypeEnum], null: false
@@ -56,12 +54,19 @@ module Types
       field :applied_dunning_campaign, Types::DunningCampaigns::Object
       field :can_create_billing_entity, Boolean, null: false, method: :can_create_billing_entity?
 
+      field :accessible_by_current_session, Boolean, null: false
+      field :authentication_methods, [String], null: false
+
       def webhook_url
         object.webhook_endpoints.map(&:webhook_url).first
       end
 
       def api_key
         object.api_keys.first.value
+      end
+
+      def accessible_by_current_session
+        object.authentication_methods.include?(context[:login_method])
       end
     end
   end
