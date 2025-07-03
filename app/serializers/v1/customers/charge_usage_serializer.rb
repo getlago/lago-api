@@ -66,14 +66,12 @@ module V1
 
       def build_filter_data(grouped_fees)
         charge_filter = grouped_fees.first.charge_filter
-        return nil unless charge_filter
-
         usage_data = calculate_usage_data(grouped_fees)
 
         {
           **usage_data.except(:amount_currency),
-          invoice_display_name: charge_filter.invoice_display_name,
-          values: charge_filter.to_h
+          invoice_display_name: charge_filter&.invoice_display_name,
+          values: charge_filter&.to_h
         }
       end
 
