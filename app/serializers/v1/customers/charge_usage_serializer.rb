@@ -31,7 +31,7 @@ module V1
         {
           units: usage_calculator.current_units.to_s,
           projected_units: usage_calculator.projected_units.to_s,
-          events_count: fees.sum(&:events_count),
+          events_count: fees.sum(0) { |f| f.events_count.to_i },
           amount_cents: usage_calculator.current_amount_cents,
           projected_amount_cents: usage_calculator.projected_amount_cents.to_i,
           amount_currency: fees.first.amount_currency
