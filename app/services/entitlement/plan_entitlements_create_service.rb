@@ -16,7 +16,7 @@ module Entitlement
           create_entitlements
         end
 
-        result.entitlements = plan.entitlements.reload.includes(:feature, values: :privilege)
+        result.entitlements = plan.entitlements.includes(:feature, values: :privilege)
         result
       end
     end
@@ -32,7 +32,10 @@ module Entitlement
       return if entitlements_params.blank?
 
       entitlements_params.each do |feature_code, privilege_values|
-        feature = organization.features.find_by!(code: feature_code)
+        feature = organization.features.includes(:privileges).find { it.code == feature_code }
+
+        raise ActiveRecord::RecordNotFound.new("Entitlement::Feature") unless feature
+
         entitlement = Entitlement.create!(
           organization: organization,
           feature: feature,

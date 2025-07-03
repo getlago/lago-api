@@ -235,5 +235,62 @@ RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
         expect(result.error.messages[:invitation_privilege_value]).to eq(["value_not_in_select_options"])
       end
     end
+
+    context "with bullet gem to detect N+1 queries", with_bullet: true do
+      context "when updating multiple features with multiple privileges" do
+        let(:feature) { create(:feature, organization:) }
+        let(:feature2) { create(:feature, organization:, code: "storage") }
+        let(:feature3) { create(:feature, organization:, code: "api") }
+        let(:privilege) { create(:privilege, feature:, code: "max") }
+        let(:privilege2) { create(:privilege, feature:, code: "max_admins") }
+        let(:privilege3) { create(:privilege, organization:, feature: feature2, code: "max_storage") }
+        let(:privilege4) { create(:privilege, organization:, feature: feature2, code: "max_bandwidth") }
+        let(:privilege5) { create(:privilege, organization:, feature: feature3, code: "max_requests") }
+        let(:privilege6) { create(:privilege, organization:, feature: feature3, code: "max_rate_limit") }
+        let(:entitlement2) { create(:entitlement, organization:, plan:, feature: feature2) }
+        let(:entitlement3) { create(:entitlement, organization:, plan:, feature: feature3) }
+        let(:entitlement_value2) { create(:entitlement_value, entitlement: entitlement2, privilege: privilege3, organization:, value: "100") }
+        let(:entitlement_value3) { create(:entitlement_value, entitlement: entitlement3, privilege: privilege5, organization:, value: "1000") }
+        let(:entitlements_params) do
+          {
+            feature.code => {
+              privilege.code => 60,
+              privilege2.code => 5
+            },
+            feature2.code => {
+              privilege3.code => 200,
+              privilege4.code => 50
+            },
+            feature3.code => {
+              privilege5.code => 2000,
+              privilege6.code => 100
+            }
+          }
+        end
+
+        before do
+          feature2
+          feature3
+          privilege3
+          privilege4
+          privilege5
+          privilege6
+          entitlement2
+          entitlement3
+          entitlement_value2
+          entitlement_value3
+        end
+
+        it "does not trigger N+1 queries when updating multiple features and privileges" do
+          Bullet.start_request
+
+          result
+
+          expect(Bullet).not_to be_notification
+          expect(result).to be_success
+          expect(result.entitlements.count).to eq(3)
+        end
+      end
+    end
   end
 end

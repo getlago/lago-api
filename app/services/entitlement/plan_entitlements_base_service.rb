@@ -15,14 +15,11 @@ module Entitlement
 
     def create_entitlement_values(entitlement, feature, privilege_values)
       privilege_values.each do |privilege_code, value|
-        privilege = feature.privileges.find_by!(code: privilege_code)
+        privilege = feature.privileges.find { it.code == privilege_code }
 
-        EntitlementValue.create!(
-          organization: plan.organization,
-          entitlement: entitlement,
-          privilege: privilege,
-          value: validate_and_stringify(value, privilege)
-        )
+        raise ActiveRecord::RecordNotFound.new("Entitlement::Privilege") unless privilege
+
+        create_entitlement_value(entitlement, privilege, value)
       end
     end
 
@@ -35,20 +32,20 @@ module Entitlement
         entitlement_value = entitlement.values.find { it.entitlement_privilege_id == privilege.id }
 
         if entitlement_value
-          # Update existing value
-          entitlement_value.update!(
-            value: validate_and_stringify(value, privilege)
-          )
+          entitlement_value.update!(value: validate_and_stringify(value, privilege))
         else
-          # Create new value
-          EntitlementValue.create!(
-            organization: plan.organization,
-            entitlement: entitlement,
-            privilege: privilege,
-            value: validate_and_stringify(value, privilege)
-          )
+          create_entitlement_value(entitlement, privilege, value)
         end
       end
+    end
+
+    def create_entitlement_value(entitlement, privilege, value)
+      EntitlementValue.create!(
+        organization: organization,
+        entitlement: entitlement,
+        privilege: privilege,
+        value: validate_and_stringify(value, privilege)
+      )
     end
 
     def validate_and_stringify(value, privilege)

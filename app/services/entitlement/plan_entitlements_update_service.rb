@@ -28,7 +28,7 @@ module Entitlement
         raise ActiveRecord::RecordNotFound.new("Entitlement::Feature") unless feature
 
         # Find existing entitlement or create new one
-        entitlement = plan.entitlements.find { it.entitlement_feature_id == feature.id }
+        entitlement = plan.entitlements.includes(:values).find { it.entitlement_feature_id == feature.id }
 
         if entitlement.nil?
           entitlement = Entitlement.create!(
