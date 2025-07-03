@@ -110,7 +110,7 @@ module Events
 
             event_values AS (
               SELECT
-                #{group_names},
+                #{group_names.join(", ")},
                 property,
                 SUM(adjusted_value) AS sum_adjusted_value
               FROM (
@@ -118,19 +118,19 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names},
+                  #{group_names.join(", ")},
                   #{grouped_operation_value_sql} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
-              GROUP BY #{group_names}, property
+              GROUP BY #{group_names.join(", ")}, property
             )
 
             SELECT
-              #{group_names},
+              #{group_names.join(", ")},
               COALESCE(SUM(sum_adjusted_value), 0) as aggregation
             FROM event_values
-            GROUP BY #{group_names}
+            GROUP BY #{group_names.join(", ")}
           SQL
         end
 
@@ -140,34 +140,77 @@ module Events
 
             event_values AS (
               SELECT
-                #{group_names},
+                #{group_names.join(", ")},
                 property,
                 operation_type,
-                timestamp
+                timestamp,
+                ROW_NUMBER() OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) AS rn
               FROM (
                 SELECT
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names},
+                  #{group_names.join(", ")},
                   #{grouped_operation_value_sql} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY #{group_names}, property, operation_type, timestamp
+              GROUP BY #{group_names.join(", ")}, property, operation_type, timestamp
+            ),
+            merged_events AS (
+              SELECT
+                e.#{group_names.join(", e.")},
+                e.property,
+                e.timestamp,
+                e.operation_type,
+                e.rn,
+                false AS is_ignored,  -- not ignored
+                e.operation_type AS previous_not_ignored_operation_type
+              FROM event_values e
+              WHERE e.rn = 1
+
+              UNION ALL
+              SELECT
+                e.#{group_names.join(", e.")},
+                e.property,
+                e.timestamp,
+                e.operation_type,
+                e.rn,
+                CASE
+                  -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+                  WHEN #{existing_grouped_event_opposite_operation_type_sql}
+                  THEN true
+                  -- Check if previous not ignored event has same operation type
+                  WHEN r.previous_not_ignored_operation_type = e.operation_type THEN true
+                  ELSE false
+                END AS is_ignored,
+
+                -- Update previous_not_ignored_operation_type only if not ignored
+                CASE
+                  -- Check if next event on same day has opposite operation type so it nullifies this one at the same day, so we can ignore it
+                  WHEN #{existing_grouped_event_opposite_operation_type_sql}
+                  THEN r.previous_not_ignored_operation_type
+                  -- Check if previous not ignored event has same operation type
+                  WHEN e.operation_type = r.previous_not_ignored_operation_type THEN r.previous_not_ignored_operation_type
+                  ELSE e.operation_type
+                END AS previous_not_ignored_operation_type
+              FROM merged_events r
+              JOIN event_values e
+                ON e.property = r.property AND e.rn = r.rn + 1 AND #{group_names.map { |name| "e.#{name} = r.#{name}" }.join(" AND ")}
             )
 
             SELECT
-              #{group_names},
+              #{group_names.join(", ")},
               COALESCE(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT
                 (#{grouped_period_ratio_sql}) AS period_ratio,
-                #{group_names}
-              FROM event_values
+                #{group_names.join(", ")}
+              FROM merged_events
+              WHERE is_ignored = false
             ) cumulated_ratios
-            GROUP BY #{group_names}
+            GROUP BY #{group_names.join(", ")}
           SQL
         end
 
@@ -202,7 +245,8 @@ module Events
               SELECT
                 property,
                 operation_type,
-                timestamp
+                timestamp,
+                ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn
               FROM (
                 SELECT
                   timestamp,
@@ -214,6 +258,45 @@ module Events
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY property, timestamp, operation_type
+            ),
+            merged_events AS (
+              SELECT
+                e.property,
+                e.timestamp,
+                e.operation_type,
+                e.rn,
+                false AS is_ignored,  -- not ignored
+                e.operation_type AS previous_not_ignored_operation_type
+              FROM event_values e
+              WHERE e.rn = 1
+
+              UNION ALL
+              SELECT
+                e.property,
+                e.timestamp,
+                e.operation_type,
+                e.rn,
+                CASE
+                  -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+                  WHEN #{existing_event_opposite_operation_type_sql}
+                  THEN true
+                  -- Check if previous not ignored event has same operation type
+                  WHEN r.previous_not_ignored_operation_type = e.operation_type THEN true
+                  ELSE false
+                END AS is_ignored,
+
+                -- Update previous_not_ignored_operation_type only if not ignored
+                CASE
+                  -- Check if next event on same day has opposite operation type so it nullifies this one at the same day, so we can ignore it
+                  WHEN #{existing_event_opposite_operation_type_sql}
+                  THEN r.previous_not_ignored_operation_type
+                  -- Check if previous not ignored event has same operation type
+                  WHEN e.operation_type = r.previous_not_ignored_operation_type THEN r.previous_not_ignored_operation_type
+                  ELSE e.operation_type
+                END AS previous_not_ignored_operation_type
+              FROM merged_events r
+              JOIN event_values e
+                ON e.property = r.property AND e.rn = r.rn + 1
             )
 
             SELECT
@@ -227,7 +310,8 @@ module Events
                 timestamp,
                 property,
                 operation_type
-              FROM event_values
+              FROM merged_events
+              WHERE is_ignored = false
             ) prorated_breakdown
             #{"WHERE prorated_value != 0" unless with_remove}
             ORDER BY timestamp ASC
@@ -260,7 +344,7 @@ module Events
           end
 
           <<-SQL
-            WITH events_data AS (#{
+            WITH RECURSIVE events_data AS (#{
               events(ordered: true)
                 .select(
                   "#{groups.join(", ")}, \
@@ -299,12 +383,12 @@ module Events
           <<-SQL
             CASE WHEN operation_type = 'add'
             THEN
-              CASE WHEN LAG(operation_type, 1) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp) = 'add'
+              CASE WHEN LAG(operation_type, 1) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) = 'add'
               THEN 0
               ELSE 1
               END
             ELSE
-              CASE LAG(operation_type, 1, 'remove') OVER (PARTITION BY #{group_names}, property ORDER BY timestamp)
+              CASE LAG(operation_type, 1, 'remove') OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp)
                 WHEN 'remove' THEN 0
                 ELSE -1
               END
@@ -350,9 +434,9 @@ module Events
                 (
                   DATE((
                     -- NOTE: if following event is older than the start of the period, we use the start of the period as the reference
-                    CASE WHEN (LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp)) < :from_datetime
+                    CASE WHEN (LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp)) < :from_datetime
                     THEN :from_datetime
-                    ELSE LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp)
+                    ELSE LEAD(timestamp, 1, :to_datetime) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp)
                     END
                   )::timestamptz AT TIME ZONE :timezone)
                   - DATE((
@@ -407,8 +491,24 @@ module Events
           SQL
         end
 
+        def existing_grouped_event_opposite_operation_type_sql
+          <<-SQL
+            (
+              SELECT
+                1
+              FROM event_values next_event
+              WHERE next_event.property = e.property
+                AND next_event.rn = e.rn + 1
+                AND #{group_names.map { |name| "next_event.#{name} = e.#{name}" }.join(" AND ")}
+                AND DATE(next_event.timestamp) = DATE(e.timestamp)
+                AND next_event.operation_type <> e.operation_type
+              LIMIT 1
+            ) = 1
+          SQL
+        end
+
         def group_names
-          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
+          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }
         end
       end
     end
