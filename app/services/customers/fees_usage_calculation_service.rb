@@ -53,7 +53,7 @@ module Customers
     end
 
     def recurring?
-      fees.first.charge.billable_metric.recurring?
+      fees.first&.charge&.billable_metric&.recurring?
     end
   end
 end

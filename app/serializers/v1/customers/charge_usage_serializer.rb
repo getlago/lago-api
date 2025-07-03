@@ -21,7 +21,13 @@ module V1
       private
 
       def calculate_usage_data(fees)
-        usage_calculator = ::Customers::FeesUsageCalculationService.new(fees)
+        usage_calculator = ::Customers::FeesUsageCalculationService.new(
+          fees:,
+          from_datetime: fees.first.properties["from_datetime"],
+          to_datetime: fees.first.properties["to_datetime"],
+          charges_duration_in_days: fees.first.properties["charges_duration"]
+        )
+
         {
           units: usage_calculator.current_units.to_s,
           projected_units: usage_calculator.projected_units.to_s,
