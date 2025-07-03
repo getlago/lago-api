@@ -56,19 +56,21 @@ module Api
       private
 
       def create_params
-        params.require(:applied_coupon).permit(
-          :external_customer_id,
-          :coupon_code,
-          :frequency,
-          :frequency_duration,
-          :amount_cents,
-          :amount_currency,
-          :percentage_rate
+        params.expect(
+          applied_coupon: [
+            :external_customer_id,
+            :coupon_code,
+            :frequency,
+            :frequency_duration,
+            :amount_cents,
+            :amount_currency,
+            :percentage_rate
+          ]
         )
       end
 
       def index_filters
-        params.permit(:external_customer_id, :status, coupon_code: [])
+        params.expect(:external_customer_id, :status, coupon_code: [])
       end
 
       def resource_name

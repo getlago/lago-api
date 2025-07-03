@@ -154,8 +154,8 @@ module Api
       private
 
       def input_params
-        @input_params ||= params.require(:credit_note)
-          .permit(
+        @input_params ||= params.expect(
+          credit_note: [
             :invoice_id,
             :reason,
             :description,
@@ -165,22 +165,24 @@ module Api
               :fee_id,
               :amount_cents
             ]
-          )
+          ]
+        )
       end
 
       def update_params
-        params.require(:credit_note).permit(:refund_status)
+        params.expect(credit_note: [:refund_status])
       end
 
       def estimate_params
-        @estimate_params ||= params.require(:credit_note)
-          .permit(
+        @estimate_params ||= params.expect(
+          credit_note: [
             :invoice_id,
             items: [
               :fee_id,
               :amount_cents
             ]
-          )
+          ]
+        )
       end
 
       def resource_name

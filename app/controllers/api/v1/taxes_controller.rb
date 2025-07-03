@@ -68,7 +68,15 @@ module Api
       private
 
       def input_params
-        params.require(:tax).permit(:code, :description, :name, :rate, :applied_to_organization)
+        params.expect(
+          tax: [
+            :code,
+            :description,
+            :name,
+            :rate,
+            :applied_to_organization
+          ]
+        )
       end
 
       def render_tax(tax)

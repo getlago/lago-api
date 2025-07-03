@@ -35,7 +35,7 @@ module Api
       end
 
       def index
-        filter_params = params.permit(billing_entity_codes: [], account_type: [])
+        filter_params = params.expect(billing_entity_codes: [], account_type: [])
         billing_entity_codes = filter_params.delete(:billing_entity_codes)
         if billing_entity_codes.present?
           billing_entities = current_organization.all_billing_entities.where(code: billing_entity_codes)
@@ -106,68 +106,70 @@ module Api
       private
 
       def create_params
-        params.require(:customer).permit(
-          :account_type,
-          :external_id,
-          :name,
-          :firstname,
-          :lastname,
-          :customer_type,
-          :country,
-          :address_line1,
-          :address_line2,
-          :state,
-          :zipcode,
-          :email,
-          :city,
-          :url,
-          :phone,
-          :logo_url,
-          :legal_name,
-          :legal_number,
-          :tax_identification_number,
-          :currency,
-          :timezone,
-          :net_payment_term,
-          :external_salesforce_id,
-          :finalize_zero_amount_invoice,
-          :skip_invoice_custom_sections,
-          :billing_entity_code,
-          integration_customers: [
-            :id,
-            :external_customer_id,
-            :integration_type,
-            :integration_code,
-            :subsidiary_id,
-            :sync_with_provider,
-            :targeted_object
-          ],
-          billing_configuration: [
-            :invoice_grace_period,
-            :payment_provider,
-            :payment_provider_code,
-            :provider_customer_id,
-            :sync,
-            :sync_with_provider,
-            :document_locale,
-            provider_payment_methods: []
-          ],
-          metadata: [
-            :id,
-            :key,
-            :value,
-            :display_in_invoice
-          ],
-          shipping_address: [
+        params.expect(
+          customer: [
+            :account_type,
+            :external_id,
+            :name,
+            :firstname,
+            :lastname,
+            :customer_type,
+            :country,
             :address_line1,
             :address_line2,
-            :city,
-            :zipcode,
             :state,
-            :country
-          ],
-          tax_codes: [],
-          invoice_custom_section_codes: []
+            :zipcode,
+            :email,
+            :city,
+            :url,
+            :phone,
+            :logo_url,
+            :legal_name,
+            :legal_number,
+            :tax_identification_number,
+            :currency,
+            :timezone,
+            :net_payment_term,
+            :external_salesforce_id,
+            :finalize_zero_amount_invoice,
+            :skip_invoice_custom_sections,
+            :billing_entity_code,
+            integration_customers: [
+              :id,
+              :external_customer_id,
+              :integration_type,
+              :integration_code,
+              :subsidiary_id,
+              :sync_with_provider,
+              :targeted_object
+            ],
+            billing_configuration: [
+              :invoice_grace_period,
+              :payment_provider,
+              :payment_provider_code,
+              :provider_customer_id,
+              :sync,
+              :sync_with_provider,
+              :document_locale,
+              provider_payment_methods: []
+            ],
+            metadata: [
+              :id,
+              :key,
+              :value,
+              :display_in_invoice
+            ],
+            shipping_address: [
+              :address_line1,
+              :address_line2,
+              :city,
+              :zipcode,
+              :state,
+              :country
+            ],
+            tax_codes: [],
+            invoice_custom_section_codes: []
+          ]
         )
       end
 

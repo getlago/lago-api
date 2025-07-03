@@ -48,29 +48,31 @@ module Api
       private
 
       def input_params
-        params.require(:organization).permit(
-          :country,
-          :default_currency,
-          :address_line1,
-          :address_line2,
-          :state,
-          :zipcode,
-          :email,
-          :city,
-          :legal_name,
-          :legal_number,
-          :net_payment_term,
-          :tax_identification_number,
-          :timezone,
-          :webhook_url,
-          :document_numbering,
-          :document_number_prefix,
-          :finalize_zero_amount_invoice,
-          email_settings: [],
-          billing_configuration: [
-            :invoice_footer,
-            :invoice_grace_period,
-            :document_locale
+        params.expect(
+          organization: [
+            :country,
+            :default_currency,
+            :address_line1,
+            :address_line2,
+            :state,
+            :zipcode,
+            :email,
+            :city,
+            :legal_name,
+            :legal_number,
+            :net_payment_term,
+            :tax_identification_number,
+            :timezone,
+            :webhook_url,
+            :document_numbering,
+            :document_number_prefix,
+            :finalize_zero_amount_invoice,
+            email_settings: [],
+            billing_configuration: [
+              :invoice_footer,
+              :invoice_grace_period,
+              :document_locale
+            ]
           ]
         )
       end

@@ -79,54 +79,56 @@ module Api
       private
 
       def input_params
-        params.require(:plan).permit(
-          :name,
-          :invoice_display_name,
-          :code,
-          :interval,
-          :description,
-          :amount_cents,
-          :amount_currency,
-          :trial_period,
-          :pay_in_advance,
-          :bill_charges_monthly,
-          :cascade_updates,
-          tax_codes: [],
-          minimum_commitment: [
-            :id,
+        params.expect(
+          plan: [
+            :name,
             :invoice_display_name,
+            :code,
+            :interval,
+            :description,
             :amount_cents,
-            {tax_codes: []}
-          ],
-          charges: [
-            :id,
-            :invoice_display_name,
-            :billable_metric_id,
-            :charge_model,
+            :amount_currency,
+            :trial_period,
             :pay_in_advance,
-            :prorated,
-            :invoiceable,
-            :regroup_paid_fees,
-            :min_amount_cents,
-            {
-              properties: {}
-            },
-            {
-              filters: [
-                :invoice_display_name,
-                {
-                  properties: {},
-                  values: {}
-                }
-              ]
-            },
-            {tax_codes: []}
-          ],
-          usage_thresholds: [
-            :id,
-            :threshold_display_name,
-            :amount_cents,
-            :recurring
+            :bill_charges_monthly,
+            :cascade_updates,
+            tax_codes: [],
+            minimum_commitment: [
+              :id,
+              :invoice_display_name,
+              :amount_cents,
+              {tax_codes: []}
+            ],
+            charges: [
+              :id,
+              :invoice_display_name,
+              :billable_metric_id,
+              :charge_model,
+              :pay_in_advance,
+              :prorated,
+              :invoiceable,
+              :regroup_paid_fees,
+              :min_amount_cents,
+              {
+                properties: {}
+              },
+              {
+                filters: [
+                  :invoice_display_name,
+                  {
+                    properties: {},
+                    values: {}
+                  }
+                ]
+              },
+              {tax_codes: []}
+            ],
+            usage_thresholds: [
+              :id,
+              :threshold_display_name,
+              :amount_cents,
+              :recurring
+            ]
           ]
         )
       end

@@ -77,14 +77,16 @@ module Api
       private
 
       def input_params
-        params.require(:add_on).permit(
-          :name,
-          :invoice_display_name,
-          :code,
-          :amount_cents,
-          :amount_currency,
-          :description,
-          tax_codes: []
+        params.expect(
+          add_on: [
+            :name,
+            :invoice_display_name,
+            :code,
+            :amount_cents,
+            :amount_currency,
+            :description,
+            tax_codes: []
+          ]
         )
       end
 
