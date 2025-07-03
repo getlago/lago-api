@@ -263,7 +263,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
           end
 
           it "raises an HTTP error" do
-            expect { service_call }.to raise_error(LagoHttpClient::HttpError)
+            expect { service_call }.to raise_error(Integrations::Aggregator::BadGatewayError)
           end
         end
       end
