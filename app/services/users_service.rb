@@ -89,7 +89,7 @@ class UsersService < BaseService
   def payload
     {
       sub: result.user.id,
-      exp: Time.now.to_i + 8640 # 6 hours expiration
+      exp: Time.now.to_i + 8640 # 2 hours and 24 minutes expiration
     }
   end
 
