@@ -11,6 +11,7 @@ RSpec.describe Types::WalletTransactions::Object do
     expect(subject).to have_field(:amount).of_type("String!")
     expect(subject).to have_field(:credit_amount).of_type("String!")
     expect(subject).to have_field(:invoice_requires_successful_payment).of_type("Boolean!")
+    expect(subject).to have_field(:source).of_type("WalletTransactionSourceEnum!")
     expect(subject).to have_field(:status).of_type("WalletTransactionStatusEnum!")
     expect(subject).to have_field(:transaction_status).of_type("WalletTransactionTransactionStatusEnum!")
     expect(subject).to have_field(:transaction_type).of_type("WalletTransactionTransactionTypeEnum!")
