@@ -31,6 +31,10 @@ module Auth
         return result.single_validation_failure!(error_code: "user_does_not_exist")
       end
 
+      unless result.user.organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
+        return result.single_validation_failure!(error_code: "login_method_not_authorized")
+      end
+
       result.user = user
       generate_token
     rescue Google::Auth::IDTokens::SignatureError
