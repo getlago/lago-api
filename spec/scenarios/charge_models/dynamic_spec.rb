@@ -117,8 +117,8 @@ describe "Charge Models - Dynamic Pricing Scenarios", :scenarios, type: :request
 
         expect(json[:customer_usage][:charges_usage][0][:grouped_usage]).to match_array(
           [
-            {amount_cents: 902, events_count: 1, units: "10.0", grouped_by: {group_key: "value 2"}, filters: []},
-            {amount_cents: 10, events_count: 1, units: "10.0", grouped_by: {group_key: "value 1"}, filters: []}
+            {amount_cents: 902, events_count: 1, units: "10.0", grouped_by: {group_key: "value 2"}, filters: [], projected_amount_cents: 13981, projected_units: "155.0"},
+            {amount_cents: 10, events_count: 1, units: "10.0", grouped_by: {group_key: "value 1"}, filters: [], projected_amount_cents: 155, projected_units: "155.0"}
           ]
         )
       end
