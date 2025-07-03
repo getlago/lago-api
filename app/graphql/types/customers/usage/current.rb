@@ -6,7 +6,7 @@ module Types
       class Current < Types::BaseObject
         graphql_name "CustomerUsage"
 
-        delegate :projected_amount_cents, to: :usage_calculator
+        delegate :projected_amount_cents, to: :object
 
         field :from_datetime, GraphQL::Types::ISO8601DateTime, null: false
         field :to_datetime, GraphQL::Types::ISO8601DateTime, null: false
