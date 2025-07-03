@@ -6,23 +6,17 @@ module Types
       class ChargeFilter < Types::BaseObject
         graphql_name "ChargeFilterUsage"
 
+        delegate :projected_units, :projected_amount_cents, to: :usage_calculator
+
         field :id, ID, null: true, method: :charge_filter_id
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
-        field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
         field :invoice_display_name, String, null: true
-        field :units, GraphQL::Types::Float, null: false
+        field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :projected_units, GraphQL::Types::Float, null: false
+        field :units, GraphQL::Types::Float, null: false
         field :values, Types::ChargeFilters::Values, null: false
-
-        def projected_units
-          usage_calculator.projected_units
-        end
-
-        def projected_amount_cents
-          usage_calculator.projected_amount_cents
-        end
 
         def values
           object.charge_filter&.to_h || {} # rubocop:disable Lint/RedundantSafeNavigation

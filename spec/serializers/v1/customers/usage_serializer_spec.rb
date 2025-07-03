@@ -9,12 +9,6 @@ RSpec.describe ::V1::Customers::UsageSerializer do
   let(:from_datetime) { fixed_date.beginning_of_month }
   let(:to_datetime) { fixed_date.end_of_month }
   let(:issuing_date) { fixed_date.end_of_month }
-
-  before do
-    allow(Date).to receive(:current).and_return(fixed_date)
-    allow(Time).to receive(:current).and_return(fixed_date.to_time)
-  end
-
   let(:usage) do
     SubscriptionUsage.new(
       from_datetime: from_datetime.iso8601,
@@ -57,8 +51,12 @@ RSpec.describe ::V1::Customers::UsageSerializer do
       ]
     )
   end
-
   let(:result) { JSON.parse(serializer.to_json) }
+
+  before do
+    allow(Date).to receive(:current).and_return(fixed_date)
+    allow(Time).to receive(:current).and_return(fixed_date.to_time)
+  end
 
   it "serializes the customer usage" do
     aggregate_failures do

@@ -6,12 +6,14 @@ module Types
       class Charge < Types::BaseObject
         graphql_name "ChargeUsage"
 
+        delegate :projected_units, :projected_amount_cents, to: :usage_calculator
+
         field :amount_cents, GraphQL::Types::BigInt, null: false
-        field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
         field :id, ID, null: false
-        field :units, GraphQL::Types::Float, null: false
+        field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :projected_units, GraphQL::Types::Float, null: false
+        field :units, GraphQL::Types::Float, null: false
 
         field :billable_metric, Types::BillableMetrics::Object, null: false
         field :charge, Types::Charges::Object, null: false
@@ -26,20 +28,12 @@ module Types
           usage_calculator.current_units
         end
 
-        def projected_units
-          usage_calculator.projected_units
-        end
-
         def events_count
           object.sum(&:events_count)
         end
 
         def amount_cents
           usage_calculator.current_amount_cents
-        end
-
-        def projected_amount_cents
-          usage_calculator.projected_amount_cents
         end
 
         def charge

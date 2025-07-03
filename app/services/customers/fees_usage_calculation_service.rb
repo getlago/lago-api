@@ -11,14 +11,14 @@ module Customers
       @charges_duration_in_days = charges_duration_in_days
       @amount_cents = amount_cents
     end
-    
+
     def current_amount_cents
       fees.sum(&:amount_cents)
     end
 
     def projected_amount_cents
       return current_amount_cents if recurring?
-      time_ratio > 0 ? ((amount_cents || current_amount_cents) / BigDecimal(time_ratio.to_s)).round.to_i : 0
+      (time_ratio > 0) ? ((amount_cents || current_amount_cents) / BigDecimal(time_ratio.to_s)).round.to_i : 0
     end
 
     def current_units
@@ -29,7 +29,7 @@ module Customers
       current_units = fees.sum { |f| BigDecimal(f.units) }
 
       return current_units if recurring?
-      time_ratio > 0 ? (current_units / BigDecimal(time_ratio.to_s)).round(2) : BigDecimal('0')
+      (time_ratio > 0) ? (current_units / BigDecimal(time_ratio.to_s)).round(2) : BigDecimal("0")
     end
 
     private

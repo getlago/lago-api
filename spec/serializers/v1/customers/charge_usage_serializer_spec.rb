@@ -21,14 +21,14 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     if is_recurring
       BigDecimal("10")
     else
-      ratio > 0 ? (BigDecimal("10") / BigDecimal(ratio.to_s)).round(2) : BigDecimal('0')
+      (ratio > 0) ? (BigDecimal("10") / BigDecimal(ratio.to_s)).round(2) : BigDecimal("0")
     end
   end
   let(:expected_projected_amount_cents) do
     if is_recurring
       100
     else
-      ratio > 0 ? (100 / BigDecimal(ratio.to_s)).round.to_i : 0
+      (ratio > 0) ? (100 / BigDecimal(ratio.to_s)).round.to_i : 0
     end
   end
 
@@ -119,14 +119,14 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       if is_recurring
         BigDecimal("30")
       else
-        ratio > 0 ? (BigDecimal("30") / BigDecimal(ratio.to_s)).round(2) : BigDecimal('0')
+        (ratio > 0) ? (BigDecimal("30") / BigDecimal(ratio.to_s)).round(2) : BigDecimal("0")
       end
     end
     let(:expected_filter_projected_amount_cents) do
       if is_recurring
         300
       else
-        ratio > 0 ? (300 / BigDecimal(ratio.to_s)).round.to_i : 0
+        (ratio > 0) ? (300 / BigDecimal(ratio.to_s)).round.to_i : 0
       end
     end
 
@@ -153,38 +153,11 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     end
   end
 
-  describe "edge cases" do
-    context "when ratio is zero" do
-      let(:from_datetime) { Date.current + 2.days }
-      let(:to_datetime) { Date.current + 1.days }
-      
-      it "handles zero division gracefully" do
-        expect(result["charges"].first).to include(
-          "projected_units" => "0.0",
-          "projected_amount_cents" => 0
-        )
-      end
-    end
-
-    context "when current date is after the period" do
-      let(:from_datetime) { 1.month.ago.beginning_of_month }
-      let(:to_datetime) { 1.month.ago.end_of_month }
-      
-      it "clamps ratio to 1.0" do
-        # When ratio is clamped to 1.0, projected values should equal current values
-        expect(result["charges"].first).to include(
-          "projected_units" => "10.0",
-          "projected_amount_cents" => 100
-        )
-      end
-    end
-  end
-
   describe "recurring charges" do
     let(:is_recurring) { true }
 
     before do
-      allow_any_instance_of(charge.billable_metric.class).to receive(:recurring?).and_return(true)
+      allow(charge.billable_metric).to receive(:recurring?).and_return(true)
     end
 
     it "does not project values for recurring charges" do

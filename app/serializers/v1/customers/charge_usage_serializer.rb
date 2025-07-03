@@ -54,8 +54,8 @@ module V1
         return [] unless fees.first.charge&.filters&.any?
 
         fees.group_by { |f| f.charge_filter&.id }
-            .values
-            .filter_map { |grouped_fees| build_filter_data(grouped_fees) }
+          .values
+          .filter_map { |grouped_fees| build_filter_data(grouped_fees) }
       end
 
       def build_filter_data(grouped_fees)
@@ -75,8 +75,8 @@ module V1
         return [] unless fees.any? { |f| f.grouped_by.present? }
 
         fees.group_by(&:grouped_by)
-            .values
-            .map { |grouped_fees| build_grouped_usage_data(grouped_fees) }
+          .values
+          .map { |grouped_fees| build_grouped_usage_data(grouped_fees) }
       end
 
       def build_grouped_usage_data(grouped_fees)

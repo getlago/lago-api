@@ -159,6 +159,7 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
       context "when there is no error" do
         let(:current_date) { DateTime.parse("2025-06-15") }
         let(:timestamp) { current_date }
+
         before do
           stub_request(:post, endpoint).to_return do |request|
             response = JSON.parse(File.read(

@@ -6,6 +6,8 @@ module Types
       class Current < Types::BaseObject
         graphql_name "CustomerUsage"
 
+        delegate :projected_amount_cents, to: :usage_calculator
+
         field :from_datetime, GraphQL::Types::ISO8601DateTime, null: false
         field :to_datetime, GraphQL::Types::ISO8601DateTime, null: false
 
@@ -18,10 +20,6 @@ module Types
         field :total_amount_cents, GraphQL::Types::BigInt, null: false
 
         field :charges_usage, [Types::Customers::Usage::Charge], null: false
-
-        def projected_amount_cents
-          object.projected_amount_cents
-        end
 
         def charges_usage
           object.fees.group_by(&:charge_id).values
