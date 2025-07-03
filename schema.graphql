@@ -3827,6 +3827,7 @@ enum CurrencyEnum {
 Current Organization Type
 """
 type CurrentOrganization {
+  accessibleByCurrentSession: Boolean!
   addressLine1: String
   addressLine2: String
   adyenPaymentProviders: [AdyenProvider!]
@@ -7435,7 +7436,7 @@ enum OrderByEnum {
 Safe Organization Type
 """
 type Organization {
-  authenticationMethods: [String!]!
+  accessibleByCurrentSession: Boolean!
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   defaultCurrency: CurrencyEnum!
