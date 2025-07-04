@@ -20,7 +20,11 @@ module Auth
         find_or_create_user
         find_or_create_membership
 
-        UsersService.new.new_token(result.user)
+        unless result.user.organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::OKTA)
+          return result.single_validation_failure!(error_code: "login_method_not_authorized")
+        end
+
+        generate_token
       rescue ValidationError => e
         result.single_validation_failure!(error_code: e.message)
         result
@@ -29,6 +33,13 @@ module Auth
       private
 
       attr_reader :code, :state
+
+      def generate_token
+        result.token = Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::OKTA)
+        result
+      rescue => e
+        result.service_failure!(code: "token_encoding_error", message: e.message)
+      end
 
       def find_or_create_user
         user = User.find_or_initialize_by(email: result.email)

@@ -34,6 +34,9 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
         expect(result.user.email).to eq("foo@bar.com")
         expect(result.token).to be_present
         expect(invite.reload).to be_accepted
+
+        decoded = Auth::TokenService.decode(token: result.token)
+        expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::OKTA)
       end
     end
 

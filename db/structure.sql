@@ -2237,6 +2237,7 @@ CREATE TABLE public.organizations (
     finalize_zero_amount_invoice boolean DEFAULT true NOT NULL,
     clickhouse_events_store boolean DEFAULT false NOT NULL,
     hmac_key character varying NOT NULL,
+    authentication_methods character varying[] DEFAULT '{email_password,google_oauth}'::character varying[] NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -8918,6 +8919,8 @@ SET search_path TO "$user", public;
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250704800001'),
 ('20250703133126'),
+('20250701141017'),
+('20250701133139'),
 ('20250630180000'),
 ('20250627134933'),
 ('20250627134932'),

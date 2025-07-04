@@ -21,9 +21,16 @@ module Types
       field :name, String, null: false
       field :timezone, Types::TimezoneEnum, null: true
 
+      field :accessible_by_current_session, Boolean, null: false
+
       field :billing_configuration, Types::Organizations::BillingConfiguration, null: true
 
       field :can_create_billing_entity, Boolean, null: false, method: :can_create_billing_entity?
+
+      def accessible_by_current_session
+        context[:current_user].organizations.include?(object) &&
+          object.authentication_methods.include?(context[:login_method])
+      end
     end
   end
 end
