@@ -42,6 +42,10 @@ RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
       expect(result.entitlements.count).to eq(1)
     end
 
+    it "sends `plan.updated` webhook" do
+      expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", plan)
+    end
+
     it "creates the entitlement with correct values" do
       result
       entitlement = plan.entitlements.first

@@ -16,6 +16,8 @@ module Entitlement
           create_entitlements
         end
 
+        SendWebhookJob.perform_after_commit("plan.updated", plan)
+
         result.entitlements = plan.entitlements.includes(:feature, values: :privilege)
         result
       end

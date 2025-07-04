@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Entitlement
-  class EntitlementPrivilegeDestroyService < BaseService
+  class PlanEntitlementPrivilegeDestroyService < BaseService
     Result = BaseResult[:entitlement]
 
     def initialize(entitlement:, privilege_code:)
@@ -18,6 +18,8 @@ module Entitlement
 
       entitlement_value.discard!
 
+      SendWebhookJob.perform_after_commit("plan.updated", entitlement.plan)
+
       # NOTE: reload the entitlement with all the associations required to serialize it
       result.entitlement = Entitlement.includes(:feature, values: :privilege).find_by(id: entitlement.id)
       result
@@ -28,7 +30,6 @@ module Entitlement
     attr_reader :entitlement, :privilege_code
 
     def find_entitlement_value
-      # NOTE: use this since it's eager loaded? `entitlement.values.find { |v| v.privilege.code == privilege_code }`
       entitlement.values.joins(:privilege).find_by(privilege: {code: privilege_code})
     end
   end

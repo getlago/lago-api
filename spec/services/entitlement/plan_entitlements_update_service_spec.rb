@@ -50,6 +50,10 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
       expect(result.entitlements).to include(entitlement)
     end
 
+    it "sends `plan.updated` webhook" do
+      expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", plan)
+    end
+
     context "when privilege value does not exist" do
       let(:entitlements_params) do
         {

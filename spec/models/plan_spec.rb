@@ -23,6 +23,7 @@ RSpec.describe Plan, type: :model do
     expect(subject).to have_many(:applied_taxes).class_name("Plan::AppliedTax").dependent(:destroy)
     expect(subject).to have_many(:taxes).through(:applied_taxes)
     expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement").dependent(:destroy)
+    expect(subject).to have_many(:entitlement_values).through(:entitlements).source(:values).class_name("Entitlement::EntitlementValue").dependent(:destroy)
 
     expect(subject).to validate_presence_of(:interval)
     expect(subject).to define_enum_for(:interval).with_values(Plan::INTERVALS)

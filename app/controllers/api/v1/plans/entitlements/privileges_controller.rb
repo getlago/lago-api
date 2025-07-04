@@ -11,7 +11,7 @@ module Api
           before_action :find_entitlement
 
           def destroy
-            result = ::Entitlement::EntitlementPrivilegeDestroyService.call(
+            result = ::Entitlement::PlanEntitlementPrivilegeDestroyService.call(
               entitlement: entitlement,
               privilege_code: params[:code]
             )

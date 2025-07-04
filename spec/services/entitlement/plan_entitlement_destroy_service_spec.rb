@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::EntitlementDestroyService, type: :service do
+RSpec.describe Entitlement::PlanEntitlementDestroyService, type: :service do
   subject(:destroy_service) { described_class.new(entitlement: entitlement) }
 
   let(:organization) { create(:organization) }
@@ -24,15 +24,19 @@ RSpec.describe Entitlement::EntitlementDestroyService, type: :service do
     end
 
     it "soft deletes the entitlement" do
-      expect { result }.to change { Entitlement::Entitlement.kept.count }.by(-1)
+      expect { result }.to change(feature.entitlements, :count).by(-1)
     end
 
     it "soft deletes all entitlement values" do
-      expect { result }.to change { Entitlement::EntitlementValue.kept.count }.by(-1)
+      expect { result }.to change(feature.entitlement_values, :count).by(-1)
     end
 
     it "returns the entitlement in the result" do
       expect(result.entitlement).to eq(entitlement)
+    end
+
+    it "sends `plan.updated` webhook" do
+      expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", plan)
     end
 
     context "when entitlement is nil" do

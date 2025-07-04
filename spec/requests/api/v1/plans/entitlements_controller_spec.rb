@@ -403,8 +403,8 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
     it "deletes the entitlement and its values" do
       expect {
         delete_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}"
-      }.to change { Entitlement::Entitlement.kept.count }.by(-1)
-        .and change { Entitlement::EntitlementValue.kept.count }.by(-1)
+      }.to change(feature.entitlements, :count).by(-1)
+        .and change(feature.entitlement_values, :count).by(-1)
 
       expect(response).to have_http_status(:success)
     end

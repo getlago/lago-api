@@ -73,7 +73,7 @@ module Api
         end
 
         def destroy
-          result = ::Entitlement::EntitlementDestroyService.call(entitlement: entitlement)
+          result = ::Entitlement::PlanEntitlementDestroyService.call(entitlement: entitlement)
 
           if result.success?
             render(

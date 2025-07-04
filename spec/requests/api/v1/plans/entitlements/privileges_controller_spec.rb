@@ -21,7 +21,7 @@ RSpec.describe Api::V1::Plans::Entitlements::PrivilegesController, type: :reques
     it "deletes the specific privilege value from the entitlement" do
       expect {
         delete_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}/privileges/#{privilege.code}"
-      }.to change { Entitlement::EntitlementValue.kept.count }.by(-1)
+      }.to change(privilege.values, :count).by(-1)
 
       expect(response).to have_http_status(:success)
 

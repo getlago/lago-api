@@ -8,7 +8,7 @@ RSpec.describe Entitlement::FeatureDestroyService, type: :service do
   let(:organization) { create(:organization) }
   let(:feature) { create(:feature, organization:) }
   let(:privilege1) { create(:privilege, feature:, code: "max_admins", value_type: "integer") }
-  let(:privilege2) { create(:privilege, feature:, code: "max_users", value_type: "integer") }
+  let(:privilege2) { create(:privilege, feature:, code: "has_root", value_type: "boolean") }
 
   before do
     privilege1
@@ -22,7 +22,7 @@ RSpec.describe Entitlement::FeatureDestroyService, type: :service do
     end
 
     it "discards all privileges associated with the feature" do
-      expect { subject }.to change { feature.privileges.kept.count }.by(-2)
+      expect { subject }.to change(feature.privileges, :count).by(-2)
     end
 
     it "returns the feature in the result" do
@@ -58,6 +58,23 @@ RSpec.describe Entitlement::FeatureDestroyService, type: :service do
 
       it "still discards the feature successfully" do
         expect { subject }.to change { feature.reload.discarded? }.from(false).to(true)
+      end
+    end
+
+    context "when feature is attached to a plan" do
+      let(:entitlement) { create(:entitlement, feature:) }
+      let(:privilege1_value) { create(:entitlement_value, entitlement:, privilege: privilege1, value: 10) }
+      let(:privilege2_value) { create(:entitlement_value, entitlement:, privilege: privilege2, value: true) }
+
+      before do
+        privilege1_value
+        privilege2_value
+      end
+
+      it "discard all values and entitlement" do
+        expect { subject }.to change(feature.entitlement_values, :count).from(2).to(0)
+          .and change(feature.entitlements, :count).from(1).to(0)
+          .and have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", entitlement.plan)
       end
     end
   end
