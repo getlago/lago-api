@@ -25,6 +25,7 @@ class Plan < ApplicationRecord
   has_many :applied_taxes, class_name: "Plan::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
   has_many :entitlements, class_name: "Entitlement::Entitlement", dependent: :destroy
+  has_many :entitlement_values, through: :entitlements, source: :values, class_name: "Entitlement::EntitlementValue", dependent: :destroy
 
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
