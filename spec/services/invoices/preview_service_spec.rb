@@ -186,7 +186,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               Rails.cache.clear
             end
 
-            it "creates preview invoice for 2 days" do
+            it "creates preview invoice for 2 days", transaction: false do
               # Two days should be billed, Mar 30 and Mar 31
 
               travel_to(timestamp) do
@@ -207,7 +207,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               end
             end
 
-            it "uses the Rails cache" do
+            it "uses the Rails cache", transaction: false do
               key = [
                 "charge-usage",
                 Subscriptions::ChargeCacheService::CACHE_KEY_VERSION,
@@ -280,7 +280,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               Rails.cache.clear
             end
 
-            it "creates preview invoice for 1 day" do
+            it "creates preview invoice for 1 day", transaction: false do
               # One days should be billed, Mar 30 only
 
               travel_to(subscription.terminated_at) do
@@ -369,7 +369,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               Rails.cache.clear
             end
 
-            it "creates preview invoice for 1 day" do
+            it "creates preview invoice for 1 day", transaction: false do
               # One days should be billed, Mar 30 only
 
               travel_to(terminated_subscription.terminated_at) do
@@ -466,7 +466,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               Rails.cache.clear
             end
 
-            it "creates preview invoice" do
+            it "creates preview invoice", transaction: false do
               # only charges from March (3 days), full April billed by new plan
 
               travel_to(Time.zone.parse("30 Mar 2024 05:00")) do
@@ -974,7 +974,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               Rails.cache.clear
             end
 
-            it "creates preview invoice for full month" do
+            it "creates preview invoice for full month", transaction: false do
               travel_to(timestamp) do
                 result = preview_service.call
 

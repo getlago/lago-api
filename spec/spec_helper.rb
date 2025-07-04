@@ -159,9 +159,16 @@ RSpec.configure do |config|
       :transaction
     end
     DatabaseCleaner.strategy = strategy
+
     # We need to set the strategy for the `events` connection as well to properly rollback changes done using the `events` connection.
     # DO NOT CHANGE `:db` to `:events` as it will not work properly with `:transaction` strategy.
-    DatabaseCleaner[:active_record, db: EventsRecord].strategy = strategy
+    DatabaseCleaner[:active_record, db: EventsRecord].strategy = if strategy == :transaction
+      :transaction
+    else
+      # If the `deletion` strategy is used for the default connection, we don't need to set it for the `events` connection as they are using the same database.
+      DatabaseCleaner::NullStrategy.new
+    end
+
     DatabaseCleaner.cleaning do
       example.run
     end
