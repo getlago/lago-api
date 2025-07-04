@@ -6,9 +6,13 @@ module Types
       class Charge < Types::BaseObject
         graphql_name "ChargeUsage"
 
+        delegate :projected_units, :projected_amount_cents, to: :usage_calculator
+
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
         field :id, ID, null: false
+        field :projected_amount_cents, GraphQL::Types::BigInt, null: false
+        field :projected_units, GraphQL::Types::Float, null: false
         field :units, GraphQL::Types::Float, null: false
 
         field :billable_metric, Types::BillableMetrics::Object, null: false
@@ -21,7 +25,7 @@ module Types
         end
 
         def units
-          object.map { |f| BigDecimal(f.units) }.sum
+          usage_calculator.current_units
         end
 
         def events_count
@@ -29,7 +33,7 @@ module Types
         end
 
         def amount_cents
-          object.sum(&:amount_cents)
+          usage_calculator.current_amount_cents
         end
 
         def charge
@@ -50,6 +54,24 @@ module Types
           return [] unless object.any? { |f| f.grouped_by.present? }
 
           object.group_by(&:grouped_by).values
+        end
+
+        private
+
+        def usage_calculator
+          @usage_calculator ||= begin
+            first_fee = object.first
+            from = first_fee.properties["from_datetime"]
+            to = first_fee.properties["to_datetime"]
+            duration = first_fee.properties["charges_duration"]
+
+            ::Customers::FeesUsageCalculationService.new(
+              fees: object,
+              from_datetime: from,
+              to_datetime: to,
+              charges_duration_in_days: duration
+            )
+          end
         end
       end
     end
