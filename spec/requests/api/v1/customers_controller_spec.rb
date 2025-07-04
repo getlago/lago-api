@@ -41,8 +41,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       expect(json[:customer][:billing_entity_code]).to eq(organization.default_billing_entity.code)
     end
 
-    context "with premium features" do
-      around { |test| lago_premium!(&test) }
+    context "with premium features", :lago_premium do
 
       let(:create_params) do
         {
@@ -60,7 +59,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context "with finalize_zero_amount_invoice" do
+    context "with finalize_zero_amount_invoice", :lago_premium do
       let(:create_params) do
         {
           external_id: SecureRandom.uuid,
@@ -76,8 +75,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context "with billing configuration" do
-      around { |test| lago_premium!(&test) }
+    context "with billing configuration", :lago_premium do
 
       let(:create_params) do
         {
@@ -104,7 +102,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         subject
       end
 
-      context "when provider payment methods are not present" do
+      context "when provider payment methods are not present", :lago_premium do
         let(:provider_payment_methods) { nil }
 
         it "returns a success" do
@@ -125,7 +123,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         end
       end
 
-      context "when both provider payment methods are set" do
+      context "when both provider payment methods are set", :lago_premium do
         let(:provider_payment_methods) { %w[card sepa_debit] }
 
         it "returns a success" do
@@ -146,7 +144,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         end
       end
 
-      context "when provider payment methods contain only card" do
+      context "when provider payment methods contain only card", :lago_premium do
         let(:provider_payment_methods) { %w[card] }
 
         it "returns a success" do
@@ -167,7 +165,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         end
       end
 
-      context "when provider payment methods contain only sepa_debit" do
+      context "when provider payment methods contain only sepa_debit", :lago_premium do
         let(:provider_payment_methods) { %w[sepa_debit] }
 
         it "returns a success" do
@@ -189,7 +187,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context "with account_type partner" do
+    context "with account_type partner", :lago_premium do
       let(:organization) { create(:organization, premium_integrations: ["revenue_share"]) }
 
       let(:create_params) do
@@ -199,8 +197,6 @@ RSpec.describe Api::V1::CustomersController, type: :request do
           account_type: "partner"
         }
       end
-
-      around { |test| lago_premium!(&test) }
 
       it "returns a success" do
         subject
@@ -212,7 +208,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context "with metadata" do
+    context "with metadata", :lago_premium do
       let(:create_params) do
         {
           external_id: SecureRandom.uuid,
@@ -245,7 +241,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context "with invalid params" do
+    context "with invalid params", :lago_premium do
       let(:create_params) do
         {name: "Foo Bar", currency: "invalid"}
       end
@@ -256,7 +252,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context "with invoice_custom_sections" do
+    context "with invoice_custom_sections", :lago_premium do
       let(:create_params) do
         {
           external_id: SecureRandom.uuid,
@@ -277,7 +273,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         subject
       end
 
-      context "when sending custom invoice_custom_sections" do
+      context "when sending custom invoice_custom_sections", :lago_premium do
         let(:skip_invoice_custom_sections) { false }
         let(:invoice_custom_section_codes) { invoice_custom_sections.map(&:code) }
 
@@ -294,7 +290,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         end
       end
 
-      context "when sending skip_invoice_custom_sections AND invoice_custom_section_codes" do
+      context "when sending skip_invoice_custom_sections AND invoice_custom_section_codes", :lago_premium do
         let(:skip_invoice_custom_sections) { true }
         let(:invoice_custom_section_codes) { invoice_custom_sections.map(&:code) }
 
@@ -306,7 +302,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context "when billing_entity_code is provided" do
+    context "when billing_entity_code is provided", :lago_premium do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:create_params) do
         {
@@ -341,7 +337,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       expect(json[:customer][:portal_url]).to include("/customer-portal/")
     end
 
-    context "when customer does not belongs to the organization" do
+    context "when customer, :lago_premium does not belongs to the organization", :lago_premium do
       let(:customer) { create(:customer) }
 
       it "returns not found error" do
@@ -369,7 +365,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       expect(json[:customers][0][:taxes]).not_to be_nil
     end
 
-    context "with account_type filters" do
+    context "with account_type filters", :lago_premium do
       let(:params) { {account_type: %w[partner]} }
 
       let(:partner) do
@@ -387,7 +383,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context "when filtering by billing_entity_code" do
+    context "when filtering by billing_entity_code", :lago_premium do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:customer) { create(:customer, organization:, billing_entity:) }
       let(:params) { {billing_entity_codes: [billing_entity.code]} }
@@ -402,7 +398,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         expect(json[:customers].first[:lago_id]).to eq(customer.id)
       end
 
-      context "when one of billing entities does not exist" do
+      context "when one of billing entities, :lago_premium does not exist", :lago_premium do
         let(:params) { {billing_entity_codes: [billing_entity.code, "non_existent_code"]} }
 
         it "returns a not found error" do
@@ -413,7 +409,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         end
       end
 
-      context "with invalid billing entity codes" do
+      context "with invalid billing entity codes", :lago_premium do
         let(:params) { {billing_entity_codes: "invalid_code"} }
 
         it "ignores the parameter" do
@@ -425,7 +421,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
         end
       end
 
-      context "with two identical billing entity codes" do
+      context "with two identical billing entity codes", :lago_premium do
         let(:params) { {billing_entity_codes: [billing_entity.code, billing_entity.code]} }
 
         it "returns customers for the specified billing entity" do
@@ -458,7 +454,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
-    context "when customer does not exist" do
+    context "when customer, :lago_premium does not exist", :lago_premium do
       let(:external_id) { SecureRandom.uuid }
 
       it "returns a not found error" do
@@ -490,7 +486,7 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       expect(json[:customer][:external_id]).to eq(customer.external_id)
     end
 
-    context "when customer does not exist" do
+    context "when customer, :lago_premium does not exist", :lago_premium do
       let(:external_id) { SecureRandom.uuid }
 
       it "returns not_found error" do

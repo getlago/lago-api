@@ -24,15 +24,13 @@ RSpec.describe Mutations::Integrations::Xero::Create, type: :graphql do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   before { membership.organization.update!(premium_integrations: ["xero"]) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:create"
 
-  it "creates a xero integration" do
+  it "creates a xero integration", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,

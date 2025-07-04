@@ -46,9 +46,7 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     )
   end
 
-  around { |test| lago_premium!(&test) }
-
-  context "when aggregation is 0" do
+  context "when aggregation is 0", :lago_premium do
     let(:aggregation) { 0 }
     let(:aggregation_count) { 0 }
 
@@ -73,7 +71,7 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     end
   end
 
-  context "when aggregation is 1" do
+  context "when aggregation is 1", :lago_premium do
     let(:aggregation) { 1 }
     let(:aggregation_count) { 1 }
 
@@ -99,7 +97,7 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     end
   end
 
-  context "when aggregation is 10" do
+  context "when aggregation is 10", :lago_premium do
     let(:aggregation) { 10 }
     let(:aggregation_count) { 1 }
 
@@ -125,7 +123,7 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     end
   end
 
-  context "when aggregation is 11" do
+  context "when aggregation is 11", :lago_premium do
     let(:aggregation) { 11 }
     let(:aggregation_count) { 1 }
 
@@ -160,7 +158,7 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     end
   end
 
-  context "when aggregation is 12" do
+  context "when aggregation is 12", :lago_premium do
     let(:aggregation) { 12 }
     let(:aggregation_count) { 1 }
 
@@ -195,7 +193,7 @@ RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service
     end
   end
 
-  context "when aggregation is 21" do
+  context "when aggregation is 21", :lago_premium do
     let(:aggregation) { 21 }
     let(:aggregation_count) { 1 }
 

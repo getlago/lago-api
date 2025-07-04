@@ -107,7 +107,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       allow(response).to receive(:body).and_return(body)
     end
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       it "returns an error" do
         result = described_class.new(invoice: nil).call
 
@@ -116,7 +116,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       end
     end
 
-    context "when integration customer does not exist" do
+    context "when integration customer, :lago_premium does not exist", :lago_premium do
       let(:integration_customer_tax) { nil }
 
       it "returns an error" do
@@ -127,7 +127,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       end
     end
 
-    context "when invoice is not pending" do
+    context "when invoice is not pending", :lago_premium do
       before do
         invoice.update(status: %i[finalized voided generating].sample)
       end
@@ -141,7 +141,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       end
     end
 
-    context "when taxes are fetched successfully" do
+    context "when taxes are fetched successfully", :lago_premium do
       before do
         allow(Utils::ActivityLog).to receive(:produce)
       end
@@ -217,8 +217,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
       end
 
-      context "with lago_premium" do
-        around { |test| lago_premium!(&test) }
+      context "with lago_premium", :lago_premium do
 
         it "enqueues GeneratePdfAndNotifyJob with email true" do
           expect do
@@ -226,7 +225,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
           end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
         end
 
-        context "when billing entity does not have right email settings" do
+        context "when billing entity, :lago_premium does not have right email settings", :lago_premium do
           before { invoice.billing_entity.update!(email_settings: []) }
 
           it "enqueues GeneratePdfAndNotifyJob with email false" do
@@ -258,7 +257,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         expect(Invoices::Payments::CreateService).to have_received(:call_async)
       end
 
-      context "with credit notes" do
+      context "with credit notes", :lago_premium do
         let(:credit_note) do
           create(
             :credit_note,
@@ -288,7 +287,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
           expect(credit.amount_cents).to eq(10)
         end
 
-        context "when invoice type is one_off" do
+        context "when invoice type is one_off", :lago_premium do
           before do
             invoice.update!(invoice_type: :one_off)
           end
@@ -305,7 +304,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         end
       end
 
-      context "when status is draft" do
+      context "when status is draft", :lago_premium do
         before do
           invoice.update!(status: :draft)
         end
@@ -356,7 +355,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
           expect(Invoices::Payments::CreateService).not_to have_received(:call_async)
         end
 
-        context "with credit notes" do
+        context "with credit notes", :lago_premium do
           let(:credit_note) do
             create(
               :credit_note,
@@ -385,7 +384,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       end
     end
 
-    context "when failed to fetch taxes" do
+    context "when failed to fetch taxes", :lago_premium do
       let(:body) do
         path = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
         File.read(path)
@@ -406,7 +405,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
         expect(invoice.error_details.tax_error.order(created_at: :asc).last.discarded?).to be(false)
       end
 
-      context "with api limit error" do
+      context "with api limit error", :lago_premium do
         let(:body) do
           p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/api_limit_response.json")
           File.read(p)

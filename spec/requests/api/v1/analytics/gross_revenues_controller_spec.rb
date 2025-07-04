@@ -16,7 +16,6 @@ RSpec.describe Api::V1::Analytics::GrossRevenuesController, type: :request do
     end
 
     context "when licence is premium" do
-      around { |test| lago_premium!(&test) }
 
       include_examples "requires API permission", "analytic", "read"
 
@@ -28,7 +27,7 @@ RSpec.describe Api::V1::Analytics::GrossRevenuesController, type: :request do
         expect(Analytics::GrossRevenuesService).to have_received(:call).with(organization, billing_entity_id: nil, currency: nil, months: nil, external_customer_id: nil)
       end
 
-      context "when sending params" do
+      context "when sending params", :lago_premium do
         let(:params) { {billing_entity_code: billing_entity.code} }
 
         it "calls the service with the billing_entity_id" do
@@ -38,7 +37,7 @@ RSpec.describe Api::V1::Analytics::GrossRevenuesController, type: :request do
       end
     end
 
-    context "when licence is not premium" do
+    context "when licence is not premium", :lago_premium do
       it "returns the gross revenue" do
         subject
 

@@ -50,13 +50,11 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
     recurring_transaction_rule
   end
 
-  around { |test| lago_premium!(&test) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "wallets:update"
 
-  it "updates a wallet" do
+  it "updates a wallet", :lago_premium do
     result = execute_graphql(
       current_organization: organization,
       current_user: membership.user,

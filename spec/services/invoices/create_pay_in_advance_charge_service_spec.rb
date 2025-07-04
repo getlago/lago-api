@@ -169,8 +169,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
+    context "with lago_premium", :lago_premium do
 
       it "enqueues GeneratePdfAndNotifyJob with email true" do
         expect do
@@ -178,7 +177,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
-      context "when organization does not have right email settings" do
+      context "when organization, :lago_premium does not have right email settings", :lago_premium do
         let(:email_settings) { [] }
 
         it "enqueues GeneratePdfAndNotifyJob with email false" do
@@ -189,7 +188,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end
     end
 
-    context "with customer timezone" do
+    context "with customer timezone", :lago_premium do
       let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
       let(:timestamp) { DateTime.parse("2022-11-25 01:00:00") }
 
@@ -201,7 +200,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end
     end
 
-    context "when there is tax provider integration" do
+    context "when there is tax provider integration", :lago_premium do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
       let(:response) { instance_double(Net::HTTPOK) }
@@ -248,7 +247,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         end
       end
 
-      context "when there is error received from the provider" do
+      context "when there is error received from the provider", :lago_premium do
         let(:body) do
           p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
           File.read(p)
@@ -277,7 +276,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
       end
     end
 
-    context "with grace period" do
+    context "with grace period", :lago_premium do
       let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
       let(:timestamp) { DateTime.parse("2022-11-25 08:00:00") }
 
@@ -293,7 +292,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
     end
 
     context "when an error occurs" do
-      context "with a stale object error" do
+      context "with a stale object error", :lago_premium do
         before { create(:wallet, customer:, balance_cents: 100) }
 
         it "propagates the error" do
@@ -304,7 +303,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
         end
       end
 
-      context "with a sequence error" do
+      context "with a sequence error", :lago_premium do
         it "propagates the error" do
           allow_any_instance_of(Invoice) # rubocop:disable RSpec/AnyInstance
             .to receive(:save!).and_raise(Sequenced::SequenceError)

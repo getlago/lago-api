@@ -18,9 +18,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
     allow(LifetimeUsages::CheckThresholdsService).to receive(:call)
   end
 
-  around { |test| lago_premium!(&test) }
-
-  context "when both lifetime_usage and progressive_billing are enabled" do
+  context "when both lifetime_usage and progressive_billing are enabled", :lago_premium do
     let(:premium_integrations) { %w[lifetime_usage progressive_billing] }
 
     it "calls both services and deletes subscription_activity" do
@@ -39,7 +37,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
     end
   end
 
-  context "when lifetime_usage and progressive_billing are both disabled" do
+  context "when lifetime_usage and progressive_billing are both disabled", :lago_premium do
     let(:premium_integrations) { ["salesforce"] }
 
     it "calculates and checks thresholds are not called" do
@@ -58,7 +56,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
     end
   end
 
-  context "when only using lifetime_usage" do
+  context "when only using lifetime_usage", :lago_premium do
     let(:premium_integrations) { ["lifetime_usage"] }
 
     it "calls calculate service and deletes subscription_activity" do
@@ -75,7 +73,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
     end
   end
 
-  context "when progressive_billing_enabled is true" do
+  context "when progressive_billing_enabled is true", :lago_premium do
     let(:premium_integrations) { ["progressive_billing"] }
 
     it "calls both calculate and check thresholds services and deletes subscription_activity" do
@@ -94,7 +92,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
     end
   end
 
-  context "when lifetime_usage already exists" do
+  context "when lifetime_usage already exists", :lago_premium do
     let(:premium_integrations) { %w[progressive_billing] }
 
     it "does not create a new lifetime usage" do
@@ -103,7 +101,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
     end
   end
 
-  context "when subscription has alerts" do
+  context "when subscription has alerts", :lago_premium do
     let(:premium_integrations) { [] }
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:alert) { create(:usage_current_amount_alert, organization:, subscription_external_id: subscription.external_id) }
@@ -129,7 +127,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
       expect { subscription_activity.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
 
-    context "when alerting fail" do
+    context "when alerting fail", :lago_premium do
       it "deletes subscription_activity before raising" do
         allow(::UsageMonitoring::ProcessAlertService).to receive(:call).and_raise(StandardError, "boom")
         expect { service.call }.to raise_error(StandardError, "boom")
@@ -137,7 +135,7 @@ RSpec.describe UsageMonitoring::ProcessSubscriptionActivityService, type: :servi
       end
     end
 
-    context "when progressive_billing fail" do
+    context "when progressive_billing fail", :lago_premium do
       let(:premium_integrations) { %w[lifetime_usage progressive_billing] }
 
       it "processes alert and then raise" do

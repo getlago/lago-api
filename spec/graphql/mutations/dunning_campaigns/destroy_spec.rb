@@ -18,13 +18,11 @@ RSpec.describe Mutations::DunningCampaigns::Destroy, type: :graphql do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "dunning_campaigns:delete"
 
-  it "deletes a dunning campaign" do
+  it "deletes a dunning campaign", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -39,7 +37,7 @@ RSpec.describe Mutations::DunningCampaigns::Destroy, type: :graphql do
     expect(data["id"]).to eq(dunning_campaign.id)
   end
 
-  context "when dunnign campaign is not found" do
+  context "when dunnign campaign is not found", :lago_premium do
     let(:dunning_campaign) { create(:dunning_campaign) }
 
     it "returns an error" do

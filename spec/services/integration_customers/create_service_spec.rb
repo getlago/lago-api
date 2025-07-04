@@ -24,7 +24,7 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
 
     let(:subsidiary_id) { "1" }
 
-    context "with netsuite premium integration present" do
+          context "with netsuite premium integration present", :lago_premium do
       let(:integration_code) { integration.code }
       let(:external_customer_id) { nil }
       let(:sync_with_provider) { true }
@@ -42,7 +42,7 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
 
       let(:integration_customer) { IntegrationCustomers::BaseCustomer.last }
 
-      around { |test| lago_premium!(&test) }
+
 
       before do
         organization.update!(premium_integrations: ["netsuite"])

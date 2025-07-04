@@ -5,8 +5,6 @@ require "rails_helper"
 RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, type: :service do
   subject(:flag_service) { described_class.new(invoice:) }
 
-  around { |test| lago_premium!(&test) }
-
   let(:invoice) { create(:invoice, :subscription, subscriptions:, organization: customer.organization) }
   let(:lifetime_usage) { create(:lifetime_usage, subscription: invoice.subscriptions.first) }
 
@@ -27,20 +25,20 @@ RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, type: :service do
         .to change { lifetime_usage.reload.recalculate_invoiced_usage }.from(false).to(true)
     end
 
-    context "when the invoice is not subscription" do
+    context "when the invoice is not subscription", :lago_premium do
       let(:lifetime_usage) { nil }
       let(:invoice) { create(:invoice, invoice_type: "one_off") }
 
       it { expect(flag_service.call).to be_success }
     end
 
-    context "when the invoice is not finalized or voided" do
+    context "when the invoice is not finalized or voided", :lago_premium do
       let(:invoice) { create(:invoice, :subscription, :draft) }
 
       it { expect(flag_service.call).to be_success }
     end
 
-    context "when the lifetime usage does not exists" do
+    context "when the lifetime usage, :lago_premium does not exists", :lago_premium do
       let(:lifetime_usage) { nil }
 
       it "creates a new lifetime usage" do
@@ -51,7 +49,7 @@ RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, type: :service do
       end
     end
 
-    context "when the invoice has no plan usage thresholds" do
+    context "when the invoice has no plan usage thresholds", :lago_premium do
       let(:usage_thresold) { nil }
 
       it "does not flags the lifetime usage" do
@@ -59,7 +57,7 @@ RSpec.describe LifetimeUsages::FlagRefreshFromInvoiceService, type: :service do
         expect(lifetime_usage.reload.recalculate_invoiced_usage).to be(false)
       end
 
-      context "when organization has lifetime_usage enabled" do
+      context "when organization has lifetime_usage enabled", :lago_premium do
         before do
           customer.organization.update!(premium_integrations: ["lifetime_usage"])
         end

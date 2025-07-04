@@ -74,7 +74,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
         .and_return(service_result)
     end
 
-    context "with adyen payment provider" do
+    context "with adyen payment provider", :lago_premium do
       let(:provider) { "adyen" }
       let(:payment_provider) { create(:adyen_provider, code: payment_provider_code, organization:) }
       let(:provider_customer) { create(:adyen_customer, payment_provider:, customer:) }
@@ -122,8 +122,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
           .not_to have_enqueued_mail(PaymentRequestMailer, :requested)
       end
 
-      context "when issue_receipts_enabled is true" do
-        around { |test| lago_premium!(&test) }
+      context "when issue_receipts_enabled is true", :lago_premium do
         before { organization.update!(premium_integrations: %w[issue_receipts]) }
 
         it "enqueues a payment receipt job" do
@@ -131,7 +130,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
         end
       end
 
-      context "when the payment fails" do
+      context "when the payment fails", :lago_premium do
         let(:service_result) do
           BaseService::Result.new.tap do |r|
             r.payment = instance_double(Payment, payable_payment_status: "failed")
@@ -146,7 +145,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "with gocardless payment provider" do
+    context "with gocardless payment provider", :lago_premium do
       let(:provider) { "gocardless" }
       let(:payment_provider) { create(:gocardless_provider, code: payment_provider_code, organization:) }
       let(:provider_customer) { create(:gocardless_customer, payment_provider:, customer:) }
@@ -188,7 +187,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
           .not_to have_enqueued_mail(PaymentRequestMailer, :requested)
       end
 
-      context "when the payment fails" do
+      context "when the payment fails", :lago_premium do
         let(:service_result) do
           BaseService::Result.new.tap do |r|
             r.payment = instance_double(Payment, payable_payment_status: "failed")
@@ -203,7 +202,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "with stripe payment provider" do
+    context "with stripe payment provider", :lago_premium do
       it "creates a payment and calls the stripe service" do
         result = create_service.call
 
@@ -245,7 +244,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
           .not_to have_enqueued_mail(PaymentRequestMailer, :requested)
       end
 
-      context "when the payment fails" do
+      context "when the payment fails", :lago_premium do
         let(:service_result) do
           BaseService::Result.new.tap do |r|
             r.payment = instance_double(Payment, payable_payment_status: "failed")
@@ -260,7 +259,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "when payment request payment status is succeeded" do
+    context "when payment request payment status is succeeded", :lago_premium do
       let(:payment_request) do
         create(
           :payment_request,
@@ -286,7 +285,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "with no payment provider" do
+    context "with no payment provider", :lago_premium do
       let(:payment_provider) { nil }
 
       it "does not creates a stripe payment", :aggregate_failures do
@@ -301,7 +300,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "with 0 amount" do
+    context "with 0 amount", :lago_premium do
       let(:payment_request) do
         create(
           :payment_request,
@@ -334,7 +333,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "when customer does not have a provider customer id" do
+    context "when customer, :lago_premium does not have a provider customer id", :lago_premium do
       before { provider_customer.update!(provider_customer_id: nil) }
 
       it "does not creates a stripe payment", :aggregate_failures do
@@ -348,7 +347,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "when some invoices are already paid" do
+    context "when some invoices are already paid", :lago_premium do
       let(:invoice_1) do
         create(
           :invoice,
@@ -371,7 +370,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "when provider service raises a service failure" do
+    context "when provider service raises a service failure", :lago_premium do
       let(:service_result) do
         BaseService::Result.new.tap do |r|
           r.payment = instance_double(Payment, status: "pending", payable_payment_status: "pending")
@@ -403,7 +402,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
           .with(params: {payment_request:}, args: [])
       end
 
-      context "when payment has a payable_payment_status" do
+      context "when payment has a payable_payment_status", :lago_premium do
         let(:service_result) do
           BaseService::Result.new.tap do |r|
             r.payment = instance_double(Payment, payable_payment_status: "failed")
@@ -421,7 +420,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
         end
       end
 
-      context "when payable_payment_status is pending" do
+      context "when payable_payment_status is pending", :lago_premium do
         let(:service_result) do
           BaseService::Result.new.tap do |r|
             r.payment = instance_double(Payment, status: "failed", payable_payment_status: "pending")
@@ -446,7 +445,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "when payment status is processing" do
+    context "when payment status is processing", :lago_premium do
       let(:service_result) do
         BaseService::Result.new.tap do |r|
           r.payment = instance_double(Payment, payable_payment_status: "pending", status: "processing")
@@ -477,7 +476,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "when a payment exits" do
+    context "when a payment exits", :lago_premium do
       let(:payment) do
         create(
           :payment,
@@ -511,7 +510,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
         expect(provider_service).to have_received(:call!)
       end
 
-      context "when payment is already processing" do
+      context "when payment is already processing", :lago_premium do
         let(:payment_status) { "processing" }
 
         it "does not creates a payment" do
@@ -529,7 +528,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
   end
 
   describe "#call_async" do
-    context "with adyen payment provider" do
+    context "with adyen payment provider", :lago_premium do
       let(:payment_provider) { "adyen" }
 
       it "enqueues a job to create a adyen payment" do
@@ -539,7 +538,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "with gocardless payment provider" do
+    context "with gocardless payment provider", :lago_premium do
       let(:payment_provider) { "gocardless" }
 
       it "enqueues a job to create a gocardless payment" do
@@ -549,7 +548,7 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
-    context "with strip payment provider" do
+    context "with strip payment provider", :lago_premium do
       let(:payment_provider) { "stripe" }
 
       it "enqueues a job to create a stripe payment" do

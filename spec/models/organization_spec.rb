@@ -180,13 +180,13 @@ RSpec.describe Organization, type: :model do
     describe "of hmac key presence" do
       subject { organization }
 
-      context "with a new record" do
+      context "with a new record", :lago_premium do
         let(:organization) { build(:organization) }
 
         it { is_expected.not_to validate_presence_of(:hmac_key) }
       end
 
-      context "with a persisted record" do
+      context "with a persisted record", :lago_premium do
         let(:organization) { create(:organization) }
 
         it { is_expected.to validate_presence_of(:hmac_key) }
@@ -197,7 +197,7 @@ RSpec.describe Organization, type: :model do
   describe "#save" do
     subject { organization.save! }
 
-    context "with a new record" do
+    context "with a new record", :lago_premium do
       let(:organization) { build(:organization) }
       let(:used_hmac_key) { create(:organization).hmac_key }
       let(:unique_hmac_key) { SecureRandom.uuid }
@@ -218,7 +218,7 @@ RSpec.describe Organization, type: :model do
       end
     end
 
-    context "with a persisted record" do
+    context "with a persisted record", :lago_premium do
       let(:organization) { create(:organization) }
 
       it "does not change document number prefix of organization" do
@@ -271,12 +271,10 @@ RSpec.describe Organization, type: :model do
   describe "#can_create_billing_entity?" do
     subject { organization.can_create_billing_entity? }
 
-    around { |test| lago_premium!(&test) }
-
-    context "when no premium multi entities integration is enabled" do
+    context "when no premium multi entities integration is enabled", :lago_premium do
       it { is_expected.to eq(true) }
 
-      context "when organization has one active billing entity" do
+      context "when organization has one active billing entity", :lago_premium do
         before do
           create(:billing_entity, organization:)
         end
@@ -285,14 +283,14 @@ RSpec.describe Organization, type: :model do
       end
     end
 
-    context "when the premium multi_entities_pro integration is enabled" do
+    context "when the premium multi_entities_pro integration is enabled", :lago_premium do
       before do
         organization.update!(premium_integrations: ["multi_entities_pro"])
       end
 
       it { is_expected.to eq(true) }
 
-      context "when the organization has reached the limit" do
+      context "when the organization has reached the limit", :lago_premium do
         before do
           create_list(:billing_entity, 2, organization:)
         end
@@ -300,7 +298,7 @@ RSpec.describe Organization, type: :model do
         it { is_expected.to eq(false) }
       end
 
-      context "when organization has archived billing entities" do
+      context "when organization has archived billing entities", :lago_premium do
         before do
           create_list(:billing_entity, 2, :archived, organization:)
         end
@@ -309,14 +307,14 @@ RSpec.describe Organization, type: :model do
       end
     end
 
-    context "when the premium multi_entities_enterprise integration is enabled" do
+    context "when the premium multi_entities_enterprise integration is enabled", :lago_premium do
       before do
         organization.update!(premium_integrations: ["multi_entities_enterprise"])
       end
 
       it { is_expected.to eq(true) }
 
-      context "when the organization has some billing entities" do
+      context "when the organization has some billing entities", :lago_premium do
         before do
           create_list(:billing_entity, 2, organization:)
         end
@@ -327,7 +325,6 @@ RSpec.describe Organization, type: :model do
   end
 
   describe "#using_lifetime_usage?" do
-    around { |test| lago_premium!(&test) }
 
     it do
       expect(build(:organization, premium_integrations: ["lifetime_usage"])).to be_using_lifetime_usage
@@ -359,8 +356,7 @@ RSpec.describe Organization, type: :model do
       expect(organization.from_email_address).to eq("noreply@getlago.com")
     end
 
-    context "when organization from_email integration is enabled" do
-      around { |test| lago_premium!(&test) }
+    context "when organization from_email integration is enabled", :lago_premium do
 
       it "returns the organization email" do
         organization.update!(premium_integrations: ["from_email"])
@@ -374,11 +370,11 @@ RSpec.describe Organization, type: :model do
 
     let(:organization) { create(:organization, billing_entities: []) }
 
-    context "when the organization has no billing entities" do
+    context "when the organization has no billing entities", :lago_premium do
       it { is_expected.to eq(nil) }
     end
 
-    context "when the organization has one billing entity" do
+    context "when the organization has one billing entity", :lago_premium do
       let(:billing_entity) { create(:billing_entity, organization:) }
 
       before { billing_entity }
@@ -386,7 +382,7 @@ RSpec.describe Organization, type: :model do
       it { is_expected.to eq(billing_entity) }
     end
 
-    context "when the organization has multiple billing entities" do
+    context "when the organization has multiple billing entities", :lago_premium do
       let(:billing_entity_1) { create(:billing_entity, organization:, created_at: 1.day.ago) }
       let(:billing_entity_2) { create(:billing_entity, organization:, created_at: 2.days.ago) }
       let(:billing_entity_3) { create(:billing_entity, organization:, created_at: 3.days.ago, archived_at: Time.current) }
@@ -482,7 +478,7 @@ RSpec.describe Organization, type: :model do
       expect(organization).to be_clickhouse_events_store
     end
 
-    context "when clickhouse_events_store is false" do
+    context "when clickhouse_events_store is false", :lago_premium do
       let(:organization) { create(:organization, clickhouse_events_store: false) }
 
       it "returns false" do

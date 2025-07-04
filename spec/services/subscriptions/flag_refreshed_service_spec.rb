@@ -14,8 +14,6 @@ RSpec.describe Subscriptions::FlagRefreshedService, type: :service do
     wallet
   end
 
-  around { |test| lago_premium!(&test) }
-
   describe "#call" do
     it "flags the wallets and usage for refresh" do
       result = flag_service.call

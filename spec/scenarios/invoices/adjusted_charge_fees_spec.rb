@@ -28,9 +28,7 @@ describe "Adjusted Charge Fees Scenario", :scenarios, type: :request, transactio
     )
   end
 
-  around { |test| lago_premium!(&test) }
-
-  context "with adjusted units" do
+  context "with adjusted units", :lago_premium do
     it "creates invoices correctly" do
       # NOTE: Jul 19th: create the subscription
       travel_to(subscription_at) do
@@ -100,7 +98,7 @@ describe "Adjusted Charge Fees Scenario", :scenarios, type: :request, transactio
     end
   end
 
-  context "with adjusted amount" do
+  context "with adjusted amount", :lago_premium do
     let(:unit_precise_amount) { "150.00" }
 
     it "creates invoices correctly" do

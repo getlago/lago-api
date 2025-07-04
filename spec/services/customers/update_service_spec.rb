@@ -69,7 +69,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       expect(Utils::ActivityLog).to have_received(:produce).with(customer, "customer.updated")
     end
 
-    context "when updating the billing entity reference" do
+    context "when updating the billing entity reference", :lago_premium do
       let(:billing_entity_2) { create(:billing_entity, organization:) }
 
       let(:update_args) do
@@ -86,7 +86,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         expect(result.customer.billing_entity).to eq(billing_entity_2)
       end
 
-      context "when billing entity is archived" do
+      context "when billing entity is archived", :lago_premium do
         before { billing_entity_2.update!(archived_at: Time.current) }
 
         it "fails" do
@@ -98,7 +98,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context "when customer is attached to a subscription" do
+      context "when customer is attached to a subscription", :lago_premium do
         before do
           create(:subscription, customer:)
         end
@@ -111,7 +111,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context "when updating account_type to partner" do
+    context "when updating account_type to partner", :lago_premium do
       let(:customer) do
         create(
           :customer,
@@ -140,8 +140,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context "with premium features" do
-      around { |test| lago_premium!(&test) }
+    context "with premium features", :lago_premium do
 
       let(:update_args) do
         {
@@ -167,7 +166,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context "when revenue_share feature is enabled and updates account_type to partner" do
+      context "when revenue_share feature is enabled and updates account_type to partner", :lago_premium do
         let(:organization) do
           create(:organization, premium_integrations: %w[revenue_share auto_dunning])
         end
@@ -195,7 +194,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           expect(updated_customer.applied_dunning_campaign).to be_nil
         end
 
-        context "when customer is attached to a subscription" do
+        context "when customer is attached to a subscription", :lago_premium do
           before do
             create(:subscription, customer:)
           end
@@ -210,7 +209,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context "with metadata" do
+    context "with metadata", :lago_premium do
       let(:customer_metadata) { create(:customer_metadata, customer:) }
       let(:another_customer_metadata) { create(:customer_metadata, customer:, key: "test", value: "1") }
       let(:update_args) do
@@ -251,7 +250,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context "with validation error" do
+    context "with validation error", :lago_premium do
       let(:external_id) { nil }
 
       it "returns an error" do
@@ -265,7 +264,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context "when attached to a subscription" do
+    context "when attached to a subscription", :lago_premium do
       let(:account_type) { "partner" }
 
       before do
@@ -282,7 +281,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         expect(updated_customer.account_type).to eq customer.account_type
       end
 
-      context "when updating the currency" do
+      context "when updating the currency", :lago_premium do
         let(:update_args) do
           {
             id: customer.id,
@@ -303,7 +302,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context "when updating payment provider" do
+    context "when updating payment provider", :lago_premium do
       let(:update_args) do
         {
           id: customer.id,
@@ -339,7 +338,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         expect(PaymentProviderCustomers::UpdateService).not_to have_received(:call).with(customer)
       end
 
-      context "with provider customer id" do
+      context "with provider customer id", :lago_premium do
         let(:update_args) do
           {
             id: customer.id,
@@ -370,7 +369,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           end
         end
 
-        context "when removing a provider customer id" do
+        context "when removing a provider customer id", :lago_premium do
           let(:update_args) do
             {
               id: customer.id,
@@ -407,7 +406,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context "when partialy updating" do
+    context "when partialy updating", :lago_premium do
       let(:stripe_customer) { create(:stripe_customer, customer:, provider_payment_methods: %w[sepa_debit]) }
 
       let(:update_args) do
@@ -416,8 +415,6 @@ RSpec.describe Customers::UpdateService, type: :service do
           invoice_grace_period: 8
         }
       end
-
-      around { |test| lago_premium!(&test) }
       before { stripe_customer }
 
       it "updates only the updated args" do
@@ -432,7 +429,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context "when updating net payment term" do
+    context "when updating net payment term", :lago_premium do
       it "updates the net payment term of all draft invoices" do
         create(:invoice, :draft, customer:, net_payment_term: 30)
         create(:invoice, customer:, net_payment_term: 30)
@@ -447,7 +444,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context "when updating invoice_custom_sections" do
+    context "when updating invoice_custom_sections", :lago_premium do
       let(:invoice_custom_sections) { create_list(:invoice_custom_section, 4, organization:) }
 
       before do
@@ -456,7 +453,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         create(:billing_entity_applied_invoice_custom_section, organization:, billing_entity:, invoice_custom_section: invoice_custom_sections[3])
       end
 
-      context "when customer is set to skip_invoice_custom_sections: true" do
+      context "when customer is set to skip_invoice_custom_sections: true", :lago_premium do
         let(:update_args) do
           {
             id: customer.id,
@@ -472,7 +469,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context "when setting to invoice custom sections that match with organization selected invoice custom sections" do
+      context "when setting to invoice custom sections that match with organization selected invoice custom sections", :lago_premium do
         let(:update_args) do
           {
             id: customer.id,
@@ -488,7 +485,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context "when setting custom invoice_custom_sections for the customer" do
+      context "when setting custom invoice_custom_sections for the customer", :lago_premium do
         let(:update_args) do
           {
             id: customer.id,
@@ -503,7 +500,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context "when setting custom invoice_custom_sections for the customer with skipped invoice_custom_sections" do
+      context "when setting custom invoice_custom_sections for the customer with skipped invoice_custom_sections", :lago_premium do
         let(:update_args) do
           {
             id: customer.id,
@@ -521,7 +518,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context "when sending both: skip_invoice_custom_sections and applicable_invoice_custom_section_ids" do
+      context "when sending both: skip_invoice_custom_sections and applicable_invoice_custom_section_ids", :lago_premium do
         let(:update_args) do
           {
             id: customer.id,
@@ -539,7 +536,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context "when organization has eu tax management" do
+    context "when organization has eu tax management", :lago_premium do
       let(:eu_auto_tax_service) { instance_double(Customers::EuAutoTaxesService) }
       let(:tax_code) { "lago_eu_fr_standard" }
       let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new }
@@ -564,7 +561,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         end
       end
 
-      context "when eu tax code is not applicable" do
+      context "when eu tax code is not applicable", :lago_premium do
         let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new.not_allowed_failure!(code: "") }
 
         it "does not apply tax" do
@@ -577,7 +574,7 @@ RSpec.describe Customers::UpdateService, type: :service do
       end
     end
 
-    context "when dunning campaign data is provided" do
+    context "when dunning campaign data is provided", :lago_premium do
       let(:customer) do
         create(
           :customer,
@@ -607,7 +604,7 @@ RSpec.describe Customers::UpdateService, type: :service do
         expect(customers_service.call).to be_success
       end
 
-      context "with auto_dunning premium integration" do
+      context "with auto_dunning premium integration", :lago_premium do
         let(:customer) do
           create(
             :customer,
@@ -626,8 +623,6 @@ RSpec.describe Customers::UpdateService, type: :service do
           {applied_dunning_campaign_id: dunning_campaign.id}
         end
 
-        around { |test| lago_premium!(&test) }
-
         it "updates auto dunning config" do
           expect { customers_service.call }
             .to change(customer, :applied_dunning_campaign_id).to(dunning_campaign.id)
@@ -638,7 +633,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           expect(customers_service.call).to be_success
         end
 
-        context "with exclude from dunning campaign" do
+        context "with exclude from dunning campaign", :lago_premium do
           let(:customer) do
             create(
               :customer,
@@ -664,7 +659,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           end
         end
 
-        context "with applied_dunning_campaign_id nil" do
+        context "with applied_dunning_campaign_id nil", :lago_premium do
           let(:customer) do
             create(
               :customer,
@@ -689,7 +684,7 @@ RSpec.describe Customers::UpdateService, type: :service do
           end
         end
 
-        context "when dunning campaign can not be found" do
+        context "when dunning campaign can not be found", :lago_premium do
           let(:customer) do
             create(
               :customer,

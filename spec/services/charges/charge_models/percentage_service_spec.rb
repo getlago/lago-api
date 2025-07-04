@@ -41,7 +41,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     )
   end
 
-  context "when aggregation value is 0" do
+  context "when aggregation value is 0", :lago_premium do
     let(:aggregation) { 0 }
 
     it "returns expected amount", :aggregate_failures do
@@ -64,7 +64,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
   end
 
-  context "when fixed amount value is 0" do
+  context "when fixed amount value is 0", :lago_premium do
     it "returns expected amount" do
       expect(apply_percentage_service.amount).to eq(11.15)
       expect(apply_percentage_service.unit_amount).to eq(0.0139375) # 11.15 / 800
@@ -85,7 +85,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
   end
 
-  context "with small units amount" do
+  context "with small units amount", :lago_premium do
     let(:running_total) { [] }
     let(:fixed_amount) { nil }
     let(:aggregation) { 4 }
@@ -108,7 +108,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
   end
 
-  context "when rate is 0" do
+  context "when rate is 0", :lago_premium do
     let(:running_total) { [] }
     let(:free_units_per_events) { nil }
     let(:free_units_per_total_aggregation) { nil }
@@ -135,7 +135,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
   end
 
-  context "when free_units_per_events is nil" do
+  context "when free_units_per_events is nil", :lago_premium do
     let(:free_units_per_events) { nil }
 
     it "returns expected amount", :aggregate_failures do
@@ -158,7 +158,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
   end
 
-  context "when free_units_per_total_aggregation is nil" do
+  context "when free_units_per_total_aggregation is nil", :lago_premium do
     let(:free_units_per_total_aggregation) { nil }
 
     it "returns expected amount", :aggregate_failures do
@@ -181,7 +181,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
   end
 
-  context "when free units are not set" do
+  context "when free units are not set", :lago_premium do
     let(:free_units_per_total_aggregation) { nil }
     let(:free_units_per_events) { nil }
     let(:running_total) { [] }
@@ -206,7 +206,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
   end
 
-  context "when free_units_per_total_aggregation > last running total" do
+  context "when free_units_per_total_aggregation > last running total", :lago_premium do
     let(:free_units_per_total_aggregation) { "500.0" }
     let(:expected_percentage_amount) { (800 - 400) * (1.3 / 100) }
     let(:expected_fixed_amount) { (4 - 3) * 2.0 }
@@ -231,7 +231,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
   end
 
-  context "when free_units_count > number of events" do
+  context "when free_units_count > number of events", :lago_premium do
     let(:free_units_per_events) { 5 }
     let(:free_units_per_total_aggregation) { nil }
     let(:aggregation) { 400 }
@@ -241,7 +241,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
     end
   end
 
-  context "when applying min / max amount per transaction" do
+  context "when applying min / max amount per transaction", :lago_premium do
     let(:per_transaction_max_amount) { "12" }
     let(:per_transaction_min_amount) { "1.75" }
 
@@ -277,15 +277,14 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
       expect(apply_percentage_service.amount).to eq(301.691) # (10 + 80 + 10000) * 0.0299
     end
 
-    context "when premium" do
-      around { |test| lago_premium!(&test) }
+    context "when premium", :lago_premium do
 
       it "applies the min and max per transaction" do
         # 1.75 (min as 10 * 0.0299 < 1.75) + 2.392 + 12 (max as 10000 * 0.0299 > 12)
         expect(apply_percentage_service.amount).to eq(16.142)
       end
 
-      context "with fixed_amount" do
+      context "with fixed_amount", :lago_premium do
         let(:fixed_amount) { "2.0" }
 
         it "applies the min and max per transaction" do
@@ -294,7 +293,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
         end
       end
 
-      context "with free units per events" do
+      context "with free units per events", :lago_premium do
         let(:free_units_per_events) { 2 }
 
         it "applies the min and max only on paying transaction" do
@@ -303,7 +302,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
         end
       end
 
-      context "with free units per total aggregation" do
+      context "with free units per total aggregation", :lago_premium do
         let(:free_units_per_total_aggregation) { "30" }
 
         it "takes the free amount into account" do
@@ -312,7 +311,7 @@ RSpec.describe Charges::ChargeModels::PercentageService, type: :service do
         end
       end
 
-      context "when both free units per events and per total aggregation are applied" do
+      context "when both free units per events and per total aggregation are applied", :lago_premium do
         let(:free_units_per_events) { 3 }
         let(:free_units_per_total_aggregation) { "10000" }
 

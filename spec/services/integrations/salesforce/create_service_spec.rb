@@ -20,7 +20,7 @@ RSpec.describe Integrations::Salesforce::CreateService, type: :service do
       }
     end
 
-    context "without premium license" do
+    context "without premium license", :lago_premium do
       it "does not create an integration" do
         expect { service_call }.not_to change(Integrations::SalesforceIntegration, :count)
       end
@@ -36,9 +36,8 @@ RSpec.describe Integrations::Salesforce::CreateService, type: :service do
     end
 
     context "with premium license" do
-      around { |test| lago_premium!(&test) }
 
-      context "with salesforce premium integration not present" do
+      context "with salesforce premium integration not present", :lago_premium do
         it "returns an error" do
           result = service_call
 
@@ -49,10 +48,10 @@ RSpec.describe Integrations::Salesforce::CreateService, type: :service do
         end
       end
 
-      context "with salesforce premium integration present" do
+      context "with salesforce premium integration present", :lago_premium do
         before { organization.update!(premium_integrations: ["salesforce"]) }
 
-        context "without validation errors" do
+        context "without validation errors", :lago_premium do
           it "creates an integration" do
             expect { service_call }.to change(Integrations::SalesforceIntegration, :count).by(1)
 
@@ -61,7 +60,7 @@ RSpec.describe Integrations::Salesforce::CreateService, type: :service do
           end
         end
 
-        context "with validation error" do
+        context "with validation error", :lago_premium do
           let(:name) { nil }
 
           it "returns an error" do

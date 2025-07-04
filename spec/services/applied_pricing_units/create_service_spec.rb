@@ -11,9 +11,8 @@ RSpec.describe AppliedPricingUnits::CreateService, type: :service do
     let(:charge) { build_stubbed(:standard_charge) }
 
     context "when premium" do
-      around { |test| lago_premium!(&test) }
 
-      context "when params are present" do
+      context "when params are present", :lago_premium do
         let(:params) { {code: "credits", conversion_rate: 1.5} }
 
         it "returns true" do
@@ -21,7 +20,7 @@ RSpec.describe AppliedPricingUnits::CreateService, type: :service do
         end
       end
 
-      context "when params are missing" do
+      context "when params are missing", :lago_premium do
         let(:params) { {} }
 
         it "returns false" do
@@ -31,7 +30,7 @@ RSpec.describe AppliedPricingUnits::CreateService, type: :service do
     end
 
     context "when freemium" do
-      context "when params are present" do
+      context "when params are present", :lago_premium do
         let(:params) { {code: "credits", conversion_rate: 1.5} }
 
         it "returns false" do
@@ -39,7 +38,7 @@ RSpec.describe AppliedPricingUnits::CreateService, type: :service do
         end
       end
 
-      context "when params are missing" do
+      context "when params are missing", :lago_premium do
         let(:params) { {} }
 
         it "returns false" do
@@ -52,7 +51,7 @@ RSpec.describe AppliedPricingUnits::CreateService, type: :service do
   describe "#call" do
     subject(:result) { create_service.call }
 
-    context "when charge is missing" do
+    context "when charge is missing", :lago_premium do
       let(:charge) { nil }
       let(:params) { {} }
 
@@ -66,11 +65,11 @@ RSpec.describe AppliedPricingUnits::CreateService, type: :service do
       end
     end
 
-    context "when charge is present" do
+    context "when charge is present", :lago_premium do
       let(:organization) { create(:organization) }
       let(:charge) { create(:standard_charge, organization:) }
 
-      context "when applied pricing unit should not be created" do
+      context "when applied pricing unit should not be created", :lago_premium do
         let(:params) { {} }
 
         it "does not create applied pricing unit and return empty result" do
@@ -82,9 +81,7 @@ RSpec.describe AppliedPricingUnits::CreateService, type: :service do
       context "when applied pricing unit should be created" do
         let!(:pricing_unit) { create(:pricing_unit, organization:) }
 
-        around { |test| lago_premium!(&test) }
-
-        context "when params are valid" do
+        context "when params are valid", :lago_premium do
           let(:params) { {code: pricing_unit.code, conversion_rate: 1.5} }
 
           it "creates an applied pricing unit" do
@@ -101,7 +98,7 @@ RSpec.describe AppliedPricingUnits::CreateService, type: :service do
           end
         end
 
-        context "when params are invalid" do
+        context "when params are invalid", :lago_premium do
           let(:params) { {code: "non-existing-code", conversion_rate: -1} }
 
           it "fails with validation error" do

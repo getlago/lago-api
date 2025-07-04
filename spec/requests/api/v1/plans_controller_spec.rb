@@ -47,7 +47,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
     end
     let(:tax_codes) { [tax.code] }
 
-    context "when interval is empty" do
+    context "when interval is empty", :lago_premium do
       let(:interval) { nil }
 
       it "returns an error" do
@@ -60,7 +60,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
     end
 
-    context "when interval is present" do
+    context "when interval is present", :lago_premium do
       let(:interval) { "weekly" }
 
       include_examples "requires API permission", "plan", "write"
@@ -78,7 +78,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         expect(json[:plan][:charges].first[:lago_id]).to be_present
       end
 
-      context "when license is not premium" do
+      context "when license is not premium", :lago_premium do
         it "ignores premium fields" do
           subject
 
@@ -89,8 +89,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         end
       end
 
-      context "when license is premium" do
-        around { |test| lago_premium!(&test) }
+      context "when license is premium", :lago_premium do
 
         it "updates premium fields" do
           subject
@@ -103,8 +102,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
 
       context "with minimum commitment" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
+        context "when license is premium", :lago_premium do
 
           it "creates a plan with minimum commitment" do
             subject
@@ -114,7 +112,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not create minimum commitment" do
             subject
 
@@ -126,9 +124,8 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
       context "with usage thresholds" do
         context "when license is premium" do
-          around { |test| lago_premium!(&test) }
 
-          context "when progressive billing premium integration is present" do
+          context "when progressive billing premium integration is present", :lago_premium do
             before do
               organization.update!(premium_integrations: ["progressive_billing"])
             end
@@ -142,7 +139,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             end
           end
 
-          context "when progressive billing premium integration is not present" do
+          context "when progressive billing premium integration is not present", :lago_premium do
             it "does not create usage thresholds" do
               subject
 
@@ -152,7 +149,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not create usage thresholds" do
             subject
 
@@ -162,7 +159,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         end
       end
 
-      context "with graduated charges" do
+      context "with graduated charges", :lago_premium do
         let(:create_params) do
           {
             name: "P1",
@@ -211,7 +208,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         end
       end
 
-      context "without charges" do
+      context "without charges", :lago_premium do
         let(:create_params) do
           {
             name: "P1",
@@ -238,7 +235,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         end
       end
 
-      context "with unknown tax code on charge" do
+      context "with unknown tax code on charge", :lago_premium do
         let(:tax_codes) { ["unknown"] }
 
         it "returns a 404 response" do
@@ -321,7 +318,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       expect(json[:plan][:code]).to eq(update_params[:code])
     end
 
-    context "when plan does not exist" do
+    context "when plan, :lago_premium does not exist", :lago_premium do
       let(:plan_code) { SecureRandom.uuid }
 
       it "returns not_found error" do
@@ -330,7 +327,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
     end
 
-    context "when plan code already exists in organization scope (validation error)" do
+    context "when plan code already exists in organization scope (validation error)", :lago_premium do
       let(:other_org_plan) { create(:plan, organization:) }
       let(:code) { other_org_plan.code }
 
@@ -340,7 +337,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
     end
 
-    context "when license is not premium" do
+    context "when license is not premium", :lago_premium do
       let(:charges_params) do
         [
           {
@@ -368,7 +365,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
     end
 
-    context "when license is premium" do
+    context "when license is premium", :lago_premium do
       let(:charges_params) do
         [
           {
@@ -384,8 +381,6 @@ RSpec.describe Api::V1::PlansController, type: :request do
           }
         ]
       end
-
-      around { |test| lago_premium!(&test) }
 
       before { organization.update!(premium_integrations: ["progressive_billing"]) }
 
@@ -404,11 +399,10 @@ RSpec.describe Api::V1::PlansController, type: :request do
     end
 
     context "when plan has no minimum commitment" do
-      context "when request contains minimum commitment params" do
+      context "when request contains minimum commitment params", :lago_premium do
         before { update_params.merge!(minimum_commitment_params) }
 
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
+        context "when license is premium", :lago_premium do
 
           it "creates minimum commitment" do
             subject
@@ -419,7 +413,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not create minimum commitment" do
             subject
 
@@ -430,8 +424,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
 
       context "when request does not contain minimum commitment params" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
+        context "when license is premium", :lago_premium do
 
           it "does not create minimum commitment" do
             subject
@@ -441,7 +434,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not create minimum commitment" do
             subject
 
@@ -452,17 +445,16 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
     end
 
-    context "when plan has one minimum commitment" do
+    context "when plan has one minimum commitment", :lago_premium do
       before { minimum_commitment }
 
-      context "when request contains minimum commitment params" do
+      context "when request contains minimum commitment params", :lago_premium do
         before { update_params.merge!(minimum_commitment_params) }
 
-        context "when minimum commitment params are an empty hash" do
+        context "when minimum commitment params are an empty hash", :lago_premium do
           let(:minimum_commitment_params) { {minimum_commitment: {}} }
 
-          context "when license is premium" do
-            around { |test| lago_premium!(&test) }
+          context "when license is premium", :lago_premium do
 
             it "deletes minimum commitment" do
               subject
@@ -472,7 +464,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             end
           end
 
-          context "when license is not premium" do
+          context "when license is not premium", :lago_premium do
             it "does not delete the minimum commitment" do
               subject
 
@@ -483,8 +475,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         end
 
         context "when minimum commitment params are not an empty hash" do
-          context "when license is premium" do
-            around { |test| lago_premium!(&test) }
+          context "when license is premium", :lago_premium do
 
             it "updates minimum commitment" do
               subject
@@ -495,7 +486,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
             end
           end
 
-          context "when license is not premium" do
+          context "when license is not premium", :lago_premium do
             it "does not update minimum commitment" do
               subject
 
@@ -507,8 +498,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
 
       context "when request does not contain minimum commitment params" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
+        context "when license is premium", :lago_premium do
 
           it "does not update minimum commitment" do
             subject
@@ -518,7 +508,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not update minimum commitment" do
             subject
 
@@ -546,7 +536,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       expect(json[:plan][:code]).to eq(plan.code)
     end
 
-    context "when plan has minimum commitment" do
+    context "when plan has minimum commitment", :lago_premium do
       before { create(:commitment, plan:) }
 
       it "returns a plan" do
@@ -559,7 +549,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
     end
 
-    context "when plan has usage thresholds" do
+    context "when plan has usage thresholds", :lago_premium do
       before do
         create(:usage_threshold, plan:)
         create(:usage_threshold, :recurring, plan:)
@@ -575,7 +565,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
     end
 
-    context "when plan does not exist" do
+    context "when plan, :lago_premium does not exist", :lago_premium do
       let(:plan_code) { SecureRandom.uuid }
 
       it "returns not found" do
@@ -593,7 +583,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
     include_examples "requires API permission", "plan", "write"
 
-    context "when plan exists" do
+    context "when plan exists", :lago_premium do
       it "marks plan as pending_deletion" do
         expect { subject }.to change { plan.reload.pending_deletion }.from(false).to(true)
       end
@@ -614,7 +604,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
     end
 
-    context "when plan does not exist" do
+    context "when plan, :lago_premium does not exist", :lago_premium do
       let(:plan_code) { SecureRandom.uuid }
 
       it "returns not_found error" do
@@ -644,7 +634,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       expect(json[:plans].first[:usage_thresholds].count).to eq(1)
     end
 
-    context "when pending for deletion plan exists" do
+    context "when pending for deletion plan exists", :lago_premium do
       subject { get_with_token(organization, "/api/v1/plans") }
 
       let(:plan_pending_for_deletion) do
@@ -663,7 +653,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       end
     end
 
-    context "with pagination" do
+    context "with pagination", :lago_premium do
       before { create(:plan, organization:) }
 
       it "returns plans with correct meta data" do

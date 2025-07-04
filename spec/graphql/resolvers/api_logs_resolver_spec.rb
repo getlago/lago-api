@@ -40,9 +40,7 @@ RSpec.describe Resolvers::ApiLogsResolver, type: :graphql, clickhouse: true do
     end
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium feature", :lago_premium do
     it "returns the list of api logs" do
       result = execute_graphql(
         current_user: membership.user,

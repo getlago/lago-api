@@ -10,9 +10,7 @@ describe "Coupons breakdown Spec", :scenarios, type: :request do
     stub_pdf_generation
   end
 
-  around { |test| lago_premium!(&test) }
-
-  context "when there are multiple subscriptions and coupons of different kinds" do
+  context "when there are multiple subscriptions and coupons of different kinds", :lago_premium do
     it "creates an invoice for the expected period" do
       create_metric(name: "Name", code: "bm1", aggregation_type: "sum_agg", field_name: "total1")
       bm1 = organization.billable_metrics.find_by(code: "bm1")

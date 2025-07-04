@@ -22,14 +22,13 @@ RSpec.describe Commitments::OverrideService, type: :service do
     let(:tax) { create(:tax, organization:) }
     let(:commitment) { build(:commitment, plan:) }
 
-    context "when lago freemium" do
+    context "when lago freemium", :lago_premium do
       it "returns without overriding the commitment" do
         expect { override_service.call }.not_to change(Commitment, :count)
       end
     end
 
-    context "when lago premium" do
-      around { |test| lago_premium!(&test) }
+    context "when lago premium", :lago_premium do
 
       it "creates a commitment based on the given commitment", :aggregate_failures do
         expect { override_service.call }.to change(Commitment, :count).by(1)

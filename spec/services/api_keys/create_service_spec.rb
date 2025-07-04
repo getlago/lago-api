@@ -10,15 +10,14 @@ RSpec.describe ApiKeys::CreateService, type: :service do
     let(:organization) { create(:organization) }
 
     context "with premium organization" do
-      around { |test| lago_premium!(&test) }
 
-      context "when permissions hash is provided" do
+      context "when permissions hash is provided", :lago_premium do
         let(:params) { {permissions:, name:, organization:} }
         let(:permissions) { ApiKey.default_permissions }
 
         before { organization.update!(premium_integrations:) }
 
-        context "when organization has api permissions addon" do
+        context "when organization has api permissions addon", :lago_premium do
           let(:premium_integrations) { ["api_permissions"] }
 
           it "creates a new API key" do
@@ -32,7 +31,7 @@ RSpec.describe ApiKeys::CreateService, type: :service do
           end
         end
 
-        context "when organization has no api permissions addon" do
+        context "when organization has no api permissions addon", :lago_premium do
           let(:premium_integrations) { [] }
 
           it "does not create an API key" do
@@ -53,12 +52,12 @@ RSpec.describe ApiKeys::CreateService, type: :service do
         end
       end
 
-      context "when permissions hash is missing" do
+      context "when permissions hash is missing", :lago_premium do
         let(:params) { {name:, organization:} }
 
         before { organization.update!(premium_integrations:) }
 
-        context "when organization has api permissions addon" do
+        context "when organization has api permissions addon", :lago_premium do
           let(:premium_integrations) { ["api_permissions"] }
 
           it "creates a new API key" do
@@ -72,7 +71,7 @@ RSpec.describe ApiKeys::CreateService, type: :service do
           end
         end
 
-        context "when organization has no api permissions addon" do
+        context "when organization has no api permissions addon", :lago_premium do
           let(:premium_integrations) { [] }
 
           it "creates a new API key" do
@@ -89,13 +88,13 @@ RSpec.describe ApiKeys::CreateService, type: :service do
     end
 
     context "with free organization" do
-      context "when permissions hash is provided" do
+      context "when permissions hash is provided", :lago_premium do
         let(:params) { {permissions:, name:, organization:} }
         let(:permissions) { ApiKey.default_permissions }
 
         before { organization.update!(premium_integrations:) }
 
-        context "when organization has api permissions addon" do
+        context "when organization has api permissions addon", :lago_premium do
           let(:premium_integrations) { ["api_permissions"] }
 
           it "does not create an API key" do
@@ -114,7 +113,7 @@ RSpec.describe ApiKeys::CreateService, type: :service do
           end
         end
 
-        context "when organization has no api permissions addon" do
+        context "when organization has no api permissions addon", :lago_premium do
           let(:premium_integrations) { [] }
 
           it "does not create an API key" do
@@ -134,12 +133,12 @@ RSpec.describe ApiKeys::CreateService, type: :service do
         end
       end
 
-      context "when permissions hash is missing" do
+      context "when permissions hash is missing", :lago_premium do
         let(:params) { {name:, organization:} }
 
         before { organization.update!(premium_integrations:) }
 
-        context "when organization has api permissions addon" do
+        context "when organization has api permissions addon", :lago_premium do
           let(:premium_integrations) { ["api_permissions"] }
 
           it "does not create an API key" do
@@ -158,7 +157,7 @@ RSpec.describe ApiKeys::CreateService, type: :service do
           end
         end
 
-        context "when organization has no api permissions addon" do
+        context "when organization has no api permissions addon", :lago_premium do
           let(:premium_integrations) { [] }
 
           it "does not create an API key" do

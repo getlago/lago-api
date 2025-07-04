@@ -10,8 +10,7 @@ RSpec.describe Analytics::MrrsService, type: :service do
   describe "#call" do
     subject(:service_call) { service.call }
 
-    context "when licence is premium" do
-      around { |test| lago_premium!(&test) }
+    context "when licence is premium", :lago_premium do
 
       it "returns success" do
         expect(service_call).to be_success

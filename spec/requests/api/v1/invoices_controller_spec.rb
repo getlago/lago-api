@@ -58,7 +58,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       expect(json[:invoice][:applied_taxes][0][:tax_code]).to eq(tax.code)
     end
 
-    context "when customer does not exist" do
+    context "when customer, :lago_premium does not exist", :lago_premium do
       let(:customer_external_id) { SecureRandom.uuid }
 
       it "returns a not found error" do
@@ -67,7 +67,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when add_on does not exist" do
+    context "when add_on, :lago_premium does not exist", :lago_premium do
       let(:create_params) do
         {
           external_customer_id: customer_external_id,
@@ -92,7 +92,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when skip_psp is true" do
+    context "when skip_psp is true", :lago_premium do
       let(:create_params) do
         {
           external_customer_id: customer_external_id,
@@ -137,7 +137,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       expect(json[:invoice][:payment_status]).to eq("succeeded")
     end
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       let(:invoice_id) { SecureRandom.uuid }
 
       it "returns a not found error" do
@@ -147,7 +147,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with metadata" do
+    context "with metadata", :lago_premium do
       let(:update_params) do
         {
           metadata: [
@@ -216,7 +216,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       let(:invoice_id) { SecureRandom.uuid }
 
       it "returns not found" do
@@ -225,7 +225,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoices belongs to an other organization" do
+    context "when invoices belongs to an other organization", :lago_premium do
       let(:invoice) { create(:invoice) }
 
       it "returns not found" do
@@ -234,7 +234,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice has a fee for a deleted billable metric" do
+    context "when invoice has a fee for a deleted billable metric", :lago_premium do
       let(:billable_metric) { create(:billable_metric, :deleted) }
       let(:billable_metric_filter) { create(:billable_metric_filter, :deleted, billable_metric:) }
       let(:charge_filter) do
@@ -293,7 +293,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
     let(:customer) { create(:customer, organization:) }
 
-    context "without params" do
+    context "without params", :lago_premium do
       let(:params) { {} }
       let!(:invoice) { create(:invoice, :draft, customer:, organization:) }
 
@@ -323,7 +323,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with pagination" do
+    context "with pagination", :lago_premium do
       let(:params) { {page: 1, per_page: 1} }
 
       before do
@@ -347,7 +347,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with issuing_date params" do
+    context "with issuing_date params", :lago_premium do
       let(:params) do
         {issuing_date_from: 2.days.ago.to_date, issuing_date_to: Date.tomorrow.to_date}
       end
@@ -367,7 +367,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with external_customer_id params" do
+    context "with external_customer_id params", :lago_premium do
       let(:params) { {external_customer_id:} }
 
       let!(:matching_invoice) { create(:invoice, customer:, organization:) }
@@ -386,7 +386,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].first[:lago_id]).to eq(matching_invoice.id)
       end
 
-      context "with deleted customer" do
+      context "with deleted customer", :lago_premium do
         let(:params) { {external_customer_id:} }
         let(:customer) { create(:customer, :deleted, organization:) }
         let(:external_customer_id) { customer.external_id }
@@ -405,7 +405,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with status params" do
+    context "with status params", :lago_premium do
       let(:params) { {status: "finalized"} }
       let!(:matching_invoice) { create(:invoice, customer:, organization:) }
 
@@ -420,7 +420,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with payment status param" do
+    context "with payment status param", :lago_premium do
       let(:params) { {payment_status: "pending"} }
 
       let!(:matching_invoice) do
@@ -441,7 +441,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with payment overdue param" do
+    context "with payment overdue param", :lago_premium do
       let(:params) { {payment_overdue: true} }
 
       let!(:matching_invoice) do
@@ -459,7 +459,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with invoice type param" do
+    context "with invoice type param", :lago_premium do
       let(:params) { {invoice_type: "advance_charges"} }
 
       let!(:matching_invoice) do
@@ -477,7 +477,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with currency param" do
+    context "with currency param", :lago_premium do
       let(:params) { {currency: "USD"} }
 
       let!(:matching_invoice) { create(:invoice, customer:, currency: "USD", organization:) }
@@ -493,7 +493,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with payment dispute lost param" do
+    context "with payment dispute lost param", :lago_premium do
       let(:params) { {payment_dispute_lost: true} }
 
       let!(:matching_invoice) { create(:invoice, :dispute_lost, customer:, organization:) }
@@ -509,7 +509,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with search term param" do
+    context "with search term param", :lago_premium do
       let(:params) { {search_term: matching_invoice.number} }
 
       let!(:matching_invoice) do
@@ -527,7 +527,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with amount filters" do
+    context "with amount filters", :lago_premium do
       let(:params) do
         {
           amount_from: invoices.second.total_amount_cents,
@@ -549,7 +549,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with metadata filters" do
+    context "with metadata filters", :lago_premium do
       let(:params) do
         metadata = matching_invoice.metadata.first
 
@@ -575,7 +575,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "with self billed filters" do
+    context "with self billed filters", :lago_premium do
       let(:params) { {self_billed: true} }
 
       let(:self_billed_invoice) do
@@ -599,7 +599,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].first[:lago_id]).to eq(self_billed_invoice.id)
       end
 
-      context "when self billed is false" do
+      context "when self billed is false", :lago_premium do
         let(:params) { {self_billed: false} }
 
         it "returns non self billed invoices" do
@@ -611,7 +611,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         end
       end
 
-      context "when self billed is nil" do
+      context "when self billed is nil", :lago_premium do
         let(:params) { {self_billed: nil} }
 
         it "returns all invoices" do
@@ -623,7 +623,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoices are created in multiple billing entities" do
+    context "when invoices are created in multiple billing entities", :lago_premium do
       let(:billing_entity2) { create(:billing_entity, organization:) }
       let(:params) { {} }
 
@@ -643,7 +643,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         expect(json[:invoices].pluck(:lago_id)).to match_array([invoice1.id, invoice2.id])
       end
 
-      context "when filtering by billing entity" do
+      context "when filtering by billing entity", :lago_premium do
         let(:params) { {billing_entity_codes: [billing_entity2.code]} }
 
         it "returns invoices for the specified billing entity" do
@@ -654,7 +654,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
           expect(json[:invoices].first[:lago_id]).to eq(invoice2.id)
         end
 
-        context "when one of billing entities does not exist" do
+        context "when one of billing entities, :lago_premium does not exist", :lago_premium do
           let(:params) { {billing_entity_codes: [billing_entity2.code, SecureRandom.uuid]} }
 
           it "returns a not found error" do
@@ -674,7 +674,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     let(:invoice) { create(:invoice, customer:, organization:) }
     let(:invoice_id) { invoice.id }
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       let(:invoice_id) { SecureRandom.uuid }
 
       it "returns a not found error" do
@@ -683,7 +683,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice is draft" do
+    context "when invoice is draft", :lago_premium do
       let(:invoice) { create(:invoice, :draft, customer:, organization:) }
 
       include_examples "requires API permission", "invoice", "write"
@@ -700,7 +700,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice is finalized" do
+    context "when invoice is finalized", :lago_premium do
       let(:invoice) { create(:invoice, customer:, organization:) }
 
       it "does not update the invoice" do
@@ -722,7 +722,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     let(:invoice) { create(:invoice, :draft, customer:, organization:) }
     let(:invoice_id) { invoice.id }
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       let(:invoice_id) { SecureRandom.uuid }
 
       it "returns a not found error" do
@@ -731,7 +731,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice is not draft" do
+    context "when invoice is not draft", :lago_premium do
       let(:invoice) { create(:invoice, customer:, status: :finalized, organization:) }
 
       it "returns a not found error" do
@@ -765,7 +765,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     let(:payment_status) { :pending }
     let(:params) { {} }
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       let(:invoice_id) { SecureRandom.uuid }
 
       it "returns a not found error" do
@@ -774,7 +774,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice is draft" do
+    context "when invoice is draft", :lago_premium do
       let(:status) { :draft }
 
       it "returns a method not allowed error" do
@@ -783,7 +783,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice is voided" do
+    context "when invoice is voided", :lago_premium do
       let(:status) { :voided }
 
       it "returns a method not allowed error" do
@@ -792,10 +792,10 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice is finalized" do
+    context "when invoice is finalized", :lago_premium do
       let(:status) { :finalized }
 
-      context "when the payment status is succeeded" do
+      context "when the payment status is succeeded", :lago_premium do
         let(:payment_status) { :succeeded }
 
         it "voids the invoice" do
@@ -803,7 +803,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         end
       end
 
-      context "when the payment status is not succeeded" do
+      context "when the payment status is not succeeded", :lago_premium do
         let(:payment_status) { [:pending, :failed].sample }
 
         include_examples "requires API permission", "invoice", "write"
@@ -821,12 +821,10 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when passing credit note parameters" do
+    context "when passing credit note parameters", :lago_premium do
       let(:credit_amount) { 0 }
       let(:refund_amount) { 0 }
       let(:params) { {generate_credit_note: true, credit_amount: credit_amount, refund_amount: refund_amount} }
-
-      around { |test| lago_premium!(&test) }
 
       it "calls the void service with all parameters" do
         allow(Invoices::VoidService).to receive(:call).with(
@@ -863,7 +861,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
     let(:invoice_id) { invoice.id }
     let(:status) { :draft }
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       let(:invoice_id) { SecureRandom.uuid }
 
       it "returns not found error" do
@@ -872,10 +870,10 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice exists" do
+    context "when invoice exists", :lago_premium do
       let(:invoice) { create(:invoice, customer:, organization:, status:) }
 
-      context "when invoice is finalized" do
+      context "when invoice is finalized", :lago_premium do
         let(:status) { :finalized }
 
         include_examples "requires API permission", "invoice", "write"
@@ -892,7 +890,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         end
       end
 
-      context "when invoice is voided" do
+      context "when invoice is voided", :lago_premium do
         let(:status) { :voided }
 
         it "returns method not allowed error" do
@@ -901,7 +899,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         end
       end
 
-      context "when invoice is draft" do
+      context "when invoice is draft", :lago_premium do
         let(:status) { :draft }
 
         it "returns method not allowed error" do
@@ -910,7 +908,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         end
       end
 
-      context "when invoice is generating" do
+      context "when invoice is generating", :lago_premium do
         let(:status) { :generating }
 
         it "returns not found error" do
@@ -929,7 +927,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
     include_examples "requires API permission", "invoice", "write"
 
-    context "when invoice is draft" do
+    context "when invoice is draft", :lago_premium do
       it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
@@ -960,7 +958,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       let(:invoice_id) { SecureRandom.uuid }
 
       it "returns not found" do
@@ -969,7 +967,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoices belongs to an other organization" do
+    context "when invoices belongs to an other organization", :lago_premium do
       let(:invoice) { create(:invoice) }
 
       it "returns not found" do
@@ -1006,7 +1004,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       let(:invoice_id) { SecureRandom.uuid }
 
       it "returns not found" do
@@ -1015,7 +1013,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoices belongs to an other organization" do
+    context "when invoices belongs to an other organization", :lago_premium do
       let(:invoice) { create(:invoice) }
 
       it "returns not found" do
@@ -1053,7 +1051,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       let(:invoice_id) { SecureRandom.uuid }
 
       it "returns not found" do
@@ -1099,7 +1097,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       let(:invoice_id) { SecureRandom.uuid }
 
       it "returns not found" do
@@ -1127,8 +1125,6 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
 
     before { organization.update!(premium_integrations: ["preview"]) }
 
-    around { |test| lago_premium!(&test) }
-
     it "creates a preview invoice" do
       subject
 
@@ -1143,7 +1139,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       )
     end
 
-    context "when sending billing_entity_code" do
+    context "when sending billing_entity_code", :lago_premium do
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:applied_tax) { create(:billing_entity_applied_tax, billing_entity:, tax:) }
       let(:preview_params) do
@@ -1175,7 +1171,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
         )
       end
 
-      context "when billing entity does not exist" do
+      context "when billing entity, :lago_premium does not exist", :lago_premium do
         let(:preview_params) do
           {
             customer: {
@@ -1197,7 +1193,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when subscriptions are persisted" do
+    context "when subscriptions are persisted", :lago_premium do
       let(:customer) { create(:customer, organization:, external_id: "123456789") }
       let(:subscription1) { create(:subscription, customer:, billing_time: "anniversary", subscription_at: Time.current) }
       let(:subscription2) { create(:subscription, customer:, billing_time: "anniversary", subscription_at: Time.current) }
@@ -1226,7 +1222,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when subscriptions are persisted but only one belongs to the customer" do
+    context "when subscriptions are persisted but only one belongs to the customer", :lago_premium do
       let(:customer) { create(:customer, organization:, external_id: "123456789") }
       let(:subscription1) { create(:subscription, billing_time: "anniversary", subscription_at: Time.current) }
       let(:subscription2) { create(:subscription, customer:, billing_time: "anniversary", subscription_at: Time.current) }
@@ -1255,7 +1251,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when subscriptions do not belong to the customer" do
+    context "when subscriptions, :lago_premium do not belong to the customer", :lago_premium do
       let(:customer) { create(:customer, organization:, external_id: "123456789") }
       let(:subscription1) { create(:subscription, billing_time: "anniversary", subscription_at: Time.current) }
       let(:subscription2) { create(:subscription, billing_time: "anniversary", subscription_at: Time.current) }
@@ -1276,7 +1272,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when customer does not exist" do
+    context "when customer, :lago_premium does not exist", :lago_premium do
       let(:preview_params) do
         {
           customer: {
@@ -1292,7 +1288,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when coupons have invalid type" do
+    context "when coupons have invalid type", :lago_premium do
       let(:preview_params) do
         {
           coupons: {
@@ -1308,7 +1304,7 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       end
     end
 
-    context "when subscriptions have invalid type" do
+    context "when subscriptions have invalid type", :lago_premium do
       let(:preview_params) do
         {
           subscriptions: []

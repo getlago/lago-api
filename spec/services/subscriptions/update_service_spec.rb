@@ -49,7 +49,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.updated")
     end
 
-    context "when subscription should sync Hubspot subscription" do
+    context "when subscription should sync Hubspot subscription", :lago_premium do
       let(:params) { {name: "new name"} }
 
       before do
@@ -65,7 +65,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
     end
 
-    context "when subscription_at is not passed at all" do
+    context "when subscription_at is not passed at all", :lago_premium do
       let(:params) do
         {
           name: "new name"
@@ -84,7 +84,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
     end
 
-    context "when subscription is starting in the future" do
+    context "when subscription is starting in the future", :lago_premium do
       let(:subscription) { create(:subscription, :pending) }
 
       it "updates the subscription_at as well" do
@@ -98,7 +98,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         end
       end
 
-      context "when subscription date is set to today" do
+      context "when subscription date is set to today", :lago_premium do
         let(:subscription_at) { Time.current }
 
         before { subscription.plan.update!(pay_in_advance: true) }
@@ -122,7 +122,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
     end
 
-    context "when subscription is nil" do
+    context "when subscription is nil", :lago_premium do
       let(:params) do
         {
           name: "new name"
@@ -139,7 +139,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
     end
 
-    context "when plan_overrides" do
+    context "when plan_overrides", :lago_premium do
       let(:plan) { create(:plan, organization: membership.organization) }
       let(:subscription) { create(:subscription, plan:, subscription_at: Time.current - 1.year) }
       let(:params) do
@@ -150,8 +150,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         }
       end
 
-      around { |test| lago_premium!(&test) }
-
       it "creates the new plan accordingly" do
         update_service.call
 
@@ -159,7 +157,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         expect(subscription.plan_id).not_to eq(plan.id)
       end
 
-      context "with overriden plan" do
+      context "with overriden plan", :lago_premium do
         let(:parent_plan) { create(:plan, organization: membership.organization) }
         let(:plan) { create(:plan, organization: membership.organization, parent_id: parent_plan.id) }
 
@@ -172,7 +170,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
     end
 
-    context "when License is free and plan_overrides is passed" do
+    context "when License is free and plan_overrides is passed", :lago_premium do
       let(:params) do
         {
           name: "new name",

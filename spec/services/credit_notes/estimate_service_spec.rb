@@ -49,8 +49,6 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
 
   let(:params) { {invoice_id: invoice&.id, amount_cents: 9, reference: "ref1"} }
 
-  around { |test| lago_premium!(&test) }
-
   before do
     create(:fee_applied_tax, tax:, fee: fee1)
     create(:fee_applied_tax, tax:, fee: fee2)
@@ -96,7 +94,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     end
   end
 
-  context "with invalid items" do
+  context "with invalid items", :lago_premium do
     let(:items) do
       [
         {
@@ -126,7 +124,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     end
   end
 
-  context "with missing items" do
+  context "with missing items", :lago_premium do
     let(:items) {}
 
     it "returns a failed result" do
@@ -143,7 +141,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     end
   end
 
-  context "when invoice is not found" do
+  context "when invoice is not found", :lago_premium do
     let(:invoice) { nil }
     let(:items) { [] }
 
@@ -159,7 +157,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     end
   end
 
-  context "when invoice is legacy" do
+  context "when invoice is legacy", :lago_premium do
     let(:invoice) do
       create(
         :invoice,
@@ -184,7 +182,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
     end
   end
 
-  context "when invoice is a prepaid credit invoice" do
+  context "when invoice is a prepaid credit invoice", :lago_premium do
     let(:invoice) do
       create(
         :invoice,
@@ -217,7 +215,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
       Payments::ManualCreateService.call(organization:, params:)
     end
 
-    context "when wallet for the credits is active" do
+    context "when wallet for the credits is active", :lago_premium do
       it "estimates the credit and refund amount not higher than wallet.balance_cents" do
         result = estimate_service.call
 
@@ -236,7 +234,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
         end
       end
 
-      context "when estimating with amount higher than in the active wallet" do
+      context "when estimating with amount higher than in the active wallet", :lago_premium do
         let(:items) do
           [
             {
@@ -264,7 +262,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
       end
     end
 
-    context "when wallet for the credits is not active" do
+    context "when wallet for the credits is not active", :lago_premium do
       let(:wallet) { create(:wallet, customer:, balance_cents: 10, status: :terminated) }
 
       it "estimates the credit and refund amount hot higher than wallet.balance_amount_cents" do

@@ -23,8 +23,6 @@ RSpec.describe Resolvers::DataApi::Usages::AggregatedAmountsResolver, type: :gra
   let(:organization) { membership.organization }
   let(:body_response) { File.read("spec/fixtures/lago_data_api/usages_aggregated_amounts.json") }
 
-  around { |test| lago_premium!(&test) }
-
   before do
     stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/aggregated_amounts/")
       .to_return(status: 200, body: body_response, headers: {})
@@ -34,7 +32,7 @@ RSpec.describe Resolvers::DataApi::Usages::AggregatedAmountsResolver, type: :gra
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "data_api:view"
 
-  it "returns a list of usages aggregated amounts" do
+  it "returns a list of usages aggregated amounts", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,

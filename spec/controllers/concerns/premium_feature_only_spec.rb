@@ -28,9 +28,7 @@ RSpec.describe PremiumFeatureOnly, type: :controller do
     end
   end
 
-  context "when premium usage" do
-    around { |test| lago_premium!(&test) }
-
+  context "when premium usage", :lago_premium do
     it "does not block the request" do
       get :index
 

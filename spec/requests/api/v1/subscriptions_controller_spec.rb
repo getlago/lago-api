@@ -9,8 +9,6 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   let(:commitment_invoice_display_name) { "Overriden minimum commitment name" }
   let(:commitment_amount_cents) { 1234 }
 
-  around { |test| lago_premium!(&test) }
-
   describe "POST /api/v1/subscriptions" do
     subject { post_with_token(organization, "/api/v1/subscriptions", body) }
 
@@ -89,8 +87,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect { subject }.not_to change(Customer, :count)
     end
 
-    context "when progressive billing premium integration is present" do
-      around { |test| lago_premium!(&test) }
+    context "when progressive billing premium integration is present", :lago_premium do
 
       before do
         organization.update!(premium_integrations: ["progressive_billing"])
@@ -108,7 +105,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context "with external_customer_id, external_id and name as integer" do
+    context "with external_customer_id, external_id and name as integer", :lago_premium do
       let(:params) do
         {
           external_customer_id: 123,
@@ -138,7 +135,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         expect(customer.billing_entity).to eq(organization.default_billing_entity)
       end
 
-      context "when passing billing_entity_code" do
+      context "when passing billing_entity_code", :lago_premium do
         let(:billing_entity) { create(:billing_entity, organization:) }
         let(:params) do
           {
@@ -157,7 +154,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           expect(customer.billing_entity).to eq(billing_entity)
         end
 
-        context "when billing entity does not exist" do
+        context "when billing entity, :lago_premium does not exist", :lago_premium do
           let(:params) do
             {
               external_customer_id: 123,
@@ -176,7 +173,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           end
         end
 
-        context "when passing external_id from another billing entity" do
+        context "when passing external_id from another billing entity", :lago_premium do
           let(:params) do
             {
               external_customer_id: customer.external_id,
@@ -214,7 +211,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context "with invalid plan code" do
+    context "with invalid plan code", :lago_premium do
       let(:plan_code) { "#{plan.code}-invalid" }
 
       it "returns a not_found error" do
@@ -223,7 +220,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context "with invalid subscription_at" do
+    context "with invalid subscription_at", :lago_premium do
       let(:subscription_at) { "hello" }
 
       it "returns an unprocessable_entity error" do
@@ -232,7 +229,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context "with legacy subscription_date" do
+    context "with legacy subscription_date", :lago_premium do
       let(:params) do
         {
           external_customer_id: customer.external_id,
@@ -266,7 +263,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     end
 
     context "with payment pre-authorization" do
-      context "when the feature isn't enabled" do
+      context "when the feature isn't enabled", :lago_premium do
         let(:body) { {authorization: {}, subscription: params} }
 
         it "returns a forbidden error" do
@@ -277,7 +274,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         end
       end
 
-      context "when the feature is enabled" do
+      context "when the feature is enabled", :lago_premium do
         let(:organization) { create(:organization, premium_integrations: ["beta_payment_authorization"]) }
         let(:body) do
           {
@@ -313,7 +310,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           )
         end
 
-        context "when parameters are incorrect" do
+        context "when parameters are incorrect", :lago_premium do
           let(:body) do
             {
               authorization: {amount_cents: "100"},
@@ -329,11 +326,11 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           end
         end
 
-        context "when customer has no payment method" do
+        context "when customer has no payment method", :lago_premium do
           let(:provider_customer_id) { "cus_Rw5Qso78STEap3" }
           let(:stripe_customer) { create(:stripe_customer, customer:, provider_customer_id:, payment_provider: create(:stripe_provider, organization:), payment_method_id: nil) }
 
-          context "when customer has a default payment method on Stripe" do
+          context "when customer has a default payment method on Stripe", :lago_premium do
             it do
               stub_request(:get, %r{/v1/customers/#{provider_customer_id}$}).and_return(
                 status: 200, body: get_stripe_fixtures("customer_retrieve_response.json")
@@ -350,7 +347,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           end
         end
 
-        context "when the authorization failed (card declined)" do
+        context "when the authorization failed (card declined)", :lago_premium do
           it do
             stripe_card_declined = get_stripe_fixtures("payment_intent_authorization_failed_response.json")
             stub_request(:post, %r{/v1/payment_intents}).and_return(
@@ -392,7 +389,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:terminated_at]).to be_present
     end
 
-    context "with not existing subscription" do
+    context "with not existing subscription", :lago_premium do
       let(:external_id) { SecureRandom.uuid }
 
       it "returns a not found error" do
@@ -463,8 +460,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       )
     end
 
-    context "when progressive billing premium integration is present" do
-      around { |test| lago_premium!(&test) }
+    context "when progressive billing premium integration is present", :lago_premium do
 
       before do
         organization.update!(premium_integrations: ["progressive_billing"])
@@ -482,7 +478,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context "with not existing subscription" do
+    context "with not existing subscription", :lago_premium do
       let(:external_id) { SecureRandom.uuid }
 
       it "returns an not found error" do
@@ -491,7 +487,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context "with multuple subscriptions" do
+    context "with multuple subscriptions", :lago_premium do
       let(:active_plan) { create(:plan, organization:, amount_cents: 5000, description: "desc") }
       let(:active_subscription) do
         create(:subscription, external_id: subscription.external_id, customer:, plan:)
@@ -511,7 +507,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         )
       end
 
-      context "with pending params" do
+      context "with pending params", :lago_premium do
         let(:params) { {subscription: update_params, status: "pending"} }
 
         it "updates the pending subscription" do
@@ -551,7 +547,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       )
     end
 
-    context "when subscription does not exist" do
+    context "when subscription, :lago_premium does not exist", :lago_premium do
       let(:external_id) { SecureRandom.uuid }
 
       it "returns not found" do
@@ -560,7 +556,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context "when status is given" do
+    context "when status is given", :lago_premium do
       let(:params) { {status: "pending"} }
 
       let!(:matching_subscription) do
@@ -578,7 +574,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context "when there are multiple terminated subscriptions" do
+    context "when there are multiple terminated subscriptions", :lago_premium do
       let(:subscription) do
         create(:subscription, customer:, plan:, status: :terminated, terminated_at: 10.days.ago)
       end
@@ -629,7 +625,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscriptions].first[:lago_id]).to eq(subscription.id)
     end
 
-    context "with next and previous subscriptions" do
+    context "with next and previous subscriptions", :lago_premium do
       let(:previous_subscription) do
         create(
           :subscription,
@@ -672,7 +668,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context "with pagination" do
+    context "with pagination", :lago_premium do
       let(:params) do
         {
           external_customer_id:,
@@ -700,7 +696,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       end
     end
 
-    context "with plan code" do
+    context "with plan code", :lago_premium do
       let(:params) { {plan_code: plan.code} }
 
       it "returns subscriptions" do

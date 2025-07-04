@@ -9,7 +9,7 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
   let(:applied_charge_model) { instance_double("AppliedChargeModel", amount_details: all_charges_details) }
   let(:applied_charge_model_excluding_event) { instance_double("AppliedChargeModel", amount_details: charges_details_without_last_event) }
 
-  context "when charge model does not support pay in advance amount details" do
+  context "when charge model, :lago_premium does not support pay in advance amount details", :lago_premium do
     let(:all_charges_details) { nil }
     let(:charges_details_without_last_event) { nil }
 
@@ -18,7 +18,7 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
     end
   end
 
-  context "when charge model is percentage" do
+  context "when charge model is percentage", :lago_premium do
     let(:charge) { create(:percentage_charge, :pay_in_advance) }
     let(:charge_model) { "percentage" }
     let(:all_charges_details) do
@@ -67,7 +67,7 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
     end
   end
 
-  context "when charge model is graduated_percentage" do
+  context "when charge model is graduated_percentage", :lago_premium do
     let(:charge) { create(:graduated_percentage_charge, :pay_in_advance) }
     let(:all_charges_details) do
       {
@@ -86,8 +86,6 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
       }
     end
 
-    around { |test| lago_premium!(&test) }
-
     it "calculates graduated percentage charge details" do
       expected_details = {
         graduated_percentage_ranges: [
@@ -98,7 +96,7 @@ RSpec.describe Charges::PayInAdvance::AmountDetailsCalculator, type: :service do
       expect(amount_details_calculator.call).to eq(expected_details)
     end
 
-    context "when first event covers all tiers" do
+    context "when first event covers all tiers", :lago_premium do
       let(:all_charges_details) do
         {
           graduated_percentage_ranges: [

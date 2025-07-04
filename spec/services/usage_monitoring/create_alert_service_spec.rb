@@ -30,7 +30,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       expect(alert.thresholds.size).to eq(2)
     end
 
-    context "with recurring threshold" do
+    context "with recurring threshold", :lago_premium do
       let(:thresholds) { [{value: 80}, {code: "warning", value: 100}, {value: 32, recurring: true}] }
 
       it "creates a new alert" do
@@ -41,7 +41,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "when code already exists" do
+    context "when code already exists", :lago_premium do
       it "returns a record validation failure result" do
         create(:billable_metric_current_usage_amount_alert, organization:, code: "first", subscription_external_id: subscription.external_id)
         expect(result).to be_failure
@@ -49,7 +49,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "with billable_metric_current_usage_amount type" do
+    context "with billable_metric_current_usage_amount type", :lago_premium do
       let(:params) { {alert_type: "billable_metric_current_usage_amount", billable_metric_id: billable_metric.id, thresholds:, code: "first"} }
       let(:billable_metric) { create(:billable_metric, organization:) }
 
@@ -61,7 +61,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         expect(alert.alert_type).to eq("billable_metric_current_usage_amount")
       end
 
-      context "when billable_metric is missing" do
+      context "when billable_metric is missing", :lago_premium do
         let(:params) { {alert_type: "billable_metric_current_usage_amount", thresholds:, code: "first"} }
         let(:billable_metric) { nil }
 
@@ -71,7 +71,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         end
       end
 
-      context "when billable_metric is not found" do
+      context "when billable_metric is not found", :lago_premium do
         let(:params) { {alert_type: "billable_metric_current_usage_amount", billable_metric_code: "not,found", thresholds:, code: "first"} }
         let(:billable_metric) { nil }
 
@@ -82,7 +82,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "when the subscription is not active" do
+    context "when the subscription is not active", :lago_premium do
       let(:subscription) { create(:subscription, :terminated) }
 
       it do
@@ -90,7 +90,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "when code is blank" do
+    context "when code is blank", :lago_premium do
       let(:params) { {alert_type: "current_usage_amount", code: nil, thresholds: [1]} }
 
       it "returns a validation failure result" do
@@ -99,7 +99,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "when alert_type is blank" do
+    context "when alert_type is blank", :lago_premium do
       let(:params) { {alert_type: nil, code: "ok", thresholds: [1]} }
 
       it "returns a validation failure result" do
@@ -108,7 +108,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "when thresholds are blank" do
+    context "when thresholds are blank", :lago_premium do
       let(:params) { {alert_type: "current_usage_amount", code: "ok", thresholds: []} }
 
       it "returns a validation failure result" do
@@ -117,7 +117,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "when code is missing" do
+    context "when code is missing", :lago_premium do
       let(:params) { {alert_type: "current_usage_amount", thresholds:, code: nil} }
 
       it "returns a record validation failure result" do
@@ -126,7 +126,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "when alert_type is invalid" do
+    context "when alert_type is invalid", :lago_premium do
       let(:params) { {alert_type: "yolo", thresholds:, code: "first"} }
 
       it "returns a record validation failure result" do
@@ -135,7 +135,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "with too many thresholds" do
+    context "with too many thresholds", :lago_premium do
       let(:thresholds) do
         Array.new(21) do |i|
           {code: "warning#{i}", value: 10 + i}
@@ -148,12 +148,10 @@ RSpec.describe UsageMonitoring::CreateAlertService do
       end
     end
 
-    context "when creating lifetime_usage alert" do
+    context "when creating lifetime_usage alert", :lago_premium do
       let(:params) { {alert_type: "lifetime_usage_amount", thresholds:, code: "first"} }
 
-      around { |test| lago_premium!(&test) }
-
-      context "when organization using lifetime usage" do
+      context "when organization using lifetime usage", :lago_premium do
         let(:premium_integrations) { [] }
 
         it "returns a record validation failure result" do
@@ -162,7 +160,7 @@ RSpec.describe UsageMonitoring::CreateAlertService do
         end
       end
 
-      context "when organization does not use lifetime usage" do
+      context "when organization, :lago_premium does not use lifetime usage", :lago_premium do
         let(:premium_integrations) { ["lifetime_usage"] }
 
         it "creates the alert" do

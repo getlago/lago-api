@@ -24,8 +24,6 @@ RSpec.describe Mutations::Integrations::Anrok::Update, type: :graphql do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   before do
     integration
     membership.organization.update!(premium_integrations: ["anrok"])
@@ -35,7 +33,7 @@ RSpec.describe Mutations::Integrations::Anrok::Update, type: :graphql do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:update"
 
-  it "updates aan anrok integration" do
+  it "updates aan anrok integration", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,

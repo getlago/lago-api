@@ -52,7 +52,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when charge model is not graduated" do
+    context "when charge model is not graduated", :lago_premium do
       subject(:charge) { build(:standard_charge) }
 
       it "does not apply the validation" do
@@ -107,7 +107,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when charge model is not graduated" do
+    context "when charge model is not graduated", :lago_premium do
       subject(:charge) { build(:graduated_charge) }
 
       it "does not apply the validation" do
@@ -166,7 +166,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when charge model is not package" do
+    context "when charge model is not package", :lago_premium do
       subject(:charge) { build(:standard_charge) }
 
       it "does not apply the validation" do
@@ -225,7 +225,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when charge model is not percentage" do
+    context "when charge model is not percentage", :lago_premium do
       subject(:charge) { build(:standard_charge) }
 
       it "does not apply the validation" do
@@ -281,7 +281,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when charge model is not volume" do
+    context "when charge model is not volume", :lago_premium do
       subject(:charge) { build(:standard_charge) }
 
       it "does not apply the validation" do
@@ -304,7 +304,7 @@ RSpec.describe Charge, type: :model do
   describe "#validate_dynamic" do
     subject(:charge) { build(:dynamic_charge, billable_metric:) }
 
-    context "with sum aggregation" do
+    context "with sum aggregation", :lago_premium do
       let(:billable_metric) { create(:sum_billable_metric) }
 
       it "is valid" do
@@ -312,7 +312,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "with other aggregation" do
+    context "with other aggregation", :lago_premium do
       let(:billable_metric) { create(:latest_billable_metric) }
 
       it "is invalid" do
@@ -361,7 +361,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when charge model is not graduated percentage" do
+    context "when charge model is not graduated percentage", :lago_premium do
       subject(:charge) { build(:standard_charge) }
 
       it "does not apply the validation" do
@@ -386,7 +386,7 @@ RSpec.describe Charge, type: :model do
       expect(build(:standard_charge)).to be_valid
     end
 
-    context "when billable metric is max_agg" do
+    context "when billable metric is max_agg", :lago_premium do
       it "returns an error" do
         billable_metric = create(:max_billable_metric)
         charge = build(:standard_charge, :pay_in_advance, billable_metric:)
@@ -398,7 +398,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when billable metric is latest_agg" do
+    context "when billable metric is latest_agg", :lago_premium do
       it "returns an error" do
         billable_metric = create(:latest_billable_metric)
         charge = build(:standard_charge, :pay_in_advance, billable_metric:)
@@ -410,7 +410,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when billable metric is weighted_sum_agg" do
+    context "when billable metric is weighted_sum_agg", :lago_premium do
       it "returns an error" do
         billable_metric = create(:weighted_sum_billable_metric)
         charge = build(:standard_charge, :pay_in_advance, billable_metric:)
@@ -422,7 +422,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when charge model is volume" do
+    context "when charge model is volume", :lago_premium do
       it "returns an error" do
         charge = build(:volume_charge, :pay_in_advance)
 
@@ -435,7 +435,7 @@ RSpec.describe Charge, type: :model do
   end
 
   describe "#validate_regroup_paid_fees" do
-    context "when regroup_paid_fees is nil" do
+    context "when regroup_paid_fees is nil", :lago_premium do
       it "does not return an error when" do
         expect(build(:standard_charge, pay_in_advance: true, invoiceable: true, regroup_paid_fees: nil)).to be_valid
         expect(build(:standard_charge, pay_in_advance: true, invoiceable: false, regroup_paid_fees: nil)).to be_valid
@@ -444,7 +444,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when regroup_paid_fees is `invoice`" do
+    context "when regroup_paid_fees is `invoice`", :lago_premium do
       it "requires charge to be pay_in_advance and non invoiceable" do
         expect(build(:standard_charge, pay_in_advance: true, invoiceable: false, regroup_paid_fees: "invoice")).to be_valid
 
@@ -469,7 +469,7 @@ RSpec.describe Charge, type: :model do
       expect(build(:standard_charge)).to be_valid
     end
 
-    context "when charge is pay_in_advance" do
+    context "when charge is pay_in_advance", :lago_premium do
       it "returns an error" do
         charge = build(:standard_charge, :pay_in_advance, min_amount_cents: 1200)
 
@@ -488,7 +488,7 @@ RSpec.describe Charge, type: :model do
       expect(build(:percentage_charge, prorated: false)).to be_valid
     end
 
-    context "when charge is standard, pay_in_advance, prorated but BM is not recurring" do
+    context "when charge is standard, pay_in_advance, prorated but BM is not recurring", :lago_premium do
       let(:billable_metric) { create(:billable_metric, recurring: false) }
 
       it "returns an error" do
@@ -501,7 +501,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when charge is package, pay_in_advance, prorated and BM is recurring" do
+    context "when charge is package, pay_in_advance, prorated and BM is recurring", :lago_premium do
       it "returns an error" do
         charge = build(:package_charge, :pay_in_advance, prorated: true, billable_metric:)
 
@@ -512,7 +512,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when charge is percentage, pay_in_arrear, prorated and BM is recurring" do
+    context "when charge is percentage, pay_in_arrear, prorated and BM is recurring", :lago_premium do
       it "returns an error" do
         charge = build(:percentage_charge, prorated: true, billable_metric:)
 
@@ -523,7 +523,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when billable metric is weighted sum" do
+    context "when billable metric is weighted sum", :lago_premium do
       let(:billable_metric) { create(:weighted_sum_billable_metric) }
 
       it "returns an error" do
@@ -559,7 +559,7 @@ RSpec.describe Charge, type: :model do
       expect(charge.pricing_group_keys).to eq(["user_id"])
     end
 
-    context "with grouped_by property" do
+    context "with grouped_by property", :lago_premium do
       let(:properties) { {"amount_cents" => "1000", :grouped_by => ["user_id"]} }
 
       it "returns the pricing group keys" do
@@ -571,7 +571,7 @@ RSpec.describe Charge, type: :model do
   describe "#equal_properties?" do
     let(:charge1) { build(:standard_charge, properties: {amount: 100}) }
 
-    context "when charge model is not the same" do
+    context "when charge model is not the same", :lago_premium do
       let(:charge2) { build(:percentage_charge) }
 
       it "returns false" do
@@ -579,7 +579,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when charge model is the same and properties are different" do
+    context "when charge model is the same and properties are different", :lago_premium do
       let(:charge2) { build(:standard_charge, properties: {amount: 200}) }
 
       it "returns false if properties are not the same" do
@@ -587,7 +587,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when charge model and properties are the same" do
+    context "when charge model and properties are the same", :lago_premium do
       let(:charge2) { build(:standard_charge, properties: {amount: 100}) }
 
       it "returns true if both charge model and properties are the same" do
@@ -602,14 +602,14 @@ RSpec.describe Charge, type: :model do
     let(:charge) { create(:standard_charge) }
     let(:subscription) { create(:subscription, next_subscriptions:) }
 
-    context "when subscription has next subscription" do
+    context "when subscription has next subscription", :lago_premium do
       let(:next_subscriptions) { [create(:subscription, plan: next_plan)] }
       let(:next_plan) { build(:plan, charges:) }
 
-      context "when next subscription's plan has charges" do
+      context "when next subscription's plan has charges", :lago_premium do
         let(:charges) { [create(:standard_charge, billable_metric:)] }
 
-        context "when next plan charges includes charge billable metric" do
+        context "when next plan charges includes charge billable metric", :lago_premium do
           let(:billable_metric) { charge.billable_metric }
 
           it "returns true" do
@@ -617,7 +617,7 @@ RSpec.describe Charge, type: :model do
           end
         end
 
-        context "when next plan charges does not include charge billable metric" do
+        context "when next plan charges, :lago_premium does not include charge billable metric", :lago_premium do
           let(:billable_metric) { create(:billable_metric) }
 
           it "returns false" do
@@ -626,7 +626,7 @@ RSpec.describe Charge, type: :model do
         end
       end
 
-      context "when next subscription's plan has no charges" do
+      context "when next subscription's plan has no charges", :lago_premium do
         let(:charges) { [] }
 
         it "returns false" do
@@ -635,7 +635,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when subscription has no next subscription" do
+    context "when subscription has no next subscription", :lago_premium do
       let(:next_subscriptions) { [] }
 
       it "returns false" do
@@ -652,12 +652,11 @@ RSpec.describe Charge, type: :model do
       let(:charge) { build_stubbed(:charge, charge_model:, properties:) }
       let(:properties) { attributes_for("#{charge_model}_charge")[:properties] }
 
-      context "when premium" do
-        around { |test| lago_premium!(&test) }
+      context "when premium", :lago_premium do
 
         before { subject }
 
-        context "when charge model is graduated percentage" do
+        context "when charge model is graduated percentage", :lago_premium do
           let(:charge_model) { :graduated_percentage }
 
           it "does not add an error" do
@@ -665,7 +664,7 @@ RSpec.describe Charge, type: :model do
           end
         end
 
-        context "when charge model is non graduated percentage" do
+        context "when charge model is non graduated percentage", :lago_premium do
           let(:charge_model) { described_class::CHARGE_MODELS.excluding(:graduated_percentage).sample }
 
           it "does not add an error" do
@@ -674,10 +673,10 @@ RSpec.describe Charge, type: :model do
         end
       end
 
-      context "when freemium" do
+      context "when freemium", :lago_premium do
         before { subject }
 
-        context "when charge model is graduated percentage" do
+        context "when charge model is graduated percentage", :lago_premium do
           let(:charge_model) { :graduated_percentage }
 
           it "adds an error" do
@@ -685,7 +684,7 @@ RSpec.describe Charge, type: :model do
           end
         end
 
-        context "when charge model is non graduated percentage" do
+        context "when charge model is non graduated percentage", :lago_premium do
           let(:charge_model) { described_class::CHARGE_MODELS.excluding(:graduated_percentage).sample }
 
           it "does not add an error" do
@@ -708,10 +707,10 @@ RSpec.describe Charge, type: :model do
       )
     end
 
-    context "when has associated applied pricing unit" do
+    context "when has associated applied pricing unit", :lago_premium do
       let(:applied_pricing_unit) { build(:applied_pricing_unit, conversion_rate:) }
 
-      context "when charges conversion rate is equal" do
+      context "when charges conversion rate is equal", :lago_premium do
         let(:conversion_rate) { another_charge.applied_pricing_unit.conversion_rate }
 
         it "returns true" do
@@ -719,7 +718,7 @@ RSpec.describe Charge, type: :model do
         end
       end
 
-      context "when charges conversion rate is not equal" do
+      context "when charges conversion rate is not equal", :lago_premium do
         let(:conversion_rate) { another_charge.applied_pricing_unit.conversion_rate - 0.5 }
 
         it "returns false" do
@@ -728,7 +727,7 @@ RSpec.describe Charge, type: :model do
       end
     end
 
-    context "when has no associated applied pricing unit" do
+    context "when has no associated applied pricing unit", :lago_premium do
       let(:applied_pricing_unit) { nil }
 
       it "returns false" do

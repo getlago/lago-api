@@ -17,15 +17,14 @@ RSpec.describe DataApi::RevenueStreams::CustomersService, type: :service do
   describe "#call" do
     subject(:service_call) { service.call }
 
-    context "when licence is not premium" do
+    context "when licence is not premium", :lago_premium do
       it "returns an error" do
         expect(service_call).not_to be_success
         expect(service_call.error.code).to eq("feature_unavailable")
       end
     end
 
-    context "when licence is premium" do
-      around { |test| lago_premium!(&test) }
+    context "when licence is premium", :lago_premium do
 
       it "returns expected revenue streams customers" do
         expect(service_call).to be_success

@@ -87,8 +87,6 @@ RSpec.describe Plans::OverrideService, type: :service do
       ]
     end
 
-    around { |test| lago_premium!(&test) }
-
     before do
       organization.update!(premium_integrations: ["progressive_billing"])
       charge
@@ -204,7 +202,7 @@ RSpec.describe Plans::OverrideService, type: :service do
       )
     end
 
-    context "when minimum commitment is not valid" do
+    context "when minimum commitment is not valid", :lago_premium do
       let(:minimum_commitment_amount_cents) { nil }
 
       it "returns error", :aggregate_failures do

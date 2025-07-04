@@ -67,13 +67,11 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
 
   before { fee.invoice.draft! }
 
-  around { |test| lago_premium!(&test) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "invoices:update"
 
-  it "creates an adjusted fee" do
+  it "creates an adjusted fee", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -88,7 +86,7 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
     expect(result["data"]["createAdjustedFee"]["invoiceDisplayName"]).to eq("Hello")
   end
 
-  context "without an existing fee" do
+  context "without an existing fee", :lago_premium do
     let(:billable_metric2) { create(:billable_metric, organization:) }
     let(:charge2) { create(:standard_charge, plan:, billable_metric: billable_metric2) }
 
@@ -119,7 +117,7 @@ RSpec.describe Mutations::AdjustedFees::Create, type: :graphql do
     end
   end
 
-  context "with finalized invoice" do
+  context "with finalized invoice", :lago_premium do
     before { fee.invoice.finalized! }
 
     it "returns an error" do

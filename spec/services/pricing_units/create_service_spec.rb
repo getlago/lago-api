@@ -25,9 +25,8 @@ RSpec.describe PricingUnits::CreateService, type: :service do
     before { create(:pricing_unit, code: already_used_code, organization:) }
 
     context "with premium organization" do
-      around { |test| lago_premium!(&test) }
 
-      context "when params are valid" do
+      context "when params are valid", :lago_premium do
         let(:code) { "tokens" }
 
         it "returns a successful result with the pricing unit" do
@@ -43,7 +42,7 @@ RSpec.describe PricingUnits::CreateService, type: :service do
         end
       end
 
-      context "when params are invalid" do
+      context "when params are invalid", :lago_premium do
         let(:code) { already_used_code }
 
         it "fails with validation error" do
@@ -58,7 +57,7 @@ RSpec.describe PricingUnits::CreateService, type: :service do
     end
 
     context "with freemium organization" do
-      context "when params are valid" do
+      context "when params are valid", :lago_premium do
         let(:code) { "tokens" }
 
         it "fails with a forbidden error" do
@@ -72,7 +71,7 @@ RSpec.describe PricingUnits::CreateService, type: :service do
         end
       end
 
-      context "when params are invalid" do
+      context "when params are invalid", :lago_premium do
         let(:code) { already_used_code }
 
         it "fails with a forbidden error" do

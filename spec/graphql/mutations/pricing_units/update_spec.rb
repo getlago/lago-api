@@ -13,8 +13,6 @@ RSpec.describe Mutations::PricingUnits::Update, type: :graphql do
     )
   end
 
-  around { |test| lago_premium!(&test) }
-
   let(:query) do
     <<-GQL
       mutation($input: UpdatePricingUnitInput!) {
@@ -34,10 +32,10 @@ RSpec.describe Mutations::PricingUnits::Update, type: :graphql do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "pricing_units:update"
 
-  context "when pricing unit with such ID exists in the current organization" do
+  context "when pricing unit with such ID exists in the current organization", :lago_premium do
     let(:pricing_unit) { create(:pricing_unit, organization: membership.organization) }
 
-    context "with valid params" do
+    context "with valid params", :lago_premium do
       it "returns updated pricing unit" do
         pricing_unit_response = result["data"]["updatePricingUnit"]
 
@@ -48,7 +46,7 @@ RSpec.describe Mutations::PricingUnits::Update, type: :graphql do
       end
     end
 
-    context "with invalid params" do
+    context "with invalid params", :lago_premium do
       let(:name) { "" }
 
       it "does not change the pricing unit" do
@@ -61,7 +59,7 @@ RSpec.describe Mutations::PricingUnits::Update, type: :graphql do
     end
   end
 
-  context "when pricing unit with such ID does not exist in the current organization" do
+  context "when pricing unit with such ID does not exist in the current organization", :lago_premium do
     let!(:pricing_unit) { create(:pricing_unit) }
 
     it "does not change the pricing unit" do

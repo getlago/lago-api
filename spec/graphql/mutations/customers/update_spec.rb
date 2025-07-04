@@ -140,8 +140,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
     end
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
+  context "with premium feature", :lago_premium do
 
     it "updates a customer" do
       result = execute_graphql(
@@ -168,8 +167,7 @@ RSpec.describe Mutations::Customers::Update, type: :graphql do
     end
   end
 
-  context "when user can only update customer settings" do
-    around { |test| lago_premium!(&test) }
+  context "when user can only update customer settings", :lago_premium do
 
     it "updates a customer" do
       result = execute_graphql(

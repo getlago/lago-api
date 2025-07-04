@@ -8,7 +8,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
 
   before { tax }
 
-  context "when pay in advance subscription with free trial used on several subscriptions" do
+  context "when pay in advance subscription with free trial used on several subscriptions", :lago_premium do
     let(:organization) { create(:organization, webhook_url: nil) }
     let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:) }
@@ -61,7 +61,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when timezone is negative and not the same day as UTC" do
+  context "when timezone is negative and not the same day as UTC", :lago_premium do
     let(:organization) { create(:organization, webhook_url: nil) }
     let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: "America/Denver") } # UTC-6
@@ -84,7 +84,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when timezone is negative but same day as UTC" do
+  context "when timezone is negative but same day as UTC", :lago_premium do
     let(:organization) { create(:organization, webhook_url: nil) }
     let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: "America/Halifax") } # UTC-3
@@ -107,7 +107,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when timezone is positive but same day as UTC" do
+  context "when timezone is positive but same day as UTC", :lago_premium do
     let(:organization) { create(:organization, webhook_url: nil) }
     let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: "Europe/Paris") } # UTC+2
@@ -130,7 +130,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when timezone is positive and not the same day as UTC" do
+  context "when timezone is positive and not the same day as UTC", :lago_premium do
     let(:organization) { create(:organization, webhook_url: nil) }
     let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:, timezone: "Asia/Karachi") } # UTC+5
@@ -153,7 +153,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when invoice boundaries should cover leap month february" do
+  context "when invoice boundaries should cover leap month february", :lago_premium do
     let(:organization) { create(:organization, webhook_url: nil) }
     let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
     let(:customer) { create(:customer, organization:) }
@@ -189,7 +189,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when subscription is upgraded without grace period" do
+  context "when subscription is upgraded without grace period", :lago_premium do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 0) }
     let(:plan) { create(:plan, organization:, amount_cents: 0) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 2000) }
@@ -277,7 +277,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when subscription is terminated with a grace period" do
+  context "when subscription is terminated with a grace period", :lago_premium do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000) }
     let(:metric) { create(:billable_metric, organization:) }
@@ -320,7 +320,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in arrear subscription with recurring charges is terminated" do
+  context "when pay in arrear subscription with recurring charges is terminated", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000) }
     let(:metric) do
@@ -379,7 +379,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in arrear subscription with recurring and prorated charges is terminated" do
+  context "when pay in arrear subscription with recurring and prorated charges is terminated", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000) }
     let(:metric) do
@@ -438,7 +438,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in arrear subscription with no charges is terminated" do
+  context "when pay in arrear subscription with no charges is terminated", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000, interval: "yearly") }
 
@@ -473,7 +473,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in arrear subscription with recurring charges is upgraded and new plan does not contain same BM" do
+  context "when pay in arrear subscription with recurring charges is upgraded and new plan, :lago_premium does not contain same BM", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 2000) }
@@ -539,7 +539,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in arrear subscription with recurring charges is upgraded and new plan contains same BM" do
+  context "when pay in arrear subscription with recurring charges is upgraded and new plan contains same BM", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 2000) }
@@ -602,7 +602,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in advance subscription with recurring and prorated charges is terminated" do
+  context "when pay in advance subscription with recurring and prorated charges is terminated", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 1000) }
     let(:metric) do
@@ -649,7 +649,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in advance subscription is upgraded" do
+  context "when pay in advance subscription is upgraded", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 29_000, pay_in_advance: true) }
@@ -736,7 +736,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in arrear subscription is upgraded" do
+  context "when pay in arrear subscription is upgraded", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: false) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 29_000, pay_in_advance: false) }
@@ -821,7 +821,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in arrear plan events are ingested on the plan change date" do
+  context "when pay in arrear plan events are ingested on the plan change date", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 0, pay_in_advance: false) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 0, pay_in_advance: false) }
@@ -948,7 +948,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in advance subscription is terminated" do
+  context "when pay in advance subscription is terminated", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 29_000, pay_in_advance: true) }
@@ -1022,7 +1022,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in advance subscription is terminated on the same day" do
+  context "when pay in advance subscription is terminated on the same day", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
     let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
@@ -1059,7 +1059,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
       end
     end
 
-    context "with usage events" do
+    context "with usage events", :lago_premium do
       it "bills the usage correctly" do
         create(:standard_charge, plan:, billable_metric: metric, properties: {amount: "12"})
 
@@ -1105,7 +1105,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in advance subscription with grace period is terminated" do
+  context "when pay in advance subscription with grace period is terminated", :lago_premium do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: true) }
     let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 0) }
@@ -1118,8 +1118,6 @@ describe "Invoices Scenarios", :scenarios, type: :request do
         units: 3
       }
     end
-
-    around { |test| lago_premium!(&test) }
 
     it "bills fees correctly" do
       travel_to(Time.zone.parse("2024-01-01T00:00:00")) do
@@ -1207,7 +1205,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
       end
     end
 
-    context "with updated fee with attached credit note" do
+    context "with updated fee with attached credit note", :lago_premium do
       let(:adjusted_fee_params) do
         {
           unit_precise_amount: "0.50",
@@ -1288,7 +1286,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
       end
     end
 
-    context "with updated fee equal to zero" do
+    context "with updated fee equal to zero", :lago_premium do
       let(:adjusted_fee_params) do
         {
           unit_precise_amount: 0,
@@ -1370,7 +1368,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when pay in arrear subscription is terminated" do
+  context "when pay in arrear subscription is terminated", :lago_premium do
     let(:customer) { create(:customer, organization:) }
     let(:plan) { create(:plan, organization:, amount_cents: 2_900, pay_in_advance: false) }
     let(:plan_new) { create(:plan, organization:, amount_cents: 29_000, pay_in_advance: false) }
@@ -1436,7 +1434,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when invoice is paid in advance and grace period" do
+  context "when invoice is paid in advance and grace period", :lago_premium do
     let(:customer) { create(:customer, organization:, invoice_grace_period: 3) }
     let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 1000) }
     let(:metric) { create(:billable_metric, organization:) }
@@ -1719,7 +1717,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
       end
     end
 
-    context "when upgrading from pay in arrear to pay in advance plan" do
+    context "when upgrading from pay in arrear to pay in advance plan", :lago_premium do
       let(:pay_in_arrear_plan) { create(:plan, organization:, amount_cents: 1000) }
       let(:pay_in_advance_plan) { create(:plan, organization:, pay_in_advance: true, amount_cents: 1000) }
 
@@ -1755,11 +1753,9 @@ describe "Invoices Scenarios", :scenarios, type: :request do
       end
     end
 
-    context "when invoice grace period is removed" do
+    context "when invoice grace period is removed", :lago_premium do
       let(:organization) { create(:organization, webhook_url: nil, invoice_grace_period: 3) }
       let(:plan) { create(:plan, pay_in_advance: true, organization:, amount_cents: 1000) }
-
-      around { |test| lago_premium!(&test) }
 
       it "finalizes draft invoices" do
         create_subscription(

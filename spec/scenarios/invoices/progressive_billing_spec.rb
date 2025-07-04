@@ -20,8 +20,6 @@ describe "Progressive billing invoices", :scenarios, type: :request, transaction
     charge
   end
 
-  around { |test| lago_premium!(&test) }
-
   it "generates an invoice in the middle of the month and a final invoice at the end of the month" do
     time_0 = DateTime.new(2022, 12, 1)
     travel_to time_0 do
@@ -58,7 +56,7 @@ describe "Progressive billing invoices", :scenarios, type: :request, transaction
     end
   end
 
-  context "with grace period enabled" do
+  context "with grace period enabled", :lago_premium do
     let(:invoice_grace_period) { 2 }
 
     it "generates an invoice in the middle of the month and a draft invoice at the end of the month" do

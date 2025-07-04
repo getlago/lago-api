@@ -18,7 +18,7 @@ RSpec.describe Payments::ManualCreateService, type: :service do
       allow(Utils::ActivityLog).to receive(:produce)
     end
 
-    context "when organization is not premium" do
+    context "when organization is not premium", :lago_premium do
       it "returns forbidden failure" do
         result = service.call
 
@@ -30,9 +30,8 @@ RSpec.describe Payments::ManualCreateService, type: :service do
     end
 
     context "when organization is premium" do
-      around { |test| lago_premium!(&test) }
 
-      context "when invoice does not exist" do
+      context "when invoice, :lago_premium does not exist", :lago_premium do
         let(:invoice_id) { SecureRandom.uuid }
 
         it "returns not found failure" do
@@ -45,7 +44,7 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         end
       end
 
-      context "when invoice's payment request is succeeded" do
+      context "when invoice's payment request is succeeded", :lago_premium do
         let(:payment_request) { create(:payment_request, payment_status: "succeeded") }
 
         before do
@@ -62,7 +61,7 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         end
       end
 
-      context "when payment amount cents is greater than invoice's remaining amount cents" do
+      context "when payment amount cents is greater than invoice's remaining amount cents", :lago_premium do
         let(:amount_cents) { 10001 }
 
         it "returns validation failure" do
@@ -75,7 +74,7 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         end
       end
 
-      context "when paid_at format is invalid" do
+      context "when paid_at format is invalid", :lago_premium do
         let(:paid_at) { "invalid_date" }
 
         it "returns a validation failure" do
@@ -89,7 +88,7 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         end
       end
 
-      context "when paid_at format is valid but different format" do
+      context "when paid_at format is valid but different format", :lago_premium do
         let(:paid_at) { "2024-01-20" }
 
         it "creates a payment with valid date" do
@@ -103,7 +102,7 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         end
       end
 
-      context "when payment amount cents is smaller than invoice remaining amount cents" do
+      context "when payment amount cents is smaller than invoice remaining amount cents", :lago_premium do
         let(:amount_cents) { 2000 }
 
         it "creates a payment" do
@@ -119,7 +118,7 @@ RSpec.describe Payments::ManualCreateService, type: :service do
           expect(result.payment.payable.total_paid_amount_cents).to eq(amount_cents)
         end
 
-        context "when issue_receipts_enabled is true" do
+        context "when issue_receipts_enabled is true", :lago_premium do
           before { organization.update!(premium_integrations: %w[issue_receipts]) }
 
           it "enqueues a payment receipt job" do
@@ -127,7 +126,7 @@ RSpec.describe Payments::ManualCreateService, type: :service do
           end
         end
 
-        context "when there is an integration customer" do
+        context "when there is an integration customer", :lago_premium do
           let(:integration) do
             create(
               :netsuite_integration,
@@ -149,7 +148,7 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         end
       end
 
-      context "when payment amount cents is equal to invoice remaining amount cents" do
+      context "when payment amount cents is equal to invoice remaining amount cents", :lago_premium do
         let(:amount_cents) { 10000 }
 
         it "creates a payment" do
@@ -181,7 +180,7 @@ RSpec.describe Payments::ManualCreateService, type: :service do
           expect(Utils::ActivityLog).to have_received(:produce).with(payment, "payment.recorded")
         end
 
-        context "when issue_receipts_enabled is true" do
+        context "when issue_receipts_enabled is true", :lago_premium do
           before { organization.update!(premium_integrations: %w[issue_receipts]) }
 
           it "enqueues a payment receipt job" do

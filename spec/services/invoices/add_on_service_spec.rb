@@ -61,8 +61,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
+    context "with lago_premium", :lago_premium do
 
       it "enqueues an GeneratePdfAndNotifyJob with email true" do
         expect do
@@ -70,7 +69,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
-      context "when organization does not have right email settings" do
+      context "when organization, :lago_premium does not have right email settings", :lago_premium do
         before { applied_add_on.customer.billing_entity.update!(email_settings: []) }
 
         it "enqueue an GeneratePdfAndNotifyJob with email false" do
@@ -112,7 +111,7 @@ RSpec.describe Invoices::AddOnService, type: :service do
       let(:service_call) { invoice_service.create }
     end
 
-    context "with customer timezone" do
+    context "with customer timezone", :lago_premium do
       before { applied_add_on.customer.update!(timezone: "America/Los_Angeles") }
 
       let(:datetime) { DateTime.parse("2022-11-25 01:00:00") }

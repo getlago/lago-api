@@ -51,14 +51,12 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
 
   let(:credit) { create(:credit, invoice:, applied_coupon:, amount_cents: 100) }
 
-  around { |test| lago_premium!(&test) }
-
   before { credit }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
 
-  it "returns the estimate for the credit note creation" do
+  it "returns the estimate for the credit note creation", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -83,7 +81,7 @@ RSpec.describe Resolvers::CreditNotes::EstimateResolver, type: :graphql do
     end
   end
 
-  context "with invalid invoice" do
+  context "with invalid invoice", :lago_premium do
     it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,

@@ -9,9 +9,7 @@ RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, type: :service
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { create(:subscription, customer:) }
 
-  around { |test| lago_premium!(&test) }
-
-  context "when the plan has usage_thresholds" do
+  context "when the plan has usage_thresholds", :lago_premium do
     it "tracks activity" do
       create(:usage_threshold, plan: subscription.plan)
       expect { subject.call }.to change { organization.subscription_activities.count }.by(1)
@@ -19,7 +17,7 @@ RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, type: :service
     end
   end
 
-  context "when organization does use any integration with subscription tracking" do
+  context "when organization, :lago_premium does use any integration with subscription tracking", :lago_premium do
     let(:organization) { create(:organization, premium_integrations: %w[salesforce]) }
 
     it "does not track activity" do
@@ -28,7 +26,7 @@ RSpec.describe UsageMonitoring::TrackSubscriptionActivityService, type: :service
     end
   end
 
-  context "when subscription isn't active" do
+  context "when subscription isn't active", :lago_premium do
     let(:subscription) { create(:subscription, :terminated, customer:) }
 
     it "does not track activity" do

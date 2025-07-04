@@ -127,8 +127,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
+    context "with lago_premium", :lago_premium do
 
       it "enqueues GeneratePdfAndNotifyJob with email true" do
         expect do
@@ -136,7 +135,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
-      context "when organization does not have right email settings" do
+      context "when organization, :lago_premium does not have right email settings", :lago_premium do
         before { invoice.billing_entity.update!(email_settings: []) }
 
         it "enqueues GeneratePdfAndNotifyJob with email false" do
@@ -168,7 +167,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       expect(Invoices::Payments::CreateService).to have_received(:call_async)
     end
 
-    context "when invoice does not exist" do
+    context "when invoice, :lago_premium does not exist", :lago_premium do
       it "returns an error" do
         result = described_class.new(invoice: nil).call
         expect(result).not_to be_success
@@ -176,7 +175,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       end
     end
 
-    context "when fees already exist" do
+    context "when fees already exist", :lago_premium do
       it "regenerates them" do
         create(:fee, invoice:)
         result = finalize_service.call
@@ -189,7 +188,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       end
     end
 
-    context "with credit notes" do
+    context "with credit notes", :lago_premium do
       before do
         create(:credit_note_item, credit_note:, fee:)
         allow(Utils::ActivityLog).to receive(:produce)
@@ -235,7 +234,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       end
     end
 
-    context "when tax integration is set up" do
+    context "when tax integration is set up", :lago_premium do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
 
@@ -251,7 +250,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
         allow(Utils::SegmentTrack).to receive(:invoice_created).and_call_original
       end
 
-      context "when taxes are unknown" do
+      context "when taxes are unknown", :lago_premium do
         it "returns pending invoice" do
           result = finalize_service.call
           aggregate_failures do
@@ -286,7 +285,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       end
     end
 
-    context "when sending an invoice that is not draft" do
+    context "when sending an invoice that is not draft", :lago_premium do
       let(:invoice) do
         create(
           :invoice,
@@ -304,7 +303,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       end
     end
 
-    context "when invoice has invoice_generation_errors" do
+    context "when invoice has invoice_generation_errors", :lago_premium do
       before do
         ErrorDetail.create(
           owner: invoice,
@@ -319,13 +318,13 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
         )
       end
 
-      context "when successfully generated the invoice" do
+      context "when successfully generated the invoice", :lago_premium do
         it "deletes the invoice_generation_errors" do
           expect { finalize_service.call }.to change(invoice.error_details.invoice_generation_error, :count).by(-1)
         end
       end
 
-      context "when failed to generate the invoice" do
+      context "when failed to generate the invoice", :lago_premium do
         before do
           allow(Invoices::RefreshDraftService).to receive(:call).and_return(BaseService::Result.new.service_failure!(code: "code", message: "message"))
         end

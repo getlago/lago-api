@@ -28,7 +28,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
 
     before { tax }
 
-    context "with Lago freemium" do
+    context "with Lago freemium", :lago_premium do
       it "returns a failure" do
         travel_to(timestamp) do
           result = preview_service.call
@@ -42,9 +42,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
     end
 
     context "with Lago premium" do
-      around { |test| lago_premium!(&test) }
 
-      context "when customer does not exist" do
+      context "when customer, :lago_premium does not exist", :lago_premium do
         it "returns an error" do
           result = described_class.new(customer: nil, subscriptions: [subscription]).call
 
@@ -53,7 +52,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
       end
 
-      context "when subscriptions are missing" do
+      context "when subscriptions are missing", :lago_premium do
         let(:subscriptions) { [] }
 
         it "returns an error" do
@@ -64,7 +63,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
       end
 
-      context "when currencies do not match" do
+      context "when currencies, :lago_premium do not match", :lago_premium do
         let(:customer) { build(:customer, organization:, billing_entity:, currency: "USD") }
 
         it "returns an error" do
@@ -75,7 +74,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
       end
 
-      context "when billing periods do not match" do
+      context "when billing periods, :lago_premium do not match", :lago_premium do
         let(:customer) { create(:customer, organization:, billing_entity:) }
         let(:plan1) { create(:plan, organization:, interval: "monthly") }
         let(:plan2) { create(:plan, organization:, interval: "monthly") }
@@ -97,7 +96,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
       end
 
-      context "with calendar billing" do
+      context "with calendar billing", :lago_premium do
         it "creates preview invoice for 2 days" do
           # Two days should be billed, Mar 30 and Mar 31
 
@@ -119,7 +118,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
         end
 
-        context "with one persisted subscription" do
+        context "with one persisted subscription", :lago_premium do
           let(:customer) { create(:customer, organization:, billing_entity:) }
           let(:subscription) do
             create(
@@ -156,7 +155,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "with charge fees" do
+          context "with charge fees", :lago_premium do
             let(:billable_metric) do
               create(:billable_metric, aggregation_type: "count_agg")
             end
@@ -222,7 +221,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "when preview premium integration does not exist" do
+          context "when preview premium integration, :lago_premium does not exist", :lago_premium do
             before { organization.update!(premium_integrations: ["netsuite"]) }
 
             it "returns an error" do
@@ -235,7 +234,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "when subscription is terminated" do
+          context "when subscription is terminated", :lago_premium do
             let(:subscription) do
               create(
                 :subscription,
@@ -300,7 +299,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "when subscription is upgraded" do
+          context "when subscription is upgraded", :lago_premium do
             let(:timestamp) { Time.zone.parse("29 Mar 2024") }
             let(:plan_new) { create(:plan, organization:, interval: "monthly", amount_cents: 200) }
             let(:subscriptions) { [terminated_subscription, upgrade_subscription] }
@@ -389,7 +388,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "when subscription is downgraded" do
+          context "when subscription is, :lago_premium downgraded", :lago_premium do
             let(:timestamp) { Time.zone.parse("29 Mar 2024") }
             let(:rotate_timestamp) { Time.zone.parse("1 Apr 2024 01:00") }
             let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
@@ -488,7 +487,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
         end
 
-        context "with in advance billing in the future" do
+        context "with in advance billing in the future", :lago_premium do
           let(:organization) { create(:organization) }
           let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 2) }
           let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
@@ -524,7 +523,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
         end
 
-        context "with in advance billing with persisted subscription" do
+        context "with in advance billing with persisted subscription", :lago_premium do
           let(:customer) { create(:customer, organization:, billing_entity:) }
           let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
           let(:subscription) do
@@ -560,7 +559,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "with terminated subscription" do
+          context "with terminated subscription", :lago_premium do
             let(:subscription) do
               create(
                 :subscription,
@@ -593,7 +592,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "with upgraded subscription" do
+          context "with upgraded subscription", :lago_premium do
             let(:timestamp) { Time.zone.parse("29 Mar 2024") }
             let(:plan_new) { create(:plan, charges:, organization:, interval: "monthly", amount_cents: 200, pay_in_advance: true) }
             let(:subscriptions) { [terminated_subscription, upgrade_subscription] }
@@ -656,7 +655,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "when preview premium integration does not exist" do
+          context "when preview premium integration, :lago_premium does not exist", :lago_premium do
             before { organization.update!(premium_integrations: ["netsuite"]) }
 
             it "returns an error" do
@@ -670,7 +669,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
         end
 
-        context "with applied coupons" do
+        context "with applied coupons", :lago_premium do
           let(:applied_coupon) do
             build(
               :applied_coupon,
@@ -702,7 +701,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
         end
 
-        context "with credit note credits" do
+        context "with credit note credits", :lago_premium do
           let(:credit_note) do
             create(
               :credit_note,
@@ -739,12 +738,12 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
         end
 
-        context "with wallet credits" do
+        context "with wallet credits", :lago_premium do
           let(:wallet) { build(:wallet, customer:, balance: "0.03", credits_balance: "0.03") }
 
           before { wallet }
 
-          context "with customer that is not persisted" do
+          context "with customer that is not persisted", :lago_premium do
             it "does not apply credits" do
               travel_to(timestamp) do
                 result = preview_service.call
@@ -756,7 +755,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "with customer that is persisted" do
+          context "with customer that is persisted", :lago_premium do
             let(:customer) { create(:customer, organization:, billing_entity:) }
             let(:wallet) { create(:wallet, customer:, balance: "0.03", credits_balance: "0.03") }
 
@@ -780,7 +779,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
         end
 
-        context "with provider taxes" do
+        context "with provider taxes", :lago_premium do
           let(:integration) { create(:anrok_integration, organization:) }
           let(:integration_customer) { build(:anrok_customer, integration:, customer:) }
           let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
@@ -798,7 +797,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             customer.integration_customers = [integration_customer]
           end
 
-          context "when there is no error" do
+          context "when there is no error", :lago_premium do
             before do
               stub_request(:post, endpoint).to_return do |request|
                 response = JSON.parse(File.read(
@@ -833,7 +832,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "when there is error received from the provider" do
+          context "when there is error received from the provider", :lago_premium do
             before do
               stub_request(:post, endpoint).to_return do |request|
                 response = File.read(
@@ -861,7 +860,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "when there is Net::OpenTimeout error" do
+          context "when there is Net::OpenTimeout error", :lago_premium do
             before do
               allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:new)
                 .and_raise(Net::OpenTimeout)
@@ -887,7 +886,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
       end
 
-      context "with anniversary billing" do
+      context "with anniversary billing", :lago_premium do
         let(:billing_time) { "anniversary" }
 
         it "creates preview invoice for full month" do
@@ -909,7 +908,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
         end
 
-        context "with one persisted subscriptions" do
+        context "with one persisted subscriptions", :lago_premium do
           let(:customer) { create(:customer, organization:, billing_entity:) }
           let(:subscription) do
             create(
@@ -944,7 +943,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             end
           end
 
-          context "with charge fees" do
+          context "with charge fees", :lago_premium do
             let(:billable_metric) do
               create(:billable_metric, aggregation_type: "count_agg")
             end
@@ -995,7 +994,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
         end
 
-        context "with multiple persisted subscriptions" do
+        context "with multiple persisted subscriptions", :lago_premium do
           let(:customer) { create(:customer, organization:, invoice_grace_period: 3, billing_entity:) }
           let(:plan1) { create(:plan, organization:, interval: "monthly") }
           let(:plan2) { create(:plan, organization:, interval: "monthly") }

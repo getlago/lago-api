@@ -36,9 +36,7 @@ RSpec.describe Resolvers::ActivityLogResolver, type: :graphql, clickhouse: true 
     end
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium feature", :lago_premium do
     it "returns a single activity log" do
       result = execute_graphql(
         current_user: membership.user,

@@ -138,7 +138,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       expect(subscription.reload.lifetime_usage.recalculate_invoiced_usage).to be(true)
     end
 
-    context "when there is tax provider integration" do
+    context "when there is tax provider integration", :lago_premium do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
 
@@ -172,15 +172,14 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
-    context "when periodic but no active subscriptions" do
+    context "when periodic but no active subscriptions", :lago_premium do
       it "does not create any invoices" do
         subscription.terminated!
         expect { invoice_service.call }.not_to change(Invoice, :count)
       end
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
+    context "with lago_premium", :lago_premium do
 
       it "enqueues GeneratePdfAndNotifyJob with email true" do
         expect do
@@ -188,7 +187,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
-      context "when organization does not have right email settings" do
+      context "when organization, :lago_premium does not have right email settings", :lago_premium do
         before { customer.billing_entity.update!(email_settings: []) }
 
         it "enqueues GeneratePdfAndNotifyJob with email false" do
@@ -199,7 +198,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
-    context "with customer timezone" do
+    context "with customer timezone", :lago_premium do
       before { subscription.customer.update!(timezone: "America/Los_Angeles", invoice_grace_period: 3) }
 
       let(:timestamp) { DateTime.parse("2022-11-25 01:00:00") }
@@ -211,7 +210,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
-    context "with applicable grace period" do
+    context "with applicable grace period", :lago_premium do
       before do
         subscription.customer.update!(invoice_grace_period: 3)
       end
@@ -257,7 +256,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
-    context "when invoice already exists" do
+    context "when invoice already exists", :lago_premium do
       let(:timestamp) { Time.zone.parse("2023-10-01T00:00:00.000Z") }
 
       let(:invoice_subscription) do
@@ -293,12 +292,12 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
-    context "when skip zero invoices is set" do
+    context "when skip zero invoices is set", :lago_premium do
       before do
         customer.update(finalize_zero_amount_invoice: :skip)
       end
 
-      context "when invoice total amount is not 0" do
+      context "when invoice total amount is not 0", :lago_premium do
         it "creates an invoice in :finalized status" do
           result = invoice_service.call
           expect(result.invoice.status).to eq("finalized")
@@ -306,7 +305,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         end
       end
 
-      context "when invoice total amount is 0" do
+      context "when invoice total amount is 0", :lago_premium do
         let(:plan) { create(:plan, interval: "monthly", pay_in_advance:, amount_cents: 0) }
 
         before do
@@ -319,7 +318,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
           expect(result.invoice.number).to include("DRAFT")
         end
 
-        context "when billing entity has grace period" do
+        context "when billing entity has grace period", :lago_premium do
           let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 30) }
 
           it "creates an invoice in :draft status" do
@@ -330,8 +329,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
-    context "when revenue_analytics is set" do
-      around { |test| lago_premium!(&test) }
+    context "when revenue_analytics is set", :lago_premium do
 
       before do
         organization.update!(premium_integrations: %w[revenue_analytics])
@@ -343,7 +341,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
           .with(invoice: an_instance_of(Invoice), subscriptions: [subscription])
       end
 
-      context "when subscription is terminating" do
+      context "when subscription is terminating", :lago_premium do
         let(:invoicing_reason) { :subscription_terminating }
 
         it "enqueues DailyUsages::FillFromInvoiceJob with email false" do
@@ -354,7 +352,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       end
     end
 
-    context "when creating invoice for partner" do
+    context "when creating invoice for partner", :lago_premium do
       let(:customer) { create(:customer, :with_salesforce_integration, :with_hubspot_integration, organization:, account_type: "partner") }
       let(:salesforce_service) { instance_double(Integrations::Aggregator::Invoices::CreateService) }
       let(:hubspot_service) { instance_double(Integrations::Aggregator::Invoices::Hubspot::CreateService) }

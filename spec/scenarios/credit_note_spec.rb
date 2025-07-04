@@ -48,8 +48,6 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
   let(:plan_applied_tax) { create(:plan_applied_tax, plan: plan2, tax: plan_tax) }
   let(:plan_applied_tax2) { create(:plan_applied_tax, plan: plan2, tax:) }
 
-  around { |test| lago_premium!(&test) }
-
   before do
     tax
     plan_applied_tax
@@ -170,7 +168,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
     expect(credit_note.coupons_adjustment_amount_cents).to eq(16_454)
   end
 
-  context "when applying multiple time the same coupon" do
+  context "when applying multiple time the same coupon", :lago_premium do
     let(:plan) do
       create(
         :plan,
@@ -342,10 +340,10 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
   end
 
   context "when creating credit note with possible rounding issues" do
-    context "when creating credit notes for small items with taxes, so sum of items with their taxes is bigger than invoice total amount" do
+    context "when creating credit notes for small items with taxes, so sum of items with their taxes is bigger than invoice total amount", :lago_premium do
       let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
 
-      context "when two similar items are refunded separately" do
+      context "when two similar items are refunded separately", :lago_premium do
         let(:add_ons) { create_list(:add_on, 2, organization:, amount_cents: 68_33) }
 
         it "solves the rounding issue" do
@@ -461,7 +459,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
         end
       end
 
-      context "when four items are refunded separately, some whole, some in parts" do
+      context "when four items are refunded separately, some whole, some in parts", :lago_premium do
         let(:add_ons) { create_list(:add_on, 4, organization:, amount_cents: 68_33) }
 
         it "solves the rounding issue" do
@@ -679,7 +677,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       end
     end
 
-    context "when creating credit note with small items and applied coupons" do
+    context "when creating credit note with small items and applied coupons", :lago_premium do
       let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
       let(:plan_tax) { create(:tax, organization:, name: "Plan Tax", rate: 20, applied_to_organization: false) }
       let(:plan) do
@@ -899,7 +897,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when invoice is prepaid credit" do
+  context "when invoice is prepaid credit", :lago_premium do
     it "behaves differently depending on the invoice payment status, wallet balance and wallet status" do
       # Create a prepaid credit invoice for 15 credits
       create_wallet({

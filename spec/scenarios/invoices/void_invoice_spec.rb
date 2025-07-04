@@ -8,14 +8,12 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 1000, pay_in_advance: true) }
 
-  around { |test| lago_premium!(&test) }
-
   before do
     tax
     stub_pdf_generation
   end
 
-  context "when voiding a basic invoice" do
+  context "when voiding a basic invoice", :lago_premium do
     it "marks the invoice as voided" do
       travel_to(DateTime.new(2023, 1, 1)) do
         create_subscription(
@@ -49,7 +47,7 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when voiding a fully paid invoice" do
+  context "when voiding a fully paid invoice", :lago_premium do
     it "voids the invoice and creates a credit note with refund" do
       # Create a subscription
       travel_to(DateTime.new(2023, 1, 1)) do
@@ -89,7 +87,7 @@ describe "Void Invoice Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when voiding an invoice with partial credit and refund" do
+  context "when voiding an invoice with partial credit and refund", :lago_premium do
     it "creates a partial credit note and a voided credit note for the remaining amount" do
       # Create a subscription
       travel_to(DateTime.new(2023, 1, 1)) do

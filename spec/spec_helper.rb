@@ -160,4 +160,8 @@ RSpec.configure do |config|
       example.run
     end
   end
+
+  config.around(:each, :lago_premium) do |example|
+    lago_premium!(&example)
+  end
 end

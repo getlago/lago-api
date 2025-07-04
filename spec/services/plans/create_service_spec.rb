@@ -141,7 +141,7 @@ RSpec.describe Plans::CreateService, type: :service do
       expect(plan.minimum_commitment).to be_nil
     end
 
-    context "without premium license" do
+    context "without premium license", :lago_premium do
       it "does not create progressive billing thresholds" do
         plans_service.call
 
@@ -156,9 +156,8 @@ RSpec.describe Plans::CreateService, type: :service do
     end
 
     context "with premium license" do
-      around { |test| lago_premium!(&test) }
 
-      context "when progressive billing premium integration is not present" do
+      context "when progressive billing premium integration is not present", :lago_premium do
         it "does not create progressive billing thresholds" do
           plans_service.call
 
@@ -168,7 +167,7 @@ RSpec.describe Plans::CreateService, type: :service do
         end
       end
 
-      context "when progressive billing premium integration is present" do
+      context "when progressive billing premium integration is present", :lago_premium do
         before do
           organization.update!(premium_integrations: ["progressive_billing"])
         end
@@ -187,13 +186,13 @@ RSpec.describe Plans::CreateService, type: :service do
       end
 
       context "when applied pricing params provided" do
-        context "when params are valid" do
+        context "when params are valid", :lago_premium do
           it "creates applied pricing units" do
             expect { result }.to change(AppliedPricingUnit, :count).by(2)
           end
         end
 
-        context "when params are invalid" do
+        context "when params are invalid", :lago_premium do
           let(:applied_pricing_unit_args) do
             {code: "non-existing-code"}
           end
@@ -286,8 +285,7 @@ RSpec.describe Plans::CreateService, type: :service do
       expect(Utils::ActivityLog).to have_received(:produce).with(result.plan, "plan.created")
     end
 
-    context "when premium" do
-      around { |test| lago_premium!(&test) }
+    context "when premium", :lago_premium do
 
       let(:charges_args) do
         [
@@ -354,7 +352,7 @@ RSpec.describe Plans::CreateService, type: :service do
       end
     end
 
-    context "with code already used by a deleted plan" do
+    context "with code already used by a deleted plan", :lago_premium do
       it "creates a plan with the same code" do
         create(:plan, organization:, code: "new_plan", deleted_at: Time.current)
 
@@ -366,7 +364,7 @@ RSpec.describe Plans::CreateService, type: :service do
       end
     end
 
-    context "with validation error" do
+    context "with validation error", :lago_premium do
       let(:plan_name) { nil }
 
       it "returns an error" do
@@ -375,7 +373,7 @@ RSpec.describe Plans::CreateService, type: :service do
         expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
       end
 
-      context "with premium charge model" do
+      context "with premium charge model", :lago_premium do
         let(:plan_name) { "foo" }
         let(:charges_args) do
           [
@@ -412,7 +410,7 @@ RSpec.describe Plans::CreateService, type: :service do
       end
     end
 
-    context "with metrics from other organization" do
+    context "with metrics from other organization", :lago_premium do
       let(:billable_metric) { create(:billable_metric) }
 
       it "returns an error" do

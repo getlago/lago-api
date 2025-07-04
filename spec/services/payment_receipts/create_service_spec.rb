@@ -10,7 +10,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
   let(:payment) { create(:payment, payable: invoice) }
 
   describe "#call" do
-    context "when issuing receipts is not enabled" do
+    context "when issuing receipts is not enabled", :lago_premium do
       it "returns forbidden failure" do
         result = described_class.call(payment:)
 
@@ -19,11 +19,10 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
       end
     end
 
-    context "when issuing receipts is enabled" do
-      around { |test| lago_premium!(&test) }
+    context "when issuing receipts is enabled", :lago_premium do
       before { organization.update!(premium_integrations: %w[issue_receipts]) }
 
-      context "when customer is a partner account" do
+      context "when customer is a partner account", :lago_premium do
         let(:customer) { create(:customer, organization:, account_type: :partner) }
 
         it "returns result" do
@@ -35,7 +34,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
       end
 
       context "when customer is not a partner account" do
-        context "when payment does not exist" do
+        context "when payment, :lago_premium does not exist", :lago_premium do
           let(:payment) { nil }
 
           it "returns not found failure" do
@@ -47,7 +46,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
         end
 
         context "when payment exists" do
-          context "when payment receipt already exists" do
+          context "when payment receipt already exists", :lago_premium do
             before { create(:payment_receipt, payment:, organization:) }
 
             it "returns result" do
@@ -58,10 +57,10 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
             end
           end
 
-          context "when payment receipt does not exist" do
+          context "when payment receipt, :lago_premium does not exist", :lago_premium do
             before { payment.update!(payable_payment_status:) }
 
-            context "when payment is not succeeded" do
+            context "when payment is not succeeded", :lago_premium do
               let(:payable_payment_status) { Payment::PAYABLE_PAYMENT_STATUS.reject { |status| status == "succeeded" }.sample }
 
               it "returns result" do
@@ -72,7 +71,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
               end
             end
 
-            context "when payment is succeeded" do
+            context "when payment is succeeded", :lago_premium do
               let(:payable_payment_status) { "succeeded" }
               let(:payment_receipt) { build(:payment_receipt) }
 

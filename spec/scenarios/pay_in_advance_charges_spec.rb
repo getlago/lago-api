@@ -386,7 +386,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
       end
     end
 
-    context "when there is matching filter" do
+    context "when there is matching filter", :lago_premium do
       let(:transaction_id) { "#{SecureRandom.uuid}test" }
       let(:billable_metric_filter) do
         create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe])
@@ -449,7 +449,7 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
       end
     end
 
-    context "when there is no matching filter" do
+    context "when there is no matching filter", :lago_premium do
       let(:transaction_id) { "#{SecureRandom.uuid}test" }
       let(:cloud_metric_filter) do
         create(:billable_metric_filter, billable_metric:, key: "cloud", values: %w[AWS])
@@ -1003,7 +1003,6 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
     end
 
     describe "with min / max per transaction" do
-      around { |test| lago_premium!(&test) }
 
       it "creates a pay_in_advance fee " do
         ### 24 january: Create subscription.
@@ -1335,8 +1334,6 @@ describe "Pay in advance charges Scenarios", :scenarios, type: :request, transac
   describe "with sum_agg / graduated_percentage" do
     let(:aggregation_type) { "sum_agg" }
     let(:field_name) { "amount" }
-
-    around { |test| lago_premium!(&test) }
 
     it "creates an pay_in_advance fee" do
       ### 24 january: Create subscription.

@@ -26,8 +26,7 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
       end
     end
 
-    context "when only premium" do
-      around { |test| lago_premium!(&test) }
+    context "when only premium", :lago_premium do
 
       it "does not enqueue any job" do
         described_class.perform_now
@@ -38,10 +37,8 @@ describe Clock::RefreshLifetimeUsagesJob, job: true do
       end
     end
 
-    context "when premium & with the premium_integration enabled" do
+    context "when premium & with the premium_integration enabled", :lago_premium do
       let(:organization) { create(:organization, premium_integrations: ["progressive_billing"]) }
-
-      around { |test| lago_premium!(&test) }
 
       it "enqueues a job for every usage that needs to be recalculated" do
         described_class.perform_now

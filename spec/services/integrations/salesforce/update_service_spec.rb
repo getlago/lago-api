@@ -15,7 +15,7 @@ RSpec.describe Integrations::Salesforce::UpdateService, type: :service do
     let(:name) { "Salesforce updated name" }
     let(:update_args) { {name:} }
 
-    context "without premium license" do
+    context "without premium license", :lago_premium do
       it "returns an error" do
         result = service_call
 
@@ -27,9 +27,8 @@ RSpec.describe Integrations::Salesforce::UpdateService, type: :service do
     end
 
     context "with premium license" do
-      around { |test| lago_premium!(&test) }
 
-      context "with salesforce premium integration not present" do
+      context "with salesforce premium integration not present", :lago_premium do
         it "returns an error" do
           result = service_call
 
@@ -40,12 +39,12 @@ RSpec.describe Integrations::Salesforce::UpdateService, type: :service do
         end
       end
 
-      context "with salesforce premium integration present" do
+      context "with salesforce premium integration present", :lago_premium do
         before do
           organization.update!(premium_integrations: ["salesforce"])
         end
 
-        context "without validation errors" do
+        context "without validation errors", :lago_premium do
           it "updates an integration" do
             service_call
 
@@ -60,7 +59,7 @@ RSpec.describe Integrations::Salesforce::UpdateService, type: :service do
           end
         end
 
-        context "with validation error" do
+        context "with validation error", :lago_premium do
           let(:name) { nil }
 
           it "returns an error" do

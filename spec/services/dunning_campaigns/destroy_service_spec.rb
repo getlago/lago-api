@@ -16,7 +16,7 @@ RSpec.describe DunningCampaigns::DestroyService, type: :service do
   describe "#call" do
     subject(:result) { destroy_service.call }
 
-    context "when dunning campaign is not found" do
+    context "when dunning campaign is not found", :lago_premium do
       let(:dunning_campaign) { nil }
       let(:dunning_campaign_threshold) { nil }
 
@@ -28,7 +28,7 @@ RSpec.describe DunningCampaigns::DestroyService, type: :service do
       end
     end
 
-    context "when lago freemium" do
+    context "when lago freemium", :lago_premium do
       it "returns an error", :aggregate_failures do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
@@ -40,9 +40,8 @@ RSpec.describe DunningCampaigns::DestroyService, type: :service do
     end
 
     context "when lago premium" do
-      around { |test| lago_premium!(&test) }
 
-      context "when no auto_dunning premium integration" do
+      context "when no auto_dunning premium integration", :lago_premium do
         it "returns an error", :aggregate_failures do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ForbiddenFailure)
@@ -53,7 +52,7 @@ RSpec.describe DunningCampaigns::DestroyService, type: :service do
         end
       end
 
-      context "when auto_dunning premium integration" do
+      context "when auto_dunning premium integration", :lago_premium do
         let(:organization) do
           create(:organization, premium_integrations: ["auto_dunning"])
         end
@@ -79,7 +78,7 @@ RSpec.describe DunningCampaigns::DestroyService, type: :service do
           end
         end
 
-        context "when dunning campaign was applied on billing_entity" do
+        context "when dunning campaign was applied on billing_entity", :lago_premium do
           before { organization.default_billing_entity.update!(applied_dunning_campaign: dunning_campaign) }
 
           it "resets the applied dunning campaign on the billing entity" do

@@ -7,8 +7,6 @@ RSpec.describe Fees::ChargeService do
     described_class.new(invoice:, charge:, subscription:, boundaries:, context:, apply_taxes:)
   end
 
-  around { |test| lago_premium!(&test) }
-
   let(:customer) { create(:customer) }
   let(:organization) { customer.organization }
   let(:context) { :finalize }
@@ -54,14 +52,14 @@ RSpec.describe Fees::ChargeService do
   end
 
   describe ".call" do
-    context "without filters" do
+    context "without filters", :lago_premium do
       it "creates a fee" do
         result = charge_subscription_service.call
         expect(result).to be_success
         expect(result.fees.count).to be_zero
       end
 
-      context "with an event" do
+      context "with an event", :lago_premium do
         let(:event) do
           create(
             :event,
@@ -99,7 +97,7 @@ RSpec.describe Fees::ChargeService do
           expect { charge_subscription_service.call }.to change(Fee, :count)
         end
 
-        context "with preview context" do
+        context "with preview context", :lago_premium do
           let(:context) { :invoice_preview }
 
           it "does not persist fee" do
@@ -109,7 +107,7 @@ RSpec.describe Fees::ChargeService do
       end
 
       # TODO(pricing_group_keys): remove after deprecation of grouped_by
-      context "with grouped standard charge" do
+      context "with grouped standard charge", :lago_premium do
         let(:charge) do
           create(
             :standard_charge,
@@ -126,14 +124,14 @@ RSpec.describe Fees::ChargeService do
           create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
         end
 
-        context "without events" do
+        context "without events", :lago_premium do
           it "does not create a fee" do
             result = charge_subscription_service.call
             expect(result).to be_success
             expect(result.fees.count).to eq(0)
           end
 
-          context "when organization as zero_amount_fees premium integration" do
+          context "when organization as zero_amount_fees premium integration", :lago_premium do
             before do
               organization.update!(premium_integrations: ["zero_amount_fees"])
             end
@@ -146,7 +144,7 @@ RSpec.describe Fees::ChargeService do
           end
         end
 
-        context "with events" do
+        context "with events", :lago_premium do
           before do
             create(
               :event,
@@ -212,7 +210,7 @@ RSpec.describe Fees::ChargeService do
             )
           end
 
-          context "with adjusted fee" do
+          context "with adjusted fee", :lago_premium do
             let(:adjusted_fee) do
               create(
                 :adjusted_fee,
@@ -277,7 +275,7 @@ RSpec.describe Fees::ChargeService do
             end
           end
 
-          context "with recurring weighted sum aggregation" do
+          context "with recurring weighted sum aggregation", :lago_premium do
             let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
             it "creates a fee and a cached aggregation per group" do
@@ -289,7 +287,7 @@ RSpec.describe Fees::ChargeService do
             end
           end
 
-          context "with custom aggregation" do
+          context "with custom aggregation", :lago_premium do
             let(:billable_metric) do
               create(:custom_aggregation_billable_metric, organization:)
 
@@ -305,7 +303,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "with pricing_group_keys and standard charge" do
+      context "with pricing_group_keys and standard charge", :lago_premium do
         let(:charge) do
           create(
             :standard_charge,
@@ -322,14 +320,14 @@ RSpec.describe Fees::ChargeService do
           create(:billable_metric, organization:, aggregation_type: "sum_agg", field_name: "value")
         end
 
-        context "without events" do
+        context "without events", :lago_premium do
           it "does not create a fee" do
             result = charge_subscription_service.call
             expect(result).to be_success
             expect(result.fees.count).to eq(0)
           end
 
-          context "when organization as zero_amount_fees premium integration" do
+          context "when organization as zero_amount_fees premium integration", :lago_premium do
             before do
               organization.update!(premium_integrations: ["zero_amount_fees"])
             end
@@ -342,7 +340,7 @@ RSpec.describe Fees::ChargeService do
           end
         end
 
-        context "with events" do
+        context "with events", :lago_premium do
           before do
             create(
               :event,
@@ -408,7 +406,7 @@ RSpec.describe Fees::ChargeService do
             )
           end
 
-          context "with adjusted fee" do
+          context "with adjusted fee", :lago_premium do
             let(:adjusted_fee) do
               create(
                 :adjusted_fee,
@@ -473,7 +471,7 @@ RSpec.describe Fees::ChargeService do
             end
           end
 
-          context "with recurring weighted sum aggregation" do
+          context "with recurring weighted sum aggregation", :lago_premium do
             let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
             it "creates a fee and a cached aggregation per group" do
@@ -485,7 +483,7 @@ RSpec.describe Fees::ChargeService do
             end
           end
 
-          context "with custom aggregation" do
+          context "with custom aggregation", :lago_premium do
             let(:billable_metric) do
               create(:custom_aggregation_billable_metric, organization:)
 
@@ -501,7 +499,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "with graduated charge model" do
+      context "with graduated charge model", :lago_premium do
         let(:charge) do
           create(
             :graduated_charge,
@@ -551,7 +549,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "when fee already exists on the period" do
+      context "when fee already exists on the period", :lago_premium do
         before do
           create(:fee, charge:, subscription:, invoice:)
         end
@@ -561,7 +559,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "when billing an new upgraded subscription" do
+      context "when billing an new upgraded subscription", :lago_premium do
         let(:previous_plan) { create(:plan, amount_cents: subscription.plan.amount_cents - 20) }
         let(:previous_subscription) do
           create(:subscription, plan: previous_plan, status: :terminated)
@@ -609,7 +607,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "with all types of aggregation" do
+      context "with all types of aggregation", :lago_premium do
         let(:event) do
           create(
             :event,
@@ -631,7 +629,7 @@ RSpec.describe Fees::ChargeService do
             )
           end
 
-          context "without pricing unit on the charge" do
+          context "without pricing unit on the charge", :lago_premium do
             it "creates fees" do
               result = charge_subscription_service.call
               expect(result).to be_success
@@ -654,7 +652,7 @@ RSpec.describe Fees::ChargeService do
             end
           end
 
-          context "with pricing unit on the charge" do
+          context "with pricing unit on the charge", :lago_premium do
             before do
               create(
                 :applied_pricing_unit,
@@ -696,7 +694,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "when there is adjusted fee" do
+      context "when there is adjusted fee", :lago_premium do
         let(:adjusted_fee) do
           create(
             :adjusted_fee,
@@ -722,7 +720,7 @@ RSpec.describe Fees::ChargeService do
           invoice.draft!
         end
 
-        context "with adjusted units" do
+        context "with adjusted units", :lago_premium do
           it "creates a fee" do
             result = charge_subscription_service.call
 
@@ -743,7 +741,7 @@ RSpec.describe Fees::ChargeService do
             )
           end
 
-          context "when there is true-up fee" do
+          context "when there is true-up fee", :lago_premium do
             before { charge.update!(min_amount_cents: 20_000) }
 
             it "creates two fees" do
@@ -761,7 +759,7 @@ RSpec.describe Fees::ChargeService do
             end
           end
 
-          context "with standard charge, all types of aggregation and presence of filters" do
+          context "with standard charge, all types of aggregation and presence of filters", :lago_premium do
             let(:region) do
               create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa])
             end
@@ -911,7 +909,7 @@ RSpec.describe Fees::ChargeService do
           end
         end
 
-        context "with adjusted amount" do
+        context "with adjusted amount", :lago_premium do
           let(:adjusted_fee) do
             create(
               :adjusted_fee,
@@ -949,7 +947,7 @@ RSpec.describe Fees::ChargeService do
           end
         end
 
-        context "with adjusted display name" do
+        context "with adjusted display name", :lago_premium do
           let(:adjusted_fee) do
             create(
               :adjusted_fee,
@@ -987,7 +985,7 @@ RSpec.describe Fees::ChargeService do
           end
         end
 
-        context "with invoice NOT in draft status" do
+        context "with invoice NOT in draft status", :lago_premium do
           before { invoice.finalized! }
 
           it "creates a fee without using adjusted fee attributes" do
@@ -1010,7 +1008,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "with true-up fee" do
+      context "with true-up fee", :lago_premium do
         it "creates two fees" do
           travel_to(Time.zone.parse("2023-04-01")) do
             charge.update!(min_amount_cents: 1000)
@@ -1029,7 +1027,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "with negative units" do
+      context "with negative units", :lago_premium do
         let(:charge) do
           create(
             :graduated_charge,
@@ -1096,7 +1094,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "with standard charge, all types of aggregation and presence of filter" do
+    context "with standard charge, all types of aggregation and presence of filter", :lago_premium do
       let(:region) do
         create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa])
       end
@@ -1317,7 +1315,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "when unique_count_agg" do
+      context "when unique_count_agg", :lago_premium do
         it "creates expected fees for unique_count_agg aggregation type" do
           billable_metric.update!(aggregation_type: :unique_count_agg, field_name: "foo_bar")
           result = charge_subscription_service.call
@@ -1363,7 +1361,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "with package charge and presence of filters" do
+    context "with package charge and presence of filters", :lago_premium do
       let(:region) do
         create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa])
       end
@@ -1535,7 +1533,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "with percentage charge and presence of filters" do
+    context "with percentage charge and presence of filters", :lago_premium do
       let(:region) do
         create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa])
       end
@@ -1691,7 +1689,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "with graduated charge and presence of filters" do
+    context "with graduated charge and presence of filters", :lago_premium do
       let(:region) do
         create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa])
       end
@@ -1797,7 +1795,7 @@ RSpec.describe Fees::ChargeService do
         )
       end
 
-      context "without pricing unit on the charge" do
+      context "without pricing unit on the charge", :lago_premium do
         it "creates expected fees for count_agg aggregation type" do
           billable_metric.update!(aggregation_type: :count_agg)
           result = charge_subscription_service.call
@@ -1838,7 +1836,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "with pricing unit on the charge" do
+      context "with pricing unit on the charge", :lago_premium do
         before do
           create(
             :applied_pricing_unit,
@@ -1902,7 +1900,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "with volume charge and presence of filters" do
+    context "with volume charge and presence of filters", :lago_premium do
       let(:region) do
         create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa])
       end
@@ -2031,7 +2029,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "with graduated percentage charge and presence of filters" do
+    context "with graduated percentage charge and presence of filters", :lago_premium do
       let(:region) do
         create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa])
       end
@@ -2175,7 +2173,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "with true-up fee and presence of filters" do
+    context "with true-up fee and presence of filters", :lago_premium do
       let(:region) do
         create(:billable_metric_filter, billable_metric:, key: "region", values: %w[europe usa])
       end
@@ -2239,7 +2237,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "with recurring weighted sum aggregation" do
+    context "with recurring weighted sum aggregation", :lago_premium do
       let(:context) { :recurring }
       let(:billable_metric) { create(:weighted_sum_billable_metric, :recurring, organization:) }
 
@@ -2273,7 +2271,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "with aggregation error" do
+    context "with aggregation error", :lago_premium do
       let(:billable_metric) do
         create(
           :billable_metric,
@@ -2304,7 +2302,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "when current usage" do
+    context "when current usage", :lago_premium do
       let(:context) { :current_usage }
 
       context "with all types of aggregation" do
@@ -2342,7 +2340,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "with graduated charge model" do
+      context "with graduated charge model", :lago_premium do
         let(:charge) do
           create(
             :graduated_charge,
@@ -2393,7 +2391,7 @@ RSpec.describe Fees::ChargeService do
         end
       end
 
-      context "with aggregation error" do
+      context "with aggregation error", :lago_premium do
         let(:billable_metric) do
           create(
             :billable_metric,
@@ -2425,7 +2423,7 @@ RSpec.describe Fees::ChargeService do
       end
     end
 
-    context "when apply taxes" do
+    context "when apply taxes", :lago_premium do
       let(:apply_taxes) { true }
 
       before do

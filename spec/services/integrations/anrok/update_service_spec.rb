@@ -22,7 +22,7 @@ RSpec.describe Integrations::Anrok::UpdateService, type: :service do
       }
     end
 
-    context "without premium license" do
+    context "without premium license", :lago_premium do
       it "returns an error" do
         result = service_call
 
@@ -34,9 +34,8 @@ RSpec.describe Integrations::Anrok::UpdateService, type: :service do
     end
 
     context "with premium license" do
-      around { |test| lago_premium!(&test) }
 
-      context "without validation errors" do
+      context "without validation errors", :lago_premium do
         it "updates an integration" do
           service_call
 
@@ -52,7 +51,7 @@ RSpec.describe Integrations::Anrok::UpdateService, type: :service do
         end
       end
 
-      context "with validation error" do
+      context "with validation error", :lago_premium do
         let(:name) { nil }
 
         it "returns an error" do

@@ -59,7 +59,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       )
     end
 
-    context "with transaction metadata" do
+    context "with transaction metadata", :lago_premium do
       let(:create_params) do
         {
           external_customer_id: customer.external_id,
@@ -88,7 +88,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         )
       end
 
-      context "when transaction metadata is a hash" do
+      context "when transaction metadata is a hash", :lago_premium do
         let(:create_params) do
           {
             external_customer_id: customer.external_id,
@@ -110,8 +110,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
+    context "with recurring transaction rules", :lago_premium do
 
       let(:create_params) do
         {
@@ -148,7 +147,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
-      context "when invoice_requires_successful_payment is set at the wallet level but the rule level" do
+      context "when invoice_requires_successful_payment is set at the wallet level but the rule level", :lago_premium do
         let(:create_params) do
           {
             external_customer_id: customer.external_id,
@@ -182,7 +181,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
-      context "when invoice_requires_successful_payment is set at the rule level but not present at the wallet level" do
+      context "when invoice_requires_successful_payment is set at the rule level but not present at the wallet level", :lago_premium do
         let(:create_params) do
           {
             external_customer_id: customer.external_id,
@@ -212,7 +211,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
-      context "with expiration_at transaction rule" do
+      context "with expiration_at transaction rule", :lago_premium do
         let(:create_params) do
           {
             external_customer_id: customer.external_id,
@@ -243,7 +242,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
-      context "with transaction metadata" do
+      context "with transaction metadata", :lago_premium do
         let(:create_params) do
           {
             external_customer_id: customer.external_id,
@@ -277,7 +276,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           end
         end
 
-        context "when transaction metadata is a hash" do
+        context "when transaction metadata is a hash", :lago_premium do
           let(:transaction_metadata) { {key: "valid_value", value: "also_valid"} }
 
           it "returns a validation error" do
@@ -289,7 +288,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
     end
 
-    context "with limitations" do
+    context "with limitations", :lago_premium do
       let(:create_params) do
         {
           external_customer_id: customer.external_id,
@@ -356,7 +355,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
     end
 
-    context "when wallet does not exist" do
+    context "when wallet, :lago_premium does not exist", :lago_premium do
       let(:id) { SecureRandom.uuid }
 
       it "returns not_found error" do
@@ -366,7 +365,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
     end
 
-    context "with limitations" do
+    context "with limitations", :lago_premium do
       let(:update_params) do
         {
           name: "wallet1",
@@ -388,8 +387,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
+    context "with recurring transaction rules", :lago_premium do
 
       let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
       let(:update_params) do
@@ -434,7 +432,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
-      context "when transaction expiration_at is set" do
+      context "when transaction expiration_at is set", :lago_premium do
         let(:expiration_at) { (Time.current + 2.years).iso8601 }
         let(:update_params) do
           {
@@ -465,7 +463,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
-      context "when transaction metadata is set" do
+      context "when transaction metadata is set", :lago_premium do
         let(:update_params) do
           {
             name: "wallet1",
@@ -500,7 +498,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         end
       end
 
-      context "when invoice_requires_successful_payment is updated at the wallet level" do
+      context "when invoice_requires_successful_payment is updated at the wallet level", :lago_premium do
         let(:update_params) do
           {
             name: "wallet1",
@@ -520,7 +518,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           }
         end
 
-        context "when the rule exists" do
+        context "when the rule exists", :lago_premium do
           let(:rule_id) { recurring_transaction_rule.id }
 
           it "updates the wallet and the rule" do
@@ -542,7 +540,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           end
         end
 
-        context "when the rule does not exist" do
+        context "when the rule, :lago_premium does not exist", :lago_premium do
           let(:rule_id) { "does not exists in the db" }
 
           it "create a new rule and follow the new wallet configuration" do
@@ -562,7 +560,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           end
         end
 
-        context "when the rule does not exist but the param is passed explicitly" do
+        context "when the rule, :lago_premium does not exist but the param is passed explicitly", :lago_premium do
           let(:wallet) { create(:wallet, customer:, invoice_requires_successful_payment: true) }
           let(:update_params) do
             {
@@ -621,7 +619,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       expect(json[:wallet][:name]).to eq(wallet.name)
     end
 
-    context "when wallet does not exist" do
+    context "when wallet, :lago_premium does not exist", :lago_premium do
       let(:id) { SecureRandom.uuid }
 
       it "returns not found" do
@@ -656,7 +654,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       expect { subject }.to have_enqueued_job(SendWebhookJob).with("wallet.terminated", Wallet)
     end
 
-    context "when wallet does not exist" do
+    context "when wallet, :lago_premium does not exist", :lago_premium do
       let(:id) { SecureRandom.uuid }
 
       it "returns not_found error" do
@@ -665,7 +663,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
     end
 
-    context "when wallet id does not belong to the current organization" do
+    context "when wallet id, :lago_premium does not belong to the current organization", :lago_premium do
       let(:other_org_wallet) { create(:wallet) }
       let(:id) { other_org_wallet.id }
 
@@ -696,7 +694,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       expect(json[:wallets].first[:recurring_transaction_rules]).to be_empty
     end
 
-    context "with pagination" do
+    context "with pagination", :lago_premium do
       before { create(:wallet, customer:) }
 
       it "returns wallets with correct meta data" do
@@ -713,7 +711,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
       end
     end
 
-    context "when external_customer_id does not belong to the current organization" do
+    context "when external_customer_id, :lago_premium does not belong to the current organization", :lago_premium do
       let(:other_org_customer) { create(:customer) }
       let(:external_id) { other_org_customer.external_id }
 

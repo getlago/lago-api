@@ -77,7 +77,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
       expect(result2).not_to be_success
     end
 
-    context "when there is tax provider integration" do
+    context "when there is tax provider integration", :lago_premium do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
 
@@ -85,7 +85,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
         integration_customer
       end
 
-      context "when taxes are unknown" do
+      context "when taxes are unknown", :lago_premium do
         it "keeps the tax status as pending", aggregate_failures: true do
           result = create_service.call
 
@@ -99,7 +99,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
       end
     end
 
-    context "with multiple thresholds" do
+    context "with multiple thresholds", :lago_premium do
       let(:sorted_usage_thresholds) do
         [
           create(:usage_threshold, plan:, amount_cents: 1000),
@@ -134,7 +134,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
       end
     end
 
-    context "when threshold was already billed" do
+    context "when threshold was already billed", :lago_premium do
       before do
         invoice = create(
           :invoice,
@@ -202,15 +202,14 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
       expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.created")
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
+    context "with lago_premium", :lago_premium do
 
       it "enqueues an GeneratePdfAndNotifyJob with email true" do
         expect { create_service.call }
           .to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
-      context "when organization does not have right email settings" do
+      context "when organization, :lago_premium does not have right email settings", :lago_premium do
         before { subscription.billing_entity.update!(email_settings: []) }
 
         it "enqueue an GeneratePdfAndNotifyJob with email false" do

@@ -27,7 +27,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
   end
 
   describe "#call" do
-    context "when charge is not pay_in_advance" do
+    context "when charge is not pay_in_advance", :lago_premium do
       let(:charge) { create(:standard_charge) }
 
       it "returns an error" do
@@ -130,8 +130,6 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
       end
 
       let(:charge_model_class) { Charges::ChargeModels::GraduatedPercentageService }
-
-      around { |test| lago_premium!(&test) }
 
       it_behaves_like "a charge model"
     end

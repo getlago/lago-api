@@ -67,7 +67,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         .to have_enqueued_job(WalletTransactions::CreateJob)
     end
 
-    context "with validation error" do
+    context "with validation error", :lago_premium do
       let(:paid_credits) { "-15.00" }
 
       it "returns an error" do
@@ -76,7 +76,7 @@ RSpec.describe Wallets::CreateService, type: :service do
       end
     end
 
-    context "when invoice_requires_successful_payment is set " do
+    context "when invoice_requires_successful_payment is set ", :lago_premium do
       let(:params) do
         {
           name: "New Wallet",
@@ -101,7 +101,7 @@ RSpec.describe Wallets::CreateService, type: :service do
       end
     end
 
-    context "when customer does not have a currency" do
+    context "when customer, :lago_premium does not have a currency", :lago_premium do
       let(:customer_currency) { nil }
 
       it "applies the currency to the customer" do
@@ -109,7 +109,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         expect(customer.reload.currency).to eq("EUR")
       end
 
-      context "when no currency is provided" do
+      context "when no currency is provided", :lago_premium do
         let(:params) do
           {
             name: "New Wallet",
@@ -130,7 +130,7 @@ RSpec.describe Wallets::CreateService, type: :service do
       end
     end
 
-    context "when wallet have transaction metadata" do
+    context "when wallet have transaction metadata", :lago_premium do
       let(:params) do
         {
           name: "New Wallet",
@@ -154,8 +154,7 @@ RSpec.describe Wallets::CreateService, type: :service do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
+    context "with recurring transaction rules", :lago_premium do
 
       let(:rules) do
         [
@@ -194,7 +193,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         end
       end
 
-      context "when number of rules is incorrect" do
+      context "when number of rules is incorrect", :lago_premium do
         let(:rules) do
           [
             {
@@ -215,7 +214,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         end
       end
 
-      context "when trigger is invalid" do
+      context "when trigger is invalid", :lago_premium do
         let(:rules) do
           [
             {
@@ -231,7 +230,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         end
       end
 
-      context "when threshold credits value is invalid" do
+      context "when threshold credits value is invalid", :lago_premium do
         let(:rules) do
           [
             {
@@ -248,7 +247,7 @@ RSpec.describe Wallets::CreateService, type: :service do
       end
     end
 
-    context "with limitations" do
+    context "with limitations", :lago_premium do
       let(:limitations) do
         {
           fee_types: %w[charge]
@@ -277,7 +276,7 @@ RSpec.describe Wallets::CreateService, type: :service do
         expect(wallet.reload.allowed_fee_types).to eq(%w[charge])
       end
 
-      context "when fee limitations are not correct" do
+      context "when fee limitations are not correct", :lago_premium do
         let(:limitations) do
           {
             fee_types: %w[invalid]

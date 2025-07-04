@@ -203,9 +203,7 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
   it_behaves_like "requires current user"
   it_behaves_like "requires permission", "plans:update"
 
-  context "with premium license" do
-    around { |test| lago_premium!(&test) }
-
+  context "with premium license", :lago_premium do
     before { organization.update!(premium_integrations: ["progressive_billing"]) }
 
     it "updates a plan" do

@@ -22,7 +22,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
       billing_entity.update!(applied_dunning_campaign: dunning_campaign)
     end
 
-    context "when lago freemium" do
+    context "when lago freemium", :lago_premium do
       it "returns an error" do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
@@ -34,9 +34,8 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
     end
 
     context "when lago premium" do
-      around { |test| lago_premium!(&test) }
 
-      context "when no auto_dunning premium integration" do
+      context "when no auto_dunning premium integration", :lago_premium do
         it "returns an error" do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ForbiddenFailure)
@@ -47,7 +46,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
         end
       end
 
-      context "when auto_dunning premium integration" do
+      context "when auto_dunning premium integration", :lago_premium do
         let(:organization) do
           create(:organization, premium_integrations: ["auto_dunning"])
         end
@@ -131,7 +130,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             .to have_attributes({amount_cents: 5_55, currency: "CHF"})
         end
 
-        context "when bcc_emails is set and should be reset" do
+        context "when bcc_emails is set and should be reset", :lago_premium do
           let(:dunning_campaign) { create(:dunning_campaign, organization:, bcc_emails: ["earl@example.com"]) }
           let(:params) do
             {
@@ -175,7 +174,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        context "when threshold amount_cents changes and does not apply anymore to the customer" do
+        context "when threshold amount_cents changes and, :lago_premium does not apply anymore to the customer", :lago_premium do
           let(:thresholds_input) do
             [
               {
@@ -199,7 +198,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             )
           end
 
-          context "when the campaign is assigned to the customer" do
+          context "when the campaign is assigned to the customer", :lago_premium do
             let(:dunning_campaign) do
               create(:dunning_campaign, organization:)
             end
@@ -216,7 +215,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        context "when threshold currency changes and does not apply anymore to the customer" do
+        context "when threshold currency changes and, :lago_premium does not apply anymore to the customer", :lago_premium do
           let(:thresholds_input) do
             [
               {
@@ -238,7 +237,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             )
           end
 
-          context "when the campaign is assigned to the customer" do
+          context "when the campaign is assigned to the customer", :lago_premium do
             let(:dunning_campaign) do
               create(:dunning_campaign, organization:)
             end
@@ -255,7 +254,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        context "when threshold amount_cents changes but it still applies to the customer" do
+        context "when threshold amount_cents changes but it still applies to the customer", :lago_premium do
           let(:thresholds_input) do
             [
               {
@@ -279,7 +278,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             )
           end
 
-          context "when the campaign is assigned to the customer" do
+          context "when the campaign is assigned to the customer", :lago_premium do
             let(:dunning_campaign) do
               create(:dunning_campaign, organization:)
             end
@@ -296,7 +295,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        context "when threshold currency changes but it still applies to the customer" do
+        context "when threshold currency changes but it still applies to the customer", :lago_premium do
           let(:thresholds_input) do
             [
               {
@@ -327,7 +326,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             )
           end
 
-          context "when the campaign is assigned to the customer" do
+          context "when the campaign is assigned to the customer", :lago_premium do
             let(:dunning_campaign) do
               create(:dunning_campaign, organization:)
             end
@@ -344,7 +343,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        context "when a threshold is discarded and the campaign does not apply anymore to the customer" do
+        context "when a threshold is discarded and the campaign, :lago_premium does not apply anymore to the customer", :lago_premium do
           let(:thresholds_input) { [] } # No thresholds remain.
 
           before do
@@ -358,7 +357,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             )
           end
 
-          context "when the campaign is assigned to the customer" do
+          context "when the campaign is assigned to the customer", :lago_premium do
             let(:dunning_campaign) do
               create(:dunning_campaign, organization:)
             end
@@ -375,7 +374,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        context "when a threshold is discarded and replaced with one that still applies to the customer" do
+        context "when a threshold is discarded and replaced with one that still applies to the customer", :lago_premium do
           let(:thresholds_input) do
             [
               {
@@ -398,7 +397,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
             )
           end
 
-          context "when the campaign is assigned to the customer" do
+          context "when the campaign is assigned to the customer", :lago_premium do
             let(:dunning_campaign) do
               create(:dunning_campaign, organization:)
             end
@@ -415,7 +414,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        context "when the input does not include a thresholds" do
+        context "when the input, :lago_premium does not include a thresholds", :lago_premium do
           let(:dunning_campaign_threshold_to_be_deleted) do
             create(:dunning_campaign_threshold, dunning_campaign:, currency: "EUR")
           end
@@ -430,7 +429,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        context "with applied_to_organization false" do
+        context "with applied_to_organization false", :lago_premium do
           let(:params) { {applied_to_organization: false} }
 
           before do
@@ -460,7 +459,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        context "with applied_to_organization true" do
+        context "with applied_to_organization true", :lago_premium do
           let(:params) { {applied_to_organization: true} }
 
           let(:dunning_campaign) do
@@ -476,7 +475,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
               .from(nil).to(dunning_campaign.id)
           end
 
-          context "with a previous dunning campaign is applied to the default billing entity" do
+          context "with a previous dunning campaign is applied to the default billing entity", :lago_premium do
             let(:dunning_campaign_2) do
               create(:dunning_campaign, organization:)
             end
@@ -512,7 +511,7 @@ RSpec.describe DunningCampaigns::UpdateService, type: :service do
           end
         end
 
-        context "with no dunning campaign record" do
+        context "with no dunning campaign record", :lago_premium do
           let(:dunning_campaign) { nil }
           let(:thresholds_input) { nil }
 

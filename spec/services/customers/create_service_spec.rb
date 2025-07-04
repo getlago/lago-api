@@ -70,7 +70,7 @@ RSpec.describe Customers::CreateService, type: :service do
     expect(Utils::ActivityLog).to have_received(:produce).with(result.customer, "customer.created")
   end
 
-  context "when organization has multiple billing entities" do
+  context "when organization has multiple billing entities", :lago_premium do
     let(:billing_entity_2) { create(:billing_entity, organization:) }
 
     before { billing_entity_2 }
@@ -81,7 +81,7 @@ RSpec.describe Customers::CreateService, type: :service do
       expect(result.customer.billing_entity).to eq(organization.default_billing_entity)
     end
 
-    context "with billing_entity_code" do
+    context "with billing_entity_code", :lago_premium do
       before do
         create_args.merge!(billing_entity_code: billing_entity_2.code)
       end
@@ -93,7 +93,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
   end
 
-  context "when organization has no active billing entity" do
+  context "when organization has no active billing entity", :lago_premium do
     before do
       organization.billing_entities.update_all(archived_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
@@ -105,7 +105,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
   end
 
-  context "when billing_entity_code belongs to an archived billing entity" do
+  context "when billing_entity_code belongs to an archived billing entity", :lago_premium do
     let(:billing_entity_2) { create(:billing_entity, organization:) }
 
     before do
@@ -120,8 +120,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
   end
 
-  context "with premium features" do
-    around { |test| lago_premium!(&test) }
+  context "with premium features", :lago_premium do
 
     let(:create_args) do
       {
@@ -146,7 +145,7 @@ RSpec.describe Customers::CreateService, type: :service do
       expect(customer.invoice_grace_period).to eq(2)
     end
 
-    context "with revenue share feature enabled and account_type 'partner'" do
+    context "with revenue share feature enabled and account_type 'partner'", :lago_premium do
       let(:organization) do
         create(:organization, premium_integrations: ["revenue_share"])
       end
@@ -163,7 +162,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
   end
 
-  context "with customer_type" do
+  context "with customer_type", :lago_premium do
     let(:create_args) do
       {
         external_id: SecureRandom.uuid,
@@ -179,7 +178,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
   end
 
-  context "with metadata" do
+  context "with metadata", :lago_premium do
     let(:create_args) do
       {
         external_id: SecureRandom.uuid,
@@ -207,7 +206,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
   end
 
-  context "when customer already exists" do
+  context "when customer already exists", :lago_premium do
     let(:customer) do
       create(:customer, organization:, external_id: create_args[:external_id])
     end
@@ -219,7 +218,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
   end
 
-  context "with validation error" do
+  context "with validation error", :lago_premium do
     let(:create_args) do
       {
         name: "Foo Bar"
@@ -231,7 +230,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
   end
 
-  context "with stripe payment provider" do
+  context "with stripe payment provider", :lago_premium do
     before do
       create(
         :stripe_provider,
@@ -239,7 +238,7 @@ RSpec.describe Customers::CreateService, type: :service do
       )
     end
 
-    context "with provider customer id" do
+    context "with provider customer id", :lago_premium do
       let(:create_args) do
         {
           external_id: SecureRandom.uuid,
@@ -260,7 +259,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
   end
 
-  context "with gocardless payment provider" do
+  context "with gocardless payment provider", :lago_premium do
     before do
       create(
         :gocardless_provider,
@@ -268,7 +267,7 @@ RSpec.describe Customers::CreateService, type: :service do
       )
     end
 
-    context "with provider customer id" do
+    context "with provider customer id", :lago_premium do
       let(:create_args) do
         {
           external_id: SecureRandom.uuid,
@@ -288,7 +287,7 @@ RSpec.describe Customers::CreateService, type: :service do
       end
     end
 
-    context "with sync option enabled" do
+    context "with sync option enabled", :lago_premium do
       let(:create_args) do
         {
           external_id: SecureRandom.uuid,
@@ -308,7 +307,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
   end
 
-  context "with account_type 'partner'" do
+  context "with account_type 'partner'", :lago_premium do
     before do
       create_args.merge!(account_type: "partner")
     end
@@ -320,7 +319,7 @@ RSpec.describe Customers::CreateService, type: :service do
     end
   end
 
-  context "when organization has eu tax management" do
+  context "when organization has eu tax management", :lago_premium do
     let(:eu_auto_tax_service) { instance_double(Customers::EuAutoTaxesService) }
     let(:tax_code) { "lago_eu_fr_standard" }
     let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new }
@@ -341,7 +340,7 @@ RSpec.describe Customers::CreateService, type: :service do
       expect(tax.code).to eq("lago_eu_fr_standard")
     end
 
-    context "when eu tax code is not applicable" do
+    context "when eu tax code is not applicable", :lago_premium do
       let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new.not_allowed_failure!(code: "") }
 
       it "does not apply tax" do

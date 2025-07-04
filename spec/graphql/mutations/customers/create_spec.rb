@@ -137,8 +137,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
     end
   end
 
-  context "with premium feature" do
-    around { |test| lago_premium!(&test) }
+  context "with premium feature", :lago_premium do
 
     it "creates a customer" do
       stripe_provider
@@ -174,7 +173,7 @@ RSpec.describe Mutations::Customers::Create, type: :graphql do
     end
   end
 
-  context "with validation errors" do
+  context "with validation errors", :lago_premium do
     it "returns an error with validation messages" do
       result = execute_graphql(
         current_user: membership.user,

@@ -50,7 +50,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
       expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
     end
 
-    context "when wallet is not found" do
+    context "when wallet is not found", :lago_premium do
       let(:wallet) { nil }
 
       it "returns an error" do
@@ -64,7 +64,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
     end
 
     context "with invalid expiration_at" do
-      context "when string cannot be parsed to date" do
+      context "when string cannot be parsed to date", :lago_premium do
         let(:expiration_at) { "invalid" }
 
         it "returns false and result has errors" do
@@ -77,7 +77,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context "when expiration_at is integer" do
+      context "when expiration_at is integer", :lago_premium do
         let(:expiration_at) { 123 }
 
         it "returns false and result has errors" do
@@ -90,7 +90,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context "when expiration_at is less than current time" do
+      context "when expiration_at is less than current time", :lago_premium do
         let(:expiration_at) { (Time.current - 1.year).iso8601 }
 
         it "returns false and result has errors" do
@@ -104,8 +104,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
       end
     end
 
-    context "with recurring transaction rules" do
-      around { |test| lago_premium!(&test) }
+    context "with recurring transaction rules", :lago_premium do
 
       let(:recurring_transaction_rule) { create(:recurring_transaction_rule, wallet:) }
       let(:transaction_metadata) { [] }
@@ -152,7 +151,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context "when editing existing interval rule" do
+      context "when editing existing interval rule", :lago_premium do
         let(:rules) do
           [
             {
@@ -188,7 +187,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context "when changing the rule into threshold one" do
+      context "when changing the rule into threshold one", :lago_premium do
         let(:rules) do
           [
             {
@@ -223,7 +222,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context "when an empty array is sent as argument" do
+      context "when an empty array is sent as argument", :lago_premium do
         let(:rules) { [] }
 
         it "terminates all existing recurring transaction rules" do
@@ -240,7 +239,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context "when number of rules is incorrect" do
+      context "when number of rules is incorrect", :lago_premium do
         let(:rules) do
           [
             {
@@ -268,7 +267,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context "when trigger is invalid" do
+      context "when trigger is invalid", :lago_premium do
         let(:rules) do
           [
             {
@@ -290,7 +289,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context "when threshold credits value is invalid" do
+      context "when threshold credits value is invalid", :lago_premium do
         let(:rules) do
           [
             {
@@ -312,7 +311,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context "when transaction_rule.transaction_metadata is hash" do
+      context "when transaction_rule.transaction_metadata is hash", :lago_premium do
         let(:transaction_metadata) { {} }
 
         it "returns an error" do
@@ -326,7 +325,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
       end
     end
 
-    context "with limitations" do
+    context "with limitations", :lago_premium do
       let(:limitations) do
         {
           fee_types: %w[charge]
@@ -349,7 +348,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
       end
 
-      context "when an empty array is sent as argument" do
+      context "when an empty array is sent as argument", :lago_premium do
         let(:limitations) do
           {
             fee_types: []
@@ -366,7 +365,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         end
       end
 
-      context "when fee type is invalid" do
+      context "when fee type is invalid", :lago_premium do
         let(:limitations) do
           {
             fee_types: %w[invalid]

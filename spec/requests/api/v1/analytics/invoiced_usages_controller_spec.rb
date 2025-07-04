@@ -15,9 +15,7 @@ RSpec.describe Api::V1::Analytics::InvoicedUsagesController, type: :request do #
       allow(Analytics::InvoicedUsagesService).to receive(:call).and_call_original
     end
 
-    context "when license is premium" do
-      around { |test| lago_premium!(&test) }
-
+    context "when license is premium", :lago_premium do
       include_examples "requires API permission", "analytic", "read"
 
       it "returns the invoiced usage" do

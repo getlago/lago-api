@@ -86,13 +86,11 @@ RSpec.describe Mutations::BillingEntities::Update, type: :graphql do
     }
   end
 
-  around { |test| lago_premium!(&test) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "billing_entities:update"
 
-  it "updates the billing entity" do
+  it "updates the billing entity", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,
@@ -129,7 +127,7 @@ RSpec.describe Mutations::BillingEntities::Update, type: :graphql do
     expect(result_data["selectedInvoiceCustomSections"]).to match_array(invoice_custom_sections.map { |section| {"id" => section.id} })
   end
 
-  context "with extra view permissions" do
+  context "with extra view permissions", :lago_premium do
     let(:permissions) do
       [required_permission].concat(%w[billing_entities:emails:view billing_entities:invoices:view])
     end
@@ -152,7 +150,7 @@ RSpec.describe Mutations::BillingEntities::Update, type: :graphql do
     end
   end
 
-  context "when the billing entity is not found" do
+  context "when the billing entity is not found", :lago_premium do
     it "returns a not found error" do
       result = execute_graphql(
         current_user: membership.user,

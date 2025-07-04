@@ -38,8 +38,6 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
   let(:organization) { membership.organization }
   let(:body_response) { File.read("spec/fixtures/lago_data_api/revenue_streams_plans.json") }
 
-  around { |test| lago_premium!(&test) }
-
   before do
     stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/revenue_streams/#{organization.id}/plans/")
       .to_return(status: 200, body: body_response, headers: {})
@@ -49,7 +47,7 @@ RSpec.describe Resolvers::DataApi::RevenueStreams::PlansResolver, type: :graphql
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "data_api:view"
 
-  it "returns a list of revenue streams plans" do
+  it "returns a list of revenue streams plans", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,

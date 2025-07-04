@@ -6,9 +6,7 @@ describe "Wallet Transaction with invoice after payment", :scenarios, type: :req
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 
-  around { |test| lago_premium!(&test) }
-
-  context "when the wallet does not require successful payment before invoicing" do
+  context "when the wallet, :lago_premium does not require successful payment before invoicing", :lago_premium do
     it "allows wallet transaction to require successful payment" do
       create_wallet({
         external_customer_id: customer.external_id,
@@ -70,7 +68,7 @@ describe "Wallet Transaction with invoice after payment", :scenarios, type: :req
       expect(wallet.credits_balance).to eq 25
     end
 
-    context "when there is a payment failure" do
+    context "when there is a payment failure", :lago_premium do
       it "keeps the invoice invisible" do
         setup_stripe_for(customer:)
         allow_any_instance_of(::PaymentProviders::Stripe::Payments::CreateService).to receive(:create_payment_intent) # rubocop:disable RSpec/AnyInstance

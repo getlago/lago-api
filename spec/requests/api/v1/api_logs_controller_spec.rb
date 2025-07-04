@@ -22,9 +22,7 @@ RSpec.describe Api::V1::ApiLogsController, type: :request, clickhouse: true do
       end
     end
 
-    context "with premium organization" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium organization", :lago_premium do
       include_examples "requires API permission", "api_log", "read"
 
       context "without filters" do
@@ -196,9 +194,7 @@ RSpec.describe Api::V1::ApiLogsController, type: :request, clickhouse: true do
       end
     end
 
-    context "with premium organization" do
-      around { |test| lago_premium!(&test) }
-
+    context "with premium organization", :lago_premium do
       include_examples "requires API permission", "api_log", "read"
 
       it "returns api logs" do

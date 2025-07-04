@@ -14,7 +14,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
   end
 
   ["2020-08-27", "2024-09-30.acacia", "2025-04-30.basil"].each do |version|
-    context "when payment intent event (api_version: #{version})" do
+    context "when payment intent event (api_version: #{version})", :lago_premium do
       let(:invoice) { create(:invoice, organization:) }
       let(:event_json) { get_stripe_fixtures("webhooks/payment_intent_succeeded.json", version:) }
 
@@ -53,8 +53,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         expect { event_service.call }.not_to have_enqueued_job(PaymentReceipts::CreateJob)
       end
 
-      context "when issue_receipts_enabled is true" do
-        around { |test| lago_premium!(&test) }
+      context "when issue_receipts_enabled is true", :lago_premium do
         before { organization.update!(premium_integrations: %w[issue_receipts]) }
 
         it "enqueues a payment receipt job" do
@@ -67,7 +66,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
       end
     end
 
-    context "when payment intent event for a payment request" do
+    context "when payment intent event for a payment request", :lago_premium do
       let(:event_json) do
         get_stripe_fixtures("webhooks/payment_intent_succeeded.json", version:) do |h|
           h["data"]["object"]["id"] = "pi_12345"
@@ -78,8 +77,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         end
       end
 
-      context "when issue_receipts_enabled is true" do
-        around { |test| lago_premium!(&test) }
+      context "when issue_receipts_enabled is true", :lago_premium do
         before { organization.update!(premium_integrations: %w[issue_receipts]) }
 
         it "enqueues a payment receipt job" do
@@ -141,7 +139,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
         })
       end
 
-      context "when payment belongs to a payment_request from another organization" do
+      context "when payment belongs to a payment_request from another organization", :lago_premium do
         let(:payment_request_other_organization) do
           create(:payment_request, organization: create(:organization))
         end
@@ -167,7 +165,7 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
       end
     end
 
-    context "when payment intent event with an invalid payable type" do
+    context "when payment intent event with an invalid payable type", :lago_premium do
       let(:event_json) do
         get_stripe_fixtures("webhooks/payment_intent_succeeded.json", version:) do |h|
           h["data"]["object"]["id"] = "pi_12345"

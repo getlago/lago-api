@@ -236,7 +236,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
     end
   end
 
-  context "with organization timezone" do
+  context "with organization timezone", :lago_premium do
     it "creates invoice numbers correctly" do
       # NOTE: Jul 19th: create the subscription
       travel_to(subscription_at) do
@@ -338,7 +338,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
     end
   end
 
-  context "with grace period and per_customer numbering" do
+  context "with grace period and per_customer numbering", :lago_premium do
     let(:customer_second) { create(:customer, organization:, invoice_grace_period: 2) }
 
     it "creates invoice numbers correctly" do
@@ -542,7 +542,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
     end
   end
 
-  context "with grace period and per billing entity numbering" do
+  context "with grace period and per billing entity numbering", :lago_premium do
     let(:customer_second) { create(:customer, organization:, invoice_grace_period: 2) }
 
     let(:organization) do
@@ -795,10 +795,8 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
     end
   end
 
-  context "with partner customer" do
+  context "with partner customer", :lago_premium do
     let(:customer_third) { create(:customer, organization:, billing_entity: billing_entity_first, account_type: "partner") }
-
-    around { |test| lago_premium!(&test) }
 
     before { organization.update!(premium_integrations: ["revenue_share"]) }
 
@@ -935,7 +933,7 @@ describe "Invoice Numbering Scenario", :scenarios, type: :request, transaction: 
     end
   end
 
-  context "with multiple billing entities" do
+  context "with multiple billing entities", :lago_premium do
     let(:organization) do
       create(
         :organization,

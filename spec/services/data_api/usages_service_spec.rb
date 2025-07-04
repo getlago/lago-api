@@ -26,7 +26,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
 
     let(:params) { {} }
 
-    context "when licence is not premium" do
+    context "when licence is not premium", :lago_premium do
       let(:query) { {time_granularity: "daily", start_of_period_dt: Date.current - 30.days} }
 
       before do
@@ -35,7 +35,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
           .to_return(status: 200, body: body_response, headers: {})
       end
 
-      context "when billable metric is not deleted" do
+      context "when billable metric is not deleted", :lago_premium do
         it "returns usages" do
           expect(service_call).to be_success
           expect(service_call.usages.count).to eq(3)
@@ -43,7 +43,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
         end
       end
 
-      context "when billable metric is deleted" do
+      context "when billable metric is deleted", :lago_premium do
         before do
           create(:billable_metric, :discarded, organization:, code: "account_members")
           usage_json["is_billable_metric_deleted"] = true
@@ -57,10 +57,8 @@ RSpec.describe DataApi::UsagesService, type: :service do
       end
     end
 
-    context "when licence is premium" do
+    context "when licence is premium", :lago_premium do
       let(:query) { {time_granularity: "daily"} }
-
-      around { |test| lago_premium!(&test) }
 
       before do
         stub_request(:get, "#{ENV["LAGO_DATA_API_URL"]}/usages/#{organization.id}/")
@@ -68,7 +66,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
           .to_return(status: 200, body: body_response, headers: {})
       end
 
-      context "when billable metric is not deleted" do
+      context "when billable metric is not deleted", :lago_premium do
         it "returns usages" do
           expect(service_call).to be_success
           expect(service_call.usages.count).to eq(3)
@@ -76,7 +74,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
         end
       end
 
-      context "when billable metric is deleted" do
+      context "when billable metric is deleted", :lago_premium do
         before do
           create(:billable_metric, :discarded, organization:, code: "account_members")
           usage_json["is_billable_metric_deleted"] = true
@@ -95,7 +93,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
     subject(:filtered_params) { service.send(:filtered_params) }
 
     context "when licence is not premium" do
-      context "when additional params are provided" do
+      context "when additional params are provided", :lago_premium do
         let(:params) do
           {
             billable_metric_code: "code",
@@ -114,7 +112,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
         end
       end
 
-      context "when no params are provided" do
+      context "when no params are provided", :lago_premium do
         let(:params) { {} }
 
         it "returns default params with daily granularity and 30 days back start date" do
@@ -125,7 +123,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
         end
       end
 
-      context "when time_granularity is not provided" do
+      context "when time_granularity is not provided", :lago_premium do
         let(:params) { {start_of_period_dt: Date.current - 30.days} }
 
         it "adds default daily time granularity to params" do
@@ -137,8 +135,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
       end
     end
 
-    context "when licence is premium" do
-      around { |test| lago_premium!(&test) }
+    context "when licence is premium", :lago_premium do
 
       let(:params) { {time_granularity: "monthly"} }
 
@@ -146,7 +143,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
         expect(filtered_params).to eq(params)
       end
 
-      context "when additional params are provided" do
+      context "when additional params are provided", :lago_premium do
         let(:params) { {time_granularity: "monthly", additional_param: "value", from_date:} }
 
         it "includes the additional params in the filtered params" do
@@ -158,7 +155,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
         end
       end
 
-      context "when time_granularity is not provided" do
+      context "when time_granularity is not provided", :lago_premium do
         let(:params) { {} }
 
         it "adds default daily time granularity to params" do
@@ -183,7 +180,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
 
     let(:params) { {} }
 
-    context "when there are discarded billable metrics" do
+    context "when there are discarded billable metrics", :lago_premium do
       before do
         create(:billable_metric, organization: organization, code: "active_metric")
         create(:billable_metric, :discarded, organization: organization, code: "deleted_metric")
@@ -194,7 +191,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
       end
     end
 
-    context "when there are no discarded billable metrics" do
+    context "when there are no discarded billable metrics", :lago_premium do
       before do
         create(:billable_metric, organization: organization, code: "active_metric")
       end
@@ -204,7 +201,7 @@ RSpec.describe DataApi::UsagesService, type: :service do
       end
     end
 
-    context "when there are discarded metrics from other organizations" do
+    context "when there are discarded metrics from other organizations", :lago_premium do
       let(:other_organization) { create(:organization) }
 
       before do

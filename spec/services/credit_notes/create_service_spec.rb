@@ -301,8 +301,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         end
       end
 
-      context "with a valid license" do
-        around { |test| lago_premium!(&test) }
+      context "with a valid license", :lago_premium do
 
         it "returns a success" do
           result = create_service.call
@@ -455,7 +454,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
     end
 
-    context "when invoice is credit" do
+    context "when invoice is credit", :lago_premium do
       let(:invoice) do
         create(
           :invoice,
@@ -489,7 +488,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         fee
       end
 
-      around { |test| lago_premium!(&test) }
+
 
       it "Creates credit note and voids corresponding amount of credits from the wallet" do
         result = create_service.call

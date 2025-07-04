@@ -13,11 +13,10 @@ RSpec.describe ApiKeys::RotateService, type: :service do
       let!(:api_key) { create(:api_key) }
       let(:organization) { api_key.organization }
 
-      context "when preferred expiration date is provided" do
+      context "when preferred expiration date is provided", :lago_premium do
         let(:expires_at) { generate(:future_date) }
 
-        context "with premium organization" do
-          around { |test| lago_premium!(&test) }
+        context "with premium organization", :lago_premium do
 
           it "expires the API key with preferred date" do
             expect { service_result }
@@ -38,7 +37,7 @@ RSpec.describe ApiKeys::RotateService, type: :service do
           end
         end
 
-        context "with free organization" do
+        context "with free organization", :lago_premium do
           it "does not creates a new API key for organization" do
             expect { service_result }.not_to change(ApiKey, :count)
           end
@@ -57,13 +56,12 @@ RSpec.describe ApiKeys::RotateService, type: :service do
         end
       end
 
-      context "when preferred expiration date is missing" do
+      context "when preferred expiration date is missing", :lago_premium do
         let(:expires_at) { nil }
 
         before { freeze_time }
 
-        context "with premium organization" do
-          around { |test| lago_premium!(&test) }
+        context "with premium organization", :lago_premium do
 
           it "expires the API key with current time" do
             expect { service_result }.to change(api_key, :expires_at).to(Time.current)
@@ -82,7 +80,7 @@ RSpec.describe ApiKeys::RotateService, type: :service do
           end
         end
 
-        context "with free organization" do
+        context "with free organization", :lago_premium do
           it "expires the API key with current time" do
             expect { service_result }.to change(api_key, :expires_at).to(Time.current)
           end
@@ -102,7 +100,7 @@ RSpec.describe ApiKeys::RotateService, type: :service do
       end
     end
 
-    context "when API key is missing" do
+    context "when API key is missing", :lago_premium do
       let(:api_key) { nil }
       let(:expires_at) { double }
 

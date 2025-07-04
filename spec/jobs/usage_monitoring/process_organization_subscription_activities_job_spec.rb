@@ -9,8 +9,7 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob, ty
     allow(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService).to receive(:call!)
   end
 
-  context "when license is premium" do
-    around { |test| lago_premium!(&test) }
+  context "when license is premium", :lago_premium do
 
     it "calls the service with the organization" do
       described_class.perform_now(organization.id)
@@ -18,7 +17,7 @@ RSpec.describe UsageMonitoring::ProcessOrganizationSubscriptionActivitiesJob, ty
     end
   end
 
-  context "when license is not premium" do
+  context "when license is not premium", :lago_premium do
     it "does not call the service or log" do
       described_class.perform_now(organization.id)
       expect(UsageMonitoring::ProcessOrganizationSubscriptionActivitiesService).not_to have_received(:call!)

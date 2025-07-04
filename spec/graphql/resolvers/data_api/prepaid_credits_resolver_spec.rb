@@ -35,13 +35,11 @@ RSpec.describe Resolvers::DataApi::PrepaidCreditsResolver, type: :graphql do
       .to_return(status: 200, body: body_response, headers: {})
   end
 
-  around { |test| lago_premium!(&test) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "data_api:view"
 
-  it "returns a list of prepaid credits" do
+  it "returns a list of prepaid credits", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,

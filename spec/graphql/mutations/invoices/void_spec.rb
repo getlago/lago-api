@@ -45,8 +45,7 @@ RSpec.describe Mutations::Invoices::Void, type: :graphql do
     end
   end
 
-  context "when passing credit note parameters" do
-    around { |test| lago_premium!(&test) }
+  context "when passing credit note parameters", :lago_premium do
 
     let(:credit_amount) { 0 }
     let(:refund_amount) { 0 }

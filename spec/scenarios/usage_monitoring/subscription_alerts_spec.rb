@@ -19,8 +19,6 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
 
   include_context "with webhook tracking"
 
-  around { |test| lago_premium!(&test) }
-
   def send_event!(params)
     create_event({
       transaction_id: "tr_#{SecureRandom.hex(16)}"
@@ -103,7 +101,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     expect(webhooks_sent.count { |w| w.dig(:triggered_alert, :alert_type) == "billable_metric_current_usage_amount" }).to eq 1
   end
 
-  context "with recurring thresholds" do
+  context "with recurring thresholds", :lago_premium do
     it "sends alert forever" do
       create_subscription({
         external_customer_id: customer.external_id,
@@ -144,7 +142,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     end
   end
 
-  context "with billable_metric_current_usage_units alert" do
+  context "with billable_metric_current_usage_units alert", :lago_premium do
     it do
       create_subscription({
         external_customer_id: customer.external_id,
@@ -190,7 +188,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     end
   end
 
-  context "with lifetime_usage alerts" do
+  context "with lifetime_usage alerts", :lago_premium do
     let(:premium_integrations) { %i[lifetime_usage progressive_billing] }
 
     it do
@@ -233,7 +231,7 @@ describe "Subscriptions Alerting Scenario", :scenarios, type: :request, cache: :
     end
   end
 
-  context "when there is no alert" do
+  context "when there is no alert", :lago_premium do
     it "does not track activity" do
       create_subscription({
         external_customer_id: customer.external_id,

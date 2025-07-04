@@ -29,15 +29,13 @@ RSpec.describe Mutations::Integrations::Netsuite::Create, type: :graphql do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   before { membership.organization.update!(premium_integrations: ["netsuite"]) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:create"
 
-  it "creates a netsuite integration" do
+  it "creates a netsuite integration", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,

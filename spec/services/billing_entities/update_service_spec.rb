@@ -71,7 +71,7 @@ RSpec.describe BillingEntities::UpdateService do
       expect(Utils::ActivityLog).to have_received(:produce).with(billing_entity, "billing_entities.updated")
     end
 
-    context "when document_number_prefix is sent" do
+    context "when, :lago_premium document_number_prefix is sent", :lago_premium do
       before { params[:document_number_prefix] = "abc" }
 
       it "converts document_number_prefix to upcase version" do
@@ -81,7 +81,7 @@ RSpec.describe BillingEntities::UpdateService do
       end
     end
 
-    context "when finalize_zero_amount_invoice is sent" do
+    context "when finalize_zero_amount_invoice is sent", :lago_premium do
       before { params[:finalize_zero_amount_invoice] = "false" }
 
       it "sets finalize_zero_amount_invoice" do
@@ -91,7 +91,7 @@ RSpec.describe BillingEntities::UpdateService do
       end
     end
 
-    context "when document_number_prefix is invalid" do
+    context "when, :lago_premium document_number_prefix is invalid", :lago_premium do
       before { params[:document_number_prefix] = "aaaaaaaaaaaaaaa" }
 
       it "returns an error" do
@@ -103,8 +103,7 @@ RSpec.describe BillingEntities::UpdateService do
       end
     end
 
-    context "with premium features" do
-      around { |test| lago_premium!(&test) }
+    context "with premium features", :lago_premium do
 
       let(:timezone) { "Europe/Paris" }
       let(:email_settings) { ["invoice.finalized"] }
@@ -115,7 +114,7 @@ RSpec.describe BillingEntities::UpdateService do
         expect(result.billing_entity.timezone).to eq("Europe/Paris")
       end
 
-      context "when updating invoice grace period" do
+      context "when updating invoice grace period", :lago_premium do
         let(:customer) { create(:customer, billing_entity:) }
 
         let(:invoice_grace_period) { 2 }
@@ -133,7 +132,7 @@ RSpec.describe BillingEntities::UpdateService do
         end
       end
 
-      context "when updating net_payment_term" do
+      context "when updating net_payment_term", :lago_premium do
         let(:customer) { create(:customer, billing_entity:) }
 
         let(:params) do
@@ -160,7 +159,7 @@ RSpec.describe BillingEntities::UpdateService do
       end
     end
 
-    context "with base64 logo" do
+    context "with base64 logo", :lago_premium do
       let(:logo) do
         logo_file = File.read(Rails.root.join("spec/factories/images/logo.png"))
         base64_logo = Base64.encode64(logo_file)
@@ -174,7 +173,7 @@ RSpec.describe BillingEntities::UpdateService do
       end
     end
 
-    context "with validation errors" do
+    context "with validation errors", :lago_premium do
       let(:country) { "---" }
 
       it "returns an error" do
@@ -187,7 +186,7 @@ RSpec.describe BillingEntities::UpdateService do
     end
 
     context "with eu tax management" do
-      context "with org within the EU" do
+      context "with org within the EU", :lago_premium do
         let(:params) { {eu_tax_management: true, country: "fr"} }
 
         before do
@@ -204,7 +203,7 @@ RSpec.describe BillingEntities::UpdateService do
         end
       end
 
-      context "with org outside the EU" do
+      context "with org outside the EU", :lago_premium do
         let(:params) { {eu_tax_management: true, country: "us"} }
 
         before do
@@ -223,7 +222,7 @@ RSpec.describe BillingEntities::UpdateService do
         end
       end
 
-      context "with org is outside the EU but feature is already enabled" do
+      context "with org is outside the EU but feature is already enabled", :lago_premium do
         let(:params) { {eu_tax_management: false} }
 
         before do
@@ -242,7 +241,7 @@ RSpec.describe BillingEntities::UpdateService do
       end
     end
 
-    context "when updating invoice_custom_sections" do
+    context "when updating invoice_custom_sections", :lago_premium do
       let(:params) { {invoice_custom_section_ids: [invoice_custom_section_1.id, invoice_custom_section_2.id]} }
 
       let(:invoice_custom_section_1) { create(:invoice_custom_section, organization:) }
@@ -254,7 +253,7 @@ RSpec.describe BillingEntities::UpdateService do
         expect(result.billing_entity.selected_invoice_custom_sections).to contain_exactly(invoice_custom_section_1, invoice_custom_section_2)
       end
 
-      context "when removing a section" do
+      context "when removing a section", :lago_premium do
         let(:params) { {invoice_custom_section_ids: [invoice_custom_section_1.id]} }
 
         before do
@@ -268,7 +267,7 @@ RSpec.describe BillingEntities::UpdateService do
         end
       end
 
-      context "when adding a section" do
+      context "when adding a section", :lago_premium do
         let(:params) { {invoice_custom_section_ids: [invoice_custom_section_1.id, invoice_custom_section_2.id]} }
 
         before do
@@ -282,7 +281,7 @@ RSpec.describe BillingEntities::UpdateService do
         end
       end
 
-      context "when removing all sections" do
+      context "when removing all sections", :lago_premium do
         let(:params) { {invoice_custom_section_ids: []} }
 
         it "removes all sections" do
@@ -292,7 +291,7 @@ RSpec.describe BillingEntities::UpdateService do
         end
       end
 
-      context "when invoice_custom_section_codes are provided" do
+      context "when invoice_custom_section_codes are provided", :lago_premium do
         let(:params) do
           {invoice_custom_section_codes: [invoice_custom_section_1.code, invoice_custom_section_2.code]}
         end
@@ -303,7 +302,7 @@ RSpec.describe BillingEntities::UpdateService do
           expect(result.billing_entity.selected_invoice_custom_sections).to contain_exactly(invoice_custom_section_1, invoice_custom_section_2)
         end
 
-        context "when removing a section" do
+        context "when removing a section", :lago_premium do
           let(:params) { {invoice_custom_section_codes: [invoice_custom_section_1.code]} }
 
           before do
@@ -317,7 +316,7 @@ RSpec.describe BillingEntities::UpdateService do
           end
         end
 
-        context "when adding a section" do
+        context "when adding a section", :lago_premium do
           let(:params) { {invoice_custom_section_codes: [invoice_custom_section_1.code, invoice_custom_section_2.code]} }
 
           before do
@@ -331,7 +330,7 @@ RSpec.describe BillingEntities::UpdateService do
           end
         end
 
-        context "when removing all sections" do
+        context "when removing all sections", :lago_premium do
           let(:params) { {invoice_custom_section_cods: []} }
 
           it "removes all sections" do
@@ -343,7 +342,7 @@ RSpec.describe BillingEntities::UpdateService do
       end
     end
 
-    context "when billing_entity is not provided" do
+    context "when billing_entity is not provided", :lago_premium do
       let(:billing_entity) { nil }
 
       it "raises an error" do

@@ -23,15 +23,13 @@ RSpec.describe Mutations::Integrations::Avalara::Create, type: :graphql do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   before { membership.organization.update!(premium_integrations: ["avalara"]) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:create"
 
-  it "creates an avalara integration" do
+  it "creates an avalara integration", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,

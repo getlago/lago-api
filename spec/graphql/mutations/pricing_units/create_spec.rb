@@ -38,9 +38,7 @@ RSpec.describe Mutations::PricingUnits::Create, type: :graphql do
   it_behaves_like "requires permission", "pricing_units:create"
 
   context "with premium organization" do
-    around { |test| lago_premium!(&test) }
-
-    context "with valid params" do
+    context "with valid params", :lago_premium do
       let(:code) { "cloud_token" }
 
       it "creates a new pricing unit" do
@@ -57,7 +55,7 @@ RSpec.describe Mutations::PricingUnits::Create, type: :graphql do
       end
     end
 
-    context "with invalid params" do
+    context "with invalid params", :lago_premium do
       let(:code) { "" }
 
       it "does not create a new pricing unit" do

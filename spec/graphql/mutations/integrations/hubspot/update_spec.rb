@@ -26,8 +26,6 @@ RSpec.describe Mutations::Integrations::Hubspot::Update, type: :graphql do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   before do
     integration
     membership.organization.update!(premium_integrations: ["hubspot"])
@@ -37,7 +35,7 @@ RSpec.describe Mutations::Integrations::Hubspot::Update, type: :graphql do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:update"
 
-  it "updates a hubspot integration" do
+  it "updates a hubspot integration", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,

@@ -5,21 +5,19 @@ require "rails_helper"
 RSpec.describe ApiKeys::UpdateService do
   subject(:service_result) { described_class.call(api_key:, params:) }
 
-  around { |test| lago_premium!(&test) }
-
   let(:name) { Faker::Lorem.words.join(" ") }
 
   context "when API key is provided" do
     let!(:api_key) { create(:api_key) }
     let(:organization) { api_key.organization }
 
-    context "when permissions hash is provided" do
+    context "when permissions hash is provided", :lago_premium do
       let(:params) { {permissions:, name:} }
       let(:permissions) { api_key.permissions.merge("add_on" => ["read"]) }
 
       before { organization.update!(premium_integrations:) }
 
-      context "when organization has api permissions addon" do
+      context "when organization has api permissions addon", :lago_premium do
         let(:premium_integrations) { ["api_permissions"] }
 
         it "updates the API key" do
@@ -27,7 +25,7 @@ RSpec.describe ApiKeys::UpdateService do
         end
       end
 
-      context "when organization has no api permissions addon" do
+      context "when organization has no api permissions addon", :lago_premium do
         let(:premium_integrations) { [] }
 
         it "does not update an API key" do
@@ -44,12 +42,12 @@ RSpec.describe ApiKeys::UpdateService do
       end
     end
 
-    context "when permissions hash is missing" do
+    context "when permissions hash is missing", :lago_premium do
       let(:params) { {name:} }
 
       before { organization.update!(premium_integrations:) }
 
-      context "when organization has api permissions addon" do
+      context "when organization has api permissions addon", :lago_premium do
         let(:premium_integrations) { ["api_permissions"] }
 
         it "updates the API key" do
@@ -57,7 +55,7 @@ RSpec.describe ApiKeys::UpdateService do
         end
       end
 
-      context "when organization has no api permissions addon" do
+      context "when organization has no api permissions addon", :lago_premium do
         let(:premium_integrations) { [] }
 
         it "updates the API key" do
@@ -67,7 +65,7 @@ RSpec.describe ApiKeys::UpdateService do
     end
   end
 
-  context "when API key is missing" do
+  context "when API key is missing", :lago_premium do
     let(:api_key) { nil }
     let(:params) { {name:} }
 

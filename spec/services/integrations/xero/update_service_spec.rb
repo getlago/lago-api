@@ -21,7 +21,7 @@ RSpec.describe Integrations::Xero::UpdateService, type: :service do
       }
     end
 
-    context "without premium license" do
+    context "without premium license", :lago_premium do
       it "returns an error" do
         result = service_call
 
@@ -33,9 +33,8 @@ RSpec.describe Integrations::Xero::UpdateService, type: :service do
     end
 
     context "with premium license" do
-      around { |test| lago_premium!(&test) }
 
-      context "when xero premium integration is not present" do
+      context "when xero premium integration is not present", :lago_premium do
         it "returns an error" do
           result = service_call
 
@@ -46,12 +45,12 @@ RSpec.describe Integrations::Xero::UpdateService, type: :service do
         end
       end
 
-      context "when xero premium integration is present" do
+      context "when xero premium integration is present", :lago_premium do
         before do
           organization.update!(premium_integrations: ["xero"])
         end
 
-        context "without validation errors" do
+        context "without validation errors", :lago_premium do
           it "updates an integration" do
             service_call
 
@@ -66,7 +65,7 @@ RSpec.describe Integrations::Xero::UpdateService, type: :service do
           end
         end
 
-        context "with validation error" do
+        context "with validation error", :lago_premium do
           let(:name) { nil }
 
           it "returns an error" do

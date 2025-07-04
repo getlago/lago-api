@@ -79,7 +79,7 @@ RSpec.describe Organizations::UpdateService do
       expect(default_billing_entity.document_locale).to eq("fr")
     end
 
-    context "when document_number_prefix is sent" do
+    context "when, :lago_premium document_number_prefix is sent", :lago_premium do
       before { params[:document_number_prefix] = "abc" }
 
       it "converts document_number_prefix to upcase version" do
@@ -91,7 +91,7 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
-    context "when finalize_zero_amount_invoice is sent" do
+    context "when finalize_zero_amount_invoice is sent", :lago_premium do
       before { params[:finalize_zero_amount_invoice] = "false" }
 
       it "converts document_number_prefix to upcase version" do
@@ -103,7 +103,7 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
-    context "when document_number_prefix is invalid" do
+    context "when, :lago_premium document_number_prefix is invalid", :lago_premium do
       before { params[:document_number_prefix] = "aaaaaaaaaaaaaaa" }
 
       it "returns an error" do
@@ -117,8 +117,7 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
-    context "with premium features" do
-      around { |test| lago_premium!(&test) }
+    context "with premium features", :lago_premium do
 
       let(:timezone) { "Europe/Paris" }
       let(:email_settings) { ["invoice.finalized"] }
@@ -129,7 +128,7 @@ RSpec.describe Organizations::UpdateService do
         expect(result.organization.timezone).to eq("Europe/Paris")
       end
 
-      context "when updating invoice grace period" do
+      context "when updating invoice grace period", :lago_premium do
         let(:customer) { create(:customer, organization:) }
 
         let(:invoice_to_be_finalized) do
@@ -167,7 +166,7 @@ RSpec.describe Organizations::UpdateService do
       # Despite we do not use net_payment_term from org anymore, we need this test to ensure that update on billing_entity is
       # triggered and correctly handled
       # TODO: delete when cleaning up org from billing-entity specific data
-      context "when updating net_payment_term" do
+      context "when updating net_payment_term", :lago_premium do
         let(:customer) { create(:customer, organization:) }
 
         let(:draft_invoice) do
@@ -199,7 +198,7 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
-    context "with base64 logo" do
+    context "with base64 logo", :lago_premium do
       let(:logo) do
         logo_file = File.read(Rails.root.join("spec/factories/images/logo.png"))
         base64_logo = Base64.encode64(logo_file)
@@ -213,7 +212,7 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
-    context "with validation errors" do
+    context "with validation errors", :lago_premium do
       let(:country) { "---" }
 
       it "returns an error" do
@@ -228,7 +227,7 @@ RSpec.describe Organizations::UpdateService do
     end
 
     context "with eu tax management" do
-      context "with org within the EU" do
+      context "with org within the EU", :lago_premium do
         let(:params) { {eu_tax_management: true, country: "fr"} }
 
         before do
@@ -244,7 +243,7 @@ RSpec.describe Organizations::UpdateService do
         end
       end
 
-      context "with org outside the EU" do
+      context "with org outside the EU", :lago_premium do
         let(:params) { {eu_tax_management: true, country: "us"} }
 
         before do
@@ -262,7 +261,7 @@ RSpec.describe Organizations::UpdateService do
         end
       end
 
-      context "with org is outside the EU but feature is already enabled" do
+      context "with org is outside the EU but feature is already enabled", :lago_premium do
         let(:params) { {eu_tax_management: false} }
 
         before do
@@ -281,7 +280,7 @@ RSpec.describe Organizations::UpdateService do
       end
     end
 
-    context "when organization does not have active billing_entities" do
+    context "when organization, :lago_premium does not have active billing_entities", :lago_premium do
       it "returns an error and does not update the organization" do
         organization.default_billing_entity.discard!
         organization.reload
@@ -296,7 +295,7 @@ RSpec.describe Organizations::UpdateService do
     end
 
     context "when updating organization's document_numbering" do
-      context "when updating to per_organization" do
+      context "when updating to per_organization", :lago_premium do
         let(:params) { {document_numbering: "per_organization"} }
 
         it "updates the organization numbering to per_organization and default billing_entity to per_entity" do
@@ -307,7 +306,7 @@ RSpec.describe Organizations::UpdateService do
         end
       end
 
-      context "when updating to not existing value" do
+      context "when updating to not existing value", :lago_premium do
         let(:params) { {document_numbering: "not_existing_document_numbering"} }
 
         it "returns an error" do

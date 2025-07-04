@@ -10,8 +10,6 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
   let(:charge) { create(:charge, plan: plan, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "1"}) }
   let(:customer) { create(:customer, organization:, billing_entity:) }
 
-  around { |test| lago_premium!(&test) }
-
   def ingest_event(subscription, amount)
     create_event({
       transaction_id: SecureRandom.uuid,
@@ -22,7 +20,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
     perform_usage_update
   end
 
-  context "when a wallet created for a user with plain plan and usage-based charge" do
+  context "when a wallet created for a user with plain plan and usage-based charge", :lago_premium do
     before do
       charge
     end
@@ -123,7 +121,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
     end
   end
 
-  context "with pay in advance charges and taxes" do
+  context "with pay in advance charges and taxes", :lago_premium do
     let(:charge) { create(:charge, :pay_in_advance, plan: plan, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "1"}) }
     let(:tax) { create(:tax, :applied_to_billing_entity, organization: organization, rate: 10, billing_entity:) }
 
@@ -193,7 +191,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
     end
   end
 
-  context "with 'normal' plan, with pay in advance charges plan and with threshold usage recurring set on plan" do
+  context "with 'normal' plan, with pay in advance charges plan and with threshold usage recurring set on plan", :lago_premium do
     let(:plan1) { create(:plan, organization: organization, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
     let(:charge1) { create(:charge, plan: plan1, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "1"}) }
 
@@ -330,7 +328,7 @@ describe "Use wallet's credits and recalculate balances", :scenarios, type: :req
     end
   end
 
-  context "with multiple threshold usages set on plan" do
+  context "with multiple threshold usages set on plan", :lago_premium do
     let(:plan) { create(:plan, organization: organization, interval: "monthly", amount_cents: 0, pay_in_advance: false) }
     let(:charge) { create(:charge, plan: plan, billable_metric: billable_metric, charge_model: "standard", properties: {"amount" => "10"}) }
     let(:usage_threshold) { create(:usage_threshold, plan: plan, amount_cents: 200_00, recurring: false) }

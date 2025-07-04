@@ -19,13 +19,11 @@ describe "Progressive Billing enablement", :scenarios, type: :request, transacti
   let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"}) }
   let(:usage_threshold) { create(:usage_threshold, plan: plan, amount_cents: 20000) }
 
-  around { |test| lago_premium!(&test) }
-
   before do
     charge
   end
 
-  context "when enabled when usage has already been accumulating" do
+  context "when enabled when usage has already been accumulating", :lago_premium do
     it "correctly calculates thresholds and generates correct progressive billing invoices" do
       time_0 = DateTime.new(2022, 12, 1)
       travel_to time_0
@@ -76,7 +74,7 @@ describe "Progressive Billing enablement", :scenarios, type: :request, transacti
     end
   end
 
-  context "when enabled when usage has already been invoiced" do
+  context "when enabled when usage has already been invoiced", :lago_premium do
     it "correctly calculates thresholds and generates correct progressive billing invoices" do
       time_0 = DateTime.new(2022, 12, 1)
       travel_to time_0

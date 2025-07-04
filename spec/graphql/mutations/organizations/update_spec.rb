@@ -99,7 +99,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     end
   end
 
-  context "without necessary permissions" do
+  context "without necessary permissions", :lago_premium do
     it "ignores permissions-protected field and updates the rest" do
       result = execute_graphql(
         current_user: membership.user,
@@ -125,8 +125,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
     end
   end
 
-  context "with premium features" do
-    around { |test| lago_premium!(&test) }
+  context "with premium features", :lago_premium do
 
     let(:timezone) { "TZ_EUROPE_PARIS" }
 
@@ -157,7 +156,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
       end
     end
 
-    context "with Etc/GMT+12 timezone" do
+    context "with Etc/GMT+12 timezone", :lago_premium do
       let(:timezone) { "TZ_ETC_GMT_12" }
 
       it "updates an organization" do

@@ -6,8 +6,6 @@ describe "Wallet Transaction with rounding", :scenarios, type: :request do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:) }
 
-  around { |test| lago_premium!(&test) }
-
   it "rounds the amount field when handling paid_credits" do
     create_wallet({
       external_customer_id: customer.external_id,

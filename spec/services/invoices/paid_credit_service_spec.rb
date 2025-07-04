@@ -85,8 +85,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
+    context "with lago_premium", :lago_premium do
 
       it "enqueues an SendEmailJob" do
         expect do
@@ -94,7 +93,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
-      context "when organization does not have right email settings" do
+      context "when organization, :lago_premium does not have right email settings", :lago_premium do
         before { customer.billing_entity.update!(email_settings: []) }
 
         it "does not enqueue an SendEmailJob" do
@@ -124,7 +123,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       expect(Invoices::Payments::CreateJob).to have_been_enqueued.with(invoice: result.invoice, payment_provider: :stripe)
     end
 
-    context "with customer timezone" do
+    context "with customer timezone", :lago_premium do
       before { customer.update!(timezone: "America/Los_Angeles") }
 
       let(:timestamp) { DateTime.parse("2022-11-25 01:00:00").to_i }
@@ -136,7 +135,7 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end
     end
 
-    context "with provided invoice" do
+    context "with provided invoice", :lago_premium do
       let(:invoice) do
         create(:invoice, organization: customer.organization, customer:, invoice_type: :credit, status: :generating)
       end
@@ -158,10 +157,8 @@ RSpec.describe Invoices::PaidCreditService, type: :service do
       end
     end
 
-    context "with wallet_transaction.invoice_requires_successful_payment" do
+    context "with wallet_transaction.invoice_requires_successful_payment", :lago_premium do
       let(:invoice_requires_successful_payment) { true }
-
-      around { |test| lago_premium!(&test) }
 
       it "creates an open invoice" do
         result = invoice_service.call

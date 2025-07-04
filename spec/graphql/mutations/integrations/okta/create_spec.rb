@@ -21,15 +21,13 @@ RSpec.describe Mutations::Integrations::Okta::Create, type: :graphql do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   before { membership.organization.update!(premium_integrations: ["okta"]) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:create"
 
-  it "creates an okta integration" do
+  it "creates an okta integration", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: membership.organization,

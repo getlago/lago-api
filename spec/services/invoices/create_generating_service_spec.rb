@@ -32,7 +32,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
       expect(result.invoice.net_payment_term).to eq(customer.applicable_net_payment_term)
     end
 
-    context "with customer timezone" do
+    context "with customer timezone", :lago_premium do
       let(:customer) { create(:customer, timezone: "America/Los_Angeles") }
       let(:datetime) { Time.zone.parse("2022-11-25 01:00:00") }
 
@@ -44,7 +44,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
       end
     end
 
-    context "with applicable net payment term" do
+    context "with applicable net payment term", :lago_premium do
       let(:customer) { create(:customer, net_payment_term: 3) }
 
       it "assigns the payment due date based on the net payment term" do
@@ -55,7 +55,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
       end
     end
 
-    context "when a block is passed to the method" do
+    context "when a block is passed to the method", :lago_premium do
       let(:invoice_type) { :subscription }
       let(:subscription) { create(:subscription, customer:, started_at: Time.current - 1.day) }
 
@@ -88,7 +88,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
       end
     end
 
-    context "when invoice type is subscription" do
+    context "when invoice type is subscription", :lago_premium do
       let(:invoice_type) { :subscription }
       let(:customer) { create(:customer, invoice_grace_period: 3) }
 
@@ -98,7 +98,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
         expect(result.invoice.issuing_date.to_s).to eq((datetime + 3.days).to_date.to_s)
       end
 
-      context "when charge pay in advance invoice is generated" do
+      context "when charge pay in advance invoice is generated", :lago_premium do
         let(:charge_in_advance) { true }
 
         it "creates an invoice with correct issuing date" do
@@ -108,7 +108,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
         end
       end
 
-      context "with customer timezone" do
+      context "with customer timezone", :lago_premium do
         let(:customer) { create(:customer, timezone: "America/Los_Angeles", invoice_grace_period: 3) }
         let(:datetime) { Time.zone.parse("2022-11-25 01:00:00") }
 
@@ -121,10 +121,8 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
       end
     end
 
-    context "when customer is a partner account" do
+    context "when customer is a partner account", :lago_premium do
       let(:customer) { create(:customer, account_type: "partner") }
-
-      around { |test| lago_premium!(&test) }
 
       it "returns a failure" do
         result = create_service.call
@@ -133,7 +131,7 @@ RSpec.describe Invoices::CreateGeneratingService, type: :service do
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
       end
 
-      context "when revenue share premium feature is enabled" do
+      context "when revenue share premium feature is enabled", :lago_premium do
         let(:customer) { create(:customer, organization:, account_type: "partner") }
 
         let(:organization) do

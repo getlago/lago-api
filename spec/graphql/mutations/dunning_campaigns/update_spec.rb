@@ -45,8 +45,6 @@ RSpec.describe Mutations::DunningCampaigns::Update, type: :graphql do
     }
   end
 
-  around { |test| lago_premium!(&test) }
-
   before do
     organization.default_billing_entity.update!(applied_dunning_campaign: dunning_campaign)
   end
@@ -55,7 +53,7 @@ RSpec.describe Mutations::DunningCampaigns::Update, type: :graphql do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "dunning_campaigns:update"
 
-  it "updates a dunning campaign" do
+  it "updates a dunning campaign", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,

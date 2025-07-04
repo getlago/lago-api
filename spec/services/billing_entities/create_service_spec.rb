@@ -23,13 +23,13 @@ RSpec.describe BillingEntities::CreateService, type: :service do
     expect(Utils::ActivityLog).to have_received(:produce).with(billing_entity, "billing_entities.created")
   end
 
-  context "when lago freemium" do
+  context "when lago freemium", :lago_premium do
     it "returns an error" do
       expect(result).to be_failure
       expect(result.error).to be_a(BaseService::ForbiddenFailure)
     end
 
-    context "when the organization does not have active billing entities" do
+    context "when the organization, :lago_premium does not have active billing entities", :lago_premium do
       before do
         organization.billing_entities.each(&:discard)
       end
@@ -69,7 +69,7 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         expect(result.billing_entity.email_settings).to be_empty
       end
 
-      context "when an id is provided in the params hash" do
+      context "when an id is provided in the params hash", :lago_premium do
         it "creates a billing entity with the provided id" do
           params[:id] = organization.id
 
@@ -81,16 +81,15 @@ RSpec.describe BillingEntities::CreateService, type: :service do
   end
 
   context "when lago premium" do
-    around { |test| lago_premium!(&test) }
 
-    context "when no multi_entity premium feature is enabled" do
+    context "when no multi_entity premium feature is enabled", :lago_premium do
       it "returns an error" do
         expect(result).to be_failure
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
       end
     end
 
-    context "when multi_entities_pro premium feature is enabled" do
+    context "when multi_entities_pro premium feature is enabled", :lago_premium do
       let(:organization) do
         create(:organization, premium_integrations: ["multi_entities_pro"])
       end
@@ -104,7 +103,7 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         expect(result.billing_entity.document_numbering).to eq("per_customer")
       end
 
-      context "when creating billing entity with full data" do
+      context "when creating billing entity with full data", :lago_premium do
         let(:params) do
           {
             name: "Billing Entity",
@@ -172,7 +171,7 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         end
       end
 
-      context "when document_number_prefix is lowercase" do
+      context "when, :lago_premium document_number_prefix is lowercase", :lago_premium do
         it "converts document_number_prefix to uppercase" do
           params[:document_number_prefix] = "abc"
 
@@ -181,7 +180,7 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         end
       end
 
-      context "when document_number_prefix is invalid" do
+      context "when, :lago_premium document_number_prefix is invalid", :lago_premium do
         before { params[:document_number_prefix] = "aaaaaaaaaaaaaaa" }
 
         it "returns an error" do
@@ -191,7 +190,7 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         end
       end
 
-      context "when billing entity outside the EU and eu_tax_management is true" do
+      context "when billing entity outside the EU and eu_tax_management is true", :lago_premium do
         let(:tax_auto_generate_service) { instance_double(Taxes::AutoGenerateService) }
 
         before do
@@ -210,7 +209,7 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         end
       end
 
-      context "with validation errors" do
+      context "with validation errors", :lago_premium do
         before do
           params[:country] = "---"
         end
@@ -222,7 +221,7 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         end
       end
 
-      context "when max billing entities limit is reached" do
+      context "when max billing entities limit is reached", :lago_premium do
         it "returns an error" do
           create(:billing_entity, organization:)
 
@@ -233,7 +232,7 @@ RSpec.describe BillingEntities::CreateService, type: :service do
       end
     end
 
-    context "when multi_entities_enterprise premium feature is enabled" do
+    context "when multi_entities_enterprise premium feature is enabled", :lago_premium do
       let(:organization) do
         create(:organization, premium_integrations: ["multi_entities_enterprise"])
       end
@@ -247,7 +246,7 @@ RSpec.describe BillingEntities::CreateService, type: :service do
         expect(result.billing_entity.name).to eq("Billing Entity")
       end
 
-      context "when record is invalid" do
+      context "when record is invalid", :lago_premium do
         let(:params) { {name: nil, code: nil} }
 
         it "returns an error" do

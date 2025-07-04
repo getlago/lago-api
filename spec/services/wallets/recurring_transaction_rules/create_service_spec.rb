@@ -27,14 +27,13 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
   end
 
   describe "#call" do
-    context "when freemium" do
+    context "when freemium", :lago_premium do
       it "does not create any recurring transaction rule" do
         expect { create_service.call }.not_to change { wallet.reload.recurring_transaction_rules.count }
       end
     end
 
-    context "when premium" do
-      around { |test| lago_premium!(&test) }
+    context "when premium", :lago_premium do
 
       it "creates rule with expected attributes" do
         expect { create_service.call }.to change { wallet.reload.recurring_transaction_rules.count }.by(1)
@@ -52,7 +51,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         )
       end
 
-      context "when method is fixed" do
+      context "when method is fixed", :lago_premium do
         let(:rule_params) do
           {
             trigger: "threshold",
@@ -74,7 +73,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         end
       end
 
-      context "when invoice_requires_successful_payment is present" do
+      context "when invoice_requires_successful_payment is present", :lago_premium do
         let(:rule_params) do
           {
             trigger: "threshold",
@@ -92,7 +91,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         end
       end
 
-      context "when transaction metadata is present" do
+      context "when transaction metadata is present", :lago_premium do
         let(:rule_params) do
           {
             trigger: "threshold",
@@ -112,7 +111,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         end
       end
 
-      context "when invoice_requires_successful_payment is blank" do
+      context "when invoice_requires_successful_payment is blank", :lago_premium do
         let(:wallet) { create(:wallet, invoice_requires_successful_payment: true) }
         let(:wallet_params) do
           {
@@ -134,7 +133,7 @@ RSpec.describe Wallets::RecurringTransactionRules::CreateService do
         end
       end
 
-      context "when expiration_at is set in the rule" do
+      context "when expiration_at is set in the rule", :lago_premium do
         let(:expiration_at) { (Time.current + 1.year).iso8601 }
         let(:wallet_params) do
           {

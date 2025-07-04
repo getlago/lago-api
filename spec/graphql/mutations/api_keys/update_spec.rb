@@ -13,8 +13,6 @@ RSpec.describe Mutations::ApiKeys::Update, type: :graphql do
     )
   end
 
-  around { |test| lago_premium!(&test) }
-
   let(:query) do
     <<-GQL
       mutation($input: UpdateApiKeyInput!) {
@@ -33,12 +31,12 @@ RSpec.describe Mutations::ApiKeys::Update, type: :graphql do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "developers:keys:manage"
 
-  context "when api key with such ID exists in the current organization" do
+  context "when api key with such ID exists in the current organization", :lago_premium do
     let(:api_key) { membership.organization.api_keys.first }
 
     before { membership.organization.update!(premium_integrations: ["api_permissions"]) }
 
-    context "when permissions are present" do
+    context "when permissions are present", :lago_premium do
       it "returns updated api key" do
         api_key_response = result["data"]["updateApiKey"]
 
@@ -50,7 +48,7 @@ RSpec.describe Mutations::ApiKeys::Update, type: :graphql do
       end
     end
 
-    context "when permissions are missing" do
+    context "when permissions are missing", :lago_premium do
       let(:input_params) { {id: api_key.id, name:} }
 
       it "returns updated api key" do
@@ -65,7 +63,7 @@ RSpec.describe Mutations::ApiKeys::Update, type: :graphql do
     end
   end
 
-  context "when api key with such ID does not exist in the current organization" do
+  context "when api key with such ID does not exist in the current organization", :lago_premium do
     let!(:api_key) { create(:api_key) }
 
     it "does not change the api key" do

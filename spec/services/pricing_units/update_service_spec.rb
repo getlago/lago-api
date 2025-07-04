@@ -19,12 +19,11 @@ RSpec.describe PricingUnits::UpdateService, type: :service do
     end
 
     context "with premium organization" do
-      around { |test| lago_premium!(&test) }
 
       context "when pricing unit is present" do
         let!(:pricing_unit) { create(:pricing_unit) }
 
-        context "when params are valid" do
+        context "when params are valid", :lago_premium do
           let(:description) { "description" }
 
           it "returns a successful result with the pricing unit" do
@@ -40,7 +39,7 @@ RSpec.describe PricingUnits::UpdateService, type: :service do
           end
         end
 
-        context "when params are invalid" do
+        context "when params are invalid", :lago_premium do
           let(:description) { "a" * 601 }
 
           it "fails with validation error" do
@@ -54,10 +53,10 @@ RSpec.describe PricingUnits::UpdateService, type: :service do
         end
       end
 
-      context "when pricing unit is missing" do
+      context "when pricing unit is missing", :lago_premium do
         let(:pricing_unit) { nil }
 
-        context "when params are valid" do
+        context "when params are valid", :lago_premium do
           let(:description) { "description" }
 
           it "fails with pricing unit not found error" do
@@ -66,7 +65,7 @@ RSpec.describe PricingUnits::UpdateService, type: :service do
           end
         end
 
-        context "when params are invalid" do
+        context "when params are invalid", :lago_premium do
           let(:description) { "a" * 601 }
 
           it "fails with pricing unit not found error" do
@@ -81,7 +80,7 @@ RSpec.describe PricingUnits::UpdateService, type: :service do
       context "when pricing unit is present" do
         let!(:pricing_unit) { create(:pricing_unit) }
 
-        context "when params are valid" do
+        context "when params are valid", :lago_premium do
           let(:description) { "description" }
 
           it "fails with a forbidden error" do
@@ -95,7 +94,7 @@ RSpec.describe PricingUnits::UpdateService, type: :service do
           end
         end
 
-        context "when params are invalid" do
+        context "when params are invalid", :lago_premium do
           let(:description) { "a" * 601 }
 
           it "fails with a forbidden error" do
@@ -110,10 +109,10 @@ RSpec.describe PricingUnits::UpdateService, type: :service do
         end
       end
 
-      context "when pricing unit is missing" do
+      context "when pricing unit is missing", :lago_premium do
         let(:pricing_unit) { nil }
 
-        context "when params are valid" do
+        context "when params are valid", :lago_premium do
           let(:description) { "description" }
 
           it "fails with a forbidden error" do
@@ -123,7 +122,7 @@ RSpec.describe PricingUnits::UpdateService, type: :service do
           end
         end
 
-        context "when params are invalid" do
+        context "when params are invalid", :lago_premium do
           let(:description) { "a" * 601 }
 
           it "fails with a forbidden error" do

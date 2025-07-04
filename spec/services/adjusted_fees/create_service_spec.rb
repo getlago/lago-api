@@ -32,8 +32,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
       allow(refresh_service).to receive(:call).and_return(BaseService::Result.new)
     end
 
-    context "when license is premium" do
-      around { |test| lago_premium!(&test) }
+    context "when license is premium", :lago_premium do
 
       it "creates an adjusted fee" do
         expect { create_service.call }.to change(AdjustedFee, :count).by(1)
@@ -65,7 +64,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         )
       end
 
-      context "when invoice is NOT in draft status" do
+      context "when invoice is NOT in draft status", :lago_premium do
         before { invoice.finalized! }
 
         it "returns forbidden status" do
@@ -79,7 +78,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         end
       end
 
-      context "when there is invalid charge model but amount is adjusted" do
+      context "when there is invalid charge model but amount is adjusted", :lago_premium do
         let(:percentage_charge) { create(:percentage_charge) }
         let(:fee) { create(:charge_fee, invoice:, subscription:, charge: percentage_charge) }
 
@@ -90,7 +89,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         end
       end
 
-      context "when there is invalid charge model and display name is adjusted" do
+      context "when there is invalid charge model and display name is adjusted", :lago_premium do
         let(:percentage_charge) { create(:percentage_charge) }
         let(:fee) { create(:charge_fee, invoice:, subscription:, charge: percentage_charge) }
         let(:params) do
@@ -107,7 +106,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         end
       end
 
-      context "when there is invalid charge model and units are adjusted" do
+      context "when there is invalid charge model and units are adjusted", :lago_premium do
         let(:percentage_charge) { create(:percentage_charge) }
         let(:fee) { create(:charge_fee, invoice:, subscription:, charge: percentage_charge) }
         let(:params) do
@@ -129,7 +128,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         end
       end
 
-      context "when fee belongs to another invoice" do
+      context "when fee belongs to another invoice", :lago_premium do
         let(:fee) { create(:charge_fee) }
 
         it "returns error" do
@@ -143,7 +142,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         end
       end
 
-      context "when adjusted fee already exists" do
+      context "when adjusted fee already exists", :lago_premium do
         let(:adjusted_fee) { create(:adjusted_fee, fee:) }
 
         before { adjusted_fee }
@@ -159,7 +158,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
         end
       end
 
-      context "when adjusting without fee" do
+      context "when adjusting without fee", :lago_premium do
         let(:fee) { nil }
         let(:params) do
           {
@@ -235,7 +234,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
           expect(refresh_service).to have_received(:call)
         end
 
-        context "when adjusting a dynamic charge" do
+        context "when adjusting a dynamic charge", :lago_premium do
           let(:billable_metric) { create(:sum_billable_metric, organization:) }
           let(:charge) { create(:dynamic_charge, billable_metric:, plan: subscription.plan) }
 
@@ -246,7 +245,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
           end
         end
 
-        context "when a fee exists with the attributes" do
+        context "when a fee exists with the attributes", :lago_premium do
           let(:fee) { create(:charge_fee, invoice:, subscription:, charge:, charge_filter:) }
           let(:params) do
             {
@@ -267,7 +266,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
           end
         end
 
-        context "when subscription_id does not belongs to the invoice" do
+        context "when subscription_id, :lago_premium does not belongs to the invoice", :lago_premium do
           let(:fee) { create(:charge_fee, invoice:, subscription:, charge:, charge_filter:) }
           let(:params) do
             {
@@ -291,7 +290,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
           end
         end
 
-        context "when charge_id does not belongs to the invoice" do
+        context "when charge_id, :lago_premium does not belongs to the invoice", :lago_premium do
           let(:fee) { create(:charge_fee, invoice:, subscription:, charge:, charge_filter:) }
           let(:params) do
             {
@@ -315,7 +314,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
           end
         end
 
-        context "when charge_filter_id does not belongs to the invoice" do
+        context "when charge_filter_id, :lago_premium does not belongs to the invoice", :lago_premium do
           let(:fee) { create(:charge_fee, invoice:, subscription:, charge:, charge_filter:) }
           let(:params) do
             {
@@ -341,7 +340,7 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
       end
     end
 
-    context "when license is not premium" do
+    context "when license is not premium", :lago_premium do
       it "returns forbidden status" do
         result = create_service.call
 

@@ -45,13 +45,11 @@ RSpec.describe Mutations::DunningCampaigns::Create, type: :graphql do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "dunning_campaigns:create"
 
-  it "creates a dunning campaign" do
+  it "creates a dunning campaign", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,

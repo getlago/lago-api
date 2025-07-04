@@ -70,8 +70,7 @@ RSpec.describe Api::V1::OrganizationsController, type: :request do
       end
     end
 
-    context "with premium features" do
-      around { |test| lago_premium!(&test) }
+    context "with premium features", :lago_premium do
 
       it "updates an organization" do
         subject

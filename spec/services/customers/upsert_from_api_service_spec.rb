@@ -103,7 +103,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     expect(Utils::ActivityLog).to have_received(:produce).with(result.customer, "customer.created")
   end
 
-  context "when organization has multiple billing entities" do
+  context "when organization has multiple billing entities", :lago_premium do
     let(:billing_entity_2) { create(:billing_entity, organization:) }
 
     before { billing_entity_2 }
@@ -114,7 +114,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       expect(result.customer.billing_entity).to eq(organization.default_billing_entity)
     end
 
-    context "with billing_entity_code" do
+    context "with billing_entity_code", :lago_premium do
       let(:create_args) do
         {
           external_id:,
@@ -131,7 +131,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "when organization has no active billing entity" do
+  context "when organization has no active billing entity", :lago_premium do
     before do
       organization.billing_entities.update_all(archived_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
@@ -143,7 +143,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "when billing_entity_code belongs to an archived billing entity" do
+  context "when billing_entity_code belongs to an archived billing entity", :lago_premium do
     let(:billing_entity_2) { create(:billing_entity, organization:) }
 
     before do
@@ -158,7 +158,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with account_type 'partner'" do
+  context "with account_type 'partner'", :lago_premium do
     before do
       create_args.merge!(account_type: "partner")
     end
@@ -172,7 +172,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with invalid email" do
+  context "with invalid email", :lago_premium do
     let(:create_args) do
       {
         external_id:,
@@ -202,7 +202,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with external_id already used by a deleted customer" do
+  context "with external_id already used by a deleted customer", :lago_premium do
     it "creates a customer with the same external_id" do
       create(:customer, :deleted, organization:, external_id:)
 
@@ -214,7 +214,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with an external_id already in use in a different billing entity" do
+  context "with an external_id already in use in a different billing entity", :lago_premium do
     let(:customer) do
       create(:customer, organization:, billing_entity: billing_entity_2, external_id:)
     end
@@ -238,7 +238,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       expect(result.customer.billing_entity).to eq(billing_entity)
     end
 
-    context "when the customer already has an invoice" do
+    context "when the customer already has an invoice", :lago_premium do
       before do
         create(:invoice, customer: customer)
       end
@@ -251,7 +251,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with customer_type" do
+  context "with customer_type", :lago_premium do
     let(:create_args) do
       {
         external_id:,
@@ -267,7 +267,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       expect(result.customer.customer_type).to eq(create_args[:customer_type])
     end
 
-    context "with invalid customer_type" do
+    context "with invalid customer_type", :lago_premium do
       let(:create_args) do
         {
           external_id:,
@@ -286,7 +286,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with metadata" do
+  context "with metadata", :lago_premium do
     let(:create_args) do
       {
         external_id:,
@@ -316,7 +316,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with finalize_zero_amount_invoice" do
+  context "with finalize_zero_amount_invoice", :lago_premium do
     let(:create_args) do
       {
         external_id:,
@@ -329,7 +329,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       expect(result.customer.finalize_zero_amount_invoice).to eq("skip")
     end
 
-    context "with nil value for finalize_zero_amount_invoice" do
+    context "with nil value for finalize_zero_amount_invoice", :lago_premium do
       let(:create_args) do
         {
           external_id:,
@@ -343,7 +343,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       end
     end
 
-    context "with incorrect value of finalize_zero_amount_invoice" do
+    context "with incorrect value of finalize_zero_amount_invoice", :lago_premium do
       let(:create_args) do
         {
           external_id:,
@@ -360,8 +360,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with premium features" do
-    around { |test| lago_premium!(&test) }
+  context "with premium features", :lago_premium do
 
     let(:create_args) do
       {
@@ -382,7 +381,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       expect(result.customer.invoice_grace_period).to eq(billing[:invoice_grace_period])
     end
 
-    context "with revenue share feature enabled and account_type 'partner'" do
+    context "with revenue share feature enabled and account_type 'partner'", :lago_premium do
       let(:organization) do
         create(:organization, premium_integrations: ["revenue_share"])
       end
@@ -397,7 +396,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
         expect(result.customer).to be_exclude_from_dunning_campaign
       end
 
-      context "when updating a customer that already have an invoice" do
+      context "when updating a customer that already have an invoice", :lago_premium do
         let(:customer) do
           create(:customer, organization:, account_type: "customer", external_id:)
         end
@@ -414,7 +413,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with invoice_custom_sections params" do
+  context "with invoice_custom_sections params", :lago_premium do
     let(:invoice_custom_section) { create(:invoice_custom_section, organization:) }
     let(:create_args) do
       {
@@ -437,7 +436,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "when customer already exists" do
+  context "when customer already exists", :lago_premium do
     let(:customer) do
       create(
         :customer,
@@ -476,7 +475,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       expect(SendWebhookJob).to have_received(:perform_later).with("customer.updated", customer)
     end
 
-    context "with provider customer" do
+    context "with provider customer", :lago_premium do
       let(:payment_provider) { create(:stripe_provider, organization:) }
       let(:stripe_customer) { create(:stripe_customer, customer:, payment_provider:) }
       let(:stripe_customer_result) { BaseService::Result.new }
@@ -496,7 +495,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       end
     end
 
-    context "with metadata" do
+    context "with metadata", :lago_premium do
       let(:customer_metadata) { create(:customer_metadata, customer:) }
       let(:another_customer_metadata) { create(:customer_metadata, customer:, key: "test", value: "1") }
       let(:create_args) do
@@ -538,7 +537,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
         expect(metadata_ids).not_to include(another_customer_metadata.id)
       end
 
-      context "when more than five metadata objects are provided" do
+      context "when more than five metadata objects are provided", :lago_premium do
         let(:create_args) do
           {
             external_id:,
@@ -592,7 +591,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       end
     end
 
-    context "with integration customers" do
+    context "with integration customers", :lago_premium do
       let(:create_args) do
         {
           external_id:,
@@ -605,7 +604,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
         }
       end
 
-      context "when there are netusite and anrok customer sent" do
+      context "when there are netusite and anrok customer sent", :lago_premium do
         let(:integration_customers) do
           [
             {
@@ -631,7 +630,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
         end
       end
 
-      context "when there are multiple integration customers of the same type" do
+      context "when there are multiple integration customers of the same type", :lago_premium do
         let(:integration_customers) do
           [
             {
@@ -666,7 +665,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       end
     end
 
-    context "when attached to a subscription" do
+    context "when attached to a subscription", :lago_premium do
       let(:create_args) do
         {
           external_id:,
@@ -688,8 +687,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       end
     end
 
-    context "when updating invoice grace period" do
-      around { |test| lago_premium!(&test) }
+    context "when updating invoice grace period", :lago_premium do
 
       let(:create_args) do
         {
@@ -710,7 +708,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with validation error" do
+  context "with validation error", :lago_premium do
     let(:create_args) do
       {
         name: "Foo Bar"
@@ -722,7 +720,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with stripe configuration" do
+  context "with stripe configuration", :lago_premium do
     let(:create_args) do
       {
         external_id: SecureRandom.uuid,
@@ -735,7 +733,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       }
     end
 
-    context "when payment provider does not exist" do
+    context "when payment provider, :lago_premium does not exist", :lago_premium do
       let(:error_messages) { {base: ["payment_provider_not_found"]} }
 
       it "fails to create customer" do
@@ -745,7 +743,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       end
     end
 
-    context "when payment provider exists" do
+    context "when payment provider exists", :lago_premium do
       before { create(:stripe_provider, organization:, code: "stripe_1") }
 
       it "creates a stripe customer" do
@@ -758,7 +756,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       end
     end
 
-    context "when customer already exists" do
+    context "when customer already exists", :lago_premium do
       let(:payment_provider) { "stripe" }
       let(:payment_provider_code) { "stripe_1" }
       let(:create_args) do
@@ -786,7 +784,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
 
       before { customer }
 
-      context "when payment provider exists" do
+      context "when payment provider exists", :lago_premium do
         let(:stripe_provider) { create(:stripe_provider, code: payment_provider_code, organization:) }
 
         before { stripe_provider }
@@ -803,7 +801,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
         end
       end
 
-      context "when payment provider does not exists" do
+      context "when payment provider, :lago_premium does not exists", :lago_premium do
         it "fails" do
           expect(result).to be_failure
           expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -811,7 +809,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
         end
       end
 
-      context "when payment_provider is invalid" do
+      context "when payment_provider is invalid", :lago_premium do
         let(:payment_provider) { "foo" }
 
         it "fails" do
@@ -821,7 +819,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
         end
       end
 
-      context "when payment_provider is not sent" do
+      context "when payment_provider is not sent", :lago_premium do
         let(:create_args) do
           {
             external_id: SecureRandom.uuid,
@@ -844,7 +842,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with gocardless configuration" do
+  context "with gocardless configuration", :lago_premium do
     let(:create_args) do
       {
         external_id: SecureRandom.uuid,
@@ -856,7 +854,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       }
     end
 
-    context "when payment provider does not exist" do
+    context "when payment provider, :lago_premium does not exist", :lago_premium do
       let(:error_messages) { {base: ["payment_provider_not_found"]} }
 
       it "fails to create customer" do
@@ -866,7 +864,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       end
     end
 
-    context "when payment provider exists" do
+    context "when payment provider exists", :lago_premium do
       before { create(:gocardless_provider, organization:, code: "gocardless_1") }
 
       it "creates a gocardless customer" do
@@ -880,7 +878,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with unknown payment provider" do
+  context "with unknown payment provider", :lago_premium do
     let(:create_args) do
       {
         external_id: SecureRandom.uuid,
@@ -900,7 +898,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "when billing configuration is not provided" do
+  context "when billing configuration is not provided", :lago_premium do
     it "does not creates a payment provider customer" do
       expect(result).to be_success
       expect(result.customer.id).to be_present
@@ -909,7 +907,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       expect(result.customer.gocardless_customer).not_to be_present
     end
 
-    context "when customer is updated" do
+    context "when customer is updated", :lago_premium do
       before do
         create(
           :customer,
@@ -932,7 +930,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "when organization has eu tax management" do
+  context "when organization has eu tax management", :lago_premium do
     let(:eu_auto_tax_service) { instance_double(Customers::EuAutoTaxesService) }
     let(:tax_code) { "lago_eu_fr_standard" }
     let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new }
@@ -953,7 +951,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
       expect(tax.code).to eq(tax_code)
     end
 
-    context "when eu tax code is not applicable" do
+    context "when eu tax code is not applicable", :lago_premium do
       let(:eu_tax_result) { Customers::EuAutoTaxesService::Result.new.not_allowed_failure!(code: "") }
 
       it "does not apply tax" do
@@ -963,7 +961,7 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "with tax_codes" do
+  context "with tax_codes", :lago_premium do
     let(:create_args) do
       {
         external_id: SecureRandom.uuid,

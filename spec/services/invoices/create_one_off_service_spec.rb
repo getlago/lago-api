@@ -95,7 +95,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       expect(Invoices::Payments::CreateService).to have_received(:call_async)
     end
 
-    context "when skip_payment is true" do
+    context "when skip_payment is true", :lago_premium do
       it "does not create a payment" do
         allow(Invoices::Payments::CreateService).to receive(:call_async)
 
@@ -117,7 +117,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
-    context "when there is tax provider integration" do
+    context "when there is tax provider integration", :lago_premium do
       let(:integration) { create(:anrok_integration, organization:) }
       let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
       let(:response) { instance_double(Net::HTTPOK) }
@@ -208,7 +208,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
         expect(invoice.fees.map(&:taxes_rate).sort).to eq([10.0, 15.0])
       end
 
-      context "when there is error received from the provider" do
+      context "when there is error received from the provider", :lago_premium do
         let(:body) do
           p = Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
           File.read(p)
@@ -232,7 +232,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
     end
 
-    context "when invoice amount in cents is zero" do
+    context "when invoice amount in cents is zero", :lago_premium do
       let(:fees) do
         [
           {
@@ -267,8 +267,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
     end
 
-    context "with lago_premium" do
-      around { |test| lago_premium!(&test) }
+    context "with lago_premium", :lago_premium do
 
       it "enqueues GeneratePdfAndNotifyJob with email true" do
         expect do
@@ -276,7 +275,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
         end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
-      context "when organization does not have right email settings" do
+      context "when organization, :lago_premium does not have right email settings", :lago_premium do
         before { customer.billing_entity.update!(email_settings: []) }
 
         it "enqueues GeneratePdfAndNotifyJob with email false" do
@@ -287,7 +286,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
     end
 
-    context "with customer timezone" do
+    context "with customer timezone", :lago_premium do
       before { customer.update!(timezone: "America/Los_Angeles") }
 
       let(:timestamp) { DateTime.parse("2022-11-25 01:00:00") }
@@ -299,7 +298,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
     end
 
-    context "when currency does not match" do
+    context "when currency, :lago_premium does not match", :lago_premium do
       let(:currency) { "NOK" }
 
       it "fails" do
@@ -314,7 +313,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
     end
 
-    context "when currency does not present" do
+    context "when currency, :lago_premium does not present", :lago_premium do
       let(:currency) { nil }
 
       before { customer.update!(currency: nil) }
@@ -331,7 +330,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
     end
 
-    context "when customer is not found" do
+    context "when customer is not found", :lago_premium do
       let(:customer) { nil }
 
       it "returns a not found error" do
@@ -345,7 +344,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
     end
 
-    context "when fees are blank" do
+    context "when fees are blank", :lago_premium do
       let(:fees) { [] }
 
       it "returns a not found error" do
@@ -359,7 +358,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       end
     end
 
-    context "when add_on_code is invalid" do
+    context "when add_on_code is invalid", :lago_premium do
       let(:fees) do
         [
           {
@@ -391,14 +390,14 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
 
     let(:result) { BaseService::Result.new }
 
-    context "when the fee result is successful" do
+    context "when the fee result is successful", :lago_premium do
       it "returns false" do
         expect(subject).to be false
       end
     end
 
     context "when the fee result is not successful" do
-      context "when the fee result error code is tax_error" do
+      context "when the fee result error code is tax_error", :lago_premium do
         before do
           result.service_failure!(code: "tax_error", message: "Tax error")
         end
@@ -408,7 +407,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
         end
       end
 
-      context "when the fee result error does not respond to code" do
+      context "when the fee result error, :lago_premium does not respond to code", :lago_premium do
         before do
           result.validation_failure!(errors: [{message: "error"}])
         end
@@ -418,7 +417,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
         end
       end
 
-      context "when the fee result error code is not tax_error" do
+      context "when the fee result error code is not tax_error", :lago_premium do
         before do
           result.service_failure!(code: "code1", message: "Code1 error")
         end

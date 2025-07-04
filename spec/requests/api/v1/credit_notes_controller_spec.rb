@@ -67,7 +67,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       )
     end
 
-    context "when credit note does not exists" do
+    context "when credit note, :lago_premium does not exists", :lago_premium do
       let(:credit_note_id) { SecureRandom.uuid }
 
       it "returns not found" do
@@ -76,7 +76,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "when credit note is draft" do
+    context "when credit note is draft", :lago_premium do
       let(:credit_note) { create(:credit_note, :draft) }
 
       it "returns not found" do
@@ -85,7 +85,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "when credit note belongs to another organization" do
+    context "when credit note belongs to another organization", :lago_premium do
       let(:wrong_credit_note) { create(:credit_note) }
       let(:credit_note_id) { wrong_credit_note.id }
 
@@ -110,7 +110,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
 
     include_examples "requires API permission", "credit_note", "write"
 
-    context "when credit not exists" do
+    context "when credit not exists", :lago_premium do
       it "updates the credit note" do
         subject
 
@@ -120,7 +120,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "when credit note does not exist" do
+    context "when credit note, :lago_premium does not exist", :lago_premium do
       let(:credit_note_id) { SecureRandom.uuid }
 
       it "returns a not found error" do
@@ -129,7 +129,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "when provided refund status is invalid" do
+    context "when provided refund status is invalid", :lago_premium do
       let(:update_params) { {refund_status: "invalid_status"} }
 
       it "returns an unprocessable entity error" do
@@ -155,7 +155,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       expect(CreditNotes::GeneratePdfJob).to have_been_enqueued
     end
 
-    context "when a file is attached to the credit note" do
+    context "when a file is attached to the credit note", :lago_premium do
       let(:credit_note) { create(:credit_note, :with_file, invoice:, customer:) }
 
       it "returns the credit note object" do
@@ -166,7 +166,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "when credit note does not exist" do
+    context "when credit note, :lago_premium does not exist", :lago_premium do
       let(:credit_note_id) { SecureRandom.uuid }
 
       it "returns not found" do
@@ -175,7 +175,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "when credit note is draft" do
+    context "when credit note is draft", :lago_premium do
       let(:credit_note) { create(:credit_note, :draft) }
 
       it "returns not found" do
@@ -184,7 +184,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "when credit note belongs to another organization" do
+    context "when credit note belongs to another organization", :lago_premium do
       let(:wrong_credit_note) { create(:credit_note) }
       let(:credit_note_id) { wrong_credit_note.id }
 
@@ -201,7 +201,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
     let(:organization) { customer.organization }
     let(:customer) { create(:customer) }
 
-    context "with no params" do
+    context "with no params", :lago_premium do
       let(:params) { {} }
       let(:invoices) { create_pair(:invoice, organization:, customer:) }
 
@@ -220,7 +220,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with pagination" do
+    context "with pagination", :lago_premium do
       let(:params) { {page: 1, per_page: 1} }
       let(:invoices) { create_pair(:invoice, organization:, customer:) }
 
@@ -244,7 +244,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with external_customer_id filter" do
+    context "with external_customer_id filter", :lago_premium do
       let(:params) { {external_customer_id: customer.external_id} }
       let!(:credit_note) { create(:credit_note, customer:) }
 
@@ -261,7 +261,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with reason filter" do
+    context "with reason filter", :lago_premium do
       let(:params) { {reason: matching_reasons} }
       let(:matching_reasons) { CreditNote::REASON.sample(2) }
 
@@ -285,7 +285,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with credit status filter" do
+    context "with credit status filter", :lago_premium do
       let(:params) { {credit_status: matching_credit_statuses} }
       let(:matching_credit_statuses) { CreditNote::CREDIT_STATUS.sample(2) }
 
@@ -311,7 +311,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with refund status filter" do
+    context "with refund status filter", :lago_premium do
       let(:params) { {refund_status: matching_refund_statuses} }
       let(:matching_refund_statuses) { CreditNote::REFUND_STATUS.sample(2) }
 
@@ -337,7 +337,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with invoice number filter" do
+    context "with invoice number filter", :lago_premium do
       let(:params) { {invoice_number: matching_credit_note.invoice.number} }
       let!(:matching_credit_note) { create(:credit_note, customer:) }
 
@@ -354,7 +354,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with issuing date filters" do
+    context "with issuing date filters", :lago_premium do
       let(:params) do
         {
           issuing_date_from: credit_notes.second.issuing_date,
@@ -376,7 +376,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with amount filters" do
+    context "with amount filters", :lago_premium do
       let(:params) do
         {
           amount_from: credit_notes.second.total_amount_cents,
@@ -398,7 +398,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with self billed invoice filter" do
+    context "with self billed invoice filter", :lago_premium do
       let(:params) { {self_billed: true} }
 
       let(:self_billed_credit_note) do
@@ -424,7 +424,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(json[:credit_notes].first[:lago_id]).to eq(self_billed_credit_note.id)
       end
 
-      context "when self billed is false" do
+      context "when self billed is false", :lago_premium do
         let(:params) { {self_billed: false} }
 
         it "returns non self billed credit_notes" do
@@ -436,7 +436,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         end
       end
 
-      context "when self billed is nil" do
+      context "when self billed is nil", :lago_premium do
         let(:params) { {self_billed: nil} }
 
         it "returns all credit_notes" do
@@ -448,7 +448,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with search term" do
+    context "with search term", :lago_premium do
       let(:params) { {search_term: matching_credit_note.invoice.number} }
       let!(:matching_credit_note) { create(:credit_note, customer:) }
 
@@ -465,7 +465,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "with billing entity codes filter" do
+    context "with billing entity codes filter", :lago_premium do
       let(:params) { {billing_entity_codes: [billing_entity.code]} }
       let(:billing_entity) { create(:billing_entity, organization:) }
       let(:matching_credit_note) { create(:credit_note, customer:, invoice: create(:invoice, billing_entity:)) }
@@ -483,7 +483,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
         expect(json[:credit_notes].pluck(:lago_id)).to contain_exactly matching_credit_note.id
       end
 
-      context "when one of billing entity codes is not found" do
+      context "when one of billing entity codes is not found", :lago_premium do
         let(:params) { {billing_entity_codes: [billing_entity.code, SecureRandom.uuid]} }
 
         it "returns an error" do
@@ -525,8 +525,6 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       }
     end
 
-    around { |test| lago_premium!(&test) }
-
     include_examples "requires API permission", "credit_note", "write"
 
     it "creates a credit note" do
@@ -558,7 +556,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       expect(json[:credit_note][:items][1][:fee][:lago_id]).to eq(fee2.id)
     end
 
-    context "when invoice is not found" do
+    context "when invoice is not found", :lago_premium do
       let(:invoice_id) { SecureRandom.uuid }
 
       it "returns not found" do
@@ -584,7 +582,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       expect(json[:credit_note][:balance_amount_cents]).to eq(0)
     end
 
-    context "when credit note does not exist" do
+    context "when credit note, :lago_premium does not exist", :lago_premium do
       let(:credit_note_id) { SecureRandom.uuid }
 
       it "returns a not found error" do
@@ -593,7 +591,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       end
     end
 
-    context "when credit note is not voidable" do
+    context "when credit note is not voidable", :lago_premium do
       before { credit_note.update!(credit_amount_cents: 0, credit_status: :voided) }
 
       it "returns an unprocessable entity error" do
@@ -622,8 +620,6 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       }
     end
 
-    around { |test| lago_premium!(&test) }
-
     include_examples "requires API permission", "credit_note", "write"
 
     it "returns the computed amounts for credit note creation" do
@@ -644,7 +640,7 @@ RSpec.describe Api::V1::CreditNotesController, type: :request do
       expect(estimated_credit_note[:applied_taxes]).to be_blank
     end
 
-    context "with invalid invoice" do
+    context "with invalid invoice", :lago_premium do
       let(:invoice) { create(:invoice) }
 
       it "returns not found" do

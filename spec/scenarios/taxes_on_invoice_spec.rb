@@ -10,9 +10,7 @@ describe "Taxes on Invoice Scenarios", :scenarios, type: :request do
     organization
   end
 
-  around { |test| lago_premium!(&test) }
-
-  context "when timezone is negative and not the same day as UTC" do
+  context "when timezone is negative and not the same day as UTC", :lago_premium do
     it "creates an invoice for the expected period" do
       travel_to(DateTime.new(2023, 1, 1)) do
         create_tax(name: "Banking rates", code: "banking_rates", rate: 10.0)
@@ -161,7 +159,7 @@ describe "Taxes on Invoice Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when coupons amount is greater than fees total amount" do
+  context "when coupons amount is greater than fees total amount", :lago_premium do
     it "creates an invoice for the expected period" do
       travel_to(DateTime.new(2023, 1, 1)) do
         create_tax(name: "Banking rates", code: "banking_rates", rate: 10.0)
@@ -242,7 +240,7 @@ describe "Taxes on Invoice Scenarios", :scenarios, type: :request do
     end
   end
 
-  context "when there are multiple subscriptions and coupons are covering total amount" do
+  context "when there are multiple subscriptions and coupons are covering total amount", :lago_premium do
     it "creates an invoice for the expected period" do
       travel_to(DateTime.new(2023, 1, 1)) do
         create_tax(name: "Banking rates", code: "banking_rates", rate: 10.0)

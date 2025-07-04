@@ -23,13 +23,13 @@ RSpec.describe ApiKey, type: :model do
     describe "of value presence" do
       subject { api_key }
 
-      context "with a new record" do
+      context "with a new record", :lago_premium do
         let(:api_key) { build(:api_key) }
 
         it { is_expected.not_to validate_presence_of(:value) }
       end
 
-      context "with a persisted record" do
+      context "with a persisted record", :lago_premium do
         let(:api_key) { create(:api_key) }
 
         it { is_expected.to validate_presence_of(:value) }
@@ -42,7 +42,7 @@ RSpec.describe ApiKey, type: :model do
       let(:api_key) { build_stubbed(:api_key) }
       let(:error) { api_key.errors.where(:permissions, :forbidden_keys) }
 
-      context "when permissions has forbidden keys" do
+      context "when permissions has forbidden keys", :lago_premium do
         before do
           api_key.permissions = api_key.permissions.merge(forbidden: [])
           subject
@@ -53,7 +53,7 @@ RSpec.describe ApiKey, type: :model do
         end
       end
 
-      context "when permissions has no forbidden keys" do
+      context "when permissions has no forbidden keys", :lago_premium do
         before { subject }
 
         it "does not add forbidden keys error" do
@@ -70,7 +70,7 @@ RSpec.describe ApiKey, type: :model do
 
       before { subject }
 
-      context "when permission contains forbidden values" do
+      context "when permission contains forbidden values", :lago_premium do
         let(:permissions) { {add_on: ["forbidden", "read"]} }
 
         it "adds an error" do
@@ -78,7 +78,7 @@ RSpec.describe ApiKey, type: :model do
         end
       end
 
-      context "when permission contains only allowed values" do
+      context "when permission contains only allowed values", :lago_premium do
         let(:permissions) { {add_on: ["read", "write"]} }
 
         it "does not add an error" do
@@ -91,7 +91,7 @@ RSpec.describe ApiKey, type: :model do
   describe "#save" do
     subject { api_key.save! }
 
-    context "with a new record" do
+    context "with a new record", :lago_premium do
       let(:api_key) { build(:api_key) }
       let(:used_value) { create(:api_key).value }
       let(:unique_value) { SecureRandom.uuid }
@@ -105,7 +105,7 @@ RSpec.describe ApiKey, type: :model do
       end
     end
 
-    context "with a persisted record" do
+    context "with a persisted record", :lago_premium do
       let(:api_key) { create(:api_key) }
 
       it "does not change the value" do
@@ -146,21 +146,19 @@ RSpec.describe ApiKey, type: :model do
   describe "#permit?" do
     subject { api_key.permit?(resource, mode) }
 
-    around { |test| lago_premium!(&test) }
-
     let(:api_key) { create(:api_key, permissions:) }
     let(:resource) { described_class::RESOURCES.sample }
     let(:mode) { described_class::MODES.sample }
 
     before { api_key.organization.update!(premium_integrations:) }
 
-    context "when organization has 'api_permissions' add-on enabled" do
+    context "when organization has 'api_permissions' add-on enabled", :lago_premium do
       let(:premium_integrations) { ["api_permissions"] }
 
-      context "when corresponding resource is specified in permissions" do
+      context "when corresponding resource is specified in permissions", :lago_premium do
         let(:permissions) { {resource => allowed_modes} }
 
-        context "when corresponding resource allows provided mode" do
+        context "when corresponding resource allows provided mode", :lago_premium do
           let(:allowed_modes) { [mode] }
 
           it "returns true" do
@@ -168,7 +166,7 @@ RSpec.describe ApiKey, type: :model do
           end
         end
 
-        context "when corresponding resource does not allow provided mode" do
+        context "when corresponding resource, :lago_premium does not allow provided mode", :lago_premium do
           let(:allowed_modes) { described_class::MODES.excluding(mode) }
 
           it "returns false" do
@@ -177,7 +175,7 @@ RSpec.describe ApiKey, type: :model do
         end
       end
 
-      context "when corresponding resource does not specified in permissions" do
+      context "when corresponding resource, :lago_premium does not specified in permissions", :lago_premium do
         let(:permissions) { described_class.default_permissions.without(resource) }
 
         it "returns false" do
@@ -186,13 +184,13 @@ RSpec.describe ApiKey, type: :model do
       end
     end
 
-    context "when organization has 'api_permissions' add-on disabled" do
+    context "when organization has 'api_permissions' add-on disabled", :lago_premium do
       let(:premium_integrations) { [] }
 
-      context "when corresponding resource is specified in permissions" do
+      context "when corresponding resource is specified in permissions", :lago_premium do
         let(:permissions) { {resource => allowed_modes} }
 
-        context "when corresponding resource allows provided mode" do
+        context "when corresponding resource allows provided mode", :lago_premium do
           let(:allowed_modes) { [mode] }
 
           it "returns true" do
@@ -200,7 +198,7 @@ RSpec.describe ApiKey, type: :model do
           end
         end
 
-        context "when corresponding resource does not allow provided mode" do
+        context "when corresponding resource, :lago_premium does not allow provided mode", :lago_premium do
           let(:allowed_modes) { described_class::MODES.excluding(mode) }
 
           it "returns true" do
@@ -209,7 +207,7 @@ RSpec.describe ApiKey, type: :model do
         end
       end
 
-      context "when corresponding resource does not specified in permissions" do
+      context "when corresponding resource, :lago_premium does not specified in permissions", :lago_premium do
         let(:permissions) { described_class.default_permissions.without(resource) }
 
         it "returns true" do
@@ -222,12 +220,12 @@ RSpec.describe ApiKey, type: :model do
   describe "#expired?" do
     it { expect(subject).not_to be_expired }
 
-    context "with an expires_at value" do
+    context "with an expires_at value", :lago_premium do
       let(:expires_at) { Time.current + 1.hour }
 
       it { expect(subject).not_to be_expired }
 
-      context "when expires_at is in the past" do
+      context "when expires_at is in the past", :lago_premium do
         let(:expires_at) { Time.current - 1.hour }
 
         it { expect(subject).to be_expired }

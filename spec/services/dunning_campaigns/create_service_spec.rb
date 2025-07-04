@@ -29,7 +29,7 @@ RSpec.describe DunningCampaigns::CreateService, type: :service do
   end
 
   describe "#call" do
-    context "when lago freemium" do
+    context "when lago freemium", :lago_premium do
       it "returns an error" do
         result = create_service.call
 
@@ -43,9 +43,8 @@ RSpec.describe DunningCampaigns::CreateService, type: :service do
     end
 
     context "when lago premium" do
-      around { |test| lago_premium!(&test) }
 
-      context "when no auto_dunning premium integration" do
+      context "when no auto_dunning premium integration", :lago_premium do
         it "returns an error" do
           result = create_service.call
 
@@ -54,7 +53,7 @@ RSpec.describe DunningCampaigns::CreateService, type: :service do
         end
       end
 
-      context "when auto_dunning premium integration" do
+      context "when auto_dunning premium integration", :lago_premium do
         let(:organization) do
           create(:organization, premium_integrations: ["auto_dunning"])
         end
@@ -71,7 +70,7 @@ RSpec.describe DunningCampaigns::CreateService, type: :service do
           expect(result.dunning_campaign.bcc_emails).to eq([])
         end
 
-        context "when bcc_emails" do
+        context "when bcc_emails", :lago_premium do
           it do
             result = described_class.new(organization:, params: params.merge(bcc_emails: ["earl@example.com"])).call
 
@@ -79,7 +78,7 @@ RSpec.describe DunningCampaigns::CreateService, type: :service do
           end
         end
 
-        context "with a previous dunning campaign set as applied on default billing entity" do
+        context "with a previous dunning campaign set as applied on default billing entity", :lago_premium do
           let(:dunning_campaign_2) do
             create(:dunning_campaign, organization:)
           end
@@ -92,7 +91,7 @@ RSpec.describe DunningCampaigns::CreateService, type: :service do
           end
         end
 
-        context "with applied_to_organization true" do
+        context "with applied_to_organization true", :lago_premium do
           let(:applied_to_organization) { true }
 
           it "updates the default billing entity with applied_dunning_campaign" do
@@ -102,7 +101,7 @@ RSpec.describe DunningCampaigns::CreateService, type: :service do
             expect(organization.default_billing_entity.applied_dunning_campaign).to eq(result.dunning_campaign)
           end
 
-          context "with a previous dunning campaign set as applied on default billing entity" do
+          context "with a previous dunning campaign set as applied on default billing entity", :lago_premium do
             let(:dunning_campaign_2) do
               create(:dunning_campaign, organization:)
             end
@@ -124,7 +123,7 @@ RSpec.describe DunningCampaigns::CreateService, type: :service do
           end
         end
 
-        context "with validation error" do
+        context "with validation error", :lago_premium do
           before do
             create(:dunning_campaign, organization:, code: "dunning-campaign")
           end
@@ -138,7 +137,7 @@ RSpec.describe DunningCampaigns::CreateService, type: :service do
           end
         end
 
-        context "without thresholds" do
+        context "without thresholds", :lago_premium do
           let(:thresholds) { [] }
 
           it "returns an error" do

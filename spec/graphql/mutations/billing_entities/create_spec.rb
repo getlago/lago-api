@@ -80,8 +80,6 @@ RSpec.describe Mutations::BillingEntities::Create, type: :graphql do
     "data:image/png;base64,#{base64_logo}"
   end
 
-  around { |test| lago_premium!(&test) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "billing_entities:create"
@@ -101,7 +99,7 @@ RSpec.describe Mutations::BillingEntities::Create, type: :graphql do
     )
   end
 
-  context "when the organization can create billing entities" do
+  context "when the organization can create billing entities", :lago_premium do
     let(:organization) { create(:organization, premium_integrations: %w[multi_entities_enterprise]) }
 
     it "creates a billing entity for the current organization" do
@@ -139,7 +137,7 @@ RSpec.describe Mutations::BillingEntities::Create, type: :graphql do
       expect(result_data["billingConfiguration"]).to be_nil
     end
 
-    context "with extra view permissions" do
+    context "with extra view permissions", :lago_premium do
       let(:permissions) do
         [required_permission].concat(%w[billing_entities:emails:view billing_entities:invoices:view])
       end

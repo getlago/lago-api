@@ -3,7 +3,6 @@
 require "rails_helper"
 
 describe "Daily Usages: Fill History", :time_travel, :scenarios, type: :request, transaction: false do
-  around { |test| lago_premium!(&test) }
 
   let(:organization) { create(:organization, webhook_url: nil, email_settings: [], premium_integrations: ["revenue_analytics"]) }
   let(:plan) { create(:plan, organization:, interval: "monthly", amount_cents: 0, pay_in_advance: true) }

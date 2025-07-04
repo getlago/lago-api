@@ -141,7 +141,7 @@ RSpec.describe Plans::UpdateService, type: :service do
     end
 
     context "with activity logs" do
-      context "when no parent" do
+      context "when no parent", :lago_premium do
         it "produces" do
           described_class.call(plan:, params: update_args)
 
@@ -149,7 +149,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "when plan is a children" do
+      context "when plan is a children", :lago_premium do
         let(:parent_id) { plan.id }
         let(:child_plan) { create(:plan, organization:, parent_id:) }
 
@@ -161,7 +161,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "with cascade option" do
+    context "with cascade option", :lago_premium do
       let(:child_plan) { create(:plan, organization:, parent_id:) }
       let(:parent_id) { plan.id }
 
@@ -170,7 +170,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         update_args[:cascade_updates] = true
       end
 
-      context "when cascade is true and there is no children plans" do
+      context "when cascade is true and there is no children plans", :lago_premium do
         let(:parent_id) { nil }
 
         it "does not enqueue the job for updating subscription fee" do
@@ -180,7 +180,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "when cascade is true and child plan is already updated" do
+      context "when cascade is true and child plan is already updated", :lago_premium do
         let(:child_plan) { create(:plan, organization:, parent_id:, amount_cents: 150) }
 
         it "does not enqueue the job for updating subscription fee" do
@@ -190,7 +190,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "when cascade is true with children plans not touched" do
+      context "when cascade is true with children plans not touched", :lago_premium do
         it "enqueues the job for updating subscription fee" do
           expect do
             plans_service.call
@@ -198,7 +198,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "when cascade is false with children plans not touched" do
+      context "when cascade is false with children plans not touched", :lago_premium do
         before do
           update_args[:cascade_updates] = false
         end
@@ -211,7 +211,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "when thresholds are present" do
+    context "when thresholds are present", :lago_premium do
       let(:usage_thresholds) do
         updated_plan.usage_thresholds.order(threshold_display_name: :asc)
       end
@@ -226,14 +226,13 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
 
       context "with premium license" do
-        around { |test| lago_premium!(&test) }
 
-        context "when progressive billing premium integration is present" do
+        context "when progressive billing premium integration is present", :lago_premium do
           before do
             plan.organization.update!(premium_integrations: ["progressive_billing"])
           end
 
-          context "when thresholds args are passed" do
+          context "when thresholds args are passed", :lago_premium do
             before do
               update_args[:usage_thresholds] = usage_thresholds_args
 
@@ -262,7 +261,7 @@ RSpec.describe Plans::UpdateService, type: :service do
             end
           end
 
-          context "when thresholds args are passed as empty array" do
+          context "when thresholds args are passed as empty array", :lago_premium do
             before do
               update_args[:usage_thresholds] = []
             end
@@ -272,7 +271,7 @@ RSpec.describe Plans::UpdateService, type: :service do
             end
           end
 
-          context "when thresholds args are not passed" do
+          context "when thresholds args are not passed", :lago_premium do
             it "does not update the thresholds" do
               aggregate_failures do
                 expect(usage_thresholds.count).to eq(4)
@@ -286,34 +285,33 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "when thresholds are not present" do
+    context "when thresholds are not present", :lago_premium do
       let(:usage_thresholds) do
         updated_plan.usage_thresholds.order(threshold_display_name: :asc)
       end
 
       let(:updated_plan) { plans_service.call.plan }
 
-      context "without premium license" do
+      context "without premium license", :lago_premium do
         it "does not create progressive billing thresholds" do
           expect(usage_thresholds.count).to eq(0)
         end
       end
 
       context "with premium license" do
-        around { |test| lago_premium!(&test) }
 
-        context "when progressive billing premium integration is not present" do
+        context "when progressive billing premium integration is not present", :lago_premium do
           it "does not create progressive billing thresholds" do
             expect(usage_thresholds.count).to eq(0)
           end
         end
 
-        context "when progressive billing premium integration is present" do
+        context "when progressive billing premium integration is present", :lago_premium do
           before do
             plan.organization.update!(premium_integrations: ["progressive_billing"])
           end
 
-          context "when thresholds args are passed" do
+          context "when thresholds args are passed", :lago_premium do
             before do
               update_args[:usage_thresholds] = usage_thresholds_args
             end
@@ -337,7 +335,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "when charges are not passed" do
+    context "when charges are not passed", :lago_premium do
       let(:charge) { create(:standard_charge, plan:) }
       let(:update_args) do
         {
@@ -363,7 +361,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "when plan amount is updated" do
+    context "when plan amount is updated", :lago_premium do
       let(:new_customer) { create(:customer, organization:) }
       let(:subscription) { create(:subscription, plan:, customer: new_customer) }
       let(:update_args) do
@@ -389,7 +387,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "when there are pending subscriptions which are not relevant after the amount cents decrease" do
+      context "when there are pending subscriptions which are not relevant after the amount cents decrease", :lago_premium do
         let(:pending_plan) { create(:plan, organization:, amount_cents: 10) }
         let(:pending_subscription) do
           create(:subscription, plan: pending_plan, status: :pending, previous_subscription_id: subscription.id)
@@ -409,7 +407,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "when there are pending subscriptions which are not relevant after the amount cents increase" do
+      context "when there are pending subscriptions which are not relevant after the amount cents increase", :lago_premium do
         let(:original_plan) { create(:plan, organization:, amount_cents: 150) }
         let(:subscription) { create(:subscription, plan: original_plan, customer: new_customer) }
         let(:pending_subscription) do
@@ -448,7 +446,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           expect(result.plan.amount_cents).to eq(200)
         end
 
-        context "when pending subscription does not have a previous one" do
+        context "when pending subscription, :lago_premium does not have a previous one", :lago_premium do
           let(:pending_subscription) do
             create(:subscription, plan:, status: :pending, previous_subscription_id: nil)
           end
@@ -460,7 +458,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when subscription upgrade fails" do
+        context "when subscription upgrade fails", :lago_premium do
           let(:plan_upgrade_result) do
             BaseService::Result.new.validation_failure!(
               errors: {billing_time: ["value_is_invalid"]}
@@ -478,7 +476,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "when plan is not found" do
+    context "when plan is not found", :lago_premium do
       let(:applied_tax) { nil }
       let(:plan) { nil }
 
@@ -492,7 +490,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "with validation error" do
+    context "with validation error", :lago_premium do
       let(:plan_name) { nil }
 
       it "returns an error" do
@@ -505,7 +503,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "with new charge" do
+      context "with new charge", :lago_premium do
         let(:plan_name) { "foo" }
 
         let(:charges_args) do
@@ -528,7 +526,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "with premium charge model" do
+      context "with premium charge model", :lago_premium do
         let(:plan_name) { "foo" }
 
         let(:charges_args) do
@@ -568,8 +566,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when premium" do
-          around { |test| lago_premium!(&test) }
+        context "when premium", :lago_premium do
 
           it "saves premium charge model" do
             plans_service.call
@@ -586,7 +583,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "with metrics from other organization" do
+    context "with metrics from other organization", :lago_premium do
       let(:billable_metric) { create(:billable_metric) }
 
       it "returns an error" do
@@ -600,11 +597,10 @@ RSpec.describe Plans::UpdateService, type: :service do
     end
 
     context "when plan has no minimum commitment" do
-      context "when minimum commitment arguments are present" do
+      context "when minimum commitment arguments are present", :lago_premium do
         before { update_args.merge!({minimum_commitment: minimum_commitment_args}) }
 
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
+        context "when license is premium", :lago_premium do
 
           it "creates minimum commitment" do
             result = plans_service.call
@@ -617,7 +613,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not create minimum commitment" do
             result = plans_service.call
 
@@ -627,8 +623,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
 
       context "when minimum commitment arguments are not present" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
+        context "when license is premium", :lago_premium do
 
           it "does not create minimum commitment" do
             result = plans_service.call
@@ -637,7 +632,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not create minimum commitment" do
             result = plans_service.call
 
@@ -646,11 +641,10 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "when minimum commitment arguments is an empty hash" do
+      context "when minimum commitment arguments is an empty hash", :lago_premium do
         before { update_args.merge!({minimum_commitment: {}}) }
 
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
+        context "when license is premium", :lago_premium do
 
           it "does not create minimum commitment" do
             result = plans_service.call
@@ -659,7 +653,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not create minimum commitment" do
             result = plans_service.call
 
@@ -669,16 +663,15 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "when plan has minimum commitment" do
+    context "when plan has minimum commitment", :lago_premium do
       let(:minimum_commitment) { create(:commitment, plan:) }
 
       before { minimum_commitment }
 
-      context "when minimum commitment arguments are present" do
+      context "when minimum commitment arguments are present", :lago_premium do
         before { update_args.merge!({minimum_commitment: minimum_commitment_args}) }
 
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
+        context "when license is premium", :lago_premium do
 
           it "updates minimum commitment" do
             result = plans_service.call
@@ -687,7 +680,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not update minimum commitment" do
             result = plans_service.call
 
@@ -696,15 +689,14 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "when only some minimum commitment arguments are present" do
+      context "when only some minimum commitment arguments are present", :lago_premium do
         let(:minimum_commitment_args) do
           {invoice_display_name: minimum_commitment_invoice_display_name}
         end
 
         before { update_args.merge!({minimum_commitment: minimum_commitment_args}) }
 
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
+        context "when license is premium", :lago_premium do
 
           it "does not update minimum commitment args that are not present" do
             result = plans_service.call
@@ -716,7 +708,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not update minimum commitment" do
             result = plans_service.call
 
@@ -727,8 +719,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
 
       context "when minimum commitment arguments are not present" do
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
+        context "when license is premium", :lago_premium do
 
           it "does not update minimum commitment" do
             result = plans_service.call
@@ -737,7 +728,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not update minimum commitment" do
             result = plans_service.call
 
@@ -746,11 +737,10 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "when minimum commitment arguments is an empty hash" do
+      context "when minimum commitment arguments is an empty hash", :lago_premium do
         before { update_args.merge!({minimum_commitment: {}}) }
 
-        context "when license is premium" do
-          around { |test| lago_premium!(&test) }
+        context "when license is premium", :lago_premium do
 
           it "deletes plan minimum commitment" do
             result = plans_service.call
@@ -759,7 +749,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when license is not premium" do
+        context "when license is not premium", :lago_premium do
           it "does not delete minimum commitment" do
             result = plans_service.call
 
@@ -861,8 +851,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         expect(plan.charges.where(pay_in_advance: false).first.min_amount_cents).to eq(0)
       end
 
-      context "when premium" do
-        around { |test| lago_premium!(&test) }
+      context "when premium", :lago_premium do
 
         it "saves premium attributes" do
           plans_service.call
@@ -873,7 +862,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "with cascade option and update charge case" do
+      context "with cascade option and update charge case", :lago_premium do
         let(:child_plan) { create(:plan, organization:, parent_id:) }
         let(:parent_id) { plan.id }
         let(:charge_parent_id) { existing_charge.id }
@@ -892,7 +881,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           update_args[:cascade_updates] = true
         end
 
-        context "when cascade is true and there is no children plans" do
+        context "when cascade is true and there is no children plans", :lago_premium do
           let(:parent_id) { nil }
 
           it "does not enqueue the job for updating charge" do
@@ -902,7 +891,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when cascade is true and there are children plans" do
+        context "when cascade is true and there are children plans", :lago_premium do
           it "enqueues the job for updating charge" do
             expect do
               plans_service.call
@@ -910,7 +899,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when cascade is false with children plans" do
+        context "when cascade is false with children plans", :lago_premium do
           before do
             update_args[:cascade_updates] = false
           end
@@ -923,7 +912,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "with cascade option and create charge case" do
+      context "with cascade option and create charge case", :lago_premium do
         let(:child_plan) { create(:plan, organization:, parent_id:) }
         let(:parent_id) { plan.id }
 
@@ -932,7 +921,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           update_args[:cascade_updates] = true
         end
 
-        context "when cascade is true and there is no children plans" do
+        context "when cascade is true and there is no children plans", :lago_premium do
           let(:parent_id) { nil }
 
           it "does not enqueue the job for creating new charge" do
@@ -942,7 +931,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when cascade is true and there are children plans" do
+        context "when cascade is true and there are children plans", :lago_premium do
           it "enqueues the job for creating new charge" do
             expect do
               plans_service.call
@@ -951,7 +940,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when cascade is false with children plans" do
+        context "when cascade is false with children plans", :lago_premium do
           before do
             update_args[:cascade_updates] = false
           end
@@ -965,7 +954,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "with existing charge attached to subscription" do
+    context "with existing charge attached to subscription", :lago_premium do
       let(:existing_charge) do
         create(
           :standard_charge,
@@ -1006,7 +995,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "with charge to delete" do
+    context "with charge to delete", :lago_premium do
       let(:subscription) { create(:subscription, plan:) }
       let(:charge) do
         create(
@@ -1044,7 +1033,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         end
       end
 
-      context "with cascade option" do
+      context "with cascade option", :lago_premium do
         let(:child_plan) { create(:plan, organization:, parent_id:) }
         let(:parent_id) { plan.id }
         let(:charge_parent_id) { charge.id }
@@ -1063,7 +1052,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           update_args[:cascade_updates] = true
         end
 
-        context "when cascade is true and there is no children plans" do
+        context "when cascade is true and there is no children plans", :lago_premium do
           let(:parent_id) { nil }
 
           it "does not enqueue the job for removing charge" do
@@ -1073,7 +1062,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when cascade is true and there are children plans" do
+        context "when cascade is true and there are children plans", :lago_premium do
           it "enqueues the job for removing charge" do
             expect do
               plans_service.call
@@ -1081,7 +1070,7 @@ RSpec.describe Plans::UpdateService, type: :service do
           end
         end
 
-        context "when cascade is false with children plans" do
+        context "when cascade is false with children plans", :lago_premium do
           before do
             update_args[:cascade_updates] = false
           end
@@ -1095,7 +1084,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "when attached to a subscription" do
+    context "when attached to a subscription", :lago_premium do
       let(:existing_charge) do
         create(
           :standard_charge,

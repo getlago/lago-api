@@ -16,7 +16,7 @@ RSpec.describe Charges::UpdateService, type: :service do
   describe "#call" do
     subject(:result) { update_service.call }
 
-    context "when charge is missing" do
+    context "when charge is missing", :lago_premium do
       let(:charge) { nil }
       let(:params) { {} }
 
@@ -26,7 +26,7 @@ RSpec.describe Charges::UpdateService, type: :service do
       end
     end
 
-    context "when charge exists" do
+    context "when charge exists", :lago_premium do
       let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
       let(:charge) do
         create(
@@ -103,8 +103,7 @@ RSpec.describe Charges::UpdateService, type: :service do
         expect(charge.reload).to have_attributes(pay_in_advance: true, invoiceable: true)
       end
 
-      context "when premium" do
-        around { |test| lago_premium!(&test) }
+      context "when premium", :lago_premium do
 
         it "saves premium attributes" do
           subject
@@ -113,7 +112,7 @@ RSpec.describe Charges::UpdateService, type: :service do
         end
       end
 
-      context "when cascade is true" do
+      context "when cascade is true", :lago_premium do
         let(:cascade_options) do
           {
             cascade: true,
@@ -142,7 +141,7 @@ RSpec.describe Charges::UpdateService, type: :service do
           expect { subject }.to change(charge.applied_pricing_unit, :conversion_rate).to(2.5)
         end
 
-        context "with pricing_group_keys in the properties" do
+        context "with pricing_group_keys in the properties", :lago_premium do
           let(:pricing_group_keys) { {pricing_group_keys: ["cloud"]} }
 
           it "apply the value to the charge" do
@@ -151,7 +150,7 @@ RSpec.describe Charges::UpdateService, type: :service do
           end
         end
 
-        context "with charge properties already overridden" do
+        context "with charge properties already overridden", :lago_premium do
           let(:cascade_options) do
             {
               cascade: true,
@@ -164,7 +163,7 @@ RSpec.describe Charges::UpdateService, type: :service do
             expect { subject }.not_to change { charge.reload.properties }
           end
 
-          context "with pricing_group_keys in the properties" do
+          context "with pricing_group_keys in the properties", :lago_premium do
             let(:pricing_group_keys) { {pricing_group_keys: ["cloud"]} }
 
             it "apply the value to the charge" do
@@ -172,7 +171,7 @@ RSpec.describe Charges::UpdateService, type: :service do
                 .from(nil).to(["cloud"])
             end
 
-            context "when charge has a pricing_group_keys" do
+            context "when charge has a pricing_group_keys", :lago_premium do
               let(:charge) do
                 create(
                   :standard_charge,
@@ -193,7 +192,7 @@ RSpec.describe Charges::UpdateService, type: :service do
             end
           end
 
-          context "with legacy grouped_by in the properties" do
+          context "with legacy grouped_by in the properties", :lago_premium do
             let(:pricing_group_keys) { {grouped_by: ["cloud"]} }
 
             it "apply the value to the charge" do
@@ -201,7 +200,7 @@ RSpec.describe Charges::UpdateService, type: :service do
                 .from(nil).to(["cloud"])
             end
 
-            context "when charge has a grouped_by" do
+            context "when charge has a grouped_by", :lago_premium do
               let(:charge) do
                 create(
                   :standard_charge,
@@ -223,7 +222,7 @@ RSpec.describe Charges::UpdateService, type: :service do
           end
         end
 
-        context "when applied pricing unit params are invalid" do
+        context "when applied pricing unit params are invalid", :lago_premium do
           let(:applied_pricing_unit_params) do
             {
               conversion_rate: -1

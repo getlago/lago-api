@@ -19,8 +19,6 @@ describe "Stripe Payment for Real", :scenarios, type: :request do
 
   include_context "with webhook tracking"
 
-  around { |test| lago_premium!(&test) }
-
   before do
     raise "You need to set the SPEC_STRIPE_SECRET_KEY environment variable" unless api_key
 
@@ -153,7 +151,7 @@ describe "Stripe Payment for Real", :scenarios, type: :request do
     })
   end
 
-  context "when customer is in India and has `require_action` on 3DS" do
+  context "when customer is in India and has `require_action` on 3DS", :lago_premium do
     it do
       create_or_update_customer({
         external_id: "cust_#{external_id}",
@@ -194,7 +192,7 @@ describe "Stripe Payment for Real", :scenarios, type: :request do
     end
   end
 
-  context "with payment authorization" do
+  context "with payment authorization", :lago_premium do
     it do
     end
   end

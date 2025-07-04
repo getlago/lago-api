@@ -30,15 +30,13 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
       .and_return(payment_request_result)
   end
 
-  context "when premium features are enabled" do
+  context "when premium features are enabled", :lago_premium do
     let(:organization) { create :organization, premium_integrations: %w[auto_dunning] }
 
     let(:invoice_1) { create :invoice, organization:, customer:, currency:, payment_overdue: false }
     let(:invoice_2) { create :invoice, organization:, customer:, currency:, payment_overdue: true, total_amount_cents: 99_00 }
     let(:invoice_3) { create :invoice, organization:, customer:, currency: "USD", payment_overdue: true }
     let(:invoice_4) { create :invoice, currency:, payment_overdue: true }
-
-    around { |test| lago_premium!(&test) }
 
     before do
       invoice_1
@@ -76,7 +74,7 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
       end
     end
 
-    context "when dunning campaign max attempt is reached" do
+    context "when dunning campaign max attempt is reached", :lago_premium do
       let(:customer) do
         create(
           :customer,
@@ -93,7 +91,7 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
       end
     end
 
-    context "when the campaign threshold is not reached" do
+    context "when the campaign threshold is not reached", :lago_premium do
       let(:dunning_campaign_threshold) do
         create :dunning_campaign_threshold, dunning_campaign:, currency:, amount_cents: 99_01
       end
@@ -104,7 +102,7 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
       end
     end
 
-    context "when the campaign is not applicable anymore" do
+    context "when the campaign is not applicable anymore", :lago_premium do
       let(:customer) do
         create :customer, organization:, currency:, applied_dunning_campaign:
       end
@@ -125,7 +123,7 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
       end
     end
 
-    context "when the customer is excluded from auto dunning" do
+    context "when the customer is excluded from auto dunning", :lago_premium do
       let(:customer) do
         create :customer, organization:, currency:, exclude_from_dunning_campaign: true
       end
@@ -136,7 +134,7 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
       end
     end
 
-    context "when days between attempts has not passed" do
+    context "when days between attempts has not passed", :lago_premium do
       let(:customer) do
         create(
           :customer,
@@ -164,7 +162,7 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
       end
     end
 
-    context "when payment request creation fails" do
+    context "when payment request creation fails", :lago_premium do
       before do
         payment_request_result.service_failure!(code: "error", message: "failure")
       end
@@ -177,7 +175,7 @@ RSpec.describe DunningCampaigns::ProcessAttemptService, type: :service, aggregat
       end
     end
 
-    context "when a customer has invoices that are not ready for payment processing" do
+    context "when a customer has invoices that are not ready for payment processing", :lago_premium do
       let(:invoice_5) { create :invoice, organization:, customer:, currency:, payment_overdue: true, ready_for_payment_processing: false, total_amount_cents: 99_00 }
 
       before { invoice_5 }

@@ -181,7 +181,7 @@ RSpec.describe BillingEntity, type: :model do
   describe "#save" do
     subject { billing_entity.save! }
 
-    context "with a new record" do
+    context "with a new record", :lago_premium do
       let(:billing_entity) { build(:billing_entity) }
 
       it "sets document number prefix of billing_entity" do
@@ -191,7 +191,7 @@ RSpec.describe BillingEntity, type: :model do
           .to eq "#{billing_entity.name.first(3).upcase}-#{billing_entity.id.last(4).upcase}"
       end
 
-      context "when document number prefix is already set" do
+      context "when, :lago_premium document number prefix is already set", :lago_premium do
         it "does not change existing document number prefix of billing_entity" do
           billing_entity.document_number_prefix = "ABC-1234"
           subject
@@ -201,7 +201,7 @@ RSpec.describe BillingEntity, type: :model do
       end
     end
 
-    context "with a persisted record" do
+    context "with a persisted record", :lago_premium do
       let(:billing_entity) { create(:billing_entity) }
 
       it "does not change document number prefix of billing_entity" do
@@ -252,21 +252,21 @@ RSpec.describe BillingEntity, type: :model do
   end
 
   describe "#eu_vat_eligible?" do
-    context "when country is nil" do
+    context "when country is nil", :lago_premium do
       it "returns false" do
         billing_entity.country = nil
         expect(billing_entity).not_to be_eu_vat_eligible
       end
     end
 
-    context "when country is not in the EU" do
+    context "when country is not in the EU", :lago_premium do
       it "returns false" do
         billing_entity.country = "US"
         expect(billing_entity).not_to be_eu_vat_eligible
       end
     end
 
-    context "when country is in the EU" do
+    context "when country is in the EU", :lago_premium do
       it "returns true" do
         billing_entity.country = "FR"
         expect(billing_entity).to be_eu_vat_eligible
@@ -281,11 +281,9 @@ RSpec.describe BillingEntity, type: :model do
       expect(from_email_address).to eq("noreply@getlago.com")
     end
 
-    context "when organization from_email integration is enabled" do
+    context "when organization from_email integration is enabled", :lago_premium do
       let(:organization) { create(:organization, premium_integrations: ["from_email"]) }
       let(:billing_entity) { build(:billing_entity, organization:) }
-
-      around { |test| lago_premium!(&test) }
 
       it "returns the billing_entity email" do
         expect(from_email_address).to eq(billing_entity.email)

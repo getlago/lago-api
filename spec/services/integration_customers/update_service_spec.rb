@@ -27,7 +27,7 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
 
     before { integration_customer }
 
-    context "with netsuite premium integration present" do
+    context "with netsuite premium integration present", :lago_premium do
       let(:integration_code) { integration.code }
       let(:external_customer_id) { nil }
       let(:sync_with_provider) { true }
@@ -44,8 +44,6 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
         instance_double(Integrations::Aggregator::Contacts::UpdateService)
       end
 
-      around { |test| lago_premium!(&test) }
-
       before do
         organization.update!(premium_integrations: ["netsuite"])
 
@@ -57,10 +55,10 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
         allow(aggregator_contacts_update_service).to receive(:call).and_return(update_result)
       end
 
-      context "when sync with provider is true" do
+      context "when sync with provider is true", :lago_premium do
         let(:sync_with_provider) { true }
 
-        context "when external customer id is present" do
+        context "when external customer id is present", :lago_premium do
           let(:external_customer_id) { SecureRandom.uuid }
 
           it "returns integration customer" do
@@ -75,7 +73,7 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
           end
         end
 
-        context "when subsidiary id is present" do
+        context "when subsidiary id is present", :lago_premium do
           it "returns integration customer" do
             result = service_call
 
@@ -87,7 +85,7 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
           end
         end
 
-        context "when customer external id is not present" do
+        context "when customer external id is not present", :lago_premium do
           let(:external_customer_id) { nil }
 
           it "returns integration customer" do
@@ -101,7 +99,7 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
           end
         end
 
-        context "with anrok customer" do
+        context "with anrok customer", :lago_premium do
           let(:external_customer_id) { SecureRandom.uuid }
           let(:integration_customer) { create(:anrok_customer, integration:, customer:) }
 
@@ -118,7 +116,7 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
           end
         end
 
-        context "with salesforce customer" do
+        context "with salesforce customer", :lago_premium do
           let(:external_customer_id) { SecureRandom.uuid }
           let(:integration) { create(:salesforce_integration, organization:) }
           let(:integration_customer) { create(:salesforce_customer, integration:, customer:) }
@@ -137,10 +135,10 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
         end
       end
 
-      context "when sync with provider is false" do
+      context "when sync with provider is false", :lago_premium do
         let(:sync_with_provider) { false }
 
-        context "when customer external id is present" do
+        context "when customer external id is present", :lago_premium do
           let(:external_customer_id) { SecureRandom.uuid }
 
           it "calls aggregator update service" do
@@ -156,7 +154,7 @@ RSpec.describe IntegrationCustomers::UpdateService, type: :service do
           end
         end
 
-        context "when customer external id is not present" do
+        context "when customer external id is not present", :lago_premium do
           let(:external_customer_id) { nil }
 
           it "does not calls aggregator update service" do

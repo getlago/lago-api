@@ -13,8 +13,6 @@ describe "Create partner and run billing Scenarios", :scenarios, type: :request 
     {code: metric.code, transaction_id: SecureRandom.uuid}
   end
 
-  around { |test| lago_premium!(&test) }
-
   before do
     billing_entity.update!(document_numbering: "per_billing_entity")
   end

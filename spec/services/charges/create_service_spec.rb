@@ -11,7 +11,7 @@ RSpec.describe Charges::CreateService, type: :service do
   describe "#call" do
     subject(:result) { create_service.call }
 
-    context "when plan is not found" do
+    context "when plan is not found", :lago_premium do
       let(:plan) { nil }
       let(:params) { {} }
 
@@ -21,10 +21,10 @@ RSpec.describe Charges::CreateService, type: :service do
       end
     end
 
-    context "when plan exists" do
+    context "when plan exists", :lago_premium do
       let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
 
-      context "when params are invalid" do
+      context "when params are invalid", :lago_premium do
         let(:params) do
           {
             billable_metric_id: sum_billable_metric.id,
@@ -127,8 +127,7 @@ RSpec.describe Charges::CreateService, type: :service do
           )
         end
 
-        context "when premium" do
-          around { |test| lago_premium!(&test) }
+        context "when premium", :lago_premium do
 
           it "assigns premium attributes values from params" do
             expect(result.charge)
@@ -136,13 +135,13 @@ RSpec.describe Charges::CreateService, type: :service do
               .and have_attributes(invoiceable: false, min_amount_cents: 10)
           end
 
-          context "when applied pricing unit params are valid" do
+          context "when applied pricing unit params are valid", :lago_premium do
             it "creates applied pricing unit" do
               expect { subject }.to change(AppliedPricingUnit, :count).by(1)
             end
           end
 
-          context "when applied pricing unit params are invalid" do
+          context "when applied pricing unit params are invalid", :lago_premium do
             let(:applied_pricing_unit_params) do
               {
                 code: "non-existing-code",
@@ -169,7 +168,7 @@ RSpec.describe Charges::CreateService, type: :service do
           end
         end
 
-        context "when freemium" do
+        context "when freemium", :lago_premium do
           it "assigns premium attributes default values no matter of values in params" do
             expect(result.charge)
               .to be_persisted

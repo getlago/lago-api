@@ -33,14 +33,13 @@ RSpec.describe Charges::OverrideService, type: :service do
 
     before { charge }
 
-    context "when lago freemium" do
+    context "when lago freemium", :lago_premium do
       it "returns without overriding the charge" do
         expect { override_service.call }.not_to change(Charge, :count)
       end
     end
 
-    context "when lago premium" do
-      around { |test| lago_premium!(&test) }
+    context "when lago premium", :lago_premium do
 
       it "creates a charge based on the given charge" do
         applied_tax = create(:charge_applied_tax, charge:)
@@ -67,7 +66,7 @@ RSpec.describe Charges::OverrideService, type: :service do
         expect(new_charge.taxes).to contain_exactly(tax)
       end
 
-      context "with charge filters" do
+      context "with charge filters", :lago_premium do
         let(:billable_metric_filter) { create(:billable_metric_filter, billable_metric:) }
 
         let(:charge) do
@@ -150,7 +149,7 @@ RSpec.describe Charges::OverrideService, type: :service do
         end
       end
 
-      context "with applied pricing unit" do
+      context "with applied pricing unit", :lago_premium do
         let(:params) do
           {
             id: charge.id,

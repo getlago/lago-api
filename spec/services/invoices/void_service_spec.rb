@@ -8,7 +8,7 @@ RSpec.describe Invoices::VoidService, type: :service do
   let(:params) { {} }
 
   describe "#call" do
-    context "when invoice is nil" do
+    context "when invoice is nil", :lago_premium do
       let(:invoice) { nil }
 
       it "returns a failure" do
@@ -23,7 +23,7 @@ RSpec.describe Invoices::VoidService, type: :service do
       end
     end
 
-    context "when invoice is draft" do
+    context "when invoice is draft", :lago_premium do
       let(:invoice) { create(:invoice, :draft) }
 
       it "returns a failure" do
@@ -37,7 +37,7 @@ RSpec.describe Invoices::VoidService, type: :service do
       end
     end
 
-    context "when the invoice is voided" do
+    context "when the invoice is voided", :lago_premium do
       let(:invoice) { create(:invoice, status: :voided) }
 
       it "returns a failure" do
@@ -51,11 +51,11 @@ RSpec.describe Invoices::VoidService, type: :service do
       end
     end
 
-    context "when the invoice is finalized" do
+    context "when the invoice is finalized", :lago_premium do
       let(:invoice) { create(:invoice, :subscription, subscriptions:, status: :finalized, payment_status:, payment_overdue: true) }
       let(:subscriptions) { create_list(:subscription, 1) }
 
-      context "when the payment status is succeeded" do
+      context "when the payment status is succeeded", :lago_premium do
         let(:payment_status) { :succeeded }
 
         it "voids the invoice" do
@@ -69,7 +69,7 @@ RSpec.describe Invoices::VoidService, type: :service do
         end
       end
 
-      context "when the payment status is not succeeded" do
+      context "when the payment status is not succeeded", :lago_premium do
         let(:payment_status) { [:pending, :failed].sample }
 
         before do
@@ -111,7 +111,7 @@ RSpec.describe Invoices::VoidService, type: :service do
           expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.voided")
         end
 
-        context "when the invoice has applied credits from the wallet" do
+        context "when the invoice has applied credits from the wallet", :lago_premium do
           let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
           let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: "outbound", amount: 100, credit_amount: 100) }
 
@@ -128,7 +128,7 @@ RSpec.describe Invoices::VoidService, type: :service do
           end
         end
 
-        context "when the invoice has credits from applied coupons" do
+        context "when the invoice has credits from applied coupons", :lago_premium do
           let(:coupon) { create(:coupon) }
           let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
           let!(:credit) { create(:credit, invoice: invoice, applied_coupon: applied_coupon) }
@@ -143,7 +143,7 @@ RSpec.describe Invoices::VoidService, type: :service do
           end
         end
 
-        context "when the invoice has credits from credit notes" do
+        context "when the invoice has credits from credit notes", :lago_premium do
           let(:credit_note) { create(:credit_note) }
           let!(:credit) { create(:credit, invoice: invoice, credit_note: credit_note) }
 
@@ -157,7 +157,7 @@ RSpec.describe Invoices::VoidService, type: :service do
           end
         end
 
-        context "when invoice is a purchase credits invoice" do
+        context "when invoice is a purchase credits invoice", :lago_premium do
           let(:invoice) { create(:invoice, :credit, status: :finalized, payment_status:, payment_overdue: true) }
           let(:payment_status) { [:pending, :failed].sample }
           let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
@@ -190,7 +190,7 @@ RSpec.describe Invoices::VoidService, type: :service do
     describe "when generate credit note is true" do
       let(:params) { {generate_credit_note: true} }
 
-      context "when invoice is nil" do
+      context "when invoice is nil", :lago_premium do
         let(:invoice) { nil }
 
         it "returns a failure" do
@@ -202,8 +202,7 @@ RSpec.describe Invoices::VoidService, type: :service do
         end
       end
 
-      context "when the invoice is voided" do
-        around { |test| lago_premium!(&test) }
+      context "when the invoice is voided", :lago_premium do
 
         let(:invoice) { create(:invoice, status: :voided) }
 

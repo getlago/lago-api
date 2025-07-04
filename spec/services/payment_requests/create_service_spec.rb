@@ -25,15 +25,13 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
     }
   end
 
-  around { |test| lago_premium!(&test) }
-
   describe "#call" do
     let(:amount_cents) do
       first_invoice.total_amount_cents + second_invoice.total_amount_cents -
         first_invoice.total_paid_amount_cents - second_invoice.total_paid_amount_cents
     end
 
-    context "when organization is not premium" do
+    context "when organization is not premium", :lago_premium do
       before do
         allow(License).to receive(:premium?).and_return(false)
       end
@@ -46,7 +44,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       end
     end
 
-    context "when customer does not exist" do
+    context "when customer, :lago_premium does not exist", :lago_premium do
       before { params[:external_customer_id] = "non-existing-id" }
 
       it "returns not found failure" do
@@ -58,7 +56,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       end
     end
 
-    context "when invoices are not found" do
+    context "when invoices are not found", :lago_premium do
       before { params[:lago_invoice_ids] = [] }
 
       it "returns not found failure" do
@@ -70,7 +68,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       end
     end
 
-    context "when invoices are not overdue" do
+    context "when invoices are not overdue", :lago_premium do
       before { first_invoice.update!(payment_overdue: false) }
 
       it "returns not allowed failure" do
@@ -82,7 +80,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       end
     end
 
-    context "when invoices have different currencies" do
+    context "when invoices have different currencies", :lago_premium do
       before { second_invoice.update!(currency: "USD") }
 
       it "returns not allowed failure" do
@@ -94,7 +92,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       end
     end
 
-    context "when invoices are not ready for payment processing" do
+    context "when invoices are not ready for payment processing", :lago_premium do
       before { first_invoice.update!(ready_for_payment_processing: false) }
 
       it "returns not allowed failure" do
@@ -129,7 +127,7 @@ RSpec.describe PaymentRequests::CreateService, type: :service do
       expect(PaymentRequests::Payments::CreateService).to have_received(:call_async).with(payable: result.payment_request)
     end
 
-    context "when Payments::CreateService returns an error" do
+    context "when Payments::CreateService returns an error", :lago_premium do
       before { customer.update!(payment_provider: nil) }
 
       it "sends an email to the customer" do

@@ -7,7 +7,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
 
   let(:currency) { "EUR" }
 
-  context "when premium features are enabled" do
+  context "when premium features are enabled", :lago_premium do
     let(:organization) { create :organization, premium_integrations: %w[auto_dunning] }
     let(:billing_entity) { organization.default_billing_entity }
     let(:customer) { create :customer, organization:, billing_entity:, currency: }
@@ -34,9 +34,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       )
     end
 
-    around { |test| lago_premium!(&test) }
-
-    context "when billing_entity has an applied dunning campaign" do
+    context "when billing_entity has an applied dunning campaign", :lago_premium do
       let(:dunning_campaign) { create :dunning_campaign, organization: }
 
       let(:dunning_campaign_threshold) do
@@ -54,7 +52,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         billing_entity.update!(applied_dunning_campaign: dunning_campaign)
       end
 
-      context "when a customer has overdue balance exceeding threshold in same currency" do
+      context "when a customer has overdue balance exceeding threshold in same currency", :lago_premium do
         before do
           invoice_1
           invoice_2
@@ -67,7 +65,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
             .with(customer:, dunning_campaign_threshold:)
         end
 
-        context "when organization does not have auto_dunning feature enabled" do
+        context "when organization, :lago_premium does not have auto_dunning feature enabled", :lago_premium do
           let(:organization) { create(:organization, premium_integrations: []) }
 
           it "does not queue a job for the customer" do
@@ -76,7 +74,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
           end
         end
 
-        context "when maximum attempts are reached" do
+        context "when maximum attempts are reached", :lago_premium do
           let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt: 5 }
 
           let(:dunning_campaign) do
@@ -95,7 +93,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
           end
         end
 
-        context "when not enough days have passed since last attempt" do
+        context "when not enough days have passed since last attempt", :lago_premium do
           let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt_at: 3.days.ago }
 
           let(:dunning_campaign) do
@@ -114,7 +112,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
           end
         end
 
-        context "when enough days have passed since last attempt" do
+        context "when enough days have passed since last attempt", :lago_premium do
           let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt_at: 4.days.ago - 1.second }
 
           let(:dunning_campaign) do
@@ -136,7 +134,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
       end
 
-      context "when customer has overdue balance below threshold" do
+      context "when customer has overdue balance below threshold", :lago_premium do
         before do
           invoice_1
         end
@@ -147,7 +145,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
       end
 
-      context "when there is no matching threshold for customer overdue balance" do
+      context "when there is no matching threshold for customer overdue balance", :lago_premium do
         let(:dunning_campaign_threshold) do
           create(
             :dunning_campaign_threshold,
@@ -167,7 +165,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
       end
 
-      context "when customer has an applied dunning campaign overwriting billing entity's default campaign" do
+      context "when customer has an applied dunning campaign overwriting billing entity's default campaign", :lago_premium do
         let(:customer) do
           create(
             :customer,
@@ -196,7 +194,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
           customer_dunning_campaign_threshold
         end
 
-        context "when a customer has overdue balance exceeding threshold in same currency" do
+        context "when a customer has overdue balance exceeding threshold in same currency", :lago_premium do
           before do
             invoice_1
           end
@@ -209,7 +207,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
           end
         end
 
-        context "when customer has overdue balance below threshold" do
+        context "when customer has overdue balance below threshold", :lago_premium do
           before do
             invoice_2
           end
@@ -220,7 +218,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
           end
         end
 
-        context "when there is no matching threshold for customer overdue balance" do
+        context "when there is no matching threshold for customer overdue balance", :lago_premium do
           let(:customer_dunning_campaign_threshold) do
             create(
               :dunning_campaign_threshold,
@@ -241,10 +239,10 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
       end
 
-      context "when customer is excluded from dunning campaigns" do
+      context "when customer is excluded from dunning campaigns", :lago_premium do
         let(:customer) { create :customer, organization:, billing_entity:, currency:, exclude_from_dunning_campaign: true }
 
-        context "when a customer has overdue balance exceeding threshold in same currency" do
+        context "when a customer has overdue balance exceeding threshold in same currency", :lago_premium do
           before do
             invoice_1
             invoice_2
@@ -258,7 +256,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       end
     end
 
-    context "when customer has an applied dunning campaign" do
+    context "when customer has an applied dunning campaign", :lago_premium do
       let(:customer) do
         create(
           :customer,
@@ -287,7 +285,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         dunning_campaign_threshold
       end
 
-      context "when a customer has overdue balance exceeding threshold in same currency" do
+      context "when a customer has overdue balance exceeding threshold in same currency", :lago_premium do
         before do
           invoice_1
         end
@@ -299,7 +297,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
             .with(customer:, dunning_campaign_threshold:)
         end
 
-        context "when organization does not have auto_dunning feature enabled" do
+        context "when organization, :lago_premium does not have auto_dunning feature enabled", :lago_premium do
           let(:organization) { create(:organization, premium_integrations: []) }
 
           it "does not queue a job for the customer" do
@@ -308,7 +306,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
           end
         end
 
-        context "when maximum attempts are reached" do
+        context "when maximum attempts are reached", :lago_premium do
           let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt: 5 }
 
           let(:dunning_campaign) do
@@ -327,7 +325,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
           end
         end
 
-        context "when not enough days have passed since last attempt" do
+        context "when not enough days have passed since last attempt", :lago_premium do
           let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt_at: 3.days.ago }
 
           let(:dunning_campaign) do
@@ -346,7 +344,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
           end
         end
 
-        context "when enough days have passed since last attempt" do
+        context "when enough days have passed since last attempt", :lago_premium do
           let(:customer) { create :customer, organization:, billing_entity:, last_dunning_campaign_attempt_at: 4.days.ago - 1.second }
 
           let(:dunning_campaign) do
@@ -368,7 +366,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
       end
 
-      context "when customer has overdue balance below threshold" do
+      context "when customer has overdue balance below threshold", :lago_premium do
         before do
           invoice_2
         end
@@ -379,7 +377,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         end
       end
 
-      context "when there is no matching threshold for customer overdue balance" do
+      context "when there is no matching threshold for customer overdue balance", :lago_premium do
         let(:dunning_campaign_threshold) do
           create(
             :dunning_campaign_threshold,
@@ -400,7 +398,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       end
     end
 
-    context "when neither billing_entity nor customer has an applied dunning campaign" do
+    context "when neither billing_entity nor customer has an applied dunning campaign", :lago_premium do
       let(:dunning_campaign) { create :dunning_campaign, organization: }
 
       let(:dunning_campaign_threshold) do
@@ -423,7 +421,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
       end
     end
 
-    context "when organization has multiple billing entities with different applied dunning campaigns" do
+    context "when organization has multiple billing entities with different applied dunning campaigns", :lago_premium do
       let(:billing_entity_1) { create :billing_entity, organization:, applied_dunning_campaign: dunning_campaign_1 }
       let(:billing_entity_2) { create :billing_entity, organization:, applied_dunning_campaign: dunning_campaign_2 }
       let(:customer_1) { create :customer, organization:, billing_entity: billing_entity_1, currency: }
@@ -456,7 +454,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
         dunning_campaign_threshold_2
       end
 
-      context "when all customers have overdue balances exceeding all thresholds" do
+      context "when all customers have overdue balances exceeding all thresholds", :lago_premium do
         before do
           create(:invoice, organization:, customer: customer, currency:, payment_overdue: true, total_amount_cents: 100_00)
           create(:invoice, organization:, customer: customer_1, currency:, payment_overdue: true, total_amount_cents: 60_00)

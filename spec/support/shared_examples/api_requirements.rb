@@ -2,7 +2,6 @@
 
 RSpec.shared_examples "requires API permission" do |resource, mode|
   describe "permissions" do
-    around { |test| lago_premium!(&test) }
 
     let(:api_key) { organization.api_keys.first }
 
@@ -12,10 +11,10 @@ RSpec.shared_examples "requires API permission" do |resource, mode|
       subject
     end
 
-    context "when organization has 'api_permissions' premium integration" do
+    context "when organization has 'api_permissions' premium integration", :lago_premium do
       let(:premium_integrations) { organization.premium_integrations.including("api_permissions") }
 
-      context "when API key allows #{mode} action for #{resource}" do
+      context "when API key allows #{mode} action for #{resource}", :lago_premium do
         let(:modes) { [ApiKey::MODES, [mode]].sample }
 
         it "does not return 403 Forbidden" do
@@ -23,7 +22,7 @@ RSpec.shared_examples "requires API permission" do |resource, mode|
         end
       end
 
-      context "when API key forbids #{mode} action for #{resource}" do
+      context "when API key forbids #{mode} action for #{resource}", :lago_premium do
         let(:modes) { ApiKey::MODES.excluding(mode) }
 
         it "returns 403 Forbidden" do
@@ -35,10 +34,10 @@ RSpec.shared_examples "requires API permission" do |resource, mode|
       end
     end
 
-    context "when organization has no 'api_permissions' premium integration" do
+    context "when organization has no 'api_permissions' premium integration", :lago_premium do
       let(:premium_integrations) { organization.premium_integrations.excluding("api_permissions") }
 
-      context "when API key allows #{mode} action for #{resource}" do
+      context "when API key allows #{mode} action for #{resource}", :lago_premium do
         let(:modes) { [ApiKey::MODES, [mode]].sample }
 
         it "does not return 403 Forbidden" do
@@ -46,7 +45,7 @@ RSpec.shared_examples "requires API permission" do |resource, mode|
         end
       end
 
-      context "when API key forbids #{mode} action for #{resource}" do
+      context "when API key forbids #{mode} action for #{resource}", :lago_premium do
         let(:modes) { ApiKey::MODES.excluding(mode) }
 
         it "does not return 403 Forbidden" do

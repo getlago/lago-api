@@ -21,7 +21,6 @@ RSpec.describe Api::V1::DataApi::UsagesController, type: :request do # rubocop:d
     end
 
     context "when license is premium" do
-      around { |test| lago_premium!(&test) }
 
       include_examples "requires API permission", "analytic", "read"
 

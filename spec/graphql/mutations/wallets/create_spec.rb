@@ -43,13 +43,11 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "wallets:create"
 
-  it "creates a wallet" do
+  it "creates a wallet", :lago_premium do
     allow(WalletTransactions::CreateJob).to receive(:perform_later)
     allow(SendWebhookJob).to receive(:perform_later)
 
@@ -118,7 +116,7 @@ RSpec.describe Mutations::Wallets::Create, type: :graphql do
     expect(SendWebhookJob).to have_received(:perform_later).with("wallet.created", Wallet)
   end
 
-  context "when name is not present" do
+  context "when name is not present", :lago_premium do
     it "creates a wallet" do
       result = execute_graphql(
         current_user: membership.user,

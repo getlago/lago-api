@@ -77,8 +77,6 @@ RSpec.describe DataExports::Csv::Invoices do
     }
   end
 
-  around { |test| lago_premium!(&test) }
-
   before do
     invoice
 
@@ -106,7 +104,7 @@ RSpec.describe DataExports::Csv::Invoices do
       expect(generated_csv).to eq(expected_csv)
     end
 
-    context "when organization has multiple billing_entities" do
+    context "when organization has multiple billing_entities", :lago_premium do
       let(:billing_entity) { create(:billing_entity, organization:) }
 
       before { billing_entity }

@@ -49,13 +49,11 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
     GQL
   end
 
-  around { |test| lago_premium!(&test) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "credit_notes:create"
 
-  it "creates a credit note" do
+  it "creates a credit note", :lago_premium do
     result = execute_graphql(
       current_user: membership.user,
       current_organization: organization,
@@ -108,7 +106,7 @@ RSpec.describe Mutations::CreditNotes::Create, type: :graphql do
     end
   end
 
-  context "when invoice is not found" do
+  context "when invoice is not found", :lago_premium do
     it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
