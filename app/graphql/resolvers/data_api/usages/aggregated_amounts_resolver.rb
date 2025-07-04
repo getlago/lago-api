@@ -9,7 +9,7 @@ module Resolvers
 
         REQUIRED_PERMISSION = "data_api:view"
 
-        graphql_name "DataApiUsages"
+        graphql_name "DataApiUsagesAggregatedAmounts"
         description "Query usages of an organization"
 
         argument :currency, Types::CurrencyEnum, required: false
@@ -28,6 +28,8 @@ module Resolvers
 
         argument :billing_entity_code, String, required: false
         argument :plan_code, String, required: false
+
+        argument :is_customer_tin_empty, Boolean, required: false
 
         type Types::DataApi::Usages::AggregatedAmounts::Object.collection_type, null: false
 

@@ -13,6 +13,7 @@ module Resolvers
       argument :billing_entity_code, String, required: false
       argument :billing_entity_id, ID, required: false
       argument :currency, Types::CurrencyEnum, required: false
+      argument :is_customer_tin_empty, Boolean, required: false
 
       type Types::Analytics::InvoiceCollections::Object.collection_type, null: false
 
