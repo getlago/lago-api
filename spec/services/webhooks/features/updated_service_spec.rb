@@ -18,4 +18,4 @@ RSpec.describe Webhooks::Features::UpdatedService do
       "created_at" => String
     }
   end
-end 
+end

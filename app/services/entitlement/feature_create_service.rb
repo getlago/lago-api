@@ -28,7 +28,7 @@ module Entitlement
         result.feature = feature
       end
 
-      SendWebhookJob.perform_after_commit("feature.created", feature)
+      SendWebhookJob.perform_after_commit("feature.created", result.feature)
 
       result
     rescue ActiveRecord::RecordInvalid => e

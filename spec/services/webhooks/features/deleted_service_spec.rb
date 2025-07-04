@@ -18,4 +18,4 @@ RSpec.describe Webhooks::Features::DeletedService do
       "created_at" => String
     }
   end
-end 
+end
