@@ -58,7 +58,21 @@ module Invoices
           end
 
           new_fees.each do |fee_attributes|
-            new_fee = Fee.create!(fee_attributes.merge(invoice: invoice))
+            # Ensure required fields have default values
+            fee_data = fee_attributes.merge(
+              invoice: invoice,
+              organization: invoice.organization,
+              billing_entity: invoice.billing_entity,
+              amount_cents: fee_attributes.fetch(:unit_amount_cents, 0),
+              unit_amount_cents: fee_attributes[:unit_amount_cents],
+              amount_currency: invoice.currency,
+              fee_type: fee_attributes[:add_on_id].present? ? :add_on : :charge,
+              taxes_amount_cents: 0,
+              taxes_precise_amount_cents: 0.to_d,
+              payment_status: :pending
+            )
+
+            new_fee = Fee.create!(fee_data)
 
             taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
             taxes_result.raise_if_error!
