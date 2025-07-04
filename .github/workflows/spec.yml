@@ -59,11 +59,6 @@ jobs:
       KNAPSACK_PRO_LOG_LEVEL: info
 
     steps:
-      - name: Fail if community PR
-        if: ${{ !env.KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC }}
-        run: |
-          echo '::error::This is a community PR. The `KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC` environment variable is not set and Knapsack Pro will not run the specs.'
-          exit 1
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install Ruby and gems
@@ -82,7 +77,13 @@ jobs:
       - name: Set up Clickhouse database schema
         run: bin/rails db:migrate:clickhouse
       - name: Run tests
-        run: bundle exec rake knapsack_pro:queue:rspec
+        run: |
+          if [[ -z "$KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC" ]]; then
+            echo "::warning::This is a community PR. We'll default to running the test using 'parallel_tests'."
+            bundle exec parallel_rspec --only-group "${KNAPSACK_PRO_CI_NODE_INDEX}" -n "${KNAPSACK_PRO_CI_NODE_TOTAL}" --exclude-pattern "spec/integration/.*_integration_spec.rb"
+          else
+            bundle exec rake knapsack_pro:queue:rspec
+          fi
         continue-on-error: true
       - name: retry failed tests
         run: bundle exec rspec --only-failures
