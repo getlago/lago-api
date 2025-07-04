@@ -15,23 +15,29 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
 
     Rails.cache.write(state, "foo@bar.com")
 
+    if okta_integration
+      okta_integration.organization.premium_integrations << "okta"
+      okta_integration.organization.save!
+      okta_integration.organization.enable_okta_authentication!
+    end
+
     allow(LagoHttpClient::Client).to receive(:new).and_return(lago_http_client)
     allow(lago_http_client).to receive(:post_url_encoded).and_return(okta_token_response)
     allow(lago_http_client).to receive(:get).and_return(okta_userinfo_response)
   end
 
   describe "#call" do
+    around { |test| lago_premium!(&test) }
+
     it "creates user, membership and authenticate user" do
       result = service.call
 
-      aggregate_failures do
-        expect(result).to be_success
-        expect(result.user.email).to eq("foo@bar.com")
-        expect(result.token).to be_present
+      expect(result).to be_success
+      expect(result.user.email).to eq("foo@bar.com")
+      expect(result.token).to be_present
 
-        decoded = Auth::TokenService.decode(token: result.token)
-        expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::OKTA)
-      end
+      decoded = Auth::TokenService.decode(token: result.token)
+      expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::OKTA)
     end
 
     context "when state is not found" do
@@ -45,6 +51,22 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error.messages.values.flatten).to include("state_not_found")
+        end
+      end
+    end
+
+    context "when the login method is not allowed" do
+      let(:user) { create(:user, email: "foo@bar.com") }
+      let(:membership) { create(:membership, user:, organization: okta_integration.organization) }
+
+      before { okta_integration.organization.disable_okta_authentication! }
+
+      it "returns error" do
+        result = service.call
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.messages.values.flatten).to include("login_method_not_authorized")
         end
       end
     end
