@@ -21,6 +21,7 @@ module Integrations
         )
 
         integration.save!
+        organization.enable_okta_authentication!
 
         result.integration = integration
         result
