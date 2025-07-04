@@ -84,6 +84,24 @@ RSpec.describe Auth::GoogleService do
       end
     end
 
+    context "when login method is not allowed" do
+      let(:user) { create(:user, email: "foo@bar.com", password: "foobar") }
+      let(:membership) { create(:membership, :active, user:) }
+
+      before do
+        membership.organization.disable_google_oauth_authentication!
+      end
+
+      it "returns a validation failure" do
+        result = service.login("code")
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.messages.values.flatten).to include("login_method_not_authorized")
+        end
+      end
+    end
+
     context "when user does not have active memberships" do
       before do
         create(:user, email: "foo@bar.com")

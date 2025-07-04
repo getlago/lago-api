@@ -149,6 +149,17 @@ RSpec.describe UsersService, type: :service do
               expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
             end
           end
+
+          context "when login method is not allowed" do
+            before { active_membership.organization.disable_email_password_authentication! }
+
+            it "fails with login method not authorized" do
+              expect(result).to be_failure
+              expect(result.user).to eq user
+              expect(result.token).to be nil
+              expect(result.error.messages).to match(base: ["login_method_not_authorized"])
+            end
+          end
         end
 
         context "when user has no active membership" do
