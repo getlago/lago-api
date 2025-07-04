@@ -4,7 +4,7 @@ module AuthenticableUser
   extend ActiveSupport::Concern
 
   included do
-    before_action :renew_token, if: :expired_token?
+    before_action :renew_token, if: :token_near_expiration?
   end
 
   private
@@ -17,16 +17,17 @@ module AuthenticableUser
     @token ||= request.headers["Authorization"].to_s.split(" ").last
   end
 
-  def decoded_token(verify_exp: true)
-    @decoded_token ||= JWT.decode(token, ENV["SECRET_KEY_BASE"], verify_exp, decode_options)
+  def decoded_token
+    @decoded_token ||= JWT.decode(token, ENV["SECRET_KEY_BASE"], true, decode_options)
   rescue JWT::DecodeError => e
     raise e if e.is_a?(JWT::ExpiredSignature) || Rails.env.development?
   end
 
-  def expired_token?
-    return false unless token && decoded_token(verify_exp: false)
+  def token_near_expiration?
+    return false unless token && decoded_token
 
-    Time.now.to_i > payload_data["exp"]
+    # NOTE: we consider the token is near expiration if it expires in less than 1 hour
+    Time.now.to_i > payload_data["exp"] - 1.hour.to_i
   end
 
   def payload_data

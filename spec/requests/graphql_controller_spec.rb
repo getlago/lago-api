@@ -51,11 +51,11 @@ RSpec.describe GraphqlController, type: :request do
       let(:token) do
         UsersService.new.new_token(user).token
       end
-      let(:expired_token) do
+      let(:near_expiration_token) do
         JWT.encode(
           {
             sub: user.id,
-            exp: Time.now.to_i - 1
+            exp: 30.minutes.from_now.to_i
           },
           ENV["SECRET_KEY_BASE"],
           "HS256"
@@ -103,7 +103,7 @@ RSpec.describe GraphqlController, type: :request do
         post(
           "/graphql",
           headers: {
-            "Authorization" => "Bearer #{expired_token}"
+            "Authorization" => "Bearer #{near_expiration_token}"
           },
           params: {
             query: mutation,
