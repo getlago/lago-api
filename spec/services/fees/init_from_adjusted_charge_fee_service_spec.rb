@@ -24,7 +24,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       plan: subscription.plan,
       billable_metric:,
       properties: {
-        amount: "20",
+        amount: "23.45",
         amount_currency: "EUR"
       }
     )
@@ -48,7 +48,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       fee_type: :charge,
       adjusted_units: true,
       adjusted_amount: false,
-      units: 3
+      units: 7
     )
   end
 
@@ -69,13 +69,13 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
         invoice:,
         subscription:,
         charge:,
-        amount_cents: 6_000,
-        precise_amount_cents: 6_000.0,
+        amount_cents: 16415,
+        precise_amount_cents: 16415,
         taxes_precise_amount_cents: 0.0,
         amount_currency: invoice.currency,
-        units: 3,
-        unit_amount_cents: 2_000,
-        precise_unit_amount: 20,
+        units: 7,
+        unit_amount_cents: 2345,
+        precise_unit_amount: 23.45,
         events_count: 0,
         payment_status: "pending"
       )
