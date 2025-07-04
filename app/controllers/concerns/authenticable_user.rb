@@ -31,7 +31,7 @@ module AuthenticableUser
     return false unless token && decoded_token
 
     # NOTE: we consider the token is near expiration if it expires in less than 1 hour
-    Time.now.to_i > payload_data["exp"] - 1.hour.to_i
+    Time.now.to_i > decoded_token["exp"] - 1.hour.to_i
   end
 
   def renew_token
