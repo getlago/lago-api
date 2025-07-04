@@ -3,10 +3,6 @@
 module Webhooks
   module PaymentReceipts
     class GeneratedService < Webhooks::BaseService
-      def current_organization
-        @current_organization ||= object.payment.payable.organization
-      end
-
       def object_serializer
         ::V1::PaymentReceiptSerializer.new(
           object,
