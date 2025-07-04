@@ -23,6 +23,7 @@ module V1
       }
 
       payload.merge!(charges) if include?(:charges)
+      payload.merge!(entitlements) if include?(:entitlements)
       payload.merge!(usage_thresholds) if include?(:usage_thresholds)
       payload.merge!(taxes) if include?(:taxes)
       payload.merge!(minimum_commitment) if include?(:minimum_commitment) && model.minimum_commitment
@@ -38,6 +39,14 @@ module V1
         ::V1::ChargeSerializer,
         collection_name: "charges",
         includes: include?(:taxes) ? %i[taxes] : []
+      ).serialize
+    end
+
+    def entitlements
+      ::CollectionSerializer.new(
+        model.entitlements.includes(:feature, values: :privilege),
+        ::V1::Entitlement::PlanEntitlementSerializer,
+        collection_name: "entitlements"
       ).serialize
     end
 

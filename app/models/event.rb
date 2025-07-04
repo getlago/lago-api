@@ -82,13 +82,13 @@ end
 #
 # Indexes
 #
-#  index_events_on_customer_id                              (customer_id)
-#  index_events_on_deleted_at                               (deleted_at)
-#  index_events_on_external_subscription_id_precise_amount  (external_subscription_id,code,timestamp) WHERE ((deleted_at IS NULL) AND (precise_total_amount_cents IS NOT NULL))
-#  index_events_on_external_subscription_id_with_included   (external_subscription_id,code,timestamp) WHERE (deleted_at IS NULL)
-#  index_events_on_organization_id                          (organization_id)
-#  index_events_on_organization_id_and_code                 (organization_id,code)
-#  index_events_on_organization_id_and_timestamp            (organization_id,timestamp) WHERE (deleted_at IS NULL)
-#  index_events_on_properties                               (properties) USING gin
-#  index_unique_transaction_id                              (organization_id,external_subscription_id,transaction_id) UNIQUE
+#  idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp  (external_subscription_id,organization_id,code,timestamp) WHERE (deleted_at IS NULL)
+#  index_events_on_customer_id                                      (customer_id)
+#  index_events_on_deleted_at                                       (deleted_at)
+#  index_events_on_external_subscription_id_precise_amount          (external_subscription_id,code,timestamp) WHERE ((deleted_at IS NULL) AND (precise_total_amount_cents IS NOT NULL))
+#  index_events_on_external_subscription_id_with_included           (external_subscription_id,code,timestamp) WHERE (deleted_at IS NULL)
+#  index_events_on_organization_id                                  (organization_id)
+#  index_events_on_organization_id_and_code                         (organization_id,code)
+#  index_events_on_properties                                       (properties) USING gin
+#  index_unique_transaction_id                                      (organization_id,external_subscription_id,transaction_id) UNIQUE
 #

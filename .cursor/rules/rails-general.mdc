@@ -70,11 +70,15 @@ end
 # Controllers
 
 - Under `V1` namespace the resource retrieved should always be scoped to the current_organization. Typically, to retrieve Alerts, use `current_organization.alerts.where(...)`
+- In controller `create` method, return regular 200 status, avoid `status: :created`
+- When testing controller, access the response via `json` method, which parsed json and symbolized keys.
 
 
 # Models
 
 - New models must directly belong to an organization. Store the `organization_id` in the table, don't use `through:`
+- When testing models, to test all associations and group them all in a `describe "associations"` block with a single `it` block
+- When testing models, to test all validations and group them all in a `describe "validations"` block with a single `it` block
 
 
 Soft deletion
@@ -97,7 +101,6 @@ To create a webhook:
     - `object_type` which is the object serialized. Reuse this method in the serializer `root_name` param
 - Add the mapping `name` => Service class to the `SendWebhookJob::WEBHOOK_SERVICES` hash
 - Write a test for the webhook class
-
 
 # Query object
 

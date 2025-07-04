@@ -94,5 +94,21 @@ RSpec.describe Plans::DestroyService, type: :service do
         end
       end
     end
+
+    context "with entitlements" do
+      let(:entitlement) { create(:entitlement, plan:) }
+      let(:entitlement_value) { create(:entitlement_value, entitlement: entitlement, privilege: create(:privilege, feature: entitlement.feature)) }
+
+      before do
+        entitlement
+        entitlement_value
+      end
+
+      it "destroys the entitlements" do
+        destroy_service.call
+        expect(entitlement.reload).to be_discarded
+        expect(entitlement_value.reload).to be_discarded
+      end
+    end
   end
 end

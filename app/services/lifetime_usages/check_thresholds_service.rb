@@ -11,6 +11,8 @@ module LifetimeUsages
     end
 
     def call
+      return result unless subscription.active?
+
       usage_thresholds = LifetimeUsages::UsageThresholds::CheckService.call!(lifetime_usage:, progressive_billed_amount:).passed_thresholds
 
       if usage_thresholds.any?

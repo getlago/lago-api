@@ -10628,6 +10628,7 @@ type WalletTransaction {
   invoiceRequiresSuccessfulPayment: Boolean!
   metadata: [WalletTransactionMetadataObject!]
   settledAt: ISO8601DateTime
+  source: WalletTransactionSourceEnum!
   status: WalletTransactionStatusEnum!
   transactionStatus: WalletTransactionTransactionStatusEnum!
   transactionType: WalletTransactionTransactionTypeEnum!
@@ -10658,6 +10659,12 @@ input WalletTransactionMetadataInput {
 type WalletTransactionMetadataObject {
   key: String!
   value: String!
+}
+
+enum WalletTransactionSourceEnum {
+  interval
+  manual
+  threshold
 }
 
 enum WalletTransactionStatusEnum {

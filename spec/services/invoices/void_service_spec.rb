@@ -58,13 +58,13 @@ RSpec.describe Invoices::VoidService, type: :service do
       context "when the payment status is succeeded" do
         let(:payment_status) { :succeeded }
 
-        it "returns a failure" do
+        it "voids the invoice" do
           result = void_service.call
 
           aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-            expect(result.error.code).to eq("not_voidable")
+            expect(result).to be_success
+            expect(result.invoice).to be_voided
+            expect(result.invoice.voided_at).to be_present
           end
         end
       end

@@ -179,4 +179,13 @@ RSpec.describe LifetimeUsages::CheckThresholdsService, type: :service, transacti
       expect(subscription.invoices.progressive_billing).to be_empty
     end
   end
+
+  context "when subscription is terminated" do
+    let(:subscription) { create(:subscription, :terminated, customer: customer) }
+
+    it "does not create an invoice for the current usage" do
+      expect { service.call }.not_to change(Invoice, :count)
+      expect(subscription.invoices.progressive_billing).to be_empty
+    end
+  end
 end
