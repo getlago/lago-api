@@ -22,8 +22,16 @@ RSpec.describe Mutations::Auth::Okta::Login, type: :graphql, cache: :memory do
     GQL
   end
 
+  around { |test| lago_premium!(&test) }
+
   before do
     okta_integration
+
+    if okta_integration
+      okta_integration.organization.premium_integrations << "okta"
+      okta_integration.organization.save!
+      okta_integration.organization.enable_okta_authentication!
+    end
 
     Rails.cache.write(state, "foo@bar.com")
 
