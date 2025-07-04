@@ -22868,6 +22868,18 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "addOn",
+              "description": null,
+              "type": {
+                "kind": "OBJECT",
+                "name": "AddOn",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "adjustedFee",
               "description": null,
               "type": {
@@ -23075,13 +23087,9 @@
               "name": "id",
               "description": null,
               "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,

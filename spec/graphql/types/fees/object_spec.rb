@@ -6,6 +6,8 @@ RSpec.describe Types::Fees::Object do
   subject { described_class }
 
   it do
+    expect(subject).to have_field(:id).of_type("ID")
+    expect(subject).to have_field(:add_on).of_type("AddOn")
     expect(subject).to have_field(:invoice_display_name).of_type("String")
     expect(subject).to have_field(:charge).of_type("Charge")
     expect(subject).to have_field(:currency).of_type("CurrencyEnum!")
