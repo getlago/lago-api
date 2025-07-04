@@ -59,6 +59,11 @@ jobs:
       KNAPSACK_PRO_LOG_LEVEL: info
 
     steps:
+      - name: Fail if community PR
+        if: ${{ !env.KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC }}
+        run: |
+          echo '::error::This is a community PR. The `KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC` environment variable is not set and Knapsack Pro will not run the specs.'
+          exit 1
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install Ruby and gems
