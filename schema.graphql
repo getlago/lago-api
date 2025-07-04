@@ -4923,6 +4923,7 @@ type EventCollection {
 }
 
 type Fee implements InvoiceItem {
+  addOn: AddOn
   adjustedFee: Boolean!
   adjustedFeeType: AdjustedFeeTypeEnum
   amountCents: BigInt!
@@ -4937,7 +4938,7 @@ type Fee implements InvoiceItem {
   eventsCount: BigInt
   feeType: FeeTypesEnum!
   groupedBy: JSON!
-  id: ID!
+  id: ID
   invoiceDisplayName: String
   invoiceName: String
   itemCode: String!
