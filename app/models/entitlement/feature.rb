@@ -9,6 +9,8 @@ module Entitlement
 
     belongs_to :organization
     has_many :privileges, class_name: "Entitlement::Privilege", foreign_key: "entitlement_feature_id", dependent: :destroy
+    has_many :entitlements, class_name: "Entitlement::Entitlement", foreign_key: "entitlement_feature_id", dependent: :destroy
+    has_many :entitlement_values, through: :entitlements, source: :values, class_name: "Entitlement::EntitlementValue", dependent: :destroy
 
     validates :code, presence: true, length: {maximum: 255}
     validates :name, length: {maximum: 255}

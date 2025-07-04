@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Entitlement
-  class EntitlementDestroyService < BaseService
+  class PlanEntitlementDestroyService < BaseService
     Result = BaseResult[:entitlement]
 
     def initialize(entitlement:)
@@ -16,6 +16,8 @@ module Entitlement
         entitlement.values.discard_all!
         entitlement.discard!
       end
+
+      SendWebhookJob.perform_after_commit("plan.updated", entitlement.plan)
 
       result.entitlement = entitlement
       result

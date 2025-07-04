@@ -54,6 +54,10 @@ RSpec.describe Entitlement::PrivilegeDestroyService, type: :service do
       it "discards all related entitlement values" do
         expect { subject }.to change(Entitlement::EntitlementValue, :count).by(-1)
       end
+
+      it "sends `plan.updated` webhook" do
+        expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", entitlement.plan)
+      end
     end
   end
 end

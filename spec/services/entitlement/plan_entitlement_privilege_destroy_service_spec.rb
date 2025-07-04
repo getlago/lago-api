@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::EntitlementPrivilegeDestroyService, type: :service do
+RSpec.describe Entitlement::PlanEntitlementPrivilegeDestroyService, type: :service do
   subject(:destroy_service) { described_class.new(entitlement: entitlement, privilege_code: privilege_code) }
 
   let(:organization) { create(:organization) }
@@ -28,7 +28,7 @@ RSpec.describe Entitlement::EntitlementPrivilegeDestroyService, type: :service d
     end
 
     it "soft deletes the specific entitlement value" do
-      expect { result }.to change { Entitlement::EntitlementValue.kept.count }.by(-1)
+      expect { result }.to change(feature.entitlement_values, :count).by(-1)
     end
 
     it "does not delete other entitlement values" do
@@ -44,6 +44,10 @@ RSpec.describe Entitlement::EntitlementPrivilegeDestroyService, type: :service d
         expect(value.association(:privilege)).to be_loaded
       end
       expect(result.entitlement.values.ids).to contain_exactly(entitlement_value2.id)
+    end
+
+    it "sends `plan.updated` webhook" do
+      expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", plan)
     end
 
     context "when entitlement is nil" do

@@ -12,6 +12,9 @@ module Entitlement
           update_entitlements
         end
 
+        # NOTE: The webhooks is sent even if no changes were made to the plan
+        SendWebhookJob.perform_after_commit("plan.updated", plan)
+
         result.entitlements = plan.entitlements.reload.includes(:feature, values: :privilege)
         result
       end

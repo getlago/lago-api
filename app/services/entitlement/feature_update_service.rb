@@ -13,12 +13,19 @@ module Entitlement
     def call
       return result.not_found_failure!(resource: "feature") unless feature
 
+      jobs = feature.entitlements.select(:plan_id).distinct.pluck(:plan_id).map do |plan_id|
+        SendWebhookJob.new("plan.updated", Plan.new(id: plan_id))
+      end
+
       ActiveRecord::Base.transaction do
         update_feature_attributes
         update_privileges if params[:privileges].present?
 
         feature.save!
       end
+
+      # NOTE: The webhook is sent even if there was no actual change
+      after_commit { ActiveJob.perform_all_later(jobs) }
 
       result.feature = feature
       result

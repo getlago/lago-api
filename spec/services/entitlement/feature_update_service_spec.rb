@@ -145,5 +145,21 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         expect(result.feature.name).to eq("")
       end
     end
+
+    context "when feature is attached to a plan" do
+      let(:params) { {} }
+      let(:entitlement) { create(:entitlement, feature:) }
+      let(:privilege1_value) { create(:entitlement_value, entitlement:, privilege: privilege1, value: 10) }
+      let(:privilege2_value) { create(:entitlement_value, entitlement:, privilege: privilege2, value: true) }
+
+      before do
+        privilege1_value
+        privilege2_value
+      end
+
+      it "discard all values and entitlement" do
+        expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", entitlement.plan)
+      end
+    end
   end
 end
