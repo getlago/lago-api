@@ -71,7 +71,7 @@ describe "Recurring Non Invoiceable Fees", :scenarios, type: :request do
         context "without grouped_by" do
           let(:grouped_by) { nil }
 
-          it "creates one fee for all events" do
+          it "creates one fee for all events", transaction: false do
             travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # BILLING DAY !
               perform_billing
 
@@ -285,7 +285,7 @@ describe "Recurring Non Invoiceable Fees", :scenarios, type: :request do
       context "without grouped_by" do
         let(:grouped_by) { nil }
 
-        it "creates one fee for all events" do
+        it "creates one fee for all events", transaction: false do
           travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # BILLING DAY !
             perform_billing
 
@@ -441,7 +441,7 @@ describe "Recurring Non Invoiceable Fees", :scenarios, type: :request do
       context "without grouped_by" do
         let(:grouped_by) { nil }
 
-        it "creates one fee for all events" do
+        it "creates one fee for all events", transaction: false do
           travel_to(Time.zone.parse("2024-07-01T00:10:00")) do # BILLING DAY !
             perform_billing
 
