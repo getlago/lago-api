@@ -624,6 +624,15 @@ type AuthUrl {
   url: String!
 }
 
+"""
+Organization Authentication Methods Values
+"""
+enum AuthenticationMethodsEnum {
+  email_password
+  google_oauth
+  okta
+}
+
 type Authorize {
   url: String!
 }
@@ -3833,7 +3842,7 @@ type CurrentOrganization {
   adyenPaymentProviders: [AdyenProvider!]
   apiKey: String
   appliedDunningCampaign: DunningCampaign
-  authenticationMethods: [String!]!
+  authenticationMethods: [AuthenticationMethodsEnum!]!
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   cashfreePaymentProviders: [CashfreeProvider!]
@@ -10600,6 +10609,7 @@ Update Organization input arguments
 input UpdateOrganizationInput {
   addressLine1: String
   addressLine2: String
+  authenticationMethods: [AuthenticationMethodsEnum!]
   billingConfiguration: OrganizationBillingConfigurationInput
   city: String
 
