@@ -5,7 +5,8 @@ require "rails_helper"
 RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
   let(:required_permission) { "invoices:update" }
   let(:organization) { create(:organization) }
-  let(:user) { create(:user, organization: organization) }
+  let(:membership) { create(:membership, organization: organization) }
+  let(:user) { membership.user }
   let(:voided_invoice) { create(:invoice, :voided, organization: organization) }
   let!(:fee) { create(:fee, invoice: voided_invoice, organization: organization) }
   let(:fees) do
@@ -76,7 +77,7 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided, type: :graphql do
     expect(result["data"]["regenerateFromVoided"]).to be_nil
     expect(result["errors"]).to be_present
 
-    non_voided_invoice = create(:invoice, status: :finalized, organization: organization, customer: customer)
+    non_voided_invoice = create(:invoice, status: :finalized, organization: organization, customer: voided_invoice.customer)
     result2 = execute_graphql(
       current_organization: organization,
       current_user: user,
