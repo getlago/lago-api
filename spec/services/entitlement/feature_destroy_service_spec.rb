@@ -32,6 +32,10 @@ RSpec.describe Entitlement::FeatureDestroyService, type: :service do
       expect(result.feature).to eq(feature)
     end
 
+    it "sends feature.deleted webhook" do
+      expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.deleted", feature)
+    end
+
     context "when feature is nil" do
       it "returns a not found failure" do
         result = described_class.call(feature: nil)

@@ -25,6 +25,8 @@ module Entitlement
 
       after_commit { ActiveJob.perform_all_later(jobs) }
 
+      SendWebhookJob.perform_after_commit("feature.deleted", feature)
+
       result.feature = feature
       result
     end

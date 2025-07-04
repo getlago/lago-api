@@ -32,6 +32,10 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         expect(result.feature.description).to eq("Updated feature description")
       end
 
+      it "sends feature.updated webhook" do
+        expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", feature)
+      end
+
       it "only updates provided attributes" do
         original_name = feature.name
         params.delete(:name)

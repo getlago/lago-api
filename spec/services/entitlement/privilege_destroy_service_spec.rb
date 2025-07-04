@@ -25,6 +25,10 @@ RSpec.describe Entitlement::PrivilegeDestroyService, type: :service do
       expect(result.privilege).to eq(privilege)
     end
 
+    it "sends feature.updated webhook" do
+      expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", feature)
+    end
+
     context "when privilege is nil" do
       it "returns a not found failure" do
         result = described_class.call(privilege: nil)
