@@ -3,10 +3,6 @@
 module Webhooks
   module PaymentRequests
     class PaymentStatusUpdatedService < Webhooks::BaseService
-      def current_organization
-        @current_organization ||= object.organization
-      end
-
       def object_serializer
         ::V1::PaymentRequestSerializer.new(
           object,

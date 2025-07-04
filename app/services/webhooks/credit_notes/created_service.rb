@@ -3,10 +3,6 @@
 module Webhooks
   module CreditNotes
     class CreatedService < Webhooks::BaseService
-      def current_organization
-        @current_organization ||= object.organization
-      end
-
       def object_serializer
         ::V1::CreditNoteSerializer.new(
           object,

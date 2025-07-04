@@ -36,7 +36,7 @@ module Webhooks
     end
 
     def current_organization
-      # Empty
+      @current_organization ||= object.organization
     end
 
     def webhook_type
