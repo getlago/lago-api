@@ -3,6 +3,8 @@
 module Webhooks
   module CreditNotes
     class CreatedService < Webhooks::BaseService
+      private
+
       def object_serializer
         ::V1::CreditNoteSerializer.new(
           object,

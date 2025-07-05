@@ -3,6 +3,8 @@
 module Webhooks
   module Subscriptions
     class UpdatedService < Webhooks::BaseService
+      private
+
       def object_serializer
         ::V1::SubscriptionSerializer.new(
           object,

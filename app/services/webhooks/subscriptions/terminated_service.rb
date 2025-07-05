@@ -3,6 +3,8 @@
 module Webhooks
   module Subscriptions
     class TerminatedService < Webhooks::BaseService
+      private
+
       def object_serializer
         ::V1::SubscriptionSerializer.new(
           object,

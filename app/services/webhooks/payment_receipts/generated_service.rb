@@ -3,6 +3,8 @@
 module Webhooks
   module PaymentReceipts
     class GeneratedService < Webhooks::BaseService
+      private
+
       def object_serializer
         ::V1::PaymentReceiptSerializer.new(
           object,

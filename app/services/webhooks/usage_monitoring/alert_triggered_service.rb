@@ -3,6 +3,8 @@
 module Webhooks
   module UsageMonitoring
     class AlertTriggeredService < Webhooks::BaseService
+      private
+
       def object_serializer
         ::V1::UsageMonitoring::TriggeredAlertSerializer.new(
           object,

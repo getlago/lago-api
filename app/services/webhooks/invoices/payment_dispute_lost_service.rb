@@ -3,6 +3,8 @@
 module Webhooks
   module Invoices
     class PaymentDisputeLostService < Webhooks::BaseService
+      private
+
       def object_serializer
         ::V1::Invoices::PaymentDisputeLostSerializer.new(
           object,

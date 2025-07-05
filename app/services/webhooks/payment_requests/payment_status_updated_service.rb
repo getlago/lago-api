@@ -3,6 +3,8 @@
 module Webhooks
   module PaymentRequests
     class PaymentStatusUpdatedService < Webhooks::BaseService
+      private
+
       def object_serializer
         ::V1::PaymentRequestSerializer.new(
           object,

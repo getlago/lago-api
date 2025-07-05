@@ -3,6 +3,8 @@
 module Webhooks
   module Invoices
     class GeneratedService < Webhooks::BaseService
+      private
+
       def object_serializer
         ::V1::InvoiceSerializer.new(
           object,

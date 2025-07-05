@@ -3,6 +3,8 @@
 module Webhooks
   module Invoices
     class VoidedService < Webhooks::BaseService
+      private
+
       def object_serializer
         ::V1::InvoiceSerializer.new(
           object,
