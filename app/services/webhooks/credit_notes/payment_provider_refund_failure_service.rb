@@ -7,10 +7,6 @@ module Webhooks
 
       alias_method :credit_note, :object
 
-      def current_organization
-        @current_organization ||= credit_note.organization
-      end
-
       def object_serializer
         ::V1::CreditNotes::PaymentProviderRefundErrorSerializer.new(
           credit_note,

@@ -5,10 +5,6 @@ module Webhooks
     class PaidCreditAddedService < Webhooks::BaseService
       private
 
-      def current_organization
-        @current_organization ||= object.organization
-      end
-
       def object_serializer
         ::V1::InvoiceSerializer.new(
           object,
