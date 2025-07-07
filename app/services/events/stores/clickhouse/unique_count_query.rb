@@ -40,24 +40,35 @@ module Events
             -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
             same_day_ignored AS (
               SELECT
-                property,
-                operation_type,
-                timestamp,
-                ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn,
+                e.property,
+                e.operation_type,
+                e.timestamp,
                 CASE
-                  WHEN (
-                    SELECT 1
-                    FROM events_data next_event
-                    WHERE next_event.property = events_data.property
-                      AND toDate(next_event.timestamp) = toDate(events_data.timestamp)
-                      AND next_event.operation_type != events_data.operation_type
-                      AND next_event.timestamp > events_data.timestamp
-                    LIMIT 1
-                  ) = 1 AND rn != 1
+                  WHEN next_event.next_property IS NOT NULL AND e.rn != 1
                   THEN true
                   ELSE false
                 END AS is_ignored
-              FROM events_data
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) as e
+              LEFT JOIN (
+                SELECT
+                  timestamp as next_timestamp,
+                  property as next_property,
+                  operation_type as next_operation_type
+                FROM events_data
+              ) as next_event ON (
+                next_event.next_property = e.property
+                AND toDate(next_event.next_timestamp) = toDate(e.timestamp)
+                AND next_event.next_operation_type != e.operation_type
+                AND next_event.next_timestamp > e.timestamp
+              )
             ),
             -- Check if the operation type is the same as previous, so it nullifies this one
             event_values AS (
@@ -123,26 +134,39 @@ module Events
             -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
             same_day_ignored AS (
               SELECT
-                #{group_names.join(", ")},
-                property,
-                operation_type,
-                timestamp,
-                ROW_NUMBER() OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) AS rn,
+                e.#{group_names.join(", e.")},
+                e.property,
+                e.operation_type,
+                e.timestamp,
                 CASE
-                  WHEN (
-                    SELECT 1
-                    FROM events_data next_event
-                    WHERE next_event.property = events_data.property
-                      AND #{group_names.map { |name| "next_event.#{name} = events_data.#{name}" }.join(" AND ")}
-                      AND toDate(next_event.timestamp) = toDate(events_data.timestamp)
-                      AND next_event.operation_type != events_data.operation_type
-                      AND next_event.timestamp > events_data.timestamp
-                    LIMIT 1
-                  ) = 1 AND rn != 1
+                  WHEN next_event.next_property IS NOT NULL AND e.rn != 1
                   THEN true
                   ELSE false
                 END AS is_ignored
-              FROM events_data
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{group_names.join(", ")},
+                  ROW_NUMBER() OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) AS rn
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) as e
+              LEFT JOIN (
+                SELECT
+                  timestamp as next_timestamp,
+                  property as next_property,
+                  operation_type as next_operation_type,
+                  #{group_names.map { |name| "#{name} as next_#{name}" }.join(", ")}
+                FROM events_data
+              ) as next_event ON (
+                next_event.next_property = e.property
+                AND #{group_names.map { |name| "next_event.next_#{name} = e.#{name}" }.join(" AND ")}
+                AND toDate(next_event.next_timestamp) = toDate(e.timestamp)
+                AND next_event.next_operation_type != e.operation_type
+                AND next_event.next_timestamp > e.timestamp
+              )
             ),
             -- Check if the operation type is the same as previous, so it nullifies this one
             event_values AS (
@@ -150,8 +174,7 @@ module Events
                 #{group_names.join(", ")},
                 property,
                 operation_type,
-                timestamp,
-                ROW_NUMBER() OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) AS rn
+                timestamp
               FROM (
                 SELECT
                   timestamp,
@@ -165,7 +188,7 @@ module Events
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY #{group_names.join(", ")}, property, operation_type, timestamp
-            ),
+            )
 
             SELECT
               #{group_names.join(", ")},
@@ -211,31 +234,41 @@ module Events
             -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
             same_day_ignored AS (
               SELECT
-                property,
-                operation_type,
-                timestamp,
-                ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn,
+                e.property,
+                e.operation_type,
+                e.timestamp,
                 CASE
-                  WHEN (
-                    SELECT 1
-                    FROM events_data next_event
-                    WHERE next_event.property = events_data.property
-                      AND #{group_names.map { |name| "next_event.#{name} = events_data.#{name}" }.join(" AND ")}
-                      AND toDate(next_event.timestamp) = toDate(events_data.timestamp)
-                      AND next_event.operation_type != events_data.operation_type
-                      AND next_event.timestamp > events_data.timestamp
-                    LIMIT 1
-                  ) = 1 AND rn != 1
+                  WHEN next_event.next_property IS NOT NULL AND e.rn != 1
                   THEN true
                   ELSE false
                 END AS is_ignored
-              FROM events_data
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) as e
+              LEFT JOIN (
+                SELECT
+                  timestamp as next_timestamp,
+                  property as next_property,
+                  operation_type as next_operation_type
+                FROM events_data
+              ) as next_event ON (
+                next_event.next_property = e.property
+                AND toDate(next_event.next_timestamp) = toDate(e.timestamp)
+                AND next_event.next_operation_type != e.operation_type
+                AND next_event.next_timestamp > e.timestamp
+              )
             ),
             event_values AS (
               SELECT
                 property,
                 operation_type,
-                timestamp,
+                timestamp
               FROM (
                 SELECT
                   timestamp,
@@ -248,7 +281,7 @@ module Events
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY property, timestamp, operation_type
-            ),
+            )
 
             SELECT
               prorated_value,
