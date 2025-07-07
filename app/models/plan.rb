@@ -55,7 +55,7 @@ class Plan < ApplicationRecord
     %w[name code]
   end
 
-  def pay_in_arrear?
+  def pay_in_arrears?
     !pay_in_advance
   end
 

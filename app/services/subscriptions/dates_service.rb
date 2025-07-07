@@ -185,10 +185,10 @@ module Subscriptions
       last_invoice_subscription.charges_to_datetime
     end
 
-    def terminated_pay_in_arrear?
+    def terminated_pay_in_arrears?
       # NOTE: In case of termination or upgrade when we are terminating old plan (paying in arrear),
       #       we should take to the beginning of the billing period
-      subscription.terminated_at?(billing_at) && plan.pay_in_arrear? && !subscription.downgraded?
+      subscription.terminated_at?(billing_at) && plan.pay_in_arrears? && !subscription.downgraded?
     end
 
     def terminated?
