@@ -1115,7 +1115,7 @@ CREATE TABLE public.add_ons_taxes (
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2565,7 +2565,7 @@ CREATE TABLE public.fees_taxes (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2742,7 +2742,7 @@ CREATE TABLE public.invoices_taxes (
     updated_at timestamp(6) without time zone NOT NULL,
     fees_amount_cents bigint DEFAULT 0 NOT NULL,
     taxable_base_amount_cents bigint DEFAULT 0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2777,7 +2777,7 @@ CREATE TABLE public.plans_taxes (
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -8916,6 +8916,14 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250707085725'),
+('20250707085724'),
+('20250707085651'),
+('20250707085650'),
+('20250707085634'),
+('20250707085633'),
+('20250707085615'),
+('20250707085614'),
 ('20250707083222'),
 ('20250707083221'),
 ('20250707083211'),
