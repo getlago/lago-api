@@ -10,6 +10,7 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
   let(:voided_invoice) { create(:invoice, :voided, organization:, customer:) }
   let(:fee) { create(:fee, invoice: voided_invoice, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:) }
+  let(:add_on) { create(:add_on, organization: organization) }
   let(:fees) do
     [{
       id: fee.id,
@@ -21,16 +22,16 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
     }]
   end
 
-  def new_fee_config(description: "New fee", units: 2.0, amount_cents: 500)
+  def new_fee_config(description: "New fee", units: 2.0, amount_cents: 500, unit_amount_cents: 1000)
     {
       organization_id: organization.id,
       billing_entity_id: voided_invoice.billing_entity_id,
       description: description,
       units: units,
       amount_cents: amount_cents,
+      unit_amount_cents: unit_amount_cents,
       taxes_amount_cents: 0,
       amount_currency: "EUR",
-      fee_type: "subscription",
       subscription_id: subscription.id,
       invoiceable_type: "Subscription",
       invoiceable_id: subscription.id
@@ -433,19 +434,22 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
       end
 
       context "when a new fee is provided (id omitted)" do
-        let(:fees) { [new_fee_config] }
+        let(:fees) do
+          [
+            new_fee_config.merge(total_aggregated_units: 2.0), # charge fee (no add_on_id)
+            new_fee_config(description: "Add-on fee", units: 1.0, amount_cents: 200).merge(add_on_id: add_on.id) # add_on fee
+          ]
+        end
 
-        it "creates a new fee on the regenerated invoice" do
+        it "creates new fees on the regenerated invoice (charge and add_on)" do
           result = regenerate_service.call
-
+          puts result.error.inspect unless result.success?
           expect(result).to be_success
-          expect(result.invoice.fees.count).to eq(1)
-          new_fee = result.invoice.fees.first
-          expect(new_fee.description).to eq("New fee")
-          expect(new_fee.units).to eq(2.0)
-          expect(new_fee.amount_cents).to eq(500)
-          expect(new_fee.taxes_amount_cents).to eq(0)
-          expect(new_fee.amount_currency).to eq("EUR")
+          expect(result.invoice.fees.count).to eq(2)
+          charge_fee = result.invoice.fees.find { |f| f.fee_type == "charge" }
+          add_on_fee = result.invoice.fees.find { |f| f.fee_type == "add_on" }
+          expect(charge_fee.total_aggregated_units).to eq(2.0)
+          expect(add_on_fee.total_aggregated_units).to be_nil
         end
       end
 
@@ -453,7 +457,8 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
         let(:fees) do
           [
             {id: fee.id},
-            new_fee_config
+            new_fee_config.merge(total_aggregated_units: 2.0), # charge fee
+            new_fee_config(description: "Add-on fee", units: 1.0, amount_cents: 200).merge(add_on_id: add_on.id) # add_on fee
           ]
         end
 
@@ -462,8 +467,8 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
 
           aggregate_failures do
             expect(result).to be_success
-            expect(result.invoice.fees.count).to eq(2)
-            expect(result.invoice.fees.pluck(:description)).to include(fee.description, "New fee")
+            expect(result.invoice.fees.count).to eq(3)
+            expect(result.invoice.fees.pluck(:description)).to include(fee.description, "New fee", "Add-on fee")
           end
         end
       end

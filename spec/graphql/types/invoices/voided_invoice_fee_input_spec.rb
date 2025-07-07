@@ -16,5 +16,6 @@ RSpec.describe Types::Invoices::VoidedInvoiceFeeInput do
     expect(subject).to accept_argument(:tax_codes).of_type("[String!]")
     expect(subject).to accept_argument(:unit_amount_cents).of_type("BigInt")
     expect(subject).to accept_argument(:units).of_type("Float")
+    expect(subject).to accept_argument(:total_aggregated_units).of_type("Float")
   end
 end

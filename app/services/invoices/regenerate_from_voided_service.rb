@@ -44,7 +44,16 @@ module Invoices
 
               fee_input = fees.find { |f| f[:id] == fee_record.id }
               if fee_input
-                allowed_attrs = %i[charge_id subscription_id invoice_display_name units description amount_cents unit_amount_cents add_on_id]
+                allowed_attrs = %i[
+                  charge_id
+                  subscription_id
+                  invoice_display_name
+                  units
+                  description
+                  amount_cents
+                  unit_amount_cents
+                  add_on_id
+                ]
                 allowed_attrs.each do |attr|
                   fee[attr] = fee_input[attr] if fee_input.key?(attr)
                 end
@@ -69,7 +78,9 @@ module Invoices
               fee_type: fee_attributes[:add_on_id].present? ? :add_on : :charge,
               taxes_amount_cents: 0,
               taxes_precise_amount_cents: 0.to_d,
-              payment_status: :pending
+              payment_status: :pending,
+              # Mandatory when the fee_type is :charge
+              total_aggregated_units: fee_attributes[:total_aggregated_units]
             )
 
             new_fee = Fee.create!(fee_data)
@@ -100,6 +111,8 @@ module Invoices
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
       e.result
+    rescue => e
+      result.service_failure!(code: "unexpected_error", message: e.message)
     end
 
     private
