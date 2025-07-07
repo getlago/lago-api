@@ -11,6 +11,14 @@ class Event < EventsRecord
 
   validates :transaction_id, presence: true, uniqueness: {scope: %i[organization_id external_subscription_id]}
   validates :code, presence: true
+  validates :source, presence: true, inclusion: { in: %w[usage fixed_charge] }
+
+  EVENT_SOURCES = {
+    usage: 'usage',
+    fixed_charge: 'fixed_charge'
+  }.freeze
+
+  enum :source, EVENT_SOURCES, default: "usage"
 
   default_scope -> { kept }
   scope :from_datetime, ->(from_datetime) { where("events.timestamp >= ?", from_datetime) }
@@ -70,6 +78,7 @@ end
 #  metadata                   :jsonb            not null
 #  precise_total_amount_cents :decimal(40, 15)
 #  properties                 :jsonb            not null
+#  source                     :string           default("usage"), not null
 #  timestamp                  :datetime
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
@@ -89,6 +98,8 @@ end
 #  index_events_on_external_subscription_id_with_included           (external_subscription_id,code,timestamp) WHERE (deleted_at IS NULL)
 #  index_events_on_organization_id                                  (organization_id)
 #  index_events_on_organization_id_and_code                         (organization_id,code)
+#  index_events_on_organization_id_and_source                       (organization_id,source)
 #  index_events_on_properties                                       (properties) USING gin
+#  index_events_on_source                                           (source)
 #  index_unique_transaction_id                                      (organization_id,external_subscription_id,transaction_id) UNIQUE
 #

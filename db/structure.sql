@@ -421,11 +421,14 @@ DROP INDEX IF EXISTS public.index_fees_on_charge_filter_id;
 DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
+DROP INDEX IF EXISTS public.index_events_on_source;
 DROP INDEX IF EXISTS public.index_events_on_properties;
+DROP INDEX IF EXISTS public.index_events_on_organization_id_and_source;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_events_on_external_subscription_id_with_included;
 DROP INDEX IF EXISTS public.index_events_on_external_subscription_id_precise_amount;
+DROP INDEX IF EXISTS public.index_events_on_external_subscription_id_and_source;
 DROP INDEX IF EXISTS public.index_events_on_deleted_at;
 DROP INDEX IF EXISTS public.index_events_on_customer_id;
 DROP INDEX IF EXISTS public.index_error_details_on_owner;
@@ -1952,7 +1955,8 @@ CREATE TABLE public.events (
     deleted_at timestamp(6) without time zone,
     external_customer_id character varying,
     external_subscription_id character varying,
-    precise_total_amount_cents numeric(40,15)
+    precise_total_amount_cents numeric(40,15),
+    source character varying DEFAULT 'usage'::character varying NOT NULL
 )
 WITH (autovacuum_vacuum_scale_factor='0.005');
 
@@ -5840,6 +5844,13 @@ CREATE INDEX index_events_on_deleted_at ON public.events USING btree (deleted_at
 
 
 --
+-- Name: index_events_on_external_subscription_id_and_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_external_subscription_id_and_source ON public.events USING btree (external_subscription_id, source);
+
+
+--
 -- Name: index_events_on_external_subscription_id_precise_amount; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5868,10 +5879,24 @@ CREATE INDEX index_events_on_organization_id_and_code ON public.events USING btr
 
 
 --
+-- Name: index_events_on_organization_id_and_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_organization_id_and_source ON public.events USING btree (organization_id, source);
+
+
+--
 -- Name: index_events_on_properties; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX index_events_on_properties ON public.events USING gin (properties jsonb_path_ops);
+
+
+--
+-- Name: index_events_on_source; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_source ON public.events USING btree (source);
 
 
 --
@@ -8916,6 +8941,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250707100400'),
 ('20250707090348'),
 ('20250707090347'),
 ('20250707090329'),
