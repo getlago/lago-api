@@ -24,7 +24,7 @@ module Resolvers
     type Types::ApiLogs::Object.collection_type, null: true
 
     def resolve(**args)
-      raise unauthorized_error unless License.premium?
+      raise unauthorized_error unless License.premium? && Utils::ApiLog.available?
 
       result = ApiLogsQuery.call(
         organization: current_organization,
