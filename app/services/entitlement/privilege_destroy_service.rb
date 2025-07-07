@@ -23,6 +23,8 @@ module Entitlement
 
       after_commit { ActiveJob.perform_all_later(jobs) }
 
+      SendWebhookJob.perform_after_commit("feature.updated", privilege.feature)
+
       result.privilege = privilege
       result
     end
