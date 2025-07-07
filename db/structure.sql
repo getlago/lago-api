@@ -1142,7 +1142,7 @@ CREATE TABLE public.adjusted_fees (
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     charge_filter_id uuid,
     unit_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1196,7 +1196,7 @@ CREATE TABLE public.applied_coupons (
     frequency integer DEFAULT 0 NOT NULL,
     frequency_duration integer,
     frequency_duration_remaining integer,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1213,7 +1213,7 @@ CREATE TABLE public.applied_invoice_custom_sections (
     invoice_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2256,7 +2256,7 @@ CREATE TABLE public.payment_provider_customers (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2440,7 +2440,7 @@ CREATE TABLE public.subscriptions (
     subscription_at timestamp(6) without time zone,
     ending_at timestamp(6) without time zone,
     trial_ended_at timestamp(6) without time zone,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -8916,6 +8916,16 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250707113718'),
+('20250707113717'),
+('20250707100102'),
+('20250707100101'),
+('20250707100026'),
+('20250707100025'),
+('20250707100013'),
+('20250707100012'),
+('20250707095956'),
+('20250707095955'),
 ('20250707095224'),
 ('20250707095223'),
 ('20250707094932'),
