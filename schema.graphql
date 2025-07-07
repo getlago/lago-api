@@ -8496,7 +8496,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(limit: Int, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query a single tax of an organization

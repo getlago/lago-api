@@ -9,7 +9,9 @@ module Resolvers
 
     description "Query subscriptions of an organization"
 
+    argument :external_customer_id, String, required: false
     argument :limit, Integer, required: false
+    argument :overriden, Boolean, required: false
     argument :page, Integer, required: false
     argument :plan_code, String, required: false
     argument :search_term, String, required: false
@@ -21,7 +23,7 @@ module Resolvers
       result = SubscriptionsQuery.call(
         organization: current_organization,
         pagination: {page:, limit:},
-        filters: {plan_code:, status:},
+        filters: {plan_code:, status:, external_customer_id:, overriden:},
         search_term:
       )
 
