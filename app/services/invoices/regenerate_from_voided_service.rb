@@ -87,8 +87,6 @@ module Invoices
 
             taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
             taxes_result.raise_if_error!
-
-            new_fee.save!
           end
 
           amounts_from_fees_result = Invoices::ComputeAmountsFromFees.call(invoice: invoice)
