@@ -47,6 +47,8 @@ module Types
     field :dunning_campaigns, resolver: Resolvers::DunningCampaignsResolver
     field :event, resolver: Resolvers::EventResolver
     field :events, resolver: Resolvers::EventsResolver
+    field :feature, resolver: Resolvers::Entitlement::FeatureResolver
+    field :features, resolver: Resolvers::Entitlement::FeaturesResolver
     field :google_auth_url, resolver: Resolvers::Auth::Google::AuthUrlResolver
     field :gross_revenues, resolver: Resolvers::Analytics::GrossRevenuesResolver
     field :integration, resolver: Resolvers::IntegrationResolver

@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::FeatureUpdateService, type: :service do
+RSpec.describe Entitlement::FeaturePartialUpdateService, type: :service do
   subject { described_class.call(feature:, params:) }
 
   let(:organization) { create(:organization) }
@@ -147,6 +147,43 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
 
         expect(result).to be_success
         expect(result.feature.name).to eq("")
+      end
+    end
+
+    context "when new privileges is provided" do
+      let(:new_privilege_code) { "new_privilege" }
+      let(:params) do
+        {
+          privileges: {
+            new_privilege_code => {name: "New Privilege"}
+          }
+        }
+      end
+
+      it "creates a new privilege" do
+        result = subject
+
+        expect(result).to be_success
+        expect(feature.privileges.reload.count).to eq(3) # 2 existing + 1 new
+        expect(feature.privileges.find_by(code: new_privilege_code).name).to eq("New Privilege")
+      end
+
+      context "when new privilege params are invalid" do
+        let(:params) do
+          {
+            privileges: {
+              new_privilege_code => {name: "New Privilege", value_type: "invalid_type"}
+            }
+          }
+        end
+
+        it "returns a validation failure" do
+          result = subject
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages).to include("privilege.value_type": ["value_is_invalid"])
+        end
       end
     end
 

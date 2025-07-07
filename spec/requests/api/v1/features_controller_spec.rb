@@ -307,14 +307,14 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       expect(json[:feature][:description]).to eq("Updated feature description")
     end
 
-    it "only updates privileges that exist" do
+    it "creates privilege non existent privilege" do
       params[:feature][:privileges]["nonexistent"] = {name: "New Name"}
 
       subject
 
       expect(response).to have_http_status(:ok)
       expect(json[:feature][:privileges][:max][:name]).to eq("Max.")
-      expect(json[:feature][:privileges]).not_to include(:nonexistent)
+      expect(json[:feature][:privileges][:nonexistent][:name]).to eq("New Name")
     end
 
     context "when updating only feature attributes" do
