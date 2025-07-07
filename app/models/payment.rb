@@ -119,7 +119,7 @@ end
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
 #  invoice_id                   :uuid
-#  organization_id              :uuid
+#  organization_id              :uuid             not null
 #  payable_id                   :uuid
 #  payment_provider_customer_id :uuid
 #  payment_provider_id          :uuid

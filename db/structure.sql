@@ -3483,7 +3483,7 @@ CREATE TABLE public.payments (
     reference character varying,
     provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
     provider_payment_method_id character varying,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3566,7 +3566,7 @@ CREATE TABLE public.recurring_transaction_rules (
     expiration_at timestamp(6) without time zone,
     terminated_at timestamp(6) without time zone,
     status integer DEFAULT 0,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3586,7 +3586,7 @@ CREATE TABLE public.refunds (
     provider_refund_id character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -8916,6 +8916,12 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250707082521'),
+('20250707082520'),
+('20250707082510'),
+('20250707082509'),
+('20250707082436'),
+('20250707082435'),
 ('20250707081911'),
 ('20250707081910'),
 ('20250707081837'),
