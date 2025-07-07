@@ -21,6 +21,7 @@ RSpec.describe Invoice, type: :model do
 
   it { is_expected.to have_many(:applied_usage_thresholds) }
   it { is_expected.to have_many(:usage_thresholds).through(:applied_usage_thresholds) }
+  it { is_expected.to have_many(:regenerated_invoices).class_name("Invoice") }
 
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }

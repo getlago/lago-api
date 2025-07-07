@@ -16,7 +16,9 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "invoice") unless voided_invoice
       return result.not_allowed_failure!(code: "not_voided") unless voided_invoice.voided?
+      return result.not_allowed_failure!(code: "already_regenerated") if voided_invoice.regenerated_invoices.any?
 
+      # For Miguel to review:
       # 1. Grace Period (draft status) - Done
       # 2. Usar a mesma data da voided invoice (bounderies) - Done
       # 3. Check Invoices::TransitionToFinalStatusService.call(invoice:) (finalized or draft status) - Done
