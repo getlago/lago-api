@@ -27,6 +27,8 @@ module Resolvers
       argument :billing_entity_code, String, required: false
       argument :plan_code, String, required: false
 
+      argument :is_customer_tin_empty, Boolean, required: false
+
       type Types::DataApi::RevenueStreams::Object.collection_type, null: false
 
       def resolve(**args)
