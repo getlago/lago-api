@@ -112,8 +112,7 @@ To create a webhook:
 - After making changes to the tests, always run the tests to ensure they pass.
 - When doing array comparison in tests, use `eq` or `match_array` instead of multiple `include`/`not_to include` assertions when the expected array is small enough to be readable
 - Use single-line `let` statements when they fit on one line without breaking Rubocop rules
-- Use `let!` only for objects that need to be created before the test runs; if not referencing the object in the test, use `let` instead and explicitly reference it in the test
-- For test setup objects that aren't referenced in tests, consider creating them directly in a `before` block instead of using `let`
+- Use `let!` only for objects that need to be created before the test runs; if not referencing the object in tests, consider creating them directly in a `before` block instead of using `let`
 
 ## Models
 
