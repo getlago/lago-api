@@ -188,5 +188,35 @@ RSpec.describe Utils::ActivityLog, type: :service do
         expect(karafka_producer).not_to have_received(:produce_async)
       end
     end
+
+    describe ".available?" do
+      subject { activity_log.available? }
+
+      context "without clickhouse" do
+        before do
+          ENV["LAGO_CLICKHOUSE_ENABLED"] = nil
+        end
+
+        it { is_expected.to be_falsey }
+      end
+
+      context "without kafka vars" do
+        before do
+          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
+          ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"] = nil
+          ENV["LAGO_CLICKHOUSE_ENABLED"] = "true"
+        end
+
+        it { is_expected.to be_falsey }
+      end
+
+      context "with everything configured", :kafka_configured do
+        before do
+          ENV["LAGO_CLICKHOUSE_ENABLED"] = "true"
+        end
+
+        it { is_expected.to be_truthy }
+      end
+    end
   end
 end

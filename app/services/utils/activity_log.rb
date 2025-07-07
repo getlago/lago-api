@@ -18,6 +18,12 @@ module Utils
       new(*, **, &).produce
     end
 
+    def self.available?
+      ENV["LAGO_CLICKHOUSE_ENABLED"].present? &&
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present? &&
+        ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"].present?
+    end
+
     # This method is used to produce an activity log after a commit.
     #
     # It is meant to avoid race-conditions where a asynchronous post-processing run before changes are commited to the DB.
@@ -62,8 +68,7 @@ module Utils
     attr_reader :object, :activity_type, :activity_id, :block
 
     def produce_with_diff(changes)
-      return if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
-      return if ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"].blank?
+      return unless self.class.available?
 
       current_time = Time.current.iso8601[...-1]
       Karafka.producer.produce_async(
