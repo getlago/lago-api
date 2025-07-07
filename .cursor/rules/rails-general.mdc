@@ -3,7 +3,6 @@ description: General Rails rules
 globs: app/**/*.rb
 alwaysApply: true
 ---
-
 # General style
 
 - avoid `if/unless` modifier right before the last line.
@@ -77,9 +76,6 @@ end
 # Models
 
 - New models must directly belong to an organization. Store the `organization_id` in the table, don't use `through:`
-- When testing models, to test all associations and group them all in a `describe "associations"` block with a single `it` block
-- When testing models, to test all validations and group them all in a `describe "validations"` block with a single `it` block
-
 
 Soft deletion
 - not all models are soft deletable
@@ -113,6 +109,22 @@ To create a webhook:
   `expect(response).to be_not_found_error("alert")`
 - Prefer `expect(...).to have_received()` instead of `expect(...).to receive()`
 - never use `aggregate_failure` in new test. Do not edit existing tests to remove it.
+- After making any code changes, always run the relevant tests to ensure they pass: `lago exec api bundle exec rspec <spec_file_or_directory>`
+- When doing array comparison in tests, use `eq` or `match_array` instead of multiple `include`/`not_to include` assertions when the expected array is small enough to be readable
+- Use single-line `let` statements when they fit on one line without breaking Rubocop rules
+- Use `let!` only for objects that need to be created before the test runs; if not referencing the object in the test, use `let` instead and explicitly reference it in the test
+- For test setup objects that aren't referenced in tests, consider creating them directly in a `before` block instead of using `let`
+
+## Models
+
+- When testing models, test all enums and group them all in a `describe "enums"` block with a single `it` block (not multiple `it` blocks)
+- When testing models, test ALL associations (belongs_to, has_one, has_many, etc.) and group them all in a `describe "associations"` block with a single `it` block (not multiple `it` blocks)
+  - Include ALL association parameters and options (class_name, foreign_key, through, dependent, autosave, optional, etc.)
+  - Clickhouse associations should have their own `describe "Clickhouse associations"` block with `clickhouse: true` metadata after the associations block
+- When testing models, test all scopes and group them all in a `describe "Scopes"` block with individual `describe ".scope_name"` blocks for each scope
+- When testing models, test all validations and group them all in a `describe "validations"` block with a single `it` block
+  - For complex custom validations, use a nested `describe "attribute_name validation"` block instead of using the method name
+- Test sections should appear in this order: enums, associations, Clickhouse associations, scopes, validations
 
 ## Factories
 
