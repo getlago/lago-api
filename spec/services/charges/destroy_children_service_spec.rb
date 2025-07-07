@@ -13,6 +13,7 @@ RSpec.describe Charges::DestroyChildrenService, type: :service do
   let(:child_plan) { create(:plan, organization:, parent_id:) }
   let(:parent_id) { plan.id }
   let(:charge_parent_id) { charge.id }
+  let(:subscription) { create(:subscription, plan: child_plan) }
   let(:child_charge) do
     create(
       :standard_charge,
@@ -23,7 +24,10 @@ RSpec.describe Charges::DestroyChildrenService, type: :service do
     )
   end
 
-  before { child_charge }
+  before do
+    child_charge
+    subscription
+  end
 
   describe "#call" do
     it "soft deletes the charge" do

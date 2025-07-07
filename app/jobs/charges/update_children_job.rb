@@ -8,7 +8,7 @@ module Charges
       charge = Charge.find_by(id: old_parent_attrs["id"])
       return unless charge
 
-      charge.children.order(created_at: :asc).pluck(:id).each_slice(20) do |child_ids|
+      charge.children.joins(plan: :subscriptions).where(subscriptions: { status: "active" }).distinct.pluck(:id).each_slice(20) do |child_ids|
         Charges::UpdateChildrenBatchJob.perform_later(
           child_ids:,
           params:,
