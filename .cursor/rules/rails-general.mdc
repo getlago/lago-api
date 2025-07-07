@@ -109,7 +109,7 @@ To create a webhook:
   `expect(response).to be_not_found_error("alert")`
 - Prefer `expect(...).to have_received()` instead of `expect(...).to receive()`
 - never use `aggregate_failure` in new test. Do not edit existing tests to remove it.
-- After making any code changes, always run the relevant tests to ensure they pass: `lago exec api bundle exec rspec <spec_file_or_directory>`
+- After making changes to the tests, always run the tests to ensure they pass.
 - When doing array comparison in tests, use `eq` or `match_array` instead of multiple `include`/`not_to include` assertions when the expected array is small enough to be readable
 - Use single-line `let` statements when they fit on one line without breaking Rubocop rules
 - Use `let!` only for objects that need to be created before the test runs; if not referencing the object in the test, use `let` instead and explicitly reference it in the test
