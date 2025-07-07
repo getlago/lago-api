@@ -154,6 +154,7 @@ module Events
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY #{group_names.join(", ")}, property, operation_type, timestamp
+              ORDER BY timestamp ASC
             )
 
             SELECT
@@ -292,8 +293,9 @@ module Events
           # If property already added, another addition returns 0 ; it returns 1 otherwise
           # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
           <<-SQL
-            CASE WHEN LAG(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp) = operation_type
-            THEN 0
+            CASE
+            WHEN LAG(operation_type, 1, 'remove') OVER (PARTITION BY property ORDER BY timestamp) = operation_type
+            THEN 0 -- NOTE: if the first ever operation is a remove, it's not relevant; note that it's "remove" if not found, so we ignore "empty" remove
             ELSE CASE WHEN operation_type = 'add' THEN 1 ELSE -1 END
             END
           SQL
@@ -304,8 +306,9 @@ module Events
           # If property already added, another addition returns 0 ; it returns 1 otherwise
           # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
           <<-SQL
-            CASE WHEN LAG(operation_type, 1) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) = operation_type
-            THEN 0
+            CASE
+            WHEN LAG(operation_type, 1, 'remove') OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) = operation_type
+            THEN 0 -- NOTE: if the first ever operation is a remove, it's not relevant; note that it's "remove" if not found, so we ignore "empty" remove
             ELSE CASE WHEN operation_type = 'add' THEN 1 ELSE -1 END
             END
           SQL

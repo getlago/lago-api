@@ -364,6 +364,7 @@ module Events
           # NOTE: Returns 1 for relevant addition, -1 for relevant removal
           # If property already added, another addition returns 0 ; it returns 1 otherwise
           # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
+          # If it's the first event for a property and it's a remove, return 0 (can't remove what was never added)
           <<-SQL
             if (
               operation_type = 'add',
@@ -386,6 +387,7 @@ module Events
           # NOTE: Returns 1 for relevant addition, -1 for relevant removal
           # If property already added, another addition returns 0 ; it returns 1 otherwise
           # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
+          # If it's the first event for a property and it's a remove, return 0 (can't remove what was never added)
           <<-SQL
             if (
               operation_type = 'add',
