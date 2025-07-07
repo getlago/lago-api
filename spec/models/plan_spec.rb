@@ -45,7 +45,7 @@ RSpec.describe Plan, type: :model do
     end
   end
 
-  describe ".has_trial?" do
+  describe "#has_trial?" do
     it "returns true when trial_period" do
       expect(plan).to have_trial
     end
@@ -59,7 +59,7 @@ RSpec.describe Plan, type: :model do
     end
   end
 
-  describe ".yearly_amount_cents" do
+  describe "#yearly_amount_cents" do
     let(:plan) do
       build(:plan, interval: :yearly, amount_cents: 100)
     end
@@ -145,6 +145,20 @@ RSpec.describe Plan, type: :model do
       create(:invoice_subscription, invoice: invoice2, subscription: subscription2)
 
       expect(plan.draft_invoices_count).to eq(2)
+    end
+  end
+
+  describe "#pay_in_arrears?" do
+    context "when pay_in_advance is true" do
+      let(:plan) { build(:plan, :pay_in_advance) }
+
+      it { expect(plan.pay_in_arrears?).to be(false) }
+    end
+
+    context "when pay_in_advance is false" do
+      let(:plan) { build(:plan) }
+
+      it { expect(plan.pay_in_arrears?).to be(true) }
     end
   end
 end
