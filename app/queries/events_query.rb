@@ -6,7 +6,8 @@ class EventsQuery < BaseQuery
     :code,
     :external_subscription_id,
     :timestamp_from,
-    :timestamp_to
+    :timestamp_to,
+    :source
   ]
 
   def call
@@ -20,6 +21,7 @@ class EventsQuery < BaseQuery
     events = with_code(events) if filters.code
     events = with_external_subscription_id(events) if filters.external_subscription_id
     events = with_timestamp_range(events) if filters.timestamp_from || filters.timestamp_to
+    events = with_source(events) if filters.source
 
     result.events = events
     result
@@ -41,6 +43,10 @@ class EventsQuery < BaseQuery
     scope = scope.where(timestamp: timestamp_from..) if filters.timestamp_from
     scope = scope.where(timestamp: ..timestamp_to) if filters.timestamp_to
     scope
+  end
+
+  def with_source(scope)
+    scope.where(source: filters.source)
   end
 
   def timestamp_from

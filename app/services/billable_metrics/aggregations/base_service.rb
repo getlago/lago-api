@@ -89,7 +89,7 @@ module BillableMetrics
           code: billable_metric.code,
           subscription:,
           boundaries:,
-          filters:
+          filters: filters.merge(source: filters[:source] || 'usage')
         )
       end
 

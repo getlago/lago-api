@@ -12,6 +12,9 @@ module Events
             .where(organization_id: subscription.organization.id)
             .where(code:)
 
+          # Apply source filtering if specified
+          scope = scope.where(source:) if source.present?
+
           scope = scope.order(timestamp: :asc) if ordered
 
           scope = scope.where("events_enriched.timestamp >= ?", from_datetime) if force_from || use_from_boundary

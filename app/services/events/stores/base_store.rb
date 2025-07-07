@@ -16,6 +16,8 @@ module Events
         @matching_filters = filters[:matching_filters] || {}
         @ignored_filters = filters[:ignored_filters] || []
 
+        @source = filters[:source] || 'usage'
+
         @aggregation_property = nil
         @numeric_property = false
         @use_from_boundary = true
@@ -133,7 +135,7 @@ module Events
 
       protected
 
-      attr_accessor :code, :subscription, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters
+      attr_accessor :code, :subscription, :boundaries, :grouped_by_values, :filters, :matching_filters, :ignored_filters, :source
 
       delegate :customer, to: :subscription
 
