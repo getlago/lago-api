@@ -361,7 +361,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         organization_id: organization.id,
         external_subscription_id: subscription.external_id,
         code:,
-        timestamp: boundaries[:from_datetime] + 0.day,
+        timestamp: boundaries[:from_datetime] + 0.days,
         properties: {
           billable_metric.field_name => 2
         },
@@ -374,7 +374,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         organization_id: organization.id,
         external_subscription_id: subscription.external_id,
         code:,
-        timestamp: (boundaries[:from_datetime] + 0.day).end_of_day,
+        timestamp: (boundaries[:from_datetime] + 0.days).end_of_day,
         properties: {
           billable_metric.field_name => 2,
           :operation_type => "remove"

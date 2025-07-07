@@ -727,24 +727,24 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           expect(result.aggregations.count).to eq(2)
 
           # As result of all merged events we have this table:
-# [
-#   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-06-09T00:00:00.000Z", "operation_type" => "add", "rn" => 1, "is_ignored" => false, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-06-09T00:00:00.000Z", "operation_type" => "add", "rn" => 1, "is_ignored" => false, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T01:00:00.000Z", "operation_type" => "remove", "rn" => 2, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T01:00:00.000Z", "operation_type" => "remove", "rn" => 2, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T02:00:00.000Z", "operation_type" => "add", "rn" => 3, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T02:00:00.000Z", "operation_type" => "add", "rn" => 3, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T02:00:01.000Z", "operation_type" => "remove", "rn" => 4, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T02:00:01.000Z", "operation_type" => "remove", "rn" => 4, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T03:00:00.000Z", "operation_type" => "add", "rn" => 5, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T03:00:00.000Z", "operation_type" => "add", "rn" => 5, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-11T00:00:00.000Z", "operation_type" => "remove", "rn" => 6, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-11T00:00:00.000Z", "operation_type" => "remove", "rn" => 6, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-11T01:00:00.000Z", "operation_type" => "add", "rn" => 7, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-11T01:00:00.000Z", "operation_type" => "add", "rn" => 7, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-#   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-11T02:00:00.000Z", "operation_type" => "remove", "rn" => 8, "is_ignored" => false, "previous_not_ignored_operation_type" => "remove"},
-#   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-11T02:00:00.000Z", "operation_type" => "remove", "rn" => 8, "is_ignored" => false, "previous_not_ignored_operation_type" => "remove"}
-# ]
+          # [
+          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-06-09T00:00:00.000Z", "operation_type" => "add", "rn" => 1, "is_ignored" => false, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-06-09T00:00:00.000Z", "operation_type" => "add", "rn" => 1, "is_ignored" => false, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T01:00:00.000Z", "operation_type" => "remove", "rn" => 2, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T01:00:00.000Z", "operation_type" => "remove", "rn" => 2, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T02:00:00.000Z", "operation_type" => "add", "rn" => 3, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T02:00:00.000Z", "operation_type" => "add", "rn" => 3, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T02:00:01.000Z", "operation_type" => "remove", "rn" => 4, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T02:00:01.000Z", "operation_type" => "remove", "rn" => 4, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T03:00:00.000Z", "operation_type" => "add", "rn" => 5, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T03:00:00.000Z", "operation_type" => "add", "rn" => 5, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-11T00:00:00.000Z", "operation_type" => "remove", "rn" => 6, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-11T00:00:00.000Z", "operation_type" => "remove", "rn" => 6, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-11T01:00:00.000Z", "operation_type" => "add", "rn" => 7, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-11T01:00:00.000Z", "operation_type" => "add", "rn" => 7, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
+          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-11T02:00:00.000Z", "operation_type" => "remove", "rn" => 8, "is_ignored" => false, "previous_not_ignored_operation_type" => "remove"},
+          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-11T02:00:00.000Z", "operation_type" => "remove", "rn" => 8, "is_ignored" => false, "previous_not_ignored_operation_type" => "remove"}
+          # ]
           result.aggregations.each do |aggregation|
             expect(aggregation.grouped_by.keys).to include("agent_name")
             expect(aggregation.grouped_by["agent_name"]).to eq("frodo").or eq("aragorn")
@@ -1032,7 +1032,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             )
 
             result = unique_count_service.per_event_aggregation(grouped_by_values: {"scheme" => "visa"})
-
 
             # as result of this events we have:
             # 1. timestamp: added_at, operation_type: add, property: SecureRandom.uuid, scheme: visa
