@@ -14,9 +14,9 @@ module Types
       argument :name, String, required: false
       argument :subscription_id, ID, required: false
       argument :tax_codes, [String], required: false
+      argument :total_aggregated_units, GraphQL::Types::Float, required: false
       argument :unit_amount_cents, GraphQL::Types::BigInt, required: false
       argument :units, GraphQL::Types::Float, required: false
-      argument :total_aggregated_units, GraphQL::Types::Float, required: false
     end
   end
 end
