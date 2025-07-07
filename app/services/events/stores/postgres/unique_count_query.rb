@@ -37,58 +37,43 @@ module Events
         def prorated_query
           <<-SQL
             #{events_cte_sql},
-            event_values AS (
-              SELECT
-                property,
-                operation_type,
-                timestamp,
-                ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  #{operation_value_sql} AS adjusted_value
-                FROM events_data
-                ORDER BY timestamp ASC
-              ) adjusted_event_values
-              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, operation_type, timestamp
-            ),
             -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
             same_day_ignored AS (
               SELECT
                 property,
                 operation_type,
                 timestamp,
-                rn,
                 CASE
                   WHEN #{existing_event_opposite_operation_type_sql} AND rn != 1
                   THEN true
                   ELSE false
                 END AS is_ignored
-              FROM event_values as e
+              FROM events_data as e
             ),
-            -- Check if the operation type is repeated, so it nullifies this one at the same day
-            ignored_repeated_operation_type AS (
+            -- Check if the operation type is the same as previous, so it nullifies this one
+            event_values AS (
               SELECT
                 property,
                 operation_type,
-                timestamp,
-                CASE
-                  WHEN #{operation_value_sql} = 0 AND rn != 1
-                  THEN true
-                  ELSE false
-                END AS is_ignored
-              FROM same_day_ignored
-              WHERE is_ignored = false
+                timestamp
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{operation_value_sql} AS adjusted_value
+                FROM same_day_ignored
+                WHERE is_ignored = false
+                ORDER BY timestamp ASC
+              ) adjusted_event_values
+              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+              GROUP BY property, operation_type, timestamp
             )
 
             SELECT COALESCE(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT (#{period_ratio_sql}) AS period_ratio
-              FROM ignored_repeated_operation_type
-              WHERE is_ignored = false
+              FROM event_values
             ) cumulated_ratios
           SQL
         end
@@ -126,27 +111,6 @@ module Events
         def grouped_prorated_query
           <<-SQL
             #{grouped_events_cte_sql},
-
-            event_values AS (
-              SELECT
-                #{group_names.join(", ")},
-                property,
-                operation_type,
-                timestamp,
-                ROW_NUMBER() OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) AS rn
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  #{group_names.join(", ")},
-                  #{grouped_operation_value_sql} AS adjusted_value
-                FROM events_data
-                ORDER BY timestamp ASC
-              ) adjusted_event_values
-              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY #{group_names.join(", ")}, property, operation_type, timestamp
-            ),
             -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
             same_day_ignored AS (
               SELECT
@@ -154,28 +118,42 @@ module Events
                 property,
                 operation_type,
                 timestamp,
-                rn,
                 CASE
                   WHEN #{existing_grouped_event_opposite_operation_type_sql} AND rn != 1
                   THEN true
                   ELSE false
                 END AS is_ignored
-              FROM event_values
+              FROM (
+                SELECT
+                  #{group_names.join(", ")},
+                  property,
+                  operation_type,
+                  timestamp,
+                  ROW_NUMBER() OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) AS rn
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) as e
             ),
-            -- Check if the operation type is repeated, so it nullifies this one at the same day
-            ignored_repeated_operation_type AS (
+            -- Check if the operation type is the same as previous, so it nullifies this one
+            event_values AS (
               SELECT
                 #{group_names.join(", ")},
                 property,
                 operation_type,
-                timestamp,
-                CASE
-                  WHEN #{grouped_operation_value_sql} = 0 AND rn != 1
-                  THEN true
-                  ELSE false
-                END AS is_ignored
-              FROM same_day_ignored
-              WHERE is_ignored = false
+                timestamp
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{group_names.join(", ")},
+                  #{grouped_operation_value_sql} AS adjusted_value
+                FROM same_day_ignored
+                WHERE is_ignored = false
+                ORDER BY timestamp ASC
+              ) adjusted_event_values
+              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+              GROUP BY #{group_names.join(", ")}, property, operation_type, timestamp
             )
 
             SELECT
@@ -185,8 +163,7 @@ module Events
               SELECT
                 (#{grouped_period_ratio_sql}) AS period_ratio,
                 #{group_names.join(", ")}
-              FROM ignored_repeated_operation_type
-              WHERE is_ignored = false
+              FROM event_values
             ) cumulated_ratios
             GROUP BY #{group_names.join(", ")}
           SQL
@@ -219,52 +196,40 @@ module Events
         def prorated_breakdown_query(with_remove: false)
           <<-SQL
             #{events_cte_sql},
-            event_values AS (
-              SELECT
-                property,
-                operation_type,
-                timestamp,
-                ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn
-              FROM (
-                SELECT
-                  timestamp,
-                  property,
-                  operation_type,
-                  #{operation_value_sql} AS adjusted_value
-                FROM events_data
-                ORDER BY timestamp ASC
-              ) adjusted_event_values
-              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, timestamp, operation_type
-            ),
             -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
             same_day_ignored AS (
               SELECT
                 property,
                 operation_type,
                 timestamp,
-                rn,
+                ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn,
                 CASE
                   WHEN #{existing_event_opposite_operation_type_sql} AND rn != 1
                   THEN true
                   ELSE false
                 END AS is_ignored
-              FROM event_values as e
+              FROM events_data as e
             ),
             -- Check if the operation type is repeated, so it nullifies this one at the same day
-            ignored_repeated_operation_type AS (
+            event_values AS (
               SELECT
                 property,
                 operation_type,
-                timestamp,
-                CASE
-                  WHEN #{operation_value_sql} = 0 AND rn != 1
-                  THEN true
-                  ELSE false
-                END AS is_ignored
-              FROM same_day_ignored
-              WHERE is_ignored = false
+                timestamp
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{operation_value_sql} AS adjusted_value
+                FROM same_day_ignored
+                WHERE is_ignored = false
+                ORDER BY timestamp ASC
+              ) adjusted_event_values
+              WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
+              GROUP BY property, timestamp, operation_type
             )
+
             SELECT
               prorated_value,
               timestamp,
@@ -276,8 +241,7 @@ module Events
                 timestamp,
                 property,
                 operation_type
-              FROM ignored_repeated_operation_type
-              WHERE is_ignored = false
+              FROM event_values
             ) prorated_breakdown
             #{"WHERE prorated_value != 0" unless with_remove}
             ORDER BY timestamp ASC
@@ -293,12 +257,13 @@ module Events
         def events_cte_sql
           # NOTE: Common table expression returning event's timestamp, property name and operation type.
           <<-SQL
-            WITH RECURSIVE events_data AS (#{
+            WITH events_data AS (#{
               events(ordered: true)
                 .select(
                   "timestamp, \
                   #{sanitized_property_name} AS property, \
-                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type"
+                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type, 
+                  ROW_NUMBER() OVER (PARTITION BY #{sanitized_property_name} ORDER BY timestamp) AS rn"
                 ).to_sql
             })
           SQL
@@ -310,7 +275,7 @@ module Events
           end
 
           <<-SQL
-            WITH RECURSIVE events_data AS (#{
+            WITH events_data AS (#{
               events(ordered: true)
                 .select(
                   "#{groups.join(", ")}, \
@@ -327,17 +292,9 @@ module Events
           # If property already added, another addition returns 0 ; it returns 1 otherwise
           # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
           <<-SQL
-            CASE WHEN operation_type = 'add'
-            THEN
-              CASE WHEN LAG(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp) = 'add'
-              THEN 0
-              ELSE 1
-              END
-            ELSE
-              CASE LAG(operation_type, 1, 'remove') OVER (PARTITION BY property ORDER BY timestamp)
-                WHEN 'remove' THEN 0
-                ELSE -1
-              END
+            CASE WHEN LAG(operation_type, 1) OVER (PARTITION BY property ORDER BY timestamp) = operation_type
+            THEN 0
+            ELSE CASE WHEN operation_type = 'add' THEN 1 ELSE -1 END
             END
           SQL
         end
@@ -347,17 +304,9 @@ module Events
           # If property already added, another addition returns 0 ; it returns 1 otherwise
           # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
           <<-SQL
-            CASE WHEN operation_type = 'add'
-            THEN
-              CASE WHEN LAG(operation_type, 1) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) = 'add'
-              THEN 0
-              ELSE 1
-              END
-            ELSE
-              CASE LAG(operation_type, 1, 'remove') OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp)
-                WHEN 'remove' THEN 0
-                ELSE -1
-              END
+            CASE WHEN LAG(operation_type, 1) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) = operation_type
+            THEN 0
+            ELSE CASE WHEN operation_type = 'add' THEN 1 ELSE -1 END
             END
           SQL
         end
@@ -447,7 +396,7 @@ module Events
             (
               SELECT
                 1
-              FROM event_values next_event
+              FROM events_data next_event
               WHERE next_event.property = e.property
                 AND DATE(next_event.timestamp) = DATE(e.timestamp)
                 AND next_event.operation_type <> e.operation_type
@@ -462,12 +411,12 @@ module Events
             (
               SELECT
                 1
-              FROM event_values next_event
-              WHERE next_event.property = event_values.property
-                AND #{group_names.map { |name| "next_event.#{name} = event_values.#{name}" }.join(" AND ")}
-                AND DATE(next_event.timestamp) = DATE(event_values.timestamp)
-                AND next_event.operation_type <> event_values.operation_type
-                AND next_event.timestamp > event_values.timestamp
+              FROM events_data next_event
+              WHERE next_event.property = e.property
+                AND #{group_names.map { |name| "next_event.#{name} = e.#{name}" }.join(" AND ")}
+                AND DATE(next_event.timestamp) = DATE(e.timestamp)
+                AND next_event.operation_type <> e.operation_type
+                AND next_event.timestamp > e.timestamp
               LIMIT 1
             ) = 1
           SQL

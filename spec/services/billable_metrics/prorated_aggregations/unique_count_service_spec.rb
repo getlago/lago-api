@@ -1018,7 +1018,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
               organization_id: organization.id,
               code: billable_metric.code,
               external_subscription_id: subscription.external_id,
-              timestamp: added_at + 1.day,
+              timestamp: added_at + 1.day + 1.hour,
               properties: {unique_id: "property_1", scheme: "visa", operation_type: "remove"}
             )
 
@@ -1027,7 +1027,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
               organization_id: organization.id,
               code: billable_metric.code,
               external_subscription_id: subscription.external_id,
-              timestamp: added_at + 1.day,
+              timestamp: added_at + 1.day + 2.hours,
               properties: {unique_id: "property_1", scheme: "visa", operation_type: "add"}
             )
 
@@ -1046,11 +1046,12 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             # 10. timestamp: added_at + 1.day, operation_type: remove, property: property_1, scheme: visa (ignored)
             # 11. timestamp: added_at + 1.day, operation_type: add, property: property_1, scheme: visa (ignored)
             # when grouping by scheme Visa + taking into account minimal length of proration (1 day), some events are ignored,
-            # so we have 2 uniq properties: property_1 and SecureRandom.uuid
-            # length of proration is 21 days for SecureRandom.uuid and 2 day for property_1
+            # so we have 2 uniq properties: property_1, SecureRandom.uuid; '1111' doesn't have scheme visa, so it's excluded
+            # length of proration is 21 days for property_1, 21 days for SecureRandom.uuid (becuase random is just added once, property_1
+            # is added and removed multiple times, but the last action is add, so we merge all the events into one add)
 
             expect(result.event_aggregation).to eq([1, 1])
-            expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([21.fdiv(31).ceil(5), 2.fdiv(31).ceil(5)])
+            expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([21.fdiv(31).ceil(5), 21.fdiv(31).ceil(5)])
           end
         end
       end
