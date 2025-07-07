@@ -87,7 +87,7 @@ module Events
                 -- Check if current event should be ignored
                 if(
                   -- Check if next event on same day has opposite operation type
-                  (toDate(next_timestamp) = toDate(timestamp) AND next_operation_type != operation_type)
+                  (rn != 1 AND toDate(next_timestamp) = toDate(timestamp) AND next_operation_type != operation_type)
                   OR
                   -- Check if previous event has same operation type
                   prev_operation_type = operation_type,
@@ -195,7 +195,7 @@ module Events
                 -- Check if current event should be ignored
                 if(
                   -- Check if next event on same day has opposite operation type
-                  (toDate(next_timestamp) = toDate(timestamp) AND next_operation_type != operation_type)
+                  (rn != 1 AND toDate(next_timestamp) = toDate(timestamp) AND next_operation_type != operation_type)
                   OR
                   -- Check if previous event has same operation type
                   prev_operation_type = operation_type,
@@ -251,7 +251,8 @@ module Events
               SELECT
                 property,
                 operation_type,
-                timestamp
+                timestamp,
+                ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn
               FROM (
                 SELECT
                   timestamp,
@@ -262,7 +263,48 @@ module Events
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, operation_type, timestamp
+              GROUP BY property, timestamp, operation_type
+            ),
+            events_with_next AS (
+              SELECT
+                e1.property,
+                e1.operation_type,
+                e1.timestamp,
+                e1.rn,
+                e2.operation_type AS next_operation_type,
+                e2.timestamp AS next_timestamp
+              FROM event_values e1
+              LEFT JOIN event_values e2 ON e1.property = e2.property AND toInt64(e1.rn) = toInt64(e2.rn) - 1
+            ),
+            events_with_prev AS (
+              SELECT
+                e1.property,
+                e1.operation_type,
+                e1.timestamp,
+                e1.rn,
+                e1.next_operation_type,
+                e1.next_timestamp,
+                e2.operation_type AS prev_operation_type
+              FROM events_with_next e1
+              LEFT JOIN event_values e2 ON e1.property = e2.property AND toInt64(e1.rn) = toInt64(e2.rn) + 1
+            ),
+            events_filtered AS (
+              SELECT
+                property,
+                operation_type,
+                timestamp,
+                rn,
+                -- Check if current event should be ignored
+                if(
+                  -- Check if next event on same day has opposite operation type
+                  (rn != 1 AND toDate(next_timestamp) = toDate(timestamp) AND next_operation_type != operation_type)
+                  OR
+                  -- Check if previous event has same operation type
+                  prev_operation_type = operation_type,
+                  true,
+                  false
+                ) AS is_ignored
+              FROM events_with_prev
             )
 
             SELECT
@@ -276,7 +318,8 @@ module Events
                 timestamp,
                 property,
                 operation_type
-              FROM event_values
+              FROM events_filtered
+              WHERE is_ignored = false
             ) prorated_breakdown
             #{"WHERE prorated_value != 0" unless with_remove}
             ORDER BY timestamp ASC

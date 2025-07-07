@@ -361,7 +361,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         organization_id: organization.id,
         external_subscription_id: subscription.external_id,
         code:,
-        timestamp: boundaries[:from_datetime] + 1.day,
+        timestamp: boundaries[:from_datetime] + 0.day,
         properties: {
           billable_metric.field_name => 2
         },
@@ -374,7 +374,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         organization_id: organization.id,
         external_subscription_id: subscription.external_id,
         code:,
-        timestamp: (boundaries[:from_datetime] + 1.day).end_of_day,
+        timestamp: (boundaries[:from_datetime] + 0.day).end_of_day,
         properties: {
           billable_metric.field_name => 2,
           :operation_type => "remove"
@@ -382,10 +382,16 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         value: "2",
         decimal_value: 2
       )
-
       event_store.aggregation_property = billable_metric.field_name
 
       # NOTE: Events calculation: 16/31 + 1/31 + + 15/31 + 14/31 + 13/31 + 12/31
+      # Events:
+      # 1 => added on 0 day, never removed => 16/31
+      # 2 => added on 0 day, removed on 0 day => 1/31
+      # 2 => added on 1 day, never removed => 15/31
+      # 3 => added on 2 day, never removed => 14/31
+      # 4 => added on 3 day, never removed => 13/31
+      # 5 => added on 4 day, never removed => 12/31
       expect(event_store.prorated_unique_count.round(3)).to eq(2.29)
     end
   end
