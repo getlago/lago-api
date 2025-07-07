@@ -39,7 +39,7 @@ end
 #  threshold_display_name :string
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
-#  organization_id        :uuid
+#  organization_id        :uuid             not null
 #  plan_id                :uuid             not null
 #
 # Indexes
