@@ -364,7 +364,6 @@ module Events
           # NOTE: Returns 1 for relevant addition, -1 for relevant removal
           # If property already added, another addition returns 0 ; it returns 1 otherwise
           # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
-          # If it's the first event for a property and it's a remove, return 0 (can't remove what was never added)
           <<-SQL
             if (
               operation_type = 'add',
@@ -375,7 +374,7 @@ module Events
               ))
               ,
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
+                ifNull((anyOrNull(operation_type) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)), 'remove') = 'remove',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(-1, :decimal_scale)
               ))
@@ -387,7 +386,6 @@ module Events
           # NOTE: Returns 1 for relevant addition, -1 for relevant removal
           # If property already added, another addition returns 0 ; it returns 1 otherwise
           # If property already removed or not yet present, another removal returns 0 ; it returns -1 otherwise
-          # If it's the first event for a property and it's a remove, return 0 (can't remove what was never added)
           <<-SQL
             if (
               operation_type = 'add',
@@ -398,7 +396,7 @@ module Events
               ))
               ,
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
+                ifNull((anyOrNull(operation_type) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)), 'remove') = 'remove',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(-1, :decimal_scale)
               ))

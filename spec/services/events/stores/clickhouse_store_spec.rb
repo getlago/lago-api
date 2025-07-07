@@ -394,6 +394,45 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
       # 5 => added on 4 day, never removed => 12/31
       expect(event_store.prorated_unique_count.round(3)).to eq(2.29)
     end
+
+    context "with multiple events at the same day" do
+      it "returns the number of unique active event properties merged within one day" do
+        event_params = [
+          {timestamp: boundaries[:from_datetime], operation_type: "remove"},
+          {timestamp: boundaries[:from_datetime] + 1.hour, operation_type: "add"},
+          {timestamp: boundaries[:from_datetime] + 2.hours, operation_type: "remove"},
+          {timestamp: boundaries[:from_datetime] + 3.hours, operation_type: "add"},
+          {timestamp: boundaries[:from_datetime] + 1.day, operation_type: "remove"},
+          {timestamp: boundaries[:from_datetime] + 1.day + 1.hour, operation_type: "add"},
+          {timestamp: boundaries[:from_datetime] + 2.days + 1.hour, operation_type: "remove"}
+        ]
+
+        event_params.each do |params|
+          Clickhouse::EventsEnriched.create!(
+            transaction_id: SecureRandom.uuid,
+            organization_id: organization.id,
+            external_subscription_id: subscription.external_id,
+            code:,
+            timestamp: params[:timestamp],
+            properties: {
+              billable_metric.field_name => 7,
+              :operation_type => params[:operation_type]
+            },
+            value: "2",
+            decimal_value: 2
+          )
+        end
+
+        # NOTE: Events calculation: 3/31
+        # Events:
+        # 1 => added on 0 day, never removed => 16/31
+        # 2 => added on 0 day, removed on 2 day => 3/31
+        # 3 => added on 2 day, never removed => 14/31
+        # 4 => added on 3 day, never removed => 13/31
+        # 5 => added on 4 day, never removed => 12/31
+        expect(event_store.prorated_unique_count.round(3)).to eq(1.839) # 16/31 + 3/31 + 14/31 + 13/31 + 12/31
+      end
+    end
   end
 
   describe "#grouped_unique_count" do
