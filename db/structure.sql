@@ -2600,7 +2600,7 @@ CREATE TABLE public.invoice_metadata (
     value character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3304,7 +3304,7 @@ CREATE TABLE public.invoices_payment_requests (
     payment_request_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3699,7 +3699,7 @@ CREATE TABLE public.usage_thresholds (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -8916,6 +8916,12 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250707095224'),
+('20250707095223'),
+('20250707094932'),
+('20250707094931'),
+('20250707094901'),
+('20250707094900'),
 ('20250707090348'),
 ('20250707090347'),
 ('20250707090329'),
