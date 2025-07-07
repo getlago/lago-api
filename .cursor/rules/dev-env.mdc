@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
 
@@ -8,7 +8,7 @@ This projects runs in docker container, managed with docker-compose
 
 You must run `rspec` in the api container, use the following command. Use any options and argument you need
 ```
-lago exec api rspec
+lago exec api bundle exec rspec
 ```
 
 You must just the `rails` cli in the container (to use `db:migrate` or `generate` for instance)
