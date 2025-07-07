@@ -4938,7 +4938,7 @@ type Fee implements InvoiceItem {
   eventsCount: BigInt
   feeType: FeeTypesEnum!
   groupedBy: JSON!
-  id: ID
+  id: ID!
   invoiceDisplayName: String
   invoiceName: String
   itemCode: String!
@@ -5009,12 +5009,11 @@ type FeeAppliedTax implements AppliedTax {
 }
 
 """
-Fee input for creating or updating invoice
+Fee input for creating invoice
 """
 input FeeInput {
   addOnId: ID!
   description: String
-  id: ID
   invoiceDisplayName: String
   name: String
   taxCodes: [String!]
@@ -8523,7 +8522,7 @@ input RegenerateInvoiceInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  fees: [FeeInput!]!
+  fees: [VoidedInvoiceFeeInput!]!
   voidedInvoiceId: ID!
 }
 
@@ -10548,6 +10547,22 @@ input VoidInvoiceInput {
   generateCreditNote: Boolean
   id: ID!
   refundAmount: BigInt
+}
+
+"""
+Fee input for creating or updating invoice from voided invoice
+"""
+input VoidedInvoiceFeeInput {
+  addOnId: ID
+  chargeId: ID
+  description: String
+  id: ID
+  invoiceDisplayName: String
+  name: String
+  subscriptionId: ID
+  taxCodes: [String!]
+  unitAmountCents: BigInt
+  units: Float
 }
 
 type VolumeRange {
