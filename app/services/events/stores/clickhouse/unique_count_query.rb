@@ -53,54 +53,49 @@ module Events
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, timestamp, operation_type
+              GROUP BY property, operation_type, timestamp
             ),
-            events_with_next AS (
-              SELECT
-                e1.property,
-                e1.operation_type,
-                e1.timestamp,
-                e1.rn,
-                e2.operation_type AS next_operation_type,
-                e2.timestamp AS next_timestamp
-              FROM event_values e1
-              LEFT JOIN event_values e2 ON e1.property = e2.property AND toInt64(e1.rn) = toInt64(e2.rn) - 1
-            ),
-            events_with_prev AS (
-              SELECT
-                e1.property,
-                e1.operation_type,
-                e1.timestamp,
-                e1.rn,
-                e1.next_operation_type,
-                e1.next_timestamp,
-                e2.operation_type AS prev_operation_type
-              FROM events_with_next e1
-              LEFT JOIN event_values e2 ON e1.property = e2.property AND toInt64(e1.rn) = toInt64(e2.rn) + 1
-            ),
-            events_filtered AS (
+            -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+            same_day_ignored AS (
               SELECT
                 property,
                 operation_type,
                 timestamp,
                 rn,
-                -- Check if current event should be ignored
-                if(
-                  -- Check if next event on same day has opposite operation type
-                  (rn != 1 AND toDate(next_timestamp) = toDate(timestamp) AND next_operation_type != operation_type)
-                  OR
-                  -- Check if previous event has same operation type
-                  prev_operation_type = operation_type,
-                  true,
-                  false
-                ) AS is_ignored
-              FROM events_with_prev
+                CASE
+                  WHEN (
+                    SELECT 1
+                    FROM event_values next_event
+                    WHERE next_event.property = event_values.property
+                      AND toDate(next_event.timestamp) = toDate(event_values.timestamp)
+                      AND next_event.operation_type != event_values.operation_type
+                      AND next_event.timestamp > event_values.timestamp
+                    LIMIT 1
+                  ) = 1 AND rn != 1
+                  THEN true
+                  ELSE false
+                END AS is_ignored
+              FROM event_values
+            ),
+            -- Check if the operation type is repeated, so it nullifies this one at the same day
+            ignored_repeated_operation_type AS (
+              SELECT
+                property,
+                operation_type,
+                timestamp,
+                CASE
+                  WHEN #{operation_value_sql} = 0 AND rn != 1
+                  THEN true
+                  ELSE false
+                END AS is_ignored
+              FROM same_day_ignored
+              WHERE is_ignored = false
             )
 
             SELECT coalesce(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT (#{period_ratio_sql}) AS period_ratio
-              FROM events_filtered
+              FROM ignored_repeated_operation_type
               WHERE is_ignored = false
             ) cumulated_ratios
           SQL
@@ -160,49 +155,44 @@ module Events
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
               GROUP BY #{group_names.join(", ")}, property, operation_type, timestamp
             ),
-            events_with_next AS (
-              SELECT
-                e1.#{group_names.join(", e1.")},
-                e1.property,
-                e1.operation_type,
-                e1.timestamp,
-                e1.rn,
-                e2.operation_type AS next_operation_type,
-                e2.timestamp AS next_timestamp
-              FROM event_values e1
-              LEFT JOIN event_values e2 ON e1.property = e2.property AND toInt64(e1.rn) = toInt64(e2.rn) - 1 AND #{group_names.map { |name| "e1.#{name} = e2.#{name}" }.join(" AND ")}
-            ),
-            events_with_prev AS (
-              SELECT
-                e1.#{group_names.join(", e1.")},
-                e1.property,
-                e1.operation_type,
-                e1.timestamp,
-                e1.rn,
-                e1.next_operation_type,
-                e1.next_timestamp,
-                e2.operation_type AS prev_operation_type
-              FROM events_with_next e1
-              LEFT JOIN event_values e2 ON e1.property = e2.property AND toInt64(e1.rn) = toInt64(e2.rn) + 1 AND #{group_names.map { |name| "e1.#{name} = e2.#{name}" }.join(" AND ")}
-            ),
-            events_filtered AS (
+            -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+            same_day_ignored AS (
               SELECT
                 #{group_names.join(", ")},
                 property,
                 operation_type,
                 timestamp,
                 rn,
-                -- Check if current event should be ignored
-                if(
-                  -- Check if next event on same day has opposite operation type
-                  (rn != 1 AND toDate(next_timestamp) = toDate(timestamp) AND next_operation_type != operation_type)
-                  OR
-                  -- Check if previous event has same operation type
-                  prev_operation_type = operation_type,
-                  true,
-                  false
-                ) AS is_ignored
-              FROM events_with_prev
+                CASE
+                  WHEN (
+                    SELECT 1
+                    FROM event_values next_event
+                    WHERE next_event.property = event_values.property
+                      AND #{group_names.map { |name| "next_event.#{name} = event_values.#{name}" }.join(" AND ")}
+                      AND toDate(next_event.timestamp) = toDate(event_values.timestamp)
+                      AND next_event.operation_type != event_values.operation_type
+                      AND next_event.timestamp > event_values.timestamp
+                    LIMIT 1
+                  ) = 1 AND rn != 1
+                  THEN true
+                  ELSE false
+                END AS is_ignored
+              FROM event_values
+            ),
+            -- Check if the operation type is repeated, so it nullifies this one at the same day
+            ignored_repeated_operation_type AS (
+              SELECT
+                #{group_names.join(", ")},
+                property,
+                operation_type,
+                timestamp,
+                CASE
+                  WHEN #{grouped_operation_value_sql} = 0 AND rn != 1
+                  THEN true
+                  ELSE false
+                END AS is_ignored
+              FROM same_day_ignored
+              WHERE is_ignored = false
             )
 
             SELECT
@@ -212,7 +202,7 @@ module Events
               SELECT
                 (#{grouped_period_ratio_sql}) AS period_ratio,
                 #{group_names.join(", ")}
-              FROM events_filtered
+              FROM ignored_repeated_operation_type
               WHERE is_ignored = false
             ) cumulated_ratios
             GROUP BY #{group_names.join(", ")}
