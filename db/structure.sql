@@ -3165,7 +3165,7 @@ CREATE TABLE public.integration_items (
     external_name character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3199,7 +3199,7 @@ CREATE TABLE public.integration_resources (
     updated_at timestamp(6) without time zone NOT NULL,
     integration_id uuid,
     resource_type integer DEFAULT 0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3290,7 +3290,7 @@ CREATE TABLE public.invoice_subscriptions (
     charges_from_datetime timestamp(6) without time zone,
     charges_to_datetime timestamp(6) without time zone,
     invoicing_reason public.subscription_invoicing_reason,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -8916,6 +8916,12 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250707081911'),
+('20250707081910'),
+('20250707081837'),
+('20250707081836'),
+('20250707081826'),
+('20250707081825'),
 ('20250704800001'),
 ('20250703133126'),
 ('20250630180000'),

@@ -33,7 +33,7 @@ end
 #  updated_at            :datetime         not null
 #  external_id           :string           not null
 #  integration_id        :uuid             not null
-#  organization_id       :uuid
+#  organization_id       :uuid             not null
 #
 # Indexes
 #
