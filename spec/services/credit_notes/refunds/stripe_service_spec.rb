@@ -226,6 +226,32 @@ RSpec.describe CreditNotes::Refunds::StripeService, type: :service do
       end
     end
 
+    context "when payment provider customer was discarded" do
+      before { stripe_customer.discard }
+
+      it "creates a stripe refund and a refund" do
+        result = stripe_service.create
+
+        aggregate_failures do
+          expect(result).to be_success
+
+          expect(result.refund.id).to be_present
+
+          expect(result.refund.credit_note).to eq(credit_note)
+          expect(result.refund.payment).to eq(payment)
+          expect(result.refund.payment_provider).to eq(stripe_payment_provider)
+          expect(result.refund.payment_provider_customer).to eq(stripe_customer)
+          expect(result.refund.amount_cents).to eq(134)
+          expect(result.refund.amount_currency).to eq("CHF")
+          expect(result.refund.status).to eq("succeeded")
+          expect(result.refund.provider_refund_id).to eq("re_123456")
+
+          expect(result.credit_note).to be_succeeded
+          expect(result.credit_note.refunded_at).to be_present
+        end
+      end
+    end
+
     context "when dispute was lost" do
       let(:invoice) { create(:invoice, :dispute_lost, customer:, organization:) }
 

@@ -17,6 +17,12 @@ module Customers
         payment_provider_result.raise_if_error!
         payment_provider_result.payment_provider
       end
+
+      def payment_provider_customer(customer)
+        return nil unless customer
+
+        PaymentProviderCustomers::BaseCustomer.with_discarded.find_by(customer_id: customer.id)
+      end
     end
   end
 end
