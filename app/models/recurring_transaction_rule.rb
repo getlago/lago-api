@@ -66,7 +66,7 @@ end
 #  trigger                             :integer          default("interval"), not null
 #  created_at                          :datetime         not null
 #  updated_at                          :datetime         not null
-#  organization_id                     :uuid
+#  organization_id                     :uuid             not null
 #  wallet_id                           :uuid             not null
 #
 # Indexes
