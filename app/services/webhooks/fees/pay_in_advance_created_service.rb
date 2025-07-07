@@ -5,10 +5,6 @@ module Webhooks
     class PayInAdvanceCreatedService < Webhooks::BaseService
       private
 
-      def current_organization
-        @current_organization ||= object.customer.organization
-      end
-
       def object_serializer
         ::V1::FeeSerializer.new(
           object,

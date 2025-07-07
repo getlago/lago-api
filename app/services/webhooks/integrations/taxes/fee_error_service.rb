@@ -6,10 +6,6 @@ module Webhooks
       class FeeErrorService < Webhooks::BaseService
         private
 
-        def current_organization
-          @current_organization ||= object.organization
-        end
-
         def object_serializer
           ::V1::Integrations::Taxes::FeeErrorSerializer.new(
             object,
