@@ -27,7 +27,6 @@ ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_e711e8089e;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_e3cf54daac;
-ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_e3a64e537e;
 ALTER TABLE IF EXISTS ONLY public.integration_collection_mappings DROP CONSTRAINT IF EXISTS fk_rails_e148d17c1f;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_dfac602b2c;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_dea748e529;
@@ -8868,14 +8867,6 @@ ALTER TABLE ONLY public.integration_collection_mappings
 
 
 --
--- Name: payments fk_rails_e3a64e537e; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.payments
-    ADD CONSTRAINT fk_rails_e3a64e537e FOREIGN KEY (customer_id) REFERENCES public.customers(id);
-
-
---
 -- Name: usage_monitoring_triggered_alerts fk_rails_e3cf54daac; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9082,9 +9073,6 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250707081825'),
 ('20250704800001'),
 ('20250703133126'),
-('20250702163700'),
-('20250702162444'),
-('20250702161535'),
 ('20250702160827'),
 ('20250702160723'),
 ('20250630180000'),

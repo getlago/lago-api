@@ -251,7 +251,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
     let(:subscription) { create(:subscription, customer:, plan:) }
     let(:subscription_2) { create(:subscription, customer:, plan: parent_plan) }
 
-    before { subscription; subscription_2 }
+    before { [subscription, subscription_2] }
 
     context "when overriden is true" do
       let(:filters) { {overriden: true} }

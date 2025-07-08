@@ -130,11 +130,7 @@ end
 #  status                       :string           not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
-<<<<<<< HEAD
 #  customer_id                  :uuid
-=======
-#  customer_id                  :uuid             not null
->>>>>>> 8826fe16e (Better way to define ransack)
 #  invoice_id                   :uuid
 #  organization_id              :uuid             not null
 #  payable_id                   :uuid
@@ -157,7 +153,6 @@ end
 #
 # Foreign Keys
 #
-#  fk_rails_...  (customer_id => customers.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (payment_provider_id => payment_providers.id)

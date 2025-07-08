@@ -234,7 +234,7 @@ module Api
 
       def index_filters
         filters = params.permit(:external_customer_id, :plan_code, status: [])
-        filters[:status] = ['active'] if filters[:status].blank?
+        filters[:status] = ["active"] if filters[:status].blank?
         filters
       end
 
