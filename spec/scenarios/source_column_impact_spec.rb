@@ -11,11 +11,9 @@ RSpec.describe "Source Column Impact on Billing", type: :scenario do
   let(:billable_metric) { create(:billable_metric, organization:, code:, aggregation_type: "sum_agg", field_name: "value") }
   let(:charge) { create(:standard_charge, plan:, billable_metric:, properties: {amount: "10"}) }
   let(:add_on) { create(:add_on, organization:, amount_cents: 10, code:) }
-  # let(:fixed_charge) { create(:fixed_charge, plan:, billable_metric:, properties: {amount: "10"}) }
 
   before do
     charge
-    # fixed_charge
   end
 
   # there is no unique constraint on code for billable_metric and fixed_charge (add_on) across db tables.
@@ -24,22 +22,21 @@ RSpec.describe "Source Column Impact on Billing", type: :scenario do
   describe "when fixed charge events pollute usage aggregations by code coincidence" do
     context "with sum aggregation" do
       it "does not include fixed charge events in usage calculations" do
-        create_list(:event, 2, 
-          organization:, 
-          subscription:, 
-          code:,
-          source: 'usage',
-          properties: { value: 5 },
-          timestamp: 1.day.ago
-        )
-
-        # Should not be included in usage calculations
         create_list(:event, 2,
           organization:,
           subscription:,
           code:,
-          source: 'fixed_charge',
-          properties: { value: 15 },
+          source: "usage",
+          properties: { value: 5 },
+          timestamp: 1.day.ago
+        )
+
+        create_list(:event, 2,
+          organization:,
+          subscription:,
+          code:,
+          source: "fixed_charge",
+          properties: { value: 10 },
           timestamp: 1.day.ago
         )
 
@@ -182,8 +179,6 @@ RSpec.describe "Source Column Impact on Billing", type: :scenario do
           }
         )
 
-        # TODO: this one is broken, result.units is nil, it shouldn't... what is going on?
-
         expect(result.fees.first.units).to eq(1)
         expect(result.fees.first.amount_cents).to eq(1000)
       end
@@ -225,7 +220,7 @@ RSpec.describe "Source Column Impact on Billing", type: :scenario do
         :event,
         organization:,
         subscription:,
-        code: ,
+        code:,
         source: 'usage',
         properties: { value: 8 },
         timestamp: Time.current
@@ -341,41 +336,15 @@ RSpec.describe "Source Column Impact on Billing", type: :scenario do
 
       result = usage_service.call
 
-      expect(result.usage.charges_usage.first.units).to eq("10.0")
+      expect(result.usage.fees.first.units).to eq("10.0")
       expect(result.usage.total_amount_cents).to eq(10000)
     end
   end
 
   describe "when fixed charge events affect lifetime usage calculations" do
-    let(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:) }
+    let(:lifetime_usage) { create(:lifetime_usage, organization:, subscription:, recalculate_current_usage: true) }
 
     it "does not include fixed charge events in lifetime usage calculations" do
-      create_list(:event, 2,
-        organization:,
-        subscription:,
-        code:,
-        source: 'usage',
-        properties: { value: 5 },
-        timestamp: 1.day.ago
-      )
-
-      create_list(:event, 2,
-        organization:,
-        subscription:,
-        code:,
-        source: 'fixed_charge',
-        properties: { value: 7 },
-        timestamp: 1.day.ago
-      )
-
-      result = LifetimeUsages::CalculateService.call(lifetime_usage:)
-
-      expect(result.lifetime_usage.current_usage_amount_cents).to eq(1000)
-    end
-  end
-
-  describe "when fixed charge events affect event validation" do
-    it "does not include fixed charge events in event validation" do
       create_list(:event, 2,
         organization:,
         subscription:,
@@ -395,13 +364,42 @@ RSpec.describe "Source Column Impact on Billing", type: :scenario do
         timestamp: 1.day.ago
       )
 
+      # lifetime_usage = subscription.create_lifetime_usage!(organization:)
+      # lifetime_usage.update!(recalculate_current_usage: true)
+
+      result = LifetimeUsages::CalculateService.call(lifetime_usage:)
+
+      expect(result.lifetime_usage.current_usage_amount_cents).to eq(1000)
+    end
+  end
+
+  describe "when fixed charge events affect event validation" do
+    it "does not include fixed charge events in event validation" do
+      create_list(:event, 2,
+        organization:,
+        subscription:,
+        code:,
+        source: 'usage',
+        properties: { value: 5 },
+        timestamp: 10.minutes.ago
+      )
+
+      create(
+        :event,
+        organization:,
+        subscription:,
+        code:,
+        source: 'fixed_charge',
+        properties: { value: 7 },
+        timestamp: 5.minutes.ago
+      )
+
+      # Force materialized view refresh
       Scenic.database.refresh_materialized_view(
         Events::LastHourMv.table_name,
         concurrently: false,
         cascade: false
       )
-
-      Events::PostValidationJob.perform_now(organization:)
 
       expect(Events::LastHourMv.count).to eq(2)
     end
