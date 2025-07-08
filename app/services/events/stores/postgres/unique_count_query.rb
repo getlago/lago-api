@@ -44,7 +44,11 @@ module Events
                 operation_type,
                 timestamp,
                 CASE
-                  WHEN #{existing_event_opposite_operation_type_sql} AND rn != 1
+                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  WHEN operation_type = 'add'
+                  THEN false
+                  -- if the next event the same day is the opposite operation type, it should be ignored
+                  WHEN #{existing_event_opposite_operation_type_sql}
                   THEN true
                   ELSE false
                 END AS is_ignored
@@ -119,7 +123,11 @@ module Events
                 operation_type,
                 timestamp,
                 CASE
-                  WHEN #{existing_grouped_event_opposite_operation_type_sql} AND rn != 1
+                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  WHEN operation_type = 'add'
+                  THEN false
+                  -- if the next event the same day is the opposite operation type, it should be ignored
+                  WHEN #{existing_grouped_event_opposite_operation_type_sql}
                   THEN true
                   ELSE false
                 END AS is_ignored
@@ -128,8 +136,7 @@ module Events
                   #{group_names.join(", ")},
                   property,
                   operation_type,
-                  timestamp,
-                  ROW_NUMBER() OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) AS rn
+                  timestamp
                 FROM events_data
                 ORDER BY timestamp ASC
               ) as e
@@ -203,9 +210,11 @@ module Events
                 property,
                 operation_type,
                 timestamp,
-                ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn,
                 CASE
-                  WHEN #{existing_event_opposite_operation_type_sql} AND rn != 1
+                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  WHEN operation_type = 'add'
+                  THEN false
+                  WHEN #{existing_event_opposite_operation_type_sql}
                   THEN true
                   ELSE false
                 END AS is_ignored
@@ -263,8 +272,7 @@ module Events
                 .select(
                   "timestamp, \
                   #{sanitized_property_name} AS property, \
-                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type, 
-                  ROW_NUMBER() OVER (PARTITION BY #{sanitized_property_name} ORDER BY timestamp) AS rn"
+                  COALESCE(events.properties->>'operation_type', 'add') AS operation_type"
                 ).to_sql
             })
           SQL

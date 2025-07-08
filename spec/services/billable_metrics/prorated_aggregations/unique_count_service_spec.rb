@@ -317,6 +317,31 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
           expect(result.aggregation).to eq(1.fdiv(31).ceil(5))
         end
+
+        context "when added and removed the same day multiple days" do
+          it "returns the correct number" do
+            events_params = [
+              {timestamp: added_at, id: event.properties["unique_id"], operation_type: "add"},
+              {timestamp: added_at + 1.hour, id: event.properties["unique_id"], operation_type: "remove"},
+              {timestamp: added_at + 5.days, id: event.properties["unique_id"], operation_type: "add"},
+              {timestamp: added_at + 5.days + 1.hour, id: event.properties["unique_id"], operation_type: "remove"},
+              {timestamp: added_at + 10.days, id: event.properties["unique_id"], operation_type: "add"},
+              {timestamp: added_at + 10.days + 1.hour, id: event.properties["unique_id"], operation_type: "remove"},
+            ]
+
+            events_params.each do |event_params|
+              create(
+                :event,
+                organization_id: organization.id,
+                code: billable_metric.code,
+                external_subscription_id: subscription.external_id,
+                timestamp: event_params[:timestamp],
+                properties: {unique_id: event_params[:id], operation_type: event_params[:operation_type]}
+              )
+            end
+            expect(result.aggregation).to eq(3.fdiv(31).ceil(5))
+          end
+        end
       end
     end
 
