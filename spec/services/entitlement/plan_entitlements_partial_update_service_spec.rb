@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
+RSpec.describe Entitlement::PlanEntitlementsPartialUpdateService, type: :service do
   subject(:update_service) { described_class.new(organization:, plan:, entitlements_params:) }
 
   let(:organization) { create(:organization) }

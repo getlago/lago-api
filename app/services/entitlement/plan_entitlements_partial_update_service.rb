@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Entitlement
-  class PlanEntitlementsUpdateService < PlanEntitlementsBaseService
+  class PlanEntitlementsPartialUpdateService < PlanEntitlementsBaseService
     Result = BaseResult[:entitlements]
 
     def call
