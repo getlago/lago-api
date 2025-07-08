@@ -3,6 +3,12 @@ description: General Rails rules
 globs: app/**/*.rb
 alwaysApply: true
 ---
+
+This projects runs in docker container, managed with docker-compose.
+You must run `rspec` in the api container, use `lago exec api bundle exec rspec <args>`.
+You must use the `rails` cli in the container too, for example: `lago exec api bin/rails db:migrate`.
+
+
 # General style
 
 - avoid `if/unless` modifier right before the last line.
