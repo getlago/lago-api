@@ -416,17 +416,18 @@ module Events
               if(
                 operation_type = 'add',
                 -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
-                ceil(
-                  date_diff(
-                    'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
-                    if(
-                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
-                      toDateTime64(:from_datetime, 3, 'UTC'),
-                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
-                    ),
-                    :timezone
-                  ) / 86400
+                date_diff(
+                  'days',
+                  -- this is crasy: to_datetime is the 1 day of the NEXT billing period, so 1st of Aug - 31 of Jul returns correctly 1 day;
+                  -- the timestamp of remove is the LAST DAY, that still should be calculated, but 3 Jul - 1 Jul == 2 days, but we need 3,
+                  -- that's why for to_datetime when it's a timestamp we add 1 day to it
+                  if(toDate(timestamp) < toDate(:from_datetime, 'UTC'), toDate(:from_datetime, 'UTC'), toDate(timestamp)),
+                  if(
+                    toDate(leadInFrame(timestamp, 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDate(:from_datetime, 'UTC'),
+                    toDate(:from_datetime, 'UTC'),
+                    leadInFrame(addDays(toDate(timestamp), 1), 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                  ),
+                  :timezone
                 )
                 /
                 -- NOTE: full duration of the period
@@ -446,17 +447,15 @@ module Events
               if(
                 operation_type = 'add',
                 -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
-                ceil(
-                  date_diff(
-                    'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
-                                          if(
-                        (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
-                        toDateTime64(:to_datetime, 3, 'UTC'),
-                        leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
-                      ),
-                    :timezone
-                  ) / 86400
+                date_diff(
+                  'days',
+                  if(toDate(timestamp) < toDate(:from_datetime, 'UTC'), toDate(:from_datetime, 'UTC'), toDate(timestamp)),
+                  if(
+                      toDate(leadInFrame(addDays(toDate(timestamp), 1), 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDate(:from_datetime, 'UTC'),
+                      toDate(:to_datetime, 'UTC'),
+                      leadInFrame(addDays(toDate(timestamp), 1), 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                    ),
+                  :timezone
                 )
                 /
                 -- NOTE: full duration of the period

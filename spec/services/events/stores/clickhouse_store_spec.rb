@@ -415,7 +415,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
             code:,
             timestamp: params[:timestamp],
             properties: {
-              billable_metric.field_name => 7,
+              billable_metric.field_name => 2,
               :operation_type => params[:operation_type]
             },
             value: "2",
@@ -430,7 +430,7 @@ RSpec.describe Events::Stores::ClickhouseStore, type: :service, clickhouse: true
         # 3 => added on 2 day, never removed => 14/31
         # 4 => added on 3 day, never removed => 13/31
         # 5 => added on 4 day, never removed => 12/31
-        expect(event_store.prorated_unique_count.round(3)).to eq(1.839) # 16/31 + 3/31 + 14/31 + 13/31 + 12/31
+        expect(event_store.prorated_unique_count.round(3)).to eq(1.871) # 16/31 + 3/31 + 14/31 + 13/31 + 12/31
       end
     end
   end
