@@ -579,6 +579,7 @@ DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_recurring_756a2a370
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_78eb24d06c;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_4290c95dec;
 DROP INDEX IF EXISTS public.idx_on_timestamp_charge_id_external_subscription_id;
+DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
 DROP INDEX IF EXISTS public.idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
@@ -4769,6 +4770,13 @@ CREATE UNIQUE INDEX idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca1
 
 
 --
+-- Name: idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb ON public.charges USING btree (plan_id, billable_metric_id, pay_in_advance) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: idx_on_timestamp_charge_id_external_subscription_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8916,6 +8924,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250708094414'),
 ('20250707113718'),
 ('20250707113717'),
 ('20250707100102'),
