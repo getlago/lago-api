@@ -5522,6 +5522,7 @@ type Invoice {
   prepaidCreditAmountCents: BigInt!
   progressiveBillingCreditAmountCents: BigInt!
   refundableAmountCents: BigInt!
+  regeneratedInvoiceId: String
   selfBilled: Boolean!
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!

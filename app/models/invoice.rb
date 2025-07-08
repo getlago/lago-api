@@ -21,6 +21,8 @@ class Invoice < ApplicationRecord
   belongs_to :organization
   belongs_to :billing_entity, optional: true
 
+  has_one :regenerated_invoice, class_name: "Invoice", foreign_key: :voided_invoice_id
+
   has_many :fees
   has_many :credits
   has_many :wallet_transactions
@@ -30,7 +32,6 @@ class Invoice < ApplicationRecord
   has_many :metadata, class_name: "Metadata::InvoiceMetadata", dependent: :destroy
   has_many :credit_notes
   has_many :progressive_billing_credits, class_name: "Credit", foreign_key: :progressive_billing_invoice_id
-  has_many :regenerated_invoices, class_name: "Invoice", foreign_key: :voided_invoice_id
 
   has_many :applied_taxes, class_name: "Invoice::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
