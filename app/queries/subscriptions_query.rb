@@ -7,7 +7,7 @@ class SubscriptionsQuery < BaseQuery
   def call
     subscriptions = base_scope.result
     subscriptions = paginate(subscriptions)
-    subscriptions = subscriptions.where(status: filtered_statuses)
+    subscriptions = subscriptions.where(status: filtered_statuses) if valid_status?
     subscriptions = apply_consistent_ordering(
       subscriptions,
       default_order: <<~SQL.squish
@@ -72,8 +72,6 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def filtered_statuses
-    return [:active] unless valid_status?
-
     filters.status
   end
 

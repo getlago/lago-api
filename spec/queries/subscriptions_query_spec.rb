@@ -229,15 +229,18 @@ RSpec.describe SubscriptionsQuery, type: :query do
   end
 
   context "with no status filter" do
-    it "returns only active subscriptions" do
-      create(:subscription, :pending, customer:, plan:)
+    it "returns all subscriptions" do
+      subscription_2 = create(:subscription, customer:, plan:, status: :terminated)
+      subscription_3 = create(:subscription, customer:, plan:, status: :canceled)
+      subscription_4 = create(:subscription, customer:, plan:, status: :pending)
 
       expect(result).to be_success
-      expect(result.subscriptions.count).to eq(1)
+      expect(result.subscriptions.count).to eq(4)
       expect(result.subscriptions.active.count).to eq(1)
-      expect(result.subscriptions.pending.count).to eq(0)
-      expect(result.subscriptions.canceled.count).to eq(0)
-      expect(result.subscriptions.terminated.count).to eq(0)
+      expect(result.subscriptions.pending.count).to eq(1)
+      expect(result.subscriptions.canceled.count).to eq(1)
+      expect(result.subscriptions.terminated.count).to eq(1)
+      expect(result.subscriptions).to eq([subscription, subscription_2, subscription_3, subscription_4])
     end
   end
 
