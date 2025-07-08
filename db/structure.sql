@@ -579,6 +579,7 @@ DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_recurring_756a2a370
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_78eb24d06c;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_4290c95dec;
 DROP INDEX IF EXISTS public.idx_on_timestamp_charge_id_external_subscription_id;
+DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
 DROP INDEX IF EXISTS public.idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
@@ -1115,7 +1116,7 @@ CREATE TABLE public.add_ons_taxes (
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1142,7 +1143,7 @@ CREATE TABLE public.adjusted_fees (
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     charge_filter_id uuid,
     unit_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1196,7 +1197,7 @@ CREATE TABLE public.applied_coupons (
     frequency integer DEFAULT 0 NOT NULL,
     frequency_duration integer,
     frequency_duration_remaining integer,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1213,7 +1214,7 @@ CREATE TABLE public.applied_invoice_custom_sections (
     invoice_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2256,7 +2257,7 @@ CREATE TABLE public.payment_provider_customers (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2440,7 +2441,7 @@ CREATE TABLE public.subscriptions (
     subscription_at timestamp(6) without time zone,
     ending_at timestamp(6) without time zone,
     trial_ended_at timestamp(6) without time zone,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2565,7 +2566,7 @@ CREATE TABLE public.fees_taxes (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2600,7 +2601,7 @@ CREATE TABLE public.invoice_metadata (
     value character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2742,7 +2743,7 @@ CREATE TABLE public.invoices_taxes (
     updated_at timestamp(6) without time zone NOT NULL,
     fees_amount_cents bigint DEFAULT 0 NOT NULL,
     taxable_base_amount_cents bigint DEFAULT 0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2777,7 +2778,7 @@ CREATE TABLE public.plans_taxes (
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2908,7 +2909,7 @@ CREATE TABLE public.wallet_transactions (
     metadata jsonb DEFAULT '[]'::jsonb,
     credit_note_id uuid,
     failed_at timestamp(6) without time zone,
-    organization_id uuid,
+    organization_id uuid NOT NULL,
     lock_version integer DEFAULT 0 NOT NULL
 );
 
@@ -2986,7 +2987,7 @@ CREATE TABLE public.wallets (
     invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
     lock_version integer DEFAULT 0 NOT NULL,
     ready_to_be_refreshed boolean DEFAULT false NOT NULL,
-    organization_id uuid,
+    organization_id uuid NOT NULL,
     allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     last_ongoing_balance_sync_at timestamp without time zone
 );
@@ -3131,7 +3132,7 @@ CREATE TABLE public.integration_collection_mappings (
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3148,7 +3149,7 @@ CREATE TABLE public.integration_customers (
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3165,7 +3166,7 @@ CREATE TABLE public.integration_items (
     external_name character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3182,7 +3183,7 @@ CREATE TABLE public.integration_mappings (
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3199,7 +3200,7 @@ CREATE TABLE public.integration_resources (
     updated_at timestamp(6) without time zone NOT NULL,
     integration_id uuid,
     resource_type integer DEFAULT 0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3290,7 +3291,7 @@ CREATE TABLE public.invoice_subscriptions (
     charges_from_datetime timestamp(6) without time zone,
     charges_to_datetime timestamp(6) without time zone,
     invoicing_reason public.subscription_invoicing_reason,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3304,7 +3305,7 @@ CREATE TABLE public.invoices_payment_requests (
     payment_request_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3483,7 +3484,7 @@ CREATE TABLE public.payments (
     reference character varying,
     provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
     provider_payment_method_id character varying,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3566,7 +3567,7 @@ CREATE TABLE public.recurring_transaction_rules (
     expiration_at timestamp(6) without time zone,
     terminated_at timestamp(6) without time zone,
     status integer DEFAULT 0,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3586,7 +3587,7 @@ CREATE TABLE public.refunds (
     provider_refund_id character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3699,7 +3700,7 @@ CREATE TABLE public.usage_thresholds (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3785,7 +3786,7 @@ CREATE TABLE public.webhooks (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     webhook_endpoint_id uuid,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -4766,6 +4767,13 @@ CREATE INDEX idx_on_organization_id_organization_sequential_id_2387146f54 ON pub
 --
 
 CREATE UNIQUE INDEX idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167 ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id, charge_filter_id) WHERE ((created_at > '2025-01-21 00:00:00'::timestamp without time zone) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true));
+
+
+--
+-- Name: idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb ON public.charges USING btree (plan_id, billable_metric_id, pay_in_advance) WHERE (deleted_at IS NULL);
 
 
 --
@@ -8916,6 +8924,56 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250708094414'),
+('20250707113718'),
+('20250707113717'),
+('20250707100102'),
+('20250707100101'),
+('20250707100026'),
+('20250707100025'),
+('20250707100013'),
+('20250707100012'),
+('20250707100010'),
+('20250707095956'),
+('20250707095955'),
+('20250707095224'),
+('20250707095223'),
+('20250707094932'),
+('20250707094931'),
+('20250707094901'),
+('20250707094900'),
+('20250707090348'),
+('20250707090347'),
+('20250707090329'),
+('20250707090328'),
+('20250707090314'),
+('20250707090313'),
+('20250707085725'),
+('20250707085724'),
+('20250707085651'),
+('20250707085650'),
+('20250707085634'),
+('20250707085633'),
+('20250707085615'),
+('20250707085614'),
+('20250707083222'),
+('20250707083221'),
+('20250707083211'),
+('20250707083210'),
+('20250707083160'),
+('20250707083159'),
+('20250707082521'),
+('20250707082520'),
+('20250707082510'),
+('20250707082509'),
+('20250707082436'),
+('20250707082435'),
+('20250707081911'),
+('20250707081910'),
+('20250707081837'),
+('20250707081836'),
+('20250707081826'),
+('20250707081825'),
 ('20250704800001'),
 ('20250703133126'),
 ('20250630180000'),

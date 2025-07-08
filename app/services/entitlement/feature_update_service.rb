@@ -27,6 +27,8 @@ module Entitlement
       # NOTE: The webhook is sent even if there was no actual change
       after_commit { ActiveJob.perform_all_later(jobs) }
 
+      SendWebhookJob.perform_after_commit("feature.updated", feature)
+
       result.feature = feature
       result
     rescue ActiveRecord::RecordInvalid => e

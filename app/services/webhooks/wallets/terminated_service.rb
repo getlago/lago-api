@@ -5,10 +5,6 @@ module Webhooks
     class TerminatedService < Webhooks::BaseService
       private
 
-      def current_organization
-        @current_organization ||= object.organization
-      end
-
       def object_serializer
         ::V1::WalletSerializer.new(object, root_name: "wallet", includes: %i[recurring_transaction_rules])
       end

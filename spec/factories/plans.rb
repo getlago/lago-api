@@ -11,5 +11,9 @@ FactoryBot.define do
     pay_in_advance { false }
     amount_cents { 100 }
     amount_currency { "EUR" }
+
+    trait :pay_in_advance do
+      pay_in_advance { true }
+    end
   end
 end

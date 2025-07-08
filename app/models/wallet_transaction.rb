@@ -78,7 +78,7 @@ end
 #  updated_at                          :datetime         not null
 #  credit_note_id                      :uuid
 #  invoice_id                          :uuid
-#  organization_id                     :uuid
+#  organization_id                     :uuid             not null
 #  wallet_id                           :uuid             not null
 #
 # Indexes

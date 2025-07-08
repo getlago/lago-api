@@ -81,7 +81,7 @@ end
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #  object_id           :uuid
-#  organization_id     :uuid
+#  organization_id     :uuid             not null
 #  webhook_endpoint_id :uuid
 #
 # Indexes

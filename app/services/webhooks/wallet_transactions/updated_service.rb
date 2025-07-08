@@ -5,10 +5,6 @@ module Webhooks
     class UpdatedService < Webhooks::BaseService
       private
 
-      def current_organization
-        @current_organization ||= object.wallet.organization
-      end
-
       def object_serializer
         ::V1::WalletTransactionSerializer.new(object, root_name: "wallet_transaction")
       end

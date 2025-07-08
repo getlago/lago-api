@@ -114,7 +114,7 @@ end
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  invoice_id            :uuid             not null
-#  organization_id       :uuid
+#  organization_id       :uuid             not null
 #  subscription_id       :uuid             not null
 #
 # Indexes

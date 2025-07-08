@@ -32,6 +32,8 @@ module Resolvers
         argument :filter_values, String, required: false
         argument :grouped_by, String, required: false
 
+        argument :is_customer_tin_empty, Boolean, required: false
+
         type Types::DataApi::Usages::Invoiced::Object.collection_type, null: false
 
         def resolve(**args)

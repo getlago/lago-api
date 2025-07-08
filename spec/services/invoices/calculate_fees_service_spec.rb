@@ -297,7 +297,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
           )
         end
 
-        it "creates a charge fee" do
+        it "creates a charge fee", transaction: false do
           result = invoice_service.call
 
           aggregate_failures do
@@ -627,7 +627,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
 
         context "when plan no minimum commitment" do
-          it "creates a charge fee but no minimum commitment fee" do
+          it "creates a charge fee but no minimum commitment fee", transaction: false do
             result = invoice_service.call
 
             aggregate_failures do

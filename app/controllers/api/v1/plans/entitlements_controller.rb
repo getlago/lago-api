@@ -53,7 +53,7 @@ module Api
         end
 
         def update
-          result = ::Entitlement::PlanEntitlementsUpdateService.call(
+          result = ::Entitlement::PlanEntitlementsPartialUpdateService.call(
             organization: current_organization,
             plan:,
             entitlements_params: update_params

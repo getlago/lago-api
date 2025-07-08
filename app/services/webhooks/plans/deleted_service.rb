@@ -5,10 +5,6 @@ module Webhooks
     class DeletedService < Webhooks::BaseService
       private
 
-      def current_organization
-        @current_organization ||= object.organization
-      end
-
       def object_serializer
         ::V1::PlanSerializer.new(
           object,

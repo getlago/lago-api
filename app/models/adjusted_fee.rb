@@ -42,7 +42,7 @@ end
 #  fee_id                    :uuid
 #  group_id                  :uuid
 #  invoice_id                :uuid             not null
-#  organization_id           :uuid
+#  organization_id           :uuid             not null
 #  subscription_id           :uuid
 #
 # Indexes
