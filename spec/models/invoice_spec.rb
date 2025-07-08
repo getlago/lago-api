@@ -9,6 +9,8 @@ RSpec.describe Invoice, type: :model do
 
   it_behaves_like "paper_trail traceable"
 
+  it { is_expected.to have_one(:regenerated_invoice).class_name("Invoice").with_foreign_key(:voided_invoice_id) }
+
   it { is_expected.to have_many(:integration_resources) }
   it { is_expected.to have_many(:error_details) }
 
@@ -21,7 +23,6 @@ RSpec.describe Invoice, type: :model do
 
   it { is_expected.to have_many(:applied_usage_thresholds) }
   it { is_expected.to have_many(:usage_thresholds).through(:applied_usage_thresholds) }
-  it { is_expected.to have_many(:regenerated_invoices).class_name("Invoice") }
 
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }

@@ -74,9 +74,14 @@ module Types
       field :integration_syncable, GraphQL::Types::Boolean, null: false
       field :payable_type, GraphQL::Types::String, null: false
       field :payments, [Types::Payments::Object], null: true
+      field :regenerated_invoice_id, String, null: true
       field :tax_provider_id, String, null: true
       field :tax_provider_voidable, GraphQL::Types::Boolean, null: false
       field :voided_invoice_id, String, null: true
+
+      def regenerated_invoice_id
+        object&.regenerated_invoice&.id
+      end
 
       def payable_type
         "Invoice"

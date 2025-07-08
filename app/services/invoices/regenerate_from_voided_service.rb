@@ -16,7 +16,7 @@ module Invoices
     def call
       return result.not_found_failure!(resource: "invoice") unless voided_invoice
       return result.not_allowed_failure!(code: "not_voided") unless voided_invoice.voided?
-      return result.not_allowed_failure!(code: "already_regenerated") if voided_invoice.regenerated_invoices.any?
+      return result.not_allowed_failure!(code: "already_regenerated") if voided_invoice.regenerated_invoices.present?
 
       # For Miguel to review:
       # 1. Grace Period (draft status) - Done

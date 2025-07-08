@@ -27031,6 +27031,18 @@
               "args": []
             },
             {
+              "name": "regeneratedInvoiceId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "selfBilled",
               "description": null,
               "type": {
