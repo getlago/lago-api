@@ -914,6 +914,7 @@ type ChargeUsage {
   filters: [ChargeFilterUsage!]
   groupedUsage: [GroupedChargeUsage!]!
   id: ID!
+  pricingUnitAmountCents: BigInt
   units: Float!
 }
 
