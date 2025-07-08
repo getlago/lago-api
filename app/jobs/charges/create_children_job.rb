@@ -8,7 +8,7 @@ module Charges
       plan = charge.plan
       return unless plan&.children&.any?
 
-      plan.children.order(created_at: :asc).pluck(:id).each_slice(20) do |child_ids|
+      plan.children.joins(:subscriptions).where(subscriptions: {status: %w[active pending]}).distinct.pluck(:id).each_slice(20) do |child_ids|
         Charges::CreateChildrenBatchJob.perform_later(
           child_ids:,
           charge:,
