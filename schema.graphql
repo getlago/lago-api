@@ -7672,6 +7672,7 @@ type Plan {
   id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
+  isOverridden: Boolean!
   minimumCommitment: Commitment
   name: String!
   organization: Organization
