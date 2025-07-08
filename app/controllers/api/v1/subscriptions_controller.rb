@@ -233,7 +233,9 @@ module Api
       end
 
       def index_filters
-        params.permit(:external_customer_id, :plan_code, status: [])
+        filters = params.permit(:external_customer_id, :plan_code, status: [])
+        filters[:status] = ['active'] if filters[:status].blank?
+        filters
       end
 
       def render_subscription(subscription)
