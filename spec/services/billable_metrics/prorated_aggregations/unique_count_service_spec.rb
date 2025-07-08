@@ -326,7 +326,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
               {timestamp: added_at + 5.days, id: event.properties["unique_id"], operation_type: "add"},
               {timestamp: added_at + 5.days + 1.hour, id: event.properties["unique_id"], operation_type: "remove"},
               {timestamp: added_at + 10.days, id: event.properties["unique_id"], operation_type: "add"},
-              {timestamp: added_at + 10.days + 1.hour, id: event.properties["unique_id"], operation_type: "remove"},
+              {timestamp: added_at + 10.days + 1.hour, id: event.properties["unique_id"], operation_type: "remove"}
             ]
 
             events_params.each do |event_params|

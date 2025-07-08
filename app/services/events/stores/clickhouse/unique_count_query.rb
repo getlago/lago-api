@@ -44,7 +44,10 @@ module Events
                 e.operation_type,
                 e.timestamp,
                 CASE
-                  WHEN next_event.next_property IS NOT NULL AND e.rn != 1
+                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  WHEN operation_type = 'add' THEN false
+                  -- if the next event the same day is the opposite operation type, it should be ignored
+                  WHEN next_event.next_property IS NOT NULL
                   THEN true
                   ELSE false
                 END AS is_ignored
@@ -52,8 +55,7 @@ module Events
                 SELECT
                   timestamp,
                   property,
-                  operation_type,
-                  ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn
+                  operation_type
                 FROM events_data
                 ORDER BY timestamp ASC
               ) as e
@@ -139,7 +141,10 @@ module Events
                 e.operation_type,
                 e.timestamp,
                 CASE
-                  WHEN next_event.next_property IS NOT NULL AND e.rn != 1
+                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  WHEN operation_type = 'add' THEN false
+                  -- if the next event the same day is the opposite operation type, it should be ignored
+                  WHEN next_event.next_property IS NOT NULL
                   THEN true
                   ELSE false
                 END AS is_ignored
@@ -148,8 +153,7 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names.join(", ")},
-                  ROW_NUMBER() OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp) AS rn
+                  #{group_names.join(", ")}
                 FROM events_data
                 ORDER BY timestamp ASC
               ) as e
@@ -238,7 +242,10 @@ module Events
                 e.operation_type,
                 e.timestamp,
                 CASE
-                  WHEN next_event.next_property IS NOT NULL AND e.rn != 1
+                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  WHEN operation_type = 'add' THEN false
+                  -- if the next event the same day is the opposite operation type, it should be ignored
+                  WHEN next_event.next_property IS NOT NULL
                   THEN true
                   ELSE false
                 END AS is_ignored
@@ -246,8 +253,7 @@ module Events
                 SELECT
                   timestamp,
                   property,
-                  operation_type,
-                  ROW_NUMBER() OVER (PARTITION BY property ORDER BY timestamp) AS rn
+                  operation_type
                 FROM events_data
                 ORDER BY timestamp ASC
               ) as e
