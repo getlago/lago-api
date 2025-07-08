@@ -255,7 +255,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
     end
 
     it "updates existing entitlement value" do
-      put_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}", params
+      patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
 
       expect(response).to have_http_status(:success)
       expect(json[:entitlements]).to be_present
@@ -265,7 +265,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
     it "does not create new entitlement" do
       expect {
-        put_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}", params
+        patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
       }.not_to change(Entitlement::Entitlement, :count)
     end
 
@@ -287,12 +287,12 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
       it "creates new entitlement value" do
         expect {
-          put_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}", params
+          patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
         }.to change(Entitlement::EntitlementValue, :count).by(1)
       end
 
       it "creates entitlement value with correct value" do
-        put_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}", params
+        patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
 
         expect(response).to have_http_status(:success)
         expect(json[:entitlements].first[:privileges][:max_admins][:value]).to eq(30)
@@ -319,13 +319,13 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
       it "creates new entitlement" do
         expect {
-          put_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{new_feature.code}", params
+          patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
         }.to change(Entitlement::Entitlement, :count).by(1)
       end
 
       it "creates new entitlement value" do
         expect {
-          put_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{new_feature.code}", params
+          patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
         }.to change(Entitlement::EntitlementValue, :count).by(1)
       end
     end
@@ -342,7 +342,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "returns not found error" do
-        put_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}", params
+        patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
 
         expect(response).to be_not_found_error("feature")
       end
@@ -360,7 +360,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "returns not found error" do
-        put_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}", params
+        patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
 
         expect(response).to be_not_found_error("privilege")
       end
@@ -368,7 +368,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
     context "when plan does not exist" do
       it "returns not found error" do
-        put_with_token organization, "/api/v1/plans/invalid_plan/entitlements/#{feature.code}", params
+        patch_with_token organization, "/api/v1/plans/invalid_plan/entitlements", params
 
         expect(response).to be_not_found_error("plan")
       end
@@ -382,7 +382,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "returns success with existing entitlements" do
-        put_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}", params
+        patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
 
         expect(response).to have_http_status(:success)
         expect(json[:entitlements]).to be_present
