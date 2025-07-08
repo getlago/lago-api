@@ -19,7 +19,7 @@ module Resolvers
 
     type Types::Subscriptions::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil, plan_code: nil, status: nil, search_term: nil)
+    def resolve(page: nil, limit: nil, plan_code: nil, status: nil, external_customer_id: nil, overriden: nil, search_term: nil)
       result = SubscriptionsQuery.call(
         organization: current_organization,
         pagination: {page:, limit:},
