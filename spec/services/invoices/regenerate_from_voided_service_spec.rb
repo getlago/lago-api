@@ -69,6 +69,16 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
           end
         end
 
+        it "does not create invoice with generating status" do
+          result = regenerate_service.call
+
+          aggregate_failures do
+            expect(result).to be_success
+            expect(result.invoice.status).not_to eq("generating")
+            expect(result.invoice).to be_visible
+          end
+        end
+
         it "sets the voided_invoice_id on the new invoice" do
           result = regenerate_service.call
 
