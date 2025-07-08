@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Invoices::VoidService, type: :service do
-  subject(:void_service) { described_class.new(invoice:) }
+  subject(:void_service) { described_class.new(invoice:, params:) }
+
+  let(:params) { {} }
 
   describe "#call" do
     context "when invoice is nil" do
@@ -56,13 +58,13 @@ RSpec.describe Invoices::VoidService, type: :service do
       context "when the payment status is succeeded" do
         let(:payment_status) { :succeeded }
 
-        it "returns a failure" do
+        it "voids the invoice" do
           result = void_service.call
 
           aggregate_failures do
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
-            expect(result.error.code).to eq("not_voidable")
+            expect(result).to be_success
+            expect(result.invoice).to be_voided
+            expect(result.invoice.voided_at).to be_present
           end
         end
       end
@@ -181,6 +183,35 @@ RSpec.describe Invoices::VoidService, type: :service do
             expect(wallet.reload.credits_balance).to eq(100)
             expect(WalletTransactions::RecreditService).not_to have_received(:call)
           end
+        end
+      end
+    end
+
+    describe "when generate credit note is true" do
+      let(:params) { {generate_credit_note: true} }
+
+      context "when invoice is nil" do
+        let(:invoice) { nil }
+
+        it "returns a failure" do
+          result = void_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("invoice")
+        end
+      end
+
+      context "when the invoice is voided" do
+        around { |test| lago_premium!(&test) }
+
+        let(:invoice) { create(:invoice, status: :voided) }
+
+        it "returns a failure" do
+          result = void_service.call
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+          expect(result.error.code).to eq("not_voidable")
         end
       end
     end

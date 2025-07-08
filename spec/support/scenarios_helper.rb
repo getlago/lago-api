@@ -124,6 +124,12 @@ module ScenariosHelper
     end
   end
 
+  def void_invoice(invoice, params = {})
+    post_with_token(organization, "/api/v1/invoices/#{invoice.id}/void", params)
+    perform_all_enqueued_jobs
+    invoice.reload
+  end
+
   def create_one_off_invoice(customer, addons, taxes: [], units: 1)
     api_call do
       create_invoice_params = {
@@ -180,7 +186,7 @@ module ScenariosHelper
   def mock_vies_check!(vat_number)
     valvat = instance_double(Valvat)
     allow(Valvat).to receive(:new).with(vat_number).and_return(valvat)
-    allow(valvat).to receive(:exists?).with(detail: true).and_return({
+    allow(valvat).to receive(:exists?).with(detail: true, raise_error: true).and_return({
       countryCode: vat_number[0..1].upcase,
       vatNumber: vat_number.upcase
     })

@@ -5,14 +5,16 @@ require "net/http/post/multipart"
 module LagoHttpClient
   class Client
     RESPONSE_SUCCESS_CODES = [200, 201, 202, 204].freeze
+    MAX_RETRIES_ATTEMPTS = 3
 
-    attr_reader :uri
+    attr_reader :uri, :retries_on
 
-    def initialize(url, read_timeout: nil)
+    def initialize(url, read_timeout: nil, retries_on: [])
       @uri = URI(url)
       @http_client = Net::HTTP.new(uri.host, uri.port)
       @http_client.read_timeout = read_timeout if read_timeout.present?
       @http_client.use_ssl = true if uri.scheme == "https"
+      @retries_on = retries_on
     end
 
     def post(body, headers)
@@ -25,10 +27,7 @@ module LagoHttpClient
       end
 
       req.body = body.to_json
-
-      response = http_client.request(req)
-
-      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
+      response = request(req)
 
       JSON.parse(response.body.presence || "{}")
     rescue JSON::ParserError
@@ -43,11 +42,7 @@ module LagoHttpClient
       end
 
       req.body = body.to_json
-      response = http_client.request(req)
-
-      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
-
-      response
+      request(req)
     end
 
     def put_with_response(body, headers)
@@ -58,11 +53,7 @@ module LagoHttpClient
       end
 
       req.body = body.to_json
-      response = http_client.request(req)
-
-      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
-
-      response
+      request(req)
     end
 
     def post_multipart_file(params = {})
@@ -71,11 +62,7 @@ module LagoHttpClient
         params
       )
 
-      response = http_client.request(req)
-
-      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
-
-      response
+      request(req)
     end
 
     def post_url_encoded(params, headers)
@@ -86,10 +73,7 @@ module LagoHttpClient
         req[key] = headers[key]
       end
 
-      response = http_client.request(req, encoded_form)
-
-      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
-
+      response = request(req, encoded_form)
       JSON.parse(response.body.presence || "{}")
     end
 
@@ -102,10 +86,7 @@ module LagoHttpClient
         req[key] = headers[key]
       end
 
-      response = http_client.request(req)
-
-      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
-
+      response = request(req)
       JSON.parse(response.body.presence || "{}")
     end
 
@@ -117,6 +98,24 @@ module LagoHttpClient
       raise(
         ::LagoHttpClient::HttpError.new(response.code, response.body, uri, response_headers: response.each_header.to_h)
       )
+    end
+
+    def request(req, params = nil)
+      attempt = 0
+
+      response = begin
+        attempt += 1
+        http_client.request(req, params)
+      rescue => e
+        if retries_on.include?(e.class)
+          retry if attempt < MAX_RETRIES_ATTEMPTS
+        else
+          raise
+        end
+      end
+
+      raise_error(response) unless RESPONSE_SUCCESS_CODES.include?(response.code.to_i)
+      response
     end
   end
 end

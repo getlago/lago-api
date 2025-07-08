@@ -8,6 +8,8 @@ module Events
           .where(organization_id: subscription.organization.id)
           .where(code:)
 
+        scope = scope.where(source:) if source.present? # NOTE: should we require source?
+
         scope = scope.order(timestamp: :asc) if ordered
 
         scope = scope.from_datetime(from_datetime) if force_from || use_from_boundary

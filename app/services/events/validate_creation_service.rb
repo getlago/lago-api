@@ -41,11 +41,16 @@ module Events
     def valid_transaction_id?
       return false if event_params[:transaction_id].blank?
 
-      !Event.where(
+      query = Event.where(
         organization_id: organization.id,
         transaction_id: event_params[:transaction_id],
         external_subscription_id: subscriptions.first.external_id
-      ).exists?
+      )
+
+      # Filter by source if specified in event_params
+      query = query.where(source: event_params[:source]) if event_params[:source].present?
+
+      !query.exists?
     end
 
     def valid_code?

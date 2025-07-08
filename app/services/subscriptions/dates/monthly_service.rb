@@ -4,7 +4,7 @@ module Subscriptions
   module Dates
     class MonthlyService < Subscriptions::DatesService
       def compute_from_date(date = base_date)
-        if plan.pay_in_advance? || terminated_pay_in_arrear?
+        if plan.pay_in_advance? || terminated_pay_in_arrears?
           return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date.beginning_of_month
         end
 
@@ -16,7 +16,7 @@ module Subscriptions
           return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date.beginning_of_month
         end
 
-        return compute_from_date if plan.pay_in_arrear?
+        return compute_from_date if plan.pay_in_arrears?
         return base_date.beginning_of_month if calendar?
 
         previous_anniversary_day(base_date)

@@ -243,12 +243,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
         it "returns a 404 response" do
           subject
-
-          aggregate_failures do
-            expect(response).to have_http_status(:not_found)
-            expect(json[:error]).to eq("Not Found")
-            expect(json[:code]).to eq("tax_not_found")
-          end
+          expect(response).to be_not_found_error("tax")
         end
       end
     end

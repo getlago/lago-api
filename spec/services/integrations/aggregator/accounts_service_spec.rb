@@ -30,7 +30,7 @@ RSpec.describe Integrations::Aggregator::AccountsService do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
-        .with(accounts_endpoint)
+        .with(accounts_endpoint, retries_on: [OpenSSL::SSL::SSLError])
         .and_return(lago_client)
       allow(lago_client).to receive(:get)
         .with(headers:, params:)
@@ -42,7 +42,7 @@ RSpec.describe Integrations::Aggregator::AccountsService do
       account = result.accounts.first
 
       aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(accounts_endpoint)
+        expect(LagoHttpClient::Client).to have_received(:new).with(accounts_endpoint, retries_on: [OpenSSL::SSL::SSLError])
         expect(lago_client).to have_received(:get)
         expect(result.accounts.count).to eq(3)
         expect(account.external_id).to eq("12ec4c59-ad56-4a4f-93eb-fb0a7740f4e2")

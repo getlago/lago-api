@@ -8,7 +8,7 @@ class CouponTarget < ApplicationRecord
   belongs_to :coupon
   belongs_to :plan, optional: true
   belongs_to :billable_metric, optional: true
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   default_scope -> { kept }
 end
@@ -23,7 +23,7 @@ end
 #  updated_at         :datetime         not null
 #  billable_metric_id :uuid
 #  coupon_id          :uuid             not null
-#  organization_id    :uuid
+#  organization_id    :uuid             not null
 #  plan_id            :uuid
 #
 # Indexes

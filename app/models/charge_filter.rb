@@ -7,7 +7,7 @@ class ChargeFilter < ApplicationRecord
   self.discard_column = :deleted_at
 
   belongs_to :charge, -> { with_discarded }, touch: true
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   has_many :values, class_name: "ChargeFilterValue", dependent: :destroy
   has_many :billable_metric_filters, through: :values
@@ -71,7 +71,7 @@ end
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  charge_id            :uuid             not null
-#  organization_id      :uuid
+#  organization_id      :uuid             not null
 #
 # Indexes
 #

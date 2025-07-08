@@ -14,7 +14,7 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployPropertiesService do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
-        .with(endpoint)
+        .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
         .and_return(http_client)
       allow(http_client).to receive(:post_with_response).and_return(response)
 
@@ -26,7 +26,7 @@ RSpec.describe Integrations::Hubspot::Subscriptions::DeployPropertiesService do
       deploy_properties_service.call
 
       aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(endpoint)
+        expect(LagoHttpClient::Client).to have_received(:new).with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
         expect(http_client).to have_received(:post_with_response) do |payload, headers|
           expect(payload[:objectType]).to eq("LagoSubscriptions")
           expect(headers["Authorization"]).to include("Bearer")

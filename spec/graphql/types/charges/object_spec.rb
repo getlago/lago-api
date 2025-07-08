@@ -20,6 +20,7 @@ RSpec.describe Types::Charges::Object do
     expect(subject).to have_field(:deleted_at).of_type("ISO8601DateTime")
     expect(subject).to have_field(:updated_at).of_type("ISO8601DateTime!")
     expect(subject).to have_field(:taxes).of_type("[Tax!]")
+    expect(subject).to have_field(:applied_pricing_unit).of_type("AppliedPricingUnit")
     expect(subject).to have_field(:filters).of_type("[ChargeFilter!]")
   end
 end

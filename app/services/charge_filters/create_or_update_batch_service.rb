@@ -43,6 +43,11 @@ module ChargeFilters
             end
 
             if parent_filter.blank? || parent_filter_properties(parent_filter) != filter.properties
+              # Make sure that pricing group keys are cascaded even if properties are overridden
+              cascade_pricing_group_keys(filter, filter_param)
+              filter.save!
+
+              # NOTE: Make sure update_at is touched even if not changed to keep the order
               filter.touch # rubocop:disable Rails/SkipsModelValidations
               result.filters << filter
 
@@ -83,7 +88,7 @@ module ChargeFilters
         # NOTE: remove old filters that were not created or updated
         remove_query = charge.filters
         remove_query = remove_query.where(id: inherited_filter_ids) if cascade_updates && parent_filters
-        remove_query.where.not(id: result.filters.map(&:id)).find_each do
+        remove_query.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
           remove_filter(it)
         end
       end
@@ -110,7 +115,7 @@ module ChargeFilters
     def remove_all
       ActiveRecord::Base.transaction do
         if cascade_updates
-          charge.filters.where(id: inherited_filter_ids).find_each { remove_filter(it) }
+          charge.filters.where(id: inherited_filter_ids).unscope(:order).find_each { remove_filter(it) }
         else
           charge.filters.each { remove_filter(it) }
         end
@@ -129,7 +134,7 @@ module ChargeFilters
 
       return @inherited_filter_ids if parent_filters.blank? || !cascade_updates
 
-      parent_filters.find_each do |pf|
+      parent_filters.unscope(:order).find_each do |pf|
         value = pf.to_h_with_discarded.sort
 
         match = filters.find do |f|
@@ -140,6 +145,18 @@ module ChargeFilters
       end
 
       @inherited_filter_ids
+    end
+
+    def cascade_pricing_group_keys(filter, params)
+      pricing_group_keys = params.dig(:properties, :pricing_group_keys) || params.dig(:properties, :grouped_by)
+
+      if pricing_group_keys
+        filter.properties["pricing_group_keys"] = pricing_group_keys
+        filter.properties.delete("grouped_by")
+      elsif filter.pricing_group_keys.present?
+        filter.properties.delete("pricing_group_keys")
+        filter.properties.delete("grouped_by")
+      end
     end
   end
 end

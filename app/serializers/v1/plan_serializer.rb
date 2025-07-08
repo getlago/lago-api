@@ -25,6 +25,7 @@ module V1
 
       payload.merge!(charges) if include?(:charges)
       payload.merge!(fixed_charges) if include?(:fixed_charges)
+      payload.merge!(entitlements) if include?(:entitlements)
       payload.merge!(usage_thresholds) if include?(:usage_thresholds)
       payload.merge!(taxes) if include?(:taxes)
       payload.merge!(minimum_commitment) if include?(:minimum_commitment) && model.minimum_commitment
@@ -48,6 +49,14 @@ module V1
         model.fixed_charges,
         ::V1::FixedChargeSerializer,
         collection_name: "fixed_charges"
+      ).serialize
+    end
+
+    def entitlements
+      ::CollectionSerializer.new(
+        model.entitlements.includes(:feature, values: :privilege),
+        ::V1::Entitlement::PlanEntitlementSerializer,
+        collection_name: "entitlements"
       ).serialize
     end
 

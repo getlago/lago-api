@@ -76,7 +76,7 @@ module Api
         if result.success?
           render(
             json: ::CollectionSerializer.new(
-              result.invoices.includes(:metadata, :applied_taxes),
+              result.invoices.includes(:metadata, :applied_taxes, :billing_entity, :applied_usage_thresholds),
               ::V1::InvoiceSerializer,
               collection_name: "invoices",
               meta: pagination_metadata(result.invoices),
@@ -134,7 +134,7 @@ module Api
       def void
         invoice = current_organization.invoices.visible.find_by(id: params[:id])
 
-        result = Invoices::VoidService.call(invoice:)
+        result = Invoices::VoidService.call(invoice: invoice, params: void_params)
         if result.success?
           render_invoice(result.invoice)
         else
@@ -339,6 +339,10 @@ module Api
             ]
           ]
         )
+      end
+
+      def void_params
+        params.permit(:generate_credit_note, :refund_amount, :credit_amount)
       end
 
       def sync_salesforce_id_params

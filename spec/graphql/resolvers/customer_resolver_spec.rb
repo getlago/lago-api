@@ -6,8 +6,8 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   let(:required_permission) { "customers:view" }
   let(:query) do
     <<~GQL
-      query($customerId: ID!) {
-        customer(id: $customerId) {
+      query($customerId: ID, $externalId: ID) {
+        customer(id: $customerId, externalId: $externalId) {
           id
           externalId
           externalSalesforceId
@@ -85,6 +85,40 @@ RSpec.describe Resolvers::CustomerResolver, type: :graphql do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "customers:view"
+
+  context "when id and external_id are not provided" do
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect_graphql_error(
+        result:,
+        message: "You must provide either `id` or `external_id`."
+      )
+    end
+  end
+
+  context "when external_id is provided" do
+    it "returns a single customer" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          externalId: customer.external_id
+        }
+      )
+
+      customer_response = result["data"]["customer"]
+      expect(customer_response["id"]).to eq(customer.id)
+      expect(customer_response["externalId"]).to eq(customer.external_id)
+    end
+  end
 
   it "returns a single customer" do
     result = execute_graphql(

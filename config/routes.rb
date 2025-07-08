@@ -13,6 +13,7 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resources :activity_logs, param: :activity_id, only: %i[index show]
+      resources :api_logs, param: :request_id, only: %i[index show]
 
       namespace :analytics do
         get :gross_revenue, to: "gross_revenues#index", as: :gross_revenue
@@ -50,6 +51,12 @@ Rails.application.routes.draw do
         post :evaluate_expression, on: :collection
       end
 
+      resources :features, param: :code, code: /.*/, only: %i[index show create update destroy] do
+        scope module: :features do
+          resources :privileges, only: %i[destroy], param: :code
+        end
+      end
+
       resources :coupons, param: :code, code: /.*/
       resources :credit_notes, only: %i[create update show index] do
         post :download, on: :member
@@ -78,7 +85,11 @@ Rails.application.routes.draw do
       resources :payment_receipts, only: %i[index show]
       resources :payment_requests, only: %i[create index]
       resources :payments, only: %i[create index show]
-      resources :plans, param: :code, code: /.*/
+      resources :plans, param: :code, code: /.*/ do
+        resources :entitlements, only: %i[index show create update destroy], param: :code, code: /.*/, controller: "plans/entitlements" do
+          resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "plans/entitlements/privileges"
+        end
+      end
       resources :taxes, param: :code, code: /.*/
       resources :wallet_transactions, only: %i[create show] do
         post :payment_url, on: :member
@@ -110,7 +121,7 @@ Rails.application.routes.draw do
 
   namespace :admin do
     resources :memberships, only: %i[create]
-    resources :organizations, only: %i[update]
+    resources :organizations, only: %i[update create]
     resources :invoices do
       post :regenerate, on: :member
     end

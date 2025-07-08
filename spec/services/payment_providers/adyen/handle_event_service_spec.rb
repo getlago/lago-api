@@ -134,5 +134,34 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
         expect(refund_service).to have_received(:update_status)
       end
     end
+
+    context "when ignored event" do
+      let(:refund_service) { instance_double(CreditNotes::Refunds::AdyenService) }
+      let(:event_json) do
+        JSON.parse(event_response_json)["notificationItems"]
+          .first&.dig("NotificationRequestItem").to_json
+      end
+
+      %w[report_available recurring_contract].each do |event_type|
+        let(:event_response_json) do
+          path = Rails.root.join("spec/fixtures/adyen/webhook_#{event_type}_response.json")
+          File.read(path)
+        end
+
+        before do
+          allow(CreditNotes::Refunds::AdyenService).to receive(:new)
+            .and_return(refund_service)
+          allow(refund_service).to receive(:update_status)
+            .and_return(true)
+        end
+
+        it "does not route the event to an other service" do
+          event_service.call
+
+          expect(CreditNotes::Refunds::AdyenService).not_to have_received(:new)
+          expect(refund_service).not_to have_received(:update_status)
+        end
+      end
+    end
   end
 end

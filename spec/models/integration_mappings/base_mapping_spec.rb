@@ -8,6 +8,7 @@ RSpec.describe IntegrationMappings::BaseMapping, type: :model do
   it_behaves_like "paper_trail traceable"
 
   it { is_expected.to belong_to(:integration) }
+  it { is_expected.to belong_to(:organization) }
 
   describe "#push_to_settings" do
     it "push the value into settings" do

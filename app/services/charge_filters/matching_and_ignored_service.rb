@@ -21,7 +21,7 @@ module ChargeFilters
         child = f.to_h_with_all_values
 
         result.matching_filters.all? do |key, values|
-          values.any? { (child[key] || []).include?(_1) }
+          values.any? { (child[key] || []).include?(it) }
         end
       end
 
@@ -60,7 +60,7 @@ module ChargeFilters
     attr_reader :charge, :filter
 
     def other_filters
-      @other_filters ||= charge.filters.select { _1.id != filter.id }
+      @other_filters ||= charge.filters.select { it.id != filter.id }
     end
   end
 end

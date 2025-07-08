@@ -12,6 +12,7 @@ FactoryBot.define do
     transaction_id { "tr_#{SecureRandom.hex}" }
     code { Faker::Alphanumeric.alphanumeric(number: 10) }
     timestamp { Time.current }
+    source { "usage" }
 
     external_subscription_id { subscription.external_id }
   end
@@ -35,5 +36,6 @@ FactoryBot.define do
     transaction_id { "tr_#{SecureRandom.hex}" }
     code { Faker::Alphanumeric.alphanumeric(number: 10) }
     timestamp { Time.current }
+    source { "usage" }
   end
 end

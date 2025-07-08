@@ -35,6 +35,10 @@ Rails.application.configure do
   config.active_record.encryption.deterministic_key = "test"
   config.active_record.encryption.key_derivation_salt = "test"
 
+  # Ensures we raise an error when we call `scope.order(...).find_each` as it could potentially
+  # log a lot of warnings on production.
+  config.active_record.error_on_ignored_order = true
+
   config.active_job.queue_adapter = :test
   config.license_url = "http://license.lago"
 

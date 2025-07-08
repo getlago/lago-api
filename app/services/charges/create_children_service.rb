@@ -4,9 +4,10 @@ module Charges
   class CreateChildrenService < BaseService
     Result = BaseResult[:charge]
 
-    def initialize(charge:, payload:)
+    def initialize(child_ids:, charge:, payload:)
       @charge = charge
       @payload = payload.deep_symbolize_keys
+      @child_ids = child_ids
       super
     end
 
@@ -14,7 +15,7 @@ module Charges
       return result.not_found_failure!(resource: "charge") unless charge
 
       ActiveRecord::Base.transaction do
-        plan.children.find_each do |child|
+        plan.children.where(id: child_ids).find_each do |child|
           Charges::CreateService.call!(plan: child, params: payload.merge(parent_id: charge.id))
         end
       end
@@ -25,7 +26,7 @@ module Charges
 
     private
 
-    attr_reader :charge, :payload
+    attr_reader :charge, :payload, :child_ids
 
     delegate :plan, to: :charge
   end

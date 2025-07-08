@@ -3,6 +3,8 @@
 module Api
   module V1
     class EventsController < Api::BaseController
+      skip_audit_logs!
+
       ACTIONS_WITH_CACHED_API_KEY = %i[create batch estimate_instant_fees batch_estimate_instant_fees].freeze
 
       def create

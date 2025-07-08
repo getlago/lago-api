@@ -100,7 +100,9 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
   end
 
   before do
-    allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+    allow(LagoHttpClient::Client).to receive(:new)
+      .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      .and_return(lago_client)
 
     integration_customer
     integration_collection_mapping1
@@ -326,7 +328,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
           end
 
           it "raises an HTTP error" do
-            expect { service_call }.to raise_error(LagoHttpClient::HttpError)
+            expect { service_call }.to raise_error(Integrations::Aggregator::BadGatewayError)
           end
         end
       end

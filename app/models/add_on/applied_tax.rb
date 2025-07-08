@@ -6,7 +6,7 @@ class AddOn
 
     belongs_to :add_on
     belongs_to :tax
-    belongs_to :organization, optional: true
+    belongs_to :organization
   end
 end
 
@@ -18,7 +18,7 @@ end
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  add_on_id       :uuid             not null
-#  organization_id :uuid
+#  organization_id :uuid             not null
 #  tax_id          :uuid             not null
 #
 # Indexes

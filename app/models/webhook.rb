@@ -7,9 +7,7 @@ class Webhook < ApplicationRecord
 
   belongs_to :webhook_endpoint
   belongs_to :object, polymorphic: true, optional: true
-
-  # TODO: belongs_to :organization, optional: true
-  has_one :organization, through: :webhook_endpoint
+  belongs_to :organization
 
   enum :status, STATUS
 
@@ -83,7 +81,7 @@ end
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #  object_id           :uuid
-#  organization_id     :uuid
+#  organization_id     :uuid             not null
 #  webhook_endpoint_id :uuid
 #
 # Indexes

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Charges::CreateChildrenService, type: :service do
-  subject(:create_service) { described_class.new(charge:, payload:) }
+  subject(:create_service) { described_class.new(child_ids:, charge:, payload:) }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
@@ -12,6 +12,7 @@ RSpec.describe Charges::CreateChildrenService, type: :service do
 
   let(:child_plan) { create(:plan, organization:, parent_id:) }
   let(:parent_id) { plan.id }
+  let(:child_ids) { child_plan.id }
 
   let(:payload) { {} }
 

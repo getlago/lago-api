@@ -8,7 +8,7 @@ module IntegrationCollectionMappings
     self.table_name = "integration_collection_mappings"
 
     belongs_to :integration, class_name: "Integrations::BaseIntegration"
-    belongs_to :organization, optional: true
+    belongs_to :organization
 
     MAPPING_TYPES = %i[
       fallback_item coupon subscription_fee minimum_commitment tax prepaid_credit credit_note account
@@ -33,7 +33,7 @@ end
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  integration_id  :uuid             not null
-#  organization_id :uuid
+#  organization_id :uuid             not null
 #
 # Indexes
 #

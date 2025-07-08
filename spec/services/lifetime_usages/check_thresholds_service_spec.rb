@@ -112,6 +112,7 @@ RSpec.describe LifetimeUsages::CheckThresholdsService, type: :service, transacti
     let(:progressive_billing_invoice) do
       create(
         :invoice,
+        :with_subscriptions,
         organization:,
         customer:,
         status: "finalized",
@@ -174,6 +175,15 @@ RSpec.describe LifetimeUsages::CheckThresholdsService, type: :service, transacti
     end
 
     it "does not create an invoice for the largest usage_threshold amount" do
+      expect { service.call }.not_to change(Invoice, :count)
+      expect(subscription.invoices.progressive_billing).to be_empty
+    end
+  end
+
+  context "when subscription is terminated" do
+    let(:subscription) { create(:subscription, :terminated, customer: customer) }
+
+    it "does not create an invoice for the current usage" do
       expect { service.call }.not_to change(Invoice, :count)
       expect(subscription.invoices.progressive_billing).to be_empty
     end

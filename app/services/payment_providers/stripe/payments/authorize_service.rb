@@ -71,8 +71,7 @@ module PaymentProviders
             },
             {
               api_key:,
-              idempotency_key: "auth-#{provider_customer.id}-#{unique_id}",
-              stripe_version: ::Stripe.api_version || "2024-09-30.acacia" # TODO: Remove once Stripe.api_version is fully locked
+              idempotency_key: "auth-#{provider_customer.id}-#{unique_id}"
             }
           )
         end

@@ -57,7 +57,7 @@ RSpec.describe Charges::UpdateService, type: :service do
           invoiceable: false,
           properties: {
             amount: "400"
-          },
+          }.merge(pricing_group_keys),
           applied_pricing_unit: applied_pricing_unit_params,
           filters: [
             {
@@ -74,6 +74,8 @@ RSpec.describe Charges::UpdateService, type: :service do
           conversion_rate: 2.5
         }
       end
+
+      let(:pricing_group_keys) { {} }
 
       before { create(:applied_pricing_unit, pricing_unitable: charge, conversion_rate: 1.1) }
 
@@ -140,6 +142,15 @@ RSpec.describe Charges::UpdateService, type: :service do
           expect { subject }.to change(charge.applied_pricing_unit, :conversion_rate).to(2.5)
         end
 
+        context "with pricing_group_keys in the properties" do
+          let(:pricing_group_keys) { {pricing_group_keys: ["cloud"]} }
+
+          it "apply the value to the charge" do
+            expect { subject }.to change { charge.reload.pricing_group_keys }
+              .from(nil).to(["cloud"])
+          end
+        end
+
         context "with charge properties already overridden" do
           let(:cascade_options) do
             {
@@ -151,6 +162,64 @@ RSpec.describe Charges::UpdateService, type: :service do
 
           it "does not update charge properties" do
             expect { subject }.not_to change { charge.reload.properties }
+          end
+
+          context "with pricing_group_keys in the properties" do
+            let(:pricing_group_keys) { {pricing_group_keys: ["cloud"]} }
+
+            it "apply the value to the charge" do
+              expect { subject }.to change { charge.reload.pricing_group_keys }
+                .from(nil).to(["cloud"])
+            end
+
+            context "when charge has a pricing_group_keys" do
+              let(:charge) do
+                create(
+                  :standard_charge,
+                  plan:,
+                  billable_metric_id: sum_billable_metric.id,
+                  amount_currency: "USD",
+                  properties: {
+                    amount: "300",
+                    pricing_group_keys: ["region"]
+                  }
+                )
+              end
+
+              it "overrides the keys" do
+                expect { subject }.to change { charge.reload.pricing_group_keys }
+                  .from(["region"]).to(["cloud"])
+              end
+            end
+          end
+
+          context "with legacy grouped_by in the properties" do
+            let(:pricing_group_keys) { {grouped_by: ["cloud"]} }
+
+            it "apply the value to the charge" do
+              expect { subject }.to change { charge.reload.pricing_group_keys }
+                .from(nil).to(["cloud"])
+            end
+
+            context "when charge has a grouped_by" do
+              let(:charge) do
+                create(
+                  :standard_charge,
+                  plan:,
+                  billable_metric_id: sum_billable_metric.id,
+                  amount_currency: "USD",
+                  properties: {
+                    amount: "300",
+                    grouped_by: ["region"]
+                  }
+                )
+              end
+
+              it "overrides the keys" do
+                expect { subject }.to change { charge.reload.pricing_group_keys }
+                  .from(["region"]).to(["cloud"])
+              end
+            end
           end
         end
 

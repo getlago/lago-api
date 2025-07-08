@@ -60,6 +60,7 @@ module BillableMetrics
 
           count = counts.find { |c| c[:groups] == aggregation[:groups] } || {}
           group_result.count = count[:value] || 0
+          group_result.options = {running_total: running_total(options, grouped_by_values: group_result.grouped_by)}
           group_result
         end
       rescue ActiveRecord::StatementInvalid => e
@@ -85,14 +86,17 @@ module BillableMetrics
 
       # NOTE: Return cumulative sum of field_name based on the number of free units
       #       (per_events or per_total_aggregation).
-      def running_total(options)
+      def running_total(options, grouped_by_values: nil)
         free_units_per_events = options[:free_units_per_events].to_i
         free_units_per_total_aggregation = BigDecimal(options[:free_units_per_total_aggregation] || 0)
 
         return [] if free_units_per_events.zero? && free_units_per_total_aggregation.zero?
-        return running_total_per_events(free_units_per_events) unless free_units_per_events.zero?
 
-        running_total_per_aggregation(free_units_per_total_aggregation)
+        event_store.with_grouped_by_values(grouped_by_values) do
+          return running_total_per_events(free_units_per_events) unless free_units_per_events.zero?
+
+          running_total_per_aggregation(free_units_per_total_aggregation)
+        end
       end
 
       def running_total_per_events(limit)
@@ -110,8 +114,8 @@ module BillableMetrics
       end
 
       def compute_pay_in_advance_aggregation
-        return BigDecimal("0") unless event
-        return BigDecimal("0") if event.properties.blank?
+        return BigDecimal(0) unless event
+        return BigDecimal(0) if event.properties.blank?
 
         value = event.properties.fetch(billable_metric.field_name, 0).to_s
 

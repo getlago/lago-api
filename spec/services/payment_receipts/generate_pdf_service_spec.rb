@@ -52,6 +52,18 @@ RSpec.describe PaymentReceipts::GeneratePdfService, type: :service do
       end
     end
 
+    context "when related to a progressive billing invoice" do
+      let(:invoice) do
+        create(:invoice, :progressive_billing_invoice, customer:, status: :finalized, organization:)
+      end
+
+      it "successfully generates the payment receipt" do
+        result = payment_receipt_generate_service.call
+
+        expect(result.payment_receipt.file).to be_present
+      end
+    end
+
     context "with already generated file" do
       before do
         payment_receipt.file.attach(

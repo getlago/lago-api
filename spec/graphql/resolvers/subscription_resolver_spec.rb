@@ -6,9 +6,10 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
   let(:required_permission) { "subscriptions:view" }
   let(:query) do
     <<~GQL
-      query($subscriptionId: ID!) {
-        subscription(id: $subscriptionId) {
+      query($subscriptionId: ID, $externalId: ID) {
+        subscription(id: $subscriptionId, externalId: $externalId) {
           id
+          externalId
           name
           startedAt
           endingAt
@@ -35,6 +36,40 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:view"
+
+  context "when id and external_id are not provided" do
+    it "returns an error" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect_graphql_error(
+        result:,
+        message: "You must provide either `id` or `external_id`."
+      )
+    end
+  end
+
+  context "when external_id is provided" do
+    it "returns a single subscription" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {
+          externalId: subscription.external_id
+        }
+      )
+
+      subscription_response = result["data"]["subscription"]
+      expect(subscription_response["id"]).to eq(subscription.id)
+      expect(subscription_response["externalId"]).to eq(subscription.external_id)
+    end
+  end
 
   it "returns a single subscription", :aggregate_failures do
     result = execute_graphql(

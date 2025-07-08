@@ -13,6 +13,9 @@ module Charges
 
       def apply
         result.grouped_results = aggregation_result.aggregations.map do |aggregation|
+          # Reassign the aggregator for per events logic
+          aggregation.aggregator = aggregation_result.aggregator
+
           group_result = charge_model.apply(
             charge:,
             aggregation_result: aggregation,

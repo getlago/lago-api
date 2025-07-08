@@ -204,19 +204,19 @@ RSpec.describe "Create and edit plans with charge filters", :scenarios, type: :r
       charges_usage = json[:customer_usage][:charges_usage].first
       expect(charges_usage[:filters].count).to eq(6)
 
-      f2_filter = charges_usage[:filters].find { _1[:invoice_display_name] == "f2" }
+      f2_filter = charges_usage[:filters].find { it[:invoice_display_name] == "f2" }
       expect(f2_filter[:amount_cents]).to eq(5000)
       expect(f2_filter[:units]).to eq("10.0")
       expect(f2_filter[:events_count]).to eq(1)
       expect(f2_filter[:invoice_display_name]).to eq("f2")
 
-      charges_usage[:filters].reject { [nil, "f2"].include?(_1[:invoice_display_name]) }.each do |filter|
+      charges_usage[:filters].reject { [nil, "f2"].include?(it[:invoice_display_name]) }.each do |filter|
         expect(filter[:amount_cents]).to eq(0)
         expect(filter[:units]).to eq("0.0")
         expect(filter[:events_count]).to eq(0)
       end
 
-      default_filter = charges_usage[:filters].find { _1[:invoice_display_name].nil? }
+      default_filter = charges_usage[:filters].find { it[:invoice_display_name].nil? }
       expect(default_filter[:amount_cents]).to eq(0)
       expect(default_filter[:units]).to eq("10.0")
       expect(default_filter[:events_count]).to eq(1)

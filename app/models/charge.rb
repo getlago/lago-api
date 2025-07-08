@@ -7,7 +7,7 @@ class Charge < ApplicationRecord
   include Discard::Model
   self.discard_column = :deleted_at
 
-  belongs_to :organization, optional: true
+  belongs_to :organization
   belongs_to :plan, -> { with_discarded }, touch: true
   belongs_to :billable_metric, -> { with_discarded }
   belongs_to :parent, class_name: "Charge", optional: true
@@ -58,10 +58,6 @@ class Charge < ApplicationRecord
   default_scope -> { kept }
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
-
-  def supports_grouped_by?
-    standard? || dynamic?
-  end
 
   def pricing_group_keys
     properties["pricing_group_keys"].presence || properties["grouped_by"]
@@ -171,7 +167,7 @@ end
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  billable_metric_id   :uuid
-#  organization_id      :uuid
+#  organization_id      :uuid             not null
 #  parent_id            :uuid
 #  plan_id              :uuid
 #

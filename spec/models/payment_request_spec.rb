@@ -65,13 +65,8 @@ RSpec.describe PaymentRequest, type: :model do
   end
 
   describe "#invoice_ids" do
-    let(:payment_request) do
-      create(:payment_request, invoices:)
-    end
-
-    let(:invoices) do
-      create_list(:invoice, 2)
-    end
+    let(:payment_request) { create(:payment_request, invoices:) }
+    let(:invoices) { create_list(:invoice, 2, organization:) }
 
     it "returns a list with the applied invoice ids" do
       expect(payment_request.invoice_ids).to eq(invoices.map(&:id))

@@ -6,7 +6,7 @@ module Subscriptions
 
     def self.expire_for_subscription(subscription)
       subscription.plan.charges.includes(:filters)
-        .find_each { expire_for_subscription_charge(subscription:, charge: _1) }
+        .find_each { |charge| expire_for_subscription_charge(subscription:, charge:) }
     end
 
     def self.expire_for_subscription_charge(subscription:, charge:)

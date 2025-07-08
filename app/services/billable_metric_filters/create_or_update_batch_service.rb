@@ -46,8 +46,8 @@ module BillableMetricFilters
         end
 
         # NOTE: discard all filters that were not created or updated
-        billable_metric.filters.where.not(id: result.filters.map(&:id)).find_each do
-          discard_filter(_1)
+        billable_metric.filters.where.not(id: result.filters.map(&:id)).unscope(:order).find_each do
+          discard_filter(it)
         end
       end
 
@@ -62,12 +62,12 @@ module BillableMetricFilters
 
     def discard_all
       ActiveRecord::Base.transaction do
-        billable_metric.filters.each { discard_filter(_1) }
+        billable_metric.filters.each { discard_filter(it) }
       end
     end
 
     def discard_filter(filter)
-      filter.filter_values.each { discard_filter_value(_1) }
+      filter.filter_values.each { discard_filter_value(it) }
       filter.discard!
     end
 

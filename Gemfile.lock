@@ -653,6 +653,8 @@ GEM
       activerecord (>= 6.1)
       request_store (~> 1.4)
     parallel (1.27.0)
+    parallel_tests (5.3.0)
+      parallel
     parser (3.3.8.0)
       ast (~> 2.4.1)
       racc
@@ -1012,6 +1014,7 @@ DEPENDENCIES
   ostruct
   paper_trail
   parallel
+  parallel_tests (~> 5.3)
   pg
   pry
   puma (~> 6.5)

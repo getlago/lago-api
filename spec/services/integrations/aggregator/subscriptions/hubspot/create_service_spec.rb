@@ -30,8 +30,12 @@ RSpec.describe Integrations::Aggregator::Subscriptions::Hubspot::CreateService d
   end
 
   before do
-    allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
-    allow(LagoHttpClient::Client).to receive(:new).with(properties_endpoint).and_return(lago_properties_client)
+    allow(LagoHttpClient::Client).to receive(:new)
+      .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      .and_return(lago_client)
+    allow(LagoHttpClient::Client).to receive(:new)
+      .with(properties_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      .and_return(lago_properties_client)
 
     integration_customer
     integration.sync_subscriptions = true

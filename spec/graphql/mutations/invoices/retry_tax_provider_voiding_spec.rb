@@ -14,12 +14,14 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding, type: :graphql do
       :invoice,
       :voided,
       :with_tax_voiding_error,
+      :subscription,
       organization:,
       customer:,
       subscriptions: [subscription],
       currency: "EUR"
     )
   end
+
   let(:subscription) do
     create(
       :subscription,
@@ -77,7 +79,9 @@ RSpec.describe Mutations::Invoices::RetryTaxProviderVoiding, type: :graphql do
 
     integration_customer
 
-    allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+    allow(LagoHttpClient::Client).to receive(:new)
+      .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      .and_return(lago_client)
     allow(lago_client).to receive(:post_with_response).and_return(response)
     allow(response).to receive(:body).and_return(body)
   end

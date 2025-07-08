@@ -21,10 +21,6 @@ RSpec.describe Invoices::UpdateService do
   let(:result) { invoice_service.call }
 
   describe "call" do
-    before do
-      allow(Invoices::PrepaidCreditJob).to receive(:perform_later)
-    end
-
     it "updates the invoice" do
       aggregate_failures do
         expect(result).to be_success
@@ -102,11 +98,7 @@ RSpec.describe Invoices::UpdateService do
 
     context "with attached fees" do
       it "enqueues a job to update the payment_status of the fees" do
-        result
-
-        expect(Invoices::UpdateFeesPaymentStatusJob)
-          .to have_been_enqueued
-          .with(invoice)
+        expect { result }.to have_enqueued_job_after_commit(Invoices::UpdateFeesPaymentStatusJob).with(invoice)
       end
     end
 
@@ -199,6 +191,29 @@ RSpec.describe Invoices::UpdateService do
       end
     end
 
+    context "when invoice has hubspot integration" do
+      let(:sync_invoices) { true }
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
+      let(:integration_customer) { create(:hubspot_customer, integration:, customer:, organization:) }
+      let(:invoice) { create(:invoice, customer: integration_customer.customer, organization:) }
+
+      it "enqueues a job to update the hubspot invoice" do
+        expect { result }.to have_enqueued_job_after_commit(Integrations::Aggregator::Invoices::Hubspot::UpdateJob).with(invoice:)
+      end
+
+      context "when it should not sync hubspot invoices" do
+        let(:sync_invoices) { false }
+
+        it "does not enqueue a job to update the hubspot invoice" do
+          result
+
+          expect(Integrations::Aggregator::Invoices::Hubspot::UpdateJob).not_to have_been_enqueued
+        end
+      end
+    end
+
     context "when invoice type is credit" do
       let(:subscription) { create(:subscription, customer: invoice.customer) }
       let(:wallet) { create(:wallet, customer: invoice.customer, balance: 10.0, credits_balance: 10.0) }
@@ -226,8 +241,7 @@ RSpec.describe Invoices::UpdateService do
         let(:update_args) { {payment_status: "succeeded"} }
 
         it "calls Invoices::PrepaidCreditJob with the correct arguments" do
-          result
-          expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice, :succeeded)
+          expect { result }.to have_enqueued_job_after_commit(Invoices::PrepaidCreditJob).with(invoice, :succeeded)
         end
       end
 
@@ -235,8 +249,7 @@ RSpec.describe Invoices::UpdateService do
         let(:update_args) { {payment_status: "failed"} }
 
         it "calls Invoices::PrepaidCreditJob with the correct arguments" do
-          result
-          expect(Invoices::PrepaidCreditJob).to have_received(:perform_later).with(invoice, :failed)
+          expect { result }.to have_enqueued_job_after_commit(Invoices::PrepaidCreditJob).with(invoice, :failed)
         end
       end
     end
@@ -250,12 +263,7 @@ RSpec.describe Invoices::UpdateService do
         end
 
         it "delivers a webhook" do
-          result
-
-          expect(SendWebhookJob).to have_been_enqueued.with(
-            "invoice.payment_status_updated",
-            invoice
-          )
+          expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("invoice.payment_status_updated", invoice)
         end
 
         it "produces an activity log" do
@@ -268,13 +276,8 @@ RSpec.describe Invoices::UpdateService do
       context "when invoice is invisible" do
         before { invoice.update! status: :open }
 
-        it "delivers a webhook" do
-          result
-
-          expect(SendWebhookJob).not_to have_been_enqueued.with(
-            "invoice.payment_status_updated",
-            invoice
-          )
+        it "does not deliver a webhook" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
         end
       end
 
@@ -282,12 +285,7 @@ RSpec.describe Invoices::UpdateService do
         let(:invoice) { create(:invoice, payment_status: :succeeded) }
 
         it "does not deliver a webhook" do
-          result
-
-          expect(SendWebhookJob).not_to have_been_enqueued.with(
-            "invoice.payment_status_updated",
-            invoice
-          )
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
         end
       end
     end

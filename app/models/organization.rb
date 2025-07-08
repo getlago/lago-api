@@ -20,6 +20,7 @@ class Organization < ApplicationRecord
   }.freeze
 
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
+  has_many :api_logs, class_name: "Clickhouse::ApiLog"
   has_many :api_keys
   has_many :billing_entities, -> { active }
   has_many :all_billing_entities, class_name: "BillingEntity"
@@ -29,13 +30,13 @@ class Organization < ApplicationRecord
   has_many :plans
   has_many :pricing_units
   has_many :customers
-  has_many :subscriptions, through: :customers
+  has_many :subscriptions
   has_many :invoices
-  has_many :credit_notes, through: :invoices
-  has_many :fees, through: :subscriptions
+  has_many :credit_notes
+  has_many :fees
   has_many :events
   has_many :coupons
-  has_many :applied_coupons, through: :coupons
+  has_many :applied_coupons
   has_many :add_ons
   has_many :daily_usages
   has_many :invites
@@ -43,15 +44,19 @@ class Organization < ApplicationRecord
   has_many :payment_providers, class_name: "PaymentProviders::BaseProvider"
   has_many :payment_requests
   has_many :taxes
-  has_many :wallets, through: :customers
-  has_many :wallet_transactions, through: :wallets
+  has_many :wallets
+  has_many :wallet_transactions
   has_many :webhook_endpoints
-  has_many :webhooks, through: :webhook_endpoints
+  has_many :webhooks
   has_many :cached_aggregations
   has_many :data_exports
   has_many :error_details
   has_many :dunning_campaigns
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
+  has_many :features, class_name: "Entitlement::Feature"
+  has_many :privileges, class_name: "Entitlement::Privilege"
+  has_many :entitlements, class_name: "Entitlement::Entitlement"
+  has_many :entitlement_values, class_name: "Entitlement::EntitlementValue"
 
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"
@@ -213,6 +218,10 @@ class Organization < ApplicationRecord
     return default_billing_entity.timezone if default_billing_entity
 
     super
+  end
+
+  def postgres_events_store?
+    !clickhouse_events_store?
   end
 
   private

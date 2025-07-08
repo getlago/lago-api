@@ -8,6 +8,11 @@ class EmailValidator < ActiveModel::EachValidator
   protected
 
   def valid?(value)
-    value&.match(Regex::EMAIL)
+    return false if value.blank?
+
+    # `-1` to keep empty emails after the last comma e.g. "user@domain.com,,"
+    emails = value.split(",", -1).map(&:strip)
+
+    emails.all? { |email| email.match?(Regex::EMAIL) }
   end
 end

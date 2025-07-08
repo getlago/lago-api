@@ -7,7 +7,7 @@ class DunningCampaignThreshold < ApplicationRecord
   self.discard_column = :deleted_at
 
   belongs_to :dunning_campaign
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :currency, inclusion: {in: currency_list}
@@ -29,7 +29,7 @@ end
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #  dunning_campaign_id :uuid             not null
-#  organization_id     :uuid
+#  organization_id     :uuid             not null
 #
 # Indexes
 #

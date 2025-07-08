@@ -29,9 +29,10 @@ module Credits
         before_taxes: true
       )
 
+      weighting_base_amount_cents = base_amount_cents # Ensure that base remains the same during weighting process
       fees.reload.each do |fee|
-        unless base_amount_cents.zero?
-          fee.precise_coupons_amount_cents += fee.compute_precise_credit_amount_cents(credit_amount, base_amount_cents)
+        unless weighting_base_amount_cents.zero?
+          fee.precise_coupons_amount_cents += fee.compute_precise_credit_amount_cents(credit_amount, weighting_base_amount_cents)
         end
 
         fee.precise_coupons_amount_cents = fee.amount_cents if fee.amount_cents < fee.precise_coupons_amount_cents
@@ -84,7 +85,12 @@ module Credits
     # TODO: ensure targeted amount is right with BM/plan limitation
     def base_amount_cents
       if applied_coupon.coupon.limited_billable_metrics? || applied_coupon.coupon.limited_plans?
-        return fees.sum(:amount_cents)
+        amount = 0
+        fees.each do |fee|
+          amount += fee.amount_cents - fee.precise_coupons_amount_cents
+        end
+
+        return amount
       end
 
       invoice.sub_total_excluding_taxes_amount_cents

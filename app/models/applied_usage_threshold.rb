@@ -3,7 +3,7 @@
 class AppliedUsageThreshold < ApplicationRecord
   belongs_to :usage_threshold, -> { with_discarded }
   belongs_to :invoice
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   validates :usage_threshold_id, uniqueness: {scope: :invoice_id}
 
@@ -32,7 +32,7 @@ end
 #  created_at                  :datetime         not null
 #  updated_at                  :datetime         not null
 #  invoice_id                  :uuid             not null
-#  organization_id             :uuid
+#  organization_id             :uuid             not null
 #  usage_threshold_id          :uuid             not null
 #
 # Indexes

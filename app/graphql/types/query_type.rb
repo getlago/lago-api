@@ -17,6 +17,8 @@ module Types
     field :alerts, resolver: Resolvers::UsageMonitoring::SubscriptionAlertsResolver
     field :api_key, resolver: Resolvers::ApiKeyResolver
     field :api_keys, resolver: Resolvers::ApiKeysResolver
+    field :api_log, resolver: Resolvers::ApiLogResolver
+    field :api_logs, resolver: Resolvers::ApiLogsResolver
     field :billable_metric, resolver: Resolvers::BillableMetricResolver
     field :billable_metrics, resolver: Resolvers::BillableMetricsResolver
     field :billing_entities, resolver: Resolvers::BillingEntitiesResolver
@@ -76,6 +78,8 @@ module Types
     field :payments, resolver: Resolvers::PaymentsResolver
     field :plan, resolver: Resolvers::PlanResolver
     field :plans, resolver: Resolvers::PlansResolver
+    field :pricing_unit, resolver: Resolvers::PricingUnitResolver
+    field :pricing_units, resolver: Resolvers::PricingUnitsResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver

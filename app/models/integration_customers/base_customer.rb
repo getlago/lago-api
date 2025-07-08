@@ -9,7 +9,7 @@ module IntegrationCustomers
 
     belongs_to :customer
     belongs_to :integration, class_name: "Integrations::BaseIntegration"
-    belongs_to :organization, optional: true
+    belongs_to :organization
 
     TAX_INTEGRATION_TYPES = %w[
       IntegrationCustomers::AnrokCustomer
@@ -87,7 +87,7 @@ end
 #  customer_id          :uuid             not null
 #  external_customer_id :string
 #  integration_id       :uuid             not null
-#  organization_id      :uuid
+#  organization_id      :uuid             not null
 #
 # Indexes
 #

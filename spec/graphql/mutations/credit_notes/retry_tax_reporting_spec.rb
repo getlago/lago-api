@@ -12,12 +12,14 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
   let(:invoice) do
     create(
       :invoice,
+      :with_subscriptions,
       organization:,
       customer:,
       subscriptions: [subscription],
       currency: "EUR"
     )
   end
+
   let(:credit_note) do
     create(
       :credit_note,
@@ -27,6 +29,7 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
       invoice:
     )
   end
+
   let(:subscription) do
     create(
       :subscription,
@@ -83,7 +86,9 @@ RSpec.describe Mutations::CreditNotes::RetryTaxReporting, type: :graphql do
 
     integration_customer
 
-    allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+    allow(LagoHttpClient::Client).to receive(:new)
+      .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      .and_return(lago_client)
     allow(lago_client).to receive(:post_with_response).and_return(response)
     allow(response).to receive(:body).and_return(body)
   end

@@ -175,7 +175,9 @@ RSpec.describe Integrations::Aggregator::CreditNotes::CreateService do
   let(:description) { credit_note.invoice.credits.coupon_kind.map(&:item_name).join(",") }
 
   before do
-    allow(LagoHttpClient::Client).to receive(:new).with(endpoint).and_return(lago_client)
+    allow(LagoHttpClient::Client).to receive(:new)
+      .with(endpoint, retries_on: [OpenSSL::SSL::SSLError])
+      .and_return(lago_client)
 
     integration_customer
     charge

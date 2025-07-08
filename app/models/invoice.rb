@@ -107,7 +107,7 @@ class Invoice < ApplicationRecord
     end
 
     event :void do
-      transitions from: :finalized, to: :voided, guard: :voidable?, after: :void_invoice!
+      transitions from: :finalized, to: :voided, after: :handle_void_transition!
     end
   end
 
@@ -411,8 +411,11 @@ class Invoice < ApplicationRecord
     status_changed_to_finalized?
   end
 
-  def void_invoice!
-    update!(ready_for_payment_processing: false)
+  def handle_void_transition!
+    update!(
+      ready_for_payment_processing: false,
+      voided_at: Time.current
+    )
   end
 
   def ensure_number
@@ -569,6 +572,7 @@ end
 #  organization_id                         :uuid             not null
 #  organization_sequential_id              :integer          default(0), not null
 #  sequential_id                           :integer
+#  voided_invoice_id                       :uuid
 #
 # Indexes
 #
@@ -585,6 +589,7 @@ end
 #  index_invoices_on_self_billed                                   (self_billed)
 #  index_invoices_on_sequential_id                                 (sequential_id)
 #  index_invoices_on_status                                        (status)
+#  index_invoices_on_voided_invoice_id                             (voided_invoice_id)
 #
 # Foreign Keys
 #

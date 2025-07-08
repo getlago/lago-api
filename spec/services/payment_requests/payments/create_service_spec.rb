@@ -348,6 +348,29 @@ RSpec.describe PaymentRequests::Payments::CreateService, type: :service do
       end
     end
 
+    context "when some invoices are already paid" do
+      let(:invoice_1) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          total_amount_cents: 200,
+          currency: "USD",
+          ready_for_payment_processing: false
+        )
+      end
+
+      it "does not create a stripe payment" do
+        result = create_service.call
+
+        expect(result).to be_success
+
+        expect(result.payable).to eq(payment_request)
+        expect(result.payment).to be_nil
+        expect(provider_class).not_to have_received(:new)
+      end
+    end
+
     context "when provider service raises a service failure" do
       let(:service_result) do
         BaseService::Result.new.tap do |r|

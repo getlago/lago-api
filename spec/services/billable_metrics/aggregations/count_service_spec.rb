@@ -222,6 +222,7 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
         expect(aggregation.current_usage_units).to eq(1)
 
         expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index - 1]) if index.positive?
+        expect(aggregation.options[:running_total]).to eq([])
       end
     end
 
@@ -237,6 +238,18 @@ RSpec.describe BillableMetrics::Aggregations::CountService, type: :service do
         expect(aggregation.aggregation).to eq(0)
         expect(aggregation.count).to eq(0)
         expect(aggregation.grouped_by).to eq({"agent_name" => nil})
+      end
+    end
+
+    context "with free units per events" do
+      it "returns a result with free units" do
+        result = count_service.aggregate(options: {free_units_per_events: 10})
+
+        expect(result.aggregations.count).to eq(5)
+
+        result.aggregations.each_with_index do |aggregation, index|
+          expect(aggregation.options[:running_total]).to eq([1])
+        end
       end
     end
 

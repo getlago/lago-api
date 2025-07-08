@@ -312,5 +312,43 @@ RSpec.describe Events::CreateBatchService, type: :service do
         expect(karafka_producer).to have_received(:produce_async).exactly(100)
       end
     end
+
+    context "when clickhouse is enabled on the organization" do
+      let(:organization) { create(:organization, clickhouse_events_store: true) }
+
+      it "does not store the event in postgres" do
+        result = nil
+
+        expect { result = create_batch_service.call }.not_to change(Event, :count)
+        expect(result).to be_success
+      end
+
+      it "does not enqueues a post processing job" do
+        expect { create_batch_service.call }.not_to have_enqueued_job(Events::PostProcessJob)
+      end
+
+      context "when kafka is configured" do
+        let(:karafka_producer) { instance_double(WaterDrop::Producer) }
+
+        before do
+          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"
+          ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] = "raw_events"
+        end
+
+        after do
+          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
+          ENV["LAGO_KAFKA_RAW_EVENTS_TOPIC"] = nil
+        end
+
+        it "produces the event on kafka" do
+          allow(Karafka).to receive(:producer).and_return(karafka_producer)
+          allow(karafka_producer).to receive(:produce_async)
+
+          create_batch_service.call
+
+          expect(karafka_producer).to have_received(:produce_async).exactly(100)
+        end
+      end
+    end
   end
 end

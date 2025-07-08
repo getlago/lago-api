@@ -15,7 +15,7 @@ module Resolvers
     type Types::ApiKeys::SanitizedObject.collection_type, null: false
 
     def resolve(page: nil, limit: nil)
-      current_organization.api_keys.order(created_at: :asc).page(page).limit(limit)
+      current_organization.api_keys.order(created_at: :asc).page(page).per(limit)
     end
   end
 end

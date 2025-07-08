@@ -2,7 +2,7 @@
 
 class DataExportPart < ApplicationRecord
   belongs_to :data_export
-  belongs_to :organization, optional: true
+  belongs_to :organization
 
   scope :completed, -> { where(completed: true) }
 end
@@ -19,7 +19,7 @@ end
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  data_export_id  :uuid             not null
-#  organization_id :uuid
+#  organization_id :uuid             not null
 #
 # Indexes
 #

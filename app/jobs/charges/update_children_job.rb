@@ -6,14 +6,17 @@ module Charges
 
     def perform(params:, old_parent_attrs:, old_parent_filters_attrs:, old_parent_applied_pricing_unit_attrs:)
       charge = Charge.find_by(id: old_parent_attrs["id"])
+      return unless charge
 
-      Charges::UpdateChildrenService.call!(
-        charge:,
-        params:,
-        old_parent_attrs:,
-        old_parent_filters_attrs:,
-        old_parent_applied_pricing_unit_attrs:
-      )
+      charge.children.order(created_at: :asc).pluck(:id).each_slice(20) do |child_ids|
+        Charges::UpdateChildrenBatchJob.perform_later(
+          child_ids:,
+          params:,
+          old_parent_attrs:,
+          old_parent_filters_attrs:,
+          old_parent_applied_pricing_unit_attrs:
+        )
+      end
     end
   end
 end

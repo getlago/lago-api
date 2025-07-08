@@ -25,7 +25,7 @@ RSpec.describe Integrations::Aggregator::SubsidiariesService do
 
     before do
       allow(LagoHttpClient::Client).to receive(:new)
-        .with(subsidiaries_endpoint)
+        .with(subsidiaries_endpoint, retries_on: [OpenSSL::SSL::SSLError])
         .and_return(lago_client)
       allow(lago_client).to receive(:get)
         .with(headers:)
@@ -36,7 +36,7 @@ RSpec.describe Integrations::Aggregator::SubsidiariesService do
       result = subsidiaries_service.call
 
       aggregate_failures do
-        expect(LagoHttpClient::Client).to have_received(:new).with(subsidiaries_endpoint)
+        expect(LagoHttpClient::Client).to have_received(:new).with(subsidiaries_endpoint, retries_on: [OpenSSL::SSL::SSLError])
         expect(lago_client).to have_received(:get)
         expect(result.subsidiaries.count).to eq(4)
         expect(result.subsidiaries.first.external_id).to eq("1")

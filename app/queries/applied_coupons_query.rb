@@ -22,7 +22,7 @@ class AppliedCouponsQuery < BaseQuery
   end
 
   def with_coupon_code(scope)
-    scope.where(coupons: {code: filters.coupon_code})
+    scope.joins(:coupon).where(coupons: {code: filters.coupon_code})
   end
 
   def with_external_customer(scope)

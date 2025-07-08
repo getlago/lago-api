@@ -92,6 +92,7 @@ module Plans
 
       result.plan = plan
       track_plan_created(plan)
+      SendWebhookJob.perform_after_commit("plan.created", plan)
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)

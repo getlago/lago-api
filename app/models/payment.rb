@@ -5,7 +5,7 @@ class Payment < ApplicationRecord
 
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
-  belongs_to :organization, optional: true
+  belongs_to :organization
   belongs_to :payable, polymorphic: true
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
@@ -119,7 +119,7 @@ end
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
 #  invoice_id                   :uuid
-#  organization_id              :uuid
+#  organization_id              :uuid             not null
 #  payable_id                   :uuid
 #  payment_provider_customer_id :uuid
 #  payment_provider_id          :uuid

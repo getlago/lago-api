@@ -17,6 +17,7 @@ RSpec.describe Fees::ChargeService do
   let(:subscription) do
     create(
       :subscription,
+      organization:,
       status: :active,
       started_at: Time.zone.parse("2022-03-15"),
       customer:
@@ -1317,7 +1318,7 @@ RSpec.describe Fees::ChargeService do
       end
 
       context "when unique_count_agg" do
-        it "creates expected fees for unique_count_agg aggregation type" do
+        it "creates expected fees for unique_count_agg aggregation type", transaction: false do
           billable_metric.update!(aggregation_type: :unique_count_agg, field_name: "foo_bar")
           result = charge_subscription_service.call
           expect(result).to be_success

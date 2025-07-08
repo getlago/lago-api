@@ -4,13 +4,13 @@ module AuthenticableUser
   extend ActiveSupport::Concern
 
   included do
-    before_action :renew_token
+    before_action :renew_token, if: :token_near_expiration?
   end
 
   private
 
   def current_user
-    @current_user ||= User.find_by(id: payload_data["sub"]) if token && decoded_token && valid_token?
+    @current_user ||= User.find_by(id: payload_data["sub"]) if token && decoded_token
   end
 
   def token
@@ -23,8 +23,11 @@ module AuthenticableUser
     raise e if e.is_a?(JWT::ExpiredSignature) || Rails.env.development?
   end
 
-  def valid_token?
-    Time.now.to_i <= payload_data["exp"]
+  def token_near_expiration?
+    return false unless token && decoded_token
+
+    # NOTE: we consider the token is near expiration if it expires in less than 1 hour
+    Time.now.to_i > payload_data["exp"] - 1.hour.to_i
   end
 
   def payload_data

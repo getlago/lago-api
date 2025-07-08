@@ -116,6 +116,7 @@ group :development, :test do
   gem "awesome_print"
   gem "pry"
   gem "knapsack_pro", "~> 8.1"
+  gem "parallel_tests", "~> 5.3"
 
   gem "database_cleaner-active_record"
   gem "rspec-graphql_matchers"

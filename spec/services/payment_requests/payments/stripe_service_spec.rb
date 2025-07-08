@@ -145,7 +145,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       payment
     end
 
-    it "updates the payment, payment_request and invoice payment_status", :aggregate_failures do
+    it "updates the payment, payment_request and invoice payment_status" do
       expect(result).to be_success
       expect(result.payment.status).to eq(status)
       expect(result.payment.payable_payment_status).to eq("succeeded")
@@ -212,7 +212,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
     context "when status is failed" do
       let(:status) { "failed" }
 
-      it "updates the payment, payment_request and invoice status", :aggregate_failures do
+      it "updates the payment, payment_request and invoice status" do
         expect(result).to be_success
         expect(result.payment.status).to eq(status)
         expect(result.payment.payable_payment_status).to eq("failed")
@@ -261,7 +261,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
     context "with invalid status" do
       let(:status) { "invalid-status" }
 
-      it "does not update the payment_status of payment_request, invoice and payment", :aggregate_failures do
+      it "does not update the payment_status of payment_request, invoice and payment" do
         expect { result }
           .to not_change { payment_request.reload.payment_status }
           .and not_change { invoice_1.reload.payment_status }
@@ -269,7 +269,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
           .and not_change { payment.reload.status }
       end
 
-      it "returns an error", :aggregate_failures do
+      it "returns an error" do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(result.error.messages.keys).to include(:payable_payment_status)
@@ -302,7 +302,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
         stripe_customer
       end
 
-      it "creates a payment and updates payment request and invoice payment status", :aggregate_failures do
+      it "creates a payment and updates payment request and invoice payment status" do
         expect(result).to be_success
         expect(result.payment.status).to eq(status)
         expect(result.payment.payable_payment_status).to eq("succeeded")
@@ -329,7 +329,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
           )
         end
 
-        it "raises a not found failure", :aggregate_failures do
+        it "raises a not found failure" do
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.message).to eq("payment_request_not_found")
@@ -365,7 +365,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
         payment
       end
 
-      it "updates the payment status and related entities", :aggregate_failures do
+      it "updates the payment status and related entities" do
         expect(result).to be_success
         expect(result.payment.status).to eq("succeeded")
         expect(result.payment.payable_payment_status).to eq("succeeded")
@@ -391,7 +391,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       let(:payment) { nil }
       let(:status) { "succeeded" }
 
-      it "returns an empty result", :aggregate_failures do
+      it "returns an empty result" do
         expect(result).to be_success
         expect(result.payment).to be_nil
       end
@@ -408,7 +408,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
           )
         end
 
-        it "returns an empty result", :aggregate_failures do
+        it "returns an empty result" do
           expect(result).to be_success
           expect(result.payment).to be_nil
         end
@@ -430,7 +430,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
             stripe_payment_provider
           end
 
-          it "creates the missing payment and updates payment_request status", :aggregate_failures do
+          it "creates the missing payment and updates payment_request status" do
             expect(result).to be_success
             expect(result.payment.status).to eq(status)
             expect(result.payment.payable_payment_status).to eq("succeeded")
@@ -468,7 +468,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
         create(:payment, payable: payment_request_other_organization, provider_payment_id: "ch_123456")
       end
 
-      it "returns an empty result", :aggregate_failures do
+      it "returns an empty result" do
         expect(result).to be_success
         expect(result.payment).to be_nil
       end
@@ -479,6 +479,34 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
           .and not_change { invoice_1.reload.payment_status }
           .and not_change { invoice_2.reload.payment_status }
           .and not_change { payment.reload.status }
+      end
+    end
+
+    context "when payment's payable already has a successful payment" do
+      let(:payment) { nil }
+
+      let(:stripe_payment) do
+        PaymentProviders::StripeProvider::StripePayment.new(
+          id: "ch_123456",
+          status: "succeeded",
+          metadata: {
+            lago_payable_id: payment_request.id,
+            lago_payable_type: "PaymentRequest"
+          }
+        )
+      end
+
+      before do
+        stripe_customer
+        stripe_payment_provider
+
+        payment_request.payment_succeeded!
+      end
+
+      it "returns an empty result" do
+        expect(result).to be_success
+        expect(result.payment).to be_nil
+        expect(result.payable).to be_nil
       end
     end
   end

@@ -53,7 +53,6 @@ FactoryBot.define do
         subscriptions { [create(:subscription)] }
       end
 
-      invoice_type { :subscription }
       after :create do |invoice, evaluator|
         evaluator.subscriptions.each do |subscription|
           create(:invoice_subscription, :boundaries, invoice:, subscription:)
@@ -72,6 +71,14 @@ FactoryBot.define do
 
     trait :invisible do
       status { Invoice::INVISIBLE_STATUS.keys.sample }
+    end
+
+    trait :progressive_billing_invoice do
+      invoice_type { :progressive_billing }
+      with_subscriptions
+      after :create do |invoice|
+        create(:applied_usage_threshold, invoice:, organization: invoice.organization)
+      end
     end
   end
 end

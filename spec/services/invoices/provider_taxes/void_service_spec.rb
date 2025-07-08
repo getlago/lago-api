@@ -14,6 +14,7 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
         :invoice,
         :voided,
         :with_tax_voiding_error,
+        :with_subscriptions,
         customer:,
         organization:,
         subscriptions: [subscription],
@@ -89,11 +90,17 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
       fee_charge
       integration_customer
 
-      allow(LagoHttpClient::Client).to receive(:new).with(void_endpoint).and_return(lago_client1)
+      allow(LagoHttpClient::Client)
+        .to receive(:new)
+        .with(void_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        .and_return(lago_client1)
       allow(lago_client1).to receive(:post_with_response).and_return(response1)
       allow(response1).to receive(:body).and_return(body_void)
 
-      allow(LagoHttpClient::Client).to receive(:new).with(negate_endpoint).and_return(lago_client2)
+      allow(LagoHttpClient::Client)
+        .to receive(:new)
+        .with(negate_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        .and_return(lago_client2)
       allow(lago_client2).to receive(:post_with_response).and_return(response2)
       allow(response2).to receive(:body).and_return(body_negate)
     end
@@ -142,8 +149,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
         result = void_service.call
 
         expect(result).not_to be_success
-        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
-        expect(LagoHttpClient::Client).not_to have_received(:new).with(negate_endpoint)
+        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        expect(LagoHttpClient::Client).not_to have_received(:new).with(negate_endpoint, retries_on: [OpenSSL::SSL::SSLError])
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(invoice.reload.status).to eq("voided")
       end
@@ -173,8 +180,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
         result = void_service.call
 
         expect(result).not_to be_success
-        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
-        expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint)
+        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint, retries_on: [OpenSSL::SSL::SSLError])
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(invoice.reload.status).to eq("voided")
       end
@@ -208,8 +215,8 @@ RSpec.describe Invoices::ProviderTaxes::VoidService, type: :service do
         result = void_service.call
 
         expect(result).not_to be_success
-        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint)
-        expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint)
+        expect(LagoHttpClient::Client).to have_received(:new).with(void_endpoint, retries_on: [OpenSSL::SSL::SSLError])
+        expect(LagoHttpClient::Client).to have_received(:new).with(negate_endpoint, retries_on: [OpenSSL::SSL::SSLError])
         expect(result.error).to be_a(BaseService::ValidationFailure)
         expect(invoice.reload.status).to eq("voided")
       end
