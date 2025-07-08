@@ -53,6 +53,7 @@ ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_b
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_bda048a8d9;
+ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_bcdc5787f8;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
 ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS fk_rails_bacb46d2a3;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_ba128983c2;
@@ -82,6 +83,7 @@ ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_9
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_90d93bd016;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_909197908c;
+ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_90302b3ca3;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_8fa6f0d920;
 ALTER TABLE IF EXISTS ONLY public.applied_pricing_units DROP CONSTRAINT IF EXISTS fk_rails_8e0c3d0c5b;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_8df9bf2b6c;
@@ -110,6 +112,7 @@ ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_778
 ALTER TABLE IF EXISTS ONLY public.commitments DROP CONSTRAINT IF EXISTS fk_rails_76ceb88c74;
 ALTER TABLE IF EXISTS ONLY public.integrations DROP CONSTRAINT IF EXISTS fk_rails_755d734f25;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_75577c354e;
+ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fk_rails_752665cc51;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_745b4ca7dd;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rails_73d83e23b6;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_710f37148d;
@@ -416,6 +419,10 @@ DROP INDEX IF EXISTS public.index_fixed_charges_on_parent_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_organization_id;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_deleted_at;
 DROP INDEX IF EXISTS public.index_fixed_charges_on_add_on_id;
+DROP INDEX IF EXISTS public.index_fixed_charge_events_on_subscription_id;
+DROP INDEX IF EXISTS public.index_fixed_charge_events_on_organization_id;
+DROP INDEX IF EXISTS public.index_fixed_charge_events_on_customer_id;
+DROP INDEX IF EXISTS public.index_fixed_charge_events_on_code;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id_and_tax_id;
@@ -673,6 +680,7 @@ ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS groups_pkey;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS group_properties_pkey;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fixed_charges_pkey;
+ALTER TABLE IF EXISTS ONLY public.fixed_charge_events DROP CONSTRAINT IF EXISTS fixed_charge_events_pkey;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fees_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fees_pkey;
 ALTER TABLE IF EXISTS ONLY public.events DROP CONSTRAINT IF EXISTS events_pkey;
@@ -767,6 +775,7 @@ DROP TABLE IF EXISTS public.groups;
 DROP TABLE IF EXISTS public.group_properties;
 DROP VIEW IF EXISTS public.flat_filters;
 DROP TABLE IF EXISTS public.fixed_charges;
+DROP TABLE IF EXISTS public.fixed_charge_events;
 DROP VIEW IF EXISTS public.exports_wallets;
 DROP TABLE IF EXISTS public.wallets;
 DROP VIEW IF EXISTS public.exports_wallet_transactions;
@@ -3085,6 +3094,24 @@ CREATE VIEW public.exports_wallets AS
 
 
 --
+-- Name: fixed_charge_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.fixed_charge_events (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    customer_id uuid NOT NULL,
+    code character varying,
+    properties jsonb,
+    "timestamp" timestamp without time zone,
+    subscription_id uuid NOT NULL,
+    deleted_at timestamp without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: fixed_charges; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4283,6 +4310,14 @@ ALTER TABLE ONLY public.fees
 
 ALTER TABLE ONLY public.fees_taxes
     ADD CONSTRAINT fees_taxes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: fixed_charge_events fixed_charge_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charge_events
+    ADD CONSTRAINT fixed_charge_events_pkey PRIMARY KEY (id);
 
 
 --
@@ -6133,6 +6168,34 @@ CREATE INDEX index_fees_taxes_on_organization_id ON public.fees_taxes USING btre
 --
 
 CREATE INDEX index_fees_taxes_on_tax_id ON public.fees_taxes USING btree (tax_id);
+
+
+--
+-- Name: index_fixed_charge_events_on_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charge_events_on_code ON public.fixed_charge_events USING btree (code);
+
+
+--
+-- Name: index_fixed_charge_events_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charge_events_on_customer_id ON public.fixed_charge_events USING btree (customer_id);
+
+
+--
+-- Name: index_fixed_charge_events_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charge_events_on_organization_id ON public.fixed_charge_events USING btree (organization_id);
+
+
+--
+-- Name: index_fixed_charge_events_on_subscription_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charge_events_on_subscription_id ON public.fixed_charge_events USING btree (subscription_id);
 
 
 --
@@ -8332,6 +8395,14 @@ ALTER TABLE ONLY public.fees_taxes
 
 
 --
+-- Name: fixed_charge_events fk_rails_752665cc51; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charge_events
+    ADD CONSTRAINT fk_rails_752665cc51 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: refunds fk_rails_75577c354e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8553,6 +8624,14 @@ ALTER TABLE ONLY public.applied_pricing_units
 
 ALTER TABLE ONLY public.commitments_taxes
     ADD CONSTRAINT fk_rails_8fa6f0d920 FOREIGN KEY (commitment_id) REFERENCES public.commitments(id);
+
+
+--
+-- Name: fixed_charge_events fk_rails_90302b3ca3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charge_events
+    ADD CONSTRAINT fk_rails_90302b3ca3 FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
 
 
 --
@@ -8785,6 +8864,14 @@ ALTER TABLE ONLY public.applied_coupons
 
 ALTER TABLE ONLY public.plans_taxes
     ADD CONSTRAINT fk_rails_bacde7a063 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
+
+
+--
+-- Name: fixed_charge_events fk_rails_bcdc5787f8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charge_events
+    ADD CONSTRAINT fk_rails_bcdc5787f8 FOREIGN KEY (customer_id) REFERENCES public.customers(id);
 
 
 --
@@ -9146,6 +9233,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250708155211'),
 ('20250707100400'),
 ('20250707090348'),
 ('20250707090347'),
