@@ -5540,6 +5540,7 @@ type Invoice {
   versionNumber: Int!
   voidable: Boolean!
   voidedAt: ISO8601DateTime
+  voidedInvoiceId: String
 }
 
 type InvoiceAppliedTax implements AppliedTax {

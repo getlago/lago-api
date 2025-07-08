@@ -76,6 +76,7 @@ module Types
       field :payments, [Types::Payments::Object], null: true
       field :tax_provider_id, String, null: true
       field :tax_provider_voidable, GraphQL::Types::Boolean, null: false
+      field :voided_invoice_id, String, null: true
 
       def payable_type
         "Invoice"
