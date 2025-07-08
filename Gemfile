@@ -105,7 +105,6 @@ end
 
 group :development, :test do
   gem "bullet"
-  gem "byebug"
   gem "clockwork-test"
   gem "debug", platforms: %i[mri mingw x64_mingw], require: false
   gem "dotenv"
@@ -114,7 +113,7 @@ group :development, :test do
   gem "simplecov", require: false
   gem "webmock"
   gem "awesome_print"
-  gem "pry"
+  gem "pry-byebug"
   gem "knapsack_pro", "~> 8.1"
   gem "parallel_tests", "~> 5.3"
 
