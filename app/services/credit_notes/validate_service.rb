@@ -73,7 +73,21 @@ module CreditNotes
 
     # NOTE: Check if total amount matched the items amount
     def valid_items_amount?
+      byebug
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
+      pp "total_amount_cents: #{total_amount_cents}"
+      pp "total_items_amount_cents: #{total_items_amount_cents}"
+      pp credit_note.items.map { |item| item.precise_amount_cents }
+      pp credit_note.items.sum(&:precise_amount_cents)*1.88
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
       return true if total_amount_cents == total_items_amount_cents
+
 
       add_error(field: :base, error_code: "does_not_match_item_amounts")
     end

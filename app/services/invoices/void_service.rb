@@ -101,17 +101,21 @@ module Invoices
         )
       end
 
-      remaining_amount = invoice.reload.creditable_amount_cents.round
+      remaining_amount = invoice.reload.creditable_amount_cents
       if remaining_amount.positive?
-        estimate_result = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: remaining_amount)
-        estimate_result = CreditNotes::EstimateService.call!(invoice: invoice, items: estimate_result)
+        fees = invoice.fees.map do |fee|
+          {
+            fee_id: fee.id,
+            amount_cents: (fee.precise_creditable_amount_cents)
+          }
+        end
 
         credit_note_to_void = CreditNotes::CreateService.call!(
           invoice: invoice,
           reason: :other,
           description: "Credit note created due to voided invoice #{invoice.id}",
-          credit_amount_cents: estimate_result.credit_note.credit_amount_cents,
-          items: estimate_result.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents} }
+          credit_amount_cents: remaining_amount,
+          items: fees
         )
 
         CreditNotes::VoidService.call!(credit_note: credit_note_to_void.credit_note)
@@ -121,13 +125,13 @@ module Invoices
     end
 
     def estimate_credit_note_for_target_credit(invoice:, target_credit_cents:)
-      base_total = invoice.sub_total_including_taxes_amount_cents.to_f
+      base_total = invoice.creditable_amount_cents.to_f
       ratio = target_credit_cents.to_f / base_total
 
       invoice.fees.map do |fee|
         {
           fee_id: fee.id,
-          amount_cents: (fee.amount_cents * ratio)
+          amount_cents: (fee.precise_creditable_amount_cents * ratio)
         }
       end
     end

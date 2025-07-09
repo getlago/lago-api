@@ -188,6 +188,13 @@ class Fee < ApplicationRecord
     remaining_amount
   end
 
+  def precise_creditable_amount_cents
+    remaining_amount = precise_amount_cents - credit_note_items.sum(:precise_amount_cents)
+
+    return [remaining_amount, invoice.associated_active_wallet&.balance_cents || 0].min if credit?
+    remaining_amount
+  end
+
   # There are add_on type and one_off type so in order not to mix those two types with associations,
   # this method is added to handle it. In the near future we will deprecate add_on type and remove this method
   def add_on
