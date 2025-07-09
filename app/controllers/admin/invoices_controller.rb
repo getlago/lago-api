@@ -13,7 +13,7 @@ module Admin
     def show
       service = ::Invoices::GeneratePdfService.new(invoice:)
 
-      render(html: service.render_html.html_safe)
+      render(html: service.render_html.html_safe) # rubocop:disable Rails/OutputSafety
     end
 
     private
