@@ -12,7 +12,7 @@ module Resolvers
 
       argument :id, ID, required: true, description: "Unique ID of the feature"
 
-      type Types::Entitlement::FeatureObject
+      type Types::Entitlement::FeatureObject, null: false
 
       def resolve(id:)
         current_organization.features.find(id)

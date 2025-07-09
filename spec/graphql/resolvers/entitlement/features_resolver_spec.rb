@@ -35,6 +35,12 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "features:view"
 
+  it do
+    expect(described_class).to accept_argument(:limit).of_type("Int")
+    expect(described_class).to accept_argument(:page).of_type("Int")
+    expect(described_class).to accept_argument(:search_term).of_type("String")
+  end
+
   it "returns a list of features" do
     feature_with_privilege = create(:feature, organization:)
     privilege = create(:privilege, feature: feature_with_privilege, value_type: "boolean")
@@ -85,5 +91,45 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
     )
 
     expect(Bullet).not_to be_notification
+  end
+
+  context "when search_term is provided" do
+    let(:query) do
+      <<~GQL
+        query {
+          features(limit: 5, searchTerm: "testtest") {
+            collection {
+              id
+              code
+              name
+              description
+              privileges {
+                id
+                code
+                name
+                valueType
+                config
+              }
+              createdAt
+            }
+            metadata { currentPage totalCount }
+          }
+        }
+      GQL
+    end
+
+    it "returns features matching the search term" do
+      create(:feature, organization:)
+      feature1 = create(:feature, organization:, code: "testtest1", name: "Test Feature 1")
+
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:
+      )
+
+      expect(result["data"]["features"]["collection"].sole["code"]).to eq(feature1.code)
+    end
   end
 end

@@ -20,8 +20,6 @@ module Entitlement
 
     validate :validate_config
 
-    attribute :value_type, :string, default: "string"
-
     private
 
     def validate_config

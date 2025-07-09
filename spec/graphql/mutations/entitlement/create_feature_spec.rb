@@ -18,6 +18,8 @@ RSpec.describe Mutations::Entitlement::CreateFeature, type: :graphql do
           privileges {
             code
             name
+            valueType
+            config
           }
         }
       }
@@ -76,12 +78,16 @@ RSpec.describe Mutations::Entitlement::CreateFeature, type: :graphql do
 
       result_data = result["data"]["createFeature"]
 
+      pp result_data["privileges"].sole
+
       expect(result_data["code"]).to eq("test_feature_with_privileges")
       expect(result_data["name"]).to eq("Test Feature With Privileges")
       expect(result_data["description"]).to eq("Test Feature Description")
       expect(result_data["privileges"].size).to eq(1)
       expect(result_data["privileges"].sole["code"]).to eq(privilege_code)
       expect(result_data["privileges"].sole["name"]).to eq(privilege_name)
+      expect(result_data["privileges"].sole["valueType"]).to eq("string")
+      expect(result_data["privileges"].sole["config"]).to eq({})
     end
   end
 end

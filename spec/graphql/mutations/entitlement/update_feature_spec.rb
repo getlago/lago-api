@@ -72,33 +72,64 @@ RSpec.describe Mutations::Entitlement::UpdateFeature, type: :graphql do
     expect(result["errors"]).to be_present
   end
 
-  context "when creating new privileges" do
-    let(:new_privilege_code) { "new_privilege" }
-    let(:new_privilege_name) { "New Privilege" }
+  context "with privileges" do
+    context "when privilege already exists" do
+      it "updates the privilege" do
+        create(:privilege, feature:, code: "seats", name: "Old Name")
 
-    it "adds new privileges to the feature" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            id: feature.id,
-            name: "Updated Feature Name",
-            description: "Updated Feature Description",
-            privileges: [
-              {code: new_privilege_code, name: new_privilege_name}
-            ]
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {
+              id: feature.id,
+              name: "Feature Name",
+              description: "Feature Description",
+              privileges: [
+                {code: "seats", name: "new name"}
+              ]
+            }
           }
-        }
-      )
+        )
 
-      result_data = result["data"]["updateFeature"]
+        result_data = result["data"]["updateFeature"]
 
-      expect(result_data["privileges"].size).to eq(1)
-      expect(result_data["privileges"].sole["code"]).to eq(new_privilege_code)
-      expect(result_data["privileges"].sole["name"]).to eq(new_privilege_name)
+        expect(result_data["privileges"].size).to eq(1)
+        expect(result_data["privileges"].sole["code"]).to eq("seats")
+        expect(result_data["privileges"].sole["name"]).to eq("new name")
+      end
+    end
+
+    context "when privilege is new" do
+      let(:new_privilege_code) { "new_privilege" }
+      let(:new_privilege_name) { "New Privilege" }
+
+      it "adds new privileges to the feature" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {
+              id: feature.id,
+              name: "Updated Feature Name",
+              description: "Updated Feature Description",
+              privileges: [
+                {code: new_privilege_code, name: new_privilege_name}
+              ]
+            }
+          }
+        )
+
+        result_data = result["data"]["updateFeature"]
+
+        expect(result_data["privileges"].size).to eq(1)
+        expect(result_data["privileges"].sole["code"]).to eq(new_privilege_code)
+        expect(result_data["privileges"].sole["name"]).to eq(new_privilege_name)
+      end
     end
   end
 end

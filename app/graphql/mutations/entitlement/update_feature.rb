@@ -16,11 +16,15 @@ module Mutations
 
       def resolve(**args)
         feature = current_organization.features.find_by(id: args[:id])
-        result = ::Entitlement::FeatureFullUpdateService.call(feature:, params: {
-          name: args[:name],
-          description: args[:description],
-          privileges: args[:privileges].map(&:to_h).index_by { |it| it[:code] }
-        })
+        result = ::Entitlement::FeatureUpdateService.call(
+          feature:,
+          params: {
+            name: args[:name],
+            description: args[:description],
+            privileges: args[:privileges].map(&:to_h).index_by { |it| it[:code] }
+          },
+          partial: false
+        )
 
         result.success? ? result.feature : result_error(result)
       end

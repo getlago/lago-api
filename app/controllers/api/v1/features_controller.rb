@@ -62,9 +62,10 @@ module Api
         feature = current_organization.features.where(code: params[:code]).first
         return not_found_error(resource: "feature") unless feature
 
-        result = ::Entitlement::FeaturePartialUpdateService.call(
+        result = ::Entitlement::FeatureUpdateService.call(
           feature:,
-          params: feature_update_params
+          params: feature_update_params,
+          partial: true
         )
 
         if result.success?
