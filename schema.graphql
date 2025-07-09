@@ -8215,7 +8215,7 @@ type Query {
     Unique ID of the feature
     """
     id: ID!
-  ): FeatureObject
+  ): FeatureObject!
 
   """
   Query features of an organization

@@ -42725,9 +42725,13 @@
               "name": "feature",
               "description": "Query a single feature",
               "type": {
-                "kind": "OBJECT",
-                "name": "FeatureObject",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "FeatureObject",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
