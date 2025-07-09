@@ -105,6 +105,14 @@ module Commitments
               dates_service.end_of_period&.iso8601(3)
             )
         end
+
+        def fixed_charge_fees
+          # TBD
+        end
+
+        def fixed_charge_in_advance_fees
+          # TBD
+        end
       end
     end
   end

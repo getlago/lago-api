@@ -116,6 +116,14 @@ module Commitments
 
           scope
         end
+
+        def fixed_charge_fees
+          # TBD
+        end
+
+        def fixed_charge_in_advance_fees
+          # TBD
+        end
       end
     end
   end

@@ -2,6 +2,7 @@ class CreateFixedChargeEvents < ActiveRecord::Migration[8.0]
   def change
     create_table :fixed_charge_events, id: :uuid do |t|
       t.references :organization, null: false, foreign_key: true, type: :uuid
+      # not required customer_id
       t.references :customer, null: false, foreign_key: true, type: :uuid
       t.string :code, null: false
       t.jsonb :properties, default: {}, null: false
