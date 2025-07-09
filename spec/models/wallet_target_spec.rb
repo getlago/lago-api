@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe WalletTarget, type: :model do
-  subject(:wallet_target) { build(:wallet_billable_metric) }
+  subject(:wallet_target) { build(:wallet_target) }
 
   it { is_expected.to belong_to(:organization) }
   it { is_expected.to belong_to(:wallet) }
