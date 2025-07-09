@@ -38,8 +38,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
 
       it "sends updated subscription webhook" do
-        update_service.call
-        expect(SendWebhookJob).to have_been_enqueued.with("subscription.updated", subscription)
+        expect { update_service.call }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.updated", subscription)
       end
 
       it "does not sync to Hubspot" do
@@ -62,7 +61,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
             result = update_service.call
 
             expect(result).to be_success
-          }.to have_enqueued_job(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).with(subscription:)
+          }.to have_enqueued_job_after_commit(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).with(subscription:)
         end
       end
 
@@ -123,7 +122,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
           end
 
           it "enqueues a job to bill the subscription" do
-            expect { update_service.call }.to have_enqueued_job(BillSubscriptionJob)
+            expect { update_service.call }.to have_enqueued_job_after_commit(BillSubscriptionJob)
               .with([subscription], Time.now.to_i, invoicing_reason: :subscription_starting)
           end
         end

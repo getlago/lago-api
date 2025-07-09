@@ -43,12 +43,10 @@ module Subscriptions
       else
         subscription.save!
 
-        after_commit do
-          SendWebhookJob.perform_later("subscription.updated", subscription)
-        end
+        SendWebhookJob.perform_after_commit("subscription.updated", subscription)
 
         if subscription.should_sync_hubspot_subscription?
-          Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_later(subscription:)
+          Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription:)
         end
       end
 
@@ -71,7 +69,7 @@ module Subscriptions
 
       return unless subscription.plan.pay_in_advance? && subscription.subscription_at.today?
 
-      BillSubscriptionJob.perform_later([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
+      BillSubscriptionJob.perform_after_commit([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
     end
 
     def handle_plan_override
