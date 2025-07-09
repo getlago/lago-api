@@ -4,6 +4,6 @@ FactoryBot.define do
   factory :wallet_billable_metric, class: "WalletTarget" do
     wallet
     billable_metric
-    organization
+    organization { billable_metric&.organization || wallet&.organization || association(:organization) }
   end
 end

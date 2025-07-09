@@ -10,6 +10,9 @@ class Wallet < ApplicationRecord
   has_many :wallet_transactions
   has_many :recurring_transaction_rules
 
+  has_many :wallet_targets
+  has_many :billable_metrics, through: :wallet_targets
+
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
     class_name: "Clickhouse::ActivityLog",

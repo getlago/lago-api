@@ -4,7 +4,7 @@ class WalletTarget < ApplicationRecord
   include PaperTrailTraceable
 
   belongs_to :wallet
-  belongs_to :billable_metric, optional: true
+  belongs_to :billable_metric
   belongs_to :organization
 end
 
