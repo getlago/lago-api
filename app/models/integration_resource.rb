@@ -23,7 +23,7 @@ end
 #  updated_at      :datetime         not null
 #  external_id     :string
 #  integration_id  :uuid
-#  organization_id :uuid
+#  organization_id :uuid             not null
 #  syncable_id     :uuid             not null
 #
 # Indexes

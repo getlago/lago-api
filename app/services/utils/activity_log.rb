@@ -18,21 +18,26 @@ module Utils
       new(*, **, &).produce
     end
 
+    def self.available?
+      ENV["LAGO_CLICKHOUSE_ENABLED"].present? &&
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present? &&
+        ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"].present?
+    end
+
     # This method is used to produce an activity log after a commit.
     #
     # It is meant to avoid race-conditions where a asynchronous post-processing run before changes are commited to the DB.
     def self.produce_after_commit(object, activity_type, activity_id: nil, &)
-      AfterCommitEverywhere.after_commit do
-        kwargs = {activity_id:}.compact
-        produce(object, activity_type, **kwargs, &)
-      end
+      kwargs = {after_commit: true, activity_id:}.compact
+      produce(object, activity_type, **kwargs, &)
     end
 
-    def initialize(object, activity_type, activity_id: SecureRandom.uuid, &block)
+    def initialize(object, activity_type, activity_id: SecureRandom.uuid, after_commit: false, &block)
       @object = object
       @activity_type = activity_type
       @activity_id = activity_id
       @block = block
+      @after_commit = after_commit
     end
 
     def produce
@@ -53,17 +58,25 @@ module Utils
         end
       end
 
-      produce_with_diff(changes)
+      run_maybe_after_commit { produce_with_diff(changes) }
+
       block ? result : nil
     end
 
     private
 
-    attr_reader :object, :activity_type, :activity_id, :block
+    attr_reader :object, :activity_type, :activity_id, :block, :after_commit
+
+    def run_maybe_after_commit(&block)
+      if after_commit
+        AfterCommitEverywhere.after_commit(&block)
+      else
+        yield
+      end
+    end
 
     def produce_with_diff(changes)
-      return if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
-      return if ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"].blank?
+      return unless self.class.available?
 
       current_time = Time.current.iso8601[...-1]
       Karafka.producer.produce_async(

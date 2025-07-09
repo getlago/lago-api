@@ -97,6 +97,10 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
       expect(result.fees.first.applied_taxes.count).to eq(1)
     end
 
+    it "does not create pricing unit usage" do
+      expect { fee_service.call }.not_to change(PricingUnitUsage, :count)
+    end
+
     it "delivers a webhook" do
       fee_service.call
 
@@ -490,6 +494,61 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
 
         expect(SendWebhookJob).not_to have_been_enqueued
           .with("fee.created", Fee)
+      end
+    end
+
+    context "with pricing unit on the charge" do
+      before do
+        create(
+          :applied_pricing_unit,
+          organization: subscription.organization,
+          conversion_rate: 0.25,
+          pricing_unitable: charge
+        )
+      end
+
+      it "creates a fee with converted values" do
+        result = fee_service.call
+
+        expect(result).to be_success
+
+        expect(result.fees.count).to eq(1)
+        fee = result.fees.first
+        expect(fee).to have_attributes(
+          subscription:,
+          organization_id: organization.id,
+          billing_entity_id: billing_entity.id,
+          charge:,
+          amount_cents: 250,
+          amount_currency: "EUR",
+          fee_type: "charge",
+          pay_in_advance: true,
+          invoiceable: charge,
+          units: 9,
+          events_count: 1,
+          charge_filter: nil,
+          pay_in_advance_event_id: event.id,
+          pay_in_advance_event_transaction_id: event.transaction_id,
+          payment_status: "pending",
+          unit_amount_cents: 0,
+          taxes_rate: 20.0,
+          taxes_amount_cents: 50
+        )
+        expect(fee.precise_amount_cents.to_f).to eq(250.0)
+        expect(fee.precise_unit_amount.to_f).to eq(0.0025)
+        expect(fee.taxes_precise_amount_cents.to_f).to eq(50.0)
+        expect(result.fees.first.applied_taxes.count).to eq(1)
+      end
+
+      it "creates pricing unit usage" do
+        result = fee_service.call
+
+        expect(result).to be_success
+        pricing_unit_usage = result.fees.first.pricing_unit_usage
+        expect(pricing_unit_usage).to be_persisted
+        expect(pricing_unit_usage.amount_cents).to eq(1000)
+        expect(pricing_unit_usage.precise_amount_cents.to_f).to eq(1000.0)
+        expect(pricing_unit_usage.unit_amount_cents).to eq(1)
       end
     end
 

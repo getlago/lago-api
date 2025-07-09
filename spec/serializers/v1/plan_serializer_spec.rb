@@ -7,7 +7,7 @@ RSpec.describe ::V1::PlanSerializer do
     described_class.new(
       plan,
       root_name: "plan",
-      includes: %i[charges taxes minimum_commitment usage_thresholds]
+      includes: %i[charges entitlements taxes minimum_commitment usage_thresholds]
     )
   end
 
@@ -17,14 +17,18 @@ RSpec.describe ::V1::PlanSerializer do
   let(:charge) { create(:standard_charge, plan:) }
   let(:usage_threshold) { create(:usage_threshold, plan:) }
 
-  before { subscription && charge && usage_threshold }
+  before do
+    subscription
+    charge
+    usage_threshold
+  end
 
   context "when plan has one minimium commitment" do
     let(:commitment) { create(:commitment, plan:) }
 
     before { commitment }
 
-    it "serializes the object", :aggregate_failures do
+    it "serializes the object" do
       overridden_plan = create(:plan, parent_id: plan.id)
       customer2 = create(:customer, organization: plan.organization)
       create(:subscription, customer: customer2, plan: overridden_plan)
@@ -55,6 +59,8 @@ RSpec.describe ::V1::PlanSerializer do
         "lago_id" => charge.id
       )
 
+      expect(result["plan"]["entitlements"]).to be_empty
+
       expect(result["plan"]["usage_thresholds"].first).to include(
         "lago_id" => usage_threshold.id,
         "threshold_display_name" => usage_threshold.threshold_display_name,
@@ -81,7 +87,7 @@ RSpec.describe ::V1::PlanSerializer do
   end
 
   context "when plan has no minimium commitment" do
-    it "serializes the object", :aggregate_failures do
+    it "serializes the object" do
       overridden_plan = create(:plan, parent_id: plan.id)
       customer2 = create(:customer, organization: plan.organization)
       create(:subscription, customer: customer2, plan: overridden_plan)
@@ -122,6 +128,34 @@ RSpec.describe ::V1::PlanSerializer do
       )
 
       expect(result["plan"]["minimum_commitment"]).to be_nil
+    end
+  end
+
+  context "when plan has entitlements" do
+    let(:feature) { create(:feature, organization: plan.organization, code: "seats", name: "Seats", description: "Nb users") }
+    let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
+    let(:entitlement) { create(:entitlement, feature:, plan:) }
+    let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: 100) }
+
+    before { entitlement_value }
+
+    it "serializes the entitlements" do
+      result = JSON.parse(serializer.to_json)
+      expect(result["plan"]["entitlements"].count).to eq 1
+      expect(result["plan"]["entitlements"].first).to eq({
+        "code" => "seats",
+        "name" => "Seats",
+        "description" => "Nb users",
+        "privileges" => {
+          "max" => {
+            "code" => "max",
+            "name" => nil,
+            "value" => 100,
+            "config" => {},
+            "value_type" => "integer"
+          }
+        }
+      })
     end
   end
 end

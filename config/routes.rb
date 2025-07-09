@@ -85,7 +85,12 @@ Rails.application.routes.draw do
       resources :payment_receipts, only: %i[index show]
       resources :payment_requests, only: %i[create index]
       resources :payments, only: %i[create index show]
-      resources :plans, param: :code, code: /.*/
+      resources :plans, param: :code, code: /.*/ do
+        resources :entitlements, only: %i[index show create destroy], param: :code, code: /.*/, controller: "plans/entitlements" do
+          resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "plans/entitlements/privileges"
+        end
+        patch :entitlements, to: "plans/entitlements#update"
+      end
       resources :taxes, param: :code, code: /.*/
       resources :wallet_transactions, only: %i[create show] do
         post :payment_url, on: :member

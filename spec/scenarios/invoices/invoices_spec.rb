@@ -658,7 +658,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
     end
 
-    it "bills fees correctly" do
+    it "bills fees correctly", transaction: false do
       travel_to(Time.zone.parse("2024-01-01T00:00:00")) do
         create(
           :standard_charge,
@@ -745,7 +745,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
     end
 
-    it "bills fees correctly" do
+    it "bills fees correctly", transaction: false do
       travel_to(Time.zone.parse("2024-01-01T00:00:00")) do
         create(
           :standard_charge,
@@ -957,7 +957,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
     end
 
-    it "bills fees correctly" do
+    it "bills fees correctly", transaction: false do
       travel_to(Time.zone.parse("2024-01-01T00:00:00")) do
         create(
           :standard_charge,
@@ -1121,7 +1121,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
 
     around { |test| lago_premium!(&test) }
 
-    it "bills fees correctly" do
+    it "bills fees correctly", transaction: false do
       travel_to(Time.zone.parse("2024-01-01T00:00:00")) do
         create(
           :standard_charge,
@@ -1379,7 +1379,7 @@ describe "Invoices Scenarios", :scenarios, type: :request do
       create(:billable_metric, organization:, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
     end
 
-    it "bills fees correctly" do
+    it "bills fees correctly", transaction: false do
       travel_to(Time.zone.parse("2024-01-01T00:00:00")) do
         create(
           :standard_charge,

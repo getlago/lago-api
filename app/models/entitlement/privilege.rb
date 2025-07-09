@@ -11,6 +11,8 @@ module Entitlement
 
     belongs_to :organization
     belongs_to :feature, class_name: "Entitlement::Feature", foreign_key: :entitlement_feature_id
+    has_many :values, class_name: "Entitlement::EntitlementValue", foreign_key: :entitlement_privilege_id, dependent: :destroy
+    has_many :entitlements, through: :values, class_name: "Entitlement::Entitlement"
 
     validates :code, presence: true, length: {maximum: 255}
     validates :name, length: {maximum: 255}
@@ -48,7 +50,7 @@ end
 #  config                 :jsonb
 #  deleted_at             :datetime
 #  name                   :string
-#  value_type             :enum             not null
+#  value_type             :enum             default("string"), not null
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #  entitlement_feature_id :uuid             not null

@@ -13,6 +13,7 @@ module Types
         field :id, ID, null: false
         field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :projected_units, GraphQL::Types::Float, null: false
+        field :pricing_unit_amount_cents, GraphQL::Types::BigInt, null: true
         field :units, GraphQL::Types::Float, null: false
 
         field :billable_metric, Types::BillableMetrics::Object, null: false
@@ -34,6 +35,12 @@ module Types
 
         def amount_cents
           usage_calculator.current_amount_cents
+        end
+
+        def pricing_unit_amount_cents
+          return if charge.applied_pricing_unit.nil?
+
+          object.map(&:pricing_unit_usage).sum(&:amount_cents)
         end
 
         def charge

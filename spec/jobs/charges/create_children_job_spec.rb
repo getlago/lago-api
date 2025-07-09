@@ -5,7 +5,10 @@ require "rails_helper"
 RSpec.describe Charges::CreateChildrenJob, type: :job do
   let(:billable_metric) { create(:billable_metric) }
   let(:plan) { create(:plan, organization: billable_metric.organization) }
+  let(:subscription) { create(:subscription, plan: child_plan) }
+  let(:subscription2) { create(:subscription, plan: child_plan2, status: :terminated) }
   let(:child_plan) { create(:plan, organization: billable_metric.organization, parent_id: plan.id) }
+  let(:child_plan2) { create(:plan, organization: billable_metric.organization, parent_id: plan.id) }
   let(:charge) { create(:standard_charge, plan:, billable_metric:) }
   let(:child_ids) { [child_plan.id] }
 
@@ -19,6 +22,9 @@ RSpec.describe Charges::CreateChildrenJob, type: :job do
   end
 
   before do
+    subscription
+    subscription2
+    child_plan2
     allow(Charges::CreateChildrenBatchJob).to receive(:perform_later)
       .with(child_ids:, charge:, payload: params)
       .and_call_original

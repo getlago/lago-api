@@ -26,7 +26,7 @@ end
 #  customer_id          :uuid             not null
 #  external_customer_id :string
 #  integration_id       :uuid             not null
-#  organization_id      :uuid
+#  organization_id      :uuid             not null
 #
 # Indexes
 #

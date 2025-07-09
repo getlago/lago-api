@@ -189,5 +189,9 @@ module Types
     field :create_subscription_alert, mutation: Mutations::UsageMonitoring::Alerts::Create
     field :destroy_subscription_alert, mutation: Mutations::UsageMonitoring::Alerts::Destroy
     field :update_subscription_alert, mutation: Mutations::UsageMonitoring::Alerts::Update
+
+    field :create_feature, mutation: Mutations::Entitlement::CreateFeature
+    field :destroy_feature, mutation: Mutations::Entitlement::DestroyFeature
+    field :update_feature, mutation: Mutations::Entitlement::UpdateFeature
   end
 end

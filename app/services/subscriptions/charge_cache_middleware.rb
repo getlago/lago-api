@@ -13,10 +13,21 @@ module Subscriptions
       return yield unless cache
 
       json = Subscriptions::ChargeCacheService.call(subscription:, charge:, charge_filter:, expires_in: cache_expiration) do
-        yield.to_json
+        yield
+          .map { |fee| fee.attributes.merge("pricing_unit_usage" => fee.pricing_unit_usage&.attributes) }
+          .to_json
       end
 
-      JSON.parse(json).map { |j| Fee.new(j.slice(*Fee.column_names)) }
+      JSON.parse(json).map do |j|
+        pricing_unit_usage = if j["pricing_unit_usage"].present?
+          PricingUnitUsage.new(j["pricing_unit_usage"].slice(*PricingUnitUsage.column_names))
+        end
+
+        Fee.new(
+          **j.slice(*Fee.column_names),
+          pricing_unit_usage:
+        )
+      end
     end
 
     private

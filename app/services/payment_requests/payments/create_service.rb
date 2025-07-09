@@ -101,8 +101,9 @@ module PaymentRequests
       def should_process_payment?
         return false if payable.payment_succeeded?
         return false if current_payment_provider.blank?
+        return false unless current_payment_provider_customer&.provider_customer_id
 
-        current_payment_provider_customer&.provider_customer_id
+        payable.invoices.all?(&:ready_for_payment_processing)
       end
 
       def current_payment_provider

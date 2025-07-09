@@ -1,0 +1,1 @@
+.cursor/rules/rails-general.mdc

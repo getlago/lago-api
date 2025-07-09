@@ -22,7 +22,7 @@ module CreditNotes
           credit_note:,
           payment:,
           payment_provider: payment.payment_provider,
-          payment_provider_customer: payment.payment_provider_customer,
+          payment_provider_customer: payment_provider_customer(customer),
           amount_cents: adyen_result.response.dig("amount", "value"),
           amount_currency: adyen_result.response.dig("amount", "currency"),
           status: "pending",
@@ -116,7 +116,7 @@ module CreditNotes
         SendWebhookJob.perform_later(
           "credit_note.provider_refund_failure",
           credit_note,
-          provider_customer_id: customer.adyen_customer.provider_customer_id,
+          provider_customer_id: payment_provider_customer(customer)&.provider_customer_id,
           provider_error: {
             message:,
             error_code: code

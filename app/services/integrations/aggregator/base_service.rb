@@ -170,7 +170,7 @@ module Integrations
       rescue JSON::ParserError
         if response.body.include?(BAD_REQUEST_ERROR)
           # NOTE: Sometimes, Anrock is responding with an HTTP 200 with a payload containing a 502 error...
-          raise(LagoHttpClient::HttpError.new(502, response.body, http_client.uri))
+          raise(Integrations::Aggregator::BadGatewayError.new(response.body, http_client.uri))
         end
 
         raise

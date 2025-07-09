@@ -51,6 +51,9 @@ jobs:
       LAGO_CLICKHOUSE_DATABASE: default
       LAGO_CLICKHOUSE_USERNAME: ""
       LAGO_CLICKHOUSE_PASSWORD: "password"
+      LAGO_KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+      LAGO_KAFKA_ACTIVITY_LOGS_TOPIC: activity_logs
+      LAGO_KAFKA_API_LOGS_TOPIC: api_logs
       LAGO_KAFKA_EVENTS_CHARGED_IN_ADVANCE_TOPIC: events_charged_in_advance
       KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC: ${{ secrets.KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC }}
       KNAPSACK_PRO_CI_NODE_TOTAL: ${{ matrix.ci_node_total }}
@@ -77,7 +80,13 @@ jobs:
       - name: Set up Clickhouse database schema
         run: bin/rails db:migrate:clickhouse
       - name: Run tests
-        run: bundle exec rake knapsack_pro:queue:rspec
+        run: |
+          if [[ -z "$KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC" ]]; then
+            echo "::warning::This is a community PR. We'll default to running the test using 'parallel_tests'."
+            bundle exec parallel_rspec --only-group "${KNAPSACK_PRO_CI_NODE_INDEX}" -n "${KNAPSACK_PRO_CI_NODE_TOTAL}" --exclude-pattern "spec/integration/.*_integration_spec.rb"
+          else
+            bundle exec rake knapsack_pro:queue:rspec
+          fi
         continue-on-error: true
       - name: retry failed tests
         run: bundle exec rspec --only-failures

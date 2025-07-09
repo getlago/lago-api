@@ -25,6 +25,10 @@ RSpec.describe Entitlement::PrivilegeDestroyService, type: :service do
       expect(result.privilege).to eq(privilege)
     end
 
+    it "sends feature.updated webhook" do
+      expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", feature)
+    end
+
     context "when privilege is nil" do
       it "returns a not found failure" do
         result = described_class.call(privilege: nil)
@@ -40,6 +44,23 @@ RSpec.describe Entitlement::PrivilegeDestroyService, type: :service do
 
       it "still succeeds" do
         expect { subject }.to raise_error(Discard::RecordNotDiscarded)
+      end
+    end
+
+    context "when privilege has entitlements" do
+      let(:entitlement) { create(:entitlement, feature:) }
+      let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: "10") }
+
+      before do
+        entitlement_value
+      end
+
+      it "discards all related entitlement values" do
+        expect { subject }.to change(Entitlement::EntitlementValue, :count).by(-1)
+      end
+
+      it "sends `plan.updated` webhook" do
+        expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", entitlement.plan)
       end
     end
   end

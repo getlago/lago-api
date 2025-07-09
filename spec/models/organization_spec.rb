@@ -12,43 +12,50 @@ RSpec.describe Organization, type: :model do
     )
   end
 
-  it { is_expected.to have_many(:stripe_payment_providers) }
-  it { is_expected.to have_many(:gocardless_payment_providers) }
-  it { is_expected.to have_many(:adyen_payment_providers) }
+  describe "associations" do
+    it do
+      expect(subject).to have_many(:stripe_payment_providers)
+      expect(subject).to have_many(:gocardless_payment_providers)
+      expect(subject).to have_many(:adyen_payment_providers)
+
+      expect(subject).to have_many(:api_keys)
+      expect(subject).to have_many(:billing_entities).conditions(archived_at: nil)
+      expect(subject).to have_many(:all_billing_entities).class_name("BillingEntity")
+      expect(subject).to have_many(:pricing_units)
+      expect(subject).to have_many(:customers)
+      expect(subject).to have_many(:subscriptions)
+      expect(subject).to have_many(:credit_notes)
+      expect(subject).to have_many(:invoices)
+      expect(subject).to have_many(:fees)
+      expect(subject).to have_many(:applied_coupons)
+      expect(subject).to have_many(:wallets)
+      expect(subject).to have_many(:wallet_transactions)
+      expect(subject).to have_one(:default_billing_entity).class_name("BillingEntity")
+      expect(subject).to have_many(:webhook_endpoints)
+      expect(subject).to have_many(:webhooks)
+      expect(subject).to have_many(:hubspot_integrations)
+      expect(subject).to have_many(:netsuite_integrations)
+      expect(subject).to have_many(:xero_integrations)
+      expect(subject).to have_one(:salesforce_integration)
+      expect(subject).to have_many(:data_exports)
+      expect(subject).to have_many(:dunning_campaigns)
+      expect(subject).to have_many(:daily_usages)
+      expect(subject).to have_many(:invoice_custom_sections)
+      expect(subject).to have_many(:manual_invoice_custom_sections).conditions(section_type: "manual")
+      expect(subject).to have_many(:system_generated_invoice_custom_sections).conditions(section_type: "system_generated")
+
+      expect(subject).to have_many(:features).class_name("Entitlement::Feature")
+      expect(subject).to have_many(:privileges).class_name("Entitlement::Privilege")
+      expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement")
+      expect(subject).to have_many(:entitlement_values).class_name("Entitlement::EntitlementValue")
+
+      expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
+    end
+  end
 
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
   end
-
-  it { is_expected.to have_many(:api_keys) }
-  it { is_expected.to have_many(:billing_entities).conditions(archived_at: nil) }
-  it { is_expected.to have_many(:all_billing_entities).class_name("BillingEntity") }
-  it { is_expected.to have_many(:pricing_units) }
-  it { is_expected.to have_many(:customers) }
-  it { is_expected.to have_many(:subscriptions) }
-  it { is_expected.to have_many(:credit_notes) }
-  it { is_expected.to have_many(:invoices) }
-  it { is_expected.to have_many(:fees) }
-  it { is_expected.to have_many(:applied_coupons) }
-  it { is_expected.to have_many(:wallets) }
-  it { is_expected.to have_many(:wallet_transactions) }
-  it { is_expected.to have_one(:default_billing_entity).class_name("BillingEntity") }
-  it { is_expected.to have_many(:webhook_endpoints) }
-  it { is_expected.to have_many(:webhooks) }
-  it { is_expected.to have_many(:hubspot_integrations) }
-  it { is_expected.to have_many(:netsuite_integrations) }
-  it { is_expected.to have_many(:xero_integrations) }
-  it { is_expected.to have_one(:salesforce_integration) }
-  it { is_expected.to have_many(:data_exports) }
-  it { is_expected.to have_many(:dunning_campaigns) }
-  it { is_expected.to have_many(:daily_usages) }
-  it { is_expected.to have_many(:invoice_custom_sections) }
-  it { is_expected.to have_many(:manual_invoice_custom_sections).conditions(section_type: "manual") }
-  it { is_expected.to have_many(:system_generated_invoice_custom_sections).conditions(section_type: "system_generated") }
-
-  it { is_expected.to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true) }
-
-  it { is_expected.to validate_inclusion_of(:default_currency).in_array(described_class.currency_list) }
 
   it "sets the default value to true" do
     expect(organization.finalize_zero_amount_invoice).to eq true
@@ -57,6 +64,10 @@ RSpec.describe Organization, type: :model do
   it_behaves_like "paper_trail traceable"
 
   describe "Validations" do
+    it do
+      expect(subject).to validate_inclusion_of(:default_currency).in_array(described_class.currency_list)
+    end
+
     it "is valid with valid attributes" do
       expect(organization).to be_valid
     end

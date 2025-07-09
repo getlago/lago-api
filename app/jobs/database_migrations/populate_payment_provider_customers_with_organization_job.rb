@@ -8,7 +8,7 @@ module DatabaseMigrations
     BATCH_SIZE = 1000
 
     def perform(batch_number = 1)
-      batch = PaymentProviderCustomers::BaseCustomer
+      batch = PaymentProviderCustomers::BaseCustomer.unscoped
         .where(organization_id: nil)
         .limit(BATCH_SIZE)
 

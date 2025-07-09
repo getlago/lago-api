@@ -110,6 +110,8 @@ RSpec.configure do |config|
   # NOTE: Database cleaner config to turn off/on transactional mode
   config.before(:suite) do
     DatabaseCleaner.clean_with(:deletion)
+    # No need for `DatabaseCleaner[:active_record, db: EventsRecord].clean_with(:deletion)`
+    # because both connections are using the same database.
   end
 
   config.include_context "with Time travel enabled", :time_travel
@@ -151,11 +153,22 @@ RSpec.configure do |config|
 
   config.around do |example|
     # Important to set the strategy in this block as otherwise the cleaning will always use the transaction strategy
-    DatabaseCleaner.strategy = if example.metadata[:transaction] == false
+    strategy = if example.metadata[:transaction] == false
       :deletion
     else
       :transaction
     end
+    DatabaseCleaner.strategy = strategy
+
+    # We need to set the strategy for the `events` connection as well to properly rollback changes done using the `events` connection.
+    # DO NOT CHANGE `:db` to `:events` as it will not work properly with `:transaction` strategy.
+    DatabaseCleaner[:active_record, db: EventsRecord].strategy = if strategy == :transaction
+      :transaction
+    else
+      # If the `deletion` strategy is used for the default connection, we don't need to set it for the `events` connection as they are using the same database.
+      DatabaseCleaner::NullStrategy.new
+    end
+
     DatabaseCleaner.cleaning do
       example.run
     end

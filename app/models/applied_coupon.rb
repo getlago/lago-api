@@ -59,7 +59,7 @@ end
 #  updated_at                   :datetime         not null
 #  coupon_id                    :uuid             not null
 #  customer_id                  :uuid             not null
-#  organization_id              :uuid
+#  organization_id              :uuid             not null
 #
 # Indexes
 #

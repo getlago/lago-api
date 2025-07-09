@@ -5,10 +5,6 @@ module Webhooks
     class WalletTransactionPaymentFailureService < Webhooks::BaseService
       private
 
-      def current_organization
-        @current_organization ||= object.wallet.organization
-      end
-
       def object_serializer
         ::V1::PaymentProviders::WalletTransactionPaymentErrorSerializer.new(
           object,

@@ -37,16 +37,21 @@ module PaymentRequests
           payment = create_payment(stripe_payment)
         end
 
-        unless payment
-          handle_missing_payment(organization_id, stripe_payment)
-          return result unless result.payment
+        payment ||= handle_missing_payment(organization_id, stripe_payment)
 
-          payment = result.payment
+        return result unless payment
+
+        if payment.payable.payment_succeeded?
+          if payment.persisted?
+            result.payment = payment
+            result.payable = payment.payable
+          end
+
+          return result
         end
 
         result.payment = payment
         result.payable = payment.payable
-        return result if payment.payable.payment_succeeded?
 
         processing = status == "processing"
         payment.status = status
@@ -148,20 +153,19 @@ module PaymentRequests
 
       def handle_missing_payment(organization_id, stripe_payment)
         # NOTE: Payment was not initiated by lago
-        return result unless stripe_payment.metadata&.key?(:lago_payable_id)
+        return unless stripe_payment.metadata&.key?(:lago_payable_id)
 
         # NOTE: Payment Request does not belong to this lago organization
         #       It means the same Stripe secret key is used for multiple organizations
         payment_request = PaymentRequest.find_by(id: stripe_payment.metadata[:lago_payable_id], organization_id:)
-        return result unless payment_request
+        return unless payment_request
 
         # NOTE: Payment Request exists but payment status is failed
-        return result if payment_request.payment_failed?
+        return if payment_request.payment_failed?
 
         # NOTE: For some reason payment is missing in the database... (killed sidekiq job, etc.)
         #       We have to recreate it from the received data
-        result.payment = create_payment(stripe_payment, payable: payment_request)
-        result
+        create_payment(stripe_payment, payable: payment_request)
       end
 
       def create_payment(stripe_payment, payable: nil)

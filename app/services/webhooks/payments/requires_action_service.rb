@@ -5,10 +5,6 @@ module Webhooks
     class RequiresActionService < Webhooks::BaseService
       private
 
-      def current_organization
-        @current_organization ||= object.payable.organization
-      end
-
       def object_serializer
         ::V1::Payments::RequiresActionSerializer.new(
           object,

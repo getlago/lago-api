@@ -11,6 +11,7 @@ SET row_security = off;
 
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_fd84cdb7c6;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_fd399a23d3;
+ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_fbd2b9fccb;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_f98413d404;
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_f66617edcb;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_f53ff93138;
@@ -37,6 +38,7 @@ ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_d9ffb8
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_d9ea200904;
 ALTER TABLE IF EXISTS ONLY public.integration_resources DROP CONSTRAINT IF EXISTS fk_rails_d9448a540b;
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS fk_rails_d648e28d9f;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_d53f825a88;
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS fk_rails_d4f02c82b2;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_d07bc24ce3;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ce2c63d69f;
@@ -55,6 +57,7 @@ ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP 
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_bacde7a063;
 ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS fk_rails_bacb46d2a3;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_ba128983c2;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_b61aa73940;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_b50dc82c1e;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b283a89721;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
@@ -62,6 +65,7 @@ ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_ac146c9541;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_ab16de0b32;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_aaa12f7d3e;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_aa34dd5db6;
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
@@ -84,15 +88,18 @@ ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_8c18828b53;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_89e1020aca;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_8887954ec7;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_885dc100ef;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_88349fc20a;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_86676be631;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_84f4587409;
+ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_81eedc32c0;
 ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS fk_rails_81e3b6abba;
 ALTER TABLE IF EXISTS ONLY public.entitlement_features DROP CONSTRAINT IF EXISTS fk_rails_81d8b323cf;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_7eb0484711;
 ALTER TABLE IF EXISTS ONLY public.billable_metrics DROP CONSTRAINT IF EXISTS fk_rails_7e8a2f26e5;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_7da558cadc;
+ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_7d0e61668f;
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_7c0e340dbd;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_7b324610ad;
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS fk_rails_7aab96f30e;
@@ -134,6 +141,7 @@ ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS fk_rail
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_58234c715e;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_56b7167125;
 ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_5628a713de;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_533b639bac;
 ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_52b72c9b0e;
 ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS fk_rails_526379cd99;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_52370612ae;
@@ -206,6 +214,7 @@ ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_0e464363cb;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_0d349e632f;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_0d2be3d72c;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_0c9773c34d;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_0bb6dcc01f;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_0baa7bd751;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_0934890b24;
@@ -239,6 +248,9 @@ DROP INDEX IF EXISTS public.index_wallet_transactions_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_credit_note_id;
+DROP INDEX IF EXISTS public.index_wallet_targets_on_wallet_id;
+DROP INDEX IF EXISTS public.index_wallet_targets_on_organization_id;
+DROP INDEX IF EXISTS public.index_wallet_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_versions_on_item_type_and_item_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id_and_recurring;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id;
@@ -416,7 +428,6 @@ DROP INDEX IF EXISTS public.index_fees_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_fees_on_applied_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_on_add_on_id;
 DROP INDEX IF EXISTS public.index_events_on_properties;
-DROP INDEX IF EXISTS public.index_events_on_organization_id_and_timestamp;
 DROP INDEX IF EXISTS public.index_events_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_events_on_organization_id;
 DROP INDEX IF EXISTS public.index_events_on_external_subscription_id_with_included;
@@ -430,6 +441,10 @@ DROP INDEX IF EXISTS public.index_error_details_on_deleted_at;
 DROP INDEX IF EXISTS public.index_entitlement_privileges_on_organization_id;
 DROP INDEX IF EXISTS public.index_entitlement_privileges_on_entitlement_feature_id;
 DROP INDEX IF EXISTS public.index_entitlement_features_on_organization_id;
+DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_plan_id;
+DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_organization_id;
+DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_entitlement_feature_id;
+DROP INDEX IF EXISTS public.index_entitlement_entitlement_values_on_organization_id;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_organization_id;
 DROP INDEX IF EXISTS public.index_dunning_campaigns_on_deleted_at;
@@ -570,6 +585,7 @@ DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_recurring_756a2a370
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_78eb24d06c;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_4290c95dec;
 DROP INDEX IF EXISTS public.idx_on_timestamp_charge_id_external_subscription_id;
+DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
 DROP INDEX IF EXISTS public.idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
@@ -580,6 +596,10 @@ DROP INDEX IF EXISTS public.idx_on_invoice_id_payment_request_id_aa550779a4;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_ccb39e9622;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_7edbcef7b5;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_5f37496c8c;
+DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a;
+DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_6a228dc433;
+DROP INDEX IF EXISTS public.idx_on_entitlement_feature_id_plan_id_c45949ea26;
+DROP INDEX IF EXISTS public.idx_on_entitlement_entitlement_id_48c0b3356a;
 DROP INDEX IF EXISTS public.idx_on_dunning_campaign_id_currency_fbf233b2ae;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_invoice_custom_section_id_bd78c547d3;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_customer_id_invoice_custom_e7aada65cb;
@@ -587,6 +607,7 @@ DROP INDEX IF EXISTS public.idx_on_billing_entity_id_billing_entity_sequential__
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_724373e5ae;
 DROP INDEX IF EXISTS public.idx_on_amount_cents_plan_id_recurring_888044d66b;
 DROP INDEX IF EXISTS public.idx_features_code_unique_per_organization;
+DROP INDEX IF EXISTS public.idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp;
 DROP INDEX IF EXISTS public.idx_enqueued_per_organization;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription_with_bm;
 DROP INDEX IF EXISTS public.idx_alerts_unique_per_type_per_subscription;
@@ -596,6 +617,7 @@ ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pk
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_pkey;
+ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS wallet_targets_pkey;
 ALTER TABLE IF EXISTS ONLY public.versions DROP CONSTRAINT IF EXISTS versions_pkey;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS usage_thresholds_pkey;
@@ -647,6 +669,8 @@ ALTER TABLE IF EXISTS ONLY public.events DROP CONSTRAINT IF EXISTS events_pkey;
 ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS error_details_pkey;
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS entitlement_privileges_pkey;
 ALTER TABLE IF EXISTS ONLY public.entitlement_features DROP CONSTRAINT IF EXISTS entitlement_features_pkey;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS entitlement_entitlements_pkey;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS entitlement_entitlement_values_pkey;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaigns DROP CONSTRAINT IF EXISTS dunning_campaigns_pkey;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS dunning_campaign_thresholds_pkey;
 ALTER TABLE IF EXISTS ONLY public.data_exports DROP CONSTRAINT IF EXISTS data_exports_pkey;
@@ -691,6 +715,7 @@ ALTER TABLE IF EXISTS public.versions ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.usage_monitoring_subscription_activities ALTER COLUMN id DROP DEFAULT;
 DROP TABLE IF EXISTS public.webhooks;
 DROP TABLE IF EXISTS public.webhook_endpoints;
+DROP TABLE IF EXISTS public.wallet_targets;
 DROP SEQUENCE IF EXISTS public.versions_id_seq;
 DROP TABLE IF EXISTS public.versions;
 DROP TABLE IF EXISTS public.users;
@@ -765,6 +790,8 @@ DROP TABLE IF EXISTS public.events;
 DROP TABLE IF EXISTS public.error_details;
 DROP TABLE IF EXISTS public.entitlement_privileges;
 DROP TABLE IF EXISTS public.entitlement_features;
+DROP TABLE IF EXISTS public.entitlement_entitlements;
+DROP TABLE IF EXISTS public.entitlement_entitlement_values;
 DROP TABLE IF EXISTS public.dunning_campaigns;
 DROP TABLE IF EXISTS public.dunning_campaign_thresholds;
 DROP TABLE IF EXISTS public.data_exports;
@@ -1097,7 +1124,7 @@ CREATE TABLE public.add_ons_taxes (
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1124,7 +1151,7 @@ CREATE TABLE public.adjusted_fees (
     grouped_by jsonb DEFAULT '{}'::jsonb NOT NULL,
     charge_filter_id uuid,
     unit_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1178,7 +1205,7 @@ CREATE TABLE public.applied_coupons (
     frequency integer DEFAULT 0 NOT NULL,
     frequency_duration integer,
     frequency_duration_remaining integer,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1195,7 +1222,7 @@ CREATE TABLE public.applied_invoice_custom_sections (
     invoice_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -1834,6 +1861,37 @@ CREATE TABLE public.dunning_campaigns (
 
 
 --
+-- Name: entitlement_entitlement_values; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entitlement_entitlement_values (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    entitlement_privilege_id uuid NOT NULL,
+    entitlement_entitlement_id uuid NOT NULL,
+    value character varying NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: entitlement_entitlements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entitlement_entitlements (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    entitlement_feature_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: entitlement_features; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1859,7 +1917,7 @@ CREATE TABLE public.entitlement_privileges (
     entitlement_feature_id uuid NOT NULL,
     code character varying NOT NULL,
     name character varying,
-    value_type public.entitlement_privilege_value_types NOT NULL,
+    value_type public.entitlement_privilege_value_types DEFAULT 'string'::public.entitlement_privilege_value_types NOT NULL,
     config jsonb DEFAULT '{}'::jsonb,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
@@ -2207,7 +2265,7 @@ CREATE TABLE public.payment_provider_customers (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2391,7 +2449,7 @@ CREATE TABLE public.subscriptions (
     subscription_at timestamp(6) without time zone,
     ending_at timestamp(6) without time zone,
     trial_ended_at timestamp(6) without time zone,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2516,7 +2574,7 @@ CREATE TABLE public.fees_taxes (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2551,7 +2609,7 @@ CREATE TABLE public.invoice_metadata (
     value character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2693,7 +2751,7 @@ CREATE TABLE public.invoices_taxes (
     updated_at timestamp(6) without time zone NOT NULL,
     fees_amount_cents bigint DEFAULT 0 NOT NULL,
     taxable_base_amount_cents bigint DEFAULT 0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2728,7 +2786,7 @@ CREATE TABLE public.plans_taxes (
     tax_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -2859,7 +2917,7 @@ CREATE TABLE public.wallet_transactions (
     metadata jsonb DEFAULT '[]'::jsonb,
     credit_note_id uuid,
     failed_at timestamp(6) without time zone,
-    organization_id uuid,
+    organization_id uuid NOT NULL,
     lock_version integer DEFAULT 0 NOT NULL
 );
 
@@ -2937,7 +2995,7 @@ CREATE TABLE public.wallets (
     invoice_requires_successful_payment boolean DEFAULT false NOT NULL,
     lock_version integer DEFAULT 0 NOT NULL,
     ready_to_be_refreshed boolean DEFAULT false NOT NULL,
-    organization_id uuid,
+    organization_id uuid NOT NULL,
     allowed_fee_types character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     last_ongoing_balance_sync_at timestamp without time zone
 );
@@ -3082,7 +3140,7 @@ CREATE TABLE public.integration_collection_mappings (
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3099,7 +3157,7 @@ CREATE TABLE public.integration_customers (
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3116,7 +3174,7 @@ CREATE TABLE public.integration_items (
     external_name character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3133,7 +3191,7 @@ CREATE TABLE public.integration_mappings (
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3150,7 +3208,7 @@ CREATE TABLE public.integration_resources (
     updated_at timestamp(6) without time zone NOT NULL,
     integration_id uuid,
     resource_type integer DEFAULT 0 NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3241,7 +3299,7 @@ CREATE TABLE public.invoice_subscriptions (
     charges_from_datetime timestamp(6) without time zone,
     charges_to_datetime timestamp(6) without time zone,
     invoicing_reason public.subscription_invoicing_reason,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3255,7 +3313,7 @@ CREATE TABLE public.invoices_payment_requests (
     payment_request_id uuid NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3434,7 +3492,7 @@ CREATE TABLE public.payments (
     reference character varying,
     provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
     provider_payment_method_id character varying,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3517,7 +3575,7 @@ CREATE TABLE public.recurring_transaction_rules (
     expiration_at timestamp(6) without time zone,
     terminated_at timestamp(6) without time zone,
     status integer DEFAULT 0,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3537,7 +3595,7 @@ CREATE TABLE public.refunds (
     provider_refund_id character varying NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3650,7 +3708,7 @@ CREATE TABLE public.usage_thresholds (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     deleted_at timestamp(6) without time zone,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -3704,6 +3762,20 @@ ALTER SEQUENCE public.versions_id_seq OWNED BY public.versions.id;
 
 
 --
+-- Name: wallet_targets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wallet_targets (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    wallet_id uuid NOT NULL,
+    billable_metric_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: webhook_endpoints; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3736,7 +3808,7 @@ CREATE TABLE public.webhooks (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     webhook_endpoint_id uuid,
-    organization_id uuid
+    organization_id uuid NOT NULL
 );
 
 
@@ -4072,6 +4144,22 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 
 ALTER TABLE ONLY public.dunning_campaigns
     ADD CONSTRAINT dunning_campaigns_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: entitlement_entitlement_values entitlement_entitlement_values_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlement_values
+    ADD CONSTRAINT entitlement_entitlement_values_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: entitlement_entitlements entitlement_entitlements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlements
+    ADD CONSTRAINT entitlement_entitlements_pkey PRIMARY KEY (id);
 
 
 --
@@ -4483,6 +4571,14 @@ ALTER TABLE ONLY public.versions
 
 
 --
+-- Name: wallet_targets wallet_targets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_targets
+    ADD CONSTRAINT wallet_targets_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: wallet_transactions wallet_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4550,6 +4646,13 @@ CREATE INDEX idx_enqueued_per_organization ON public.usage_monitoring_subscripti
 
 
 --
+-- Name: idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_events_on_external_sub_id_and_org_id_and_code_and_timestamp ON public.events USING btree (external_subscription_id, organization_id, code, "timestamp") WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: idx_features_code_unique_per_organization; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4596,6 +4699,34 @@ CREATE UNIQUE INDEX idx_on_billing_entity_id_invoice_custom_section_id_bd78c547d
 --
 
 CREATE UNIQUE INDEX idx_on_dunning_campaign_id_currency_fbf233b2ae ON public.dunning_campaign_thresholds USING btree (dunning_campaign_id, currency) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_on_entitlement_entitlement_id_48c0b3356a; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_entitlement_entitlement_id_48c0b3356a ON public.entitlement_entitlement_values USING btree (entitlement_entitlement_id);
+
+
+--
+-- Name: idx_on_entitlement_feature_id_plan_id_c45949ea26; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_entitlement_feature_id_plan_id_c45949ea26 ON public.entitlement_entitlements USING btree (entitlement_feature_id, plan_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_on_entitlement_privilege_id_6a228dc433; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_entitlement_privilege_id_6a228dc433 ON public.entitlement_entitlement_values USING btree (entitlement_privilege_id);
+
+
+--
+-- Name: idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a ON public.entitlement_entitlement_values USING btree (entitlement_privilege_id, entitlement_entitlement_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -4666,6 +4797,13 @@ CREATE INDEX idx_on_organization_id_organization_sequential_id_2387146f54 ON pub
 --
 
 CREATE UNIQUE INDEX idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167 ON public.fees USING btree (pay_in_advance_event_transaction_id, charge_id, charge_filter_id) WHERE ((created_at > '2025-01-21 00:00:00'::timestamp without time zone) AND (pay_in_advance_event_transaction_id IS NOT NULL) AND (pay_in_advance = true));
+
+
+--
+-- Name: idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb ON public.charges USING btree (plan_id, billable_metric_id, pay_in_advance) WHERE (deleted_at IS NULL);
 
 
 --
@@ -5649,6 +5787,34 @@ CREATE UNIQUE INDEX index_dunning_campaigns_on_organization_id_and_code ON publi
 
 
 --
+-- Name: index_entitlement_entitlement_values_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_entitlement_entitlement_values_on_organization_id ON public.entitlement_entitlement_values USING btree (organization_id);
+
+
+--
+-- Name: index_entitlement_entitlements_on_entitlement_feature_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_entitlement_entitlements_on_entitlement_feature_id ON public.entitlement_entitlements USING btree (entitlement_feature_id);
+
+
+--
+-- Name: index_entitlement_entitlements_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_entitlement_entitlements_on_organization_id ON public.entitlement_entitlements USING btree (organization_id);
+
+
+--
+-- Name: index_entitlement_entitlements_on_plan_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_entitlement_entitlements_on_plan_id ON public.entitlement_entitlements USING btree (plan_id);
+
+
+--
 -- Name: index_entitlement_features_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5737,13 +5903,6 @@ CREATE INDEX index_events_on_organization_id ON public.events USING btree (organ
 --
 
 CREATE INDEX index_events_on_organization_id_and_code ON public.events USING btree (organization_id, code);
-
-
---
--- Name: index_events_on_organization_id_and_timestamp; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_events_on_organization_id_and_timestamp ON public.events USING btree (organization_id, "timestamp") WHERE (deleted_at IS NULL);
 
 
 --
@@ -6986,6 +7145,27 @@ CREATE INDEX index_versions_on_item_type_and_item_id ON public.versions USING bt
 
 
 --
+-- Name: index_wallet_targets_on_billable_metric_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_targets_on_billable_metric_id ON public.wallet_targets USING btree (billable_metric_id);
+
+
+--
+-- Name: index_wallet_targets_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_targets_on_organization_id ON public.wallet_targets USING btree (organization_id);
+
+
+--
+-- Name: index_wallet_targets_on_wallet_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_targets_on_wallet_id ON public.wallet_targets USING btree (wallet_id);
+
+
+--
 -- Name: index_wallet_transactions_on_credit_note_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7162,6 +7342,14 @@ ALTER TABLE ONLY public.usage_monitoring_triggered_alerts
 
 ALTER TABLE ONLY public.coupon_targets
     ADD CONSTRAINT fk_rails_0bb6dcc01f FOREIGN KEY (coupon_id) REFERENCES public.coupons(id);
+
+
+--
+-- Name: entitlement_entitlements fk_rails_0c9773c34d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlements
+    ADD CONSTRAINT fk_rails_0c9773c34d FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -7741,6 +7929,14 @@ ALTER TABLE ONLY public.applied_usage_thresholds
 
 
 --
+-- Name: entitlement_entitlement_values fk_rails_533b639bac; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlement_values
+    ADD CONSTRAINT fk_rails_533b639bac FOREIGN KEY (entitlement_entitlement_id) REFERENCES public.entitlement_entitlements(id);
+
+
+--
 -- Name: credits fk_rails_5628a713de; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8069,6 +8265,14 @@ ALTER TABLE ONLY public.invoice_custom_sections
 
 
 --
+-- Name: wallet_targets fk_rails_7d0e61668f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_targets
+    ADD CONSTRAINT fk_rails_7d0e61668f FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: charge_filter_values fk_rails_7da558cadc; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8109,6 +8313,14 @@ ALTER TABLE ONLY public.add_ons
 
 
 --
+-- Name: wallet_targets fk_rails_81eedc32c0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_targets
+    ADD CONSTRAINT fk_rails_81eedc32c0 FOREIGN KEY (wallet_id) REFERENCES public.wallets(id);
+
+
+--
 -- Name: payments fk_rails_84f4587409; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8138,6 +8350,14 @@ ALTER TABLE ONLY public.invoice_subscriptions
 
 ALTER TABLE ONLY public.adjusted_fees
     ADD CONSTRAINT fk_rails_885dc100ef FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: entitlement_entitlement_values fk_rails_8887954ec7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlement_values
+    ADD CONSTRAINT fk_rails_8887954ec7 FOREIGN KEY (entitlement_privilege_id) REFERENCES public.entitlement_privileges(id);
 
 
 --
@@ -8317,6 +8537,14 @@ ALTER TABLE ONLY public.integration_items
 
 
 --
+-- Name: entitlement_entitlement_values fk_rails_aa34dd5db6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlement_values
+    ADD CONSTRAINT fk_rails_aa34dd5db6 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: commitments_taxes fk_rails_aaa12f7d3e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8370,6 +8598,14 @@ ALTER TABLE ONLY public.billing_entities_invoice_custom_sections
 
 ALTER TABLE ONLY public.fees
     ADD CONSTRAINT fk_rails_b50dc82c1e FOREIGN KEY (group_id) REFERENCES public.groups(id);
+
+
+--
+-- Name: entitlement_entitlements fk_rails_b61aa73940; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlements
+    ADD CONSTRAINT fk_rails_b61aa73940 FOREIGN KEY (entitlement_feature_id) REFERENCES public.entitlement_features(id);
 
 
 --
@@ -8514,6 +8750,14 @@ ALTER TABLE ONLY public.wallet_transactions
 
 ALTER TABLE ONLY public.idempotency_records
     ADD CONSTRAINT fk_rails_d4f02c82b2 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: entitlement_entitlements fk_rails_d53f825a88; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlements
+    ADD CONSTRAINT fk_rails_d53f825a88 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
 
 
 --
@@ -8725,6 +8969,14 @@ ALTER TABLE ONLY public.fees_taxes
 
 
 --
+-- Name: wallet_targets fk_rails_fbd2b9fccb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_targets
+    ADD CONSTRAINT fk_rails_fbd2b9fccb FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
+
+
+--
 -- Name: adjusted_fees fk_rails_fd399a23d3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8747,6 +8999,60 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250709085218'),
+('20250709082136'),
+('20250708094414'),
+('20250707113718'),
+('20250707113717'),
+('20250707100102'),
+('20250707100101'),
+('20250707100026'),
+('20250707100025'),
+('20250707100013'),
+('20250707100012'),
+('20250707100010'),
+('20250707095956'),
+('20250707095955'),
+('20250707095224'),
+('20250707095223'),
+('20250707094932'),
+('20250707094931'),
+('20250707094901'),
+('20250707094900'),
+('20250707090348'),
+('20250707090347'),
+('20250707090329'),
+('20250707090328'),
+('20250707090314'),
+('20250707090313'),
+('20250707085725'),
+('20250707085724'),
+('20250707085651'),
+('20250707085650'),
+('20250707085634'),
+('20250707085633'),
+('20250707085615'),
+('20250707085614'),
+('20250707083222'),
+('20250707083221'),
+('20250707083211'),
+('20250707083210'),
+('20250707083160'),
+('20250707083159'),
+('20250707082521'),
+('20250707082520'),
+('20250707082510'),
+('20250707082509'),
+('20250707082436'),
+('20250707082435'),
+('20250707081911'),
+('20250707081910'),
+('20250707081837'),
+('20250707081836'),
+('20250707081826'),
+('20250707081825'),
+('20250704800001'),
+('20250703133126'),
 ('20250630180000'),
 ('20250627134933'),
 ('20250627134932'),

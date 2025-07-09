@@ -5,15 +5,33 @@ require "rails_helper"
 RSpec.describe Plan, type: :model do
   subject(:plan) { build(:plan, trial_period: 3) }
 
-  it { is_expected.to have_one(:minimum_commitment) }
-  it { is_expected.to have_many(:usage_thresholds) }
+  it { expect(described_class).to be_soft_deletable }
+
+  it do
+    expect(subject).to have_one(:minimum_commitment)
+    expect(subject).to have_many(:usage_thresholds)
+    expect(subject).to have_many(:commitments)
+    expect(subject).to have_many(:charges).dependent(:destroy)
+    expect(subject).to have_many(:billable_metrics).through(:charges)
+    expect(subject).to have_many(:subscriptions)
+    expect(subject).to have_many(:customers).through(:subscriptions)
+    expect(subject).to have_many(:children).class_name("Plan").dependent(:destroy)
+    expect(subject).to have_many(:coupon_targets)
+    expect(subject).to have_many(:coupons).through(:coupon_targets)
+    expect(subject).to have_many(:invoices).through(:subscriptions)
+    expect(subject).to have_many(:usage_thresholds)
+    expect(subject).to have_many(:applied_taxes).class_name("Plan::AppliedTax").dependent(:destroy)
+    expect(subject).to have_many(:taxes).through(:applied_taxes)
+    expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement").dependent(:destroy)
+    expect(subject).to have_many(:entitlement_values).through(:entitlements).source(:values).class_name("Entitlement::EntitlementValue").dependent(:destroy)
+
+    expect(subject).to validate_presence_of(:interval)
+    expect(subject).to define_enum_for(:interval).with_values(Plan::INTERVALS)
+  end
 
   describe "Clickhouse associations", clickhouse: true do
     it { is_expected.to have_many(:activity_logs).class_name("Clickhouse::ActivityLog") }
   end
-
-  it { is_expected.to validate_presence_of(:interval) }
-  it { is_expected.to define_enum_for(:interval).with_values(Plan::INTERVALS) }
 
   it_behaves_like "paper_trail traceable"
 
@@ -27,7 +45,7 @@ RSpec.describe Plan, type: :model do
     end
   end
 
-  describe ".has_trial?" do
+  describe "#has_trial?" do
     it "returns true when trial_period" do
       expect(plan).to have_trial
     end
@@ -41,7 +59,7 @@ RSpec.describe Plan, type: :model do
     end
   end
 
-  describe ".yearly_amount_cents" do
+  describe "#yearly_amount_cents" do
     let(:plan) do
       build(:plan, interval: :yearly, amount_cents: 100)
     end
@@ -127,6 +145,20 @@ RSpec.describe Plan, type: :model do
       create(:invoice_subscription, invoice: invoice2, subscription: subscription2)
 
       expect(plan.draft_invoices_count).to eq(2)
+    end
+  end
+
+  describe "#pay_in_arrears?" do
+    context "when pay_in_advance is true" do
+      let(:plan) { build(:plan, :pay_in_advance) }
+
+      it { expect(plan.pay_in_arrears?).to be(false) }
+    end
+
+    context "when pay_in_advance is false" do
+      let(:plan) { build(:plan) }
+
+      it { expect(plan.pay_in_arrears?).to be(true) }
     end
   end
 end

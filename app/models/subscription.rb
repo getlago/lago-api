@@ -244,7 +244,7 @@ end
 #  updated_at               :datetime         not null
 #  customer_id              :uuid             not null
 #  external_id              :string           not null
-#  organization_id          :uuid
+#  organization_id          :uuid             not null
 #  plan_id                  :uuid             not null
 #  previous_subscription_id :uuid
 #

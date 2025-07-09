@@ -102,7 +102,7 @@ module WalletTransactions
         metadata:
       ).wallet_transaction
 
-      BillPaidCreditJob.perform_later(wallet_transaction, Time.current.to_i)
+      BillPaidCreditJob.perform_after_commit(wallet_transaction, Time.current.to_i)
 
       wallet_transaction
     end

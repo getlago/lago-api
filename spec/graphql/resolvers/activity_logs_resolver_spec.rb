@@ -27,7 +27,7 @@ RSpec.describe Resolvers::ActivityLogsResolver, type: :graphql, clickhouse: true
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "audit_logs:view"
 
-  context "without premium feature" do
+  shared_examples "unauthorized error" do
     it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
@@ -38,6 +38,22 @@ RSpec.describe Resolvers::ActivityLogsResolver, type: :graphql, clickhouse: true
 
       expect_graphql_error(result:, message: "unauthorized")
     end
+  end
+
+  context "without premium feature" do
+    it_behaves_like "unauthorized error"
+  end
+
+  context "without database configuration" do
+    around { |test| lago_premium!(&test) }
+
+    before do
+      ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
+      ENV["LAGO_KAFKA_ACTIVITY_LOGS_TOPIC"] = nil
+      ENV["LAGO_CLICKHOUSE_ENABLED"] = nil
+    end
+
+    it_behaves_like "unauthorized error"
   end
 
   context "with premium feature" do

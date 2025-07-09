@@ -173,12 +173,13 @@ end
 #
 # Indexes
 #
-#  index_charges_on_billable_metric_id  (billable_metric_id) WHERE (deleted_at IS NULL)
-#  index_charges_on_deleted_at          (deleted_at)
-#  index_charges_on_organization_id     (organization_id)
-#  index_charges_on_parent_id           (parent_id)
-#  index_charges_on_plan_id             (plan_id)
-#  index_charges_pay_in_advance         (billable_metric_id) WHERE ((deleted_at IS NULL) AND (pay_in_advance = true))
+#  idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb  (plan_id,billable_metric_id,pay_in_advance) WHERE (deleted_at IS NULL)
+#  index_charges_on_billable_metric_id                          (billable_metric_id) WHERE (deleted_at IS NULL)
+#  index_charges_on_deleted_at                                  (deleted_at)
+#  index_charges_on_organization_id                             (organization_id)
+#  index_charges_on_parent_id                                   (parent_id)
+#  index_charges_on_plan_id                                     (plan_id)
+#  index_charges_pay_in_advance                                 (billable_metric_id) WHERE ((deleted_at IS NULL) AND (pay_in_advance = true))
 #
 # Foreign Keys
 #

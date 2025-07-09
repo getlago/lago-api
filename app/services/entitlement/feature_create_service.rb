@@ -6,7 +6,7 @@ module Entitlement
 
     def initialize(organization:, params:)
       @organization = organization
-      @params = params
+      @params = params.to_h.with_indifferent_access
       super
     end
 
@@ -14,7 +14,7 @@ module Entitlement
       return result.not_found_failure!(resource: "organization") unless organization
 
       ActiveRecord::Base.transaction do
-        feature = Entitlement::Feature.create!(
+        feature = Feature.create!(
           organization:,
           code: params[:code],
           name: params[:name],
@@ -28,9 +28,11 @@ module Entitlement
         result.feature = feature
       end
 
+      SendWebhookJob.perform_after_commit("feature.created", result.feature)
+
       result
     rescue ActiveRecord::RecordInvalid => e
-      if e.record.is_a?(Entitlement::Privilege)
+      if e.record.is_a?(Privilege)
         # because you can get "code" error from feature or privilege, I think prefixing the field name is helpful!
         errors = e.record.errors.messages.transform_keys { |key| :"privilege.#{key}" }
         result.validation_failure!(errors:)
@@ -52,7 +54,6 @@ module Entitlement
           code:,
           name: privilege_params[:name]
         )
-        # Use DB default if not set
         privilege.value_type = privilege_params[:value_type] if privilege_params.has_key? :value_type
         privilege.config = privilege_params[:config] if privilege_params.has_key? :config
 

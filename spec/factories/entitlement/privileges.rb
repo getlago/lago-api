@@ -11,18 +11,22 @@ FactoryBot.define do
   end
 
   trait :integer_type do
+    code { "int" }
     value_type { "integer" }
   end
 
   trait :string_type do
+    code { "str" }
     value_type { "string" }
   end
 
   trait :boolean_type do
+    code { "bool" }
     value_type { "boolean" }
   end
 
   trait :select_type do
+    code { "opt" }
     value_type { "select" }
     config { {select_options: ["option1", "option2", "option3"]} }
   end

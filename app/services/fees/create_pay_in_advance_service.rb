@@ -61,15 +61,27 @@ module Fees
       cache_aggregation_result(aggregation_result:, charge_filter:)
 
       charge_model_result = apply_charge_model(aggregation_result:, properties:)
-      unit_amount_cents = charge_model_result.unit_amount * subscription.plan.amount.currency.subunit_to_unit
+
+      if charge.applied_pricing_unit
+        pricing_unit_usage = PricingUnitUsage.build_from_aggregation(charge_model_result, charge.applied_pricing_unit)
+        amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
+          .to_fiat_currency_cents(subscription.plan.amount.currency)
+          .values_at(:amount_cents, :precise_amount_cents, :unit_amount_cents, :precise_unit_amount)
+      else
+        pricing_unit_usage = nil
+        amount_cents = charge_model_result.amount
+        precise_amount_cents = charge_model_result.precise_amount
+        unit_amount_cents = charge_model_result.unit_amount * subscription.plan.amount.currency.subunit_to_unit
+        precise_unit_amount = charge_model_result.unit_amount
+      end
 
       Fee.new(
         subscription:,
         charge:,
         organization_id: customer.organization_id,
         billing_entity_id: customer.billing_entity_id,
-        amount_cents: charge_model_result.amount,
-        precise_amount_cents: charge_model_result.precise_amount,
+        amount_cents:,
+        precise_amount_cents:,
         amount_currency: subscription.plan.amount_currency,
         fee_type: :charge,
         invoiceable: charge,
@@ -85,9 +97,10 @@ module Fees
         taxes_amount_cents: 0,
         taxes_precise_amount_cents: 0.to_d,
         unit_amount_cents:,
-        precise_unit_amount: charge_model_result.unit_amount,
+        precise_unit_amount:,
         grouped_by: format_grouped_by,
-        amount_details: charge_model_result.amount_details || {}
+        amount_details: charge_model_result.amount_details || {},
+        pricing_unit_usage:
       )
     end
 

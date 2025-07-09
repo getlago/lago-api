@@ -6,11 +6,11 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
   subject(:fill_service) { described_class.new(invoice:, subscriptions:) }
 
   let(:organization) { create(:organization) }
-  let(:customer) { create(:customer, organization:) }
+  let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
   let(:subscription) { create(:subscription, customer:) }
   let(:subscriptions) { [subscription] }
 
-  let(:timestamp) { Time.zone.parse("2025-01-01T01:00:00") }
+  let(:timestamp) { Time.parse("2025-07-01 04:10:02.000000000 UTC") }
 
   let(:invoice) do
     create(
@@ -27,11 +27,15 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
       subscription:,
       invoice:,
       timestamp:,
-      from_datetime: Time.zone.parse("2024-12-01T00:00:00"),
-      to_datetime: Time.zone.parse("2024-12-31T23:59:59"),
-      charges_from_datetime: Time.zone.parse("2024-12-01T00:00:00.123456"),
-      charges_to_datetime: Time.zone.parse("2024-12-31T23:59:59.123456")
+      from_datetime: Time.parse("2025-06-06 04:00:00.000000000 +0000"),
+      to_datetime: Time.parse("2025-07-01 03:59:59.999999000 +0000"),
+      charges_from_datetime: Time.parse("2025-06-07 04:00:00.000000000 +0000"),
+      charges_to_datetime: Time.parse("2025-07-01 03:59:59.999999000 +0000")
     )
+  end
+
+  let(:usage_date) do
+    invoice_subscription.charges_to_datetime.in_time_zone(invoice.customer.applicable_timezone).to_date
   end
 
   before { invoice_subscription }
@@ -62,11 +66,11 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
             subscription:,
             external_subscription_id: subscription.external_id,
             usage: Hash,
-            from_datetime: invoice_subscription.from_datetime,
-            to_datetime: invoice_subscription.to_datetime,
+            from_datetime: invoice_subscription.charges_from_datetime.change(usec: 0),
+            to_datetime: invoice_subscription.charges_to_datetime.change(usec: 0),
             refreshed_at: invoice_subscription.timestamp,
             usage_diff: Hash,
-            usage_date: invoice_subscription.charges_to_datetime.to_date
+            usage_date:
           )
         end
       end
@@ -92,10 +96,10 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
             customer:,
             subscription:,
             external_subscription_id: subscription.external_id,
-            from_datetime: invoice_subscription.from_datetime,
-            to_datetime: invoice_subscription.to_datetime,
+            from_datetime: invoice_subscription.charges_from_datetime.change(usec: 0),
+            to_datetime: invoice_subscription.charges_to_datetime.change(usec: 0),
             refreshed_at: invoice_subscription.timestamp,
-            usage_date: invoice_subscription.charges_to_datetime.to_date
+            usage_date:
           )
         end
 
@@ -114,10 +118,10 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
             subscription: subscription2,
             invoice:,
             timestamp:,
-            from_datetime: Time.zone.parse("2024-12-01T00:00:00"),
-            to_datetime: Time.zone.parse("2024-12-31T23:59:59"),
-            charges_from_datetime: Time.zone.parse("2024-12-01T00:00:00"),
-            charges_to_datetime: Time.zone.parse("2024-12-31T23:59:59")
+            from_datetime: Time.parse("2025-06-06 04:00:00.000000000 +0000"),
+            to_datetime: Time.parse("2025-07-01 03:59:59.999999000 +0000"),
+            charges_from_datetime: Time.parse("2025-06-07 04:00:00.000000000 +0000"),
+            charges_to_datetime: Time.parse("2025-07-01 03:59:59.999999000 +0000")
           )
         end
 
@@ -140,11 +144,11 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
               subscription:,
               external_subscription_id: subscription.external_id,
               usage: Hash,
-              from_datetime: invoice_subscription.from_datetime,
-              to_datetime: invoice_subscription.to_datetime,
+              from_datetime: invoice_subscription.charges_from_datetime.change(usec: 0),
+              to_datetime: invoice_subscription.charges_to_datetime.change(usec: 0),
               refreshed_at: invoice_subscription.timestamp,
               usage_diff: Hash,
-              usage_date: invoice_subscription.charges_to_datetime.to_date
+              usage_date:
             )
           end
         end
@@ -171,7 +175,7 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
           from_datetime: invoice_subscription.charges_from_datetime,
           to_datetime: invoice_subscription.charges_to_datetime,
           refreshed_at: invoice_subscription.timestamp,
-          usage_date: invoice_subscription.charges_to_datetime.to_date
+          usage_date:
         )
       end
 
@@ -192,7 +196,7 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
           from_datetime: invoice_subscription.charges_from_datetime.change(usec: 0),
           to_datetime: invoice_subscription.charges_to_datetime.change(usec: 0),
           refreshed_at: invoice_subscription.timestamp,
-          usage_date: invoice_subscription.charges_to_datetime.to_date
+          usage_date:
         )
       end
 
@@ -336,6 +340,17 @@ RSpec.describe DailyUsages::FillFromInvoiceService, type: :service do
         expect(fees.count).to eq(1)
         expect(fees.first.subscription_id).to eq(subscription.id)
       end
+    end
+  end
+
+  describe "#usage_date" do
+    subject(:local_date) { fill_service.send(:usage_date, invoice_subscription) }
+
+    it "returns the charges_to_datetime in the customer's timezone as a date" do
+      # It is still June 30th in America/New_York timezone
+      # even if charges_to_datetime: Time.parse("2025-07-01 03:59:59.999999000 +0000")
+      expect(local_date).to eq(Date.parse("2025-06-30"))
+      expect(local_date).not_to eq(Date.parse("2025-07-01"))
     end
   end
 end

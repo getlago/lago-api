@@ -3,9 +3,7 @@
 module Webhooks
   module Invoices
     class PaymentDisputeLostService < Webhooks::BaseService
-      def current_organization
-        @current_organization ||= object.organization
-      end
+      private
 
       def object_serializer
         ::V1::Invoices::PaymentDisputeLostSerializer.new(

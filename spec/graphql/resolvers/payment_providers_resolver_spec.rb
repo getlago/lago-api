@@ -219,7 +219,7 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
         expect(stripe_provider.success_redirect_url).to be_a String
 
         payment_providers_response = result["data"]["paymentProviders"]["collection"]
-        expect(payment_providers_response.map(&:values)).to eq [[nil], [nil, nil], [nil], [nil]]
+        expect(payment_providers_response.map(&:values)).to contain_exactly([nil], [nil, nil], [nil], [nil])
       end
     end
 
@@ -233,7 +233,12 @@ RSpec.describe Resolvers::PaymentProvidersResolver, type: :graphql do
         )
 
         payment_providers_response = result["data"]["paymentProviders"]["collection"]
-        expect(payment_providers_response.map(&:values)).to eq [[adyen_provider.live_prefix], [cashfree_provider.client_id, cashfree_provider.client_secret], [true], [stripe_provider.success_redirect_url]]
+        expect(payment_providers_response.map(&:values)).to contain_exactly(
+          [adyen_provider.live_prefix],
+          [cashfree_provider.client_id, cashfree_provider.client_secret],
+          [true],
+          [stripe_provider.success_redirect_url]
+        )
       end
     end
   end

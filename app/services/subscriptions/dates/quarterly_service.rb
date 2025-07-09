@@ -6,7 +6,7 @@ module Subscriptions
       private
 
       def compute_from_date(date = base_date)
-        if plan.pay_in_advance? || terminated_pay_in_arrear?
+        if plan.pay_in_advance? || terminated_pay_in_arrears?
           return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date.beginning_of_quarter
         end
 
@@ -18,7 +18,7 @@ module Subscriptions
           return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date.beginning_of_quarter
         end
 
-        return compute_from_date if plan.pay_in_arrear?
+        return compute_from_date if plan.pay_in_arrears?
         return base_date.beginning_of_quarter if calendar?
 
         previous_anniversary_day(base_date)
@@ -148,7 +148,7 @@ module Subscriptions
       def should_find_previous_billing_date?(date, billing_months, day)
         return false if last_day_of_month?(date) && last_day_of_month?(subscription_at)
 
-        return true if date.day < day && terminated_pay_in_arrear?
+        return true if date.day < day && terminated_pay_in_arrears?
         return true if (date.day + 1) < day && last_day_of_month?(subscription_at)
         return true if date.day < day && !last_day_of_month?(subscription_at)
         return true if billing_months.exclude?(date.month)
