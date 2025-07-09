@@ -80,6 +80,49 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
       end
     end
 
+    context "when fee's charge uses pricing units" do
+      before do
+        create(
+          :applied_pricing_unit,
+          organization:,
+          conversion_rate: 0.25,
+          pricing_unitable: charge
+        )
+      end
+
+      it "instantiates a true-up fee" do
+        travel_to(DateTime.new(2023, 4, 1)) do
+          expect(result).to be_success
+
+          expect(result.true_up_fee).to be_new_record.and have_attributes(
+            subscription: fee.subscription,
+            charge: fee.charge,
+            amount_currency: fee.currency,
+            fee_type: "charge",
+            invoiceable: fee.charge,
+            properties: fee.properties,
+            payment_status: "pending",
+            units: 1,
+            events_count: 0,
+            charge_filter: nil,
+            amount_cents: 75,
+            precise_amount_cents: 75.0,
+            taxes_amount_cents: 2,
+            taxes_precise_amount_cents: 2.0000000001,
+            unit_amount_cents: 75,
+            precise_unit_amount: 0.75,
+            true_up_parent_fee_id: fee.id
+          )
+
+          expect(result.true_up_fee.pricing_unit_usage).to be_new_record.and have_attributes(
+            amount_cents: 300,
+            precise_amount_cents: 300.0,
+            unit_amount_cents: 300
+          )
+        end
+      end
+    end
+
     context "when prorated" do
       let(:used_amount_cents) { 200 }
       let(:used_precise_amount_cents) { 200.0 }

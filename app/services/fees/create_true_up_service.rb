@@ -15,10 +15,16 @@ module Fees
       return result unless fee
       return result if used_amount_cents >= prorated_min_amount_cents
 
-      amount_cents = (prorated_min_amount_cents - used_amount_cents).round
-      precise_amount_cents = prorated_min_amount_cents - used_precise_amount_cents
-      unit_amount_cents = amount_cents
-      precise_unit_amount = precise_amount_cents / charge.plan.amount.currency.subunit_to_unit.to_d
+      if charge.applied_pricing_unit
+        amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
+          .to_fiat_currency_cents(charge.plan.amount.currency)
+          .values_at(:amount_cents, :precise_amount_cents, :unit_amount_cents, :precise_unit_amount)
+      else
+        amount_cents = (prorated_min_amount_cents - used_amount_cents).round
+        precise_amount_cents = prorated_min_amount_cents - used_precise_amount_cents
+        unit_amount_cents = amount_cents
+        precise_unit_amount = precise_amount_cents / charge.plan.amount.currency.subunit_to_unit
+      end
 
       true_up_fee = fee.dup
       true_up_fee.assign_attributes(
@@ -30,7 +36,8 @@ module Fees
         charge_filter_id: nil,
         true_up_parent_fee: fee,
         unit_amount_cents:,
-        precise_unit_amount:
+        precise_unit_amount:,
+        pricing_unit_usage:
       )
 
       result.true_up_fee = true_up_fee
@@ -59,6 +66,27 @@ module Fees
         subscription,
         boundaries.timestamp ? Time.zone.parse(boundaries.timestamp) : Time.current,
         current_usage: subscription.terminated? && subscription.upgraded?
+      )
+    end
+
+    def pricing_unit_usage
+      return @pricing_unit_usage if defined?(@pricing_unit_usage)
+
+      unless charge.applied_pricing_unit
+        @pricing_unit_usage = nil
+        return
+      end
+
+      amount_cents = (prorated_min_amount_cents - used_amount_cents).round
+      precise_amount_cents = prorated_min_amount_cents - used_precise_amount_cents
+
+      @pricing_unit_usage = PricingUnitUsage.new(
+        pricing_unit: charge.pricing_unit,
+        short_name: charge.pricing_unit.short_name,
+        conversion_rate: charge.applied_pricing_unit.conversion_rate,
+        amount_cents:,
+        precise_amount_cents:,
+        unit_amount_cents: amount_cents
       )
     end
   end
