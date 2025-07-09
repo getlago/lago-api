@@ -6,6 +6,12 @@ module Utils
       new(*, **, &).produce
     end
 
+    def self.available?
+      ENV["LAGO_CLICKHOUSE_ENABLED"].present? &&
+        ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].present? &&
+        ENV["LAGO_KAFKA_API_LOGS_TOPIC"].present?
+    end
+
     def initialize(request, response, organization:, request_id: SecureRandom.uuid, &block)
       @request = request
       @response = response
@@ -15,8 +21,7 @@ module Utils
     end
 
     def produce
-      return if ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"].blank?
-      return if ENV["LAGO_KAFKA_API_LOGS_TOPIC"].blank?
+      return unless self.class.available?
 
       current_time = Time.current.iso8601[...-1]
       Karafka.producer.produce_async(

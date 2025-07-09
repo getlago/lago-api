@@ -19,6 +19,8 @@ class ActivityLogsQuery < BaseQuery
   MAX_AGE = 30.days
 
   def call
+    return result.forbidden_failure! unless Utils::ActivityLog.available?
+
     activity_logs = Clickhouse::ActivityLog.where(organization_id: organization.id, logged_at: MAX_AGE.ago..)
     activity_logs = paginate(activity_logs)
     activity_logs = activity_logs.order(logged_at: :desc)

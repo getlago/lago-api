@@ -85,5 +85,42 @@ RSpec.describe Utils::ApiLog, type: :service do
         expect(karafka_producer).not_to have_received(:produce_async)
       end
     end
+
+    describe ".available?" do
+      subject { api_log.available? }
+
+      context "without clickhouse" do
+        before do
+          ENV["LAGO_CLICKHOUSE_ENABLED"] = nil
+        end
+
+        it { is_expected.to be_falsey }
+      end
+
+      context "without kafka vars" do
+        before do
+          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
+          ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = nil
+          ENV["LAGO_CLICKHOUSE_ENABLED"] = "true"
+        end
+
+        it { is_expected.to be_falsey }
+      end
+
+      context "with everything configured" do
+        before do
+          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = "kafka"
+          ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = "api_logs"
+          ENV["LAGO_CLICKHOUSE_ENABLED"] = "true"
+        end
+
+        after do
+          ENV["LAGO_KAFKA_BOOTSTRAP_SERVERS"] = nil
+          ENV["LAGO_KAFKA_API_LOGS_TOPIC"] = nil
+        end
+
+        it { is_expected.to be_truthy }
+      end
+    end
   end
 end

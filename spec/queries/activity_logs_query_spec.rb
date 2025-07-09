@@ -156,4 +156,15 @@ RSpec.describe ActivityLogsQuery, type: :query, clickhouse: true do
       expect(described_class.call(organization:, pagination:, filters:).activity_logs).to be_empty
     end
   end
+
+  context "when activty logs are not available" do
+    before do
+      ENV["LAGO_CLICKHOUSE_ENABLED"] = nil
+    end
+
+    it { expect(result).not_to be_success }
+    it { expect(result).to be_failure }
+    it { expect(result.error).to be_a(BaseService::ForbiddenFailure) }
+    it { expect(result.error.code).to eq("feature_unavailable") }
+  end
 end

@@ -17,6 +17,8 @@ class ApiLogsQuery < BaseQuery
   MAX_AGE = 30.days
 
   def call
+    return result.forbidden_failure! unless Utils::ApiLog.available?
+
     api_logs = Clickhouse::ApiLog.where(organization_id: organization.id, logged_at: MAX_AGE.ago..)
     api_logs = api_logs.order(logged_at: :desc)
 
