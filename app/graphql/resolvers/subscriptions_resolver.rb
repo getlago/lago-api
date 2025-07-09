@@ -24,7 +24,7 @@ module Resolvers
       result = SubscriptionsQuery.call(
         organization: current_organization,
         pagination: {page:, limit:},
-        filters: {plan_code:, status:, external_customer_id:, overriden:, exclude_next_subscriptions: true },
+        filters: {plan_code:, status:, external_customer_id:, overriden:, exclude_next_subscriptions: true},
         search_term:
       )
 

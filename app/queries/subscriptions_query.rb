@@ -7,12 +7,12 @@ class SubscriptionsQuery < BaseQuery
   def call
     subscriptions = base_scope.result
     subscriptions = paginate(subscriptions)
-    subscriptions = subscriptions.where(previous_subscription_id: nil) if filters.exclude_next_subscriptions
+    subscriptions = with_excluded_next_subscriptions(subscriptions) if filters.exclude_next_subscriptions
     subscriptions = subscriptions.where(status: filtered_statuses) if valid_status?
     subscriptions = apply_consistent_ordering(
       subscriptions,
       default_order: <<~SQL.squish
-        subscriptions.started_at DESC NULLS LAST,
+        subscriptions.subscription_at DESC NULLS LAST,
         subscriptions.created_at ASC
       SQL
     )
@@ -69,6 +69,18 @@ class SubscriptionsQuery < BaseQuery
       scope.joins(:plan).where.not(plan: {parent_id: nil})
     else
       scope.joins(:plan).where(plan: {parent_id: nil})
+    end
+  end
+
+  def with_excluded_next_subscriptions(scope)
+    if filters.status.blank?
+      scope.where(previous_subscription_id: nil)
+    else
+      # Next subscription is included in previous by graphql object, but if their statuses do not match, previous
+      # subscription can be filtered out, while next subscription is not.
+      status_values = filters.status.map { |s| Subscription.statuses[s] }
+      scope.joins("LEFT JOIN subscriptions AS prev_subscriptions ON subscriptions.previous_subscription_id = prev_subscriptions.id")
+        .where("subscriptions.previous_subscription_id IS NULL OR (prev_subscriptions.status NOT IN (#{status_values.join(",")}) AND subscriptions.status IN (#{status_values.join(",")}))")
     end
   end
 
