@@ -25,6 +25,8 @@ if ENV["LAGO_SIDEKIQ_WEB"] == "true"
 end
 
 Sidekiq.configure_server do |config|
+  # Super fetch is only available in Sidekiq Pro. See https://github.com/sidekiq/sidekiq/wiki/Reliability.
+  config.super_fetch! if Sidekiq.pro?
   config.redis = redis_config
   config.logger = nil
   config[:max_retries] = 0
