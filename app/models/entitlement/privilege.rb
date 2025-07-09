@@ -20,6 +20,8 @@ module Entitlement
 
     validate :validate_config
 
+    attribute :value_type, :string, default: "string"
+
     private
 
     def validate_config
@@ -50,7 +52,7 @@ end
 #  config                 :jsonb
 #  deleted_at             :datetime
 #  name                   :string
-#  value_type             :enum             not null
+#  value_type             :enum             default("string"), not null
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #  entitlement_feature_id :uuid             not null

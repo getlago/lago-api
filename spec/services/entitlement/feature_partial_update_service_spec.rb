@@ -165,7 +165,9 @@ RSpec.describe Entitlement::FeaturePartialUpdateService, type: :service do
 
         expect(result).to be_success
         expect(feature.privileges.reload.count).to eq(3) # 2 existing + 1 new
-        expect(feature.privileges.find_by(code: new_privilege_code).name).to eq("New Privilege")
+        p = feature.privileges.find_by(code: new_privilege_code)
+        expect(p.name).to eq("New Privilege")
+        expect(p.value_type).to eq("string")
       end
 
       context "when new privilege params are invalid" do

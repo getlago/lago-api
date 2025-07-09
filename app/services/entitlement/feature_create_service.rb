@@ -54,8 +54,8 @@ module Entitlement
           code:,
           name: privilege_params[:name]
         )
-        privilege.value_type = privilege_params[:value_type] || "string"
-        privilege.config = privilege_params[:config] if privilege_params.has_key? :config # Use DB default if not set
+        privilege.value_type = privilege_params[:value_type] if privilege_params.has_key? :value_type
+        privilege.config = privilege_params[:config] if privilege_params.has_key? :config
 
         privilege.save!
       end

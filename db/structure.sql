@@ -1909,7 +1909,7 @@ CREATE TABLE public.entitlement_privileges (
     entitlement_feature_id uuid NOT NULL,
     code character varying NOT NULL,
     name character varying,
-    value_type public.entitlement_privilege_value_types NOT NULL,
+    value_type public.entitlement_privilege_value_types DEFAULT 'boolean'::public.entitlement_privilege_value_types NOT NULL,
     config jsonb DEFAULT '{}'::jsonb,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
@@ -8924,6 +8924,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250709082136'),
 ('20250708094414'),
 ('20250707113718'),
 ('20250707113717'),

@@ -165,6 +165,7 @@ RSpec.describe Entitlement::FeatureFullUpdateService, type: :service do
         expect(feature.privileges.reload.count).to eq(1)
         expect(feature.privileges.sole.code).to eq(new_privilege_code)
         expect(feature.privileges.sole.name).to eq("New Privilege")
+        expect(feature.privileges.sole.value_type).to eq("string")
       end
 
       context "when new privilege params are invalid" do
