@@ -14,5 +14,6 @@ RSpec.describe Types::Customers::Usage::Charge do
     expect(subject).to have_field(:charge).of_type("Charge!")
     expect(subject).to have_field(:grouped_usage).of_type("[GroupedChargeUsage!]!")
     expect(subject).to have_field(:filters).of_type("[ChargeFilterUsage!]")
+    expect(subject).to have_field(:pricing_unit_amount_cents).of_type("BigInt")
   end
 end
