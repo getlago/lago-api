@@ -2,16 +2,17 @@
 
 class SubscriptionsQuery < BaseQuery
   Result = BaseResult[:subscriptions]
-  Filters = BaseFilters[:external_customer_id, :plan_code, :status, :customer, :overriden]
+  Filters = BaseFilters[:external_customer_id, :plan_code, :status, :customer, :overriden, :exclude_next_subscriptions]
 
   def call
     subscriptions = base_scope.result
     subscriptions = paginate(subscriptions)
+    subscriptions = subscriptions.where(previous_subscription_id: nil) if filters.exclude_next_subscriptions
     subscriptions = subscriptions.where(status: filtered_statuses) if valid_status?
     subscriptions = apply_consistent_ordering(
       subscriptions,
       default_order: <<~SQL.squish
-        subscriptions.started_at ASC NULLS LAST,
+        subscriptions.started_at DESC NULLS LAST,
         subscriptions.created_at ASC
       SQL
     )
