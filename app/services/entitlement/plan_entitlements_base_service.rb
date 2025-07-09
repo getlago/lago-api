@@ -70,6 +70,7 @@ module Entitlement
       result.fail_with_error!(e)
     rescue ActiveRecord::RecordInvalid => e
       if e.record.is_a?(Entitlement::EntitlementValue)
+        # TODO: Should be `privilege.` ????
         errors = e.record.errors.messages.transform_keys { |key| :"entitlement_value.#{key}" }
         result.validation_failure!(errors:)
       else

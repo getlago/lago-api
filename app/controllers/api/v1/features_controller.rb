@@ -64,7 +64,8 @@ module Api
 
         result = ::Entitlement::FeatureUpdateService.call(
           feature:,
-          params: feature_update_params
+          params: feature_update_params,
+          partial: true
         )
 
         if result.success?

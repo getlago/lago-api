@@ -10,6 +10,11 @@ billable_metrics:
   create:
   update:
   delete:
+features:
+  view:
+  create:
+  update:
+  delete:
 data_api:
   view:
 plans:

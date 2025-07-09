@@ -96,6 +96,26 @@ RSpec.describe Entitlement::FeatureCreateService, type: :service do
       end
     end
 
+    context "when privilege value_type is not set" do
+      let(:params) do
+        {
+          code: "seats",
+          name: "Number of seats",
+          description: "Number of users of the account",
+          privileges: {
+            "max_admins" => {}
+          }
+        }
+      end
+
+      it "defaults to string" do
+        result = subject
+
+        expect(result).to be_success
+        expect(result.feature.privileges.sole.value_type).to eq "string"
+      end
+    end
+
     context "when privilege value_type is invalid" do
       let(:params) do
         {

@@ -6,7 +6,7 @@ module Entitlement
 
     def initialize(organization:, params:)
       @organization = organization
-      @params = params
+      @params = params.to_h.with_indifferent_access
       super
     end
 
@@ -54,7 +54,6 @@ module Entitlement
           code:,
           name: privilege_params[:name]
         )
-        # Use DB default if not set
         privilege.value_type = privilege_params[:value_type] if privilege_params.has_key? :value_type
         privilege.config = privilege_params[:config] if privilege_params.has_key? :config
 
