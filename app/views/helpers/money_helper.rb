@@ -2,7 +2,7 @@
 
 class MoneyHelper
   SYMBOLS_CURRENCIES = %w[$ € £ ¥].freeze
-  DEFAULT_STUB_CURRENCY = "USD".freeze
+  DEFAULT_STUB_CURRENCY = "USD"
 
   def self.format(money)
     money&.format(
@@ -26,8 +26,6 @@ class MoneyHelper
     amount_cents = normalize_precision(amount_cents)
     format_with_custom_currency(amount_cents, currency.short_name)
   end
-
-  private
 
   def self.currency_format(money_currency)
     if SYMBOLS_CURRENCIES.include?(money_currency&.symbol)
