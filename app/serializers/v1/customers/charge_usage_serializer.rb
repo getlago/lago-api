@@ -21,7 +21,7 @@ module V1
       private
 
       def calculate_usage_data(fees)
-        usage_calculator = ::Customers::FeesUsageCalculationService.new(
+        usage_calculator = SubscriptionUsageFee.new(
           fees:,
           from_datetime: fees.first.properties["from_datetime"],
           to_datetime: fees.first.properties["to_datetime"],

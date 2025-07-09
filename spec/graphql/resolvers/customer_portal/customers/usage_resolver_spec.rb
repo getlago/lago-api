@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graphql do
-  let(:now) { DateTime.parse("2025-06-15").in_time_zone }
+  let(:now) { Time.zone.parse("2025-06-15").in_time_zone }
   let(:timestamp) { now }
   let(:query) do
     <<~GQL

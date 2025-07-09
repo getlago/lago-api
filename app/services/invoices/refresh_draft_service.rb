@@ -74,10 +74,10 @@ module Invoices
         # NOTE: In case of a refresh the same day of the termination.
         invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
 
-        unless tax_error?(calculate_result.error)
-          if invoice.should_update_hubspot_invoice?
-            Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice: invoice.reload)
-          end
+        return result if tax_error?(calculate_result.error) # rubocop:disable Rails/TransactionExitStatement
+
+        if invoice.should_update_hubspot_invoice?
+          Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice: invoice.reload)
         end
       end
 

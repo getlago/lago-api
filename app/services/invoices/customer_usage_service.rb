@@ -189,7 +189,7 @@ module Invoices
     end
 
     def fees_usage_calculator
-      @fees_usage_calculator ||= ::Customers::FeesUsageCalculationService.new(
+      @fees_usage_calculator ||= SubscriptionUsageFee.new(
         fees: invoice.fees,
         from_datetime: boundaries[:from_datetime],
         to_datetime: boundaries[:to_datetime],

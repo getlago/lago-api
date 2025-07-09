@@ -34,7 +34,7 @@ module Types
             to = object.properties["to_datetime"]
             duration = object.properties["charges_duration"]
 
-            ::Customers::FeesUsageCalculationService.new(
+            SubscriptionUsageFee.new(
               fees: [object],
               from_datetime: from,
               to_datetime: to,

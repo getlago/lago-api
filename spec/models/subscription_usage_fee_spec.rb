@@ -2,7 +2,17 @@
 
 require "rails_helper"
 
-RSpec.describe Customers::FeesUsageCalculationService, type: :service do
+RSpec.describe SubscriptionUsageFee, type: :model do
+  subject(:subscription_usage_fee) do
+    described_class.new(
+      fees: fees,
+      from_datetime: from_datetime,
+      to_datetime: to_datetime,
+      charges_duration_in_days: charges_duration_in_days,
+      amount_cents: amount_cents
+    )
+  end
+
   let(:from_datetime) { Time.parse("2025-07-01T00:00:00Z") }
   let(:to_datetime) { Time.parse("2025-07-31T23:59:59Z") }
   let(:charges_duration_in_days) { nil }
@@ -31,25 +41,15 @@ RSpec.describe Customers::FeesUsageCalculationService, type: :service do
     ]
   end
 
-  let(:service) do
-    described_class.new(
-      fees:,
-      from_datetime:,
-      to_datetime:,
-      charges_duration_in_days:,
-      amount_cents:
-    )
-  end
-
   describe "#current_amount_cents" do
     it "returns the sum of the amount_cents from all fees" do
-      expect(service.current_amount_cents).to eq(1500)
+      expect(subscription_usage_fee.current_amount_cents).to eq(1500)
     end
   end
 
   describe "#current_units" do
     it "returns the sum of the units from all fees as a BigDecimal" do
-      expect(service.current_units).to eq(BigDecimal("15.5"))
+      expect(subscription_usage_fee.current_units).to eq(BigDecimal("15.5"))
     end
   end
 
@@ -58,7 +58,7 @@ RSpec.describe Customers::FeesUsageCalculationService, type: :service do
       let(:recurring) { true }
 
       it "returns the current amount" do
-        expect(service.projected_amount_cents).to eq(1500)
+        expect(subscription_usage_fee.projected_amount_cents).to eq(1500)
       end
     end
 
@@ -71,7 +71,7 @@ RSpec.describe Customers::FeesUsageCalculationService, type: :service do
           # Ratio = 16 / 31 = ~0.516
           # Projection = 1500 / 0.516 = ~2906
           travel_to(Time.parse("2025-07-16T12:00:00Z")) do
-            expect(service.projected_amount_cents).to eq(2906)
+            expect(subscription_usage_fee.projected_amount_cents).to eq(2906)
           end
         end
       end
@@ -79,7 +79,7 @@ RSpec.describe Customers::FeesUsageCalculationService, type: :service do
       context "when at the end of the billing period" do
         it "returns the current amount" do
           travel_to(Time.parse("2025-08-01T00:00:00Z")) do
-            expect(service.projected_amount_cents).to eq(1500)
+            expect(subscription_usage_fee.projected_amount_cents).to eq(1500)
           end
         end
       end
@@ -87,7 +87,7 @@ RSpec.describe Customers::FeesUsageCalculationService, type: :service do
       context "when it is before the billing period starts" do
         it "returns 0" do
           travel_to(Time.parse("2025-06-30T00:00:00Z")) do
-            expect(service.projected_amount_cents).to eq(0)
+            expect(subscription_usage_fee.projected_amount_cents).to eq(0)
           end
         end
       end
@@ -98,7 +98,7 @@ RSpec.describe Customers::FeesUsageCalculationService, type: :service do
         it "uses the override amount for the projection" do
           travel_to(Time.parse("2025-07-16T12:00:00Z")) do
             # Projection = 5000 / 0.516 = ~9688
-            expect(service.projected_amount_cents).to eq(9688)
+            expect(subscription_usage_fee.projected_amount_cents).to eq(9688)
           end
         end
       end
@@ -110,7 +110,7 @@ RSpec.describe Customers::FeesUsageCalculationService, type: :service do
           travel_to(Time.parse("2025-07-16T12:00:00Z")) do
             # Ratio = 16 / 30 = ~0.533
             # Projection = 1500 / 0.533 = ~2813
-            expect(service.projected_amount_cents).to eq(2813)
+            expect(subscription_usage_fee.projected_amount_cents).to eq(2813)
           end
         end
       end
@@ -122,7 +122,7 @@ RSpec.describe Customers::FeesUsageCalculationService, type: :service do
       let(:recurring) { true }
 
       it "returns the current units" do
-        expect(service.projected_units).to eq(BigDecimal("15.5"))
+        expect(subscription_usage_fee.projected_units).to eq(BigDecimal("15.5"))
       end
     end
 
@@ -132,13 +132,13 @@ RSpec.describe Customers::FeesUsageCalculationService, type: :service do
       it "returns the projected units based on the time ratio" do
         travel_to(Time.parse("2025-07-16T12:00:00Z")) do
           # Projection = 15.5 / 0.516 = ~30.03
-          expect(service.projected_units).to eq(BigDecimal("30.03"))
+          expect(subscription_usage_fee.projected_units).to eq(BigDecimal("30.03"))
         end
       end
 
       it "returns 0 before the period starts" do
         travel_to(Time.parse("2025-06-30T00:00:00Z")) do
-          expect(service.projected_units).to eq(BigDecimal("0"))
+          expect(subscription_usage_fee.projected_units).to eq(BigDecimal("0"))
         end
       end
     end
