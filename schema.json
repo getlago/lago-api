@@ -5923,6 +5923,18 @@
               "args": []
             },
             {
+              "name": "pricingUnitAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "projectedAmountCents",
               "description": null,
               "type": {
@@ -5949,18 +5961,6 @@
                   "name": "Float",
                   "ofType": null
                 }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "pricingUnitAmountCents",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "BigInt",
-                "ofType": null
               },
               "isDeprecated": false,
               "deprecationReason": null,
