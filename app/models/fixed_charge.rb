@@ -62,6 +62,7 @@ class FixedCharge < ApplicationRecord
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
 
   delegate :code, to: :add_on
+# !NOTE: should not be able to have several fixed charges with the same addon for one plan
 end
 
 # == Schema Information

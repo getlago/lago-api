@@ -19,7 +19,6 @@ module FixedCharges
       ActiveRecord::Base.transaction do
         fixed_charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
         fixed_charge.invoice_display_name = params[:invoice_display_name] unless cascade
-        units_difference = params[:units] - fixed_charge.units
         fixed_charge.units = params[:units] if params.key?(:units)
 
         if !cascade || cascade_options[:equal_properties]
@@ -31,7 +30,7 @@ module FixedCharges
 
         fixed_charge.save!
         result.fixed_charge = fixed_charge
-        issue_unit_events(units_difference) if fixed_charges_affect_immediately
+        issue_unit_eventsif fixed_charges_affect_immediately
 
         # In cascade mode it is allowed only to change properties
         unless cascade
@@ -52,10 +51,10 @@ module FixedCharges
 
     delegate :plan, to: :fixed_charge
 
-    def issue_unit_events(units)
+    def issue_unit_events
       puts '-' * 100
       plan.subscriptions.active.find_each do |subscription|
-        FixedCharges::EmitEventsService.call!(fixed_charge:, subscription:, units:)
+        FixedCharges::FixedChargesEvents::EmitEventsService.call!(fixed_charge:, subscription:)
       end
     end
   end
