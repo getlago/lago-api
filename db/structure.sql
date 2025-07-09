@@ -11,6 +11,7 @@ SET row_security = off;
 
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_fd84cdb7c6;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_fd399a23d3;
+ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_fbd2b9fccb;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_f98413d404;
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_f66617edcb;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_f53ff93138;
@@ -92,11 +93,13 @@ ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_88349fc20a;
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_86676be631;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_84f4587409;
+ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_81eedc32c0;
 ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS fk_rails_81e3b6abba;
 ALTER TABLE IF EXISTS ONLY public.entitlement_features DROP CONSTRAINT IF EXISTS fk_rails_81d8b323cf;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_7eb0484711;
 ALTER TABLE IF EXISTS ONLY public.billable_metrics DROP CONSTRAINT IF EXISTS fk_rails_7e8a2f26e5;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_7da558cadc;
+ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS fk_rails_7d0e61668f;
 ALTER TABLE IF EXISTS ONLY public.invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_7c0e340dbd;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_7b324610ad;
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS fk_rails_7aab96f30e;
@@ -245,6 +248,9 @@ DROP INDEX IF EXISTS public.index_wallet_transactions_on_wallet_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_organization_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_invoice_id;
 DROP INDEX IF EXISTS public.index_wallet_transactions_on_credit_note_id;
+DROP INDEX IF EXISTS public.index_wallet_targets_on_wallet_id;
+DROP INDEX IF EXISTS public.index_wallet_targets_on_organization_id;
+DROP INDEX IF EXISTS public.index_wallet_targets_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_versions_on_item_type_and_item_id;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id_and_recurring;
 DROP INDEX IF EXISTS public.index_usage_thresholds_on_plan_id;
@@ -611,6 +617,7 @@ ALTER TABLE IF EXISTS ONLY public.webhooks DROP CONSTRAINT IF EXISTS webhooks_pk
 ALTER TABLE IF EXISTS ONLY public.webhook_endpoints DROP CONSTRAINT IF EXISTS webhook_endpoints_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS wallets_pkey;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_pkey;
+ALTER TABLE IF EXISTS ONLY public.wallet_targets DROP CONSTRAINT IF EXISTS wallet_targets_pkey;
 ALTER TABLE IF EXISTS ONLY public.versions DROP CONSTRAINT IF EXISTS versions_pkey;
 ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS usage_thresholds_pkey;
@@ -708,6 +715,7 @@ ALTER TABLE IF EXISTS public.versions ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE IF EXISTS public.usage_monitoring_subscription_activities ALTER COLUMN id DROP DEFAULT;
 DROP TABLE IF EXISTS public.webhooks;
 DROP TABLE IF EXISTS public.webhook_endpoints;
+DROP TABLE IF EXISTS public.wallet_targets;
 DROP SEQUENCE IF EXISTS public.versions_id_seq;
 DROP TABLE IF EXISTS public.versions;
 DROP TABLE IF EXISTS public.users;
@@ -3754,6 +3762,20 @@ ALTER SEQUENCE public.versions_id_seq OWNED BY public.versions.id;
 
 
 --
+-- Name: wallet_targets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wallet_targets (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    wallet_id uuid NOT NULL,
+    billable_metric_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: webhook_endpoints; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4546,6 +4568,14 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.versions
     ADD CONSTRAINT versions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: wallet_targets wallet_targets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_targets
+    ADD CONSTRAINT wallet_targets_pkey PRIMARY KEY (id);
 
 
 --
@@ -7115,6 +7145,27 @@ CREATE INDEX index_versions_on_item_type_and_item_id ON public.versions USING bt
 
 
 --
+-- Name: index_wallet_targets_on_billable_metric_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_targets_on_billable_metric_id ON public.wallet_targets USING btree (billable_metric_id);
+
+
+--
+-- Name: index_wallet_targets_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_targets_on_organization_id ON public.wallet_targets USING btree (organization_id);
+
+
+--
+-- Name: index_wallet_targets_on_wallet_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_wallet_targets_on_wallet_id ON public.wallet_targets USING btree (wallet_id);
+
+
+--
 -- Name: index_wallet_transactions_on_credit_note_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -8214,6 +8265,14 @@ ALTER TABLE ONLY public.invoice_custom_sections
 
 
 --
+-- Name: wallet_targets fk_rails_7d0e61668f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_targets
+    ADD CONSTRAINT fk_rails_7d0e61668f FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: charge_filter_values fk_rails_7da558cadc; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8251,6 +8310,14 @@ ALTER TABLE ONLY public.entitlement_features
 
 ALTER TABLE ONLY public.add_ons
     ADD CONSTRAINT fk_rails_81e3b6abba FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: wallet_targets fk_rails_81eedc32c0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_targets
+    ADD CONSTRAINT fk_rails_81eedc32c0 FOREIGN KEY (wallet_id) REFERENCES public.wallets(id);
 
 
 --
@@ -8902,6 +8969,14 @@ ALTER TABLE ONLY public.fees_taxes
 
 
 --
+-- Name: wallet_targets fk_rails_fbd2b9fccb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_targets
+    ADD CONSTRAINT fk_rails_fbd2b9fccb FOREIGN KEY (billable_metric_id) REFERENCES public.billable_metrics(id);
+
+
+--
 -- Name: adjusted_fees fk_rails_fd399a23d3; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8924,6 +8999,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250709085218'),
 ('20250709082136'),
 ('20250708094414'),
 ('20250707113718'),
