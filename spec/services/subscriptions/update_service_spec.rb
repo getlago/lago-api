@@ -6,7 +6,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
   subject(:update_service) { described_class.new(subscription:, params:) }
 
   let(:membership) { create(:membership) }
-  let(:subscription) { create(:subscription, subscription_at: Time.current - 1.year) }
+  let(:subscription) { create(:subscription) }
 
   describe "#call" do
     let(:subscription_at) { "2022-07-07T00:00:00Z" }
@@ -141,7 +141,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
     context "when plan_overrides" do
       let(:plan) { create(:plan, organization: membership.organization) }
-      let(:subscription) { create(:subscription, plan:, subscription_at: Time.current - 1.year) }
+      let(:subscription) { create(:subscription, plan:) }
       let(:params) do
         {
           plan_overrides: {

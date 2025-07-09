@@ -8,6 +8,7 @@ FactoryBot.define do
     status { :active }
     external_id { SecureRandom.uuid }
     started_at { 1.day.ago }
+    subscription_at { 1.day.ago }
 
     trait :pending do
       status { :pending }
