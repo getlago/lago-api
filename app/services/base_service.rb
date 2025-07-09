@@ -229,8 +229,8 @@ class BaseService
 
   Result = LegacyResult
 
-  def self.activity_loggable(action:, record:, condition: -> { true })
-    self.activity_log_config = {action:, record:, condition:}
+  def self.activity_loggable(action:, record:, condition: -> { true }, after_commit: false)
+    self.activity_log_config = {action:, record:, condition:, after_commit:}
   end
 
   def self.call(*, **, &)
@@ -280,15 +280,16 @@ class BaseService
 
   def call_with_activity_log(&block)
     action = self.class.activity_log_config[:action]
+    after_commit = self.class.activity_log_config[:after_commit]
 
     case action
     when /updated/
       record = instance_exec(&self.class.activity_log_config[:record])
-      Utils::ActivityLog.produce(record, action) { call(&block) }
+      Utils::ActivityLog.produce(record, action, after_commit:) { call(&block) }
     else
       call(&block).tap do |result|
         record = instance_exec(&self.class.activity_log_config[:record])
-        Utils::ActivityLog.produce(record, action) { result }
+        Utils::ActivityLog.produce(record, action, after_commit:) { result }
       end
     end
   end

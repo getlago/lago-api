@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Subscriptions::UpdateService, type: :service do
-  subject(:update_service) { described_class.new(subscription:, params:) }
+  subject(:result) { described_class.call(subscription:, params:) }
 
   let(:membership) { create(:membership) }
   let(:subscription) { create(:subscription) }
@@ -28,8 +28,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
     context "when subscription is already active" do
       it "updates the subscription and ignores subscription_at" do
-        result = update_service.call
-
         expect(result).to be_success
 
         expect(result.subscription.name).to eq("new name")
@@ -38,17 +36,17 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
 
       it "sends updated subscription webhook" do
-        expect { update_service.call }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.updated", subscription)
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.updated", subscription)
       end
 
       it "does not sync to Hubspot" do
-        expect { update_service.call }.not_to have_enqueued_job(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
+        expect { result }.not_to have_enqueued_job(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
       end
 
-      it "produces an activity log" do
-        described_class.call(subscription:, params:)
+      it "produces an activity log after commit" do
+        result
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.updated")
+        expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.updated", after_commit: true)
       end
 
       context "when subscription should be synced with Hubspot" do
@@ -58,8 +56,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
         it "enqueues a job to update Hubspot subscription" do
           expect {
-            result = update_service.call
-
             expect(result).to be_success
           }.to have_enqueued_job_after_commit(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).with(subscription:)
         end
@@ -69,8 +65,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         let(:params) { {name: "new name"} }
 
         it "updates the subscription" do
-          result = update_service.call
-
           expect(result).to be_success
 
           expect(result.subscription.name).to eq("new name")
@@ -82,14 +76,18 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     context "when subscription is starting in the future" do
       let(:subscription) { create(:subscription, :pending) }
 
+      it "does not produce an activity log" do
+        described_class.call(subscription:, params:)
+
+        expect(Utils::ActivityLog).not_to have_received(:produce)
+      end
+
       context "when subscription is pay_in_advance" do
         let(:plan) { create(:plan, :pay_in_advance) }
         let(:subscription) { create(:subscription, :pending, plan:) }
 
         context "when subscription_at is set to past date" do
           it "updates the subscription_at as well" do
-            result = update_service.call
-
             expect(result).to be_success
 
             expect(result.subscription.name).to eq("new name")
@@ -99,7 +97,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
           it "does not enque a job to bill the subscription" do
             current_time = Time.current
             travel_to(current_time) do
-              expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+              expect { result }.not_to have_enqueued_job(BillSubscriptionJob)
             end
           end
         end
@@ -112,8 +110,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
           end
 
           it "activates subscription" do
-            result = update_service.call
-
             expect(result).to be_success
 
             expect(result.subscription.name).to eq("new name")
@@ -122,7 +118,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
           end
 
           it "enqueues a job to bill the subscription" do
-            expect { update_service.call }.to have_enqueued_job_after_commit(BillSubscriptionJob)
+            expect { result }.to have_enqueued_job_after_commit(BillSubscriptionJob)
               .with([subscription], Time.now.to_i, invoicing_reason: :subscription_starting)
           end
         end
@@ -133,7 +129,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
           let(:subscription_at) { Time.current }
 
           it "does not enqueue billing job" do
-            expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+            expect { result }.not_to have_enqueued_job(BillSubscriptionJob)
           end
         end
       end
@@ -149,8 +145,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       let(:subscription) { nil }
 
       it "returns an error" do
-        result = update_service.call
-
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("subscription_not_found")
       end
@@ -161,8 +155,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         let(:params) { {subscription_at: "invalid-date"} }
 
         it "returns validation failure" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages).to eq({subscription_at: ["invalid_date"]})
         end
@@ -172,8 +164,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         let(:params) { {ending_at: "invalid-date"} }
 
         it "returns validation failure" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages).to eq({ending_at: ["invalid_date"]})
         end
@@ -183,8 +173,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         let(:params) { {ending_at: 1.day.ago} }
 
         it "returns validation failure" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages).to eq({ending_at: ["invalid_date"]})
         end
@@ -194,8 +182,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         let(:params) { {ending_at: 1.day.from_now, subscription_at: 2.days.from_now} }
 
         it "returns validation failure" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.messages).to eq({ending_at: ["invalid_date"]})
         end
@@ -217,7 +203,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         around { |test| lago_premium!(&test) }
 
         it "creates the new plan accordingly" do
-          update_service.call
+          result
 
           expect(subscription.plan.name).to eq("new name")
           expect(subscription.plan_id).not_to eq(plan.id)
@@ -229,7 +215,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
           let(:plan) { create(:plan, organization: membership.organization, parent_id: parent_plan.id) }
 
           it "updates the plan accordingly" do
-            update_service.call
+            result
 
             expect(subscription.plan.name).to eq("new name")
             expect(subscription.plan_id).to eq(plan.id)
@@ -248,8 +234,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         end
 
         it "returns an error" do
-          result = update_service.call
-
           expect(result).not_to be_success
           expect(result.error.code).to eq("feature_unavailable")
         end
@@ -261,7 +245,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
       it "succeeds without making changes" do
         original_name = subscription.name
-        result = update_service.call
 
         expect(result).to be_success
         expect(result.subscription.name).to eq(original_name)
@@ -272,8 +255,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       let(:params) { {name: nil, ending_at: nil} }
 
       it "handles nil values gracefully" do
-        result = update_service.call
-
         expect(result).to be_success
         expect(result.subscription.name).to be_nil
         expect(result.subscription.ending_at).to be_nil
