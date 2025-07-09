@@ -11,9 +11,9 @@ module Types
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
         field :id, ID, null: false
+        field :pricing_unit_amount_cents, GraphQL::Types::BigInt, null: true
         field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :projected_units, GraphQL::Types::Float, null: false
-        field :pricing_unit_amount_cents, GraphQL::Types::BigInt, null: true
         field :units, GraphQL::Types::Float, null: false
 
         field :billable_metric, Types::BillableMetrics::Object, null: false

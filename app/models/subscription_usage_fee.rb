@@ -32,9 +32,9 @@ class SubscriptionUsageFee
   private
 
   def time_ratio
-    from_date = Time.parse(from_datetime).utc.to_date
-    to_date = Time.parse(to_datetime).utc.to_date
-    current_date = Time.current.utc.to_date
+    from_date = from_datetime.to_date
+    to_date = to_datetime.to_date
+    current_date = Time.current.to_date
 
     total_days = (to_date - from_date).to_i + 1
 
