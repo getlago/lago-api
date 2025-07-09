@@ -269,7 +269,7 @@ RSpec.describe Invoices::UpdateService do
         it "produces an activity log" do
           result
 
-          expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.payment_status_updated")
+          expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.payment_status_updated", after_commit: true)
         end
       end
 
