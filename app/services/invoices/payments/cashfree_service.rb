@@ -62,7 +62,6 @@ module Invoices
 
         Payment.new(
           organization_id: @invoice.organization_id,
-          customer:,
           payable: @invoice,
           customer:,
           payment_provider_id: cashfree_payment_provider.id,
