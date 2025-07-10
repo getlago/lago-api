@@ -9,11 +9,6 @@ module Invoices
       super
     end
 
-    activity_loggable(
-      action: "invoice.generated",
-      record: -> { invoice }
-    )
-
     def call
       return result.not_found_failure!(resource: "invoice") if invoice.blank?
       return result.not_allowed_failure!(code: "is_draft") if invoice.draft?
@@ -21,6 +16,7 @@ module Invoices
       if should_generate_pdf?
         generate_pdf
         SendWebhookJob.perform_later("invoice.generated", invoice)
+        Utils::ActivityLog.produce(invoice, "invoice.generated")
       end
 
       result.invoice = invoice
