@@ -358,11 +358,6 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         # 4 => added on 3 day, never removed => 13/31
         # 5 => added on 4 day, never removed => 12/31
         event_store.aggregation_property = billable_metric.field_name
-
-
-        puts "=" * 80
-        puts "Event.count: #{Event.where(organization_id: organization.id, code:).count}"
-
         expect(event_store.prorated_unique_count.round(3)).to eq(1.871) # 16/31 + 3/31 + 14/31 + 13/31 + 12/31
       end
     end
