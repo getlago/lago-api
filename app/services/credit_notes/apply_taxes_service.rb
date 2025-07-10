@@ -34,7 +34,6 @@ module CreditNotes
         base_amount_cents = compute_base_amount_cents(tax_code)
         applied_tax.base_amount_cents = (base_amount_cents * taxes_base_rate(invoice_applied_tax)).round
         precise_base_amount_cents = (base_amount_cents * taxes_base_rate(invoice_applied_tax))
-        tax_amount_cents = (applied_tax.base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
         precise_tax_amount_cents = (precise_base_amount_cents * invoice_applied_tax.tax_rate).fdiv(100)
         applied_tax.amount_cents += precise_tax_amount_cents.round
 
