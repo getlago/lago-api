@@ -73,16 +73,6 @@ module CreditNotes
 
     # NOTE: Check if item amount is less than or equal to invoice remaining creditable amount
     def valid_global_amount?
-      pp "-------------------------------------------"
-      pp "-------------------------------------------"
-      pp "-------------------------------------------"
-      pp "-------------------------------------------"
-      pp "total_item_amount_cents: #{total_item_amount_cents}"
-      pp "invoice.fee_total_amount_cents: #{invoice.fee_total_amount_cents}"
-      pp "invoice_credit_note_total_amount_cents: #{invoice_credit_note_total_amount_cents}"
-      pp "-------------------------------------------"
-      pp "-------------------------------------------"
-      pp "-------------------------------------------"
       return true if total_item_amount_cents <= invoice.fee_total_amount_cents - invoice_credit_note_total_amount_cents
 
       add_error(field: :amount_cents, error_code: "higher_than_remaining_invoice_amount")
