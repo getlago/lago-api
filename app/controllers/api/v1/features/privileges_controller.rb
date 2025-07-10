@@ -4,6 +4,8 @@ module Api
   module V1
     module Features
       class PrivilegesController < Api::BaseController
+        include PremiumFeatureOnly
+
         def destroy
           feature = current_organization.features.find_by(code: params[:feature_code])
           return not_found_error(resource: "feature") unless feature

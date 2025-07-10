@@ -12,11 +12,15 @@ RSpec.describe Api::V1::Features::PrivilegesController, type: :request do
     privilege2
   end
 
+  around { |test| lago_premium!(&test) }
+
   describe "DELETE /api/v1/features/:feature_code/privileges/:code" do
     subject { delete_with_token(organization, "/api/v1/features/#{feature_code}/privileges/#{privilege_code}") }
 
     let(:feature_code) { feature1.code }
     let(:privilege_code) { privilege1.code }
+
+    it_behaves_like "requires a Premium license"
 
     it "discards the privilege" do
       expect { subject }.to change { privilege1.reload.discarded? }.from(false).to(true)
