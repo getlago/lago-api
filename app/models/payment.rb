@@ -6,6 +6,7 @@ class Payment < ApplicationRecord
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
   belongs_to :organization
+  belongs_to :customer, optional: true
   belongs_to :payable, polymorphic: true
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
@@ -25,8 +26,6 @@ class Payment < ApplicationRecord
   validate :manual_payment_credit_invoice_amount_cents
   validate :max_invoice_paid_amount_cents, on: :create
   validate :payment_request_succeeded, on: :create
-
-  delegate :customer, to: :payable
 
   enum :payable_payment_status, PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h, validate: {allow_nil: true}
 

@@ -39,7 +39,8 @@ module PaymentRequests
           payment_provider_customer_id: current_payment_provider_customer.id,
           amount_cents: payable.total_amount_cents,
           amount_currency: payable.currency,
-          status: "pending"
+          status: "pending",
+          customer_id: payable.customer_id
         ).find_or_create_by!(
           payable:,
           payable_payment_status: "pending"

@@ -181,6 +181,7 @@ module PaymentRequests
         Payment.new(
           organization_id: @payable.organization_id,
           payable: @payable,
+          customer:,
           payment_provider_id: stripe_payment_provider.id,
           payment_provider_customer_id: customer.stripe_customer.id,
           amount_cents: @payable.total_amount_cents,
