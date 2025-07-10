@@ -324,7 +324,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
     end
 
     context "with multiple events at the same day" do
-      it "returns the number of unique active event properties merged within one day" do
+      it "returns the number of unique active event properties merged within one day", transaction: false do
         event_params = [
           {timestamp: boundaries[:from_datetime], operation_type: "remove"},
           {timestamp: boundaries[:from_datetime] + 1.hour, operation_type: "add"},

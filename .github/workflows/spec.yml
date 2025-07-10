@@ -30,7 +30,9 @@ jobs:
           --health-retries 5
     strategy:
       fail-fast: false
-      
+      matrix:
+        ci_node_total: [8]
+        ci_node_index: [0, 1, 2, 3, 4, 5, 6, 7]
 
     env:
       RAILS_ENV: test
@@ -79,7 +81,12 @@ jobs:
         run: bin/rails db:migrate:clickhouse
       - name: Run tests
         run: |
-          bundle exec rspec
+          if [[ -z "$KNAPSACK_PRO_TEST_SUITE_TOKEN_RSPEC" ]]; then
+            echo "::warning::This is a community PR. We'll default to running the test using 'parallel_tests'."
+            bundle exec parallel_rspec --only-group "${KNAPSACK_PRO_CI_NODE_INDEX}" -n "${KNAPSACK_PRO_CI_NODE_TOTAL}" --exclude-pattern "spec/integration/.*_integration_spec.rb"
+          else
+            bundle exec rake knapsack_pro:queue:rspec
+          fi
         continue-on-error: true
       - name: retry failed tests
         run: bundle exec rspec --only-failures
