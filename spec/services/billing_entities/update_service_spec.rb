@@ -174,6 +174,21 @@ RSpec.describe BillingEntities::UpdateService do
       end
     end
 
+    context "when logo is set but then removed" do
+      let(:logo) do
+        logo_file = File.read(Rails.root.join("spec/factories/images/logo.png"))
+        base64_logo = Base64.encode64(logo_file)
+
+        "data:image/png;base64,#{base64_logo}"
+      end
+
+      it "removes the logo" do
+        update_service.call
+        result = described_class.new(billing_entity:, params: {logo: nil}).call
+        expect(result.billing_entity.logo.blob).to be_nil
+      end
+    end
+
     context "with validation errors" do
       let(:country) { "---" }
 
