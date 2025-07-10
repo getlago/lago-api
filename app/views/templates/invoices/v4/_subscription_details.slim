@@ -52,6 +52,34 @@
                 - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
                   == SlimHelper.render('templates/invoices/v4/_fees_without_filters', fee)
 
+        .invoice-resume.overflow-auto
+          table.invoice-resume-table width="100%"
+            tr.first_child
+              td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription.from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription.to_datetime_in_customer_timezone&.to_date, format: :default))
+              td.body-2 = I18n.t('invoice.units')
+              td.body-2 = I18n.t('invoice.unit_price')
+
+    / Fixed charge fees section for subscription invoice
+    - if subscription? && subscription_fees(subscription.id).fixed_charge.any?
+      / Fixed charges payed in arrears OR fixed charges and plan payed in advance
+      - if subscription.plan.fixed_charges.where(pay_in_advance: false).any? && existing_fixed_charge_fees_in_interval?(subscription_id: subscription.id)
+        .invoice-resume.overflow-auto
+          table.invoice-resume-table width="100%"
+            - if different_boundaries_for_subscription_and_fixed_charges(subscription)
+              tr.first_child
+                td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(invoice_subscription.fixed_charges_from_datetime_in_customer_timezone&.to_date, format: :default), to_date: I18n.l(invoice_subscription.fixed_charges_to_datetime_in_customer_timezone&.to_date, format: :default))
+                td.body-2 = I18n.t('invoice.units')
+                td.body-2 = I18n.t('invoice.unit_price')
+                td.body-2 = I18n.t('invoice.tax_rate')
+                td.body-2 = I18n.t('invoice.amount')
+
+            / Loop over all top level fees
+            - subscription_fees(subscription.id).fixed_charge.positive_units.joins(:fixed_charge).sort_by { |f| f.invoice_sorting_clause }.group_by(&:fixed_charge_id).each do |_fixed_charge_id, fees|
+              - next if fees.first.fixed_charge.pay_in_advance?
+
+              - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
+                == SlimHelper.render('templates/invoices/v4/_fixed_charge_fee', fee)
+
     / Charge fees section for subscription invoice
     - if subscription? && subscription_fees(subscription.id).charge.any?
       / Charges payed in arrears OR charges and plan payed in advance

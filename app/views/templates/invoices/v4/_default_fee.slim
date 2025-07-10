@@ -9,7 +9,7 @@ tr
       .body-3 = I18n.t('invoice.units_prorated_per_period', period: IntervalHelper.interval_name(fee.subscription.plan.interval))
     - if fee.charge.percentage?
       .body-3 = I18n.t('invoice.total_events', count: fee.events_count)
-    - if fee.charge.prorated?
+    - if fee.charge.prorated? || fee.fixed_charge.prorated?
       .body-3 = I18n.t('invoice.fee_prorated')
   td.body-2 = RoundingHelper.round_decimal_part(fee.units)
   td.body-2 = MoneyHelper.format_with_precision(fee.precise_unit_amount, fee.unit_amount.currency)
