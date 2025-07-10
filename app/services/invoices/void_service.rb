@@ -102,20 +102,11 @@ module Invoices
       end
 
       remaining_amount = invoice.reload.creditable_amount_cents
-      pp "-------------------------------------------"
-      pp "-------------------------------------------"
-      pp "-------------------------------------------"
-      pp "-------------------------------------------"
-      pp "remaining_amount: #{remaining_amount}"
-      pp "-------------------------------------------"
-      pp "-------------------------------------------"
-      pp "-------------------------------------------"
-      pp "-------------------------------------------"
       if remaining_amount.positive?
         fees = invoice.fees.map do |fee|
           {
             fee_id: fee.id,
-            amount_cents: (fee.precise_creditable_amount_cents)
+            amount_cents: fee.precise_creditable_amount_cents
           }
         end
 
