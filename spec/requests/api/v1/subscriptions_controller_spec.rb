@@ -375,11 +375,12 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     end
   end
 
-  describe "DELETE /api/v1subscriptions/:external_id" do
-    subject { delete_with_token(organization, "/api/v1/subscriptions/#{external_id}") }
+  describe "DELETE /api/v1/subscriptions/:external_id" do
+    subject { delete_with_token(organization, "/api/v1/subscriptions/#{external_id}", params) }
 
     let(:subscription) { create(:subscription, customer:, plan:) }
     let(:external_id) { subscription.external_id }
+    let(:params) { {} }
 
     include_examples "requires API permission", "subscription", "write"
 
@@ -390,6 +391,29 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:lago_id]).to eq(subscription.id)
       expect(json[:subscription][:status]).to eq("terminated")
       expect(json[:subscription][:terminated_at]).to be_present
+    end
+
+    context "when subscription is pending" do
+      let(:subscription) { create(:subscription, :pending, customer:, plan:) }
+
+      it "returns a not found error" do
+        subject
+
+        expect(response).to have_http_status(:not_found)
+      end
+
+      context "when status is given" do
+        let(:params) { {status: "pending"} }
+
+        it "cancels the subscription" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:subscription][:lago_id]).to eq(subscription.id)
+          expect(json[:subscription][:status]).to eq("canceled")
+          expect(json[:subscription][:canceled_at]).to be_present
+        end
+      end
     end
 
     context "with not existing subscription" do
