@@ -12,7 +12,7 @@ module Plans
 
       ActiveRecord::Base.transaction do
         plan.update!(pending_deletion: true)
-        plan.children.each { |c| c.update!(pending_deletion: true) }
+        plan.children.update_all(pending_deletion: true) # rubocop:disable Rails/SkipsModelValidations
         Plans::DestroyJob.perform_later(plan)
       end
 
