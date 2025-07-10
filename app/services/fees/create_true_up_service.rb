@@ -2,10 +2,10 @@
 
 module Fees
   class CreateTrueUpService < BaseService
-    def initialize(fee:, amount_cents:, precise_amount_cents:)
+    def initialize(fee:, used_amount_cents:, used_precise_amount_cents:)
       @fee = fee
-      @amount_cents = amount_cents
-      @precise_amount_cents = precise_amount_cents
+      @used_amount_cents = used_amount_cents
+      @used_precise_amount_cents = used_precise_amount_cents
       @boundaries = OpenStruct.new(fee&.properties)
 
       super
@@ -13,19 +13,25 @@ module Fees
 
     def call
       return result unless fee
-      return result if amount_cents >= prorated_min_amount_cents
+      return result if used_amount_cents >= prorated_min_amount_cents
 
-      true_up_fee = fee.dup.tap do |f|
-        f.amount_cents = prorated_min_amount_cents - amount_cents
-        f.precise_amount_cents = prorated_min_amount_cents - precise_amount_cents
-        f.units = 1
-        f.total_aggregated_units = 1
-        f.events_count = 0
-        f.charge_filter_id = nil
-        f.true_up_parent_fee = fee
-        f.unit_amount_cents = f.amount_cents
-        f.precise_unit_amount = f.unit_amount.to_f
-      end
+      amount_cents = (prorated_min_amount_cents - used_amount_cents).round
+      precise_amount_cents = prorated_min_amount_cents - used_precise_amount_cents
+      unit_amount_cents = amount_cents
+      precise_unit_amount = precise_amount_cents / charge.plan.amount.currency.subunit_to_unit.to_d
+
+      true_up_fee = fee.dup
+      true_up_fee.assign_attributes(
+        amount_cents:,
+        precise_amount_cents:,
+        units: 1,
+        total_aggregated_units: 1,
+        events_count: 0,
+        charge_filter_id: nil,
+        true_up_parent_fee: fee,
+        unit_amount_cents:,
+        precise_unit_amount:
+      )
 
       result.true_up_fee = true_up_fee
       result
@@ -33,7 +39,7 @@ module Fees
 
     private
 
-    attr_reader :fee, :amount_cents, :precise_amount_cents, :boundaries
+    attr_reader :fee, :used_amount_cents, :used_precise_amount_cents, :boundaries
 
     delegate :charge, :subscription, to: :fee
 
