@@ -52,6 +52,7 @@ RSpec.describe ::V1::PlanSerializer do
         "active_subscriptions_count" => 0,
         "draft_invoices_count" => 0,
         "parent_id" => nil,
+        "pending_deletion" => false,
         "taxes" => []
       )
 

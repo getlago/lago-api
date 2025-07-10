@@ -19,7 +19,8 @@ module V1
         customers_count: 0,
         active_subscriptions_count: 0,
         draft_invoices_count: 0,
-        parent_id: model.parent_id
+        parent_id: model.parent_id,
+        pending_deletion: model.pending_deletion
       }
 
       payload.merge!(charges) if include?(:charges)
