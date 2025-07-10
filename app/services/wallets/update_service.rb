@@ -33,6 +33,8 @@ module Wallets
           wallet.allowed_fee_types = params[:applies_to][:fee_types] if params[:applies_to].key?(:fee_types)
         end
 
+        process_billable_metrics
+
         wallet.save!
       end
 
@@ -61,7 +63,49 @@ module Wallets
     end
 
     def valid_limitations?
+      result.billable_metrics = billable_metrics
+      result.billable_metric_identifiers = billable_metric_identifiers
       Wallets::ValidateLimitationsService.new(result, **params).valid?
+    end
+
+    def process_billable_metrics
+      existing_wallet_billable_metric_ids = wallet.wallet_targets.pluck(:billable_metric_id).compact
+
+      billable_metrics.each do |bm|
+        next if existing_wallet_billable_metric_ids.include?(bm.id)
+
+        WalletTarget.create!(wallet:, billable_metric: bm, organization_id: wallet.organization_id)
+      end
+
+      sanitize_wallet_billable_metrics
+    end
+
+    def sanitize_wallet_billable_metrics
+      not_needed_wallet_target_ids = wallet.wallet_targets.pluck(:billable_metric_id).compact - billable_metrics.pluck(:id)
+      not_needed_wallet_target_ids.each do |wallet_billable_metric_id|
+        WalletTarget.find_by(wallet:, billable_metric_id: wallet_billable_metric_id)&.destroy!
+      end
+    end
+
+    def billable_metric_identifiers
+      return [] if params[:applies_to].blank?
+
+      key = api_context? ? :billable_metric_codes : :billable_metric_ids
+
+      return [] if params[:applies_to][key].blank?
+
+      params[:applies_to][key]&.compact&.uniq
+    end
+
+    def billable_metrics
+      return @billable_metrics if defined?(@billable_metrics)
+      return [] if billable_metric_identifiers.blank?
+
+      @billable_metrics = if api_context?
+        BillableMetric.where(code: billable_metric_identifiers, organization_id: result.current_customer.organization_id)
+      else
+        BillableMetric.where(id: billable_metric_identifiers, organization_id: result.current_customer.organization_id)
+      end
     end
   end
 end
