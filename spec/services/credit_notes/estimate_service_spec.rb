@@ -73,7 +73,7 @@ RSpec.describe CreditNotes::EstimateService, type: :service do
         refund_amount_cents: 9,
         coupons_adjustment_amount_cents: 8,
         taxes_amount_cents: 2,
-        taxes_rate: 20
+        taxes_rate: 20.0
       )
 
       expect(credit_note.applied_taxes.size).to eq(1)
