@@ -319,6 +319,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:plan][:lago_id]).to eq(plan.id)
       expect(json[:plan][:code]).to eq(update_params[:code])
+      expect(json[:plan][:entitlements]).to be_empty
     end
 
     context "when plan does not exist" do
@@ -546,6 +547,17 @@ RSpec.describe Api::V1::PlansController, type: :request do
       expect(json[:plan][:code]).to eq(plan.code)
     end
 
+    context "when plan is discarded" do
+      before do
+        plan.discard
+      end
+
+      it "returns not found" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
     context "when plan has minimum commitment" do
       before { create(:commitment, plan:) }
 
@@ -572,6 +584,25 @@ RSpec.describe Api::V1::PlansController, type: :request do
         expect(json[:plan][:lago_id]).to eq(plan.id)
         expect(json[:plan][:code]).to eq(plan.code)
         expect(json[:plan][:usage_thresholds].count).to eq(2)
+      end
+    end
+
+    context "when plan has entitlements" do
+      before do
+        feature = create(:feature, organization:, code: :seats)
+        entitlement = create(:entitlement, plan:, feature:)
+        privileges = create_list(:privilege, 2, feature: feature)
+        create(:entitlement_value, privilege: privileges.first, entitlement: entitlement)
+        create(:entitlement_value, privilege: privileges.last, entitlement: entitlement)
+      end
+
+      it "returns a plan" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        ent = json[:plan][:entitlements].sole
+        expect(ent[:code]).to eq "seats"
+        expect(ent[:privileges].count).to eq 2
       end
     end
 
@@ -611,6 +642,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         expect(response).to have_http_status(:success)
         expect(json[:plan][:lago_id]).to eq(plan.id)
         expect(json[:plan][:code]).to eq(plan.code)
+        expect(json[:plan][:entitlements]).to be_empty
       end
     end
 
@@ -672,6 +704,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         expect(response).to have_http_status(:success)
 
         expect(json[:plans].count).to eq(1)
+        expect(json[:plans].first[:entitlements]).to be_empty
         expect(json[:meta][:current_page]).to eq(1)
         expect(json[:meta][:next_page]).to eq(2)
         expect(json[:meta][:prev_page]).to eq(nil)
