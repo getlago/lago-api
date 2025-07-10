@@ -358,16 +358,31 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
         # 4 => added on 3 day, never removed => 13/31
         # 5 => added on 4 day, never removed => 12/31
         event_store.aggregation_property = billable_metric.field_name
-        puts "-" * 80
-        puts Event.count
+        puts "=" * 80
+        puts "Event.count: #{Event.count}"
 
-        Rails.logger.info("-" * 80)
-        Rails.logger.info(Event.count)
-        Rails.logger.info(event_store.unique_count.round(3))
-        Rails.logger.info(event_store.prorated_unique_count_breakdown)
-        Rails.logger.info(event_store.prorated_unique_count.round(3))
+        puts "=" * 80
+        puts "Event.count: #{Event.count}"
+        puts(event_store.unique_count.round(3))
+        puts(event_store.prorated_unique_count_breakdown)
+        puts(event_store.prorated_unique_count.round(3))
+
+        Event.all.each do |event|
+          puts "-" * 80
+          puts "event.id: #{event.id}"
+          puts "event.properties: #{event.properties}"
+          puts "event.timestamp: #{event.timestamp}"
+        end
 
         expect(event_store.prorated_unique_count.round(3)).to eq(1.871) # 16/31 + 3/31 + 14/31 + 13/31 + 12/31
+        puts "=" * 80
+        puts "Event.count: #{Event.count}"
+        Event.all.each do |event|
+          puts "-" * 80
+          puts "event.id: #{event.id}"
+          puts "event.properties: #{event.properties}"
+          puts "event.timestamp: #{event.timestamp}"
+        end
       end
     end
   end
