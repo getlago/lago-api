@@ -77,8 +77,8 @@ module Invoices
             unit_amount_cents: fee_attributes[:unit_amount_cents],
             amount_currency: regenerated_invoice.currency,
             fee_type: fee_attributes[:add_on_id].present? ? :add_on : :charge,
-            taxes_amount_cents: 0, #To be calculated on ApplyTaxesService
-            taxes_precise_amount_cents: 0.to_d, #To be calculated on ApplyTaxesService
+            taxes_amount_cents: 0, # To be calculated on ApplyTaxesService
+            taxes_precise_amount_cents: 0.to_d, # To be calculated on ApplyTaxesService
             payment_status: :pending,
             total_aggregated_units: fee_attributes[:total_aggregated_units]
           )
