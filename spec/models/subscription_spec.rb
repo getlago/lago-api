@@ -21,6 +21,9 @@ RSpec.describe Subscription, type: :model do
         calendar: 0,
         anniversary: 1
       )
+      expect(subject).to define_enum_for(:on_termination_credit_note)
+        .backed_by_column_of_type(:enum)
+        .with_values(credit: "credit", skip: "skip")
     end
   end
 
@@ -73,6 +76,20 @@ RSpec.describe Subscription, type: :model do
     it do
       expect(subject).to validate_presence_of(:external_id)
       expect(subject).to validate_presence_of(:billing_time)
+    end
+
+    describe "on_termination_credit_note validation" do
+      context "when plan is pay in arrears" do
+        subject(:subscription) { build(:subscription) }
+
+        it { is_expected.to validate_absence_of(:on_termination_credit_note) }
+      end
+
+      context "when plan is pay in advance" do
+        subject(:subscription) { build(:subscription, plan: create(:plan, :pay_in_advance)) }
+
+        it { is_expected.to be_valid }
+      end
     end
 
     describe "external_id validation" do

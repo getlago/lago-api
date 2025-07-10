@@ -23,7 +23,8 @@ module V1
         next_plan_code: model.next_subscription&.plan&.code,
         downgrade_plan_date: model.downgrade_plan_date&.iso8601,
         current_billing_period_started_at: dates_service.charges_from_datetime&.iso8601,
-        current_billing_period_ending_at: dates_service.charges_to_datetime&.iso8601
+        current_billing_period_ending_at: dates_service.charges_to_datetime&.iso8601,
+        on_termination_credit_note: model.on_termination_credit_note
       }
 
       payload = payload.merge(customer:) if include?(:customer)

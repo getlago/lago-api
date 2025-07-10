@@ -2,6 +2,8 @@
 
 module Subscriptions
   class UpdateService < BaseService
+    Result = BaseResult[:subscription]
+
     def initialize(subscription:, params:)
       @subscription = subscription
       @params = params
@@ -21,7 +23,8 @@ module Subscriptions
         customer: subscription.customer,
         plan: subscription.plan,
         subscription_at: params.key?(:subscription_at) ? params[:subscription_at] : subscription.subscription_at,
-        ending_at: params[:ending_at]
+        ending_at: params[:ending_at],
+        on_termination_credit_note: params[:on_termination_credit_note]
       )
         return result
       end
@@ -29,6 +32,10 @@ module Subscriptions
 
       subscription.name = params[:name] if params.key?(:name)
       subscription.ending_at = params[:ending_at] if params.key?(:ending_at)
+
+      if pay_in_advance? && params.key?(:on_termination_credit_note)
+        subscription.on_termination_credit_note = params[:on_termination_credit_note]
+      end
 
       if params.key?(:plan_overrides)
         plan_result = handle_plan_override
@@ -60,6 +67,10 @@ module Subscriptions
     private
 
     attr_reader :subscription, :params
+
+    def pay_in_advance?
+      subscription.plan.pay_in_advance?
+    end
 
     def process_subscription_at_change(subscription)
       if subscription.subscription_at <= Time.current

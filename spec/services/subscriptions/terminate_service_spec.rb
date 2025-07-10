@@ -5,14 +5,18 @@ require "rails_helper"
 RSpec.describe Subscriptions::TerminateService do
   subject(:terminate_service) { described_class.new(subscription:) }
 
+  let(:on_termination_credit_note) { nil }
+
   describe ".call" do
-    subject(:result) { described_class.call(subscription:) }
+    subject(:result) { described_class.call(subscription:, on_termination_credit_note:) }
 
     let(:subscription) { create(:subscription) }
 
     it "terminates a subscription" do
       subject
 
+      expect(result).to be_a(BaseResult)
+      expect(result).to be_success
       expect(result.subscription).to be_present
       expect(result.subscription).to be_terminated
       expect(result.subscription.terminated_at).to be_present
@@ -115,7 +119,8 @@ RSpec.describe Subscriptions::TerminateService do
           :anniversary,
           plan:,
           started_at: creation_time,
-          subscription_at: creation_time
+          subscription_at: creation_time,
+          **(subscription_termination_credit_note ? {on_termination_credit_note: subscription_termination_credit_note} : {})
         )
       end
       let(:creation_time) { Time.current.beginning_of_month - 1.month }
@@ -162,15 +167,69 @@ RSpec.describe Subscriptions::TerminateService do
           taxes_rate: 20
         )
       end
+      let(:subscription_termination_credit_note) { nil }
 
       before do
         invoice_subscription
         last_subscription_fee
       end
 
-      it "creates a credit note for the remaining days" do
-        travel_to(Time.current.end_of_month - 4.days) do
-          expect { subject }.to change(CreditNote, :count).by(1)
+      [nil, "", "credit"].each do |on_termination_credit_note|
+        context "when on_termination_credit_note is #{on_termination_credit_note.inspect}" do
+          let(:on_termination_credit_note) { on_termination_credit_note }
+
+          it "creates a credit note for the remaining days" do
+            travel_to(Time.current.end_of_month - 4.days) do
+              expect { subject }.to change(CreditNote, :count).by(1)
+            end
+          end
+
+          it "updates the subscription termination behavior" do
+            travel_to(Time.current.end_of_month - 4.days) do
+              subject
+              expect(subscription.reload.on_termination_credit_note).to eq("credit")
+            end
+          end
+        end
+      end
+
+      context "when on_termination_credit_note is skip" do
+        let(:on_termination_credit_note) { "skip" }
+
+        it "does not create a credit note for the remaining days" do
+          travel_to(Time.current.end_of_month - 4.days) do
+            expect { subject }.not_to change(CreditNote, :count)
+          end
+        end
+
+        it "updates the subscription termination behavior" do
+          travel_to(Time.current.end_of_month - 4.days) do
+            subject
+            expect(subscription.reload.on_termination_credit_note).to eq("skip")
+          end
+        end
+      end
+
+      context "when on_termination_credit_note is not set" do
+        subject(:result) { described_class.call(subscription:) }
+
+        let(:subscription_termination_credit_note) { "skip" }
+
+        it "rely on the subscription on_termination_credit_notek" do
+          travel_to(Time.current.end_of_month - 4.days) do
+            expect { subject }.not_to change(CreditNote, :count)
+          end
+        end
+      end
+
+      context "when on_termination_credit_note is invalid" do
+        let(:on_termination_credit_note) { "invalid" }
+
+        it "raises an error" do
+          subject
+
+          expect(result).to be_failure
+          expect(result.error.messages).to include({on_termination_credit_note: ["invalid_value"]})
         end
       end
 
@@ -180,6 +239,23 @@ RSpec.describe Subscriptions::TerminateService do
         it "does not create a credit note for the remaining days" do
           expect { subject }.not_to change(CreditNote, :count)
         end
+      end
+    end
+
+    context "when subscription is pay in arrears" do
+      let(:on_termination_credit_note) { "credit" }
+
+      before do
+        subscription.plan.update!(pay_in_advance: false)
+      end
+
+      it "does not create a credit note" do
+        expect { subject }.not_to change(CreditNote, :count)
+      end
+
+      it "updates the subscription termination behavior" do
+        subject
+        expect(subscription.reload.on_termination_credit_note).to eq(nil)
       end
     end
   end
