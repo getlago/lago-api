@@ -15,6 +15,8 @@ module Mutations
       type Types::Entitlement::FeatureObject
 
       def resolve(**args)
+        raise unauthorized_error unless License.premium?
+
         feature = current_organization.features.find_by(id: args[:id])
         result = ::Entitlement::FeatureDestroyService.call(feature:)
 

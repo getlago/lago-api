@@ -15,6 +15,8 @@ module Mutations
       type Types::Entitlement::FeatureObject
 
       def resolve(**args)
+        raise unauthorized_error unless License.premium?
+
         result = ::Entitlement::FeatureCreateService.call(
           organization: current_organization,
           params: {

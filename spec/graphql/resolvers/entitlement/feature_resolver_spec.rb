@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::Entitlement::FeatureResolver, type: :graphql do
+  include_context "with graphql query context"
+
   let(:required_permission) { "features:view" }
   let(:query) do
     <<~GQL
@@ -24,10 +26,10 @@ RSpec.describe Resolvers::Entitlement::FeatureResolver, type: :graphql do
       }
     GQL
   end
-
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  let(:variables) { {featureId: feature.id} }
   let(:feature) { create(:feature, organization:) }
+
+  around { |test| lago_premium!(&test) }
 
   before do
     feature
@@ -36,17 +38,12 @@ RSpec.describe Resolvers::Entitlement::FeatureResolver, type: :graphql do
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "features:view"
+  it_behaves_like "requires Premium license"
 
   it "returns a single feature" do
     privilege = create(:privilege, feature:, value_type: "boolean")
 
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: required_permission,
-      query:,
-      variables: {featureId: feature.id}
-    )
+    result = subject
 
     feature_response = result["data"]["feature"]
 
@@ -63,16 +60,10 @@ RSpec.describe Resolvers::Entitlement::FeatureResolver, type: :graphql do
   end
 
   context "when feature is not found" do
-    it "returns an error" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query:,
-        variables: {featureId: "invalid"}
-      )
+    let(:variables) { {featureId: "invalid"} }
 
-      expect_graphql_error(result:, message: "Resource not found")
+    it "returns an error" do
+      expect_graphql_error(result: subject, message: "Resource not found")
     end
   end
 end

@@ -15,6 +15,8 @@ module Resolvers
       type Types::Entitlement::FeatureObject, null: false
 
       def resolve(id:)
+        raise unauthorized_error unless License.premium?
+
         current_organization.features.find(id)
       rescue ActiveRecord::RecordNotFound
         not_found_error(resource: "feature")

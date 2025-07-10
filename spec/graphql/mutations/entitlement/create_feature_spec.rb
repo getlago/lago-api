@@ -3,11 +3,11 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Entitlement::CreateFeature, type: :graphql do
-  let(:required_permission) { "features:create" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  include_context "with graphql query context"
 
-  let(:mutation) do
+  let(:required_permission) { "features:create" }
+
+  let(:query) do
     <<-GQL
       mutation($input: CreateFeatureInput!) {
         createFeature(input: $input) {
@@ -26,25 +26,24 @@ RSpec.describe Mutations::Entitlement::CreateFeature, type: :graphql do
     GQL
   end
 
+  let(:input) do
+    {
+      code: "test_feature",
+      name: "Test Feature",
+      description: "Test Feature Description",
+      privileges: []
+    }
+  end
+
+  around { |test| lago_premium!(&test) }
+
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "features:create"
+  it_behaves_like "requires Premium license"
 
   it "creates a feature" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          code: "test_feature",
-          name: "Test Feature",
-          description: "Test Feature Description",
-          privileges: []
-        }
-      }
-    )
+    result = subject
 
     result_data = result["data"]["createFeature"]
 
@@ -57,28 +56,21 @@ RSpec.describe Mutations::Entitlement::CreateFeature, type: :graphql do
   context "when creating feature with privileges" do
     let(:privilege_code) { "test_privilege" }
     let(:privilege_name) { "Test Privilege" }
+    let(:input) do
+      {
+        code: "test_feature_with_privileges",
+        name: "Test Feature With Privileges",
+        description: "Test Feature Description",
+        privileges: [
+          {code: privilege_code, name: privilege_name}
+        ]
+      }
+    end
 
     it "creates a feature with privileges" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            code: "test_feature_with_privileges",
-            name: "Test Feature With Privileges",
-            description: "Test Feature Description",
-            privileges: [
-              {code: privilege_code, name: privilege_name}
-            ]
-          }
-        }
-      )
+      result = subject
 
       result_data = result["data"]["createFeature"]
-
-      pp result_data["privileges"].sole
 
       expect(result_data["code"]).to eq("test_feature_with_privileges")
       expect(result_data["name"]).to eq("Test Feature With Privileges")

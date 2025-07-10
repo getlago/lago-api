@@ -20,6 +20,18 @@ RSpec.shared_examples "requires permission" do |permission|
   end
 end
 
+RSpec.shared_examples "requires Premium license" do
+  it "returns an error" do
+    allow(License).to receive(:premium?).and_return(false)
+
+    expect_graphql_error(
+      result: subject,
+      message: "unauthorized"
+    )
+    expect(License).to have_received(:premium?)
+  end
+end
+
 RSpec.shared_examples "requires a customer portal user" do
   it "requires a customer portal user" do
     expect(described_class.ancestors).to include(AuthenticableCustomerPortalUser)

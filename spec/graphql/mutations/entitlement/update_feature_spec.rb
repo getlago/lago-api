@@ -3,15 +3,15 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Entitlement::UpdateFeature, type: :graphql do
+  include_context "with graphql query context"
+
   let(:required_permission) { "features:update" }
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
 
   let(:feature) do
     create(:feature, organization:)
   end
 
-  let(:mutation) do
+  let(:query) do
     <<-GQL
       mutation($input: UpdateFeatureInput!) {
         updateFeature(input: $input) {
@@ -24,26 +24,24 @@ RSpec.describe Mutations::Entitlement::UpdateFeature, type: :graphql do
       }
     GQL
   end
+  let(:input) do
+    {
+      id: feature.id,
+      name: "Updated Feature Name",
+      description: "Updated Feature Description",
+      privileges: []
+    }
+  end
+
+  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "features:update"
+  it_behaves_like "requires Premium license"
 
   it "updates a feature" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          id: feature.id,
-          name: "Updated Feature Name",
-          description: "Updated Feature Description",
-          privileges: []
-        }
-      }
-    )
+    result = subject
 
     result_data = result["data"]["updateFeature"]
 
@@ -53,46 +51,41 @@ RSpec.describe Mutations::Entitlement::UpdateFeature, type: :graphql do
     expect(result_data["privileges"]).to be_empty
   end
 
-  it "returns not found error for non-existent feature" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          id: "non-existent-id",
-          name: "Updated Feature Name",
-          description: "Updated Feature Description",
-          privileges: []
-        }
+  context "when feature does not exist" do
+    let(:input) do
+      {
+        id: "non-existent-id",
+        name: "Updated Feature Name",
+        description: "Updated Feature Description",
+        privileges: []
       }
-    )
+    end
 
-    expect(result["errors"]).to be_present
+    it "returns not found error for non-existent feature" do
+      expect_graphql_error(
+        result: subject,
+        message: "not_found"
+      )
+    end
   end
 
   context "with privileges" do
     context "when privilege already exists" do
+      let(:input) do
+        {
+          id: feature.id,
+          name: "Feature Name",
+          description: "Feature Description",
+          privileges: [
+            {code: "seats", name: "new name"}
+          ]
+        }
+      end
+
       it "updates the privilege" do
         create(:privilege, feature:, code: "seats", name: "Old Name")
 
-        result = execute_graphql(
-          current_user: membership.user,
-          current_organization: organization,
-          permissions: required_permission,
-          query: mutation,
-          variables: {
-            input: {
-              id: feature.id,
-              name: "Feature Name",
-              description: "Feature Description",
-              privileges: [
-                {code: "seats", name: "new name"}
-              ]
-            }
-          }
-        )
+        result = subject
 
         result_data = result["data"]["updateFeature"]
 
@@ -105,24 +98,19 @@ RSpec.describe Mutations::Entitlement::UpdateFeature, type: :graphql do
     context "when privilege is new" do
       let(:new_privilege_code) { "new_privilege" }
       let(:new_privilege_name) { "New Privilege" }
+      let(:input) do
+        {
+          id: feature.id,
+          name: "Updated Feature Name",
+          description: "Updated Feature Description",
+          privileges: [
+            {code: new_privilege_code, name: new_privilege_name}
+          ]
+        }
+      end
 
       it "adds new privileges to the feature" do
-        result = execute_graphql(
-          current_user: membership.user,
-          current_organization: organization,
-          permissions: required_permission,
-          query: mutation,
-          variables: {
-            input: {
-              id: feature.id,
-              name: "Updated Feature Name",
-              description: "Updated Feature Description",
-              privileges: [
-                {code: new_privilege_code, name: new_privilege_name}
-              ]
-            }
-          }
-        )
+        result = subject
 
         result_data = result["data"]["updateFeature"]
 
