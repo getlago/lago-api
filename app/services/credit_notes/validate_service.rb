@@ -42,6 +42,16 @@ module CreditNotes
     end
 
     def total_items_amount_cents
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
+      pp credit_note.items.sum(&:precise_amount_cents)*0.88
+      pp credit_note.precise_taxes_amount_cents
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
+      pp "-------------------------------------------"
       (
         credit_note.items.sum(&:precise_amount_cents) -
         credit_note.precise_coupons_adjustment_amount_cents +
@@ -73,15 +83,12 @@ module CreditNotes
 
     # NOTE: Check if total amount matched the items amount
     def valid_items_amount?
-      byebug
       pp "-------------------------------------------"
       pp "-------------------------------------------"
       pp "-------------------------------------------"
       pp "-------------------------------------------"
-      pp "total_amount_cents: #{total_amount_cents}"
-      pp "total_items_amount_cents: #{total_items_amount_cents}"
-      pp credit_note.items.map { |item| item.precise_amount_cents }
-      pp credit_note.items.sum(&:precise_amount_cents)*1.88
+      pp total_amount_cents
+      pp total_items_amount_cents
       pp "-------------------------------------------"
       pp "-------------------------------------------"
       pp "-------------------------------------------"
