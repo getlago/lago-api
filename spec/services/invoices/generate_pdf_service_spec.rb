@@ -15,27 +15,24 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
   before do
     invoice_subscription
     stub_pdf_generation
+    allow(Utils::ActivityLog).to receive(:produce)
   end
 
   describe "#call" do
-    before do
-      allow(Utils::ActivityLog).to receive(:produce)
-    end
-
     it "generates the invoice synchronously" do
       result = described_class.call(invoice:, context:)
 
       expect(result.invoice.file).to be_present
     end
 
-    it "produces an activity log" do
-      invoice = described_class.call(invoice:, context:).invoice
-
-      expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.generated")
-    end
-
     it "calls the SendWebhook job" do
       expect { described_class.call(invoice:, context:) }.to have_enqueued_job(SendWebhookJob)
+    end
+
+    it "produces an activity log" do
+      result = described_class.call(invoice:, context:)
+
+      expect(Utils::ActivityLog).to have_received(:produce).with(result.invoice, "invoice.generated")
     end
 
     context "with not found invoice" do
