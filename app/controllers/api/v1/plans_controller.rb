@@ -20,7 +20,7 @@ module Api
         result = ::Plans::UpdateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
 
         if result.success?
-          render_plan(result.plan)
+          render_plan(reload_plan(code: result.plan.code)) # Reload to eager-load relationships, like :entitlements
         else
           render_error_response(result)
         end
@@ -31,7 +31,7 @@ module Api
         result = ::Plans::PrepareDestroyService.call(plan:)
 
         if result.success?
-          render_plan(result.plan)
+          render_plan(reload_plan(code: result.plan.code)) # Reload to eager-load relationships
         else
           render_error_response(result)
         end
@@ -39,11 +39,18 @@ module Api
 
       def show
         plan = current_organization.plans.parents
-          .includes(:usage_thresholds, charges: {filters: {values: :billable_metric_filter}})
+          .includes(
+            :usage_thresholds,
+            charges: {filters: {values: :billable_metric_filter}},
+            entitlements: [:feature, values: :privilege]
+          )
           .find_by(code: params[:code])
-        return not_found_error(resource: "plan") unless plan
 
-        render_plan(plan)
+        if plan
+          render_plan(plan)
+        else
+          not_found_error(resource: "plan")
+        end
       end
 
       def index
@@ -63,12 +70,13 @@ module Api
                 :usage_thresholds,
                 :taxes,
                 :minimum_commitment,
-                charges: {filters: {values: :billable_metric_filter}}
+                charges: {filters: {values: :billable_metric_filter}},
+                entitlements: [:feature, values: :privilege]
               ),
               ::V1::PlanSerializer,
               collection_name: "plans",
               meta: pagination_metadata(result.plans),
-              includes: %i[charges usage_thresholds taxes minimum_commitment]
+              includes: %i[charges usage_thresholds taxes minimum_commitment entitlements]
             )
           )
         else
@@ -77,6 +85,17 @@ module Api
       end
 
       private
+
+      def reload_plan(code:)
+        current_organization.plans.parents
+          .with_discarded
+          .includes(
+            :usage_thresholds,
+            charges: {filters: {values: :billable_metric_filter}},
+            entitlements: [:feature, values: :privilege]
+          )
+          .find_by(code:)
+      end
 
       def input_params
         params.require(:plan).permit(
@@ -136,7 +155,7 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: "plan",
-            includes: %i[charges usage_thresholds taxes minimum_commitment]
+            includes: %i[charges usage_thresholds taxes minimum_commitment entitlements]
           )
         )
       end
