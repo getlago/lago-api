@@ -35,6 +35,10 @@ RSpec.describe Subscriptions::TerminateService do
       expect { terminate_service.call }.to have_enqueued_job(BillSubscriptionJob)
     end
 
+    it "does not create a credit note for the remaining days" do
+      expect { terminate_service.call }.not_to change(CreditNote, :count)
+    end
+
     it "enqueues a BillNonInvoiceableFeesJob" do
       freeze_time do
         expect { terminate_service.call }.to have_enqueued_job(BillNonInvoiceableFeesJob)
@@ -115,7 +119,17 @@ RSpec.describe Subscriptions::TerminateService do
       end
     end
 
-    context "when subscription was payed in advance" do
+    context "when subscription was paid in advance" do
+      let(:plan) { create(:plan, :pay_in_advance) }
+      let(:subscription) do
+        create(
+          :subscription,
+          :anniversary,
+          plan:,
+          started_at: creation_time,
+          subscription_at: creation_time
+        )
+      end
       let(:creation_time) { Time.current.beginning_of_month - 1.month }
       let(:date_service) do
         Subscriptions::DatesService.new_instance(
@@ -162,22 +176,13 @@ RSpec.describe Subscriptions::TerminateService do
       end
 
       before do
-        subscription.plan.update!(pay_in_advance: true)
-        subscription.update!(
-          billing_time: :anniversary,
-          started_at: creation_time,
-          subscription_at: creation_time
-        )
-
         invoice_subscription
         last_subscription_fee
       end
 
       it "creates a credit note for the remaining days" do
         travel_to(Time.current.end_of_month - 4.days) do
-          expect do
-            terminate_service.call
-          end.to change(CreditNote, :count).by(1)
+          expect { terminate_service.call }.to change(CreditNote, :count).by(1)
         end
       end
 
@@ -185,9 +190,7 @@ RSpec.describe Subscriptions::TerminateService do
         let(:invoice_subscription) { nil }
 
         it "does not create a credit note for the remaining days" do
-          expect do
-            terminate_service.call
-          end.not_to change(CreditNote, :count)
+          expect { terminate_service.call }.not_to change(CreditNote, :count)
         end
       end
     end
@@ -245,17 +248,17 @@ RSpec.describe Subscriptions::TerminateService do
     end
 
     context "when next subscription is payed in advance" do
-      let(:plan) { create(:plan, pay_in_advance: true) }
+      let(:plan) { create(:plan, :pay_in_advance) }
+      let(:subscription) { create(:subscription, plan:) }
+      let(:next_subscription_plan) { create(:plan, :pay_in_advance) }
       let(:next_subscription) do
         create(
           :subscription,
           previous_subscription_id: subscription.id,
-          plan:,
+          plan: next_subscription_plan,
           status: :pending
         )
       end
-
-      before { subscription.plan.update!(pay_in_advance: true) }
 
       it "enqueues one job" do
         terminate_service.terminate_and_start_next(timestamp:)

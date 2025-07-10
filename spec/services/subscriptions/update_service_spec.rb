@@ -82,6 +82,12 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     context "when subscription is starting in the future" do
       let(:subscription) { create(:subscription, :pending) }
 
+      it "does not produce activity log" do
+        update_service.call
+
+        expect(Utils::ActivityLog).not_to have_received(:produce)
+      end
+
       context "when subscription is pay_in_advance" do
         let(:plan) { create(:plan, :pay_in_advance) }
         let(:subscription) { create(:subscription, :pending, plan:) }
@@ -126,6 +132,22 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
               .with([subscription], Time.now.to_i, invoicing_reason: :subscription_starting)
           end
         end
+
+        context "when subscription_at is set to future date" do
+          let(:subscription_at) { 1.week.from_now.iso8601 }
+
+          it "keeps subscription pending and updates subscription_at" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.status).to eq("pending")
+            expect(result.subscription.subscription_at).to eq(subscription_at)
+          end
+
+          it "does not enqueue billing job" do
+            expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
+          end
+        end
       end
 
       context "when plan is NOT pay_in_advance" do
@@ -135,6 +157,17 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
           it "does not enqueue billing job" do
             expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
           end
+        end
+      end
+
+      context "when updating subscription without changing subscription_at" do
+        let(:params) { {name: "new name"} }
+
+        it "updates the subscription without processing subscription_at change" do
+          result = update_service.call
+
+          expect(result).to be_success
+          expect(result.subscription.name).to eq("new name")
         end
       end
     end
@@ -277,6 +310,30 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         expect(result).to be_success
         expect(result.subscription.name).to be_nil
         expect(result.subscription.ending_at).to be_nil
+      end
+    end
+
+    context "when customer is missing" do
+      let(:subscription) { build(:subscription, customer: nil) }
+      let(:params) { {name: "new name"} }
+
+      it "returns customer not found error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("customer_not_found")
+      end
+    end
+
+    context "when plan is missing" do
+      let(:subscription) { build(:subscription, plan: nil) }
+      let(:params) { {name: "new name"} }
+
+      it "returns plan not found error" do
+        result = update_service.call
+
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("plan_not_found")
       end
     end
   end
