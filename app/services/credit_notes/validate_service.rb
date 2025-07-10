@@ -44,7 +44,7 @@ module CreditNotes
     def total_items_amount_cents
       (
         credit_note.items.sum(&:precise_amount_cents) -
-        credit_note.precise_coupons_adjustment_amount_cents +
+        credit_note.precise_coupons_adjustment_amount_cents.round +
         credit_note.precise_taxes_amount_cents
       ).round
     end
