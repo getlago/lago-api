@@ -117,6 +117,7 @@ end
 #  status                       :string           not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
+#  customer_id                  :uuid
 #  invoice_id                   :uuid
 #  organization_id              :uuid             not null
 #  payable_id                   :uuid
@@ -127,6 +128,7 @@ end
 #
 # Indexes
 #
+#  index_payments_on_customer_id                                  (customer_id)
 #  index_payments_on_invoice_id                                   (invoice_id)
 #  index_payments_on_organization_id                              (organization_id)
 #  index_payments_on_payable_id_and_payable_type                  (payable_id,payable_type) UNIQUE WHERE ((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))

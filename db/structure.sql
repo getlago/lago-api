@@ -313,6 +313,7 @@ DROP INDEX IF EXISTS public.index_payments_on_payable_type_and_payable_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type;
 DROP INDEX IF EXISTS public.index_payments_on_organization_id;
 DROP INDEX IF EXISTS public.index_payments_on_invoice_id;
+DROP INDEX IF EXISTS public.index_payments_on_customer_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_customer_id;
@@ -636,6 +637,7 @@ ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS payments_pkey;
+ALTER TABLE IF EXISTS public.payments DROP CONSTRAINT IF EXISTS payments_customer_id_null;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS payment_requests_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS payment_receipts_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_providers DROP CONSTRAINT IF EXISTS payment_providers_pkey;
@@ -3492,7 +3494,8 @@ CREATE TABLE public.payments (
     reference character varying,
     provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
     provider_payment_method_id character varying,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    customer_id uuid
 );
 
 
@@ -4424,6 +4427,14 @@ ALTER TABLE ONLY public.payment_receipts
 
 ALTER TABLE ONLY public.payment_requests
     ADD CONSTRAINT payment_requests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payments payments_customer_id_null; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.payments
+    ADD CONSTRAINT payments_customer_id_null CHECK ((customer_id IS NOT NULL)) NOT VALID;
 
 
 --
@@ -6708,6 +6719,13 @@ CREATE INDEX index_payment_requests_on_dunning_campaign_id ON public.payment_req
 --
 
 CREATE INDEX index_payment_requests_on_organization_id ON public.payment_requests USING btree (organization_id);
+
+
+--
+-- Name: index_payments_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payments_on_customer_id ON public.payments USING btree (customer_id);
 
 
 --
@@ -8999,6 +9017,8 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250710102413'),
+('20250710102337'),
 ('20250709085218'),
 ('20250709082136'),
 ('20250708094414'),
