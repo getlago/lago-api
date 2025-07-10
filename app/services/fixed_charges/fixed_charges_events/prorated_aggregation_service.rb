@@ -18,7 +18,7 @@ module FixedCharges
         result.current_usage_units = full_units
         result.count = fixed_charge_events.count
         result.total_aggregated_units = full_units
-        result.full_period_days = full_period_days
+        result.full_period_days = charges_duration
 
         if fixed_charge.prorated?
           # For prorated fixed charges, calculate the prorated units
@@ -53,7 +53,7 @@ module FixedCharges
             SELECT (
               CASE WHEN units > 0
               THEN
-                duration_days / #{full_period_days}::numeric
+                duration_days / #{charges_duration}::numeric
               ELSE
                 0 -- NOTE: no units, so no contribution
               END
@@ -100,13 +100,6 @@ module FixedCharges
         SQL
       end
 
-      def duration_ratio_sql(from, to, duration)
-        from_in_timezone = Utils::Timezone.date_in_customer_timezone_sql(customer, from)
-        to_in_timezone = Utils::Timezone.date_in_customer_timezone_sql(customer, to)
-
-        "((DATE(#{to_in_timezone}) - DATE(#{from_in_timezone}))::numeric + 1) / #{duration}::numeric"
-      end
-
       def sanitized_property_name
         ActiveRecord::Base.sanitize_sql_for_conditions(
           ["fixed_charge_events.properties->>?", "units"]
@@ -116,31 +109,31 @@ module FixedCharges
       # I don't think it's responsibility of the aggregation service... because
       # we can aggregate over any period, and these are from the billing service...
       # looking at fees/charge_service.rb, the boundaries should include charge_duration.
-      def full_period_days
-        # Calculate the real number of days in the billing period
-        # based on the subscription's billing cycle
-        case plan.interval
-        when "monthly"
-          # Calculate days from the start of the billing period to the start of the next billing period
-          billing_start = subscription.started_at.beginning_of_month.to_date
-          billing_end = billing_start.next_month.to_date
-          (billing_end - billing_start).to_i
-        when "yearly"
-          # Calculate days from the start of the billing period to the start of the next billing period
-          billing_start = subscription.started_at.beginning_of_year.to_date
-          billing_end = billing_start.next_year.to_date
-          (billing_end - billing_start).to_i
-        when "weekly"
-          7 # a week always has 7 days
-        when "quarterly"
-          # Calculate days from the start of the billing period to the start of the next billing period
-          billing_start = subscription.started_at.beginning_of_quarter.to_date
-          billing_end = billing_start.next_quarter.to_date
-          (billing_end - billing_start).to_i
-        else
-          raise "Unsupported interval: #{plan.interval}"
-        end
-      end
+      # def full_period_days
+      #   # Calculate the real number of days in the billing period
+      #   # based on the subscription's billing cycle
+      #   case plan.interval
+      #   when "monthly"
+      #     # Calculate days from the start of the billing period to the start of the next billing period
+      #     billing_start = subscription.started_at.beginning_of_month.to_date
+      #     billing_end = billing_start.next_month.to_date
+      #     (billing_end - billing_start).to_i
+      #   when "yearly"
+      #     # Calculate days from the start of the billing period to the start of the next billing period
+      #     billing_start = subscription.started_at.beginning_of_year.to_date
+      #     billing_end = billing_start.next_year.to_date
+      #     (billing_end - billing_start).to_i
+      #   when "weekly"
+      #     7 # a week always has 7 days
+      #   when "quarterly"
+      #     # Calculate days from the start of the billing period to the start of the next billing period
+      #     billing_start = subscription.started_at.beginning_of_quarter.to_date
+      #     billing_end = billing_start.next_quarter.to_date
+      #     (billing_end - billing_start).to_i
+      #   else
+      #     raise "Unsupported interval: #{plan.interval}"
+      #   end
+      # end
     end
   end
 end
