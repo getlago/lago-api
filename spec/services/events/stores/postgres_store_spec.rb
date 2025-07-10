@@ -363,6 +363,10 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
         Rails.logger.info("-" * 80)
         Rails.logger.info(Event.count)
+        Rails.logger.info(event_store.unique_count.round(3))
+        Rails.logger.info(event_store.prorated_unique_count_breakdown)
+        Rails.logger.info(event_store.prorated_unique_count.round(3))
+
         expect(event_store.prorated_unique_count.round(3)).to eq(1.871) # 16/31 + 3/31 + 14/31 + 13/31 + 12/31
       end
     end
