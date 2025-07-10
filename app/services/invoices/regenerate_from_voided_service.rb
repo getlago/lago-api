@@ -31,11 +31,15 @@ module Invoices
         )
 
         generating_result.raise_if_error!
-        invoice = generating_result.invoice
+        regenerated_invoice = generating_result.invoice
+
+        # rubocop:disable Rails/SkipsModelValidations
+        voided_invoice.invoice_subscriptions.update_all(invoice_id: regenerated_invoice.id)
+        # rubocop:enable Rails/SkipsModelValidations
 
         existing_fees.each do |fee_record|
           fee_record.dup.tap do |fee|
-            fee.invoice = invoice
+            fee.invoice = regenerated_invoice
             fee.payment_status = :pending
             fee.taxes_amount_cents = 0
             fee.taxes_precise_amount_cents = 0.to_d
@@ -57,7 +61,7 @@ module Invoices
               end
             end
 
-            fee.save!
+            fee.save
 
             taxes_result = Fees::ApplyTaxesService.call(fee: fee)
             taxes_result.raise_if_error!
@@ -66,12 +70,12 @@ module Invoices
 
         new_fees.each do |fee_attributes|
           fee_data = fee_attributes.merge(
-            invoice: invoice,
-            organization: invoice.organization,
-            billing_entity: invoice.billing_entity,
+            invoice: regenerated_invoice,
+            organization: regenerated_invoice.organization,
+            billing_entity: regenerated_invoice.billing_entity,
             amount_cents: fee_attributes.fetch(:unit_amount_cents, 0),
             unit_amount_cents: fee_attributes[:unit_amount_cents],
-            amount_currency: invoice.currency,
+            amount_currency: regenerated_invoice.currency,
             fee_type: fee_attributes[:add_on_id].present? ? :add_on : :charge,
             taxes_amount_cents: 0,
             taxes_precise_amount_cents: 0.to_d,
@@ -85,18 +89,18 @@ module Invoices
           taxes_result.raise_if_error!
         end
 
-        amounts_from_fees_result = Invoices::ComputeAmountsFromFees.call(invoice: invoice)
+        amounts_from_fees_result = Invoices::ComputeAmountsFromFees.call(invoice: regenerated_invoice)
         amounts_from_fees_result.raise_if_error!
 
         if voided_invoice.customer.applicable_invoice_grace_period.positive?
-          invoice.draft!
+          regenerated_invoice.draft!
         else
-          transition_result = Invoices::TransitionToFinalStatusService.call(invoice: invoice)
+          transition_result = Invoices::TransitionToFinalStatusService.call(invoice: regenerated_invoice)
           transition_result.raise_if_error!
-          invoice.save!
+          regenerated_invoice.save!
         end
 
-        result.invoice = invoice
+        result.invoice = regenerated_invoice
       end
 
       result
