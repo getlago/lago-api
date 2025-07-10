@@ -6,6 +6,7 @@ module Wallets
       return true unless args[:applies_to]
 
       valid_allowed_fee_types?
+      valid_billable_metrics?
 
       if errors?
         result.validation_failure!(errors:)
@@ -27,6 +28,12 @@ module Wallets
       invalid = incoming - valid_types
 
       add_error(field: :allowed_fee_types, error_code: "invalid_fee_types") if invalid.any?
+    end
+
+    def valid_billable_metrics?
+      return true if result.billable_metrics.length == result.billable_metric_identifiers.length
+
+      add_error(field: :billable_metrics, error_code: "invalid_identifier")
     end
   end
 end
