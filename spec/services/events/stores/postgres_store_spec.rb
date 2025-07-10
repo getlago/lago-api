@@ -361,11 +361,7 @@ RSpec.describe Events::Stores::PostgresStore, type: :service do
 
 
         puts "=" * 80
-        puts "Event.count: #{Event.count}"
-        event_store.unique_count
-        puts(event_store.unique_count)
-        puts(event_store.prorated_unique_count_breakdown)
-        puts(event_store.prorated_unique_count.round(3))
+        puts "Event.count: #{Event.where(organization_id: organization.id, code:).count}"
 
         expect(event_store.prorated_unique_count.round(3)).to eq(1.871) # 16/31 + 3/31 + 14/31 + 13/31 + 12/31
       end

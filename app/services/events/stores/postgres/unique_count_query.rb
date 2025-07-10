@@ -17,9 +17,7 @@ module Events
             event_values AS (
               SELECT
                 property,
-                SUM(adjusted_value) AS sum_adjusted_value,
-                timestamp,
-                operation_type
+                SUM(adjusted_value) AS sum_adjusted_value
               FROM (
                 SELECT
                   timestamp,
@@ -29,15 +27,10 @@ module Events
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
-              GROUP BY property, timestamp, operation_type
+              GROUP BY property
             )
 
-            SELECT
-                   timestamp,
-                   property,
-                   operation_type,
-                   sum_adjusted_value
-            FROM event_values
+            SELECT COALESCE(SUM(sum_adjusted_value), 0) AS aggregation FROM event_values
           SQL
         end
 
