@@ -338,6 +338,30 @@ RSpec.describe Invoices::RegenerateFromVoidedService, type: :service do
               expect(result.invoice).not_to eq(voided_invoice)
             end
           end
+
+          it "copies invoice_subscriptions from voided_invoice" do
+            subscription = create(:subscription, customer:)
+            voided_invoice = create(:invoice, :voided, invoice_type: :subscription, organization:, customer:)
+            invoice_subscription = create(:invoice_subscription, :boundaries, invoice: voided_invoice, subscription:)
+
+            service = described_class.new(voided_invoice:, fees: [{id: fee.id}])
+            result = service.call
+
+            aggregate_failures do
+              expect(result).to be_success
+              expect(result.invoice.invoice_subscriptions.count).to eq(1)
+
+              new_invoice_subscription = result.invoice.invoice_subscriptions.first
+              expect(new_invoice_subscription.subscription).to eq(subscription)
+              expect(new_invoice_subscription.timestamp).to eq(invoice_subscription.timestamp)
+              expect(new_invoice_subscription.from_datetime).to eq(invoice_subscription.from_datetime)
+              expect(new_invoice_subscription.to_datetime).to eq(invoice_subscription.to_datetime)
+              expect(new_invoice_subscription.charges_from_datetime).to eq(invoice_subscription.charges_from_datetime)
+              expect(new_invoice_subscription.charges_to_datetime).to eq(invoice_subscription.charges_to_datetime)
+              expect(new_invoice_subscription.recurring).to eq(invoice_subscription.recurring)
+              expect(new_invoice_subscription.invoicing_reason).to eq(invoice_subscription.invoicing_reason)
+            end
+          end
         end
 
         context "when invoice_type is one_off" do
