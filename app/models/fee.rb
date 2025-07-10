@@ -192,7 +192,7 @@ class Fee < ApplicationRecord
     remaining_amount = precise_amount_cents - credit_note_items.sum(:precise_amount_cents)
 
     if credit?
-      [remaining_amount, invoice.associated_active_wallet&.balance_cents || 0].min 
+      [remaining_amount, invoice.associated_active_wallet&.balance_cents || 0].min
     else
       remaining_amount
     end
