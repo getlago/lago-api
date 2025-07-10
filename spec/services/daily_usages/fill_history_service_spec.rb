@@ -12,7 +12,7 @@ RSpec.describe DailyUsages::FillHistoryService do
     let(:to_datetime) { nil }
 
     context "when subscription is terminated" do
-      before { Subscriptions::TerminateService.new(subscription:).call }
+      before { Subscriptions::TerminateService.call(subscription:) }
 
       context "when to_datetime is provided" do
         let(:to_datetime) { Time.current + 1.week }
