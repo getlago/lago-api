@@ -105,4 +105,17 @@ RSpec.describe ::V1::SubscriptionSerializer do
       expect(result["subscription"]["usage_threshold"]).to be_present
     end
   end
+
+  context "when terminated with credit note" do
+    let(:plan) { create(:plan, :pay_in_advance) }
+    let(:subscription) { create(:subscription, :terminated, plan:, on_termination_credit_note: :credit) }
+
+    it "serializes the object" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["subscription"]["on_termination_credit_note"]).to eq("credit")
+      expect(result["subscription"]["terminated_at"]).to be_present
+      expect(result["subscription"]["status"]).to eq("terminated")
+    end
+  end
 end

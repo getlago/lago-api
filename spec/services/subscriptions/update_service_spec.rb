@@ -77,6 +77,37 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
           expect(result.subscription.subscription_at.to_s).not_to include("2022-07-07")
         end
       end
+
+      context "when updating on_termination_credit_note" do
+        let(:params) { {on_termination_credit_note: "credit"} }
+
+        context "with pay_in_advance plan" do
+          let(:plan) { create(:plan, :pay_in_advance) }
+          let(:subscription) { create(:subscription, plan:) }
+
+          %w[credit omit].each do |value|
+            context "when on_termination_credit_note is #{value}" do
+              let(:params) { {on_termination_credit_note: value} }
+
+              it "accepts the value for pay_in_advance plans" do
+                result = update_service.call
+
+                expect(result).to be_success
+                expect(result.subscription.on_termination_credit_note).to eq(value)
+              end
+            end
+          end
+        end
+
+        context "with pay_in_arrears plan" do
+          it "ignores the value" do
+            result = update_service.call
+
+            expect(result).to be_success
+            expect(result.subscription.on_termination_credit_note).to be_nil
+          end
+        end
+      end
     end
 
     context "when subscription is starting in the future" do
@@ -228,6 +259,17 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
           expect(result).not_to be_success
           expect(result.error.messages).to eq({ending_at: ["invalid_date"]})
+        end
+      end
+
+      context "with invalid on_termination_credit_note" do
+        let(:params) { {on_termination_credit_note: "invalid_value"} }
+
+        it "returns validation failure" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq({on_termination_credit_note: ["invalid_value"]})
         end
       end
     end

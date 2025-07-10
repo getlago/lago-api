@@ -29,7 +29,7 @@ RSpec.describe Subscriptions::PlanUpgradeService, type: :service do
 
   describe "#call", :aggregate_failures do
     before do
-      allow(Utils::ActivityLog).to receive(:produce)
+      allow(Utils::ActivityLog).to receive(:produce).and_call_original
 
       subscription.mark_as_active!
     end
