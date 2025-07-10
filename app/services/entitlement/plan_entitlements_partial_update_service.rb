@@ -5,6 +5,7 @@ module Entitlement
     Result = BaseResult[:entitlements]
 
     def call
+      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "plan") unless plan
 
       handle_validation_errors do

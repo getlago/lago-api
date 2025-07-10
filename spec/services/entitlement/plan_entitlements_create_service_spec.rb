@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
-  subject(:create_service) { described_class.new(organization:, plan:, entitlements_params:) }
+  subject(:result) { described_class.call(organization:, plan:, entitlements_params:) }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
@@ -22,8 +22,10 @@ RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
     privilege
   end
 
+  it_behaves_like "a premium service"
+
   describe "#call" do
-    subject(:result) { create_service.call }
+    around { |test| lago_premium!(&test) }
 
     it "returns success" do
       expect(result).to be_success
@@ -152,7 +154,7 @@ RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
     end
 
     context "when plan is nil" do
-      subject(:create_service) { described_class.new(organization:, plan: nil, entitlements_params:) }
+      subject(:result) { described_class.call(organization:, plan: nil, entitlements_params:) }
 
       it "returns not found failure" do
         expect(result).not_to be_success

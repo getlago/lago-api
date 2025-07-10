@@ -10,6 +10,8 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
   let(:privilege1) { create(:privilege, feature:, code: "max", name: "Maximum") }
   let(:privilege2) { create(:privilege, feature:, code: "min", name: "Minimum") }
   let(:privilege3) { create(:privilege, feature:, code: "opt", name: "Optional") }
+  let(:params) { {} }
+  let(:partial) { false }
 
   before do
     privilege1
@@ -17,7 +19,11 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
     privilege3
   end
 
+  it_behaves_like "a premium service"
+
   describe "#call" do
+    around { |test| lago_premium!(&test) }
+
     context "when update is full" do
       let(:partial) { false }
 
