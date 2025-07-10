@@ -112,4 +112,34 @@ RSpec.describe Api::V1::PaymentRequestsController, type: :request do
       end
     end
   end
+
+  describe "GET /api/v1/payment_requests/:id" do
+    subject { get_with_token(organization, "/api/v1/payment_requests/#{id}") }
+
+    let(:payment_request) { create(:payment_request, invoices: [invoice], customer:) }
+    let(:customer) { create(:customer, organization:) }
+    let(:invoice) { create(:invoice, organization:, customer:) }
+
+    context "when payment request exists" do
+      let(:id) { payment_request.id }
+
+      include_examples "requires API permission", "payment_request", "read"
+
+      it "returns the payment request" do
+        subject
+        expect(response).to have_http_status(:ok)
+        expect(json[:payment_request][:lago_id]).to eq(payment_request.id)
+        expect(json[:payment_request][:invoices].first[:lago_id]).to eq(invoice.id)
+      end
+    end
+
+    context "when payment request does not exist" do
+      let(:id) { SecureRandom.uuid }
+
+      it "returns a not found error" do
+        subject
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+  end
 end

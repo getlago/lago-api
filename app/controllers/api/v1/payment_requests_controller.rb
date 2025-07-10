@@ -47,6 +47,13 @@ module Api
         end
       end
 
+      def show
+        payment_request = PaymentRequest.where(organization: current_organization).find_by(id: params[:id])
+        return not_found_error(resource: resource_name) unless payment_request
+
+        render_payment_request(payment_request)
+      end
+
       private
 
       def create_params
@@ -59,6 +66,16 @@ module Api
 
       def index_filters
         params.permit(:external_customer_id)
+      end
+
+      def render_payment_request(payment_request)
+        render(
+          json: ::V1::PaymentRequestSerializer.new(
+            payment_request,
+            root_name: resource_name,
+            includes: %i[customer invoices]
+          )
+        )
       end
 
       def resource_name
