@@ -35,10 +35,11 @@ module Api
         end
 
         def create
-          result = ::Entitlement::PlanEntitlementsCreateService.call(
+          result = ::Entitlement::PlanEntitlementsUpdateService.call(
             organization: current_organization,
             plan:,
-            entitlements_params: create_params
+            entitlements_params: update_params,
+            partial: false
           )
 
           if result.success?
@@ -55,10 +56,11 @@ module Api
         end
 
         def update
-          result = ::Entitlement::PlanEntitlementsPartialUpdateService.call(
+          result = ::Entitlement::PlanEntitlementsUpdateService.call(
             organization: current_organization,
             plan:,
-            entitlements_params: update_params
+            entitlements_params: update_params,
+            partial: true
           )
 
           if result.success?
@@ -90,10 +92,6 @@ module Api
         end
 
         private
-
-        def create_params
-          params.fetch(:entitlements, {}).permit!
-        end
 
         def update_params
           params.fetch(:entitlements, {}).permit!

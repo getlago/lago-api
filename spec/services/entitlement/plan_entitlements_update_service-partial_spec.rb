@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::PlanEntitlementsPartialUpdateService, type: :service do
-  subject(:result) { described_class.call(organization:, plan:, entitlements_params:) }
+RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
+  subject(:result) { described_class.call(organization:, plan:, entitlements_params:, partial: true) }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
@@ -141,7 +141,7 @@ RSpec.describe Entitlement::PlanEntitlementsPartialUpdateService, type: :service
     end
 
     context "when plan is nil" do
-      let(:result) { described_class.call(organization:, plan: nil, entitlements_params:) }
+      let(:result) { described_class.call(organization:, plan: nil, entitlements_params:, partial: true) }
 
       it "returns not found failure" do
         expect(result).not_to be_success
@@ -257,7 +257,9 @@ RSpec.describe Entitlement::PlanEntitlementsPartialUpdateService, type: :service
 
           result
 
-          expect(Bullet).not_to be_notification
+          # NOTE: the final `plan.entitlements.includes(...).reload` triggers Bullet::Notification::UnusedEagerLoading
+          #       but the eager loading is important for the serializer
+          expect(Bullet.text_notifications).to be_empty
           expect(result).to be_success
           expect(result.entitlements.count).to eq(3)
         end

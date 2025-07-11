@@ -55,6 +55,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
             invoiceDisplayName
             taxes { id rate }
           }
+          entitlements { code name description privileges { code value name valueType config } }
         }
       }
     GQL
@@ -93,6 +94,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       "invoiceDisplayName" => minimum_commitment.invoice_display_name,
       "taxes" => []
     )
+    expect(plan_response["entitlements"]).to be_empty
   end
 
   context "when plan has active subscriptions" do
@@ -203,6 +205,18 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       plan_response = result["data"]["plan"]
 
       expect(plan_response["hasDraftInvoices"]).to eq(true)
+    end
+  end
+
+  context "when plan has entitlements" do
+    it "returns entitlements" do
+      feature = create(:feature, organization:, code: "seats")
+      entitlement = create(:entitlement, plan:, feature:)
+      create(:entitlement_value, entitlement:, privilege: create(:privilege, feature:, code: "max", value_type: "integer"), value: 10)
+
+      entitlements = result["data"]["plan"]["entitlements"]
+      expect(entitlements.sole["code"]).to eq "seats"
+      expect(entitlements.sole["privileges"].sole["value"]).to eq "10"
     end
   end
 
