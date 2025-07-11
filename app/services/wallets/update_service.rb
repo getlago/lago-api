@@ -83,7 +83,7 @@ module Wallets
     def sanitize_wallet_billable_metrics
       not_needed_wallet_target_ids = wallet.wallet_targets.pluck(:billable_metric_id).compact - billable_metrics.pluck(:id)
       not_needed_wallet_target_ids.each do |wallet_billable_metric_id|
-        WalletTarget.find_by(wallet:, billable_metric_id: wallet_billable_metric_id)&.destroy!
+        WalletTarget.find_by(wallet:, billable_metric_id: wallet_billable_metric_id, organization: wallet.organization)&.destroy!
       end
     end
 
