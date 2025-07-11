@@ -26,6 +26,47 @@ You must use the `rails` cli in the container too, for example: `lago exec api b
     this
     ```
 
+# Commit Messages
+
+All commit messages must follow the Conventional Commits specification:
+
+```
+<type>[optional scope]: <description>
+
+## Context
+
+...
+
+## Description
+
+...
+```
+
+Where:
+- `<type>` is one of: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert, misc
+- `[optional scope]` is optional and describes the area of change (e.g., auth, billing, api)
+- `<description>` is a short description of the change in imperative mood
+
+**When generating or amending commit messages:**
+- The first line must be 50 characters or less
+- Use the imperative mood ("Add feature" not "Added feature")
+- The body should
+  - Explain the context and rationale for the change
+  - Explain the "why" and "what" at a conceptual level, not the "how" at a code level
+  - Be simple and direct
+  - Avoid verbose explanations
+  - Keep as many meaningful information as possible
+- Check the whole diff at once using `PAGER=cat git diff ...` to see all changes together
+- Generate the commit message based on the actual changes, not assumptions
+- Do not check previous commits or commit history
+- Only describe what was actually added or changed, not what already existed in the files
+
+**When creating new commits:**
+- Only analyze the current staged changes (`PAGER=cat git diff --staged`)
+
+**When amending commits:**
+- Always check the actual commit content first using `PAGER=cat git show HEAD` to see all changes and `PAGER=cat git diff --staged` to see staged changes
+- Use `git commit --amend -m "message"` to update the commit message
 
 # Services
 
@@ -91,6 +132,21 @@ Soft deletion
 - soft deletable models should be deletable
 - You cannot rely on `dependent: :destroy` if the model is soft deleted, you must call `discard_all!` on relationship manually
 
+## Enums
+
+- Define enum constants as arrays before using them in enum declarations
+- For PostgreSQL enums, define constants as hashes with string values, not arrays. Use the format: `ENUM_NAME = { value1: "value1", value2: "value2" }.freeze`.
+
+Example:
+
+  ```ruby
+  FEE_TYPES = %i[charge add_on subscription credit commitment].freeze
+  enum :fee_type, FEE_TYPES
+
+  ON_TERMINATION_CREDIT_NOTES = { credit: "credit", omit: "omit" }.freeze
+  enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES
+  ```
+
 # Webhooks
 
 To create a webhook:
@@ -103,6 +159,25 @@ To create a webhook:
     - `object_type` which is the object serialized. Reuse this method in the serializer `root_name` param
 - Add the mapping `name` => Service class to the `SendWebhookJob::WEBHOOK_SERVICES` hash
 - Write a test for the webhook class
+
+# Migrations
+
+- Prefer `add_column` over `change_table` when adding single columns
+- Use `safety_assured` wrapper when required for complex operations
+- Never use hardcoded or fake timestamps in migration filenames. Migration timestamps should be generated using `date +"%Y%m%d%H%M%S"` command to ensure proper chronological ordering.
+- For enums, use `create_enum` to define the PostgreSQL enum type before adding the column
+  - Enum type names should be descriptive and include the table/model context (e.g., `subscription_on_termination_credit_note`)
+
+# Backward Compatibility
+
+- New optional parameters must not break existing functionality
+
+# Service
+
+## Validation
+
+- Use descriptive error messages that explain why validation failed
+- Always validate enum values in a service validation class to prevent invalid API input
 
 # Query object
 
@@ -123,6 +198,12 @@ To create a webhook:
 ## Models
 
 - When testing models, test all enums and group them all in a `describe "enums"` block with a single `it` block (not multiple `it` blocks)
+  - When testing PostgreSQL enums, use the `.backed_by_column_of_type(:enum)` matcher:
+    ```ruby
+    expect(subject).to define_enum_for(:on_termination_credit_note)
+      .backed_by_column_of_type(:enum)
+      .with_values(credit: "credit", omit: "omit")
+    ```
 - When testing models, test ALL associations (belongs_to, has_one, has_many, etc.) and group them all in a `describe "associations"` block with a single `it` block (not multiple `it` blocks)
   - Include ALL association parameters and options (class_name, foreign_key, through, dependent, autosave, optional, etc.)
   - Clickhouse associations should have their own `describe "Clickhouse associations"` block with `clickhouse: true` metadata after the associations block
