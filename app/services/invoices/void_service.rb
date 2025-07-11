@@ -109,13 +109,15 @@ module Invoices
             amount_cents: fee.creditable_amount_cents
           }
         end
+        estimate_result = CreditNotes::EstimateService.call!(invoice: invoice, items: fees)
+
 
         credit_note_to_void = CreditNotes::CreateService.call!(
           invoice: invoice,
           reason: :other,
           description: "Credit note created due to voided invoice #{invoice.id}",
-          credit_amount_cents: remaining_amount,
-          items: fees
+          credit_amount_cents: estimate_result.credit_note.credit_amount_cents,
+          items: estimate_result.credit_note.items.map { |item| {fee_id: item.fee_id, amount_cents: item.amount_cents} }
         )
 
         CreditNotes::VoidService.call!(credit_note: credit_note_to_void.credit_note)
