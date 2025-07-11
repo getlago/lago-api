@@ -10,8 +10,8 @@ RSpec.describe Types::Payments::Object do
   it { is_expected.to have_field(:amount_cents).of_type("BigInt!") }
   it { is_expected.to have_field(:amount_currency).of_type("CurrencyEnum!") }
 
-  it { is_expected.to have_field(:customer).of_type("Customer!") }
-  it { is_expected.to have_field(:payable).of_type("Payable") }
+  it { is_expected.to have_field(:customer).of_type("Customer") }
+  it { is_expected.to have_field(:payable).of_type("Payable!") }
   it { is_expected.to have_field(:payable_payment_status).of_type("PayablePaymentStatusEnum") }
   it { is_expected.to have_field(:payment_provider_type).of_type("ProviderTypeEnum") }
   it { is_expected.to have_field(:payment_receipt).of_type("PaymentReceipt") }
