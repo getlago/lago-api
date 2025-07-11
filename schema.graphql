@@ -578,6 +578,7 @@ interface AppliedTax {
 }
 
 input AppliesToInput {
+  billableMetricIds: [ID!]
   feeTypes: [FeeTypesEnum!]
 }
 
@@ -10745,6 +10746,7 @@ type Wallet {
 }
 
 type WalletAppliesTo {
+  billableMetrics: [BillableMetric!]
   feeTypes: [FeeTypesEnum!]
 }
 

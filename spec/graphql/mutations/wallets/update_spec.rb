@@ -7,6 +7,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:customer) { create(:customer, organization:) }
+  let(:billable_metric) { create(:billable_metric, organization: membership.organization) }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) { create(:wallet, customer:) }
   let(:expiration_at) { (Time.zone.now + 1.year) }
@@ -39,6 +40,9 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
           }
           appliesTo {
             feeTypes
+            billableMetrics {
+              id
+            }
           }
         }
       }
@@ -86,7 +90,8 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
             }
           ],
           appliesTo: {
-            feeTypes: %w[subscription]
+            feeTypes: %w[subscription],
+            billableMetricIds: [billable_metric.id]
           }
         }
       }
@@ -118,6 +123,7 @@ RSpec.describe Mutations::Wallets::Update, type: :graphql do
       "invoiceRequiresSuccessfulPayment" => true
     )
     expect(result_data["appliesTo"]["feeTypes"]).to eq(["subscription"])
+    expect(result_data["appliesTo"]["billableMetrics"].first["id"]).to eq(billable_metric.id)
 
     expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
   end
