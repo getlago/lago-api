@@ -44266,6 +44266,18 @@
                   "defaultValue": null,
                   "isDeprecated": false,
                   "deprecationReason": null
+                },
+                {
+                  "name": "paymentStatus",
+                  "description": null,
+                  "type": {
+                    "kind": "ENUM",
+                    "name": "InvoicePaymentStatusTypeEnum",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
                 }
               ]
             },
