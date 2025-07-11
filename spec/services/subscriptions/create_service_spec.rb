@@ -31,7 +31,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
   describe "#call" do
     before do
-      allow(Utils::ActivityLog).to receive(:produce)
+      allow(Utils::ActivityLog).to receive(:produce).and_call_original
     end
 
     it "creates a subscription with subscription date set to current date" do
