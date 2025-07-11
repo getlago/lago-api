@@ -6,7 +6,7 @@ class Payment < ApplicationRecord
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
   belongs_to :organization
-  belongs_to :customer, optional: true
+  # belongs_to :customer, optional: true
   belongs_to :payable, polymorphic: true
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
@@ -16,6 +16,8 @@ class Payment < ApplicationRecord
   has_one :payment_receipt, dependent: :destroy
 
   monetize :amount_cents
+
+  delegate :customer, to: :payable, allow_nil: true
 
   PAYMENT_TYPES = {provider: "provider", manual: "manual"}.freeze
   attribute :payment_type, :string
