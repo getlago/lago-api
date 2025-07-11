@@ -1464,7 +1464,7 @@ RSpec.describe Invoice, type: :model do
         subscription = invoice_subscription.subscription
         billable_metric = create(:unique_count_billable_metric, organization: subscription.organization)
         charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
-        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20)
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, precise_amount_cents: 133, taxes_rate: 20)
         invoice.update(fees_amount_cents: 160)
       end
 
@@ -1505,7 +1505,7 @@ RSpec.describe Invoice, type: :model do
       let(:charge) { create(:standard_charge, plan: subscription.plan, billable_metric:) }
 
       before do
-        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 0, taxes_rate: 20)
+        create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 0, precise_amount_cents: 0, taxes_rate: 20)
       end
 
       it "returns 0" do
@@ -1586,7 +1586,7 @@ RSpec.describe Invoice, type: :model do
       subscription = invoice_subscription.subscription
       billable_metric = create(:unique_count_billable_metric, organization: subscription.organization)
       charge = create(:standard_charge, plan: subscription.plan, billable_metric:)
-      create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, taxes_rate: 20)
+      create(:charge_fee, subscription:, invoice:, charge:, amount_cents: 133, precise_amount_cents: 133, taxes_rate: 20)
       invoice.update(fees_amount_cents: 160)
     end
 

@@ -34,7 +34,7 @@ module Invoices
 
         invoice.credits.each do |credit|
           AppliedCoupons::RecreditService.call!(credit:) if credit.applied_coupon_id.present?
-          CreditNotes::RecreditService.call!(credit:) if credit.credit_note_id.present?
+          CreditNotes::RecreditService.call!(credit:) if credit.credit_note_id.present? && !credit.credit_note.voided?
         end
 
         # when generate_credit_note, we count the wallet value on the creditable value
@@ -101,10 +101,15 @@ module Invoices
         )
       end
 
-      remaining_amount = invoice.reload.creditable_amount_cents.round
+      remaining_amount = invoice.reload.creditable_amount_cents
       if remaining_amount.positive?
-        estimate_result = estimate_credit_note_for_target_credit(invoice: invoice, target_credit_cents: remaining_amount)
-        estimate_result = CreditNotes::EstimateService.call!(invoice: invoice, items: estimate_result)
+        fees = invoice.fees.map do |fee|
+          {
+            fee_id: fee.id,
+            amount_cents: fee.creditable_amount_cents
+          }
+        end
+        estimate_result = CreditNotes::EstimateService.call!(invoice: invoice, items: fees)
 
         credit_note_to_void = CreditNotes::CreateService.call!(
           invoice: invoice,
@@ -121,13 +126,13 @@ module Invoices
     end
 
     def estimate_credit_note_for_target_credit(invoice:, target_credit_cents:)
-      base_total = invoice.sub_total_including_taxes_amount_cents.to_f
+      base_total = invoice.creditable_amount_cents.to_f
       ratio = target_credit_cents.to_f / base_total
 
       invoice.fees.map do |fee|
         {
           fee_id: fee.id,
-          amount_cents: (fee.amount_cents * ratio)
+          amount_cents: (fee.precise_creditable_amount_cents * ratio)
         }
       end
     end

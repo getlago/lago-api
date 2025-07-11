@@ -281,7 +281,7 @@ class Invoice < ApplicationRecord
   def available_to_credit_amount_cents
     return 0 if version_number < CREDIT_NOTES_MIN_VERSION || draft?
 
-    fees_total_creditable = fees.sum(&:creditable_amount_cents)
+    fees_total_creditable = fees.sum(&:precise_creditable_amount_cents).round
     return 0 if fees_total_creditable.zero?
 
     credit_adjustement = if version_number < Invoice::COUPON_BEFORE_VAT_VERSION
@@ -294,9 +294,9 @@ class Invoice < ApplicationRecord
       # NOTE: Because coupons are applied before VAT,
       #       we have to discribute the coupon adjustement at prorata of each fees
       #       to compute the VAT
-      fee_rate = fee.creditable_amount_cents.fdiv(fees_total_creditable)
+      fee_rate = fee.precise_creditable_amount_cents.fdiv(fees_total_creditable)
       prorated_credit_amount = credit_adjustement * fee_rate
-      (fee.creditable_amount_cents - prorated_credit_amount) * (fee.taxes_rate || 0)
+      (fee.precise_creditable_amount_cents - prorated_credit_amount) * (fee.taxes_rate || 0)
     end.fdiv(100).round # BECAUSE OF THIS ROUND the returned value is not precise
 
     fees_total_creditable - credit_adjustement + vat
