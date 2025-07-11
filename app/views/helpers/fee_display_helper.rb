@@ -15,6 +15,16 @@ class FeeDisplayHelper
     invoice_subscription.subscription_amount_cents.positive?
   end
 
+  def self.format_precise_unit_amount(fee)
+    amount = if fee.pricing_unit_usage
+      fee.pricing_unit_usage.precise_unit_amount
+    else
+      fee.precise_unit_amount
+    end
+
+    format_with_precision(fee, amount)
+  end
+
   def self.format_with_precision(fee, amount)
     casted_amount = BigDecimal(amount)
 

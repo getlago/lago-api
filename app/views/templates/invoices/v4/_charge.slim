@@ -59,12 +59,11 @@ table.invoice-resume-table width="100%"
             - if fee.charge_filter_id?
               = ' • ' + fee.filter_display_name(separator: ' • ')
         td.body-2 = RoundingHelper.round_decimal_part(fee.units)
-        td.body-2 = FeeDisplayHelper.format_with_precision(fee, fee.precise_unit_amount)
+        td.body-2 = FeeDisplayHelper.format_precise_unit_amount(fee)
         td.body-2 == TaxHelper.applied_taxes(fee)
         td.body-2 = FeeDisplayHelper.format_amount(fee)
 
     == SlimHelper.render('templates/invoices/v4/_conversion_row', fee)
-
 
 table.total-table width="100%"
   - if coupons_amount_cents.positive?
