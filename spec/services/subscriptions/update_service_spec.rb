@@ -102,11 +102,8 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
             expect(result.subscription.subscription_at.to_s).to eq("2022-07-07 00:00:00 UTC")
           end
 
-          it "does not enque a job to bill the subscription" do
-            current_time = Time.current
-            travel_to(current_time) do
-              expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
-            end
+          it "does not enqueue a job to bill the subscription" do
+            expect { update_service.call }.not_to have_enqueued_job(BillSubscriptionJob)
           end
         end
 
