@@ -6,6 +6,7 @@ SubscriptionUsage = Struct.new(
   :issuing_date,
   :currency,
   :amount_cents,
+  :projected_amount_cents,
   :total_amount_cents,
   :taxes_amount_cents,
   :fees
