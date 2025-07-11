@@ -67,65 +67,69 @@ module Api
       private
 
       def create_params
-        params.require(:billing_entity).permit(
-          :code,
-          :name,
-          :email,
-          :legal_name,
-          :legal_number,
-          :tax_identification_number,
-          :address_line1,
-          :address_line2,
-          :city,
-          :state,
-          :zipcode,
-          :country,
-          :default_currency,
-          :timezone,
-          :document_numbering,
-          :document_number_prefix,
-          :finalize_zero_amount_invoice,
-          :net_payment_term,
-          :eu_tax_management,
-          :logo,
-          email_settings: [],
-          billing_configuration: [
-            :invoice_footer,
-            :invoice_grace_period,
-            :document_locale
+        params.expect(
+          billing_entity: [
+            :code,
+            :name,
+            :email,
+            :legal_name,
+            :legal_number,
+            :tax_identification_number,
+            :address_line1,
+            :address_line2,
+            :city,
+            :state,
+            :zipcode,
+            :country,
+            :default_currency,
+            :timezone,
+            :document_numbering,
+            :document_number_prefix,
+            :finalize_zero_amount_invoice,
+            :net_payment_term,
+            :eu_tax_management,
+            :logo,
+            email_settings: [],
+            billing_configuration: [
+              :invoice_footer,
+              :invoice_grace_period,
+              :document_locale
+            ]
           ]
         )
       end
 
       def update_params
-        params.require(:billing_entity).permit(
-          :name,
-          :email,
-          :legal_name,
-          :legal_number,
-          :tax_identification_number,
-          :address_line1,
-          :address_line2,
-          :city,
-          :state,
-          :zipcode,
-          :country,
-          :default_currency,
-          :timezone,
-          :document_numbering,
-          :document_number_prefix,
-          :finalize_zero_amount_invoice,
-          :net_payment_term,
-          :eu_tax_management,
-          :logo,
-          email_settings: [],
-          billing_configuration: [
-            :invoice_footer,
-            :invoice_grace_period,
-            :document_locale
-          ],
-          tax_codes: [],
-          invoice_custom_section_codes: []
+        params.expect(
+          billing_entity: [
+            :name,
+            :email,
+            :legal_name,
+            :legal_number,
+            :tax_identification_number,
+            :address_line1,
+            :address_line2,
+            :city,
+            :state,
+            :zipcode,
+            :country,
+            :default_currency,
+            :timezone,
+            :document_numbering,
+            :document_number_prefix,
+            :finalize_zero_amount_invoice,
+            :net_payment_term,
+            :eu_tax_management,
+            :logo,
+            email_settings: [],
+            billing_configuration: [
+              :invoice_footer,
+              :invoice_grace_period,
+              :document_locale
+            ],
+            tax_codes: [],
+            invoice_custom_section_codes: []
+          ]
         )
       end
     end

@@ -55,7 +55,7 @@ module Api
         private
 
         def past_usage_filters
-          params.permit(
+          params.expect(
             :external_subscription_id,
             :billable_metric_code,
             :periods_count

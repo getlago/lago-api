@@ -21,7 +21,7 @@ module Api
         end
 
         def filter_params
-          params.permit(
+          params.expect(
             :time_granularity,
             :currency,
             :from_date,

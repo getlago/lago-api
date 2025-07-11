@@ -107,11 +107,26 @@ module Api
         end
 
         def create_params
-          params.require(:alert).permit(:alert_type, :code, :name, :billable_metric_code, thresholds: %i[code value recurring])
+          params.expect(
+            alert: [
+              :alert_type,
+              :code,
+              :name,
+              :billable_metric_code,
+              thresholds: %i[code value recurring]
+            ]
+          )
         end
 
         def update_params
-          params.require(:alert).permit(:code, :name, :billable_metric_code, thresholds: %i[code value recurring])
+          params.expect(
+            alert: [
+              :code,
+              :name,
+              :billable_metric_code,
+              thresholds: %i[code value recurring]
+            ]
+          )
         end
 
         def resource_name

@@ -47,11 +47,11 @@ module Admin
     end
 
     def update_params
-      params.permit(:name)
+      params.expect(:name)
     end
 
     def create_params
-      params.permit(:name, :email)
+      params.expect(:name, :email)
     end
   end
 end

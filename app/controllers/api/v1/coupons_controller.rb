@@ -77,22 +77,24 @@ module Api
       private
 
       def input_params
-        params.require(:coupon).permit(
-          :name,
-          :code,
-          :description,
-          :coupon_type,
-          :amount_cents,
-          :amount_currency,
-          :percentage_rate,
-          :frequency,
-          :frequency_duration,
-          :expiration,
-          :expiration_at,
-          :reusable,
-          applies_to: [
-            plan_codes: [],
-            billable_metric_codes: []
+        params.expect(
+          coupon: [
+            :name,
+            :code,
+            :description,
+            :coupon_type,
+            :amount_cents,
+            :amount_currency,
+            :percentage_rate,
+            :frequency,
+            :frequency_duration,
+            :expiration,
+            :expiration_at,
+            :reusable,
+            applies_to: [
+              plan_codes: [],
+              billable_metric_codes: []
+            ]
           ]
         )
       end

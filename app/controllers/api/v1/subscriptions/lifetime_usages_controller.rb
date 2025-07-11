@@ -30,8 +30,10 @@ module Api
         private
 
         def update_params
-          params.require(:lifetime_usage).permit(
-            :external_historical_usage_amount_cents
+          params.expect(
+            lifetime_usage: [
+              :external_historical_usage_amount_cents
+            ]
           )
         end
 

@@ -143,20 +143,19 @@ module Api
 
       def create_params
         params
-          .require(:event)
-          .permit(
+          .expect(event: [
             :transaction_id,
             :code,
             :timestamp,
             :external_subscription_id,
             :precise_total_amount_cents,
             properties: {}
-          )
+          ])
       end
 
       def batch_params
         params
-          .permit(
+          .expect(
             events: [
               :transaction_id,
               :code,
@@ -169,7 +168,7 @@ module Api
       end
 
       def index_filters
-        params.permit(
+        params.expect(
           :code,
           :external_subscription_id,
           :timestamp_from,

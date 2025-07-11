@@ -83,15 +83,17 @@ module Api
       private
 
       def input_params
-        @input_params ||= params.require(:wallet_transaction).permit(
-          :wallet_id,
-          :paid_credits,
-          :granted_credits,
-          :voided_credits,
-          :invoice_requires_successful_payment,
-          metadata: [
-            :key,
-            :value
+        @input_params ||= params.expect(
+          wallet_transaction: [
+            :wallet_id,
+            :paid_credits,
+            :granted_credits,
+            :voided_credits,
+            :invoice_requires_successful_payment,
+            metadata: [
+              :key,
+              :value
+            ]
           ]
         )
       end
