@@ -106,7 +106,7 @@ module Invoices
         fees = invoice.fees.map do |fee|
           {
             fee_id: fee.id,
-            amount_cents: fee.precise_creditable_amount_cents
+            amount_cents: fee.creditable_amount_cents
           }
         end
 
