@@ -5425,6 +5425,7 @@ enum IntegrationTypeEnum {
   auto_dunning
   avalara
   beta_payment_authorization
+  forecasted_usage
   from_email
   hubspot
   issue_receipts
@@ -7725,6 +7726,7 @@ enum PremiumIntegrationTypeEnum {
   auto_dunning
   avalara
   beta_payment_authorization
+  forecasted_usage
   from_email
   hubspot
   issue_receipts
