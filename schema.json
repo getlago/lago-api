@@ -3282,6 +3282,35 @@
           "enumValues": null
         },
         {
+          "kind": "ENUM",
+          "name": "AuthenticationMethodsEnum",
+          "description": "Organization Authentication Methods Values",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "email_password",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "google_oauth",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "okta",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
           "kind": "OBJECT",
           "name": "Authorize",
           "description": null,
@@ -15232,6 +15261,22 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "accessibleByCurrentSession",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "addressLine1",
               "description": null,
               "type": {
@@ -15294,6 +15339,30 @@
                 "kind": "OBJECT",
                 "name": "DunningCampaign",
                 "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "authenticationMethods",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "ENUM",
+                      "name": "AuthenticationMethodsEnum",
+                      "ofType": null
+                    }
+                  }
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,
@@ -34667,6 +34736,22 @@
           "possibleTypes": null,
           "fields": [
             {
+              "name": "accessibleByCurrentSession",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "billingConfiguration",
               "description": null,
               "type": {
@@ -35939,6 +36024,38 @@
             },
             {
               "name": "auditLogsView",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "authenticationMethodsUpdate",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "authenticationMethodsView",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
@@ -53045,6 +53162,26 @@
           "possibleTypes": null,
           "fields": null,
           "inputFields": [
+            {
+              "name": "authenticationMethods",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "ENUM",
+                    "name": "AuthenticationMethodsEnum",
+                    "ofType": null
+                  }
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
             {
               "name": "defaultCurrency",
               "description": null,
