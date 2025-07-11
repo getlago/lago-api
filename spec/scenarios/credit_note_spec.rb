@@ -144,7 +144,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
       estimate = json[:estimated_credit_note]
       expect(estimate[:taxes_amount_cents]).to eq(1961)
       expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(9_806)
-      expect(estimate[:max_creditable_amount_cents]).to eq(11_767)
+      expect(estimate[:max_creditable_amount_cents]).to eq(11_768)
       expect(estimate[:max_refundable_amount_cents]).to eq(1_200)
       expect(estimate[:coupons_adjustment_amount_cents]).to eq(16_454)
       expect(estimate[:taxes_rate]).to eq(20)
@@ -154,7 +154,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
         invoice_id: invoice.id,
         reason: :other,
         credit_amount_cents: 0,
-        refund_amount_cents: 11_767,
+        refund_amount_cents: 11_768,
         items: [
           {
             fee_id: fee2.id,
@@ -165,8 +165,8 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
     end
 
     credit_note = invoice.credit_notes.first
-    expect(credit_note.refund_amount_cents).to eq(11_767)
-    expect(credit_note.total_amount_cents).to eq(11_767)
+    expect(credit_note.refund_amount_cents).to eq(11_768)
+    expect(credit_note.total_amount_cents).to eq(11_768)
     expect(credit_note.coupons_adjustment_amount_cents).to eq(16_454)
   end
 
@@ -334,7 +334,7 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
         expect(estimate[:coupons_adjustment_amount_cents]).to eq(2)
         expect(estimate[:sub_total_excluding_taxes_amount_cents]).to eq(498)
         expect(estimate[:taxes_amount_cents]).to eq(50)
-        expect(estimate[:max_creditable_amount_cents]).to eq(548)
+        expect(estimate[:max_creditable_amount_cents]).to eq(547)
         expect(estimate[:max_refundable_amount_cents]).to eq(40)
         expect(estimate[:taxes_rate]).to eq(10)
       end
@@ -821,14 +821,14 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
           taxes_amount_cents: 1319,
           precise_taxes_amount_cents: "1319.25547",
           sub_total_excluding_taxes_amount_cents: 6596,
-          max_creditable_amount_cents: 7915, # 7916
+          max_creditable_amount_cents: 7916,
           coupons_adjustment_amount_cents: 237,
           taxes_rate: 20.0
         )
         create_credit_note(
           invoice_id: invoice.id,
           reason: :other,
-          credit_amount_cents: 7915,
+          credit_amount_cents: 7916,
           items: [
             {
               fee_id: first_charge.id,
@@ -839,8 +839,8 @@ describe "Create credit note Scenarios", :scenarios, type: :request do
 
         credit_note = invoice.credit_notes.order(:created_at).last
         expect(credit_note).to have_attributes(
-          credit_amount_cents: 7915,
-          total_amount_cents: 7915,
+          credit_amount_cents: 7916,
+          total_amount_cents: 7916,
           taxes_amount_cents: 1319,
           precise_taxes_amount_cents: 1319.25547,
           precise_coupons_adjustment_amount_cents: 236.72267
