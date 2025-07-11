@@ -111,7 +111,6 @@ module Invoices
         end
         estimate_result = CreditNotes::EstimateService.call!(invoice: invoice, items: fees)
 
-
         credit_note_to_void = CreditNotes::CreateService.call!(
           invoice: invoice,
           reason: :other,
