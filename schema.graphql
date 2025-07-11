@@ -4357,6 +4357,35 @@ type DataApiUsageCollection {
   metadata: CollectionMetadata!
 }
 
+type DataApiUsageForecasted {
+  amountCents: BigInt!
+  amountCentsForecast10thPercentile: BigInt!
+  amountCentsForecast50thPercentile: BigInt!
+  amountCentsForecast90thPercentile: BigInt!
+  amountCurrency: CurrencyEnum!
+  endOfPeriodDt: ISO8601Date!
+  startOfPeriodDt: ISO8601Date!
+  units: Float!
+  unitsForecast10thPercentile: Float!
+  unitsForecast50thPercentile: Float!
+  unitsForecast90thPercentile: Float!
+}
+
+"""
+DataApiUsageForecastedCollection type
+"""
+type DataApiUsageForecastedCollection {
+  """
+  A collection of paginated DataApiUsageForecastedCollection
+  """
+  collection: [DataApiUsageForecasted!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 type DataApiUsageInvoiced {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
@@ -8171,6 +8200,11 @@ type Query {
   Query usages of an organization
   """
   dataApiUsagesAggregatedAmounts(billingEntityCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, isBillableMetricRecurring: Boolean, isCustomerTinEmpty: Boolean, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageAggregatedAmountCollection!
+
+  """
+  Query forecasted usages of an organization
+  """
+  dataApiUsagesForecasted(billingEntityCode: String, currency: CurrencyEnum, customerCountry: CountryCode, customerType: CustomerTypeEnum, externalCustomerId: String, externalSubscriptionId: String, fromDate: ISO8601Date, planCode: String, timeGranularity: TimeGranularityEnum, toDate: ISO8601Date): DataApiUsageForecastedCollection!
 
   """
   Query invoiced usages of an organization
