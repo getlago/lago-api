@@ -16,7 +16,11 @@ RSpec.describe Entitlement::FeatureDestroyService, type: :service do
     feature.reload
   end
 
+  it_behaves_like "a premium service"
+
   describe "#call" do
+    around { |test| lago_premium!(&test) }
+
     it "discards the feature" do
       expect { subject }.to change { feature.reload.discarded? }.from(false).to(true)
     end

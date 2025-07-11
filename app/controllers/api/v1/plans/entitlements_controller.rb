@@ -4,6 +4,8 @@ module Api
   module V1
     module Plans
       class EntitlementsController < Api::BaseController
+        include PremiumFeatureOnly
+
         attr_reader :plan, :entitlement
 
         before_action :find_plan

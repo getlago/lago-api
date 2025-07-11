@@ -8,7 +8,11 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
   let(:feature) { create(:feature, organization:, code: "seats") }
   let(:privilege) { create(:privilege, organization:, feature:, code: "max", value_type: "integer") }
 
+  around { |test| lago_premium!(&test) }
+
   describe "GET #index" do
+    subject { get_with_token organization, "/api/v1/plans/#{plan.code}/entitlements" }
+
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
     let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: 30, organization:) }
 
@@ -17,8 +21,10 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       entitlement_value
     end
 
+    it_behaves_like "a Premium API endpoint"
+
     it "returns a list of entitlements" do
-      get_with_token organization, "/api/v1/plans/#{plan.code}/entitlements"
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:entitlements]).to be_present
@@ -28,6 +34,8 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
   end
 
   describe "GET #show" do
+    subject { get_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}" }
+
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
     let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: 30, organization:) }
 
@@ -36,8 +44,10 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       entitlement_value
     end
 
+    it_behaves_like "a Premium API endpoint"
+
     it "returns the entitlement" do
-      get_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}"
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:entitlement][:code]).to eq("seats")
@@ -58,6 +68,8 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
   end
 
   describe "POST #create" do
+    subject { post_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params }
+
     let(:params) do
       {
         "entitlements" => {
@@ -73,10 +85,10 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       privilege
     end
 
+    it_behaves_like "a Premium API endpoint"
+
     it "creates entitlements for the plan" do
-      expect {
-        post_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
-      }.to change { plan.entitlements.count }.by(1)
+      expect { subject }.to change { plan.entitlements.count }.by(1)
         .and change(Entitlement::EntitlementValue, :count).by(1)
 
       expect(response).to have_http_status(:success)
@@ -95,7 +107,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "replaces existing entitlements" do
-        post_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:entitlements].first[:privileges][:max][:value]).to eq(25)
@@ -114,7 +126,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "returns not found error" do
-        post_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+        subject
 
         expect(response).to be_not_found_error("feature")
       end
@@ -132,7 +144,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "returns not found error" do
-        post_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+        subject
 
         expect(response).to be_not_found_error("privilege")
       end
@@ -150,7 +162,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "returns not found error" do
-        post_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+        subject
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json[:code]).to eq("validation_errors")
@@ -175,7 +187,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "returns not found error" do
-        post_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+        subject
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json[:code]).to eq("validation_errors")
@@ -199,7 +211,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "returns success with empty entitlements" do
-        post_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:entitlements]).to eq([])
@@ -224,9 +236,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "creates entitlement values for all privileges" do
-        expect {
-          post_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
-        }.to change(Entitlement::EntitlementValue, :count).by(2)
+        expect { subject }.to change(Entitlement::EntitlementValue, :count).by(2)
 
         expect(response).to have_http_status(:success)
         entitlements = json[:entitlements].first[:privileges]
@@ -236,7 +246,9 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
     end
   end
 
-  describe "PUT #update" do
+  describe "PATCH #update" do
+    subject { patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params }
+
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
     let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: "10", organization:) }
     let(:params) do
@@ -254,8 +266,10 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       entitlement_value
     end
 
+    it_behaves_like "a Premium API endpoint"
+
     it "updates existing entitlement value" do
-      patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+      subject
 
       expect(response).to have_http_status(:success)
       expect(json[:entitlements]).to be_present
@@ -265,7 +279,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
     it "does not create new entitlement" do
       expect {
-        patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+        subject
       }.not_to change(Entitlement::Entitlement, :count)
     end
 
@@ -287,12 +301,12 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
       it "creates new entitlement value" do
         expect {
-          patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+          subject
         }.to change(Entitlement::EntitlementValue, :count).by(1)
       end
 
       it "creates entitlement value with correct value" do
-        patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:entitlements].first[:privileges][:max_admins][:value]).to eq(30)
@@ -319,13 +333,13 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
       it "creates new entitlement" do
         expect {
-          patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+          subject
         }.to change(Entitlement::Entitlement, :count).by(1)
       end
 
       it "creates new entitlement value" do
         expect {
-          patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+          subject
         }.to change(Entitlement::EntitlementValue, :count).by(1)
       end
     end
@@ -342,7 +356,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "returns not found error" do
-        patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+        subject
 
         expect(response).to be_not_found_error("feature")
       end
@@ -360,7 +374,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "returns not found error" do
-        patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+        subject
 
         expect(response).to be_not_found_error("privilege")
       end
@@ -382,7 +396,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       end
 
       it "returns success with existing entitlements" do
-        patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params
+        subject
 
         expect(response).to have_http_status(:success)
         expect(json[:entitlements]).to be_present
@@ -392,6 +406,8 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
   end
 
   describe "DELETE #destroy" do
+    subject { delete_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}" }
+
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
     let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: 30, organization:) }
 
@@ -400,10 +416,10 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       entitlement_value
     end
 
+    it_behaves_like "a Premium API endpoint"
+
     it "deletes the entitlement and its values" do
-      expect {
-        delete_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}"
-      }.to change(feature.entitlements, :count).by(-1)
+      expect { subject }.to change(feature.entitlements, :count).by(-1)
         .and change(feature.entitlement_values, :count).by(-1)
 
       expect(response).to have_http_status(:success)

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::PlanEntitlementsPartialUpdateService, type: :service do
-  subject(:update_service) { described_class.new(organization:, plan:, entitlements_params:) }
+  subject(:result) { described_class.call(organization:, plan:, entitlements_params:) }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
@@ -27,8 +27,10 @@ RSpec.describe Entitlement::PlanEntitlementsPartialUpdateService, type: :service
     entitlement_value
   end
 
+  it_behaves_like "a premium service"
+
   describe "#call" do
-    subject(:result) { update_service.call }
+    around { |test| lago_premium!(&test) }
 
     it "returns success" do
       expect(result).to be_success
@@ -139,7 +141,7 @@ RSpec.describe Entitlement::PlanEntitlementsPartialUpdateService, type: :service
     end
 
     context "when plan is nil" do
-      let(:update_service) { described_class.new(organization:, plan: nil, entitlements_params:) }
+      let(:result) { described_class.call(organization:, plan: nil, entitlements_params:) }
 
       it "returns not found failure" do
         expect(result).not_to be_success

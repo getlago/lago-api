@@ -9,6 +9,8 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
   let(:privilege1) { create(:privilege, feature: feature1, code: "max_admins", name: "", value_type: "integer") }
   let(:privilege2) { create(:privilege, feature: feature1, code: "max", name: "Maximum", value_type: "integer") }
 
+  around { |test| lago_premium!(&test) }
+
   before do
     feature1
     feature2
@@ -32,6 +34,8 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
         }
       }
     end
+
+    it_behaves_like "a Premium API endpoint"
 
     it "creates a new feature with privileges" do
       expect { subject }.to change(organization.features, :count).by(1)
@@ -161,6 +165,8 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
 
     let(:params) { {} }
 
+    it_behaves_like "a Premium API endpoint"
+
     it "returns a paginated list of features" do
       subject
 
@@ -238,6 +244,8 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
 
     let(:feature_code) { feature1.code }
 
+    it_behaves_like "a Premium API endpoint"
+
     it "returns a feature" do
       subject
 
@@ -285,6 +293,8 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
         }
       }
     end
+
+    it_behaves_like "a Premium API endpoint"
 
     it "updates the feature and privilege attributes" do
       subject
@@ -421,6 +431,8 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
     subject { delete_with_token(organization, "/api/v1/features/#{feature_code}") }
 
     let(:feature_code) { feature1.code }
+
+    it_behaves_like "a Premium API endpoint"
 
     it "discards the feature" do
       expect { subject }.to change { feature1.reload.discarded? }.from(false).to(true)

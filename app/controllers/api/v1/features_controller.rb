@@ -3,6 +3,8 @@
 module Api
   module V1
     class FeaturesController < Api::BaseController
+      include PremiumFeatureOnly
+
       def index
         result = FeaturesQuery.call(
           organization: current_organization,

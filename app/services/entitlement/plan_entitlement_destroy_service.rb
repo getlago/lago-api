@@ -10,6 +10,7 @@ module Entitlement
     end
 
     def call
+      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "entitlement") unless entitlement
 
       ActiveRecord::Base.transaction do
