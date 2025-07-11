@@ -107,6 +107,37 @@ module Subscriptions
       datetime
     end
 
+    def fixed_charges_from_datetime
+      return unless subscription.started_at
+
+      datetime = customer_timezone_shift(compute_fixed_charges_from_date)
+
+      # NOTE: If customer applicable timezone changes during a billing period, there is a risk to double count events
+      #       or to miss some. To prevent it, we have to ensure that invoice bounds does not overlap or that there is no
+      #       hole between a fixed_charges_from_datetime and the fixed_charges_to_datetime of the previous period
+      if timezone_has_changed? && previous_fixed_charge_to_datetime
+        new_datetime = previous_fixed_charge_to_datetime + 1.second
+
+        # NOTE: Ensure that the invoice is really the previous one
+        #       26 hours is the maximum time difference between two places in the world
+        datetime = new_datetime if ((datetime.in_time_zone - new_datetime.in_time_zone) / 1.hour).abs < 26
+      end
+
+      datetime = subscription.started_at if datetime < subscription.started_at
+
+      datetime
+    end
+
+    def fixed_charges_to_datetime
+      return unless subscription.started_at
+
+      datetime = customer_timezone_shift(compute_fixed_charges_to_date, end_of_day: true)
+      datetime = subscription.terminated_at if subscription.terminated_at?(datetime)
+      datetime = subscription.started_at if datetime < subscription.started_at
+
+      datetime
+    end
+
     def next_end_of_period
       end_utc = compute_next_end_of_period
       customer_timezone_shift(end_utc, end_of_day: true)
@@ -179,6 +210,12 @@ module Subscriptions
       last_invoice_subscription.invoice.timezone != customer.applicable_timezone
     end
 
+    def previous_fixed_charge_to_datetime
+      return if last_invoice_subscription.blank?
+
+      last_invoice_subscription.fixed_charges_to_datetime
+    end
+
     def previous_charge_to_datetime
       return if last_invoice_subscription.blank?
 
@@ -237,6 +274,14 @@ module Subscriptions
       raise(NotImplementedError)
     end
 
+    def compute_fixed_charges_from_date
+      raise(NotImplementedError)
+    end
+
+    def compute_fixed_charges_to_date
+      raise(NotImplementedError)
+    end
+
     def compute_next_end_of_period
       raise(NotImplementedError)
     end
@@ -250,6 +295,14 @@ module Subscriptions
     end
 
     def compute_duration(from_date:)
+      raise(NotImplementedError)
+    end
+
+    def compute_charges_duration(from_date:)
+      raise(NotImplementedError)
+    end
+
+    def compute_fixed_charges_duration(from_date:)
       raise(NotImplementedError)
     end
   end

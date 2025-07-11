@@ -63,6 +63,26 @@ module Subscriptions
 
         compute_to_date(compute_charges_from_date)
       end
+      
+      def compute_fixed_charges_from_date
+        return monthly_service.compute_fixed_charges_from_date if plan.bill_fixed_charges_monthly
+
+        if terminated?
+          return subscription.anniversary? ? previous_anniversary_day(billing_date) : billing_date.beginning_of_year
+        end
+
+        return compute_from_date if plan.pay_in_arrears?
+        return base_date.beginning_of_year if calendar?
+
+        previous_anniversary_day(base_date)
+      end
+
+      def compute_fixed_charges_to_date
+        return monthly_service.compute_fixed_charges_to_date if plan.bill_fixed_charges_monthly
+        return compute_fixed_charges_from_date.end_of_year if calendar?
+
+        compute_to_date(compute_fixed_charges_from_date)
+      end
 
       def compute_next_end_of_period
         return billing_date.end_of_year if calendar?
@@ -104,6 +124,12 @@ module Subscriptions
 
       def compute_charges_duration(from_date:)
         return monthly_service.compute_charges_duration(from_date:) if plan.bill_charges_monthly
+
+        compute_duration(from_date:)
+      end
+
+      def compute_fixed_charges_duration(from_date:)
+        return monthly_service.compute_fixed_charges_duration(from_date:) if plan.bill_fixed_charges_monthly
 
         compute_duration(from_date:)
       end
