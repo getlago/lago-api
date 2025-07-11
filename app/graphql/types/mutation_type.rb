@@ -193,5 +193,7 @@ module Types
     field :create_feature, mutation: Mutations::Entitlement::CreateFeature
     field :destroy_feature, mutation: Mutations::Entitlement::DestroyFeature
     field :update_feature, mutation: Mutations::Entitlement::UpdateFeature
+
+    field :update_plan_entitlements, mutation: Mutations::Entitlement::UpdatePlanEntitlements
   end
 end
