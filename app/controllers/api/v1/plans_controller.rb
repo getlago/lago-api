@@ -20,7 +20,14 @@ module Api
         result = ::Plans::UpdateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
 
         if result.success?
-          render_plan(reload_plan(code: result.plan.code)) # Reload to eager-load relationships, like :entitlements
+          # Reload to eager-load relationships, like :entitlements
+          plan = Plan.includes(
+            :usage_thresholds,
+            charges: {filters: {values: :billable_metric_filter}},
+            entitlements: [:feature, values: :privilege]
+          ).find(result.plan.id)
+
+          render_plan(plan)
         else
           render_error_response(result)
         end
@@ -31,7 +38,14 @@ module Api
         result = ::Plans::PrepareDestroyService.call(plan:)
 
         if result.success?
-          render_plan(reload_plan(code: result.plan.code)) # Reload to eager-load relationships
+          # Reload to eager-load relationships, like :entitlements
+          plan = Plan.with_discarded.includes(
+            :usage_thresholds,
+            charges: {filters: {values: :billable_metric_filter}},
+            entitlements: [:feature, values: :privilege]
+          ).find(result.plan.id)
+
+          render_plan(plan)
         else
           render_error_response(result)
         end
@@ -85,17 +99,6 @@ module Api
       end
 
       private
-
-      def reload_plan(code:)
-        current_organization.plans.parents
-          .with_discarded
-          .includes(
-            :usage_thresholds,
-            charges: {filters: {values: :billable_metric_filter}},
-            entitlements: [:feature, values: :privilege]
-          )
-          .find_by(code:)
-      end
 
       def input_params
         params.require(:plan).permit(
