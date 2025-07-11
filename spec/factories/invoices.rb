@@ -20,6 +20,10 @@ FactoryBot.define do
       status { :draft }
     end
 
+    trait :voided do
+      status { :voided }
+    end
+
     trait :credit do
       invoice_type { :credit }
     end
@@ -71,6 +75,12 @@ FactoryBot.define do
 
     trait :invisible do
       status { Invoice::INVISIBLE_STATUS.keys.sample }
+    end
+
+    trait :with_fees do
+      after :create do |invoice|
+        create(:fee, invoice:, organization: invoice.organization)
+      end
     end
 
     trait :progressive_billing_invoice do

@@ -101,6 +101,7 @@ module Types
     field :finalize_invoice, mutation: Mutations::Invoices::Finalize
     field :lose_invoice_dispute, mutation: Mutations::Invoices::LoseDispute
     field :refresh_invoice, mutation: Mutations::Invoices::Refresh
+    field :regenerate_from_voided, mutation: Mutations::Invoices::RegenerateFromVoided
     field :retry_all_invoice_payments, mutation: Mutations::Invoices::RetryAllPayments
     field :retry_all_invoices, mutation: Mutations::Invoices::RetryAll
     field :retry_invoice, mutation: Mutations::Invoices::Retry
@@ -189,9 +190,5 @@ module Types
     field :create_subscription_alert, mutation: Mutations::UsageMonitoring::Alerts::Create
     field :destroy_subscription_alert, mutation: Mutations::UsageMonitoring::Alerts::Destroy
     field :update_subscription_alert, mutation: Mutations::UsageMonitoring::Alerts::Update
-
-    field :create_feature, mutation: Mutations::Entitlement::CreateFeature
-    field :destroy_feature, mutation: Mutations::Entitlement::DestroyFeature
-    field :update_feature, mutation: Mutations::Entitlement::UpdateFeature
   end
 end
