@@ -914,6 +914,7 @@ type ChargeUsage {
   filters: [ChargeFilterUsage!]
   groupedUsage: [GroupedChargeUsage!]!
   id: ID!
+  pricingUnitAmountCents: BigInt
   units: Float!
 }
 
@@ -4922,6 +4923,30 @@ type EventCollection {
   metadata: CollectionMetadata!
 }
 
+type FeatureObject {
+  code: String!
+  createdAt: ISO8601DateTime!
+  description: String
+  id: ID!
+  name: String
+  privileges: [PrivilegeObject!]!
+}
+
+"""
+FeatureObjectCollection type
+"""
+type FeatureObjectCollection {
+  """
+  A collection of paginated FeatureObjectCollection
+  """
+  collection: [FeatureObject!]!
+
+  """
+  Pagination Metadata for navigating the Pagination
+  """
+  metadata: CollectionMetadata!
+}
+
 type Fee implements InvoiceItem {
   addOn: AddOn
   adjustedFee: Boolean!
@@ -7505,6 +7530,10 @@ type Permissions {
   dunningCampaignsDelete: Boolean!
   dunningCampaignsUpdate: Boolean!
   dunningCampaignsView: Boolean!
+  featuresCreate: Boolean!
+  featuresDelete: Boolean!
+  featuresUpdate: Boolean!
+  featuresView: Boolean!
   invoiceCustomSectionsCreate: Boolean!
   invoiceCustomSectionsDelete: Boolean!
   invoiceCustomSectionsUpdate: Boolean!
@@ -7582,6 +7611,7 @@ type Plan {
   id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
+  isOverridden: Boolean!
   minimumCommitment: Commitment
   name: String!
   organization: Organization
@@ -7689,6 +7719,21 @@ type PricingUnitUsage {
   shortName: String!
   unitAmountCents: BigInt!
   updatedAt: ISO8601DateTime!
+}
+
+type PrivilegeObject {
+  code: String!
+  config: JSON!
+  id: ID!
+  name: String
+  valueType: PrivilegeValueTypeEnum!
+}
+
+enum PrivilegeValueTypeEnum {
+  boolean
+  integer
+  select
+  string
 }
 
 type Properties {
@@ -8103,6 +8148,21 @@ type Query {
   events(limit: Int, page: Int): EventCollection
 
   """
+  Query a single feature
+  """
+  feature(
+    """
+    Unique ID of the feature
+    """
+    id: ID!
+  ): FeatureObject!
+
+  """
+  Query features of an organization
+  """
+  features(limit: Int, page: Int, searchTerm: String): FeatureObjectCollection!
+
+  """
   Get Google auth url.
   """
   googleAuthUrl: AuthUrl!
@@ -8326,7 +8386,7 @@ type Query {
   """
   Query payments of an organization
   """
-  payments(externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int): PaymentCollection!
+  payments(externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
 
   """
   Query a single plan of an organization
@@ -8376,7 +8436,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(limit: Int, page: Int, planCode: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query a single tax of an organization
