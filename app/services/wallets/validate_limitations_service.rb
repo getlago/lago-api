@@ -31,6 +31,7 @@ module Wallets
     end
 
     def valid_billable_metrics?
+      return true if args[:applies_to][:billable_metric_ids].blank? && args[:applies_to][:billable_metric_codes].blank?
       return true if result.billable_metrics.length == result.billable_metric_identifiers.length
 
       add_error(field: :billable_metrics, error_code: "invalid_identifier")

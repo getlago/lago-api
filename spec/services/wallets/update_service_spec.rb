@@ -381,6 +381,77 @@ RSpec.describe Wallets::UpdateService, type: :service do
           expect(SendWebhookJob).not_to have_been_enqueued.with("wallet.updated", Wallet)
         end
       end
+
+      context "with new billable metric limitations" do
+        let(:billable_metric) { create(:billable_metric, organization:) }
+        let(:billable_metric_second) { create(:billable_metric, organization:) }
+        let(:wallet_target) { create(:wallet_target, wallet:, billable_metric:) }
+        let(:limitations) do
+          {
+            billable_metric_ids: [billable_metric.id, billable_metric_second.id]
+          }
+        end
+
+        before do
+          CurrentContext.source = "graphql"
+
+          billable_metric_second
+          wallet_target
+        end
+
+        it "creates new wallet target" do
+          expect { update_service.call }.to change(WalletTarget, :count).by(1)
+        end
+
+        context "with API context" do
+          let(:limitations) do
+            {
+              billable_metric_codes: [billable_metric.code, billable_metric_second.code]
+            }
+          end
+
+          before { CurrentContext.source = "api" }
+
+          it "creates new wallet target" do
+            expect { update_service.call }.to change(WalletTarget, :count).by(1)
+          end
+        end
+
+        context "with invalid billable metric" do
+          let(:limitations) do
+            {
+              billable_metric_ids: [billable_metric.id, billable_metric_second.id, "invalid"]
+            }
+          end
+
+          it "returns an error" do
+            result = update_service.call
+
+            expect(result).not_to be_success
+            expect(result.error.messages[:billable_metrics]).to eq(["invalid_identifier"])
+          end
+        end
+      end
+
+      context "with wallet targets to delete" do
+        let(:billable_metric) { create(:billable_metric, organization:) }
+        let(:wallet_target) { create(:wallet_target, wallet:, billable_metric:) }
+        let(:limitations) do
+          {
+            billable_metric_ids: []
+          }
+        end
+
+        before do
+          CurrentContext.source = "graphql"
+
+          wallet_target
+        end
+
+        it "deletes a wallet target" do
+          expect { update_service.call }.to change(WalletTarget, :count).by(-1)
+        end
+      end
     end
   end
 end
