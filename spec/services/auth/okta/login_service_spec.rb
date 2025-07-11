@@ -66,7 +66,7 @@ RSpec.describe Auth::Okta::LoginService, cache: :memory do
 
         aggregate_failures do
           expect(result).not_to be_success
-          expect(result.error.messages.values.flatten).to include("login_method_not_authorized")
+          expect(result.error.messages).to match(okta: ["login_method_not_authorized"])
         end
       end
     end

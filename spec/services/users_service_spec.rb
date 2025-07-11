@@ -157,7 +157,7 @@ RSpec.describe UsersService, type: :service do
               expect(result).to be_failure
               expect(result.user).to eq user
               expect(result.token).to be nil
-              expect(result.error.messages).to match(base: ["login_method_not_authorized"])
+              expect(result.error.messages).to match(email_password: ["login_method_not_authorized"])
             end
           end
         end

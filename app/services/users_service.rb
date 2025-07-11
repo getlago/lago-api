@@ -9,7 +9,10 @@ class UsersService < BaseService
     end
 
     unless result.user.organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
-      return result.single_validation_failure!(error_code: "login_method_not_authorized")
+      return result.single_validation_failure!(
+        error_code: "login_method_not_authorized",
+        field: Organizations::AuthenticationMethods::EMAIL_PASSWORD
+      )
     end
 
     result.token = generate_token if result.user
