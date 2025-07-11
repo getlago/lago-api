@@ -5,8 +5,8 @@ module Types
     class AppliesTo < Types::BaseObject
       graphql_name "WalletAppliesTo"
 
+      field :billable_metrics, [Types::BillableMetrics::Object], null: true
       field :fee_types, [Types::Fees::TypesEnum], null: true, method: :allowed_fee_types
-      field :billable_metrics, [Types::BillableMetrics::Object]
     end
   end
 end
