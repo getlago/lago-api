@@ -23,7 +23,7 @@ class PaymentsQuery < BaseQuery
   end
 
   def base_scope
-    Payment
+    Payment.where.not(customer_id: nil)
       .for_organization(organization)
       .ransack(search_params)
   end

@@ -35133,9 +35133,13 @@
               "name": "customer",
               "description": null,
               "type": {
-                "kind": "OBJECT",
-                "name": "Customer",
-                "ofType": null
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "Customer",
+                  "ofType": null
+                }
               },
               "isDeprecated": false,
               "deprecationReason": null,

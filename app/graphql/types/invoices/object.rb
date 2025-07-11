@@ -85,7 +85,7 @@ module Types
       end
 
       def payments
-        object.payments.order(updated_at: :desc)
+        object.payments.where.not(customer_id: nil).order(updated_at: :desc)
       end
 
       def integration_syncable
