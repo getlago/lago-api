@@ -117,9 +117,9 @@ module Plans
       return unless cascade?
       return if plan.children.empty?
 
-      old_parent_attrs = charge.attributes
-      old_parent_filters_attrs = charge.filters.map(&:attributes)
-      old_parent_applied_pricing_unit_attrs = charge.applied_pricing_unit&.attributes
+      old_parent_attrs = charge.slice(:id, :charge_model, :properties)
+      old_parent_filters_attrs = charge.filters.map { |f| f.slice(:id, :properties) }
+      old_parent_applied_pricing_unit_attrs = charge.applied_pricing_unit&.slice(:conversion_rate)
 
       Charges::UpdateChildrenJob.perform_later(
         params: payload_charge.deep_stringify_keys,
