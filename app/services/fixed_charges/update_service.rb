@@ -30,7 +30,7 @@ module FixedCharges
 
         fixed_charge.save!
         result.fixed_charge = fixed_charge
-        issue_unit_eventsif fixed_charges_affect_immediately
+        issue_unit_events if fixed_charges_affect_immediately
 
         # In cascade mode it is allowed only to change properties
         unless cascade
