@@ -1016,14 +1016,33 @@ RSpec.describe Fees::ChargeService do
             charge.update!(min_amount_cents: 1000)
             result = charge_subscription_service.call
 
-            aggregate_failures do
+            expect(result).to be_success
+            expect(result.fees.count).to eq(2)
+            expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 548) # 548 is 1000 prorated for 17 days.
+            expect(result.fees.pluck(:precise_amount_cents)).to contain_exactly(0.0, 548.3870967741935) # 548 is 1000 prorated for 17 days.
+            expect(result.fees.pluck(:taxes_precise_amount_cents)).to contain_exactly(0.0, 0.0) # 548 is 1000 prorated for 17 days.
+            expect(result.fees.pluck(:unit_amount_cents)).to contain_exactly(0, 548)
+            expect(result.fees.pluck(:precise_unit_amount)).to contain_exactly(0, 5.483870967741935)
+          end
+        end
+
+        context "with charge using pricing units" do
+          before do
+            create(
+              :applied_pricing_unit,
+              organization: charge.organization,
+              conversion_rate: 1,
+              pricing_unitable: charge
+            )
+          end
+
+          it "persists pricing unit usages" do
+            travel_to(Time.zone.parse("2023-04-01")) do
+              charge.update!(min_amount_cents: 1000)
+              result = charge_subscription_service.call
+
               expect(result).to be_success
-              expect(result.fees.count).to eq(2)
-              expect(result.fees.pluck(:amount_cents)).to contain_exactly(0, 548) # 548 is 1000 prorated for 17 days.
-              expect(result.fees.pluck(:precise_amount_cents)).to contain_exactly(0.0, 548.3870967741935) # 548 is 1000 prorated for 17 days.
-              expect(result.fees.pluck(:taxes_precise_amount_cents)).to contain_exactly(0.0, 0.0) # 548 is 1000 prorated for 17 days.
-              expect(result.fees.pluck(:unit_amount_cents)).to contain_exactly(0, 548)
-              expect(result.fees.pluck(:precise_unit_amount)).to contain_exactly(0, 5.483870967741935)
+              expect(result.fees.map(&:pricing_unit_usage)).to all be_persisted
             end
           end
         end

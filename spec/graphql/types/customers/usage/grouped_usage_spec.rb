@@ -7,6 +7,7 @@ RSpec.describe Types::Customers::Usage::GroupedUsage do
 
   it do
     expect(subject).to have_field(:amount_cents).of_type("BigInt!")
+    expect(subject).to have_field(:pricing_unit_amount_cents).of_type("BigInt")
     expect(subject).to have_field(:events_count).of_type("Int!")
     expect(subject).to have_field(:units).of_type("Float!")
     expect(subject).to have_field(:filters).of_type("[ChargeFilterUsage!]")
