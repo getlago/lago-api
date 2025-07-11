@@ -24,6 +24,18 @@ module Events
         filters_scope(scope)
       end
 
+      def fixed_charge_events(force_from: false)
+        scope = FixedChargeEvent.where(external_subscription_id: subscription.external_id)
+          .where(organization_id: subscription.organization.id)
+          .where(code:)
+          .order(timestamp: :asc)
+
+        scope = scope.from_datetime(from_datetime) if force_from || use_from_boundary
+        scope = scope.to_datetime(to_datetime) if to_datetime
+
+        scope
+      end
+
       def distinct_codes
         Event.where(external_subscription_id: subscription.external_id)
           .where(organization_id: subscription.organization.id)
@@ -343,6 +355,31 @@ module Events
             ]
           )
         ).rows
+      end
+
+      def fixed_charge
+        fixed_charge_events.last.units
+      end
+
+      def prorated_fixed_charge
+        ratio = duration_ratio_sql(
+          "fixed_charge_events.timestamp",
+          "lead('fixed_charge_events.timestamp', 1, to_datetime) OVER (ORDER BY fixed_charge_events.timestamp ASC)",
+          period_duration
+        )
+
+        # set sanitized_property_name to units
+        sql = <<-SQL
+          SUM(
+            (#{sanitized_property_name})::numeric * (#{ratio})::numeric
+          ) AS sum_result
+        SQL
+
+        ActiveRecord::Base.connection.execute(
+          Arel.sql(
+            events.select(sql).to_sql
+          )
+        ).first["sum_result"]
       end
 
       def filters_scope(scope)

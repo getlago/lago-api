@@ -9,7 +9,7 @@ module Subscriptions
     def call
       subscriptions.each do |subscription|
         subscription.fixed_charges.each do |fixed_charge|
-          FixedCharges::EmitEventsService.call(fixed_charge:, subscription:)
+          FixedCharges::FixedChargesEvents::EmitEventsService.call(fixed_charge:, subscription:)
         end
       end
     end

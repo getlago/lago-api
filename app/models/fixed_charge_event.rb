@@ -2,6 +2,19 @@ class FixedChargeEvent < ApplicationRecord
   belongs_to :organization
   belongs_to :customer
   belongs_to :subscription
+  # TO ADD:
+  # belongs_to :fixed_charge
+  # so we have a direct link from event to the charge
+
+  def units
+    properties["units"]
+  end
+
+  def default_properties
+    {
+      units: 0
+    }
+  end
 end
 
 # == Schema Information
