@@ -20,7 +20,7 @@ RSpec.describe Api::V1::Features::PrivilegesController, type: :request do
     let(:feature_code) { feature1.code }
     let(:privilege_code) { privilege1.code }
 
-    it_behaves_like "requires a Premium license"
+    it_behaves_like "a Premium API endpoint"
 
     it "discards the privilege" do
       expect { subject }.to change { privilege1.reload.discarded? }.from(false).to(true)

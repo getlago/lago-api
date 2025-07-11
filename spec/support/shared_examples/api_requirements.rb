@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.shared_examples "requires a Premium license" do
+RSpec.shared_examples "a Premium API endpoint" do
   it "requires a premium license" do
     allow(License).to receive(:premium?).and_return(false)
     subject
