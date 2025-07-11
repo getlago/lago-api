@@ -78,7 +78,11 @@ module Wallets
     end
 
     def valid_limitations?
-      return true if Wallets::ValidateLimitationsService.new(BaseService::Result.new, **args).valid?
+      limitation_result = BaseService::Result.new
+      limitation_result.billable_metrics = result.billable_metrics
+      limitation_result.billable_metric_identifiers = result.billable_metric_identifiers
+
+      return true if Wallets::ValidateLimitationsService.new(limitation_result, **args).valid?
 
       add_error(field: :applies_to, error_code: "invalid_limitations")
 
