@@ -50,7 +50,8 @@ module V1
         failed_at: model.failed_at&.iso8601,
         refunded_at: model.refunded_at&.iso8601,
         amount_details: model.amount_details,
-        self_billed: model.invoice&.self_billed || false
+        self_billed: model.invoice&.self_billed || false,
+        pricing_unit_usage:
       }
 
       payload.merge!(date_boundaries) if model.charge? || model.subscription?
@@ -126,6 +127,12 @@ module V1
 
     def invoiceable
       model.charge? ? model.charge&.invoiceable : true
+    end
+
+    def pricing_unit_usage
+      return if model.pricing_unit_usage.nil?
+
+      ::V1::PricingUnitUsageSerializer.new(model.pricing_unit_usage).serialize
     end
   end
 end

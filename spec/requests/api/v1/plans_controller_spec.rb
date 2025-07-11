@@ -36,7 +36,11 @@ RSpec.describe Api::V1::PlansController, type: :request do
             properties: {
               amount: "0.22"
             },
-            tax_codes:
+            tax_codes:,
+            applied_pricing_unit: {
+              code: pricing_unit.code,
+              conversion_rate: 1.25
+            }
           }
         ],
         usage_thresholds: [
@@ -46,6 +50,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
       }
     end
     let(:tax_codes) { [tax.code] }
+    let(:pricing_unit) { create(:pricing_unit, organization:) }
 
     context "when interval is empty" do
       let(:interval) { nil }
@@ -86,6 +91,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           charge = json[:plan][:charges].first
           expect(charge[:invoiceable]).to be true
           expect(charge[:regroup_paid_fees]).to be_nil
+          expect(charge[:applied_pricing_unit]).to be_nil
         end
       end
 
@@ -99,6 +105,11 @@ RSpec.describe Api::V1::PlansController, type: :request do
           charge = json[:plan][:charges].first
           expect(charge[:invoiceable]).to be false
           expect(charge[:regroup_paid_fees]).to eq "invoice"
+
+          expect(charge[:applied_pricing_unit]).to eq({
+            conversion_rate: "1.25",
+            lago_pricing_unit_id: pricing_unit.id
+          })
         end
       end
 
@@ -527,6 +538,31 @@ RSpec.describe Api::V1::PlansController, type: :request do
             expect(json[:plan][:minimum_commitment][:amount_cents]).to eq(minimum_commitment.amount_cents)
           end
         end
+      end
+    end
+
+    describe "update conversion rate on charges" do
+      let(:charge) { create(:standard_charge, plan:, billable_metric:) }
+      let!(:applied_pricing_unit) { create(:applied_pricing_unit, pricing_unitable: charge) }
+
+      let(:charges_params) do
+        [
+          {
+            id: charge.id,
+            charge_model: "standard",
+            billable_metric_id: billable_metric.id,
+            applied_pricing_unit: {
+              conversion_rate: "3.9"
+            }
+          }
+        ]
+      end
+
+      around { |test| lago_premium!(&test) }
+
+      it "updates conversion rate on charge's applied pricing unit" do
+        expect { subject }.to change { applied_pricing_unit.reload.conversion_rate }.to(3.9)
+        expect(response).to have_http_status(:success)
       end
     end
   end

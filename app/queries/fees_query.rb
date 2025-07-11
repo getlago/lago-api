@@ -27,6 +27,8 @@ class FeesQuery < BaseQuery
       Fee.from_organization(organization)
     end
 
+    base_scope = base_scope.includes(:pricing_unit_usage)
+
     fees = paginate(base_scope)
     fees = apply_consistent_ordering(fees, default_order: {created_at: :asc})
 
