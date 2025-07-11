@@ -7616,6 +7616,8 @@ type Permissions {
   analyticsOverdueBalancesView: Boolean!
   analyticsView: Boolean!
   auditLogsView: Boolean!
+  authenticationMethodsUpdate: Boolean!
+  authenticationMethodsView: Boolean!
   billableMetricsCreate: Boolean!
   billableMetricsDelete: Boolean!
   billableMetricsUpdate: Boolean!
