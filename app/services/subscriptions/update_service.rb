@@ -11,7 +11,8 @@ module Subscriptions
     activity_loggable(
       action: "subscription.updated",
       record: -> { subscription },
-      condition: -> { !subscription&.starting_in_the_future? }
+      condition: -> { !subscription&.starting_in_the_future? },
+      after_commit: true
     )
 
     def call
