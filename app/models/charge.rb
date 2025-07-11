@@ -53,8 +53,6 @@ class Charge < ApplicationRecord
   validate :validate_min_amount_cents
   validate :validate_custom_model
 
-  monetize :min_amount_cents, with_currency: ->(charge) { charge.plan.amount_currency }
-
   default_scope -> { kept }
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
