@@ -159,6 +159,25 @@
                 - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
                   == SlimHelper.render('templates/invoices/v4/_fees_without_filters', fee)
 
+      / Fixed charges payed in advance on paid in arrears plan
+      - if subscription.plan.fixed_charges.where(pay_in_advance: true).any? && !subscription.plan.pay_in_advance? && existing_fixed_charge_fees_in_interval?(subscription_id: subscription.id, fixed_charge_in_advance: true)
+        .invoice-resume.overflow-auto class="mt-24"
+          table.invoice-resume-table width="100%"
+            tr.first_child
+              - pay_in_advance_interval = ::Subscriptions::DatesService.fixed_charge_pay_in_advance_interval(invoice_subscription.timestamp, subscription)
+              td.body-2 = I18n.t('invoice.fees_from_to_date', from_date: I18n.l(pay_in_advance_interval[:fixed_charges_from_date], format: :default), to_date: I18n.l(pay_in_advance_interval[:fixed_charges_to_date], format: :default))
+              td.body-2 = I18n.t('invoice.units')
+              td.body-2 = I18n.t('invoice.unit_price')
+              td.body-2 = I18n.t('invoice.tax_rate')
+              td.body-2 = I18n.t('invoice.amount')
+
+            / Loop over all top level fees
+            - subscription_fees(subscription.id).fixed_charge.positive_units.joins(:fixed_charge).sort_by { |f| f.invoice_sorting_clause }.group_by(&:fixed_charge_id).each do |_fixed_charge_id, fees|
+              - next unless fees.first.fixed_charge.pay_in_advance?
+
+              - fees.sort_by { |f| f.invoice_sorting_clause }.each do |fee|
+                == SlimHelper.render('templates/invoices/v4/_fixed_charge_fee', fee)
+
     / Total section
     .invoice-resume.overflow-auto
       table.total-table width="100%"
