@@ -102,9 +102,9 @@ module Wallets
       return [] if billable_metric_identifiers.blank?
 
       @billable_metrics = if api_context?
-        BillableMetric.where(code: billable_metric_identifiers, organization_id: result.current_customer.organization_id)
+        BillableMetric.where(code: billable_metric_identifiers, organization_id: wallet.organization_id)
       else
-        BillableMetric.where(id: billable_metric_identifiers, organization_id: result.current_customer.organization_id)
+        BillableMetric.where(id: billable_metric_identifiers, organization_id: wallet.organization_id)
       end
     end
   end
