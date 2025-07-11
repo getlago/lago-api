@@ -121,6 +121,10 @@ class Customer < ApplicationRecord
     %w[id name firstname lastname legal_name external_id email]
   end
 
+  def self.ransackable_associations(_auth_object = nil)
+    []
+  end
+
   def display_name(prefer_legal_name: true)
     names = prefer_legal_name ? [legal_name.presence || name.presence] : [name.presence]
 

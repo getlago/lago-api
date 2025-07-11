@@ -2,6 +2,7 @@
 
 class Payment < ApplicationRecord
   include PaperTrailTraceable
+  include RansackUuidSearch
 
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
@@ -47,6 +48,18 @@ class Payment < ApplicationRecord
     joins(payables_join)
       .where("invoices.id IS NOT NULL OR payment_requests.id IS NOT NULL")
   }
+
+  def self.ransackable_attributes(_ = nil)
+    %w[id provider_payment_id reference] + _ransackers.keys
+  end
+
+  def self.ransackable_associations(_ = nil)
+    %w[payable customer]
+  end
+
+  ransacker :invoice_number do
+    Arel.sql("(SELECT invoices.number FROM invoices WHERE invoices.id = payments.payable_id AND payments.payable_type = 'Invoice' LIMIT 1)")
+  end
 
   def invoices
     payable.payment_invoices

@@ -7672,6 +7672,7 @@ type Plan {
   id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
+  isOverridden: Boolean!
   minimumCommitment: Commitment
   name: String!
   organization: Organization
@@ -8446,7 +8447,7 @@ type Query {
   """
   Query payments of an organization
   """
-  payments(externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int): PaymentCollection!
+  payments(externalCustomerId: ID, invoiceId: ID, limit: Int, page: Int, searchTerm: String): PaymentCollection!
 
   """
   Query a single plan of an organization
@@ -8496,7 +8497,7 @@ type Query {
   """
   Query subscriptions of an organization
   """
-  subscriptions(limit: Int, page: Int, planCode: String, status: [StatusTypeEnum!]): SubscriptionCollection!
+  subscriptions(externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
 
   """
   Query a single tax of an organization
