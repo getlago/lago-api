@@ -98,6 +98,7 @@ module Invoices
         Payment.new(
           organization_id: @invoice.organization_id,
           payable: invoice,
+          customer:,
           payment_provider_id: moneyhash_payment_provider.id,
           payment_provider_customer_id: customer.moneyhash_customer.id,
           amount_cents: invoice.total_amount_cents,
