@@ -44,10 +44,14 @@ module Subscriptions
         .where(from_datetime: date_service.from_datetime)
         .where(to_datetime: date_service.to_datetime)
 
-      if subscription.plan.yearly? && (subscription.plan.bill_charges_monthly? || subscription.plan.bill_fixed_charges_monthly?)
+      if subscription.plan.yearly? && subscription.plan.bill_charges_monthly?
         base_query = base_query
           .where(charges_from_datetime: date_service.charges_from_datetime)
           .where(charges_to_datetime: date_service.charges_to_datetime)
+      end
+
+      if subscription.plan.yearly? && subscription.plan.bill_fixed_charges_monthly?
+        base_query = base_query
           .where(fixed_charges_from_datetime: date_service.fixed_charges_from_datetime)
           .where(fixed_charges_to_datetime: date_service.fixed_charges_to_datetime)
       end

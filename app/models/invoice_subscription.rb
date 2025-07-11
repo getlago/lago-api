@@ -52,6 +52,12 @@ class InvoiceSubscription < ApplicationRecord
         .where(charges_to_datetime: boundaries[:charges_to_datetime])
     end
 
+    if subscription.plan.yearly? && subscription.plan.bill_fixed_charges_monthly?
+      base_query = base_query
+        .where(fixed_charges_from_datetime: boundaries[:fixed_charges_from_datetime])
+        .where(fixed_charges_to_datetime: boundaries[:fixed_charges_to_datetime])
+    end
+
     base_query.exists?
   end
 
