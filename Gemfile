@@ -72,7 +72,7 @@ gem "opentelemetry-exporter-otlp"
 gem "opentelemetry-instrumentation-all"
 gem "opentelemetry-sdk"
 
-gem "stackprof", require: false
+gem "stackprof", require: false, platforms: [:ruby, :mri]
 gem "sentry-rails"
 gem "sentry-ruby"
 gem "sentry-sidekiq"

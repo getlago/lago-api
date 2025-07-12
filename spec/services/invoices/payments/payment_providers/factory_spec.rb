@@ -47,5 +47,13 @@ RSpec.describe Invoices::Payments::PaymentProviders::Factory, type: :service do
         expect(factory_service.class.to_s).to eq("Invoices::Payments::MoneyhashService")
       end
     end
+
+    context "when flutterwave" do
+      let(:payment_provider) { "flutterwave" }
+
+      it "returns correct class" do
+        expect(factory_service.class.to_s).to eq("Invoices::Payments::FlutterwaveService")
+      end
+    end
   end
 end
