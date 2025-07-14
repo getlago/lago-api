@@ -47,10 +47,10 @@ module ChargeFilters
               cascade_pricing_group_keys(filter, filter_param)
               filter.save!
 
-              PaperTrail.request.disable_model(filter.class) do
-                # NOTE: Make sure update_at is touched even if not changed to keep the order
-                filter.touch # rubocop:disable Rails/SkipsModelValidations
-              end
+              PaperTrail.request.disable_model(filter.class)
+              # NOTE: Make sure update_at is touched even if not changed to keep the order
+              filter.touch # rubocop:disable Rails/SkipsModelValidations
+              PaperTrail.request.enable_model(filter.class)
               result.filters << filter
 
               next
@@ -65,11 +65,10 @@ module ChargeFilters
             properties: filter_param[:properties]
           ).properties
           if filter.save! && touch && !filter.changed?
+            PaperTrail.request.disable_model(filter.class)
             # NOTE: Make sure update_at is touched even if not changed to keep the right order
-            PaperTrail.request.disable_model(filter.class) do
-              # Keep this touch inside PaperTrail disable model to not overload db operations
-              filter.touch # rubocop:disable Rails/SkipsModelValidations
-            end
+            filter.touch # rubocop:disable Rails/SkipsModelValidations
+            PaperTrail.request.enable_model(filter.class)
           end
 
           # NOTE: Create or update the filter values
@@ -82,11 +81,10 @@ module ChargeFilters
 
             filter_value.values = values
             if filter_value.save! && touch && !filter_value.changed?
+              PaperTrail.request.disable_model(filter_value.class)
               # NOTE: Make sure update_at is touched even if not changed to keep the right order
-              PaperTrail.request.disable_model(filter_value.class) do
-                # Keep this touch inside PaperTrail disable model to not overload db operations
-                filter_value.touch # rubocop:disable Rails/SkipsModelValidations
-              end
+              filter_value.touch # rubocop:disable Rails/SkipsModelValidations
+              PaperTrail.request.enable_model(filter_value.class)
             end
           end
 
