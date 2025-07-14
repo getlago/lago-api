@@ -47,8 +47,10 @@ module ChargeFilters
               cascade_pricing_group_keys(filter, filter_param)
               filter.save!
 
-              # NOTE: Make sure update_at is touched even if not changed to keep the order
-              filter.touch # rubocop:disable Rails/SkipsModelValidations
+              PaperTrail.request.disable_model(filter.class) do
+                # NOTE: Make sure update_at is touched even if not changed to keep the order
+                filter.touch # rubocop:disable Rails/SkipsModelValidations
+              end
               result.filters << filter
 
               next
@@ -64,7 +66,10 @@ module ChargeFilters
           ).properties
           if filter.save! && touch && !filter.changed?
             # NOTE: Make sure update_at is touched even if not changed to keep the right order
-            filter.touch # rubocop:disable Rails/SkipsModelValidations
+            PaperTrail.request.disable_model(filter.class) do
+              # Keep this touch inside PaperTrail disable model to not overload db operations
+              filter.touch # rubocop:disable Rails/SkipsModelValidations
+            end
           end
 
           # NOTE: Create or update the filter values
@@ -78,7 +83,10 @@ module ChargeFilters
             filter_value.values = values
             if filter_value.save! && touch && !filter_value.changed?
               # NOTE: Make sure update_at is touched even if not changed to keep the right order
-              filter_value.touch # rubocop:disable Rails/SkipsModelValidations
+              PaperTrail.request.disable_model(filter_value.class) do
+                # Keep this touch inside PaperTrail disable model to not overload db operations
+                filter_value.touch # rubocop:disable Rails/SkipsModelValidations
+              end
             end
           end
 
