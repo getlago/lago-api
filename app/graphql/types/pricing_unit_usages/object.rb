@@ -13,6 +13,7 @@ module Types
       field :pricing_unit, Types::PricingUnits::Object, null: false
       field :short_name, String, null: false
       field :unit_amount_cents, GraphQL::Types::BigInt, null: false
+      field :precise_unit_amount, GraphQL::Types::Float, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false

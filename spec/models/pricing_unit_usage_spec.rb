@@ -18,7 +18,7 @@ RSpec.describe PricingUnitUsage, type: :model do
 
     let(:pricing_unit) { create(:pricing_unit) }
     let(:applied_pricing_unit) { create(:applied_pricing_unit, pricing_unit:, conversion_rate: 3.0150695) }
-    let(:aggregation) { Struct.new(:amount, :unit_amount).new(10655.243249, 5.5) }
+    let(:aggregation) { Struct.new(:amount, :unit_amount).new(10655.243249, 5.5423123) }
 
     let(:expected_attributes) do
       {
@@ -28,7 +28,8 @@ RSpec.describe PricingUnitUsage, type: :model do
         conversion_rate: applied_pricing_unit.conversion_rate,
         amount_cents: 1065524,
         precise_amount_cents: 1065524.3249,
-        unit_amount_cents: 550
+        unit_amount_cents: 554,
+        precise_unit_amount: 5.5423123
       }
     end
 

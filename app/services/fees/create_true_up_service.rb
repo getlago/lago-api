@@ -87,7 +87,8 @@ module Fees
         conversion_rate: charge.applied_pricing_unit.conversion_rate,
         amount_cents:,
         precise_amount_cents:,
-        unit_amount_cents: amount_cents
+        unit_amount_cents: amount_cents,
+        precise_unit_amount: precise_amount_cents / charge.pricing_unit.subunit_to_unit
       )
     end
   end

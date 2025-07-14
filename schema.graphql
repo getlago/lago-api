@@ -7778,6 +7778,7 @@ type PricingUnitUsage {
   createdAt: ISO8601DateTime!
   id: ID!
   preciseAmountCents: Float!
+  preciseUnitAmount: Float!
   pricingUnit: PricingUnit!
   shortName: String!
   unitAmountCents: BigInt!

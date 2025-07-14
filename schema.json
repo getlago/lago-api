@@ -38598,6 +38598,22 @@
               "args": []
             },
             {
+              "name": "preciseUnitAmount",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Float",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "pricingUnit",
               "description": null,
               "type": {

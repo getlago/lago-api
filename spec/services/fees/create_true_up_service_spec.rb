@@ -117,7 +117,8 @@ RSpec.describe Fees::CreateTrueUpService, type: :service do
           expect(result.true_up_fee.pricing_unit_usage).to be_new_record.and have_attributes(
             amount_cents: 300,
             precise_amount_cents: 300.0,
-            unit_amount_cents: 300
+            unit_amount_cents: 300,
+            precise_unit_amount: 3.00
           )
         end
       end
