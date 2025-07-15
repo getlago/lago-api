@@ -23,7 +23,8 @@ class PricingUnitUsage < ApplicationRecord
       conversion_rate: applied_pricing_unit.conversion_rate,
       amount_cents:,
       precise_amount_cents:,
-      unit_amount_cents:
+      unit_amount_cents:,
+      precise_unit_amount: aggregation.unit_amount
     )
   end
 
@@ -48,6 +49,7 @@ end
 #  amount_cents         :bigint           not null
 #  conversion_rate      :decimal(40, 15)  default(0.0), not null
 #  precise_amount_cents :decimal(40, 15)  default(0.0), not null
+#  precise_unit_amount  :decimal(30, 15)  default(0.0), not null
 #  short_name           :string           not null
 #  unit_amount_cents    :bigint           default(0), not null
 #  created_at           :datetime         not null

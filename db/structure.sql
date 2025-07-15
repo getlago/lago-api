@@ -3514,7 +3514,8 @@ CREATE TABLE public.pricing_unit_usages (
     unit_amount_cents bigint DEFAULT 0 NOT NULL,
     conversion_rate numeric(40,15) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    precise_unit_amount numeric(30,15) DEFAULT 0.0 NOT NULL
 );
 
 
@@ -9017,6 +9018,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250714131519'),
 ('20250710102337'),
 ('20250709085218'),
 ('20250709082136'),

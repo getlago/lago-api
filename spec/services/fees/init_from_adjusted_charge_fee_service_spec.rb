@@ -95,6 +95,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
           amount_cents: 16415,
           precise_amount_cents: 16415,
           unit_amount_cents: 2345,
+          precise_unit_amount: 23.45,
           conversion_rate: 10
         )
       end
@@ -180,6 +181,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
           amount_cents: 800,
           precise_amount_cents: 800.0,
           unit_amount_cents: 200,
+          precise_unit_amount: 2.00,
           conversion_rate: 0.5
         )
       end

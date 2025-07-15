@@ -117,7 +117,8 @@ module Fees
           conversion_rate: charge.applied_pricing_unit.conversion_rate,
           amount_cents: precise_amount_cents.round,
           precise_amount_cents:,
-          unit_amount_cents: unit_precise_amount_cents.round
+          unit_amount_cents: unit_precise_amount_cents.round,
+          precise_unit_amount: unit_precise_amount_cents / charge.pricing_unit.subunit_to_unit
         )
       end
     end

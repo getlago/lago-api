@@ -5337,6 +5337,18 @@
               "args": []
             },
             {
+              "name": "pricingUnitAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "units",
               "description": null,
               "type": {
@@ -25529,6 +25541,18 @@
               "args": []
             },
             {
+              "name": "pricingUnitAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "units",
               "description": null,
               "type": {
@@ -38559,6 +38583,22 @@
             },
             {
               "name": "preciseAmountCents",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "Float",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "preciseUnitAmount",
               "description": null,
               "type": {
                 "kind": "NON_NULL",
