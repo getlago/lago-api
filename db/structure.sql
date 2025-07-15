@@ -845,6 +845,7 @@ DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.invoice_custom_section_type;
 DROP TYPE IF EXISTS public.inbound_webhook_status;
+DROP TYPE IF EXISTS public.fixed_charge_charge_model;
 DROP TYPE IF EXISTS public.entity_document_numbering;
 DROP TYPE IF EXISTS public.entitlement_privilege_value_types;
 DROP TYPE IF EXISTS public.customer_type;
@@ -926,6 +927,17 @@ CREATE TYPE public.entitlement_privilege_value_types AS ENUM (
 CREATE TYPE public.entity_document_numbering AS ENUM (
     'per_customer',
     'per_billing_entity'
+);
+
+
+--
+-- Name: fixed_charge_charge_model; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.fixed_charge_charge_model AS ENUM (
+    'standard',
+    'graduated',
+    'volume'
 );
 
 
@@ -9040,6 +9052,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250716142613'),
 ('20250716132759'),
 ('20250716132649'),
+('20250715124108'),
 ('20250714131519'),
 ('20250710102337'),
 ('20250709085218'),
