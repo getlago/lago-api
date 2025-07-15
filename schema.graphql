@@ -2355,6 +2355,7 @@ input CreateAdjustedFeeInput {
   feeId: ID
   invoiceDisplayName: String
   invoiceId: ID!
+  invoiceSubscriptionId: ID
   subscriptionId: ID
   unitPreciseAmount: String
   units: Float
@@ -7892,6 +7893,7 @@ input PreviewAdjustedFeeInput {
   feeId: ID
   invoiceDisplayName: String
   invoiceId: ID!
+  invoiceSubscriptionId: ID
   subscriptionId: ID
   unitPreciseAmount: String
   units: Float
