@@ -70,7 +70,7 @@ module Credits
     end
 
     def compute_amount
-      if wallet.limited_billable_metrics?
+      if wallet.limited_billable_metrics? && billable_metric_limited_fees
         bm_limited_fees = billable_metric_limited_fees
         remaining_fees = invoice.fees - bm_limited_fees
         remaining_fees = remaining_fees.reject { |fee| fee.fee_type == "charge" }
@@ -81,7 +81,7 @@ module Credits
 
       fee_type_limited_fees = if wallet.limited_fee_types?
         remaining_fees.filter { |fee| wallet.allowed_fee_types.include?(fee.fee_type) }
-      elsif wallet.limited_billable_metrics?
+      elsif wallet.limited_billable_metrics? && billable_metric_limited_fees
         []
       else
         remaining_fees
@@ -95,8 +95,7 @@ module Credits
     end
 
     def billable_metric_limited_fees
-      invoice
-        .fees
+      @billable_metric_limited_fees ||= invoice.fees
         .joins(charge: :billable_metric)
         .where(billable_metric: {id: wallet.wallet_targets.pluck(:billable_metric_id)})
     end
