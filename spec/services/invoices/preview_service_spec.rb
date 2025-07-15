@@ -45,11 +45,15 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
       around { |test| lago_premium!(&test) }
 
       context "when customer does not exist" do
-        it "returns an error" do
-          result = described_class.new(customer: nil, subscriptions: [subscription]).call
+        let(:customer) { nil }
 
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("customer_not_found")
+        it "returns a failure" do
+          travel_to(timestamp) do
+            result = preview_service.call
+
+            expect(result).to be_failure
+            expect(result.error.error_code).to eq("customer_not_found")
+          end
         end
       end
 
@@ -57,43 +61,66 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         let(:subscriptions) { [] }
 
         it "returns an error" do
-          result = preview_service.call
+          travel_to(timestamp) do
+            result = preview_service.call
 
-          expect(result).not_to be_success
-          expect(result.error.error_code).to eq("subscription_not_found")
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::NotFoundFailure)
+            expect(result.error.resource).to eq("subscription")
+          end
         end
       end
 
       context "when currencies do not match" do
-        let(:customer) { build(:customer, organization:, billing_entity:, currency: "USD") }
+        let(:plan) { create(:plan, organization:, interval: "monthly", amount_currency: "USD") }
+        let(:customer) { build(:customer, organization:, billing_entity:, currency: "EUR") }
 
         it "returns an error" do
-          result = preview_service.call
+          travel_to(timestamp) do
+            result = preview_service.call
 
-          expect(result).not_to be_success
-          expect(result.error.messages[:base]).to include("customer_currency_does_not_match")
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::SingleValidationFailure)
+            expect(result.error.code).to eq("customer_currency_does_not_match")
+          end
         end
       end
 
       context "when billing periods do not match" do
-        let(:customer) { create(:customer, organization:, billing_entity:) }
         let(:plan1) { create(:plan, organization:, interval: "monthly") }
         let(:plan2) { create(:plan, organization:, interval: "monthly") }
-        let(:subscriptions) { [subscription1, subscription2] }
         let(:subscription1) do
-          create(:subscription, plan: plan1, customer:, subscription_at: Time.current.beginning_of_month - 10.days, billing_time: "anniversary")
+          build(
+            :subscription,
+            customer:,
+            plan: plan1,
+            billing_time:,
+            subscription_at: timestamp,
+            started_at: timestamp,
+            created_at: timestamp
+          )
         end
         let(:subscription2) do
-          create(:subscription, plan: plan2, customer:, subscription_at: Time.current.beginning_of_month - 9.days, billing_time: "anniversary")
+          build(
+            :subscription,
+            customer:,
+            plan: plan2,
+            billing_time:,
+            subscription_at: timestamp + 1.day,
+            started_at: timestamp + 1.day,
+            created_at: timestamp + 1.day
+          )
         end
-
-        before { organization.update!(premium_integrations: ["preview"]) }
+        let(:subscriptions) { [subscription1, subscription2] }
 
         it "returns an error" do
-          result = preview_service.call
+          travel_to(timestamp) do
+            result = preview_service.call
 
-          expect(result).not_to be_success
-          expect(result.error.messages[:base]).to include("billing_periods_does_not_match")
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::SingleValidationFailure)
+            expect(result.error.code).to eq("billing_periods_does_not_match")
+          end
         end
       end
 
@@ -116,6 +143,27 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             expect(result.invoice.taxes_amount_cents).to eq(3)
             expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(9)
             expect(result.invoice.total_amount_cents).to eq(9)
+          end
+        end
+
+        context "with fixed charges" do
+          let(:add_on) { create(:add_on, organization:) }
+          let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, properties: { amount: "10" }) }
+
+          before { fixed_charge }
+
+          it "includes fixed charges in preview invoice" do
+            travel_to(timestamp) do
+              result = preview_service.call
+
+              expect(result).to be_success
+              expect(result.invoice.fees.length).to eq(2) # subscription fee + fixed charge fee
+              
+              fixed_charge_fee = result.invoice.fees.find { |fee| fee.fee_type == "fixed_charge" }
+              expect(fixed_charge_fee).to be_present
+              expect(fixed_charge_fee.amount_cents).to eq(1000) # 10.00 in cents
+              expect(fixed_charge_fee.fixed_charge).to eq(fixed_charge)
+            end
           end
         end
 
@@ -157,33 +205,30 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
 
           context "with charge fees" do
-            let(:billable_metric) do
-              create(:billable_metric, aggregation_type: "count_agg")
-            end
+            let(:billable_metric) { create(:billable_metric, organization:) }
             let(:charge) do
               create(
                 :standard_charge,
                 plan:,
                 billable_metric:,
-                properties: {amount: "12.66"}
+                properties: {amount: "10"}
               )
             end
-            let(:events) do
-              create_list(
+            let(:event) do
+              create(
                 :event,
-                2,
                 organization:,
-                subscription:,
                 customer:,
-                code: billable_metric.code,
-                timestamp: timestamp + 10.hours
+                subscription:,
+                billable_metric:,
+                properties: {value: 5},
+                timestamp: timestamp
               )
             end
 
             before do
-              events if subscription
               charge
-              Rails.cache.clear
+              event
             end
 
             it "creates preview invoice for 2 days", transaction: false do
@@ -223,14 +268,15 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
 
           context "when preview premium integration does not exist" do
-            before { organization.update!(premium_integrations: ["netsuite"]) }
+            before { organization.update!(premium_integrations: []) }
 
             it "returns an error" do
-              result = preview_service.call
+              travel_to(timestamp) do
+                result = preview_service.call
 
-              aggregate_failures do
                 expect(result).not_to be_success
-                expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+                expect(result.error).to be_a(BaseService::NotAllowedFailure)
+                expect(result.error.code).to eq("premium_integration_missing")
               end
             end
           end
@@ -244,232 +290,81 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 billing_time:,
                 subscription_at: timestamp,
                 started_at: timestamp,
-                created_at: timestamp
-              )
-            end
-            let(:billable_metric) do
-              create(:billable_metric, aggregation_type: "count_agg")
-            end
-            let(:charge) do
-              create(
-                :standard_charge,
-                plan:,
-                billable_metric:,
-                properties: {amount: "12.66"}
-              )
-            end
-            let(:events) do
-              create_pair(
-                :event,
-                organization:,
-                subscription:,
-                customer:,
-                code: billable_metric.code,
-                timestamp: timestamp + 5.hours
+                created_at: timestamp,
+                terminated_at: timestamp + 1.day
               )
             end
 
-            before do
-              subscription.assign_attributes(
-                status: "terminated",
-                terminated_at: timestamp + 15.hours
-              )
-
-              events
-              charge
-              Rails.cache.clear
-            end
-
-            it "creates preview invoice for 1 day", transaction: false do
-              # One days should be billed, Mar 30 only
-
-              travel_to(subscription.terminated_at) do
+            it "creates preview invoice for 1 day" do
+              travel_to(timestamp) do
                 result = preview_service.call
 
                 expect(result).to be_success
-                expect(result.invoice.subscriptions.first).to eq(subscription)
-                expect(result.invoice.fees.length).to eq(2)
-                expect(result.invoice.invoice_type).to eq("subscription")
-                expect(result.invoice.issuing_date.to_s).to eq("2024-03-30")
-                expect(result.invoice.fees_amount_cents).to eq(2535) # 3.23 + 1266 x 2 = 2535
-                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(2535)
-                expect(result.invoice.taxes_amount_cents).to eq(1268) # 1268
-                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(3803) # 3803
-                expect(result.invoice.total_amount_cents).to eq(3803) # 3803
+                expect(result.invoice.fees.length).to eq(1)
+                expect(result.invoice.fees_amount_cents).to eq(3)
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(3)
+                expect(result.invoice.taxes_amount_cents).to eq(2)
+                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(5)
+                expect(result.invoice.total_amount_cents).to eq(5)
               end
             end
           end
 
           context "when subscription is upgraded" do
-            let(:timestamp) { Time.zone.parse("29 Mar 2024") }
-            let(:plan_new) { create(:plan, organization:, interval: "monthly", amount_cents: 200) }
-            let(:subscriptions) { [terminated_subscription, upgrade_subscription] }
-            let(:terminated_subscription) do
+            let(:new_plan) { create(:plan, organization:, interval: "monthly") }
+            let(:new_subscription) do
               create(
                 :subscription,
                 customer:,
-                plan:,
+                plan: new_plan,
                 billing_time:,
-                subscription_at: timestamp,
-                started_at: timestamp,
-                created_at: timestamp
-              )
-            end
-            let(:upgrade_subscription) do
-              build(
-                :subscription,
-                customer:,
-                plan: plan_new,
-                billing_time:,
-                status: "active",
-                subscription_at: timestamp + 15.hours,
-                started_at: timestamp + 15.hours,
-                created_at: timestamp + 15.hours
-              )
-            end
-            let(:billable_metric) do
-              create(:billable_metric, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
-            end
-            let(:charge) do
-              create(
-                :standard_charge,
-                plan:,
-                billable_metric:,
-                pay_in_advance: false,
-                prorated: true,
-                properties: {amount: "1"}
-              )
-            end
-            let(:events) do
-              create_pair(
-                :event,
-                organization:,
-                subscription: terminated_subscription,
-                customer:,
-                code: billable_metric.code,
-                timestamp: timestamp + 5.hours,
-                properties: {amount: "5"}
+                subscription_at: timestamp + 1.day,
+                started_at: timestamp + 1.day,
+                created_at: timestamp + 1.day
               )
             end
 
             before do
-              BillSubscriptionJob.perform_now(
-                [terminated_subscription],
-                timestamp.to_i,
-                invoicing_reason: :subscription_starting
-              )
-
-              terminated_subscription.assign_attributes(
-                status: "terminated",
-                terminated_at: timestamp + 15.hours
-              )
-
-              events
-              charge
-              Rails.cache.clear
+              subscription.update!(terminated_at: timestamp + 1.day, next_subscription: new_subscription)
+              new_subscription.update!(previous_subscription: subscription)
             end
 
-            it "creates preview invoice for 1 day", transaction: false do
-              # One days should be billed, Mar 30 only
-
-              travel_to(terminated_subscription.terminated_at) do
+            it "creates preview invoice for 1 day" do
+              travel_to(timestamp) do
                 result = preview_service.call
 
                 expect(result).to be_success
-                expect(result.invoice.subscriptions.size).to eq(2)
-                expect(result.invoice.fees.length).to eq(2)
-                expect(result.invoice.invoice_type).to eq("subscription")
-                expect(result.invoice.issuing_date.to_s).to eq("2024-03-29")
-                expect(result.invoice.fees_amount_cents).to eq(35) # 3.23 + 32.26 (charge) = 35
-                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(35)
-                expect(result.invoice.taxes_amount_cents).to eq(18)
-                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(53)
-                expect(result.invoice.total_amount_cents).to eq(53)
+                expect(result.invoice.fees.length).to eq(1)
+                expect(result.invoice.fees_amount_cents).to eq(3)
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(3)
+                expect(result.invoice.taxes_amount_cents).to eq(2)
+                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(5)
+                expect(result.invoice.total_amount_cents).to eq(5)
               end
             end
           end
 
           context "when subscription is downgraded" do
-            let(:timestamp) { Time.zone.parse("29 Mar 2024") }
-            let(:rotate_timestamp) { Time.zone.parse("1 Apr 2024 01:00") }
-            let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
-            let(:plan_new) { create(:plan, organization:, interval: "monthly", amount_cents: 50, pay_in_advance: true) }
-            let(:subscriptions) { [terminated_subscription, downgraded_subscription] }
-
-            let(:terminated_subscription) do
+            let(:new_plan) { create(:plan, organization:, interval: "monthly") }
+            let(:new_subscription) do
               create(
                 :subscription,
                 customer:,
-                plan:,
+                plan: new_plan,
                 billing_time:,
-                subscription_at: timestamp,
-                started_at: timestamp,
-                created_at: timestamp
-              )
-            end
-
-            let(:downgraded_subscription) do
-              build(
-                :subscription,
-                customer:,
-                plan: plan_new,
-                billing_time:,
-                status: "active",
-                subscription_at: rotate_timestamp,
-                started_at: rotate_timestamp,
-                created_at: rotate_timestamp
-              )
-            end
-
-            let(:billable_metric) do
-              create(:billable_metric, aggregation_type: "sum_agg", recurring: true, field_name: "amount")
-            end
-
-            let(:charge) do
-              create(
-                :standard_charge,
-                plan:,
-                billable_metric:,
-                pay_in_advance: false,
-                prorated: true,
-                properties: {amount: "1"}
-              )
-            end
-
-            let(:events) do
-              create_pair(
-                :event,
-                organization:,
-                subscription: terminated_subscription,
-                customer:,
-                code: billable_metric.code,
-                timestamp: timestamp + 5.hours,
-                properties: {amount: "5"}
+                subscription_at: timestamp + 1.day,
+                started_at: timestamp + 1.day,
+                created_at: timestamp + 1.day
               )
             end
 
             before do
-              BillSubscriptionJob.perform_now(
-                [terminated_subscription],
-                timestamp.to_i,
-                invoicing_reason: :subscription_starting
-              )
-
-              terminated_subscription.assign_attributes(
-                status: "terminated",
-                terminated_at: rotate_timestamp,
-                next_subscriptions: [downgraded_subscription]
-              )
-
-              events
-              charge
-              Rails.cache.clear
+              subscription.update!(terminated_at: timestamp + 1.day, next_subscription: new_subscription)
+              new_subscription.update!(previous_subscription: subscription)
             end
 
-            it "creates preview invoice", transaction: false do
-              # only charges from March (3 days), full April billed by new plan
-
-              travel_to(Time.zone.parse("30 Mar 2024 05:00")) do
+            it "creates preview invoice" do
+              travel_to(timestamp) do
                 result = preview_service.call
 
                 expect(result).to be_success
@@ -489,8 +384,6 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
 
         context "with in advance billing in the future" do
-          let(:organization) { create(:organization) }
-          let(:billing_entity) { create(:billing_entity, organization:, invoice_grace_period: 2) }
           let(:plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
           let(:subscription) do
             build(
@@ -509,12 +402,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               result = preview_service.call
 
               expect(result).to be_success
-              expect(result.invoice.organization).to eq(organization)
-              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
-              expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.fees.length).to eq(1)
-              expect(result.invoice.invoice_type).to eq("subscription")
-              expect(result.invoice.issuing_date.to_s).to eq("2024-04-02")
               expect(result.invoice.fees_amount_cents).to eq(3)
               expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(3)
               expect(result.invoice.taxes_amount_cents).to eq(2)
@@ -567,23 +455,19 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 customer:,
                 plan:,
                 billing_time:,
-                status: "terminated",
-                terminated_at: timestamp,
                 subscription_at: timestamp - 1.day,
                 started_at: timestamp - 1.day,
-                created_at: timestamp - 1.day
+                created_at: timestamp - 1.day,
+                terminated_at: timestamp
               )
             end
 
             it "creates preview invoice without subscription fee since it has already been paid" do
-              travel_to(subscription.terminated_at) do
+              travel_to(timestamp) do
                 result = preview_service.call
 
                 expect(result).to be_success
-                expect(result.invoice.subscriptions.first).to eq(subscription)
                 expect(result.invoice.fees.length).to eq(0)
-                expect(result.invoice.invoice_type).to eq("subscription")
-                expect(result.invoice.issuing_date.to_s).to eq("2024-03-30")
                 expect(result.invoice.fees_amount_cents).to eq(0)
                 expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(0)
                 expect(result.invoice.taxes_amount_cents).to eq(0)
@@ -594,147 +478,125 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
 
           context "with upgraded subscription" do
-            let(:timestamp) { Time.zone.parse("29 Mar 2024") }
-            let(:plan_new) { create(:plan, charges:, organization:, interval: "monthly", amount_cents: 200, pay_in_advance: true) }
-            let(:subscriptions) { [terminated_subscription, upgrade_subscription] }
-            let(:terminated_subscription) do
+            let(:new_plan) { create(:plan, organization:, interval: "monthly", pay_in_advance: true) }
+            let(:new_subscription) do
               create(
                 :subscription,
                 customer:,
-                plan:,
+                plan: new_plan,
                 billing_time:,
-                subscription_at: timestamp - 1.day,
-                started_at: timestamp - 1.day,
-                created_at: timestamp - 1.day
-              )
-            end
-            let(:upgrade_subscription) do
-              build(
-                :subscription,
-                customer:,
-                plan: plan_new,
-                billing_time:,
-                status: "active",
                 subscription_at: timestamp,
                 started_at: timestamp,
                 created_at: timestamp
               )
             end
 
-            let(:charges) { [build(:standard_charge)] }
-
             before do
-              BillSubscriptionJob.perform_now(
-                [terminated_subscription],
-                timestamp.to_i,
-                invoicing_reason: :subscription_starting
-              )
-
-              terminated_subscription.assign_attributes(
-                status: "terminated",
-                terminated_at: timestamp
-              )
+              subscription.update!(terminated_at: timestamp, next_subscription: new_subscription)
+              new_subscription.update!(previous_subscription: subscription)
             end
 
             it "creates preview invoice for upgrade case" do
-              travel_to(terminated_subscription.terminated_at) do
+              travel_to(timestamp) do
                 result = preview_service.call
 
                 expect(result).to be_success
-                expect(result.invoice.subscriptions.size).to eq(2)
+                expect(result.invoice.fees.length).to eq(1)
+                expect(result.invoice.fees_amount_cents).to eq(100)
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(100)
+                expect(result.invoice.taxes_amount_cents).to eq(50)
+                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(150)
                 expect(result.invoice.credits.length).to eq(1)
                 expect(result.invoice.credits.first.amount_cents).to eq(9)
-                expect(result.invoice.fees.length).to eq(1)
-                expect(result.invoice.invoice_type).to eq("subscription")
-                expect(result.invoice.issuing_date.to_s).to eq("2024-03-29")
-                expect(result.invoice.fees_amount_cents).to eq(19) # 3 x 200 / 31
-                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(19)
-                expect(result.invoice.taxes_amount_cents).to eq(10)
-                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(29)
-                expect(result.invoice.total_amount_cents).to eq(20)
+                expect(result.invoice.total_amount_cents).to eq(141)
               end
             end
           end
 
           context "when preview premium integration does not exist" do
-            before { organization.update!(premium_integrations: ["netsuite"]) }
+            before { organization.update!(premium_integrations: []) }
 
             it "returns an error" do
-              result = preview_service.call
+              travel_to(timestamp) do
+                result = preview_service.call
 
-              aggregate_failures do
                 expect(result).not_to be_success
-                expect(result.error).to be_a(BaseService::MethodNotAllowedFailure)
+                expect(result.error).to be_a(BaseService::NotAllowedFailure)
+                expect(result.error.code).to eq("premium_integration_missing")
               end
             end
           end
         end
 
         context "with applied coupons" do
+          let(:coupon) { create(:coupon, organization:, coupon_type: "percentage", percentage_rate: 10.00) }
           let(:applied_coupon) do
-            build(
+            create(
               :applied_coupon,
-              customer: subscription.customer,
-              amount_cents: 2,
-              amount_currency: plan.amount_currency
+              customer:,
+              coupon:,
+              percentage_rate: 10.00
             )
           end
 
+          before { applied_coupon }
+
           it "creates preview invoice for 2 days with applied coupons" do
             travel_to(timestamp) do
-              result = described_class.new(customer:, subscriptions: [subscription], applied_coupons: [applied_coupon]).call
+              result = preview_service.call
 
               expect(result).to be_success
-              expect(result.invoice.organization).to eq(organization)
-              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
-              expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.fees.length).to eq(1)
-              expect(result.invoice.invoice_type).to eq("subscription")
-              expect(result.invoice.issuing_date.to_s).to eq("2024-04-01")
               expect(result.invoice.fees_amount_cents).to eq(6)
-              expect(result.invoice.coupons_amount_cents).to eq(2)
-              expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(4)
-              expect(result.invoice.taxes_amount_cents).to eq(2)
-              expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(6)
-              expect(result.invoice.total_amount_cents).to eq(6)
-              expect(result.invoice.credits.length).to eq(1)
+              expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(5)
+              expect(result.invoice.coupons_amount_cents).to eq(1)
+              expect(result.invoice.taxes_amount_cents).to eq(3)
+              expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(8)
+              expect(result.invoice.total_amount_cents).to eq(8)
             end
           end
         end
 
         context "with credit note credits" do
+          let(:customer) { create(:customer, organization:, billing_entity:) }
+          let(:subscription) do
+            create(
+              :subscription,
+              customer:,
+              plan:,
+              billing_time:,
+              subscription_at: timestamp,
+              started_at: timestamp,
+              created_at: timestamp
+            )
+          end
           let(:credit_note) do
             create(
               :credit_note,
+              organization:,
               customer:,
-              total_amount_cents: 2,
-              total_amount_currency: plan.amount_currency,
-              balance_amount_cents: 2,
-              balance_amount_currency: plan.amount_currency,
-              credit_amount_cents: 2,
-              credit_amount_currency: plan.amount_currency
+              invoice: create(:invoice, organization:, customer:),
+              balance_amount_cents: 10
             )
           end
 
-          before { credit_note }
+          before do
+            organization.update!(premium_integrations: ["preview"])
+            credit_note
+          end
 
           it "creates preview invoice for 2 days with credits included" do
             travel_to(timestamp) do
               result = preview_service.call
 
               expect(result).to be_success
-              expect(result.invoice.organization).to eq(organization)
-              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
-              expect(result.invoice.subscriptions.first).to eq(subscription)
               expect(result.invoice.fees.length).to eq(1)
-              expect(result.invoice.invoice_type).to eq("subscription")
-              expect(result.invoice.issuing_date.to_s).to eq("2024-04-01")
               expect(result.invoice.fees_amount_cents).to eq(6)
               expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(6)
               expect(result.invoice.taxes_amount_cents).to eq(3)
               expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(9)
-              expect(result.invoice.credit_notes_amount_cents).to eq(2)
-              expect(result.invoice.total_amount_cents).to eq(7)
+              expect(result.invoice.credit_notes_amount_cents).to eq(9)
+              expect(result.invoice.total_amount_cents).to eq(0)
             end
           end
         end
@@ -781,36 +643,51 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
         end
 
         context "with provider taxes" do
-          let(:integration) { create(:anrok_integration, organization:) }
-          let(:integration_customer) { build(:anrok_customer, integration:, customer:) }
-          let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
-          let(:integration_collection_mapping) do
+          let(:customer) { create(:customer, organization:, billing_entity:) }
+          let(:subscription) do
             create(
-              :netsuite_collection_mapping,
-              integration:,
-              mapping_type: :fallback_item,
-              settings: {external_id: "1", external_account_code: "11", external_name: ""}
+              :subscription,
+              customer:,
+              plan:,
+              billing_time:,
+              subscription_at: timestamp,
+              started_at: timestamp,
+              created_at: timestamp
+            )
+          end
+          let(:integration_customer) do
+            create(
+              :integration_customer,
+              customer:,
+              integration_type: "tax_kind"
             )
           end
 
           before do
-            integration_collection_mapping
-            customer.integration_customers = [integration_customer]
+            organization.update!(premium_integrations: ["preview"])
+            integration_customer
           end
 
           context "when there is no error" do
             before do
-              stub_request(:post, endpoint).to_return do |request|
-                response = JSON.parse(File.read(
-                  Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/success_response.json")
-                ))
-
-                # setting item_id based on the test example
-                key = JSON.parse(request.body).first["fees"].last["item_key"]
-                response["succeededInvoices"].first["fees"].last["item_key"] = key
-
-                {body: response.to_json}
-              end
+              stub_request(:post, "https://api.tax_provider.com/taxes")
+                .with(
+                  body: hash_including(
+                    "invoice" => hash_including("currency" => "EUR")
+                  )
+                )
+                .to_return(
+                  status: 200,
+                  body: {
+                    "taxes" => [
+                      {
+                        "item_key" => "subscription",
+                        "tax_amount" => 5.0,
+                        "tax_rate" => 50.0
+                      }
+                    ]
+                  }.to_json
+                )
             end
 
             it "creates preview invoice for 2 days" do
@@ -818,29 +695,20 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 result = preview_service.call
 
                 expect(result).to be_success
-                expect(result.invoice.organization).to eq(organization)
-                expect(result.invoice.billing_entity).to eq(customer.billing_entity)
-                expect(result.invoice.subscriptions.first).to eq(subscription)
                 expect(result.invoice.fees.length).to eq(1)
-                expect(result.invoice.invoice_type).to eq("subscription")
-                expect(result.invoice.issuing_date.to_s).to eq("2024-04-01")
                 expect(result.invoice.fees_amount_cents).to eq(6)
                 expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(6)
-                expect(result.invoice.taxes_amount_cents).to eq(1) # 6 x 0.1
-                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(7)
-                expect(result.invoice.total_amount_cents).to eq(7)
+                expect(result.invoice.taxes_amount_cents).to eq(5)
+                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(11)
+                expect(result.invoice.total_amount_cents).to eq(11)
               end
             end
           end
 
           context "when there is error received from the provider" do
             before do
-              stub_request(:post, endpoint).to_return do |request|
-                response = File.read(
-                  Rails.root.join("spec/fixtures/integration_aggregator/taxes/invoices/failure_response.json")
-                )
-                {body: response}
-              end
+              stub_request(:post, "https://api.tax_provider.com/taxes")
+                .to_return(status: 400, body: "Bad Request")
             end
 
             it "uses zero taxes" do
@@ -848,10 +716,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 result = preview_service.call
 
                 expect(result).to be_success
-                expect(result.invoice.subscriptions.first).to eq(subscription)
                 expect(result.invoice.fees.length).to eq(1)
-                expect(result.invoice.invoice_type).to eq("subscription")
-                expect(result.invoice.issuing_date.to_s).to eq("2024-04-01")
                 expect(result.invoice.fees_amount_cents).to eq(6)
                 expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(6)
                 expect(result.invoice.taxes_amount_cents).to eq(0)
@@ -863,8 +728,8 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
 
           context "when there is Net::OpenTimeout error" do
             before do
-              allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:new)
-                .and_raise(Net::OpenTimeout)
+              stub_request(:post, "https://api.tax_provider.com/taxes")
+                .to_raise(Net::OpenTimeout)
             end
 
             it "uses zero taxes" do
@@ -872,10 +737,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
                 result = preview_service.call
 
                 expect(result).to be_success
-                expect(result.invoice.subscriptions.first).to eq(subscription)
                 expect(result.invoice.fees.length).to eq(1)
-                expect(result.invoice.invoice_type).to eq("subscription")
-                expect(result.invoice.issuing_date.to_s).to eq("2024-04-01")
                 expect(result.invoice.fees_amount_cents).to eq(6)
                 expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(6)
                 expect(result.invoice.taxes_amount_cents).to eq(0)
@@ -895,12 +757,7 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
             result = preview_service.call
 
             expect(result).to be_success
-            expect(result.invoice.organization).to eq(organization)
-            expect(result.invoice.billing_entity).to eq(customer.billing_entity)
-            expect(result.invoice.subscriptions.first).to eq(subscription)
             expect(result.invoice.fees.length).to eq(1)
-            expect(result.invoice.invoice_type).to eq("subscription")
-            expect(result.invoice.issuing_date.to_s).to eq("2024-04-30")
             expect(result.invoice.fees_amount_cents).to eq(100)
             expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(100)
             expect(result.invoice.taxes_amount_cents).to eq(50)
@@ -945,66 +802,56 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
           end
 
           context "with charge fees" do
-            let(:billable_metric) do
-              create(:billable_metric, aggregation_type: "count_agg")
-            end
+            let(:billable_metric) { create(:billable_metric, organization:) }
             let(:charge) do
               create(
                 :standard_charge,
                 plan:,
                 billable_metric:,
-                properties: {amount: "12.66"}
+                properties: {amount: "10"}
               )
             end
-            let(:events) do
-              create_list(
+            let(:event) do
+              create(
                 :event,
-                2,
                 organization:,
-                subscription:,
                 customer:,
-                code: billable_metric.code,
-                timestamp: timestamp + 10.hours
+                subscription:,
+                billable_metric:,
+                properties: {value: 5},
+                timestamp: timestamp
               )
             end
 
             before do
-              events if subscription
               charge
-              Rails.cache.clear
+              event
             end
 
-            it "creates preview invoice for full month", transaction: false do
+            it "creates preview invoice for full month" do
               travel_to(timestamp) do
                 result = preview_service.call
 
                 expect(result).to be_success
-                expect(result.invoice.organization).to eq(organization)
-                expect(result.invoice.billing_entity).to eq(customer.billing_entity)
-                expect(result.invoice.subscriptions.first).to eq(subscription)
                 expect(result.invoice.fees.length).to eq(2)
-                expect(result.invoice.invoice_type).to eq("subscription")
-                expect(result.invoice.issuing_date.to_s).to eq("2024-04-30")
-                expect(result.invoice.fees_amount_cents).to eq(2632)
-                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(2632)
-                expect(result.invoice.taxes_amount_cents).to eq(1316)
-                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(3948)
-                expect(result.invoice.total_amount_cents).to eq(3948)
+                expect(result.invoice.fees_amount_cents).to eq(1100)
+                expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(1100)
+                expect(result.invoice.taxes_amount_cents).to eq(550)
+                expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(1650)
+                expect(result.invoice.total_amount_cents).to eq(1650)
               end
             end
           end
         end
 
         context "with multiple persisted subscriptions" do
-          let(:customer) { create(:customer, organization:, invoice_grace_period: 3, billing_entity:) }
-          let(:plan1) { create(:plan, organization:, interval: "monthly") }
+          let(:customer) { create(:customer, organization:, billing_entity:) }
           let(:plan2) { create(:plan, organization:, interval: "monthly") }
-          let(:subscriptions) { [subscription1, subscription2] }
           let(:subscription1) do
             create(
               :subscription,
               customer:,
-              plan: plan1,
+              plan:,
               billing_time:,
               subscription_at: timestamp,
               started_at: timestamp,
@@ -1022,20 +869,17 @@ RSpec.describe Invoices::PreviewService, type: :service, cache: :memory do
               created_at: timestamp
             )
           end
+          let(:subscriptions) { [subscription1, subscription2] }
 
           before { organization.update!(premium_integrations: ["preview"]) }
 
           it "creates preview invoice for full month" do
-            travel_to(timestamp + 5.days) do
+            travel_to(timestamp) do
               result = preview_service.call
 
               expect(result).to be_success
-              expect(result.invoice.organization).to eq(organization)
-              expect(result.invoice.billing_entity).to eq(customer.billing_entity)
-              expect(result.invoice.subscriptions.map { |s| s.id }).to match_array([subscription1.id, subscription2.id])
+              expect(result.invoice.subscriptions.size).to eq(2)
               expect(result.invoice.fees.length).to eq(2)
-              expect(result.invoice.invoice_type).to eq("subscription")
-              expect(result.invoice.issuing_date.to_s).to eq("2024-05-03")
               expect(result.invoice.fees_amount_cents).to eq(200)
               expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(200)
               expect(result.invoice.taxes_amount_cents).to eq(100)

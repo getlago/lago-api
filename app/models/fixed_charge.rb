@@ -5,8 +5,7 @@
 
 class FixedCharge < ApplicationRecord
   include PaperTrailTraceable
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include Chargable
 
   # NOTE: These columns were removed in the scoping phase.
   self.ignored_columns = %i[
@@ -19,27 +18,25 @@ class FixedCharge < ApplicationRecord
     billing_entity_id
   ]
 
-  belongs_to :organization
   # TODO: We create plan on organization, it will not have billing_entity....
   # and fixed charge belong to plan, so it won't have billing_entity
   # belongs_to :billing_entity
   belongs_to :add_on
-  belongs_to :plan, -> { with_discarded }, touch: true
-  belongs_to :parent, class_name: "FixedCharge", optional: true
 
-  has_many :children, class_name: "FixedCharge", foreign_key: :parent_id, dependent: :nullify
   has_many :subscriptions_units_overrides, dependent: :destroy
-  has_many :fees
 
   # TODO: applied taxes
   # has_many :applied_taxes, class_name: "FixedCharge::AppliedTax", dependent: :destroy
   # has_many :taxes, through: :applied_taxes
 
-  CHARGE_MODELS = {
-    standard: "standard",
-    graduated: "graduated",
-    volume: "volume"
-  }
+  # Fixed charge models
+  CHARGE_MODELS = %i[
+    standard
+    graduated
+    volume
+  ].freeze
+
+  enum :charge_model, CHARGE_MODELS, default: :standard, null: false
 
   # INTERVALS = {
   #   weekly: "weekly",
@@ -53,13 +50,8 @@ class FixedCharge < ApplicationRecord
   #   month: "month"
   # }
 
-  enum :charge_model, CHARGE_MODELS, default: :standard, null: false
   # enum :interval, INTERVALS, default: :monthly, null: false
   # enum :billing_period_duration_unit, PERIOD_DURATION_UNIT, default: :month, null: false
-
-  default_scope -> { kept }
-
-  scope :pay_in_advance, -> { where(pay_in_advance: true) }
 
   delegate :code, to: :add_on
 end

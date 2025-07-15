@@ -41,7 +41,7 @@ module Invoices
 
       add_subscription_fees
       add_charge_fees
-      # add_fixed_charge_fees
+      add_fixed_charge_fees
       compute_tax_and_totals
 
       result.invoice = invoice
@@ -186,6 +186,47 @@ module Invoices
           end
         end
       end
+    end
+
+    def add_fixed_charge_fees
+      subscriptions.each do |subscription|
+        boundaries = fixed_charge_boundaries(subscription)
+        subscription.fixed_charges.find_each do |fixed_charge|
+          next unless should_create_fixed_charge_fee?(fixed_charge, subscription)
+
+          fee_result = Fees::FixedChargeService.call(
+            invoice: invoice,
+            fixed_charge: fixed_charge,
+            subscription: subscription,
+            boundaries: boundaries,
+            context: :preview
+          )
+          invoice.fees << fee_result.fees if fee_result.fees.present?
+        end
+      end
+    end
+
+    def fixed_charge_boundaries(subscription)
+      date_service = Subscriptions::DatesService.new_instance(
+        subscription,
+        billing_time,
+        current_usage: subscription.persisted? && subscription.terminated? && subscription.upgraded?
+      )
+      {
+        from_datetime: date_service.from_datetime,
+        to_datetime: date_service.to_datetime,
+        charges_from_datetime: date_service.charges_from_datetime,
+        charges_to_datetime: date_service.charges_to_datetime,
+        fixed_charges_from_datetime: date_service.fixed_charges_from_datetime,
+        fixed_charges_to_datetime: date_service.fixed_charges_to_datetime,
+        timestamp: billing_time,
+        charges_duration: date_service.charges_duration_in_days,
+        fixed_charges_duration: date_service.respond_to?(:fixed_charges_duration_in_days) ? date_service.fixed_charges_duration_in_days : nil
+      }
+    end
+
+    def should_create_fixed_charge_fee?(fixed_charge, subscription)
+      true
     end
 
     def compute_tax_and_totals

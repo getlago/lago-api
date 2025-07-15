@@ -4,25 +4,20 @@ class Charge < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
   include ChargePropertiesValidation
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include Chargable
 
-  belongs_to :organization
-  belongs_to :plan, -> { with_discarded }, touch: true
   belongs_to :billable_metric, -> { with_discarded }
-  belongs_to :parent, class_name: "Charge", optional: true
 
   has_one :applied_pricing_unit, as: :pricing_unitable
   has_one :pricing_unit, through: :applied_pricing_unit
 
-  has_many :children, class_name: "Charge", foreign_key: :parent_id, dependent: :nullify
-  has_many :fees
   has_many :filters, dependent: :destroy, class_name: "ChargeFilter"
   has_many :filter_values, through: :filters, class_name: "ChargeFilterValue", source: :values
 
   has_many :applied_taxes, class_name: "Charge::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
+  # Extended charge models specific to Charge
   CHARGE_MODELS = %i[
     standard
     graduated
@@ -44,7 +39,6 @@ class Charge < ApplicationRecord
   validate :validate_properties
   validate :validate_dynamic, if: -> { dynamic? }
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
-  validates :charge_model, presence: true
 
   validate :charge_model_allowance
   validate :validate_pay_in_advance
@@ -54,10 +48,6 @@ class Charge < ApplicationRecord
   validate :validate_custom_model
 
   monetize :min_amount_cents, with_currency: ->(charge) { charge.plan.amount_currency }
-
-  default_scope -> { kept }
-
-  scope :pay_in_advance, -> { where(pay_in_advance: true) }
 
   def pricing_group_keys
     properties["pricing_group_keys"].presence || properties["grouped_by"]
