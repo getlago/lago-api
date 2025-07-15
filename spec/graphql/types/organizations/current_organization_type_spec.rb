@@ -48,5 +48,6 @@ RSpec.describe Types::Organizations::CurrentOrganizationType do
 
     expect(subject).to have_field(:authentication_methods).of_type("[AuthenticationMethodsEnum!]!")
     expect(subject).to have_field(:accessible_by_current_session).of_type("Boolean!")
+    expect(subject).to have_field(:authenticated_method).of_type("AuthenticationMethodsEnum!")
   end
 end

@@ -56,6 +56,7 @@ module Types
 
       field :accessible_by_current_session, Boolean, null: false
       field :authentication_methods, [Types::Organizations::AuthenticationMethodsEnum], null: false
+      field :authenticated_method, Types::Organizations::AuthenticationMethodsEnum, null: false
 
       def webhook_url
         object.webhook_endpoints.map(&:webhook_url).first
@@ -67,6 +68,10 @@ module Types
 
       def accessible_by_current_session
         object.authentication_methods.include?(context[:login_method])
+      end
+
+      def authenticated_method
+        context[:login_method]
       end
     end
   end

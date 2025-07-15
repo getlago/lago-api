@@ -3842,6 +3842,7 @@ type CurrentOrganization {
   adyenPaymentProviders: [AdyenProvider!]
   apiKey: String
   appliedDunningCampaign: DunningCampaign
+  authenticatedMethod: AuthenticationMethodsEnum!
   authenticationMethods: [AuthenticationMethodsEnum!]!
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!

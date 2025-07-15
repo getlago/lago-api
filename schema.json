@@ -15440,6 +15440,22 @@
               "args": []
             },
             {
+              "name": "authenticatedMethod",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "ENUM",
+                  "name": "AuthenticationMethodsEnum",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "authenticationMethods",
               "description": null,
               "type": {
