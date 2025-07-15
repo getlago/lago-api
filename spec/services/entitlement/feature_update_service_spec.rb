@@ -47,6 +47,12 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
           expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", feature)
         end
 
+        it "produces an activity log" do
+          allow(Utils::ActivityLog).to receive(:produce).and_call_original
+          result = subject
+          expect(Utils::ActivityLog).to have_received(:produce).with(result.feature, "feature.updated")
+        end
+
         it "only updates provided attributes" do
           original_name = feature.name
           params.delete(:name)
@@ -250,6 +256,12 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         it "sends plan.updated webhook" do
           expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", entitlement.plan)
         end
+
+        it "produces plan.updated logs" do
+          allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+          subject
+          expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(entitlement.plan, "plan.updated")
+        end
       end
 
       shared_examples "discards all privileges" do
@@ -301,6 +313,12 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
 
         it "sends feature.updated webhook" do
           expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", feature)
+        end
+
+        it "produces an activity log" do
+          allow(Utils::ActivityLog).to receive(:produce).and_call_original
+          result = subject
+          expect(Utils::ActivityLog).to have_received(:produce).with(result.feature, "feature.updated")
         end
 
         it "only updates provided attributes" do
@@ -467,8 +485,14 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
           privilege2_value
         end
 
-        it "discard all values and entitlement" do
+        it "sends plan.updated webhook" do
           expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", entitlement.plan)
+        end
+
+        it "produces plan.updated logs" do
+          allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
+          subject
+          expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(entitlement.plan, "plan.updated")
         end
       end
     end
