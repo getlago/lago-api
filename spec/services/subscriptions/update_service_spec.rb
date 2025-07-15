@@ -45,10 +45,10 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
         expect { update_service.call }.not_to have_enqueued_job(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob)
       end
 
-      it "produces an activity log" do
+      it "produces an activity log after commit" do
         described_class.call(subscription:, params:)
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.updated")
+        expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.updated", after_commit: true)
       end
 
       context "when subscription should be synced with Hubspot" do

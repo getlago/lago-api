@@ -49,6 +49,8 @@ module Utils
         result = block.call
         return result if result.failure?
 
+        # NOTE: This will cause any unsaved changes to be lost. So if `object` is used in `result`, the service `result`
+        #       will not contain the unsaved changes.
         object.reload
         after_attrs = object_serialized
 
