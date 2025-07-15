@@ -54,6 +54,7 @@ class FixedCharge < ApplicationRecord
   # enum :billing_period_duration_unit, PERIOD_DURATION_UNIT, default: :month, null: false
 
   delegate :code, to: :add_on
+# !NOTE: should not be able to have several fixed charges with the same addon for one plan
 end
 
 # == Schema Information

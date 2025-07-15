@@ -49,7 +49,7 @@ module FixedCharges
 
     def issue_unit_events(units)
       plan.subscriptions.active.find_each do |subscription|
-        FixedCharges::EmitEventsService.call!(fixed_charge:, subscription:, units:)
+        FixedCharges::FixedChargesEvents::EmitEventsService.call!(fixed_charge:, subscription:, units:)
       end
     end
   end
