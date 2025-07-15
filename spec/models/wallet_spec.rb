@@ -49,4 +49,20 @@ RSpec.describe Wallet, type: :model do
       end
     end
   end
+
+  describe "limited_billable_metrics?" do
+    context "when wallet_targets are present" do
+      before { create(:wallet_target, wallet:) }
+
+      it "returns true" do
+        expect(wallet.limited_billable_metrics?).to be true
+      end
+    end
+
+    context "when wallet targets are not present" do
+      it "returns false" do
+        expect(wallet.limited_billable_metrics?).to be false
+      end
+    end
+  end
 end

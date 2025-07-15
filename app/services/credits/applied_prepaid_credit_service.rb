@@ -70,16 +70,40 @@ module Credits
     end
 
     def compute_amount
-      if wallet.limited_fee_types?
-        applicable_fees = invoice.fees.filter { |fee| wallet.allowed_fee_types.include?(fee.fee_type) }
+      if wallet.limited_billable_metrics?
+        bm_limited_fees = billable_metric_limited_fees
+        remaining_fees = invoice.fees - bm_limited_fees
+        remaining_fees = remaining_fees.reject { |fee| fee.fee_type == "charge" }
+      else
+        bm_limited_fees = []
+        remaining_fees = invoice.fees
+      end
 
-        total = 0
-        applicable_fees.each do |f|
-          total += f.sub_total_excluding_taxes_amount_cents + f.taxes_amount_cents - f.precise_credit_notes_amount_cents
-        end
-        [balance_cents, total].min
+      fee_type_limited_fees = if wallet.limited_fee_types?
+        remaining_fees.filter { |fee| wallet.allowed_fee_types.include?(fee.fee_type) }
+      elsif wallet.limited_billable_metrics?
+        []
+      else
+        remaining_fees
+      end
+
+      if wallet.limited_fee_types? || wallet.limited_billable_metrics?
+        [balance_cents, limited_fees_total(bm_limited_fees + fee_type_limited_fees)].min
       else
         [balance_cents, invoice.total_amount_cents].min
+      end
+    end
+
+    def billable_metric_limited_fees
+      invoice
+        .fees
+        .joins(charge: :billable_metric)
+        .where(billable_metric: {id: wallet.wallet_targets.pluck(:billable_metric_id)})
+    end
+
+    def limited_fees_total(applicable_fees)
+      applicable_fees.sum do |f|
+        f.sub_total_excluding_taxes_amount_cents + f.taxes_amount_cents - f.precise_credit_notes_amount_cents
       end
     end
   end
