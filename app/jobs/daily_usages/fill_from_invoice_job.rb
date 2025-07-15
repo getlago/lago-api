@@ -10,8 +10,6 @@ module DailyUsages
       end
     end
 
-    retry_on ActiveJob::DeserializationError, wait: :polynomially_longer, attempts: 10
-
     def perform(invoice:, subscriptions:)
       DailyUsages::FillFromInvoiceService.call(invoice:, subscriptions:).raise_if_error!
     end

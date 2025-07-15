@@ -167,7 +167,9 @@ module Invoices
         .map(&:subscription)
       return if subscriptions.blank?
 
-      DailyUsages::FillFromInvoiceJob.perform_later(invoice:, subscriptions: subscriptions)
+      after_commit do
+        DailyUsages::FillFromInvoiceJob.perform_later(invoice:, subscriptions:)
+      end
     end
   end
 end
