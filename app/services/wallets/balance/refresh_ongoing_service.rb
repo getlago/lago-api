@@ -17,7 +17,7 @@ module Wallets
           progressive_billed_total = ::Subscriptions::ProgressiveBilledAmount.call(subscription:, include_generating_invoices:).total_billed_amount_cents
 
           {
-            total_usage_amount_cents: invoice.total_amount_cents,
+            total_usage_amount_cents: calculate_total_usage_with_limitation(invoice, subscription),
             billed_usage_amount_cents: billed_usage_amount_cents(invoice, progressive_billed_total)
           }
         end
@@ -89,6 +89,19 @@ module Wallets
 
       def credits_ongoing_balance
         ongoing_balance_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
+      end
+
+      def calculate_total_usage_with_limitation(invoice, subscription)
+        return invoice.total_amount_cents unless wallet.limited_billable_metrics?
+
+        # current usage fees are not persisted so we can't use join
+        charge_ids = subscription.plan.charges.where(billable_metric_id: wallet.wallet_targets.pluck(:billable_metric_id)).pluck(:id)
+
+        return invoice.total_amount_cents if charge_ids.empty?
+
+        invoice.fees
+          .select { |f| charge_ids.include?(f.charge_id) }
+          .sum { |f| f.amount_cents + f.taxes_amount_cents }
       end
     end
   end
