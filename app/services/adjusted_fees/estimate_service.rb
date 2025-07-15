@@ -14,7 +14,7 @@ module AdjustedFees
     def call
       return result.forbidden_failure! if !License.premium?
 
-      fee = Fee.find_by(id: params[:fee_id])
+      fee = find_or_create_fee
       return result.not_found_failure!(resource: "fee") if fee.blank?
 
       charge = fee.charge
@@ -57,6 +57,86 @@ module AdjustedFees
       unit_adjustment = params[:units].present? && params[:unit_precise_amount].blank?
 
       charge && unit_adjustment && (charge.percentage? || (charge.prorated? && charge.graduated?))
+    end
+
+    def find_or_create_fee
+      return find_existing_fee if params.key?(:fee_id)
+
+      create_empty_fee
+    end
+
+    def find_existing_fee
+      fee = invoice.fees.find_by(id: params[:fee_id])
+      if fee.blank?
+        result.not_found_failure!(resource: "fee")
+        return
+      end
+
+      fee
+    end
+
+    def create_empty_fee
+      subscription = invoice.subscriptions.includes(plan: {charges: :filters}).find_by(id: params[:invoice_subscription_id])
+      unless subscription
+        result.not_found_failure!(resource: "subscription")
+        return
+      end
+
+      charge = subscription.plan.charges.find { |c| c.id == params[:charge_id] }
+      unless charge
+        result.not_found_failure!(resource: "charge")
+        return
+      end
+
+      if params[:charge_filter_id].present?
+        charge_filter = charge.filters.find_by(id: params[:charge_filter_id])
+
+        unless charge_filter
+          result.not_found_failure!(resource: "charge_filter")
+          return
+        end
+      end
+
+      fee = invoice.fees.find_by(
+        subscription_id: subscription.id,
+        charge_id: charge.id,
+        charge_filter_id: params[:charge_filter_id]
+      )
+      fee || create_fee(subscription, charge)
+    end
+
+    def create_fee(subscription, charge)
+      invoice_subscription = invoice.invoice_subscriptions.find_by(subscription_id: subscription.id)
+
+      boundaries = {
+        timestamp: invoice_subscription.timestamp,
+        charges_from_datetime: invoice_subscription.charges_from_datetime,
+        charges_to_datetime: invoice_subscription.charges_to_datetime
+      }
+
+      Fee.new(
+        organization:,
+        billing_entity_id: invoice.billing_entity_id,
+        invoice:,
+        subscription:,
+        invoiceable: charge,
+        charge:,
+        charge_filter_id: params[:charge_filter_id],
+        grouped_by: {},
+        fee_type: :charge,
+        payment_status: :pending,
+        events_count: 0,
+        amount_currency: invoice.currency,
+        amount_cents: 0,
+        precise_amount_cents: 0.to_d,
+        unit_amount_cents: 0,
+        precise_unit_amount: 0.to_d,
+        taxes_amount_cents: 0,
+        taxes_precise_amount_cents: 0.to_d,
+        units: 0,
+        total_aggregated_units: 0,
+        properties: boundaries
+      )
     end
   end
 end
