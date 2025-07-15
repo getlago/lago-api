@@ -321,5 +321,23 @@ RSpec.describe Organizations::UpdateService do
         end
       end
     end
+
+    context "when authentication_methods change" do
+      subject { described_class.new(organization:, params:, user:) }
+
+      let(:params) { {authentication_methods: ["email_password", "okta"]} }
+      let(:user) { create(:user) }
+      let(:additions) { ["okta"] }
+      let(:deletions) { ["google_oauth"] }
+
+      before do
+        create(:membership, organization:, role: :admin, user:)
+      end
+
+      it "delivers a email notification" do
+        expect { subject.call }.to have_enqueued_mail(OrganizationMailer, :authentication_methods_updated)
+          .with(params: {organization:, user:, additions:, deletions:}, args: [])
+      end
+    end
   end
 end

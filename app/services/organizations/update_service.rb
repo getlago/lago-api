@@ -4,9 +4,10 @@ module Organizations
   class UpdateService < BaseService
     Result = BaseResult[:organization]
 
-    def initialize(organization:, params:)
+    def initialize(organization:, params:, user: nil)
       @organization = organization
       @params = params
+      @user = user
 
       super(nil)
     end
@@ -29,7 +30,22 @@ module Organizations
       organization.finalize_zero_amount_invoice = params[:finalize_zero_amount_invoice] if params.key?(:finalize_zero_amount_invoice)
       organization.net_payment_term = params[:net_payment_term] if params.key?(:net_payment_term)
       organization.document_numbering = params[:document_numbering] if params.key?(:document_numbering)
-      organization.authentication_methods = params[:authentication_methods] if params.key?(:authentication_methods)
+      if params.key?(:authentication_methods)
+        deletions = organization.authentication_methods - params[:authentication_methods]
+        additions = params[:authentication_methods] - organization.authentication_methods
+        organization.authentication_methods = params[:authentication_methods]
+
+        if organization.authentication_methods_changed? && user
+          after_commit do
+            OrganizationMailer.with(
+              organization:,
+              user:,
+              additions:,
+              deletions:
+            ).authentication_methods_updated.deliver_later
+          end
+        end
+      end
 
       billing = params[:billing_configuration]&.to_h || {}
       organization.invoice_footer = billing[:invoice_footer] if billing.key?(:invoice_footer)
@@ -74,7 +90,7 @@ module Organizations
 
     private
 
-    attr_reader :organization, :params
+    attr_reader :organization, :params, :user
 
     def assign_premium_attributes
       return unless License.premium?
