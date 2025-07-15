@@ -28,6 +28,8 @@ module Types
       field :can_create_billing_entity, Boolean, null: false, method: :can_create_billing_entity?
 
       def accessible_by_current_session
+        return false if context[:current_user].nil?
+
         context[:current_user].organizations.include?(object) &&
           object.authentication_methods.include?(context[:login_method])
       end

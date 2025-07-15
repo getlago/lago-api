@@ -55,8 +55,8 @@ module Types
       field :can_create_billing_entity, Boolean, null: false, method: :can_create_billing_entity?
 
       field :accessible_by_current_session, Boolean, null: false
-      field :authentication_methods, [Types::Organizations::AuthenticationMethodsEnum], null: false
       field :authenticated_method, Types::Organizations::AuthenticationMethodsEnum, null: false
+      field :authentication_methods, [Types::Organizations::AuthenticationMethodsEnum], null: false
 
       def webhook_url
         object.webhook_endpoints.map(&:webhook_url).first
