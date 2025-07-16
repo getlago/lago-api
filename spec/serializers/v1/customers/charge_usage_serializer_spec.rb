@@ -170,7 +170,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
 
   describe "past_usage root_name" do
     subject(:serializer) { described_class.new(usage, root_name: "past_usage") }
-  
+
     it "sets projected values to zero for past_usage" do
       expect(result["past_usage"].first).to include(
         "units" => "10.0",
@@ -179,5 +179,4 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       )
     end
   end
-
 end

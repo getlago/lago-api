@@ -29,7 +29,7 @@ module V1
         )
 
         if root_name == "past_usage"
-          projected_units = '0.0'
+          projected_units = "0.0"
           projected_amount_cents = 0
         else
           projected_units = usage_calculator.projected_units.to_s
