@@ -34,9 +34,8 @@ RSpec.describe Entitlement::PrivilegeDestroyService, type: :service do
     end
 
     it "produces an activity log" do
-      allow(Utils::ActivityLog).to receive(:produce).and_call_original
       subject
-      expect(Utils::ActivityLog).to have_received(:produce).with(feature, "feature.updated")
+      expect(Utils::ActivityLog).to have_produced("feature.updated").after_commit.with(feature)
     end
 
     context "when privilege is nil" do
@@ -74,9 +73,8 @@ RSpec.describe Entitlement::PrivilegeDestroyService, type: :service do
       end
 
       it "produces plan.updated logs" do
-        allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
         subject
-        expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(entitlement.plan, "plan.updated")
+        expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(entitlement.plan)
       end
     end
   end

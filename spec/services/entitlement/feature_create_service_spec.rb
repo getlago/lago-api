@@ -35,9 +35,8 @@ RSpec.describe Entitlement::FeatureCreateService, type: :service do
     end
 
     it "produces an activity log" do
-      allow(Utils::ActivityLog).to receive(:produce)
       result = subject
-      expect(Utils::ActivityLog).to have_received(:produce).with(result.feature, "feature.created")
+      expect(Utils::ActivityLog).to have_produced("feature.created").after_commit.with(result.feature)
     end
 
     it "sends feature.created webhook" do

@@ -53,9 +53,8 @@ RSpec.describe Entitlement::PlanEntitlementPrivilegeDestroyService, type: :servi
     end
 
     it "produces an activity log" do
-      allow(Utils::ActivityLog).to receive(:produce).and_call_original
       subject
-      expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated")
+      expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(plan)
     end
 
     context "when entitlement is nil" do

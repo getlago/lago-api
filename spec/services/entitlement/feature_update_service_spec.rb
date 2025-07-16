@@ -48,9 +48,8 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         end
 
         it "produces an activity log" do
-          allow(Utils::ActivityLog).to receive(:produce).and_call_original
           result = subject
-          expect(Utils::ActivityLog).to have_received(:produce).with(result.feature, "feature.updated")
+          expect(Utils::ActivityLog).to have_produced("feature.updated").after_commit.with(result.feature)
         end
 
         it "only updates provided attributes" do
@@ -258,9 +257,8 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         end
 
         it "produces plan.updated logs" do
-          allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
           subject
-          expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(entitlement.plan, "plan.updated")
+          expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(entitlement.plan)
         end
       end
 
@@ -316,9 +314,8 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         end
 
         it "produces an activity log" do
-          allow(Utils::ActivityLog).to receive(:produce).and_call_original
           result = subject
-          expect(Utils::ActivityLog).to have_received(:produce).with(result.feature, "feature.updated")
+          expect(Utils::ActivityLog).to have_produced("feature.updated").after_commit.with(result.feature)
         end
 
         it "only updates provided attributes" do
@@ -490,9 +487,8 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         end
 
         it "produces plan.updated logs" do
-          allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
           subject
-          expect(Utils::ActivityLog).to have_received(:produce_after_commit).with(entitlement.plan, "plan.updated")
+          allow(Utils::ActivityLog).to receive(:produce_after_commit).and_call_original
         end
       end
     end

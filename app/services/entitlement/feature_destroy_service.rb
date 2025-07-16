@@ -18,6 +18,8 @@ module Entitlement
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "feature") unless feature
 
+      plans = feature.plans.to_a
+
       ActiveRecord::Base.transaction do
         feature.entitlement_values.discard_all!
         feature.entitlements.discard_all!
@@ -25,9 +27,10 @@ module Entitlement
         feature.discard!
       end
 
-      jobs = feature.plans.map do |plan|
+      jobs = []
+      plans.each do |plan|
         Utils::ActivityLog.produce_after_commit(plan, "plan.updated")
-        SendWebhookJob.new("plan.updated", plan)
+        jobs << SendWebhookJob.new("plan.updated", plan)
       end
 
       after_commit do
