@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class FixedCharge < ApplicationRecord
+  include Discard::Model
+  self.discard_column = :deleted_at
+
   belongs_to :organization
   belongs_to :plan, -> { with_discarded }, touch: true
   belongs_to :add_on, -> { with_discarded }, touch: true
