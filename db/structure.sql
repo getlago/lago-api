@@ -306,6 +306,7 @@ DROP INDEX IF EXISTS public.index_plans_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_plans_on_organization_id;
 DROP INDEX IF EXISTS public.index_plans_on_deleted_at;
 DROP INDEX IF EXISTS public.index_plans_on_created_at;
+DROP INDEX IF EXISTS public.index_plans_on_bill_fixed_charges_monthly;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_id;
@@ -2440,7 +2441,8 @@ CREATE TABLE public.plans (
     parent_id uuid,
     deleted_at timestamp(6) without time zone,
     pending_deletion boolean DEFAULT false NOT NULL,
-    invoice_display_name character varying
+    invoice_display_name character varying,
+    bill_fixed_charges_monthly boolean DEFAULT false NOT NULL
 );
 
 
@@ -6808,6 +6810,13 @@ CREATE UNIQUE INDEX index_payments_on_provider_payment_id_and_payment_provider_i
 
 
 --
+-- Name: index_plans_on_bill_fixed_charges_monthly; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plans_on_bill_fixed_charges_monthly ON public.plans USING btree (bill_fixed_charges_monthly);
+
+
+--
 -- Name: index_plans_on_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9052,6 +9061,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250716142613'),
 ('20250716132759'),
 ('20250716132649'),
+('20250716123425'),
 ('20250715124108'),
 ('20250714131519'),
 ('20250710102337'),
