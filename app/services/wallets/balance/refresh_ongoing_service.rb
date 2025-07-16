@@ -94,14 +94,10 @@ module Wallets
       end
 
       def calculate_total_usage_with_limitation(usage_amount_cents)
-        return usage_amount_cents.sum { |e| e[:total_usage_amount_cents] } unless wallet.limited_billable_metrics?
+        return usage_amount_cents.sum { |e| e[:total_usage_amount_cents] } unless wallet.limited_to_billable_metrics?
 
         # current usage fees are not persisted so we can't use join
-        all_fees = []
-        usage_amount_cents.each do |usage|
-          all_fees << usage[:invoice].fees
-        end
-        all_fees = all_fees.flatten
+        all_fees = usage_amount_cents.flat_map { |usage| usage[:invoice].fees }
         charge_ids = Charge.where(id: all_fees.map(&:charge_id)).where(billable_metric_id: wallet.wallet_targets.pluck(:billable_metric_id)).pluck(:id)
 
         return usage_amount_cents.sum { |e| e[:total_usage_amount_cents] } if charge_ids.empty?
