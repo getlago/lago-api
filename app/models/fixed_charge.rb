@@ -1,19 +1,10 @@
 # frozen_string_literal: true
 
 class FixedCharge < ApplicationRecord
-  include PaperTrailTraceable
-  include Discard::Model
-
-  self.discard_column = :deleted_at
-  default_scope -> { kept }
-
   belongs_to :organization
-  belongs_to :plan, -> { with_discarded }, touch: true
-  belongs_to :add_on, -> { with_discarded }, touch: true
-  belongs_to :parent, class_name: "FixedCharge", optional: true
-  has_many :children, class_name: "FixedCharge", foreign_key: :parent_id, dependent: :nullify
-
-  scope :pay_in_advance, -> { where(pay_in_advance: true) }
+  belongs_to :plan
+  belongs_to :add_on
+  belongs_to :parent, optional: true
 
   CHARGE_MODELS = {
     standard: "standard",
