@@ -2,23 +2,11 @@
 
 module Invoices
   class RegenerateFromVoidedService < BaseService
-    attr_reader :voided_invoice, :regenerated_invoice, :fees
-
-    ALLOWED_FEE_ATTRIBUTES = %i[
-      charge_id
-      subscription_id
-      invoice_display_name
-      units
-      description
-      amount_cents
-      unit_amount_cents
-      add_on_id
-    ].freeze
-
-    def initialize(voided_invoice:, fees:)
+    Result = BaseResult[:invoice]
+    def initialize(voided_invoice:, fees_params:)
       @voided_invoice = voided_invoice
-      @fees = fees
-      @regenerated_invoice = nil
+      @fees_params = fees_params
+
       super
     end
 
@@ -29,111 +17,82 @@ module Invoices
 
     def call
       return result.not_found_failure!(resource: "invoice") unless voided_invoice
-      return result.not_allowed_failure!(code: "not_voided") unless voided_invoice.voided?
-      return result.not_allowed_failure!(code: "already_regenerated") if voided_invoice.regenerated_invoice.present?
+      invoice = nil
 
       ActiveRecord::Base.transaction do
-        create_regenerated_invoice
-        # rubocop:disable Rails/SkipsModelValidations
-        # No callbacks or validations are called on invoice_subscriptions so it's safe to update all for better performance
-        voided_invoice.invoice_subscriptions.update_all(invoice_id: regenerated_invoice.id)
-        # rubocop:enable Rails/SkipsModelValidations
-        process_fees
-        draft_or_finalize_regenerated_invoice
+        invoice = create_regenerated_invoice
+        process_fees(invoice)
+        create_invoice_subscription(invoice) if invoice.invoice_type == "subscription"
+        Invoices::ApplyInvoiceCustomSectionsService.call(invoice: invoice)
+        Invoices::ComputeAmountsFromFees.call(invoice: invoice)
+        Invoices::TransitionToFinalStatusService.call(invoice: invoice)
+        invoice.save!
       end
 
+      result.invoice = invoice
       result
-    rescue ActiveRecord::RecordInvalid => e
-      result.record_validation_failure!(record: e.record)
-    rescue BaseService::FailedResult => e
-      e.result
     end
 
     private
 
+    attr_reader :voided_invoice, :fees_params
+
     def create_regenerated_invoice
-      generating_result = Invoices::CreateGeneratingService.call(
+      generating_result = Invoices::CreateGeneratingService.call!(
         customer: voided_invoice.customer,
         invoice_type: voided_invoice.invoice_type,
         currency: voided_invoice.currency,
         datetime: voided_invoice.created_at,
-        voided_invoice_id: voided_invoice.id
       )
-
-      generating_result.raise_if_error!
-      @regenerated_invoice = generating_result.invoice
+      invoice = generating_result.invoice
+      invoice.update(voided_invoice_id: voided_invoice.id)
+      invoice
     end
 
-    def process_fees
-      existing_fees = voided_invoice.fees.where(id: fees.map { |fee| fee[:id] })
-      new_fees = fees.select { |fee| fee[:id].blank? }
-
-      duplicate_existing_fees_with_updates(existing_fees)
-      process_new_fees(new_fees)
-    end
-
-    def duplicate_existing_fees_with_updates(existing_fees)
-      existing_fees.each do |fee_record|
-        fee_record.dup.tap do |fee|
-          fee.invoice = regenerated_invoice
-          fee.payment_status = :pending
-          fee.taxes_amount_cents = 0
-          fee.taxes_precise_amount_cents = 0.to_d
-
-          fee_input = fees.find { |f| f[:id] == fee_record.id }
-
-          if fee_input
-            ALLOWED_FEE_ATTRIBUTES.each do |attribute|
-              next unless fee_input.key?(attribute)
-
-              fee[attribute] = fee_input[attribute]
-            end
-          end
-
-          fee.save!
-
-          taxes_result = Fees::ApplyTaxesService.call(fee:)
-          taxes_result.raise_if_error!
+    def create_invoice_subscription(invoice)
+      voided_invoice.invoice_subscriptions.update_all(regenerated_invoice_id: invoice.id)
+      voided_invoice.invoice_subscriptions.each do |invoice_subscription|
+        invoice_subscription.dup.tap do |dup_invoice_subscription|
+          dup_invoice_subscription.invoice = invoice
+          dup_invoice_subscription.regenerated_invoice_id = nil
+          dup_invoice_subscription.save!
         end
       end
     end
 
-    def process_new_fees(new_fees)
-      new_fees.each do |fee_attributes|
-        fee_data = fee_attributes.merge(
-          invoice: regenerated_invoice,
-          organization: regenerated_invoice.organization,
-          billing_entity: regenerated_invoice.billing_entity,
-          amount_cents: fee_attributes.fetch(:unit_amount_cents, 0),
-          unit_amount_cents: fee_attributes[:unit_amount_cents],
-          amount_currency: regenerated_invoice.currency,
-          fee_type: fee_attributes[:add_on_id].present? ? :add_on : :charge,
-          taxes_amount_cents: 0,
-          taxes_precise_amount_cents: 0.to_d,
-          payment_status: :pending,
-          total_aggregated_units: fee_attributes[:total_aggregated_units]
-        )
-
-        new_fee = Fee.create!(fee_data)
-
-        taxes_result = Fees::ApplyTaxesService.call(fee: new_fee)
-        taxes_result.raise_if_error!
+    def process_fees(invoice)
+      fees_params.each do |fee_params|
+        if !fee_params[:id].blank?
+          voided_fee = voided_invoice.fees.find_by(id: fee_params[:id])
+          duplicate_fee(voided_fee, fee_params, invoice) if voided_fee
+        else
+          pp "fazer esta parte"
+          ##create_new_fee(fee, invoice)
+        end
       end
     end
 
-    def draft_or_finalize_regenerated_invoice
-      amounts_from_fees_result = Invoices::ComputeAmountsFromFees.call(invoice: regenerated_invoice)
-      amounts_from_fees_result.raise_if_error!
+    def duplicate_fee(voided_fee, fee_params, invoice)
+      unit_precise_amount_cents = fee_params[:unit_amount_cents].to_f || voided_fee.unit_amount_cents
+      unit_precise_amount_cents = unit_precise_amount_cents * voided_fee.amount.currency.subunit_to_unit
+      units = fee_params[:units]&.to_f || voided_fee.units
 
-      if voided_invoice.customer.applicable_invoice_grace_period.positive?
-        regenerated_invoice.draft!
-      else
-        transition_result = Invoices::TransitionToFinalStatusService.call(invoice: regenerated_invoice)
-        transition_result.raise_if_error!
-        regenerated_invoice.save!
+
+      voided_fee.dup.tap do |dup_fee|
+        dup_fee.invoice = invoice
+        dup_fee.payment_status = :pending
+        dup_fee.taxes_amount_cents = 0
+        dup_fee.taxes_precise_amount_cents = 0.to_d
+
+        dup_fee.invoice_display_name = fee_params[:invoice_display_name] if fee_params[:invoice_display_name].present?
+        dup_fee.units = units
+        dup_fee.amount_cents =  (unit_precise_amount_cents * units).round
+        dup_fee.precise_amount_cents = unit_precise_amount_cents * units
+        dup_fee.unit_amount_cents = fee_params[:unit_amount_cents] if fee_params[:unit_amount_cents].present?
+        dup_fee.precise_unit_amount = fee_params[:unit_amount_cents] if fee_params[:unit_amount_cents].present?
+
+        dup_fee.save!
       end
-
-      result.invoice = regenerated_invoice
     end
   end
 end
