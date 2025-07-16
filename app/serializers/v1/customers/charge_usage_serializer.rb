@@ -28,12 +28,20 @@ module V1
           charges_duration_in_days: fees.first.properties["charges_duration"]
         )
 
+        if root_name == "past_usage"
+          projected_units = '0.0'
+          projected_amount_cents = 0
+        else
+          projected_units = usage_calculator.projected_units.to_s
+          projected_amount_cents = usage_calculator.projected_amount_cents.to_i
+        end
+
         {
           units: usage_calculator.current_units.to_s,
-          projected_units: usage_calculator.projected_units.to_s,
+          projected_units: projected_units,
           events_count: fees.sum(0) { |f| f.events_count.to_i },
           amount_cents: usage_calculator.current_amount_cents,
-          projected_amount_cents: usage_calculator.projected_amount_cents.to_i,
+          projected_amount_cents: projected_amount_cents,
           amount_currency: fees.first.amount_currency
         }
       end

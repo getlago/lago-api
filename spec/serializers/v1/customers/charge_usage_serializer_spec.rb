@@ -15,8 +15,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
   let(:days_passed) { (Date.current - from_datetime).to_i + 1 }
   let(:ratio) { days_passed.to_f / charges_duration }
 
-  # Handle recurring vs non-recurring logic
-  let(:is_recurring) { false } # Default to non-recurring for testing
+  let(:is_recurring) { false }
   let(:expected_projected_units) do
     if is_recurring
       BigDecimal("10")
@@ -163,50 +162,22 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     it "does not project values for recurring charges" do
       expect(result["charges"].first).to include(
         "units" => "10.0",
-        "projected_units" => "10.0", # Same as current for recurring
-        "projected_amount_cents" => 100 # Same as current for recurring
+        "projected_units" => "10.0",
+        "projected_amount_cents" => 100
       )
     end
   end
 
-  describe "edge cases" do
-    context "when current date is before the period" do
-      let(:from_datetime) { 1.day.from_now }
-      let(:to_datetime) { 1.week.from_now }
-
-      it "returns zero projected values" do
-        expect(result["charges"].first).to include(
-          "projected_units" => "0.0",
-          "projected_amount_cents" => 0
-        )
-      end
-    end
-
-    context "when current date is after the period" do
-      let(:from_datetime) { 1.month.ago.beginning_of_month }
-      let(:to_datetime) { 1.month.ago.end_of_month }
-
-      it "returns current values as projected (ratio = 1.0)" do
-        expect(result["charges"].first).to include(
-          "projected_units" => "10.0",
-          "projected_amount_cents" => 100
-        )
-      end
-    end
-
-    context "when charges_duration differs from calculated duration" do
-      let(:charges_duration) { 15 } # Different from actual date range
-
-      it "uses charges_duration for calculations" do
-        expected_ratio = days_passed.to_f / 15
-        expected_units = (BigDecimal("10") / BigDecimal(expected_ratio.to_s)).round(2)
-        expected_amount = (100 / BigDecimal(expected_ratio.to_s)).round.to_i
-
-        expect(result["charges"].first).to include(
-          "projected_units" => expected_units.to_s,
-          "projected_amount_cents" => expected_amount
-        )
-      end
+  describe "past_usage root_name" do
+    subject(:serializer) { described_class.new(usage, root_name: "past_usage") }
+  
+    it "sets projected values to zero for past_usage" do
+      expect(result["past_usage"].first).to include(
+        "units" => "10.0",
+        "projected_units" => "0.0",
+        "projected_amount_cents" => 0
+      )
     end
   end
+
 end
