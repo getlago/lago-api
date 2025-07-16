@@ -72,7 +72,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     create(:invoice_applied_tax, invoice:, tax_rate:, tax:, amount_cents:)
   end
 
-  def expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents:, fee: subscription_fee)
+  def expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents:, tax_amount_cents:, fee: subscription_fee)
     expect(credit_note).to be_available
     expect(credit_note).to be_order_change
 
@@ -80,6 +80,9 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     expect(credit_note.total_amount_currency).to eq("EUR")
     expect(credit_note.credit_amount_cents).to eq(total_amount_cents)
     expect(credit_note.credit_amount_currency).to eq("EUR")
+    expect(credit_note.refund_amount_cents).to eq(0)
+    expect(credit_note.refund_amount_currency).to eq("EUR")
+    expect(credit_note.taxes_amount_cents).to eq(tax_amount_cents)
     expect(credit_note.balance_amount_cents).to eq(total_amount_cents)
     expect(credit_note.balance_amount_currency).to eq("EUR")
     expect(credit_note.applied_taxes.length).to eq(1)
@@ -104,7 +107,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
       credit_note = result.credit_note
 
-      expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20)
+      expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, tax_amount_cents: 3_20)
     end
 
     context "with amount details attached to the fee" do
@@ -142,7 +145,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
           credit_note = result.credit_note
 
-          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 38_40)
+          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 38_40, tax_amount_cents: 6_40)
         end
       end
     end
@@ -247,7 +250,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, fee: subscription_fee_2)
+        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, tax_amount_cents: 3_20, fee: subscription_fee_2)
       end
     end
 
@@ -279,7 +282,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 7_20)
+        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 7_20, tax_amount_cents: 1_20)
       end
     end
 
@@ -300,7 +303,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 18_00)
+        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 18_00, tax_amount_cents: 3_00)
       end
 
       context "when trial ends after the end of the billing period" do
@@ -327,7 +330,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 20_40)
+        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 20_40, tax_amount_cents: 3_40)
       end
     end
 
@@ -345,7 +348,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
           credit_note = result.credit_note
 
-          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 20_40)
+          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 20_40, tax_amount_cents: 3_40)
         end
       end
 
@@ -359,7 +362,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
           credit_note = result.credit_note
 
-          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20)
+          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, tax_amount_cents: 3_20)
         end
       end
     end
@@ -426,7 +429,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
           credit_note = result.credit_note
 
-          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 4_99)
+          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 4_99, tax_amount_cents: 0)
         end
       end
     end
@@ -438,10 +441,10 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           organization:,
           customer:,
           currency: "EUR",
-          fees_amount_cents: 100_00,
-          total_amount_cents: 108_00,
+          fees_amount_cents: 31_00,
+          total_amount_cents: 37_00,
           coupons_amount_cents: 10_00,
-          taxes_amount_cents: 18_00,
+          taxes_amount_cents: 6_00,
           taxes_rate: tax_rate
         )
       end
@@ -451,8 +454,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           :fee,
           subscription:,
           invoice:,
-          amount_cents: 100_00,
-          taxes_amount_cents: 18_00,
+          amount_cents: 31_00,
+          taxes_amount_cents: 6_00,
           invoiceable_type: "Subscription",
           invoiceable_id: subscription.id,
           taxes_rate: tax_rate,
@@ -468,7 +471,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 17_28)
+        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 13_01, tax_amount_cents: 2_17)
       end
     end
 
@@ -481,7 +484,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20)
+        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, tax_amount_cents: 3_20)
 
         expect(credit_note).to be_a(CreditNote).and be_new_record
         expect(credit_note.items).to all be_new_record
