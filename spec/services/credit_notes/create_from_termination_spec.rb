@@ -30,11 +30,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
   let(:plan) do
     create(
       :plan,
+      :pay_in_advance,
       organization:,
-      pay_in_advance: true,
-      amount_cents: 31_00
+      amount_cents: 31_00,
+      **(trial_period ? {trial_period:} : {})
     )
   end
+  let(:plan_amount_cents) { 31_00 }
+  let(:trial_period) { nil }
 
   let(:subscription_fee) do
     create(
@@ -291,14 +294,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     end
 
     context "when plan has trial period ending after terminated_at" do
-      let(:plan) do
-        create(
-          :plan,
-          pay_in_advance: true,
-          amount_cents: 31_00,
-          trial_period: 46
-        )
-      end
+      let(:trial_period) { 46 }
 
       it "excludes the trial from the credit amount" do
         result = create_service.call
@@ -311,14 +307,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       end
 
       context "when trial ends after the end of the billing period" do
-        let(:plan) do
-          create(
-            :plan,
-            pay_in_advance: true,
-            amount_cents: 31_00,
-            trial_period: 120
-          )
-        end
+        let(:trial_period) { 120 }
 
         it "does not creates a credit note" do
           expect { create_service.call }.not_to change(CreditNote, :count)
@@ -389,14 +378,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         )
       end
 
-      let(:plan) do
-        create(
-          :plan,
-          organization:,
-          pay_in_advance: true,
-          amount_cents: 9_99
-        )
-      end
+      let(:plan_amount_cents) { 9_99 }
 
       let(:invoice) do
         create(
