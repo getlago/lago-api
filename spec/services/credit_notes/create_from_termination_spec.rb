@@ -45,7 +45,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       taxes_amount_cents: 20,
       invoiceable_type: "Subscription",
       invoiceable_id: subscription.id,
-      taxes_rate: 20
+      taxes_rate: tax_rate
     )
   end
 
@@ -56,13 +56,21 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       customer:,
       currency: "EUR",
       fees_amount_cents: 100,
+      taxes_amount_cents: 20,
       total_amount_cents: 120
     )
   end
 
-  let(:tax) { create(:tax, organization:, rate: 20) }
-  let(:fee_applied_tax) { create(:fee_applied_tax, tax:, fee: subscription_fee) }
-  let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice:, tax:) }
+  let(:tax) { create(:tax, organization:, rate: tax_rate) }
+  let(:tax_rate) { 20 }
+  let(:fee_applied_tax) do
+    amount_cents = subscription_fee.amount_cents.positive? ? (subscription_fee.taxes_amount_cents / subscription_fee.amount_cents) : 0
+    create(:fee_applied_tax, tax:, tax_rate:, amount_cents: amount_cents, fee: subscription_fee)
+  end
+  let(:invoice_applied_tax) do
+    amount_cents = invoice.fees_amount_cents.positive? ? (invoice.taxes_amount_cents / invoice.fees_amount_cents) : 0
+    create(:invoice_applied_tax, invoice:, tax_rate:, tax:, amount_cents:)
+  end
 
   describe "#call" do
     before do
@@ -109,7 +117,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           taxes_amount_cents: 0,
           invoiceable_type: "Subscription",
           invoiceable_id: subscription.id,
-          taxes_rate: 20
+          taxes_rate: tax_rate
         )
       end
 
@@ -128,7 +136,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           taxes_amount_cents: 4,
           invoiceable_type: "Subscription",
           invoiceable_id: subscription.id,
-          taxes_rate: 20,
+          taxes_rate: tax_rate,
           created_at: Time.current - 2.months
         )
       end
@@ -142,7 +150,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           taxes_amount_cents: 4,
           invoiceable_type: "Subscription",
           invoiceable_id: subscription.id,
-          taxes_rate: 20,
+          taxes_rate: tax_rate,
           created_at: Time.current - 1.month
         )
       end
@@ -350,7 +358,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           customer:,
           currency: "EUR",
           fees_amount_cents: 999,
-          total_amount_cents: 0
+          taxes_amount_cents: 0,
+          total_amount_cents: 999
         )
       end
 
@@ -363,11 +372,12 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           taxes_amount_cents: 0,
           invoiceable_type: "Subscription",
           invoiceable_id: subscription.id,
-          taxes_rate: 0,
+          taxes_rate: tax_rate,
           created_at: Time.zone.parse("2023-02-28 10:00"),
           amount_details: {"plan_amount_cents" => 999}
         )
       end
+      let(:tax_rate) { 0 }
 
       it "creates a credit note" do
         travel_to(terminated_at) do
@@ -378,11 +388,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           credit_note = result.credit_note
           expect(credit_note).to be_available
           expect(credit_note).to be_order_change
-          expect(credit_note.total_amount_cents).to eq(599)
+          expect(credit_note.total_amount_cents).to eq(499)
           expect(credit_note.total_amount_currency).to eq("EUR")
-          expect(credit_note.credit_amount_cents).to eq(599)
+          expect(credit_note.credit_amount_cents).to eq(499)
           expect(credit_note.credit_amount_currency).to eq("EUR")
-          expect(credit_note.balance_amount_cents).to eq(599)
+          expect(credit_note.balance_amount_cents).to eq(499)
           expect(credit_note.balance_amount_currency).to eq("EUR")
           expect(credit_note.reason).to eq("order_change")
 
@@ -402,7 +412,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           total_amount_cents: 108,
           coupons_amount_cents: 10,
           taxes_amount_cents: 18,
-          taxes_rate: 20
+          taxes_rate: tax_rate
         )
       end
 
@@ -415,7 +425,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           taxes_amount_cents: 20,
           invoiceable_type: "Subscription",
           invoiceable_id: subscription.id,
-          taxes_rate: 20,
+          taxes_rate: tax_rate,
           precise_coupons_amount_cents: 10,
           amount_details: {"plan_amount_cents" => plan.amount_cents}
         )
@@ -445,10 +455,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           taxes_amount_cents: 0,
           invoiceable_type: "Subscription",
           invoiceable_id: subscription.id,
-          taxes_rate: 0,
+          taxes_rate: tax_rate,
           created_at: Time.zone.parse("2023-02-28 10:00")
         )
       end
+      let(:tax_rate) { 0 }
 
       it "creates a credit note using the plan amount cents" do
         travel_to(terminated_at) do
@@ -459,11 +470,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           credit_note = result.credit_note
           expect(credit_note).to be_available
           expect(credit_note).to be_order_change
-          expect(credit_note.total_amount_cents).to eq(19)
+          expect(credit_note.total_amount_cents).to eq(16)
           expect(credit_note.total_amount_currency).to eq("EUR")
-          expect(credit_note.credit_amount_cents).to eq(19)
+          expect(credit_note.credit_amount_cents).to eq(16)
           expect(credit_note.credit_amount_currency).to eq("EUR")
-          expect(credit_note.balance_amount_cents).to eq(19)
+          expect(credit_note.balance_amount_cents).to eq(16)
           expect(credit_note.balance_amount_currency).to eq("EUR")
           expect(credit_note.reason).to eq("order_change")
 
