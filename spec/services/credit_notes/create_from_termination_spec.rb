@@ -9,7 +9,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
   let(:subscription_at) { Time.zone.parse("2022-09-01 10:00") }
   let(:terminated_at) { Time.zone.parse("2022-10-15 10:00") }
 
-  let(:customer) { create(:customer) }
+  let(:customer) { create(:customer, **(customer_timezone ? {timezone: customer_timezone} : {})) }
+  let(:customer_timezone) { nil }
   let(:organization) { customer.organization }
   let(:context) { nil }
 
@@ -280,7 +281,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       let(:terminated_at) { Time.zone.parse("2022-10-15 01:00") }
 
       context "when timezone shift is UTC -" do
-        before { subscription.customer.update!(timezone: "America/Los_Angeles") }
+        let(:customer_timezone) { "America/Los_Angeles" }
 
         it "takes the timezone into account" do
           result = create_service.call
@@ -305,7 +306,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       end
 
       context "when timezone shift is UTC +" do
-        before { subscription.customer.update!(timezone: "Europe/Paris") }
+        let(:customer_timezone) { "Europe/Paris" }
 
         it "takes the timezone into account" do
           result = create_service.call
