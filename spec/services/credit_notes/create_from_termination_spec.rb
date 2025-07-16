@@ -73,24 +73,22 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     it "creates a credit note" do
       result = create_service.call
 
-      aggregate_failures do
-        expect(result).to be_success
+      expect(result).to be_success
 
-        credit_note = result.credit_note
-        expect(credit_note).to be_available
-        expect(credit_note).to be_order_change
-        expect(credit_note.total_amount_cents).to eq(19)
-        expect(credit_note.total_amount_currency).to eq("EUR")
-        expect(credit_note.credit_amount_cents).to eq(19)
-        expect(credit_note.credit_amount_currency).to eq("EUR")
-        expect(credit_note.balance_amount_cents).to eq(19)
-        expect(credit_note.balance_amount_currency).to eq("EUR")
-        expect(credit_note.reason).to eq("order_change")
-        expect(credit_note.applied_taxes.length).to eq(1)
-        expect(credit_note.applied_taxes.first.tax_code).to eq(invoice_applied_tax.tax_code)
+      credit_note = result.credit_note
+      expect(credit_note).to be_available
+      expect(credit_note).to be_order_change
+      expect(credit_note.total_amount_cents).to eq(19)
+      expect(credit_note.total_amount_currency).to eq("EUR")
+      expect(credit_note.credit_amount_cents).to eq(19)
+      expect(credit_note.credit_amount_currency).to eq("EUR")
+      expect(credit_note.balance_amount_cents).to eq(19)
+      expect(credit_note.balance_amount_currency).to eq("EUR")
+      expect(credit_note.reason).to eq("order_change")
+      expect(credit_note.applied_taxes.length).to eq(1)
+      expect(credit_note.applied_taxes.first.tax_code).to eq(invoice_applied_tax.tax_code)
 
-        expect(credit_note.items.count).to eq(1)
-      end
+      expect(credit_note.items.count).to eq(1)
     end
 
     context "when invoice is voided" do
@@ -154,13 +152,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       it "takes the last fee as reference" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          credit_note = result.credit_note
-          expect(credit_note.items.count).to eq(1)
-          expect(credit_note.items.first.fee).to eq(fee2)
-        end
+        credit_note = result.credit_note
+        expect(credit_note.items.count).to eq(1)
+        expect(credit_note.items.first.fee).to eq(fee2)
       end
     end
 
@@ -188,22 +184,20 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       it "takes the remaining creditable amount" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          credit_note = result.credit_note
-          expect(credit_note).to be_available
-          expect(credit_note).to be_order_change
-          expect(credit_note.total_amount_cents).to eq(7)
-          expect(credit_note.total_amount_currency).to eq("EUR")
-          expect(credit_note.credit_amount_cents).to eq(7)
-          expect(credit_note.credit_amount_currency).to eq("EUR")
-          expect(credit_note.balance_amount_cents).to eq(7)
-          expect(credit_note.balance_amount_currency).to eq("EUR")
-          expect(credit_note.reason).to eq("order_change")
+        credit_note = result.credit_note
+        expect(credit_note).to be_available
+        expect(credit_note).to be_order_change
+        expect(credit_note.total_amount_cents).to eq(7)
+        expect(credit_note.total_amount_currency).to eq("EUR")
+        expect(credit_note.credit_amount_cents).to eq(7)
+        expect(credit_note.credit_amount_currency).to eq("EUR")
+        expect(credit_note.balance_amount_cents).to eq(7)
+        expect(credit_note.balance_amount_currency).to eq("EUR")
+        expect(credit_note.reason).to eq("order_change")
 
-          expect(credit_note.items.count).to eq(1)
-        end
+        expect(credit_note.items.count).to eq(1)
       end
     end
 
@@ -220,21 +214,19 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       it "excludes the trial from the credit amount" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          credit_note = result.credit_note
-          expect(credit_note).to be_available
-          expect(credit_note).to be_order_change
-          expect(credit_note.total_amount_cents).to eq(18) # 15 * 1.2
-          expect(credit_note.total_amount_currency).to eq("EUR")
-          expect(credit_note.credit_amount_cents).to eq(18)
-          expect(credit_note.credit_amount_currency).to eq("EUR")
-          expect(credit_note.balance_amount_cents).to eq(18)
-          expect(credit_note.balance_amount_currency).to eq("EUR")
+        credit_note = result.credit_note
+        expect(credit_note).to be_available
+        expect(credit_note).to be_order_change
+        expect(credit_note.total_amount_cents).to eq(18) # 15 * 1.2
+        expect(credit_note.total_amount_currency).to eq("EUR")
+        expect(credit_note.credit_amount_cents).to eq(18)
+        expect(credit_note.credit_amount_currency).to eq("EUR")
+        expect(credit_note.balance_amount_cents).to eq(18)
+        expect(credit_note.balance_amount_currency).to eq("EUR")
 
-          expect(credit_note.items.count).to eq(1)
-        end
+        expect(credit_note.items.count).to eq(1)
       end
 
       context "when trial ends after the end of the billing period" do
@@ -257,7 +249,33 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       it "calculates credit note correctly" do
         result = described_class.new(subscription:, upgrade: true).call
 
-        aggregate_failures do
+        expect(result).to be_success
+
+        credit_note = result.credit_note
+        expect(credit_note).to be_available
+        expect(credit_note).to be_order_change
+        expect(credit_note.total_amount_cents).to eq(20)
+        expect(credit_note.total_amount_currency).to eq("EUR")
+        expect(credit_note.credit_amount_cents).to eq(20)
+        expect(credit_note.credit_amount_currency).to eq("EUR")
+        expect(credit_note.balance_amount_cents).to eq(20)
+        expect(credit_note.balance_amount_currency).to eq("EUR")
+        expect(credit_note.reason).to eq("order_change")
+
+        expect(credit_note.items.count).to eq(1)
+      end
+    end
+
+    context "with a different timezone" do
+      let(:started_at) { Time.zone.parse("2022-09-01 12:00") }
+      let(:terminated_at) { Time.zone.parse("2022-10-15 01:00") }
+
+      context "when timezone shift is UTC -" do
+        let(:customer_timezone) { "America/Los_Angeles" }
+
+        it "takes the timezone into account" do
+          result = create_service.call
+
           expect(result).to be_success
 
           credit_note = result.credit_note
@@ -274,36 +292,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           expect(credit_note.items.count).to eq(1)
         end
       end
-    end
-
-    context "with a different timezone" do
-      let(:started_at) { Time.zone.parse("2022-09-01 12:00") }
-      let(:terminated_at) { Time.zone.parse("2022-10-15 01:00") }
-
-      context "when timezone shift is UTC -" do
-        let(:customer_timezone) { "America/Los_Angeles" }
-
-        it "takes the timezone into account" do
-          result = create_service.call
-
-          aggregate_failures do
-            expect(result).to be_success
-
-            credit_note = result.credit_note
-            expect(credit_note).to be_available
-            expect(credit_note).to be_order_change
-            expect(credit_note.total_amount_cents).to eq(20)
-            expect(credit_note.total_amount_currency).to eq("EUR")
-            expect(credit_note.credit_amount_cents).to eq(20)
-            expect(credit_note.credit_amount_currency).to eq("EUR")
-            expect(credit_note.balance_amount_cents).to eq(20)
-            expect(credit_note.balance_amount_currency).to eq("EUR")
-            expect(credit_note.reason).to eq("order_change")
-
-            expect(credit_note.items.count).to eq(1)
-          end
-        end
-      end
 
       context "when timezone shift is UTC +" do
         let(:customer_timezone) { "Europe/Paris" }
@@ -311,22 +299,20 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         it "takes the timezone into account" do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            credit_note = result.credit_note
-            expect(credit_note).to be_available
-            expect(credit_note).to be_order_change
-            expect(credit_note.total_amount_cents).to eq(19)
-            expect(credit_note.total_amount_currency).to eq("EUR")
-            expect(credit_note.credit_amount_cents).to eq(19)
-            expect(credit_note.credit_amount_currency).to eq("EUR")
-            expect(credit_note.balance_amount_cents).to eq(19)
-            expect(credit_note.balance_amount_currency).to eq("EUR")
-            expect(credit_note.reason).to eq("order_change")
+          credit_note = result.credit_note
+          expect(credit_note).to be_available
+          expect(credit_note).to be_order_change
+          expect(credit_note.total_amount_cents).to eq(19)
+          expect(credit_note.total_amount_currency).to eq("EUR")
+          expect(credit_note.credit_amount_cents).to eq(19)
+          expect(credit_note.credit_amount_currency).to eq("EUR")
+          expect(credit_note.balance_amount_cents).to eq(19)
+          expect(credit_note.balance_amount_currency).to eq("EUR")
+          expect(credit_note.reason).to eq("order_change")
 
-            expect(credit_note.items.count).to eq(1)
-          end
+          expect(credit_note.items.count).to eq(1)
         end
       end
     end
@@ -387,22 +373,20 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         travel_to(terminated_at) do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            credit_note = result.credit_note
-            expect(credit_note).to be_available
-            expect(credit_note).to be_order_change
-            expect(credit_note.total_amount_cents).to eq(599)
-            expect(credit_note.total_amount_currency).to eq("EUR")
-            expect(credit_note.credit_amount_cents).to eq(599)
-            expect(credit_note.credit_amount_currency).to eq("EUR")
-            expect(credit_note.balance_amount_cents).to eq(599)
-            expect(credit_note.balance_amount_currency).to eq("EUR")
-            expect(credit_note.reason).to eq("order_change")
+          credit_note = result.credit_note
+          expect(credit_note).to be_available
+          expect(credit_note).to be_order_change
+          expect(credit_note.total_amount_cents).to eq(599)
+          expect(credit_note.total_amount_currency).to eq("EUR")
+          expect(credit_note.credit_amount_cents).to eq(599)
+          expect(credit_note.credit_amount_currency).to eq("EUR")
+          expect(credit_note.balance_amount_cents).to eq(599)
+          expect(credit_note.balance_amount_currency).to eq("EUR")
+          expect(credit_note.reason).to eq("order_change")
 
-            expect(credit_note.items.count).to eq(1)
-          end
+          expect(credit_note.items.count).to eq(1)
         end
       end
     end
@@ -440,16 +424,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       it "takes the coupon into account" do
         result = create_service.call
 
-        aggregate_failures do
-          expect(result).to be_success
+        expect(result).to be_success
 
-          credit_note = result.credit_note
-          expect(credit_note).to have_attributes(
-            total_amount_cents: 17,
-            credit_amount_cents: 17,
-            balance_amount_cents: 17
-          )
-        end
+        credit_note = result.credit_note
+        expect(credit_note).to have_attributes(
+          total_amount_cents: 17,
+          credit_amount_cents: 17,
+          balance_amount_cents: 17
+        )
       end
     end
 
@@ -472,22 +454,20 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         travel_to(terminated_at) do
           result = create_service.call
 
-          aggregate_failures do
-            expect(result).to be_success
+          expect(result).to be_success
 
-            credit_note = result.credit_note
-            expect(credit_note).to be_available
-            expect(credit_note).to be_order_change
-            expect(credit_note.total_amount_cents).to eq(19)
-            expect(credit_note.total_amount_currency).to eq("EUR")
-            expect(credit_note.credit_amount_cents).to eq(19)
-            expect(credit_note.credit_amount_currency).to eq("EUR")
-            expect(credit_note.balance_amount_cents).to eq(19)
-            expect(credit_note.balance_amount_currency).to eq("EUR")
-            expect(credit_note.reason).to eq("order_change")
+          credit_note = result.credit_note
+          expect(credit_note).to be_available
+          expect(credit_note).to be_order_change
+          expect(credit_note.total_amount_cents).to eq(19)
+          expect(credit_note.total_amount_currency).to eq("EUR")
+          expect(credit_note.credit_amount_cents).to eq(19)
+          expect(credit_note.credit_amount_currency).to eq("EUR")
+          expect(credit_note.balance_amount_cents).to eq(19)
+          expect(credit_note.balance_amount_currency).to eq("EUR")
+          expect(credit_note.reason).to eq("order_change")
 
-            expect(credit_note.items.count).to eq(1)
-          end
+          expect(credit_note.items.count).to eq(1)
         end
       end
     end
