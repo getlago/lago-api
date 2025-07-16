@@ -1,12 +1,14 @@
 # frozen_string_literal: true
 
 class FixedCharge < ApplicationRecord
+  include PaperTrailTraceable
   include Discard::Model
+
   self.discard_column = :deleted_at
 
   belongs_to :organization
-  belongs_to :plan
-  belongs_to :add_on
+  belongs_to :plan, -> { with_discarded }, touch: true
+  belongs_to :add_on, -> { with_discarded }, touch: true
   belongs_to :parent, class_name: "FixedCharge", optional: true
   has_many :children, class_name: "FixedCharge", foreign_key: :parent_id, dependent: :nullify
 
@@ -17,8 +19,8 @@ class FixedCharge < ApplicationRecord
   }.freeze
 
   enum :charge_model, CHARGE_MODELS
-
   validates :units, numericality: {greater_than_or_equal_to: 0}
+  delegate :code, to: :add_on
 end
 
 # == Schema Information
