@@ -7,7 +7,7 @@ class FixedCharge < ApplicationRecord
   belongs_to :organization
   belongs_to :plan
   belongs_to :add_on
-  belongs_to :parent, optional: true
+  belongs_to :parent, class_name: "FixedCharge", optional: true
   has_many :children, class_name: "FixedCharge", foreign_key: :parent_id, dependent: :nullify
 
   CHARGE_MODELS = {

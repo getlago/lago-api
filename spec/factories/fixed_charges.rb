@@ -3,7 +3,7 @@
 FactoryBot.define do
   factory :fixed_charge do
     organization { add_on&.organization || plan&.organization || association(:organization) }
-    plan 
+    plan
     add_on
     charge_model { "standard" }
     units { 1 }
