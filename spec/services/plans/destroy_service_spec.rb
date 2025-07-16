@@ -11,7 +11,6 @@ RSpec.describe Plans::DestroyService, type: :service do
 
   before do
     plan
-    allow(Utils::ActivityLog).to receive(:produce).and_call_original
   end
 
   describe "#call" do
@@ -29,7 +28,7 @@ RSpec.describe Plans::DestroyService, type: :service do
     it "produces an activity log" do
       described_class.call(plan:)
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.deleted")
+      expect(Utils::ActivityLog).to have_produced("plan.deleted").after_commit.with(plan)
     end
 
     context "when plan is not found" do

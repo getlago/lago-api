@@ -32,7 +32,6 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
 
   before do
     allow(SegmentTrackJob).to receive(:perform_later)
-    allow(Utils::ActivityLog).to receive(:produce)
 
     tax
     charge
@@ -199,7 +198,7 @@ RSpec.describe Invoices::ProgressiveBillingService, type: :service, transaction:
     it "produces an activity log" do
       invoice = described_class.call(sorted_usage_thresholds:, lifetime_usage:, timestamp:).invoice
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.created")
+      expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
     context "with lago_premium" do

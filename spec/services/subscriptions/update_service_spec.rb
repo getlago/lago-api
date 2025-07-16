@@ -21,8 +21,6 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
     end
 
     before do
-      allow(Utils::ActivityLog).to receive(:produce).and_call_original
-
       subscription
     end
 
@@ -48,7 +46,7 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       it "produces an activity log after commit" do
         described_class.call(subscription:, params:)
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.updated", after_commit: true)
+        expect(Utils::ActivityLog).to have_produced("subscription.updated").after_commit.with(subscription)
       end
 
       context "when subscription should be synced with Hubspot" do

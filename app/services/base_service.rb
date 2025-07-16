@@ -229,7 +229,7 @@ class BaseService
 
   Result = LegacyResult
 
-  def self.activity_loggable(action:, record:, condition: -> { true }, after_commit: nil)
+  def self.activity_loggable(action:, record:, condition: -> { true }, after_commit: true)
     self.activity_log_config = {action:, record:, condition:, after_commit:}
   end
 

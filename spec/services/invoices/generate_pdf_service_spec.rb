@@ -15,7 +15,6 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
   before do
     invoice_subscription
     stub_pdf_generation
-    allow(Utils::ActivityLog).to receive(:produce)
   end
 
   describe "#call" do
@@ -32,7 +31,7 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
     it "produces an activity log" do
       result = described_class.call(invoice:, context:)
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(result.invoice, "invoice.generated")
+      expect(Utils::ActivityLog).to have_produced("invoice.generated").with(result.invoice)
     end
 
     context "with not found invoice" do

@@ -129,6 +129,7 @@ RSpec.configure do |config|
 
   config.before do |example|
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+    allow(Utils::ActivityLog).to receive(:produce).and_call_original
 
     if example.metadata[:scenarios]
       stub_pdf_generation

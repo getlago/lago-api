@@ -39,10 +39,6 @@ RSpec.describe BillingEntities::UpdateService do
     }
   end
 
-  before do
-    allow(Utils::ActivityLog).to receive(:produce)
-  end
-
   describe "#call" do
     it "updates the billing_entity" do
       result = update_service.call
@@ -68,7 +64,7 @@ RSpec.describe BillingEntities::UpdateService do
     it "produces an activity log" do
       described_class.call(billing_entity:, params:)
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(billing_entity, "billing_entities.updated")
+      expect(Utils::ActivityLog).to have_produced("billing_entities.updated").after_commit.with(billing_entity)
     end
 
     context "when document_number_prefix is sent" do

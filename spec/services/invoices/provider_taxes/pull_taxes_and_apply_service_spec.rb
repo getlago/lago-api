@@ -142,10 +142,6 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
     end
 
     context "when taxes are fetched successfully" do
-      before do
-        allow(Utils::ActivityLog).to receive(:produce)
-      end
-
       it "marks the invoice as finalized" do
         expect { pull_taxes_service.call }
           .to change(invoice, :status).from("pending").to("finalized")
@@ -208,7 +204,7 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService, type: :service
       it "produces an activity log" do
         described_class.call(invoice:)
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.created")
+        expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
       end
 
       it "enqueues GeneratePdfAndNotifyJob with email false" do

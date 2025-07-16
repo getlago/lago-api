@@ -62,7 +62,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
-      allow(Utils::ActivityLog).to receive(:produce)
     end
 
     it "marks the invoice as finalized" do
@@ -110,7 +109,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
     it "produces an activity log" do
       described_class.call(invoice:)
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.created")
+      expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
     it "enqueues GeneratePdfAndNotifyJob with email false" do
@@ -192,7 +191,6 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
     context "with credit notes" do
       before do
         create(:credit_note_item, credit_note:, fee:)
-        allow(Utils::ActivityLog).to receive(:produce)
       end
 
       it "marks the credit notes as finalized" do
@@ -225,7 +223,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
       it "produces an activity log" do
         result = finalize_service.call
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(result.invoice.credit_notes.first, "credit_note.created")
+        expect(Utils::ActivityLog).to have_produced("credit_note.created").with(result.invoice.credit_notes.first)
       end
 
       it "enqueues CreditNotes::GeneratePdfJob" do

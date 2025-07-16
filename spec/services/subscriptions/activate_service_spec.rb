@@ -7,10 +7,6 @@ RSpec.describe Subscriptions::ActivateService, type: :service, clickhouse: true 
 
   let(:timestamp) { Time.current }
 
-  before do
-    allow(Utils::ActivityLog).to receive(:produce)
-  end
-
   describe ".activate_all_pending" do
     it "activates all pending subscriptions with subscription date set to today" do
       create(:subscription)

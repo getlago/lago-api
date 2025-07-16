@@ -10,10 +10,6 @@ RSpec.describe Coupons::CreateService, type: :service do
   let(:coupon_code) { "free-beer" }
 
   describe "create" do
-    before do
-      allow(Utils::ActivityLog).to receive(:produce)
-    end
-
     let(:expiration_at) { (Time.current + 3.days).end_of_day }
     let(:create_args) do
       {
@@ -39,7 +35,7 @@ RSpec.describe Coupons::CreateService, type: :service do
     it "produces an activity log" do
       coupon = described_class.call(create_args).coupon
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(coupon, "coupon.created")
+      expect(Utils::ActivityLog).to have_produced("coupon.created").after_commit.with(coupon)
     end
 
     context "with code already used by a deleted coupon" do

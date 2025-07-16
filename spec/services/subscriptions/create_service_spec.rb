@@ -30,10 +30,6 @@ RSpec.describe Subscriptions::CreateService, type: :service do
   end
 
   describe "#call" do
-    before do
-      allow(Utils::ActivityLog).to receive(:produce)
-    end
-
     it "creates a subscription with subscription date set to current date" do
       result = create_service.call
 
@@ -71,7 +67,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
     it "produces an activity log" do
       subscription = create_service.call.subscription
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.started")
+      expect(Utils::ActivityLog).to have_produced("subscription.started").with(subscription)
     end
 
     context "when ending_at is passed" do
@@ -663,7 +659,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
           it "produces an activity log" do
             create_service.call
-            expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.updated")
+            expect(Utils::ActivityLog).to have_produced("subscription.updated").with(subscription)
           end
 
           it "keeps the current subscription" do

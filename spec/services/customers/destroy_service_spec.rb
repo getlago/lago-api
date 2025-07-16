@@ -11,7 +11,6 @@ RSpec.describe Customers::DestroyService, type: :service do
 
   before do
     customer
-    allow(Utils::ActivityLog).to receive(:produce)
   end
 
   describe "#call" do
@@ -32,7 +31,7 @@ RSpec.describe Customers::DestroyService, type: :service do
     it "produces an activity log" do
       described_class.call(customer:)
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(customer, "customer.deleted")
+      expect(Utils::ActivityLog).to have_produced("customer.deleted").after_commit.with(customer)
     end
 
     context "when customer is not found" do

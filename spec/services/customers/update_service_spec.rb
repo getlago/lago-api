@@ -10,10 +10,6 @@ RSpec.describe Customers::UpdateService, type: :service do
   let(:payment_provider_code) { "stripe_1" }
 
   describe "update" do
-    before do
-      allow(Utils::ActivityLog).to receive(:produce)
-    end
-
     let(:customer) do
       create(
         :customer,
@@ -66,7 +62,7 @@ RSpec.describe Customers::UpdateService, type: :service do
     it "produces an activity log" do
       described_class.call(customer:, args: update_args)
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(customer, "customer.updated")
+      expect(Utils::ActivityLog).to have_produced("customer.updated").after_commit.with(customer)
     end
 
     context "when updating the billing entity reference" do

@@ -26,10 +26,6 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
     ]
   end
 
-  before do
-    allow(Utils::ActivityLog).to receive(:produce)
-  end
-
   describe "call" do
     before do
       tax
@@ -169,7 +165,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
       it "produces an activity log" do
         invoice = described_class.call(**args).invoice
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.one_off_created")
+        expect(Utils::ActivityLog).to have_produced("invoice.one_off_created").after_commit.with(invoice)
       end
 
       it "creates an invoice" do
@@ -214,10 +210,6 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
           File.read(p)
         end
 
-        before do
-          allow(Utils::ActivityLog).to receive(:produce)
-        end
-
         it "returns tax error" do
           result = described_class.call(**args)
 
@@ -226,7 +218,7 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
             expect(result.invoice.status).to eq("failed")
             expect(result.invoice.error_details.count).to eq(1)
             expect(result.invoice.error_details.first.details["tax_error"]).to eq("taxDateTooFarInFuture")
-            expect(Utils::ActivityLog).to have_received(:produce).with(result.invoice, "invoice.failed")
+            expect(Utils::ActivityLog).to have_produced("invoice.failed").with(result.invoice)
           end
         end
       end

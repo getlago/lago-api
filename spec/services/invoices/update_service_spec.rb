@@ -258,10 +258,6 @@ RSpec.describe Invoices::UpdateService do
       let(:webhook_notification) { true }
 
       context "when invoice is visible" do
-        before do
-          allow(Utils::ActivityLog).to receive(:produce)
-        end
-
         it "delivers a webhook" do
           expect { result }.to have_enqueued_job_after_commit(SendWebhookJob).with("invoice.payment_status_updated", invoice)
         end
@@ -269,7 +265,7 @@ RSpec.describe Invoices::UpdateService do
         it "produces an activity log" do
           result
 
-          expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.payment_status_updated", after_commit: true)
+          expect(Utils::ActivityLog).to have_produced("invoice.payment_status_updated").after_commit.with(invoice)
         end
       end
 

@@ -114,7 +114,6 @@ RSpec.describe Plans::UpdateService, type: :service do
   describe "call" do
     before do
       applied_tax
-      allow(Utils::ActivityLog).to receive(:produce)
     end
 
     it "updates a plan" do
@@ -145,7 +144,7 @@ RSpec.describe Plans::UpdateService, type: :service do
         it "produces" do
           described_class.call(plan:, params: update_args)
 
-          expect(Utils::ActivityLog).to have_received(:produce).with(plan, "plan.updated")
+          expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(plan)
         end
       end
 
