@@ -41,8 +41,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       :fee,
       subscription:,
       invoice:,
-      amount_cents: 100,
-      taxes_amount_cents: 20,
+      amount_cents: 31,
+      taxes_amount_cents: 6,
       invoiceable_type: "Subscription",
       invoiceable_id: subscription.id,
       taxes_rate: tax_rate
@@ -55,9 +55,9 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       organization:,
       customer:,
       currency: "EUR",
-      fees_amount_cents: 100,
-      taxes_amount_cents: 20,
-      total_amount_cents: 120
+      fees_amount_cents: 31,
+      taxes_amount_cents: 6,
+      total_amount_cents: 37
     )
   end
 
@@ -105,8 +105,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           :fee,
           subscription:,
           invoice:,
-          amount_cents: 200,
-          taxes_amount_cents: 40,
+          amount_cents: 62,
+          taxes_amount_cents: 12,
           invoiceable_type: "Subscription",
           invoiceable_id: subscription.id,
           taxes_rate: tax_rate,
@@ -120,9 +120,9 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           organization:,
           customer:,
           currency: "EUR",
-          fees_amount_cents: 200,
-          taxes_amount_cents: 40,
-          total_amount_cents: 240
+          fees_amount_cents: 62,
+          taxes_amount_cents: 12,
+          total_amount_cents: 74
         )
       end
 
@@ -471,7 +471,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           subscription:,
           invoice:,
           amount_cents: 100,
-          taxes_amount_cents: 20,
+          taxes_amount_cents: 18,
           invoiceable_type: "Subscription",
           invoiceable_id: subscription.id,
           taxes_rate: tax_rate,
