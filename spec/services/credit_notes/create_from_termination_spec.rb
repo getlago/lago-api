@@ -408,15 +408,13 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       let(:tax_rate) { 0 }
 
       it "creates a credit note" do
-        travel_to(terminated_at) do
-          result = create_service.call
+        result = create_service.call
 
-          expect(result).to be_success
+        expect(result).to be_success
 
-          credit_note = result.credit_note
+        credit_note = result.credit_note
 
-          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 4_99, precise_item_amount_cents: 4_99.49999, tax_amount_cents: 0)
-        end
+        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 4_99, precise_item_amount_cents: 4_99.49999, tax_amount_cents: 0)
       end
     end
 
