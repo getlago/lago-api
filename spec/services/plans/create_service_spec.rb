@@ -120,7 +120,6 @@ RSpec.describe Plans::CreateService, type: :service do
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
-      allow(Utils::ActivityLog).to receive(:produce)
     end
 
     it "creates a plan" do
@@ -283,7 +282,7 @@ RSpec.describe Plans::CreateService, type: :service do
     it "produces an activity log" do
       result = described_class.call(create_args)
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(result.plan, "plan.created")
+      expect(Utils::ActivityLog).to have_produced("plan.created").after_commit.with(result.plan)
     end
 
     context "when premium" do

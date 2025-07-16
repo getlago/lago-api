@@ -12,7 +12,6 @@ RSpec.describe Invoices::FinalizeOpenCreditService, type: :service do
     if invoice
       allow(invoice).to receive(:should_sync_invoice?).and_return(true)
     end
-    allow(Utils::ActivityLog).to receive(:produce)
   end
 
   describe ".call" do
@@ -31,7 +30,7 @@ RSpec.describe Invoices::FinalizeOpenCreditService, type: :service do
         invoice_id: result.invoice.id,
         invoice_type: result.invoice.invoice_type
       })
-      expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.paid_credit_added")
+      expect(Utils::ActivityLog).to have_produced("invoice.paid_credit_added").with(invoice)
     end
 
     context "when invoice is already finalized" do

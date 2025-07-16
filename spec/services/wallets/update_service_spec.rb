@@ -14,8 +14,6 @@ RSpec.describe Wallets::UpdateService, type: :service do
 
   describe "#call" do
     before do
-      allow(Utils::ActivityLog).to receive(:produce).and_call_original
-
       subscription
       wallet
     end
@@ -39,7 +37,7 @@ RSpec.describe Wallets::UpdateService, type: :service do
         expect(result.wallet.invoice_requires_successful_payment).to eq(true)
 
         expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
-        expect(Utils::ActivityLog).to have_received(:produce).with(wallet, "wallet.updated")
+        expect(Utils::ActivityLog).to have_produced("wallet.updated").after_commit.with(wallet)
       end
     end
 

@@ -25,8 +25,6 @@ RSpec.describe WalletTransactions::CreateFromParamsService, type: :service do
   let(:rate_amount) { 1 }
 
   before do
-    allow(Utils::ActivityLog).to receive(:produce)
-
     subscription
   end
 

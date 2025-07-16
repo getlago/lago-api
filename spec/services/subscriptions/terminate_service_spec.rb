@@ -190,7 +190,6 @@ RSpec.describe Subscriptions::TerminateService do
     let(:timestamp) { Time.zone.now.to_i }
 
     before do
-      allow(Utils::ActivityLog).to receive(:produce)
       next_subscription
     end
 
@@ -217,8 +216,8 @@ RSpec.describe Subscriptions::TerminateService do
 
     it "produces the activity logs" do
       terminate_service.terminate_and_start_next(timestamp:)
-      expect(Utils::ActivityLog).to have_received(:produce).with(subscription, "subscription.terminated")
-      expect(Utils::ActivityLog).to have_received(:produce).with(next_subscription, "subscription.started")
+      expect(Utils::ActivityLog).to have_produced("subscription.terminated").with(subscription)
+      expect(Utils::ActivityLog).to have_produced("subscription.started").with(next_subscription)
     end
 
     context "when terminated subscription is payed in arrear" do

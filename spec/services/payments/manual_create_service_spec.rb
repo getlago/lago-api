@@ -14,10 +14,6 @@ RSpec.describe Payments::ManualCreateService, type: :service do
   let(:amount_cents) { 10000 }
 
   describe "#call" do
-    before do
-      allow(Utils::ActivityLog).to receive(:produce)
-    end
-
     context "when organization is not premium" do
       it "returns forbidden failure" do
         result = service.call
@@ -178,7 +174,7 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         it "produces an activity log" do
           payment = described_class.call(organization:, params:).payment
 
-          expect(Utils::ActivityLog).to have_received(:produce).with(payment, "payment.recorded")
+          expect(Utils::ActivityLog).to have_produced("payment.recorded").after_commit.with(payment)
         end
 
         context "when issue_receipts_enabled is true" do

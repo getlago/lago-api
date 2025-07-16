@@ -11,10 +11,6 @@ RSpec.describe Wallets::CreateService, type: :service do
   let(:customer_currency) { "EUR" }
 
   describe "#call" do
-    before do
-      allow(Utils::ActivityLog).to receive(:produce)
-    end
-
     let(:paid_credits) { "1.00" }
     let(:granted_credits) { "0.00" }
     let(:expiration_at) { (Time.current + 1.year).iso8601 }
@@ -59,7 +55,7 @@ RSpec.describe Wallets::CreateService, type: :service do
     it "produces an activity log" do
       wallet = described_class.call(params:).wallet
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(wallet, "wallet.created")
+      expect(Utils::ActivityLog).to have_produced("wallet.created").after_commit.with(wallet)
     end
 
     it "enqueues the WalletTransaction::CreateJob" do

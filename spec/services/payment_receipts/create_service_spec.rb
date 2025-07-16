@@ -78,7 +78,6 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
 
               before do
                 allow(PaymentReceipt).to receive(:new).and_return(payment_receipt)
-                allow(Utils::ActivityLog).to receive(:produce)
               end
 
               it "creates the payment receipt" do
@@ -102,7 +101,7 @@ RSpec.describe PaymentReceipts::CreateService, type: :service do
               it "produces an activity log" do
                 payment_receipt = described_class.call(payment:).payment_receipt
 
-                expect(Utils::ActivityLog).to have_received(:produce).with(payment_receipt, "payment_receipt.created")
+                expect(Utils::ActivityLog).to have_produced("payment_receipt.created").with(payment_receipt)
               end
             end
           end

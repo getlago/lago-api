@@ -31,7 +31,6 @@ RSpec.describe Customers::CreateService, type: :service do
   before do
     allow(SendWebhookJob).to receive(:perform_later)
     allow(CurrentContext).to receive(:source).and_return("graphql")
-    allow(Utils::ActivityLog).to receive(:produce)
   end
 
   it "creates a new customer" do
@@ -67,7 +66,7 @@ RSpec.describe Customers::CreateService, type: :service do
   it "produces an activity log" do
     result
 
-    expect(Utils::ActivityLog).to have_received(:produce).with(result.customer, "customer.created")
+    expect(Utils::ActivityLog).to have_produced("customer.created").after_commit.with(result.customer)
   end
 
   context "when organization has multiple billing entities" do

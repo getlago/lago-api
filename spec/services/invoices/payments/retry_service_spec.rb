@@ -54,14 +54,10 @@ RSpec.describe Invoices::Payments::RetryService, type: :service do
           create(:invoice, customer:, organization: customer.organization, invoice_type: type)
         end
 
-        before do
-          allow(Utils::ActivityLog).to receive(:produce)
-        end
-
         it "produces an activity log" do
           described_class.call(invoice:)
 
-          expect(Utils::ActivityLog).to have_received(:produce).with(invoice, action)
+          expect(Utils::ActivityLog).to have_produced(action).with(invoice)
         end
       end
     end

@@ -9,7 +9,6 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
   describe "create" do
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
-      allow(Utils::ActivityLog).to receive(:produce)
     end
 
     let(:create_args) do
@@ -106,7 +105,7 @@ RSpec.describe BillableMetrics::CreateService, type: :service do
     it "produces an activity log" do
       metric = described_class.call(create_args).billable_metric
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(metric, "billable_metric.created")
+      expect(Utils::ActivityLog).to have_produced("billable_metric.created").after_commit.with(metric)
     end
 
     context "with validation error" do
