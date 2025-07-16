@@ -17,12 +17,14 @@ module Wallets
           progressive_billed_total = ::Subscriptions::ProgressiveBilledAmount.call(subscription:, include_generating_invoices:).total_billed_amount_cents
 
           {
-            total_usage_amount_cents: calculate_total_usage_with_limitation(invoice, subscription),
-            billed_usage_amount_cents: billed_usage_amount_cents(invoice, progressive_billed_total)
+            total_usage_amount_cents: invoice.total_amount_cents,
+            billed_usage_amount_cents: billed_usage_amount_cents(invoice, progressive_billed_total),
+            invoice:,
+            subscription:
           }
         end
 
-        @total_usage_amount_cents = usage_amount_cents.sum { |e| e[:total_usage_amount_cents] }
+        @total_usage_amount_cents = calculate_total_usage_with_limitation(usage_amount_cents)
         @total_billed_usage_amount_cents = usage_amount_cents.sum { |e| e[:billed_usage_amount_cents] }
         # Before this service is called, the wallet is already loaded in the memory. If while calculating current usage we received
         # a pay_in_advance_fee, wallet will be updated by Wallets::Balance::DecreaseService and current wallet version will throw an
@@ -91,15 +93,20 @@ module Wallets
         ongoing_balance_cents.to_f.fdiv(currency.subunit_to_unit).fdiv(wallet.rate_amount)
       end
 
-      def calculate_total_usage_with_limitation(invoice, subscription)
-        return invoice.total_amount_cents unless wallet.limited_billable_metrics?
+      def calculate_total_usage_with_limitation(usage_amount_cents)
+        return usage_amount_cents.sum { |e| e[:total_usage_amount_cents] } unless wallet.limited_billable_metrics?
 
         # current usage fees are not persisted so we can't use join
-        charge_ids = subscription.plan.charges.where(billable_metric_id: wallet.wallet_targets.pluck(:billable_metric_id)).pluck(:id)
+        all_fees = []
+        usage_amount_cents.each do |usage|
+          all_fees << usage[:invoice].fees
+        end
+        all_fees = all_fees.flatten
+        charge_ids = Charge.where(id: all_fees.map(&:charge_id)).where(billable_metric_id: wallet.wallet_targets.pluck(:billable_metric_id)).pluck(:id)
 
-        return invoice.total_amount_cents if charge_ids.empty?
+        return usage_amount_cents.sum { |e| e[:total_usage_amount_cents] } if charge_ids.empty?
 
-        invoice.fees
+        all_fees
           .select { |f| charge_ids.include?(f.charge_id) }
           .sum { |f| f.amount_cents + f.taxes_amount_cents }
       end
