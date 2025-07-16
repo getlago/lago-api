@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::PlanEntitlementDestroyService, type: :service do
-  subject(:destroy_service) { described_class.new(entitlement: entitlement) }
+  subject(:result) { described_class.call(entitlement:) }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
@@ -16,8 +16,10 @@ RSpec.describe Entitlement::PlanEntitlementDestroyService, type: :service do
     entitlement_value
   end
 
+  it_behaves_like "a premium service"
+
   describe "#call" do
-    subject(:result) { destroy_service.call }
+    around { |test| lago_premium!(&test) }
 
     it "returns success" do
       expect(result).to be_success
@@ -40,7 +42,7 @@ RSpec.describe Entitlement::PlanEntitlementDestroyService, type: :service do
     end
 
     context "when entitlement is nil" do
-      subject(:result) { described_class.new(entitlement: nil).call }
+      subject(:result) { described_class.call(entitlement: nil) }
 
       it "returns not found failure" do
         expect(result).not_to be_success

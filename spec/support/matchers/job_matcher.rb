@@ -14,15 +14,16 @@ RSpec::Matchers.define :have_enqueued_job_after_commit do |job|
     args = @args || []
     kwargs = @kwargs || {}
 
-    expect(job).to have_been_enqueued.with(*args, **kwargs), "Expected #{job} to have been enqueued with #{args} and #{kwargs}, but it was not."
+    expect(job).to have_been_enqueued.with(*args, **kwargs, &@block)
   end
 
   match_when_negated do |block|
     raise "The `have_enqueued_job_after_commit` matcher does not support negation. Use `expect { ... }.not_to have_enqueued_job` instead."
   end
 
-  chain :with do |*args, **kwargs|
+  chain :with do |*args, **kwargs, &block|
     @args = args
     @kwargs = kwargs
+    @block = block
   end
 end

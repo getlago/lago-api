@@ -18,7 +18,6 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
 
     stub_pdf_generation
     allow(Utils::PdfGenerator).to receive(:call).and_call_original
-    allow(Utils::ActivityLog).to receive(:produce)
   end
 
   describe ".call" do
@@ -37,7 +36,7 @@ RSpec.describe CreditNotes::GenerateService, type: :service do
     it "produces an activity log" do
       result = credit_note_generate_service.call
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(result.credit_note, "credit_note.generated")
+      expect(Utils::ActivityLog).to have_produced("credit_note.generated").with(result.credit_note)
     end
 
     context "when credit note is for self billed invoice" do

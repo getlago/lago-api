@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
+  subject { execute_query(query:) }
+
+  let(:organization) { create(:organization) }
   let(:required_permission) { "features:view" }
   let(:query) do
     <<~GQL
@@ -28,12 +31,12 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
     GQL
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
+  around { |test| lago_premium!(&test) }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "features:view"
+  it_behaves_like "requires Premium license"
 
   it do
     expect(described_class).to accept_argument(:limit).of_type("Int")
@@ -47,12 +50,7 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
 
     feature_without_privilege = create(:feature, organization:)
 
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: required_permission,
-      query:
-    )
+    result = subject
 
     expect(result["data"]["features"]["collection"].count).to eq(organization.features.count)
 
@@ -83,12 +81,7 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
 
     Bullet.start_request
 
-    execute_graphql(
-      current_user: membership.user,
-      current_organization: organization,
-      permissions: required_permission,
-      query: query
-    )
+    subject
 
     expect(Bullet).not_to be_notification
   end
@@ -122,12 +115,7 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
       create(:feature, organization:)
       feature1 = create(:feature, organization:, code: "testtest1", name: "Test Feature 1")
 
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query:
-      )
+      result = subject
 
       expect(result["data"]["features"]["collection"].sole["code"]).to eq(feature1.code)
     end

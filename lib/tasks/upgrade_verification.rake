@@ -4,6 +4,66 @@ require "net/http"
 require "yaml"
 
 namespace :upgrade do
+  # Note: this task is to be filled with jobs needed to be run before the upgrade
+  #       and is to be changed depending on what is required for the next version.
+  desc "Checks data and performs required jobs to fix the data before the upgrade"
+  task check_readiness: :environment do
+    Rails.logger.level = Logger::Severity::ERROR
+
+    resources_to_fill = [
+      {model: Payment, job: DatabaseMigrations::PopulatePaymentsWithCustomerId}
+    ]
+
+    puts "##################################\nStarting required jobs"
+    puts "\n#### Checking for resource to fill ####"
+
+    to_fill = []
+
+    resources_to_fill.each do |resource|
+      model = resource[:model]
+      pp "- Checking #{model.name}: 🔎"
+      count = model.where(customer_id: nil).count
+
+      if count > 0
+        to_fill << resource
+        pp "  -> #{count} records to fill 🧮"
+      else
+        pp "  -> Nothing to do ✅"
+      end
+    end
+
+    if to_fill.any?
+      puts "\n#### Enqueue jobs in the low_priority queue ####"
+      to_fill.each do |resource|
+        pp "- Enqueuing #{resource[:job].name}"
+        resource[:job].perform_later
+      end
+    end
+
+    while to_fill.present?
+      sleep 5
+      puts "\n#### Checking status ####"
+
+      to_delete = []
+      to_fill.each do |resource|
+        model = resource[:model]
+        pp "- Checking #{model.name}: 🔎"
+        count = model.where(customer_id: nil).count
+
+        if count > 0
+          pp "  -> #{count} remaining 🧮"
+        else
+          to_delete << resource
+          pp "  -> Done ✅"
+        end
+      end
+
+      to_delete.each { to_fill.delete(it) }
+    end
+
+    puts "\n#### All good, ready to Upgrade! ✅ ####"
+  end
+
   desc "Verifies the current system's readiness for an upgrade and outlines necessary migration paths"
   task verify: [:check_migrations, :check_background_jobs] do
     current_version = fetch_current_version

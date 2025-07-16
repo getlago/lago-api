@@ -11,10 +11,6 @@ RSpec.describe AppliedCoupons::TerminateService, type: :service do
   let(:applied_coupon) { create(:applied_coupon, coupon:) }
 
   describe "#call" do
-    before do
-      allow(Utils::ActivityLog).to receive(:produce)
-    end
-
     it "terminates the applied coupon" do
       result = terminate_service.call
 
@@ -25,7 +21,7 @@ RSpec.describe AppliedCoupons::TerminateService, type: :service do
     it "produces an activity log" do
       described_class.call(applied_coupon:)
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(applied_coupon, "applied_coupon.deleted")
+      expect(Utils::ActivityLog).to have_produced("applied_coupon.deleted").with(applied_coupon)
     end
 
     context "when applied coupon is already terminated" do

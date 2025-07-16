@@ -22,6 +22,8 @@ module Types
       field :trial_period, Float
       field :usage_thresholds, [Types::UsageThresholds::Object]
 
+      field :entitlements, [Types::Entitlement::PlanEntitlementObject]
+
       field :activity_logs, [Types::ActivityLogs::Object], null: true
       field :charges, [Types::Charges::Object]
       field :taxes, [Types::Taxes::Object]
@@ -41,6 +43,7 @@ module Types
       field :charges_count, Integer, null: false, description: "Number of charges attached to a plan"
       field :customers_count, Integer, null: false, description: "Number of customers attached to a plan"
       field :draft_invoices_count, Integer, null: false
+      field :is_overridden, Boolean, null: false
       field :subscriptions_count, Integer, null: false
 
       def usage_thresholds
@@ -60,6 +63,10 @@ module Types
         return count unless object.children
 
         count + object.children.joins(:subscriptions).select("subscriptions.id").distinct.count
+      end
+
+      def is_overridden
+        object.parent_id.present?
       end
 
       def has_active_subscriptions

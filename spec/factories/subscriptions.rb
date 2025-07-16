@@ -29,6 +29,10 @@ FactoryBot.define do
       billing_time { :calendar }
     end
 
+    trait :anniversary do
+      billing_time { :anniversary }
+    end
+
     trait :with_previous_subscription do
       previous_subscription { association(:subscription, customer:, plan:, organization:) }
     end

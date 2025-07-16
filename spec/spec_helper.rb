@@ -9,6 +9,9 @@ KnapsackPro::Adapters::RSpecAdapter.bind
 ENV["RAILS_ENV"] = "test"
 require_relative "../config/environment"
 
+# Explicitly require monkey patches after loading dependencies.
+Dir[Rails.root.join("spec/support/monkey_patches/*.rb")].sort.each { |f| require f }
+
 # Allow remote debugging when RUBY_DEBUG_PORT is set
 if ENV["RUBY_DEBUG_PORT"]
   require "debug/open_nonstop"
@@ -108,24 +111,36 @@ RSpec.configure do |config|
   end
 
   # NOTE: Database cleaner config to turn off/on transactional mode
-  config.before(:suite) do
-    DatabaseCleaner.clean_with(:deletion)
+  config.before(:suite) do |example|
     # No need for `DatabaseCleaner[:active_record, db: EventsRecord].clean_with(:deletion)`
     # because both connections are using the same database.
+    DatabaseCleaner[:active_record].clean_with(:deletion)
+
+    # Clean Clickhouse database if any test is using it.
+    if RSpec.world.all_examples.any? { |ex| ex.metadata[:clickhouse] }
+      WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))
+      DatabaseCleaner[:active_record, db: Clickhouse::BaseRecord].clean_with(:deletion)
+    end
+
+    WebMock.disable_net_connect!
   end
 
   config.include_context "with Time travel enabled", :time_travel
 
   config.before do |example|
     ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+    allow(Utils::ActivityLog).to receive(:produce).and_call_original
 
     if example.metadata[:scenarios]
       stub_pdf_generation
     end
 
-    if example.metadata[:clickhouse]
-      DatabaseCleaner.strategy = :deletion
+    if (clickhouse = example.metadata[:clickhouse])
       WebMock.disable_net_connect!(allow: ENV.fetch("LAGO_CLICKHOUSE_HOST", "clickhouse"))
+
+      if clickhouse.is_a?(Hash) && clickhouse[:clean_before]
+        DatabaseCleaner[:active_record, db: Clickhouse::BaseRecord].clean_with(:deletion)
+      end
     end
 
     if example.metadata[:with_bullet]
@@ -168,6 +183,9 @@ RSpec.configure do |config|
       # If the `deletion` strategy is used for the default connection, we don't need to set it for the `events` connection as they are using the same database.
       DatabaseCleaner::NullStrategy.new
     end
+
+    # Clickhouse doesn't support transaction so we default to null strategy to skip cleanup when not needed.
+    DatabaseCleaner[:active_record, db: Clickhouse::BaseRecord].strategy = DatabaseCleaner::NullStrategy.new
 
     DatabaseCleaner.cleaning do
       example.run

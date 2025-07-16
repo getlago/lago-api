@@ -9,6 +9,7 @@ FactoryBot.define do
     amount_cents { 200 }
     precise_amount_cents { BigDecimal("200.0000000001") }
     unit_amount_cents { 10 }
+    precise_unit_amount { 0.1 }
     conversion_rate { 1.0 }
   end
 end

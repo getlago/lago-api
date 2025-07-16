@@ -103,7 +103,10 @@ module BillingEntities
     end
 
     def handle_base64_logo
-      return if params[:logo].blank?
+      if params[:logo].blank?
+        billing_entity.logo&.purge
+        return
+      end
 
       base64_data = params[:logo].split(",")
       data = base64_data.second

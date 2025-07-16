@@ -20,7 +20,14 @@ module Api
         result = ::Plans::UpdateService.call(plan:, params: input_params.to_h.deep_symbolize_keys)
 
         if result.success?
-          render_plan(result.plan)
+          # Reload to eager-load relationships, like :entitlements
+          plan = Plan.includes(
+            :usage_thresholds,
+            charges: {filters: {values: :billable_metric_filter}},
+            entitlements: [:feature, values: :privilege]
+          ).find(result.plan.id)
+
+          render_plan(plan)
         else
           render_error_response(result)
         end
@@ -31,7 +38,14 @@ module Api
         result = ::Plans::PrepareDestroyService.call(plan:)
 
         if result.success?
-          render_plan(result.plan)
+          # Reload to eager-load relationships, like :entitlements
+          plan = Plan.with_discarded.includes(
+            :usage_thresholds,
+            charges: {filters: {values: :billable_metric_filter}},
+            entitlements: [:feature, values: :privilege]
+          ).find(result.plan.id)
+
+          render_plan(plan)
         else
           render_error_response(result)
         end
@@ -39,11 +53,18 @@ module Api
 
       def show
         plan = current_organization.plans.parents
-          .includes(:usage_thresholds, charges: {filters: {values: :billable_metric_filter}})
+          .includes(
+            :usage_thresholds,
+            charges: {filters: {values: :billable_metric_filter}},
+            entitlements: [:feature, values: :privilege]
+          )
           .find_by(code: params[:code])
-        return not_found_error(resource: "plan") unless plan
 
-        render_plan(plan)
+        if plan
+          render_plan(plan)
+        else
+          not_found_error(resource: "plan")
+        end
       end
 
       def index
@@ -63,12 +84,13 @@ module Api
                 :usage_thresholds,
                 :taxes,
                 :minimum_commitment,
-                charges: {filters: {values: :billable_metric_filter}}
+                charges: {filters: {values: :billable_metric_filter}},
+                entitlements: [:feature, values: :privilege]
               ),
               ::V1::PlanSerializer,
               collection_name: "plans",
               meta: pagination_metadata(result.plans),
-              includes: %i[charges usage_thresholds taxes minimum_commitment]
+              includes: %i[charges usage_thresholds taxes minimum_commitment entitlements]
             )
           )
         else
@@ -136,7 +158,7 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: "plan",
-            includes: %i[charges usage_thresholds taxes minimum_commitment]
+            includes: %i[charges usage_thresholds taxes minimum_commitment entitlements]
           )
         )
       end

@@ -24,7 +24,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       plan: subscription.plan,
       billable_metric:,
       properties: {
-        amount: "20",
+        amount: "23.45",
         amount_currency: "EUR"
       }
     )
@@ -48,7 +48,7 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       fee_type: :charge,
       adjusted_units: true,
       adjusted_amount: false,
-      units: 3
+      units: 7
     )
   end
 
@@ -57,28 +57,75 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
   end
 
   context "with adjusted units" do
-    it "initializes a fee" do
-      result = init_service.call
+    context "when adjusted fee's charge has pricing unit associated" do
+      before do
+        create(
+          :applied_pricing_unit,
+          pricing_unitable: charge,
+          pricing_unit: create(:pricing_unit, organization:),
+          conversion_rate: 10
+        )
+      end
 
-      expect(result).to be_success
-      expect(result.fee).to be_a(Fee)
-      expect(result.fee).to have_attributes(
-        id: nil,
-        organization_id: organization.id,
-        billing_entity_id: billing_entity.id,
-        invoice:,
-        subscription:,
-        charge:,
-        amount_cents: 6_000,
-        precise_amount_cents: 6_000.0,
-        taxes_precise_amount_cents: 0.0,
-        amount_currency: invoice.currency,
-        units: 3,
-        unit_amount_cents: 2_000,
-        precise_unit_amount: 20,
-        events_count: 0,
-        payment_status: "pending"
-      )
+      it "initializes a fee" do
+        result = init_service.call
+
+        expect(result).to be_success
+        expect(result.fee).to be_a(Fee)
+        expect(result.fee).to have_attributes(
+          id: nil,
+          organization_id: organization.id,
+          billing_entity_id: billing_entity.id,
+          invoice:,
+          subscription:,
+          charge:,
+          amount_cents: 164150,
+          precise_amount_cents: 164150,
+          taxes_precise_amount_cents: 0.0,
+          amount_currency: invoice.currency,
+          units: 7,
+          unit_amount_cents: 23450,
+          precise_unit_amount: 234.5,
+          events_count: 0,
+          payment_status: "pending",
+          pricing_unit_usage: PricingUnitUsage
+        )
+
+        expect(result.fee.pricing_unit_usage).to have_attributes(
+          amount_cents: 16415,
+          precise_amount_cents: 16415,
+          unit_amount_cents: 2345,
+          precise_unit_amount: 23.45,
+          conversion_rate: 10
+        )
+      end
+    end
+
+    context "when adjusted fee's charge has no pricing unit associated" do
+      it "initializes a fee" do
+        result = init_service.call
+
+        expect(result).to be_success
+        expect(result.fee).to be_a(Fee)
+        expect(result.fee).to have_attributes(
+          id: nil,
+          organization_id: organization.id,
+          billing_entity_id: billing_entity.id,
+          invoice:,
+          subscription:,
+          charge:,
+          amount_cents: 16415,
+          precise_amount_cents: 16415,
+          taxes_precise_amount_cents: 0.0,
+          amount_currency: invoice.currency,
+          units: 7,
+          unit_amount_cents: 2345,
+          precise_unit_amount: 23.45,
+          events_count: 0,
+          payment_status: "pending",
+          pricing_unit_usage: nil
+        )
+      end
     end
   end
 
@@ -99,41 +146,13 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       )
     end
 
-    it "initializes a fee" do
-      result = init_service.call
-
-      expect(result).to be_success
-      expect(result.fee).to be_a(Fee)
-      expect(result.fee).to have_attributes(
-        id: nil,
-        invoice:,
-        charge:,
-        amount_cents: 800,
-        precise_amount_cents: 800.0,
-        taxes_precise_amount_cents: 0.0,
-        amount_currency: invoice.currency,
-        units: 4,
-        unit_amount_cents: 200,
-        precise_unit_amount: 2,
-        events_count: 0,
-        payment_status: "pending"
-      )
-    end
-
-    context "when units are 0" do
-      let(:adjusted_fee) do
+    context "when adjusted fee's charge has pricing unit associated" do
+      before do
         create(
-          :adjusted_fee,
-          invoice:,
-          subscription:,
-          charge:,
-          properties:,
-          fee_type: :charge,
-          adjusted_units: false,
-          adjusted_amount: true,
-          units: 0,
-          unit_amount_cents: 0,
-          unit_precise_amount_cents: 0.0
+          :applied_pricing_unit,
+          pricing_unitable: charge,
+          pricing_unit: create(:pricing_unit, organization:),
+          conversion_rate: 0.5
         )
       end
 
@@ -146,16 +165,87 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
           id: nil,
           invoice:,
           charge:,
-          amount_cents: 0,
-          precise_amount_cents: 0.0,
+          amount_cents: 400,
+          precise_amount_cents: 400.0,
           taxes_precise_amount_cents: 0.0,
           amount_currency: invoice.currency,
-          units: 0,
-          unit_amount_cents: 0,
-          precise_unit_amount: 0,
+          units: 4,
+          unit_amount_cents: 100,
+          precise_unit_amount: 1,
+          events_count: 0,
+          payment_status: "pending",
+          pricing_unit_usage: PricingUnitUsage
+        )
+
+        expect(result.fee.pricing_unit_usage).to have_attributes(
+          amount_cents: 800,
+          precise_amount_cents: 800.0,
+          unit_amount_cents: 200,
+          precise_unit_amount: 2.00,
+          conversion_rate: 0.5
+        )
+      end
+    end
+
+    context "when adjusted fee's charge has no pricing unit associated" do
+      it "initializes a fee" do
+        result = init_service.call
+
+        expect(result).to be_success
+        expect(result.fee).to be_a(Fee)
+        expect(result.fee).to have_attributes(
+          id: nil,
+          invoice:,
+          charge:,
+          amount_cents: 800,
+          precise_amount_cents: 800.0,
+          taxes_precise_amount_cents: 0.0,
+          amount_currency: invoice.currency,
+          units: 4,
+          unit_amount_cents: 200,
+          precise_unit_amount: 2,
           events_count: 0,
           payment_status: "pending"
         )
+      end
+
+      context "when units are 0" do
+        let(:adjusted_fee) do
+          create(
+            :adjusted_fee,
+            invoice:,
+            subscription:,
+            charge:,
+            properties:,
+            fee_type: :charge,
+            adjusted_units: false,
+            adjusted_amount: true,
+            units: 0,
+            unit_amount_cents: 0,
+            unit_precise_amount_cents: 0.0
+          )
+        end
+
+        it "initializes a fee" do
+          result = init_service.call
+
+          expect(result).to be_success
+          expect(result.fee).to be_a(Fee)
+          expect(result.fee).to have_attributes(
+            id: nil,
+            invoice:,
+            charge:,
+            amount_cents: 0,
+            precise_amount_cents: 0.0,
+            taxes_precise_amount_cents: 0.0,
+            amount_currency: invoice.currency,
+            units: 0,
+            unit_amount_cents: 0,
+            precise_unit_amount: 0,
+            events_count: 0,
+            payment_status: "pending"
+          )
+        end
       end
     end
   end

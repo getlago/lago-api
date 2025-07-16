@@ -1,5 +1,19 @@
 # frozen_string_literal: true
 
+RSpec.shared_examples "a Premium API endpoint" do
+  it "requires a premium license" do
+    allow(License).to receive(:premium?).and_return(false)
+    subject
+    expect(response).to have_http_status(:forbidden)
+    expect(json[:error]).to eq("Forbidden")
+    expect(json[:code]).to eq("feature_unavailable")
+    # License.premium? is called
+    # - once for the API key granular permission
+    # - once by the PremiumFeatureOnly concern
+    expect(License).to have_received(:premium?).twice
+  end
+end
+
 RSpec.shared_examples "requires API permission" do |resource, mode|
   describe "permissions" do
     around { |test| lago_premium!(&test) }

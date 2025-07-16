@@ -10,6 +10,7 @@ module Entitlement
     end
 
     def call
+      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "feature") unless feature
 
       jobs = feature.entitlements.select(:plan_id).distinct.pluck(:plan_id).map do |plan_id|

@@ -39,10 +39,6 @@ RSpec.describe BillingEntities::UpdateService do
     }
   end
 
-  before do
-    allow(Utils::ActivityLog).to receive(:produce)
-  end
-
   describe "#call" do
     it "updates the billing_entity" do
       result = update_service.call
@@ -68,7 +64,7 @@ RSpec.describe BillingEntities::UpdateService do
     it "produces an activity log" do
       described_class.call(billing_entity:, params:)
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(billing_entity, "billing_entities.updated")
+      expect(Utils::ActivityLog).to have_produced("billing_entities.updated").after_commit.with(billing_entity)
     end
 
     context "when document_number_prefix is sent" do
@@ -171,6 +167,21 @@ RSpec.describe BillingEntities::UpdateService do
       it "updates the billing_entity with logo" do
         result = update_service.call
         expect(result.billing_entity.logo.blob).not_to be_nil
+      end
+    end
+
+    context "when logo is set but then removed" do
+      let(:logo) do
+        logo_file = File.read(Rails.root.join("spec/factories/images/logo.png"))
+        base64_logo = Base64.encode64(logo_file)
+
+        "data:image/png;base64,#{base64_logo}"
+      end
+
+      it "removes the logo" do
+        update_service.call
+        result = described_class.new(billing_entity:, params: {logo: nil}).call
+        expect(result.billing_entity.logo.blob).to be_nil
       end
     end
 

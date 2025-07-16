@@ -17,11 +17,15 @@ RSpec.describe Api::V1::Plans::Entitlements::PrivilegesController, type: :reques
     entitlement_value2
   end
 
+  around { |test| lago_premium!(&test) }
+
   describe "DELETE #destroy" do
+    subject do
+      delete_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}/privileges/#{privilege.code}"
+    end
+
     it "deletes the specific privilege value from the entitlement" do
-      expect {
-        delete_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}/privileges/#{privilege.code}"
-      }.to change(privilege.values, :count).by(-1)
+      expect { subject }.to change(privilege.values, :count).by(-1)
 
       expect(response).to have_http_status(:success)
 
@@ -48,7 +52,7 @@ RSpec.describe Api::V1::Plans::Entitlements::PrivilegesController, type: :reques
     end
 
     it "returns the updated entitlement in the response" do
-      delete_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}/privileges/#{privilege.code}"
+      subject
 
       expect(response).to have_http_status(:success)
 

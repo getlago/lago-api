@@ -29,11 +29,7 @@ module Fees
       return result if current_usage
 
       if invoice.nil? || !invoice.progressive_billing?
-        init_true_up_fee(
-          fee: result.fees.find { |f| f.charge_filter_id.nil? },
-          amount_cents: result.fees.sum(&:amount_cents),
-          precise_amount_cents: result.fees.sum(&:precise_amount_cents)
-        )
+        init_true_up_fee
       end
       return result unless result.success?
 
@@ -223,8 +219,18 @@ module Fees
       @adjusted_fee[key] = scope.first
     end
 
-    def init_true_up_fee(fee:, amount_cents:, precise_amount_cents:)
-      true_up_fee = Fees::CreateTrueUpService.call(fee:, amount_cents:, precise_amount_cents:).true_up_fee
+    def init_true_up_fee
+      fee = result.fees.find { |f| f.charge_filter_id.nil? }
+
+      if charge.applied_pricing_unit
+        used_amount_cents = result.fees.map(&:pricing_unit_usage).sum(&:amount_cents)
+        used_precise_amount_cents = result.fees.map(&:pricing_unit_usage).sum(&:precise_amount_cents)
+      else
+        used_amount_cents = result.fees.sum(&:amount_cents)
+        used_precise_amount_cents = result.fees.sum(&:precise_amount_cents)
+      end
+
+      true_up_fee = Fees::CreateTrueUpService.call(fee:, used_amount_cents:, used_precise_amount_cents:).true_up_fee
       result.fees << true_up_fee if true_up_fee
     end
 

@@ -97,8 +97,9 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::PaymentIntentSucceededService
               )
             ).and_call_original
 
-          payment = create(:payment, provider_payment_id: event.data.object.id)
-          create(:payment_request, customer: create(:customer, organization:), payments: [payment])
+          customer = create(:customer, organization:)
+          payment = create(:payment, provider_payment_id: event.data.object.id, customer:)
+          create(:payment_request, customer:, payments: [payment])
 
           stub_request(:get, %r{/v1/payment_methods/pm_}).and_return(
             status: 200, body: get_stripe_fixtures("retrieve_payment_method_response.json", version:)

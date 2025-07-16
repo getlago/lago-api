@@ -10,6 +10,7 @@ module Types
       field :amount_cents, GraphQL::Types::BigInt, null: false
       field :conversion_rate, GraphQL::Types::Float, null: false
       field :precise_amount_cents, GraphQL::Types::Float, null: false
+      field :precise_unit_amount, GraphQL::Types::Float, null: false
       field :pricing_unit, Types::PricingUnits::Object, null: false
       field :short_name, String, null: false
       field :unit_amount_cents, GraphQL::Types::BigInt, null: false

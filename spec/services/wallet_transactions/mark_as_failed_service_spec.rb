@@ -8,10 +8,6 @@ RSpec.describe WalletTransactions::MarkAsFailedService, type: :service do
   let(:wallet_transaction) { create(:wallet_transaction, status: "pending") }
 
   describe ".call" do
-    before do
-      allow(Utils::ActivityLog).to receive(:produce)
-    end
-
     context "when wallet_transaction is nil" do
       let(:wallet_transaction) { nil }
 
@@ -35,7 +31,7 @@ RSpec.describe WalletTransactions::MarkAsFailedService, type: :service do
       it "produces an activity log" do
         described_class.call(wallet_transaction:)
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(wallet_transaction, "wallet_transaction.updated")
+        expect(Utils::ActivityLog).to have_produced("wallet_transaction.updated").after_commit.with(wallet_transaction)
       end
     end
 

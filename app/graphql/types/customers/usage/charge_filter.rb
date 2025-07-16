@@ -13,6 +13,7 @@ module Types
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
         field :invoice_display_name, String, null: true
+        field :pricing_unit_amount_cents, GraphQL::Types::BigInt, null: true
         field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :projected_units, GraphQL::Types::Float, null: false
         field :units, GraphQL::Types::Float, null: false
@@ -20,6 +21,10 @@ module Types
 
         def values
           object.charge_filter&.to_h || {} # rubocop:disable Lint/RedundantSafeNavigation
+        end
+
+        def pricing_unit_amount_cents
+          object.pricing_unit_usage&.amount_cents
         end
 
         def invoice_display_name

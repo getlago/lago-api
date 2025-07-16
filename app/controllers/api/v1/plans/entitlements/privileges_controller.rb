@@ -5,6 +5,8 @@ module Api
     module Plans
       module Entitlements
         class PrivilegesController < Api::BaseController
+          include PremiumFeatureOnly
+
           attr_reader :plan, :entitlement
 
           before_action :find_plan

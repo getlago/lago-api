@@ -18,10 +18,6 @@ RSpec.describe Invoices::Payments::MarkOverdueService, type: :service do
   let(:invoice_dispute_lost_at) { nil }
 
   describe "#call" do
-    before do
-      allow(Utils::ActivityLog).to receive(:produce)
-    end
-
     it "mark the invoice as payment_overdue" do
       expect(result.invoice.payment_overdue).to be_truthy
     end
@@ -35,7 +31,7 @@ RSpec.describe Invoices::Payments::MarkOverdueService, type: :service do
     it "produces an activity log" do
       invoice = result.invoice
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.payment_overdue")
+      expect(Utils::ActivityLog).to have_produced("invoice.payment_overdue").after_commit.with(invoice)
     end
 
     context "when invoice is nil" do

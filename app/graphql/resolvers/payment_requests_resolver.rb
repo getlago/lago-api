@@ -12,14 +12,16 @@ module Resolvers
     argument :external_customer_id, String, required: false
     argument :limit, Integer, required: false
     argument :page, Integer, required: false
+    argument :payment_status, Types::Invoices::PaymentStatusTypeEnum, required: false
 
     type Types::PaymentRequests::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil, external_customer_id: nil)
+    def resolve(page: nil, limit: nil, external_customer_id: nil, payment_status: nil)
       result = PaymentRequestsQuery.call(
         organization: current_organization,
         filters: {
-          external_customer_id:
+          external_customer_id:,
+          payment_status:
         },
         pagination: {
           page:,

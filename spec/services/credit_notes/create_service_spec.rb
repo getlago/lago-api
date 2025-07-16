@@ -56,10 +56,13 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     create(:fee_applied_tax, tax:, fee: fee1)
     create(:fee_applied_tax, tax:, fee: fee2)
     create(:invoice_applied_tax, tax:, invoice:) if invoice
-    allow(Utils::ActivityLog).to receive(:produce)
   end
 
   describe "#call" do
+    subject(:result) { create_service.call }
+
+    let(:credit_note) { subject.credit_note }
+
     it "creates a credit note" do
       result = create_service.call
 
@@ -104,56 +107,56 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
     end
 
-    it "calls SegmentTrackJob" do
-      allow(SegmentTrackJob).to receive(:perform_later)
-
-      credit_note = create_service.call.credit_note
-
-      expect(SegmentTrackJob).to have_received(:perform_later).with(
-        membership_id: CurrentContext.membership,
-        event: "credit_note_issued",
-        properties: {
-          organization_id: credit_note.organization.id,
-          credit_note_id: credit_note.id,
-          invoice_id: credit_note.invoice_id,
-          credit_note_method: "both"
-        }
-      )
-    end
-
-    it "delivers a webhook" do
-      create_service.call
-
-      aggregate_failures do
-        expect(SendWebhookJob).to have_been_enqueued.with("credit_note.created", CreditNote)
-
-        expect(CreditNotes::GeneratePdfJob).to have_been_enqueued
+    it "enqueues SegmentTrackJob after commit" do
+      expect { subject }.to have_enqueued_job_after_commit(SegmentTrackJob).with do |params|
+        expect(params).to match(membership_id: CurrentContext.membership,
+          event: "credit_note_issued",
+          properties: {
+            organization_id: organization.id,
+            credit_note_id: credit_note.id,
+            invoice_id: invoice.id,
+            credit_note_method: "both"
+          })
       end
     end
 
-    it "delivers an email" do
-      expect do
-        create_service.call
-      end.to have_enqueued_job(SendEmailJob)
+    it "delivers a webhook" do
+      expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with do |event, job_credit_note|
+        expect(event).to eq("credit_note.created")
+        expect(job_credit_note).to eq(credit_note)
+      end
+    end
+
+    it "enqueues a CreditNotes::GeneratePdfJob after commit" do
+      expect { subject }.to have_enqueued_job_after_commit(CreditNotes::GeneratePdfJob).with do |job_credit_note|
+        expect(job_credit_note).to eq(credit_note)
+      end
+    end
+
+    it "delivers an email after commit" do
+      expect { subject }.to have_enqueued_job_after_commit(SendEmailJob).with do |email, job_credit_note|
+        expect(email).to eq(credit_note.billing_entity.email)
+        expect(job_credit_note).to eq(credit_note)
+      end
     end
 
     it "produces an activity log" do
       result = create_service.call
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(result.credit_note, "credit_note.created")
+      expect(Utils::ActivityLog).to have_produced("credit_note.created").with(result.credit_note)
     end
 
     it_behaves_like "syncs credit note" do
-      let(:service_call) { create_service.call }
+      let(:service_call) { subject }
     end
 
     context "when customer has tax_provider set up" do
       let(:customer) { create(:customer, :with_tax_integration, organization:) }
 
-      it "sync with tax provider" do
-        expect do
-          create_service.call
-        end.to have_enqueued_job(CreditNotes::ProviderTaxes::ReportJob)
+      it "sync with tax provider after commit" do
+        expect { subject }.to have_enqueued_job_after_commit(CreditNotes::ProviderTaxes::ReportJob).with do |**kwargs|
+          expect(kwargs[:credit_note]).to eq(credit_note)
+        end
       end
     end
 
@@ -161,9 +164,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       before { invoice.billing_entity.update!(email_settings: []) }
 
       it "does not enqueue an SendEmailJob" do
-        expect do
-          create_service.call
-        end.not_to have_enqueued_job(SendEmailJob)
+        expect { subject }.not_to have_enqueued_job(SendEmailJob)
       end
     end
 
@@ -221,11 +222,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
 
       before { payment }
 
-      it "enqueues a refund job" do
-        create_service.call
-
-        expect(CreditNotes::Refunds::StripeCreateJob).to have_been_enqueued
-          .with(CreditNote)
+      it "enqueues a refund job after commit" do
+        expect { subject }.to have_enqueued_job_after_commit(CreditNotes::Refunds::StripeCreateJob).with do |job_credit_note|
+          expect(job_credit_note).to eq(credit_note)
+        end
       end
 
       context "when Gocardless provider" do
@@ -240,10 +240,10 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           )
         end
 
-        it "enqueues a refund job" do
-          create_service.call
-
-          expect(CreditNotes::Refunds::GocardlessCreateJob).to have_been_enqueued.with(CreditNote)
+        it "enqueues a refund job after commit" do
+          expect { subject }.to have_enqueued_job_after_commit(CreditNotes::Refunds::GocardlessCreateJob).with do |job_credit_note|
+            expect(job_credit_note).to eq(credit_note)
+          end
         end
       end
 
@@ -252,7 +252,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
         let(:refund_amount_cents) { 0 }
 
         it "does not enqueue a refund job" do
-          expect { create_service.call }.not_to have_enqueued_job(CreditNotes::Refunds::StripeCreateJob)
+          expect { subject }.not_to have_enqueued_job(CreditNotes::Refunds::StripeCreateJob)
         end
       end
     end
@@ -339,9 +339,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
           end
 
           it "does not call SegmentTrackJob" do
-            allow(SegmentTrackJob).to receive(:perform_later)
-            create_service.call
-            expect(SegmentTrackJob).not_to have_received(:perform_later)
+            expect { subject }.not_to have_enqueued_job(SegmentTrackJob)
           end
         end
 
@@ -600,8 +598,6 @@ RSpec.describe CreditNotes::CreateService, type: :service do
     end
 
     context "when 'preview' context provided" do
-      subject(:result) { create_service.call }
-
       let(:context) { :preview }
 
       it "builds a credit note" do
@@ -656,11 +652,7 @@ RSpec.describe CreditNotes::CreateService, type: :service do
       end
 
       it "does not call SegmentTrackJob" do
-        allow(SegmentTrackJob).to receive(:perform_later)
-
-        subject
-
-        expect(SegmentTrackJob).not_to have_received(:perform_later)
+        expect { subject }.not_to have_enqueued_job(SegmentTrackJob)
       end
 
       it "does not deliver a webhook" do

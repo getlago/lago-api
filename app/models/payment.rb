@@ -2,10 +2,12 @@
 
 class Payment < ApplicationRecord
   include PaperTrailTraceable
+  include RansackUuidSearch
 
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
   belongs_to :organization
+  belongs_to :customer, optional: true
   belongs_to :payable, polymorphic: true
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
@@ -25,8 +27,6 @@ class Payment < ApplicationRecord
   validate :manual_payment_credit_invoice_amount_cents
   validate :max_invoice_paid_amount_cents, on: :create
   validate :payment_request_succeeded, on: :create
-
-  delegate :customer, to: :payable
 
   enum :payable_payment_status, PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h, validate: {allow_nil: true}
 
@@ -48,6 +48,18 @@ class Payment < ApplicationRecord
     joins(payables_join)
       .where("invoices.id IS NOT NULL OR payment_requests.id IS NOT NULL")
   }
+
+  def self.ransackable_attributes(_ = nil)
+    %w[id provider_payment_id reference] + _ransackers.keys
+  end
+
+  def self.ransackable_associations(_ = nil)
+    %w[payable customer]
+  end
+
+  ransacker :invoice_number do
+    Arel.sql("(SELECT invoices.number FROM invoices WHERE invoices.id = payments.payable_id AND payments.payable_type = 'Invoice' LIMIT 1)")
+  end
 
   def invoices
     payable.payment_invoices
@@ -118,6 +130,7 @@ end
 #  status                       :string           not null
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
+#  customer_id                  :uuid
 #  invoice_id                   :uuid
 #  organization_id              :uuid             not null
 #  payable_id                   :uuid
@@ -128,6 +141,7 @@ end
 #
 # Indexes
 #
+#  index_payments_on_customer_id                                  (customer_id)
 #  index_payments_on_invoice_id                                   (invoice_id)
 #  index_payments_on_organization_id                              (organization_id)
 #  index_payments_on_payable_id_and_payable_type                  (payable_id,payable_type) UNIQUE WHERE ((payable_payment_status = ANY (ARRAY['pending'::payment_payable_payment_status, 'processing'::payment_payable_payment_status])) AND (payment_type = 'provider'::payment_type))

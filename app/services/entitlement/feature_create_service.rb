@@ -11,6 +11,7 @@ module Entitlement
     end
 
     def call
+      return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "organization") unless organization
 
       ActiveRecord::Base.transaction do

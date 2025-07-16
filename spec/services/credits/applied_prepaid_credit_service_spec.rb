@@ -19,8 +19,6 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
   let(:subscription) { create(:subscription, customer:) }
 
   before do
-    allow(Utils::ActivityLog).to receive(:produce)
-
     subscription
   end
 
@@ -58,7 +56,7 @@ RSpec.describe Credits::AppliedPrepaidCreditService do
     it "produces an activity log" do
       wallet_transaction = described_class.call(invoice:, wallet:).wallet_transaction
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(wallet_transaction, "wallet_transaction.created")
+      expect(Utils::ActivityLog).to have_produced("wallet_transaction.created").after_commit.with(wallet_transaction)
     end
 
     context "when wallet credits are less than invoice amount" do

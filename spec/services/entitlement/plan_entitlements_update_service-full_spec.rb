@@ -2,8 +2,8 @@
 
 require "rails_helper"
 
-RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
-  subject(:create_service) { described_class.new(organization:, plan:, entitlements_params:) }
+RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
+  subject(:result) { described_class.call(organization:, plan:, entitlements_params:, partial: false) }
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
@@ -22,8 +22,10 @@ RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
     privilege
   end
 
+  it_behaves_like "a premium service"
+
   describe "#call" do
-    subject(:result) { create_service.call }
+    around { |test| lago_premium!(&test) }
 
     it "returns success" do
       expect(result).to be_success
@@ -57,7 +59,7 @@ RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
     end
 
     context "when plan has existing entitlements" do
-      let(:existing_entitlement) { create(:entitlement, organization:, plan:, feature:) }
+      let(:existing_entitlement) { create(:entitlement, organization:, plan:) }
       let(:existing_value) { create(:entitlement_value, entitlement: existing_entitlement, privilege:, value: "10", organization:) }
 
       before do
@@ -66,14 +68,15 @@ RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
       end
 
       it "deletes existing entitlements and their values" do
-        expect { result }.to change(Entitlement::Entitlement, :count).by(0)
-          .and change(Entitlement::EntitlementValue, :count).by(0)
+        result
+        expect(existing_value.reload.deleted_at).to be_present
+        expect(existing_entitlement.reload.deleted_at).to be_present
       end
 
       it "creates new entitlements" do
         result
-        new_entitlement = plan.entitlements.first
-        new_value = new_entitlement.values.first
+        new_entitlement = plan.entitlements.sole
+        new_value = new_entitlement.values.sole
 
         expect(new_entitlement).not_to eq(existing_entitlement)
         expect(new_value.value).to eq("25")
@@ -152,7 +155,7 @@ RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
     end
 
     context "when plan is nil" do
-      subject(:create_service) { described_class.new(organization:, plan: nil, entitlements_params:) }
+      subject(:result) { described_class.call(organization:, plan: nil, entitlements_params:, partial: false) }
 
       it "returns not found failure" do
         expect(result).not_to be_success
@@ -290,7 +293,9 @@ RSpec.describe Entitlement::PlanEntitlementsCreateService, type: :service do
 
           result
 
-          expect(Bullet).not_to be_notification
+          # NOTE: the final `plan.entitlements.includes(...).reload` triggers Bullet::Notification::UnusedEagerLoading
+          #       but the eager loading is important for the serializer
+          expect(Bullet.text_notifications).to be_empty
           expect(result).to be_success
           expect(result.entitlements.count).to eq(3)
         end

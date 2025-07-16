@@ -4,12 +4,13 @@ require "rails_helper"
 
 RSpec.describe PaymentsQuery, type: :query do
   subject(:result) do
-    described_class.call(organization:, pagination:, filters:)
+    described_class.call(organization:, pagination:, filters:, search_term:)
   end
 
   let(:returned_ids) { result.payments.pluck(:id) }
   let(:pagination) { nil }
   let(:filters) { nil }
+  let(:search_term) { nil }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
   let(:invoice) { create(:invoice, organization:) }
@@ -44,6 +45,93 @@ RSpec.describe PaymentsQuery, type: :query do
       expect(result.payments.next_page).to be_nil
       expect(result.payments.total_pages).to eq(2)
       expect(result.payments.total_count).to eq(3)
+    end
+  end
+
+  context "with search_term" do
+    let(:customer) { create(:customer, firstname: "first", lastname: "last", external_id: "external_c_id", email: "email@example.com", name: "The name") }
+    let(:invoice) { create(:invoice, :finalized, organization:, customer:, number: "number-test-123") }
+    let(:invoice3) { create(:invoice, :finalized, organization:, customer:) }
+    let(:payment_one) { create(:payment, payable: invoice) }
+    let(:payment_two) { create(:payment, payable: invoice3) }
+    let(:payment_three) { create(:payment, payable: invoice2) }
+    let(:payment_four) { create(:payment, payable: payment_request) }
+
+    before do
+      payment_one
+      payment_two
+      payment_three
+      payment_four
+    end
+
+    context "when search_term is an id" do
+      let(:search_term) { payment_one.id }
+
+      it "returns only payments for the specified id" do
+        expect(result).to be_success
+        expect(returned_ids.count).to eq(1)
+        expect(returned_ids).to contain_exactly(payment_one.id)
+      end
+    end
+
+    context "when search_term is an invoice number" do
+      let(:search_term) { invoice.number }
+
+      it "returns only payments for the specified invoice number" do
+        expect(result).to be_success
+        expect(returned_ids.count).to eq(1)
+        expect(returned_ids).to contain_exactly(payment_one.id)
+      end
+    end
+
+    context "when search_term is a customer name" do
+      let(:search_term) { customer.name }
+
+      it "returns only payments for the specified customer name" do
+        expect(result).to be_success
+        expect(returned_ids.count).to eq(2)
+        expect(returned_ids).to contain_exactly(payment_one.id, payment_two.id)
+      end
+    end
+
+    context "when search_term is a customer email" do
+      let(:search_term) { customer.email }
+
+      it "returns only payments for the specified customer email" do
+        expect(result).to be_success
+        expect(returned_ids.count).to eq(2)
+        expect(returned_ids).to contain_exactly(payment_one.id, payment_two.id)
+      end
+    end
+
+    context "when search_term is a customer external id" do
+      let(:search_term) { customer.external_id }
+
+      it "returns only payments for the specified customer external id" do
+        expect(result).to be_success
+        expect(returned_ids.count).to eq(2)
+        expect(returned_ids).to contain_exactly(payment_one.id, payment_two.id)
+      end
+    end
+
+    context "when search_term is a customer firstname" do
+      let(:search_term) { customer.firstname }
+
+      it "returns only payments for the specified customer firstname" do
+        expect(result).to be_success
+        expect(returned_ids.count).to eq(2)
+        expect(returned_ids).to contain_exactly(payment_one.id, payment_two.id)
+      end
+    end
+
+    context "when search_term is a customer lastname" do
+      let(:search_term) { customer.lastname }
+
+      it "returns only payments for the specified customer lastname" do
+        expect(result).to be_success
+        expect(returned_ids.count).to eq(2)
+        expect(returned_ids).to contain_exactly(payment_one.id, payment_two.id)
+      end
     end
   end
 

@@ -75,4 +75,33 @@ RSpec.describe PaymentRequestsQuery, type: :query do
       )
     end
   end
+
+  context "when filtering by payment_status" do
+    context "when pending status" do
+      let(:filters) { {payment_status: :pending} }
+
+      it "returns all payment_requests with status pending" do
+        expect(result).to be_success
+        expect(result.payment_requests.count).to eq(2)
+        expect(result.payment_requests.pluck(:id)).to contain_exactly(
+          payment_request_first.id,
+          payment_request_second.id
+        )
+      end
+    end
+
+    context "when succeeded status" do
+      let(:filters) { {payment_status: :succeeded} }
+
+      before { payment_request_second.payment_succeeded! }
+
+      it "returns all payment_requests with status pending" do
+        expect(result).to be_success
+        expect(result.payment_requests.count).to eq(1)
+        expect(result.payment_requests.pluck(:id)).to contain_exactly(
+          payment_request_second.id
+        )
+      end
+    end
+  end
 end

@@ -16,6 +16,7 @@ ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_rails_f66617edcb;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_f53ff93138;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_f510acb495;
+ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_f435d13904;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_f228550fda;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_f18cd04d51;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_ed387e0992;
@@ -262,7 +263,7 @@ DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_organization_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_alert_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_unique_transaction_id;
-DROP INDEX IF EXISTS public.index_unique_terminating_subscription_invoice;
+DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_subscription_invoice;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
@@ -313,6 +314,7 @@ DROP INDEX IF EXISTS public.index_payments_on_payable_type_and_payable_id;
 DROP INDEX IF EXISTS public.index_payments_on_payable_id_and_payable_type;
 DROP INDEX IF EXISTS public.index_payments_on_organization_id;
 DROP INDEX IF EXISTS public.index_payments_on_invoice_id;
+DROP INDEX IF EXISTS public.index_payments_on_customer_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_organization_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_dunning_campaign_id;
 DROP INDEX IF EXISTS public.index_payment_requests_on_customer_id;
@@ -359,6 +361,7 @@ DROP INDEX IF EXISTS public.index_invoices_on_customer_id_and_sequential_id;
 DROP INDEX IF EXISTS public.index_invoices_on_customer_id;
 DROP INDEX IF EXISTS public.index_invoices_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_subscription_id;
+DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_regenerated_invoice_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id_and_subscription_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id;
@@ -636,6 +639,7 @@ ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS plans_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS plans_pkey;
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS payments_pkey;
+ALTER TABLE IF EXISTS public.payments DROP CONSTRAINT IF EXISTS payments_customer_id_null;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS payment_requests_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS payment_receipts_pkey;
 ALTER TABLE IF EXISTS ONLY public.payment_providers DROP CONSTRAINT IF EXISTS payment_providers_pkey;
@@ -3299,7 +3303,8 @@ CREATE TABLE public.invoice_subscriptions (
     charges_from_datetime timestamp(6) without time zone,
     charges_to_datetime timestamp(6) without time zone,
     invoicing_reason public.subscription_invoicing_reason,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    regenerated_invoice_id uuid
 );
 
 
@@ -3492,7 +3497,8 @@ CREATE TABLE public.payments (
     reference character varying,
     provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
     provider_payment_method_id character varying,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    customer_id uuid
 );
 
 
@@ -3511,7 +3517,8 @@ CREATE TABLE public.pricing_unit_usages (
     unit_amount_cents bigint DEFAULT 0 NOT NULL,
     conversion_rate numeric(40,15) DEFAULT 0.0 NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    precise_unit_amount numeric(30,15) DEFAULT 0.0 NOT NULL
 );
 
 
@@ -4424,6 +4431,14 @@ ALTER TABLE ONLY public.payment_receipts
 
 ALTER TABLE ONLY public.payment_requests
     ADD CONSTRAINT payment_requests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: payments payments_customer_id_null; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.payments
+    ADD CONSTRAINT payments_customer_id_null CHECK ((customer_id IS NOT NULL)) NOT VALID;
 
 
 --
@@ -6389,6 +6404,13 @@ CREATE INDEX index_invoice_subscriptions_on_organization_id ON public.invoice_su
 
 
 --
+-- Name: index_invoice_subscriptions_on_regenerated_invoice_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_invoice_subscriptions_on_regenerated_invoice_id ON public.invoice_subscriptions USING btree (regenerated_invoice_id);
+
+
+--
 -- Name: index_invoice_subscriptions_on_subscription_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6708,6 +6730,13 @@ CREATE INDEX index_payment_requests_on_dunning_campaign_id ON public.payment_req
 --
 
 CREATE INDEX index_payment_requests_on_organization_id ON public.payment_requests USING btree (organization_id);
+
+
+--
+-- Name: index_payments_on_customer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_payments_on_customer_id ON public.payments USING btree (customer_id);
 
 
 --
@@ -7061,10 +7090,10 @@ CREATE UNIQUE INDEX index_unique_starting_subscription_invoice ON public.invoice
 
 
 --
--- Name: index_unique_terminating_subscription_invoice; Type: INDEX; Schema: public; Owner: -
+-- Name: index_unique_terminating_invoice_subscription; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_unique_terminating_subscription_invoice ON public.invoice_subscriptions USING btree (subscription_id, invoicing_reason) WHERE (invoicing_reason = 'subscription_terminating'::public.subscription_invoicing_reason);
+CREATE UNIQUE INDEX index_unique_terminating_invoice_subscription ON public.invoice_subscriptions USING btree (subscription_id, invoicing_reason) WHERE ((invoicing_reason = 'subscription_terminating'::public.subscription_invoicing_reason) AND (regenerated_invoice_id IS NULL));
 
 
 --
@@ -8937,6 +8966,14 @@ ALTER TABLE ONLY public.payment_requests
 
 
 --
+-- Name: invoice_subscriptions fk_rails_f435d13904; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invoice_subscriptions
+    ADD CONSTRAINT fk_rails_f435d13904 FOREIGN KEY (regenerated_invoice_id) REFERENCES public.invoices(id) NOT VALID;
+
+
+--
 -- Name: quantified_events fk_rails_f510acb495; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8999,6 +9036,12 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250716143358'),
+('20250716142613'),
+('20250716132759'),
+('20250716132649'),
+('20250714131519'),
+('20250710102337'),
 ('20250709085218'),
 ('20250709082136'),
 ('20250708094414'),

@@ -47,7 +47,6 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       allow(SegmentTrackJob).to receive(:perform_later)
       allow(Invoices::Payments::CreateService).to receive(:call_async).and_call_original
       allow(Invoices::TransitionToFinalStatusService).to receive(:call).and_call_original
-      allow(Utils::ActivityLog).to receive(:produce)
     end
 
     it "calls SegmentTrackJob" do
@@ -121,7 +120,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     it "produces an activity log" do
       invoice = described_class.call(subscriptions:, timestamp: timestamp.to_i, invoicing_reason:).invoice
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.created")
+      expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
     end
 
     it "enqueues GeneratePdfAndNotifyJob with email false" do
@@ -241,7 +240,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       it "produces an activity log" do
         invoice = described_class.call(subscriptions:, timestamp: timestamp.to_i, invoicing_reason:).invoice
 
-        expect(Utils::ActivityLog).to have_received(:produce).with(invoice, "invoice.drafted")
+        expect(Utils::ActivityLog).to have_produced("invoice.drafted").with(invoice)
       end
 
       it "does not flag lifetime usage for refresh" do

@@ -76,16 +76,16 @@ describe "Spending Minimum Scenarios", :scenarios, type: :request do
 
         # True up fee is pro-rated for 25/28 days.
         expect(true_up_fee).to have_attributes(
-          amount_cents: 92, # (1000 / 28.0 * 25 - 800).floor
-          taxes_amount_cents: 18,
+          amount_cents: 93, # 1000 / 28.0 * 25 - 800
+          taxes_amount_cents: 19,
           units: 1
         )
 
         expect(term_invoice).to have_attributes(
-          fees_amount_cents: 892,
-          taxes_amount_cents: 178,
+          fees_amount_cents: 893,
+          taxes_amount_cents: 179,
           credit_notes_amount_cents: 0,
-          total_amount_cents: 1070
+          total_amount_cents: 1072
         )
 
         # Refresh pay in advance invoice
@@ -115,10 +115,10 @@ describe "Spending Minimum Scenarios", :scenarios, type: :request do
         expect(credit_note.total_amount_cents).to eq(643) # 60.0 / 28 * 3
 
         expect(term_invoice).to have_attributes(
-          fees_amount_cents: 892,
-          taxes_amount_cents: 178,
+          fees_amount_cents: 893,
+          taxes_amount_cents: 179,
           credit_notes_amount_cents: 643,
-          total_amount_cents: 427 # 892 + 178 - 643
+          total_amount_cents: 429 # 893 + 179 - 643
         )
       end
     end
@@ -205,16 +205,16 @@ describe "Spending Minimum Scenarios", :scenarios, type: :request do
         true_up_fee = term_invoice.fees.where.not(true_up_parent_fee_id: nil).first
         # True up fee is pro-rated for 25/28 days.
         expect(true_up_fee).to have_attributes(
-          amount_cents: 1928, # (10000 / 28.0 * 25 - 2000 - 5000).floor
+          amount_cents: 1929, # 10000 / 28.0 * 25 - 2000 - 5000
           taxes_amount_cents: 386,
           units: 1
         )
 
         expect(term_invoice).to have_attributes(
-          fees_amount_cents: 8928, # 1928 + 2000 + 5000
+          fees_amount_cents: 8929, # 1929 + 2000 + 5000
           taxes_amount_cents: 1786,
           credit_notes_amount_cents: 643,
-          total_amount_cents: 10_071
+          total_amount_cents: 10_072
         )
       end
     end

@@ -11,6 +11,7 @@ RSpec.describe Types::PricingUnitUsages::Object do
     expect(subject).to have_field(:amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:conversion_rate).of_type("Float!")
     expect(subject).to have_field(:precise_amount_cents).of_type("Float!")
+    expect(subject).to have_field(:precise_unit_amount).of_type("Float!")
     expect(subject).to have_field(:short_name).of_type("String!")
     expect(subject).to have_field(:unit_amount_cents).of_type("BigInt!")
     expect(subject).to have_field(:pricing_unit).of_type("PricingUnit!")

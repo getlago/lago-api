@@ -29,10 +29,6 @@ RSpec.describe Coupons::UpdateService, type: :service do
   let(:applies_to) { nil }
 
   describe "#call" do
-    before do
-      allow(Utils::ActivityLog).to receive(:produce)
-    end
-
     it "updates the coupon" do
       result = update_service.call
 
@@ -51,7 +47,7 @@ RSpec.describe Coupons::UpdateService, type: :service do
     it "produces an activity log" do
       described_class.call(coupon:, params:)
 
-      expect(Utils::ActivityLog).to have_received(:produce).with(coupon, "coupon.updated")
+      expect(Utils::ActivityLog).to have_produced("coupon.updated").after_commit.with(coupon)
     end
 
     context "with validation error" do

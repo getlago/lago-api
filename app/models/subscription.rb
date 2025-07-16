@@ -2,6 +2,7 @@
 
 class Subscription < ApplicationRecord
   include PaperTrailTraceable
+  include RansackUuidSearch
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :plan, -> { with_discarded }
@@ -61,6 +62,14 @@ class Subscription < ApplicationRecord
       subscriptions.ending_at::timestamptz AT TIME ZONE
       COALESCE(customers.timezone, organizations.timezone, 'UTC')
     SQL
+  end
+
+  def self.ransackable_attributes(_ = nil)
+    %w[id name external_id]
+  end
+
+  def self.ransackable_associations(_ = nil)
+    %w[customer plan]
   end
 
   def mark_as_active!(timestamp = Time.current)
