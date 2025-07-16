@@ -6,6 +6,8 @@ module Types
       class Current < Types::BaseObject
         graphql_name "CustomerUsage"
 
+        delegate :projected_amount_cents, to: :object
+
         field :from_datetime, GraphQL::Types::ISO8601DateTime, null: false
         field :to_datetime, GraphQL::Types::ISO8601DateTime, null: false
 
@@ -13,6 +15,7 @@ module Types
         field :issuing_date, GraphQL::Types::ISO8601Date, null: false
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
+        field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :taxes_amount_cents, GraphQL::Types::BigInt, null: false
         field :total_amount_cents, GraphQL::Types::BigInt, null: false
 
