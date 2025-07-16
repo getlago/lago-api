@@ -103,19 +103,20 @@ end
 #
 # Table name: invoice_subscriptions
 #
-#  id                    :uuid             not null, primary key
-#  charges_from_datetime :datetime
-#  charges_to_datetime   :datetime
-#  from_datetime         :datetime
-#  invoicing_reason      :enum
-#  recurring             :boolean
-#  timestamp             :datetime
-#  to_datetime           :datetime
-#  created_at            :datetime         not null
-#  updated_at            :datetime         not null
-#  invoice_id            :uuid             not null
-#  organization_id       :uuid             not null
-#  subscription_id       :uuid             not null
+#  id                     :uuid             not null, primary key
+#  charges_from_datetime  :datetime
+#  charges_to_datetime    :datetime
+#  from_datetime          :datetime
+#  invoicing_reason       :enum
+#  recurring              :boolean
+#  timestamp              :datetime
+#  to_datetime            :datetime
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  invoice_id             :uuid             not null
+#  organization_id        :uuid             not null
+#  regenerated_invoice_id :uuid
+#  subscription_id        :uuid             not null
 #
 # Indexes
 #
@@ -126,7 +127,7 @@ end
 #  index_invoice_subscriptions_on_organization_id                 (organization_id)
 #  index_invoice_subscriptions_on_subscription_id                 (subscription_id)
 #  index_unique_starting_subscription_invoice                     (subscription_id,invoicing_reason) UNIQUE WHERE (invoicing_reason = 'subscription_starting'::subscription_invoicing_reason)
-#  index_unique_terminating_subscription_invoice                  (subscription_id,invoicing_reason) UNIQUE WHERE (invoicing_reason = 'subscription_terminating'::subscription_invoicing_reason)
+#  index_unique_terminating_invoice_subscription                  (subscription_id,invoicing_reason) UNIQUE WHERE ((invoicing_reason = 'subscription_terminating'::subscription_invoicing_reason) AND (regenerated_invoice_id IS NULL))
 #
 # Foreign Keys
 #

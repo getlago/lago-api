@@ -262,7 +262,7 @@ DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_organization_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_alert_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_unique_transaction_id;
-DROP INDEX IF EXISTS public.index_unique_terminating_subscription_invoice;
+DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_subscription_invoice;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
@@ -3301,7 +3301,8 @@ CREATE TABLE public.invoice_subscriptions (
     charges_from_datetime timestamp(6) without time zone,
     charges_to_datetime timestamp(6) without time zone,
     invoicing_reason public.subscription_invoicing_reason,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    regenerated_invoice_id uuid
 );
 
 
@@ -7080,10 +7081,10 @@ CREATE UNIQUE INDEX index_unique_starting_subscription_invoice ON public.invoice
 
 
 --
--- Name: index_unique_terminating_subscription_invoice; Type: INDEX; Schema: public; Owner: -
+-- Name: index_unique_terminating_invoice_subscription; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_unique_terminating_subscription_invoice ON public.invoice_subscriptions USING btree (subscription_id, invoicing_reason) WHERE (invoicing_reason = 'subscription_terminating'::public.subscription_invoicing_reason);
+CREATE UNIQUE INDEX index_unique_terminating_invoice_subscription ON public.invoice_subscriptions USING btree (subscription_id, invoicing_reason) WHERE ((invoicing_reason = 'subscription_terminating'::public.subscription_invoicing_reason) AND (regenerated_invoice_id IS NULL));
 
 
 --
@@ -9018,6 +9019,8 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250716132759'),
+('20250716132649'),
 ('20250714131519'),
 ('20250710102337'),
 ('20250709085218'),
