@@ -16,6 +16,7 @@ module Mutations
 
       def resolve(**args)
         feature = current_organization.features.find_by(id: args[:id])
+
         result = ::Entitlement::FeatureUpdateService.call(
           feature:,
           params: {
