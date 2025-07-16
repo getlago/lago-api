@@ -99,6 +99,55 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       expect(credit_note.items.count).to eq(1)
     end
 
+    context "with amount details attached to the fee" do
+      let(:subscription_fee) do
+        create(
+          :fee,
+          subscription:,
+          invoice:,
+          amount_cents: 200,
+          taxes_amount_cents: 40,
+          invoiceable_type: "Subscription",
+          invoiceable_id: subscription.id,
+          taxes_rate: tax_rate,
+          created_at: Time.zone.parse("2023-02-28 10:00"),
+          amount_details: {"plan_amount_cents" => 62}
+        )
+      end
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          customer:,
+          currency: "EUR",
+          fees_amount_cents: 200,
+          taxes_amount_cents: 40,
+          total_amount_cents: 240
+        )
+      end
+
+      it "creates a credit note based on the amount details" do
+        travel_to(terminated_at) do
+          result = create_service.call
+
+          expect(result).to be_success
+
+          credit_note = result.credit_note
+          expect(credit_note).to be_available
+          expect(credit_note).to be_order_change
+          expect(credit_note.total_amount_cents).to eq(38)
+          expect(credit_note.total_amount_currency).to eq("EUR")
+          expect(credit_note.credit_amount_cents).to eq(38)
+          expect(credit_note.credit_amount_currency).to eq("EUR")
+          expect(credit_note.balance_amount_cents).to eq(38)
+          expect(credit_note.balance_amount_currency).to eq("EUR")
+          expect(credit_note.reason).to eq("order_change")
+
+          expect(credit_note.items.count).to eq(1)
+        end
+      end
+    end
+
     context "when invoice is voided" do
       before { invoice.void! }
 
@@ -442,44 +491,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           credit_amount_cents: 17,
           balance_amount_cents: 17
         )
-      end
-    end
-
-    context "with no amount details attached to the fee" do
-      let(:subscription_fee) do
-        create(
-          :fee,
-          subscription:,
-          invoice:,
-          amount_cents: 999,
-          taxes_amount_cents: 0,
-          invoiceable_type: "Subscription",
-          invoiceable_id: subscription.id,
-          taxes_rate: tax_rate,
-          created_at: Time.zone.parse("2023-02-28 10:00")
-        )
-      end
-      let(:tax_rate) { 0 }
-
-      it "creates a credit note using the plan amount cents" do
-        travel_to(terminated_at) do
-          result = create_service.call
-
-          expect(result).to be_success
-
-          credit_note = result.credit_note
-          expect(credit_note).to be_available
-          expect(credit_note).to be_order_change
-          expect(credit_note.total_amount_cents).to eq(16)
-          expect(credit_note.total_amount_currency).to eq("EUR")
-          expect(credit_note.credit_amount_cents).to eq(16)
-          expect(credit_note.credit_amount_currency).to eq("EUR")
-          expect(credit_note.balance_amount_cents).to eq(16)
-          expect(credit_note.balance_amount_currency).to eq("EUR")
-          expect(credit_note.reason).to eq("order_change")
-
-          expect(credit_note.items.count).to eq(1)
-        end
       end
     end
 
