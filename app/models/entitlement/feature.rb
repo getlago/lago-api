@@ -11,6 +11,7 @@ module Entitlement
     has_many :privileges, class_name: "Entitlement::Privilege", foreign_key: "entitlement_feature_id", dependent: :destroy
     has_many :entitlements, class_name: "Entitlement::Entitlement", foreign_key: "entitlement_feature_id", dependent: :destroy
     has_many :entitlement_values, through: :entitlements, source: :values, class_name: "Entitlement::EntitlementValue", dependent: :destroy
+    has_many :plans, through: :entitlements
 
     validates :code, presence: true, length: {maximum: 255}
     validates :name, length: {maximum: 255}
@@ -18,6 +19,12 @@ module Entitlement
 
     def self.ransackable_attributes(_auth_object = nil)
       %w[code name description]
+    end
+
+    def subscriptions_count
+      Subscription.joins(:plan).where(plan: plans, status: [:active, :pending]).or(
+        Subscription.joins(:plan).where(plan: {parent: plans}, status: [:active, :pending])
+      ).count
     end
   end
 end
