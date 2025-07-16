@@ -53,7 +53,7 @@ class Wallet < ApplicationRecord
     allowed_fee_types.present?
   end
 
-  def limited_billable_metrics?
+  def limited_to_billable_metrics?
     billable_metrics.any?
   end
 end
