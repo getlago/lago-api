@@ -1,10 +1,14 @@
 # frozen_string_literal: true
 
 class FixedCharge < ApplicationRecord
+  include Discard::Model
+  self.discard_column = :deleted_at
+
   belongs_to :organization
   belongs_to :plan
   belongs_to :add_on
   belongs_to :parent, optional: true
+  has_many :children, class_name: "FixedCharge", foreign_key: :parent_id, dependent: :nullify
 
   CHARGE_MODELS = {
     standard: "standard",
