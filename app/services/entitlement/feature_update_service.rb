@@ -20,11 +20,6 @@ module Entitlement
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "feature") unless feature
 
-      jobs = feature.plans.map do |plan|
-        Utils::ActivityLog.produce_after_commit(plan, "plan.updated")
-        SendWebhookJob.new("plan.updated", plan)
-      end
-
       ActiveRecord::Base.transaction do
         update_feature_attributes
         delete_missing_privileges unless partial?
@@ -33,7 +28,12 @@ module Entitlement
         feature.save!
       end
 
-      # NOTE: The webhook is sent even if there was no actual change
+      jobs = feature.plans.map do |plan|
+        Utils::ActivityLog.produce_after_commit(plan, "plan.updated")
+        SendWebhookJob.new("plan.updated", plan)
+      end
+
+      # NOTE: The webhooks are sent even if there was no actual change
       after_commit do
         ActiveJob.perform_all_later(jobs)
         SendWebhookJob.perform_later("feature.updated", feature)

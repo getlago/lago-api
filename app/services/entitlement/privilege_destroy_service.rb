@@ -18,14 +18,14 @@ module Entitlement
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "privilege") unless privilege
 
-      jobs = privilege.feature.plans.map do |plan|
-        Utils::ActivityLog.produce_after_commit(plan, "plan.updated")
-        SendWebhookJob.new("plan.updated", plan)
-      end
-
       ActiveRecord::Base.transaction do
         privilege.values.discard_all!
         privilege.discard!
+      end
+
+      jobs = privilege.feature.plans.map do |plan|
+        Utils::ActivityLog.produce_after_commit(plan, "plan.updated")
+        SendWebhookJob.new("plan.updated", plan)
       end
 
       after_commit do
