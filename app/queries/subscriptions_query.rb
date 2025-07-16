@@ -61,7 +61,7 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def with_plan_code(scope)
-    scope.joins(:plan).where(plans: {code: filters.plan_code})
+    scope.joins(:plan).where(plan: {code: filters.plan_code})
   end
 
   def with_overriden(scope)
