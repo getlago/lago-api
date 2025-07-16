@@ -13,12 +13,13 @@ RSpec.describe PricingUnitUsage, type: :model do
   it { is_expected.to validate_presence_of(:conversion_rate) }
   it { is_expected.to validate_numericality_of(:conversion_rate).is_greater_than(0) }
 
-  describe ".build_from_aggregation" do
-    subject { described_class.build_from_aggregation(aggregation, applied_pricing_unit) }
+  describe ".build_from_fiat_amounts" do
+    subject { described_class.build_from_fiat_amounts(amount:, unit_amount:, applied_pricing_unit:) }
 
     let(:pricing_unit) { create(:pricing_unit) }
     let(:applied_pricing_unit) { create(:applied_pricing_unit, pricing_unit:, conversion_rate: 3.0150695) }
-    let(:aggregation) { Struct.new(:amount, :unit_amount).new(10655.243249, 5.5423123) }
+    let(:amount) { 10655.243249 }
+    let(:unit_amount) { 5.5423123 }
 
     let(:expected_attributes) do
       {

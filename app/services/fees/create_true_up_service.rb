@@ -77,18 +77,13 @@ module Fees
         return
       end
 
-      amount_cents = (prorated_min_amount_cents - used_amount_cents).round
+      amount_cents = prorated_min_amount_cents - used_amount_cents
       precise_amount_cents = prorated_min_amount_cents - used_precise_amount_cents
 
-      @pricing_unit_usage = PricingUnitUsage.new(
-        organization: fee.organization,
-        pricing_unit: charge.pricing_unit,
-        short_name: charge.pricing_unit.short_name,
-        conversion_rate: charge.applied_pricing_unit.conversion_rate,
-        amount_cents:,
-        precise_amount_cents:,
-        unit_amount_cents: amount_cents,
-        precise_unit_amount: precise_amount_cents / charge.pricing_unit.subunit_to_unit
+      @pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
+        amount: amount_cents / charge.pricing_unit.subunit_to_unit.to_d,
+        unit_amount: precise_amount_cents / charge.pricing_unit.subunit_to_unit.to_d,
+        applied_pricing_unit: charge.applied_pricing_unit
       )
     end
   end
