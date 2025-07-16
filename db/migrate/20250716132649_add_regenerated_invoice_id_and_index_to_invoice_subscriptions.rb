@@ -4,7 +4,10 @@ class AddRegeneratedInvoiceIdAndIndexToInvoiceSubscriptions < ActiveRecord::Migr
   disable_ddl_transaction!
 
   def change
-    add_column :invoice_subscriptions, :regenerated_invoice_id, :uuid
+    add_reference :invoice_subscriptions,
+      :regenerated_invoice,
+      index: {algorithm: :concurrently},
+      type: :uuid
 
     add_index :invoice_subscriptions,
       [:subscription_id, :invoicing_reason],
