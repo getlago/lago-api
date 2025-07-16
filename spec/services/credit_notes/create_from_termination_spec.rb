@@ -26,53 +26,61 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       billing_time: :calendar
     )
   end
-
   let(:plan) do
     create(
       :plan,
       :pay_in_advance,
       organization:,
-      amount_cents: 31_00,
+      amount_cents: plan_amount_cents,
       **(trial_period ? {trial_period:} : {})
     )
   end
   let(:plan_amount_cents) { 31_00 }
   let(:trial_period) { nil }
+  let(:tax) { create(:tax, organization:, rate: tax_rate) }
+  let(:tax_rate) { 20 }
+  let(:coupon_amount) { 0 }
 
-  let(:subscription_fee) do
-    create(
-      :fee,
-      subscription:,
-      invoice:,
-      amount_cents: 31_00,
-      taxes_amount_cents: 6_00,
-      invoiceable_type: "Subscription",
-      invoiceable_id: subscription.id,
-      taxes_rate: tax_rate
-    )
-  end
+  let(:fee_and_invoice) { generate_invoice_and_fee(plan_amount_cents) }
+  let(:invoice) { fee_and_invoice[:invoice] }
+  let(:subscription_fee) { fee_and_invoice[:subscription_fee] }
+  let(:invoice_applied_tax) { fee_and_invoice[:invoice_applied_tax] }
 
-  let(:invoice) do
-    create(
+  before { fee_and_invoice }
+
+  def generate_invoice_and_fee(amount_cents, coupons_amount_cents: coupon_amount, at: started_at, plan_amount_cents: nil)
+    taxes_amount_cents = ((amount_cents - coupons_amount_cents) * tax.rate / 100).round
+    invoice = create(
       :invoice,
       organization:,
       customer:,
       currency: "EUR",
-      fees_amount_cents: 31_00,
-      taxes_amount_cents: 6_00,
-      total_amount_cents: 37_00
+      coupons_amount_cents:,
+      fees_amount_cents: amount_cents,
+      total_amount_cents: amount_cents + taxes_amount_cents,
+      created_at: at
     )
-  end
+    subscription_fee = create(
+      :fee,
+      subscription:,
+      invoice:,
+      amount_cents:,
+      taxes_amount_cents:,
+      invoiceable_type: "Subscription",
+      invoiceable_id: subscription.id,
+      precise_coupons_amount_cents: coupons_amount_cents,
+      taxes_rate: tax.rate,
+      created_at: at,
+      **(plan_amount_cents ? {amount_details: {plan_amount_cents:}} : {})
+    )
+    create(:fee_applied_tax, tax:, fee: subscription_fee, amount_cents: taxes_amount_cents)
+    invoice_applied_tax = create(:invoice_applied_tax, invoice:, tax:, tax_rate: tax.rate, amount_cents: taxes_amount_cents)
 
-  let(:tax) { create(:tax, organization:, rate: tax_rate) }
-  let(:tax_rate) { 20 }
-  let(:fee_applied_tax) do
-    amount_cents = subscription_fee.amount_cents.positive? ? (subscription_fee.taxes_amount_cents / subscription_fee.amount_cents) : 0
-    create(:fee_applied_tax, tax:, tax_rate:, amount_cents: amount_cents, fee: subscription_fee)
-  end
-  let(:invoice_applied_tax) do
-    amount_cents = invoice.fees_amount_cents.positive? ? (invoice.taxes_amount_cents / invoice.fees_amount_cents) : 0
-    create(:invoice_applied_tax, invoice:, tax_rate:, tax:, amount_cents:)
+    {
+      subscription_fee:,
+      invoice:,
+      invoice_applied_tax:
+    }
   end
 
   def expect_credit_note_to_be_properly_defined(credit_note, precise_item_amount_cents:, total_amount_cents:, tax_amount_cents:, fee: subscription_fee)
@@ -102,11 +110,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
   end
 
   describe "#call" do
-    before do
-      fee_applied_tax
-      invoice_applied_tax
-    end
-
     it "creates a credit note" do
       result = create_service.call
 
@@ -114,46 +117,24 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
       credit_note = result.credit_note
 
+      # 16 days of unused subscription fee
+      # 16 * 1 euro per day + 20% tax = 19.2
       expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, precise_item_amount_cents: 16_00, tax_amount_cents: 3_20)
     end
 
     context "with amount details attached to the fee" do
-      let(:subscription_fee) do
-        create(
-          :fee,
-          subscription:,
-          invoice:,
-          amount_cents: 62_00,
-          taxes_amount_cents: 12_00,
-          invoiceable_type: "Subscription",
-          invoiceable_id: subscription.id,
-          taxes_rate: tax_rate,
-          created_at: Time.zone.parse("2023-02-28 10:00"),
-          amount_details: {"plan_amount_cents" => 62_00}
-        )
-      end
-      let(:invoice) do
-        create(
-          :invoice,
-          organization:,
-          customer:,
-          currency: "EUR",
-          fees_amount_cents: 62_00,
-          taxes_amount_cents: 12_00,
-          total_amount_cents: 74_00
-        )
-      end
+      let(:fee_and_invoice) { generate_invoice_and_fee(62_00, plan_amount_cents: 62_00) }
 
       it "creates a credit note based on the amount details" do
-        travel_to(terminated_at) do
-          result = create_service.call
+        result = create_service.call
 
-          expect(result).to be_success
+        expect(result).to be_success
 
-          credit_note = result.credit_note
+        credit_note = result.credit_note
 
-          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 38_40, precise_item_amount_cents: 32_00, tax_amount_cents: 6_40)
-        end
+        # 16 days of unused subscription fee
+        # 16 * 2 euro per day + 20% tax = 38.4
+        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 38_40, precise_item_amount_cents: 32_00, tax_amount_cents: 6_40)
       end
     end
 
@@ -166,18 +147,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     end
 
     context "when fee amount is zero" do
-      let(:subscription_fee) do
-        create(
-          :fee,
-          subscription:,
-          invoice:,
-          amount_cents: 0,
-          taxes_amount_cents: 0,
-          invoiceable_type: "Subscription",
-          invoiceable_id: subscription.id,
-          taxes_rate: tax_rate
-        )
-      end
+      let(:plan_amount_cents) { 0 }
 
       it "does not create a credit note" do
         expect { create_service.call }.not_to change(CreditNote, :count)
@@ -185,70 +155,13 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     end
 
     context "when multiple fees" do
-      let(:invoice) do
-        create(
-          :invoice,
-          organization:,
-          customer:,
-          currency: "EUR",
-          fees_amount_cents: 31_00,
-          taxes_amount_cents: 6_00,
-          total_amount_cents: 37_00,
-          created_at: Time.current - 2.months
-        )
+      let(:fee_and_invoice_2) do
+        generate_invoice_and_fee(62_00, at: Time.zone.parse("2022-10-01 10:00"), plan_amount_cents: 62_00)
       end
-      let(:subscription_fee) do
-        create(
-          :fee,
-          subscription:,
-          invoice:,
-          amount_cents: 31_00,
-          taxes_amount_cents: 6_00,
-          invoiceable_type: "Subscription",
-          invoiceable_id: subscription.id,
-          taxes_rate: tax_rate,
-          created_at: Time.current - 2.months
-        )
-      end
+      let(:invoice_2) { fee_and_invoice_2[:invoice] }
+      let(:subscription_fee_2) { fee_and_invoice_2[:subscription_fee] }
 
-      let(:invoice_2) do
-        create(
-          :invoice,
-          organization:,
-          customer:,
-          currency: "EUR",
-          fees_amount_cents: 31_00,
-          taxes_amount_cents: 6_00,
-          total_amount_cents: 37_00,
-          created_at: Time.current - 1.month
-        )
-      end
-      let(:subscription_fee_2) do
-        create(
-          :fee,
-          subscription:,
-          invoice: invoice_2,
-          amount_cents: 31_00,
-          taxes_amount_cents: 6_00,
-          invoiceable_type: "Subscription",
-          invoiceable_id: subscription.id,
-          taxes_rate: tax_rate,
-          created_at: Time.current - 1.month
-        )
-      end
-      let(:fee_applied_tax_2) do
-        amount_cents = subscription_fee_2.amount_cents.positive? ? (subscription_fee_2.taxes_amount_cents / subscription_fee_2.amount_cents) : 0
-        create(:fee_applied_tax, tax:, tax_rate:, amount_cents: amount_cents, fee: subscription_fee_2)
-      end
-      let(:invoice_applied_tax_2) do
-        amount_cents = invoice_2.fees_amount_cents.positive? ? (invoice_2.taxes_amount_cents / invoice_2.fees_amount_cents) : 0
-        create(:invoice_applied_tax, invoice: invoice_2, tax_rate:, tax:, amount_cents:)
-      end
-
-      before do
-        fee_applied_tax_2
-        invoice_applied_tax_2
-      end
+      before { fee_and_invoice_2 }
 
       it "takes the last fee as reference" do
         result = create_service.call
@@ -257,7 +170,9 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, precise_item_amount_cents: 16_00, tax_amount_cents: 3_20, fee: subscription_fee_2)
+        # 16 days of unused subscription fee
+        # 16 * 2 euro per day + 20% tax = 38.4
+        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 38_40, precise_item_amount_cents: 32_00, tax_amount_cents: 6_40, fee: subscription_fee_2)
       end
     end
 
@@ -267,17 +182,12 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           :credit_note,
           customer: subscription.customer,
           invoice: subscription_fee.invoice,
-          credit_amount_cents: 10_00
+          credit_amount_cents: 10_00,
+          taxes_amount_cents: 2_00
         )
       end
-
       let(:credit_note_item) do
-        create(
-          :credit_note_item,
-          credit_note:,
-          fee: subscription_fee,
-          amount_cents: 10_00
-        )
+        create(:credit_note_item, credit_note:, fee: subscription_fee, amount_cents: 10_00, precise_amount_cents: 10_00)
       end
 
       before { credit_note_item }
@@ -289,6 +199,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
+        # 16 days of unused subscription fee
+        # 16 * 1 euro per day - 10 euro already credited + 20% tax = 7.2
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 7_20, precise_item_amount_cents: 6_00, tax_amount_cents: 1_20)
       end
     end
@@ -303,6 +215,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
+        # 15 days of unused subscription fee
+        # 15 * 1 euro per day + 20% tax = 18
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 18_00, precise_item_amount_cents: 15_00, tax_amount_cents: 3_00)
       end
 
@@ -341,6 +255,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
           credit_note = result.credit_note
 
+          # 17 days of unused subscription fee
+          # 17 * 1 euro per day + 20% tax = 20.4
           expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 20_40, precise_item_amount_cents: 17_00, tax_amount_cents: 3_40)
         end
       end
@@ -355,6 +271,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
           credit_note = result.credit_note
 
+          # 16 days of unused subscription fee
+          # 16 * 1 euro per day + 20% tax = 19.2
           expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, precise_item_amount_cents: 16_00, tax_amount_cents: 3_20)
         end
       end
@@ -378,33 +296,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         )
       end
 
-      let(:plan_amount_cents) { 9_99 }
-
-      let(:invoice) do
-        create(
-          :invoice,
-          customer:,
-          currency: "EUR",
-          fees_amount_cents: 9_99,
-          taxes_amount_cents: 0,
-          total_amount_cents: 9_99
-        )
-      end
-
-      let(:subscription_fee) do
-        create(
-          :fee,
-          subscription:,
-          invoice:,
-          amount_cents: 999,
-          taxes_amount_cents: 0,
-          invoiceable_type: "Subscription",
-          invoiceable_id: subscription.id,
-          taxes_rate: tax_rate,
-          created_at: Time.zone.parse("2023-02-28 10:00"),
-          amount_details: {"plan_amount_cents" => 9_99}
-        )
-      end
+      let(:plan_amount_cents) { 99_9 }
       let(:tax_rate) { 0 }
 
       it "creates a credit note" do
@@ -414,39 +306,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
+        # 15 days of unused subscription fee out of 30 days
+        # 15 * (9.99/30) euro per day + 0% tax = 4.99
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 4_99, precise_item_amount_cents: 4_99.49999, tax_amount_cents: 0)
       end
     end
 
     context "with a coupon applied to the invoice" do
-      let(:invoice) do
-        create(
-          :invoice,
-          organization:,
-          customer:,
-          currency: "EUR",
-          fees_amount_cents: 31_00,
-          total_amount_cents: 37_00,
-          coupons_amount_cents: 10_00,
-          taxes_amount_cents: 6_00,
-          taxes_rate: tax_rate
-        )
-      end
-
-      let(:subscription_fee) do
-        create(
-          :fee,
-          subscription:,
-          invoice:,
-          amount_cents: 31_00,
-          taxes_amount_cents: 6_00,
-          invoiceable_type: "Subscription",
-          invoiceable_id: subscription.id,
-          taxes_rate: tax_rate,
-          precise_coupons_amount_cents: 10_00,
-          amount_details: {"plan_amount_cents" => plan.amount_cents}
-        )
-      end
+      let(:coupon_amount) { 10_00 }
 
       it "takes the coupon into account" do
         result = create_service.call
@@ -455,6 +322,8 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
+        # 16 days of unused subscription fee
+        # (16 * 1 euro per day - (10 euro coupon * 16/31)) + 20% tax = 13.01
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 13_01, precise_item_amount_cents: 16_00, tax_amount_cents: 2_17)
       end
     end
@@ -464,6 +333,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
       it "builds a credit note" do
         result = create_service.call
+
         expect(result).to be_success
 
         credit_note = result.credit_note
