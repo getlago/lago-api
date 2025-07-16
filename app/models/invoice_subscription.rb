@@ -125,6 +125,7 @@ end
 #  index_invoice_subscriptions_on_invoice_id                      (invoice_id)
 #  index_invoice_subscriptions_on_invoice_id_and_subscription_id  (invoice_id,subscription_id) UNIQUE WHERE (created_at >= '2023-11-23 00:00:00'::timestamp without time zone)
 #  index_invoice_subscriptions_on_organization_id                 (organization_id)
+#  index_invoice_subscriptions_on_regenerated_invoice_id          (regenerated_invoice_id)
 #  index_invoice_subscriptions_on_subscription_id                 (subscription_id)
 #  index_unique_starting_subscription_invoice                     (subscription_id,invoicing_reason) UNIQUE WHERE (invoicing_reason = 'subscription_starting'::subscription_invoicing_reason)
 #  index_unique_terminating_invoice_subscription                  (subscription_id,invoicing_reason) UNIQUE WHERE ((invoicing_reason = 'subscription_terminating'::subscription_invoicing_reason) AND (regenerated_invoice_id IS NULL))
@@ -133,5 +134,6 @@ end
 #
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
+#  fk_rails_...  (regenerated_invoice_id => invoices.id)
 #  fk_rails_...  (subscription_id => subscriptions.id)
 #
