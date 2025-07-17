@@ -22,9 +22,8 @@ module Entitlement
     end
 
     def subscriptions_count
-      Subscription.joins(:plan).where(plan: plans, status: [:active, :pending]).or(
-        Subscription.joins(:plan).where(plan: {parent: plans}, status: [:active, :pending])
-      ).count
+      base_scope = Subscription.joins(:plan).where(status: [:active, :pending])
+      base_scope.where(plan: plans).or(base_scope.where(plan: {parent: plans})).count
     end
   end
 end
