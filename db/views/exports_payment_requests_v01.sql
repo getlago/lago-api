@@ -17,6 +17,7 @@ SELECT
             SELECT p.id
             FROM payments AS p
             WHERE p.payable_id = pr.id AND p.payable_type = 'PaymentRequest'
+            ORDER BY p.created_at
         )
     ) AS payment_ids,
     to_json(
