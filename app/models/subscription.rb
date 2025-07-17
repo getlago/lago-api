@@ -18,6 +18,7 @@ class Subscription < ApplicationRecord
   has_many :fees
   has_many :daily_usages
   has_many :usage_thresholds, through: :plan
+  has_many :subscription_fixed_charge_units_overrides, dependent: :destroy
 
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
