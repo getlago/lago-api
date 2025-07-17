@@ -3,44 +3,59 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Subscriptions::Terminate, type: :graphql do
+  subject(:result) do
+    execute_query(
+      query: mutation,
+      input: input
+    )
+  end
+
   let(:required_permission) { "subscriptions:update" }
   let(:membership) { create(:membership) }
-  let(:subscription) { create(:subscription, organization: membership.organization) }
+  let(:organization) { membership.organization }
+  let(:subscription) { create(:subscription, organization:) }
   let(:mutation) do
     <<~GQL
       mutation($input: TerminateSubscriptionInput!) {
         terminateSubscription(input: $input) {
           id,
           status,
-          terminatedAt
+          terminatedAt,
+          onTerminationCreditNote
         }
       }
     GQL
   end
+  let(:input) { {id: subscription.id} }
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "subscriptions:update"
 
-  it "terminates a subscription" do
-    result = execute_graphql(
-      current_user: membership.user,
-      current_organization: membership.organization,
-      permissions: required_permission,
-      query: mutation,
-      variables: {
-        input: {
-          id: subscription.id
-        }
-      }
-    )
+  context "when plan is pay in advance" do
+    let(:subscription) { create(:subscription, organization:, plan: create(:plan, :pay_in_advance)) }
 
-    result_data = result["data"]["terminateSubscription"]
+    it "terminates a subscription" do
+      result_data = result["data"]["terminateSubscription"]
 
-    aggregate_failures do
       expect(result_data["id"]).to eq(subscription.id)
       expect(result_data["status"]).to eq("terminated")
       expect(result_data["terminatedAt"]).to be_present
+      expect(result_data["onTerminationCreditNote"]).to eq("credit")
+    end
+
+    context "when on_termination_credit_note is provided" do
+      let(:input) { {id: subscription.id, onTerminationCreditNote: "skip"} }
+
+      it "creates a credit note" do
+        result_data = result["data"]["terminateSubscription"]
+
+        expect(result_data["id"]).to eq(subscription.id)
+        expect(result_data["status"]).to eq("terminated")
+        expect(result_data["terminatedAt"]).to be_present
+        expect(result_data["onTerminationCreditNote"]).to eq("skip")
+        expect(subscription.reload.on_termination_credit_note).to eq("skip")
+      end
     end
   end
 end
