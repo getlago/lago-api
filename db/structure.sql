@@ -2442,7 +2442,7 @@ CREATE TABLE public.plans (
     deleted_at timestamp(6) without time zone,
     pending_deletion boolean DEFAULT false NOT NULL,
     invoice_display_name character varying,
-    bill_fixed_charges_monthly boolean DEFAULT false NOT NULL
+    bill_fixed_charges_monthly boolean DEFAULT false
 );
 
 
@@ -6813,7 +6813,7 @@ CREATE UNIQUE INDEX index_payments_on_provider_payment_id_and_payment_provider_i
 -- Name: index_plans_on_bill_fixed_charges_monthly; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_plans_on_bill_fixed_charges_monthly ON public.plans USING btree (bill_fixed_charges_monthly);
+CREATE INDEX index_plans_on_bill_fixed_charges_monthly ON public.plans USING btree (bill_fixed_charges_monthly) WHERE ((deleted_at IS NULL) AND (bill_fixed_charges_monthly IS TRUE));
 
 
 --

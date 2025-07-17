@@ -122,7 +122,7 @@ end
 #  amount_cents               :bigint           not null
 #  amount_currency            :string           not null
 #  bill_charges_monthly       :boolean
-#  bill_fixed_charges_monthly :boolean          default(FALSE), not null
+#  bill_fixed_charges_monthly :boolean          default(FALSE)
 #  code                       :string           not null
 #  deleted_at                 :datetime
 #  description                :string
@@ -139,7 +139,7 @@ end
 #
 # Indexes
 #
-#  index_plans_on_bill_fixed_charges_monthly  (bill_fixed_charges_monthly)
+#  index_plans_on_bill_fixed_charges_monthly  (bill_fixed_charges_monthly) WHERE ((deleted_at IS NULL) AND (bill_fixed_charges_monthly IS TRUE))
 #  index_plans_on_created_at                  (created_at)
 #  index_plans_on_deleted_at                  (deleted_at)
 #  index_plans_on_organization_id             (organization_id)
