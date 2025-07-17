@@ -13,5 +13,8 @@ RSpec.describe SubscriptionFixedChargeUnitsOverride, type: :model do
   it { is_expected.to belong_to(:subscription) }
   it { is_expected.to belong_to(:fixed_charge) }
 
-  it { is_expected.to validate_numericality_of(:units).is_greater_than_or_equal_to(0) }
+  describe "validations" do
+    it { is_expected.to validate_presence_of(:units) }
+    it { is_expected.to validate_numericality_of(:units).is_greater_than_or_equal_to(0) }
+  end
 end
