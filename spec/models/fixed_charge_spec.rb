@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe FixedCharge, type: :model do
   subject { build(:fixed_charge) }
+
   it_behaves_like "paper_trail traceable"
 
   it { expect(described_class).to be_soft_deletable }
