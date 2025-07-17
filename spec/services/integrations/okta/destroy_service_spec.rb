@@ -54,5 +54,16 @@ RSpec.describe Integrations::Okta::DestroyService, type: :service do
         end
       end
     end
+
+    context "when okta authentication is disabled" do
+      before do
+        organization.update(authentication_methods: ["email_password"])
+      end
+
+      it "destroys the integration" do
+        expect { destroy_service.call }
+          .to change(Integrations::BaseIntegration, :count).by(-1)
+      end
+    end
   end
 end

@@ -11,7 +11,8 @@ module Integrations
           result = super
 
           if result.success?
-            result.integration.organization.disable_okta_authentication!
+            organization = result.integration.organization
+            organization.disable_okta_authentication! if organization.okta_authentication_enabled?
           end
 
           result
@@ -21,7 +22,7 @@ module Integrations
       private
 
       def can_destroy?
-        integration.organization.authentication_methods.size > 1
+        (integration.organization.authentication_methods - [Organizations::AuthenticationMethods::OKTA]).size >= 1
       end
     end
   end
