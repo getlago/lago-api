@@ -41,7 +41,7 @@ class Fee < ApplicationRecord
   monetize :unit_amount_cents, disable_validation: true, allow_nil: true, with_model_currency: :currency
 
   # TODO: Deprecate add_on type in the near future
-  FEE_TYPES = %i[charge add_on subscription credit commitment].freeze
+  FEE_TYPES = %i[charge add_on subscription credit commitment fixed_charge].freeze
   PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
 
   enum :fee_type, FEE_TYPES
@@ -86,6 +86,7 @@ class Fee < ApplicationRecord
     return billable_metric.id if charge?
     return add_on.id if add_on?
     return invoiceable_id if credit?
+    return fixed_charge_add_on.id if fixed_charge?
 
     subscription_id
   end
@@ -94,6 +95,7 @@ class Fee < ApplicationRecord
     return BillableMetric.name if charge?
     return AddOn.name if add_on?
     return WalletTransaction.name if credit?
+    return AddOn.name if fixed_charge?
 
     Subscription.name
   end
@@ -102,6 +104,7 @@ class Fee < ApplicationRecord
     return billable_metric.code if charge?
     return add_on.code if add_on?
     return fee_type if credit?
+    return fixed_charge_add_on.code if fixed_charge?
 
     subscription.plan.code
   end
@@ -110,6 +113,7 @@ class Fee < ApplicationRecord
     return billable_metric.name if charge?
     return add_on.name if add_on?
     return fee_type if credit?
+    return fixed_charge_add_on.name if fixed_charge?
 
     subscription.plan.name
   end
@@ -118,6 +122,7 @@ class Fee < ApplicationRecord
     return billable_metric.description if charge?
     return add_on.description if add_on?
     return fee_type if credit?
+    return fixed_charge_add_on.description if fixed_charge?
 
     subscription.plan.description
   end
@@ -127,6 +132,7 @@ class Fee < ApplicationRecord
     return charge.invoice_display_name.presence || billable_metric.name if charge?
     return add_on.invoice_name if add_on?
     return fee_type if credit?
+    return fixed_charge.invoice_display_name.presence || fixed_charge_add_on.invoice_name if fixed_charge?
 
     subscription.plan.invoice_display_name
   end
