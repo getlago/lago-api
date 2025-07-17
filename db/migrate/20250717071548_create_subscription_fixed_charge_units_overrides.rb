@@ -11,7 +11,9 @@ class CreateSubscriptionFixedChargeUnitsOverrides < ActiveRecord::Migration[8.0]
       t.decimal :units, precision: 30, scale: 10, null: false, default: 0.0
       t.datetime :deleted_at, index: true
 
-      t.index [:subscription_id, :fixed_charge_id], unique: true
+      t.index [:subscription_id, :fixed_charge_id],
+        unique: true,
+        where: "deleted_at IS NULL"
 
       t.timestamps
     end

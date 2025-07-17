@@ -34,6 +34,7 @@ end
 #  idx_on_fixed_charge_id_06503ae1a5                              (fixed_charge_id)
 #  idx_on_organization_id_e742f77454                              (organization_id)
 #  idx_on_subscription_id_bd763c5aa3                              (subscription_id)
+#  idx_on_subscription_id_fixed_charge_id_d85b30a9bf              (subscription_id,fixed_charge_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_subscription_fixed_charge_units_overrides_on_deleted_at  (deleted_at)
 #
 # Foreign Keys
