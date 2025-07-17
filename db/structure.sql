@@ -602,6 +602,7 @@ DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_recurring_756a2a370
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_78eb24d06c;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_4290c95dec;
 DROP INDEX IF EXISTS public.idx_on_timestamp_charge_id_external_subscription_id;
+DROP INDEX IF EXISTS public.idx_on_subscription_id_fixed_charge_id_d85b30a9bf;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_bd763c5aa3;
 DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
 DROP INDEX IF EXISTS public.idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167;
@@ -4940,6 +4941,13 @@ CREATE INDEX idx_on_subscription_id_bd763c5aa3 ON public.subscription_fixed_char
 
 
 --
+-- Name: idx_on_subscription_id_fixed_charge_id_d85b30a9bf; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_subscription_id_fixed_charge_id_d85b30a9bf ON public.subscription_fixed_charge_units_overrides USING btree (subscription_id, fixed_charge_id) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: idx_on_timestamp_charge_id_external_subscription_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6952,11 +6960,7 @@ CREATE UNIQUE INDEX index_payments_on_provider_payment_id_and_payment_provider_i
 -- Name: index_plans_on_bill_fixed_charges_monthly; Type: INDEX; Schema: public; Owner: -
 --
 
-<<<<<<< HEAD
 CREATE INDEX index_plans_on_bill_fixed_charges_monthly ON public.plans USING btree (bill_fixed_charges_monthly) WHERE ((deleted_at IS NULL) AND (bill_fixed_charges_monthly IS TRUE));
-=======
-CREATE INDEX index_plans_on_bill_fixed_charges_monthly ON public.plans USING btree (bill_fixed_charges_monthly);
->>>>>>> 8c87414ee (add subscription_fixed_charge_units_override)
 
 
 --
