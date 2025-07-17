@@ -23,6 +23,7 @@ ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF E
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_ecb466254b;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_eaca9421be;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ea80151038;
+ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_e95f72749e;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_e8bac9c5bb;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_e88403f4b9;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
@@ -67,6 +68,7 @@ ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_ab16de0b32;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_aaa12f7d3e;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_aa34dd5db6;
+ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_aa04ceacf6;
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
@@ -133,6 +135,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62d18ea517;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
+ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_5e06da3c18;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_5cb67dee79;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_5cb2f24c3d;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_5c2e0b6d34;
@@ -413,6 +416,11 @@ DROP INDEX IF EXISTS public.index_group_properties_on_group_id;
 DROP INDEX IF EXISTS public.index_group_properties_on_deleted_at;
 DROP INDEX IF EXISTS public.index_group_properties_on_charge_id_and_group_id;
 DROP INDEX IF EXISTS public.index_group_properties_on_charge_id;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_plan_id;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_parent_id;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_organization_id;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_deleted_at;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id_and_tax_id;
@@ -668,6 +676,7 @@ ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS inb
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS idempotency_records_pkey;
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS groups_pkey;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS group_properties_pkey;
+ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fixed_charges_pkey;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fees_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fees_pkey;
 ALTER TABLE IF EXISTS ONLY public.events DROP CONSTRAINT IF EXISTS events_pkey;
@@ -761,6 +770,7 @@ DROP TABLE IF EXISTS public.idempotency_records;
 DROP TABLE IF EXISTS public.groups;
 DROP TABLE IF EXISTS public.group_properties;
 DROP VIEW IF EXISTS public.flat_filters;
+DROP TABLE IF EXISTS public.fixed_charges;
 DROP VIEW IF EXISTS public.exports_wallets;
 DROP TABLE IF EXISTS public.wallets;
 DROP VIEW IF EXISTS public.exports_wallet_transactions;
@@ -3052,6 +3062,28 @@ CREATE VIEW public.exports_wallets AS
 
 
 --
+-- Name: fixed_charges; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.fixed_charges (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    add_on_id uuid NOT NULL,
+    parent_id uuid,
+    charge_model public.fixed_charge_charge_model DEFAULT 'standard'::public.fixed_charge_charge_model NOT NULL,
+    properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    invoice_display_name character varying,
+    pay_in_advance boolean DEFAULT false NOT NULL,
+    prorated boolean DEFAULT false NOT NULL,
+    units numeric(30,10) DEFAULT 0.0 NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: flat_filters; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -4229,6 +4261,14 @@ ALTER TABLE ONLY public.fees
 
 ALTER TABLE ONLY public.fees_taxes
     ADD CONSTRAINT fees_taxes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: fixed_charges fixed_charges_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charges
+    ADD CONSTRAINT fixed_charges_pkey PRIMARY KEY (id);
 
 
 --
@@ -6065,6 +6105,41 @@ CREATE INDEX index_fees_taxes_on_organization_id ON public.fees_taxes USING btre
 --
 
 CREATE INDEX index_fees_taxes_on_tax_id ON public.fees_taxes USING btree (tax_id);
+
+
+--
+-- Name: index_fixed_charges_on_add_on_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charges_on_add_on_id ON public.fixed_charges USING btree (add_on_id);
+
+
+--
+-- Name: index_fixed_charges_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charges_on_deleted_at ON public.fixed_charges USING btree (deleted_at);
+
+
+--
+-- Name: index_fixed_charges_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charges_on_organization_id ON public.fixed_charges USING btree (organization_id);
+
+
+--
+-- Name: index_fixed_charges_on_parent_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charges_on_parent_id ON public.fixed_charges USING btree (parent_id);
+
+
+--
+-- Name: index_fixed_charges_on_plan_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charges_on_plan_id ON public.fixed_charges USING btree (plan_id);
 
 
 --
@@ -8059,6 +8134,14 @@ ALTER TABLE ONLY public.credit_notes
 
 
 --
+-- Name: fixed_charges fk_rails_5e06da3c18; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charges
+    ADD CONSTRAINT fk_rails_5e06da3c18 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
+
+
+--
 -- Name: fees fk_rails_6023b3f2dd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8587,6 +8670,14 @@ ALTER TABLE ONLY public.integration_items
 
 
 --
+-- Name: fixed_charges fk_rails_aa04ceacf6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charges
+    ADD CONSTRAINT fk_rails_aa04ceacf6 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: entitlement_entitlement_values fk_rails_aa34dd5db6; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8939,6 +9030,14 @@ ALTER TABLE ONLY public.recurring_transaction_rules
 
 
 --
+-- Name: fixed_charges fk_rails_e95f72749e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charges
+    ADD CONSTRAINT fk_rails_e95f72749e FOREIGN KEY (add_on_id) REFERENCES public.add_ons(id);
+
+
+--
 -- Name: integration_customers fk_rails_ea80151038; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9058,6 +9157,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250717092012'),
+('20250716150049'),
 ('20250716143358'),
 ('20250716142613'),
 ('20250716132759'),
