@@ -34,6 +34,11 @@ RSpec.describe Entitlement::FeatureCreateService, type: :service do
       expect(result.feature.organization).to eq(organization)
     end
 
+    it "produces an activity log" do
+      result = subject
+      expect(Utils::ActivityLog).to have_produced("feature.created").after_commit.with(result.feature)
+    end
+
     it "sends feature.created webhook" do
       expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.created", instance_of(Entitlement::Feature))
     end

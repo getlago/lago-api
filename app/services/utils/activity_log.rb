@@ -3,7 +3,7 @@
 module Utils
   class ActivityLog
     IGNORED_FIELDS = %i[updated_at].freeze
-    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity].freeze
+    IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity Entitlement::Feature].freeze
     SERIALIZED_INCLUDED_OBJECTS = {
       billing_entity: %i[taxes],
       credit_note: %i[items applied_taxes error_details],

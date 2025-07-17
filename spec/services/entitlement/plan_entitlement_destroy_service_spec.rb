@@ -41,6 +41,11 @@ RSpec.describe Entitlement::PlanEntitlementDestroyService, type: :service do
       expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", plan)
     end
 
+    it "produces an activity log" do
+      subject
+      expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(plan)
+    end
+
     context "when entitlement is nil" do
       subject(:result) { described_class.call(entitlement: nil) }
 

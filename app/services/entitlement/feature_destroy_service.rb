@@ -9,13 +9,16 @@ module Entitlement
       super
     end
 
+    activity_loggable(
+      action: "feature.deleted",
+      record: -> { result.feature }
+    )
+
     def call
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "feature") unless feature
 
-      jobs = feature.entitlements.select(:plan_id).distinct.pluck(:plan_id).map do |plan_id|
-        SendWebhookJob.new("plan.updated", Plan.new(id: plan_id))
-      end
+      plans = feature.plans.to_a
 
       ActiveRecord::Base.transaction do
         feature.entitlement_values.discard_all!
@@ -24,9 +27,16 @@ module Entitlement
         feature.discard!
       end
 
-      after_commit { ActiveJob.perform_all_later(jobs) }
+      jobs = []
+      plans.each do |plan|
+        Utils::ActivityLog.produce_after_commit(plan, "plan.updated")
+        jobs << SendWebhookJob.new("plan.updated", plan)
+      end
 
-      SendWebhookJob.perform_after_commit("feature.deleted", feature)
+      after_commit do
+        ActiveJob.perform_all_later(jobs)
+        SendWebhookJob.perform_later("feature.deleted", feature)
+      end
 
       result.feature = feature
       result

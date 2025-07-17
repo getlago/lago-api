@@ -13,6 +13,7 @@ RSpec.describe Entitlement::Feature, type: :model do
       expect(subject).to have_many(:privileges).class_name("Entitlement::Privilege").dependent(:destroy)
       expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement").dependent(:destroy)
       expect(subject).to have_many(:entitlement_values).through(:entitlements).source(:values).class_name("Entitlement::EntitlementValue").dependent(:destroy)
+      expect(subject).to have_many(:plans).through(:entitlements)
     end
   end
 

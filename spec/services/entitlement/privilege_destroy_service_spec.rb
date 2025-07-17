@@ -33,6 +33,11 @@ RSpec.describe Entitlement::PrivilegeDestroyService, type: :service do
       expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.updated", feature)
     end
 
+    it "produces an activity log" do
+      subject
+      expect(Utils::ActivityLog).to have_produced("feature.updated").after_commit.with(feature)
+    end
+
     context "when privilege is nil" do
       it "returns a not found failure" do
         result = described_class.call(privilege: nil)
@@ -65,6 +70,11 @@ RSpec.describe Entitlement::PrivilegeDestroyService, type: :service do
 
       it "sends `plan.updated` webhook" do
         expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", entitlement.plan)
+      end
+
+      it "produces plan.updated logs" do
+        subject
+        expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(entitlement.plan)
       end
     end
   end
