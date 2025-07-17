@@ -20,6 +20,11 @@ module Entitlement
     def self.ransackable_attributes(_auth_object = nil)
       %w[code name description]
     end
+
+    def subscriptions_count
+      base_scope = Subscription.joins(:plan).where(status: [:active, :pending])
+      base_scope.where(plan: plans).or(base_scope.where(plan: {parent: plans})).count
+    end
   end
 end
 

@@ -4976,6 +4976,7 @@ type FeatureObject {
   id: ID!
   name: String
   privileges: [PrivilegeObject!]!
+  subscriptionsCount: Int!
 }
 
 """
