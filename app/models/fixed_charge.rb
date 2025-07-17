@@ -26,8 +26,8 @@ class FixedCharge < ApplicationRecord
 
   validates :units, numericality: {greater_than_or_equal_to: 0}
   validates :charge_model, presence: true
-  validates :pay_in_advance, inclusion: { in: [true, false] }
-  validates :prorated, inclusion: { in: [true, false] }
+  validates :pay_in_advance, inclusion: {in: [true, false]}
+  validates :prorated, inclusion: {in: [true, false]}
   validates :properties, presence: true
 end
 
