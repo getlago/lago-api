@@ -13,6 +13,8 @@ class FixedCharge < ApplicationRecord
   belongs_to :parent, class_name: "FixedCharge", optional: true
   has_many :children, class_name: "FixedCharge", foreign_key: :parent_id, dependent: :nullify
 
+  scope :pay_in_advance, -> { where(pay_in_advance: true) }
+
   CHARGE_MODELS = {
     standard: "standard",
     graduated: "graduated",
@@ -20,8 +22,13 @@ class FixedCharge < ApplicationRecord
   }.freeze
 
   enum :charge_model, CHARGE_MODELS
-  validates :units, numericality: {greater_than_or_equal_to: 0}
   delegate :code, to: :add_on
+
+  validates :units, numericality: {greater_than_or_equal_to: 0}
+  validates :charge_model, presence: true
+  validates :pay_in_advance, inclusion: { in: [true, false] }
+  validates :prorated, inclusion: { in: [true, false] }
+  validates :properties, presence: true
 end
 
 # == Schema Information
