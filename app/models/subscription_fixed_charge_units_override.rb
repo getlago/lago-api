@@ -11,7 +11,7 @@ class SubscriptionFixedChargeUnitsOverride < ApplicationRecord
   belongs_to :subscription
   belongs_to :fixed_charge
 
-  validates :units, numericality: {greater_than_or_equal_to: 0}
+  validates :units, presence: true, numericality: {greater_than_or_equal_to: 0}
 end
 
 # == Schema Information
