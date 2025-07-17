@@ -745,8 +745,6 @@ DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.quantified_events;
 DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
-DROP TABLE IF EXISTS public.payments;
-DROP TABLE IF EXISTS public.payment_requests;
 DROP TABLE IF EXISTS public.payment_receipts;
 DROP TABLE IF EXISTS public.payment_providers;
 DROP TABLE IF EXISTS public.payment_intents;
@@ -754,7 +752,6 @@ DROP TABLE IF EXISTS public.password_resets;
 DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
-DROP TABLE IF EXISTS public.invoices_payment_requests;
 DROP TABLE IF EXISTS public.invoice_subscriptions;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
@@ -780,6 +777,11 @@ DROP TABLE IF EXISTS public.taxes;
 DROP VIEW IF EXISTS public.exports_subscriptions;
 DROP VIEW IF EXISTS public.exports_plans;
 DROP TABLE IF EXISTS public.plans_taxes;
+DROP VIEW IF EXISTS public.exports_payments;
+DROP VIEW IF EXISTS public.exports_payment_requests;
+DROP TABLE IF EXISTS public.payments;
+DROP TABLE IF EXISTS public.payment_requests;
+DROP TABLE IF EXISTS public.invoices_payment_requests;
 DROP VIEW IF EXISTS public.exports_invoices_taxes;
 DROP TABLE IF EXISTS public.invoices_taxes;
 DROP VIEW IF EXISTS public.exports_invoices;
@@ -2805,6 +2807,124 @@ CREATE VIEW public.exports_invoices_taxes AS
 
 
 --
+-- Name: invoices_payment_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoices_payment_requests (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    invoice_id uuid NOT NULL,
+    payment_request_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid NOT NULL
+);
+
+
+--
+-- Name: payment_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_requests (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    customer_id uuid NOT NULL,
+    amount_cents bigint DEFAULT 0 NOT NULL,
+    amount_currency character varying NOT NULL,
+    email character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid NOT NULL,
+    payment_status integer DEFAULT 0 NOT NULL,
+    payment_attempts integer DEFAULT 0 NOT NULL,
+    ready_for_payment_processing boolean DEFAULT true NOT NULL,
+    dunning_campaign_id uuid
+);
+
+
+--
+-- Name: payments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    invoice_id uuid,
+    payment_provider_id uuid,
+    payment_provider_customer_id uuid,
+    amount_cents bigint NOT NULL,
+    amount_currency character varying NOT NULL,
+    provider_payment_id character varying,
+    status character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    payable_type character varying DEFAULT 'Invoice'::character varying NOT NULL,
+    payable_id uuid,
+    provider_payment_data jsonb DEFAULT '{}'::jsonb,
+    payable_payment_status public.payment_payable_payment_status,
+    payment_type public.payment_type DEFAULT 'provider'::public.payment_type NOT NULL,
+    reference character varying,
+    provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
+    provider_payment_method_id character varying,
+    organization_id uuid NOT NULL,
+    customer_id uuid
+);
+
+
+--
+-- Name: exports_payment_requests; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_payment_requests AS
+ SELECT pr.organization_id,
+    pr.id AS lago_id,
+    pr.customer_id AS lago_customer_id,
+    pr.payment_attempts,
+    pr.amount_cents,
+    pr.amount_currency,
+    pr.email,
+    pr.ready_for_payment_processing,
+        CASE pr.payment_status
+            WHEN 0 THEN 'pending'::text
+            WHEN 1 THEN 'succeeded'::text
+            WHEN 2 THEN 'failed'::text
+            ELSE NULL::text
+        END AS payment_status,
+    to_json(ARRAY( SELECT p.id
+           FROM public.payments p
+          WHERE ((p.payable_id = pr.id) AND ((p.payable_type)::text = 'PaymentRequest'::text)))) AS payment_ids,
+    to_json(ARRAY( SELECT apr.invoice_id
+           FROM public.invoices_payment_requests apr
+          WHERE (apr.payment_request_id = pr.id))) AS invoice_ids,
+    pr.created_at,
+    pr.updated_at
+   FROM public.payment_requests pr;
+
+
+--
+-- Name: exports_payments; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_payments AS
+ SELECT p.organization_id,
+    p.id AS lago_id,
+    p.amount_cents,
+    p.amount_currency,
+    (p.payable_payment_status)::text AS payment_status,
+    (p.payment_type)::text AS payment_type,
+    p.reference,
+    p.provider_payment_id AS external_payment_id,
+    (p.created_at)::timestamp with time zone AS created_at,
+    (p.updated_at)::timestamp with time zone AS updated_at,
+        CASE
+            WHEN ((p.payable_type)::text = 'Invoice'::text) THEN to_json(ARRAY[p.payable_id])
+            WHEN ((p.payable_type)::text = 'PaymentRequest'::text) THEN to_json(ARRAY( SELECT ai.invoice_id
+               FROM public.invoices_payment_requests ai
+              WHERE (ai.payment_request_id = p.payable_id)
+              ORDER BY ai.created_at))
+            ELSE to_json(ARRAY[]::uuid[])
+        END AS invoice_ids
+   FROM public.payments p;
+
+
+--
 -- Name: plans_taxes; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3355,20 +3475,6 @@ CREATE TABLE public.invoice_subscriptions (
 
 
 --
--- Name: invoices_payment_requests; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoices_payment_requests (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_id uuid NOT NULL,
-    payment_request_id uuid NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL
-);
-
-
---
 -- Name: last_hour_events_mv; Type: MATERIALIZED VIEW; Schema: public; Owner: -
 --
 
@@ -3497,54 +3603,6 @@ CREATE TABLE public.payment_receipts (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     billing_entity_id uuid NOT NULL
-);
-
-
---
--- Name: payment_requests; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.payment_requests (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    customer_id uuid NOT NULL,
-    amount_cents bigint DEFAULT 0 NOT NULL,
-    amount_currency character varying NOT NULL,
-    email character varying,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL,
-    payment_status integer DEFAULT 0 NOT NULL,
-    payment_attempts integer DEFAULT 0 NOT NULL,
-    ready_for_payment_processing boolean DEFAULT true NOT NULL,
-    dunning_campaign_id uuid
-);
-
-
---
--- Name: payments; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.payments (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_id uuid,
-    payment_provider_id uuid,
-    payment_provider_customer_id uuid,
-    amount_cents bigint NOT NULL,
-    amount_currency character varying NOT NULL,
-    provider_payment_id character varying,
-    status character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    payable_type character varying DEFAULT 'Invoice'::character varying NOT NULL,
-    payable_id uuid,
-    provider_payment_data jsonb DEFAULT '{}'::jsonb,
-    payable_payment_status public.payment_payable_payment_status,
-    payment_type public.payment_type DEFAULT 'provider'::public.payment_type NOT NULL,
-    reference character varying,
-    provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
-    provider_payment_method_id character varying,
-    organization_id uuid NOT NULL,
-    customer_id uuid
 );
 
 
@@ -9156,6 +9214,8 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250717153848'),
+('20250717142440'),
 ('20250717092012'),
 ('20250716150049'),
 ('20250716143358'),
