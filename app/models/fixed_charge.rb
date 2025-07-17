@@ -17,8 +17,6 @@ class FixedCharge < ApplicationRecord
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
 
-  scope :pay_in_advance, -> { where(pay_in_advance: true) }
-
   CHARGE_MODELS = {
     standard: "standard",
     graduated: "graduated",
