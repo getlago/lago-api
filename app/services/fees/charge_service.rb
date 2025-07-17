@@ -118,7 +118,12 @@ module Fees
       # NOTE: amount_result should be a BigDecimal, we need to round it
       # to the currency decimals and transform it into currency cents
       if charge.applied_pricing_unit
-        pricing_unit_usage = PricingUnitUsage.build_from_aggregation(amount_result, charge.applied_pricing_unit)
+        pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
+          amount: amount_result.amount,
+          unit_amount: amount_result.unit_amount,
+          applied_pricing_unit: charge.applied_pricing_unit
+        )
+
         amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
           .to_fiat_currency_cents(currency)
           .values_at(:amount_cents, :precise_amount_cents, :unit_amount_cents, :precise_unit_amount)

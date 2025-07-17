@@ -502,7 +502,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         create(
           :applied_pricing_unit,
           organization: subscription.organization,
-          conversion_rate: 0.25,
+          conversion_rate: 0.5,
           pricing_unitable: charge
         )
       end
@@ -519,7 +519,7 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           organization_id: organization.id,
           billing_entity_id: billing_entity.id,
           charge:,
-          amount_cents: 250,
+          amount_cents: 5,
           amount_currency: "EUR",
           fee_type: "charge",
           pay_in_advance: true,
@@ -532,11 +532,11 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
           payment_status: "pending",
           unit_amount_cents: 0,
           taxes_rate: 20.0,
-          taxes_amount_cents: 50
+          taxes_amount_cents: 1
         )
-        expect(fee.precise_amount_cents.to_f).to eq(250.0)
-        expect(fee.precise_unit_amount.to_f).to eq(0.0025)
-        expect(fee.taxes_precise_amount_cents.to_f).to eq(50.0)
+        expect(fee.precise_amount_cents.to_f).to eq(5.0)
+        expect(fee.precise_unit_amount.to_f).to eq(0.005)
+        expect(fee.taxes_precise_amount_cents.to_f).to eq(1.0)
         expect(result.fees.first.applied_taxes.count).to eq(1)
       end
 
@@ -546,8 +546,8 @@ RSpec.describe Fees::CreatePayInAdvanceService, type: :service do
         expect(result).to be_success
         pricing_unit_usage = result.fees.first.pricing_unit_usage
         expect(pricing_unit_usage).to be_persisted
-        expect(pricing_unit_usage.amount_cents).to eq(1000)
-        expect(pricing_unit_usage.precise_amount_cents.to_f).to eq(1000.0)
+        expect(pricing_unit_usage.amount_cents).to eq(10)
+        expect(pricing_unit_usage.precise_amount_cents.to_f).to eq(10.0)
         expect(pricing_unit_usage.unit_amount_cents).to eq(1)
       end
     end
