@@ -17,6 +17,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_f53ff93138;
 ALTER TABLE IF EXISTS ONLY public.quantified_events DROP CONSTRAINT IF EXISTS fk_rails_f510acb495;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_f435d13904;
+ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_f375d320ad;
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_f228550fda;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alert_thresholds DROP CONSTRAINT IF EXISTS fk_rails_f18cd04d51;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS fk_rails_ed387e0992;
@@ -441,6 +442,7 @@ DROP INDEX IF EXISTS public.index_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_on_invoiceable;
 DROP INDEX IF EXISTS public.index_fees_on_invoice_id;
 DROP INDEX IF EXISTS public.index_fees_on_group_id;
+DROP INDEX IF EXISTS public.index_fees_on_fixed_charge_id;
 DROP INDEX IF EXISTS public.index_fees_on_deleted_at;
 DROP INDEX IF EXISTS public.index_fees_on_charge_id_and_invoice_id;
 DROP INDEX IF EXISTS public.index_fees_on_charge_id;
@@ -2558,7 +2560,8 @@ CREATE TABLE public.fees (
     taxes_base_rate double precision DEFAULT 1.0 NOT NULL,
     organization_id uuid NOT NULL,
     billing_entity_id uuid NOT NULL,
-    precise_credit_notes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL
+    precise_credit_notes_amount_cents numeric(30,5) DEFAULT 0.0 NOT NULL,
+    fixed_charge_id uuid
 );
 
 
@@ -6373,6 +6376,13 @@ CREATE INDEX index_fees_on_deleted_at ON public.fees USING btree (deleted_at);
 
 
 --
+-- Name: index_fees_on_fixed_charge_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fees_on_fixed_charge_id ON public.fees USING btree (fixed_charge_id);
+
+
+--
 -- Name: index_fees_on_group_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9499,6 +9509,14 @@ ALTER TABLE ONLY public.payment_requests
 
 
 --
+-- Name: fees fk_rails_f375d320ad; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fees
+    ADD CONSTRAINT fk_rails_f375d320ad FOREIGN KEY (fixed_charge_id) REFERENCES public.fixed_charges(id);
+
+
+--
 -- Name: invoice_subscriptions fk_rails_f435d13904; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9569,6 +9587,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+<<<<<<< HEAD
 ('20250731145640'),
 ('20250731144632'),
 ('20250724104251'),
@@ -9583,6 +9602,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250721091802'),
 ('20250718174008'),
 ('20250718140450'),
+('20250717142942'),
+('20250717140238'),
 ('20250717092012'),
 ('20250717071548'),
 ('20250716150049'),
