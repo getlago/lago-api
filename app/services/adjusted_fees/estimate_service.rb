@@ -46,7 +46,11 @@ module AdjustedFees
       )
 
       adjustement_result.fee.id = SecureRandom.uuid
-      result.fee = adjustement_result.fee
+      adjusted_fee = adjustement_result.fee
+
+      Fees::ApplyTaxesService.call(fee: adjusted_fee)
+      adjusted_fee.applied_taxes
+      result.fee = adjusted_fee
       result
     end
 
