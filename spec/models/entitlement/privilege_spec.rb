@@ -132,4 +132,14 @@ RSpec.describe Entitlement::Privilege, type: :model do
       expect(privilege.config).to include("select_options" => ["option1", "option2", "option3"])
     end
   end
+
+  describe "unique code per feature" do
+    it "fails if code already exist for the feature, unless it's soft deleted" do
+      feature = create(:feature)
+      privilege = create(:privilege, feature:, code: "test")
+      expect { create(:privilege, feature:, code: "test") }.to raise_error(ActiveRecord::RecordNotUnique)
+      privilege.update! deleted_at: Time.current
+      expect { create(:privilege, feature:, code: "test") }.not_to raise_error(ActiveRecord::RecordNotUnique)
+    end
+  end
 end

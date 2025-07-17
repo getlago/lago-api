@@ -12,7 +12,10 @@ class CreateEntitlementFeaturesAndPrivileges < ActiveRecord::Migration[8.0]
       t.datetime :deleted_at
       t.timestamps
 
-      t.index %w[code organization_id], unique: true, name: "idx_features_code_unique_per_organization", where: "(deleted_at IS NULL)"
+      t.index %w[code organization_id],
+        name: "idx_features_code_unique_per_organization",
+        unique: true,
+        where: "deleted_at IS NULL"
     end
 
     create_table :entitlement_privileges, id: :uuid do |t|
@@ -25,7 +28,9 @@ class CreateEntitlementFeaturesAndPrivileges < ActiveRecord::Migration[8.0]
       t.datetime :deleted_at
       t.timestamps
 
-      t.index %w[code entitlement_feature_id], unique: true, name: "idx_privileges_code_unique_per_feature"
+      t.index %w[code entitlement_feature_id],
+        name: "idx_privileges_code_unique_per_feature",
+        unique: true
     end
   end
 end

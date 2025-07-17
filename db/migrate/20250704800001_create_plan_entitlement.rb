@@ -9,7 +9,9 @@ class CreatePlanEntitlement < ActiveRecord::Migration[8.0]
       t.datetime :deleted_at
       t.timestamps
 
-      t.index %w[entitlement_feature_id plan_id], unique: true, where: "(deleted_at IS NULL)"
+      t.index %w[entitlement_feature_id plan_id],
+        unique: true,
+        where: "deleted_at IS NULL"
     end
 
     create_table :entitlement_entitlement_values, id: :uuid do |t|
@@ -20,7 +22,9 @@ class CreatePlanEntitlement < ActiveRecord::Migration[8.0]
       t.datetime :deleted_at
       t.timestamps
 
-      t.index %w[entitlement_privilege_id entitlement_entitlement_id], unique: true, where: "(deleted_at IS NULL)"
+      t.index %w[entitlement_privilege_id entitlement_entitlement_id],
+        unique: true,
+        where: "deleted_at IS NULL"
     end
   end
 end

@@ -58,7 +58,7 @@ end
 #
 # Indexes
 #
-#  idx_privileges_code_unique_per_feature                  (code,entitlement_feature_id) UNIQUE
+#  idx_privileges_code_unique_per_feature                  (code,entitlement_feature_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_entitlement_privileges_on_entitlement_feature_id  (entitlement_feature_id)
 #  index_entitlement_privileges_on_organization_id         (organization_id)
 #
