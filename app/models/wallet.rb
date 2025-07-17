@@ -52,6 +52,10 @@ class Wallet < ApplicationRecord
   def limited_fee_types?
     allowed_fee_types.present?
   end
+
+  def limited_to_billable_metrics?
+    billable_metrics.any?
+  end
 end
 
 # == Schema Information
