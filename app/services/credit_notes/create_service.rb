@@ -227,7 +227,7 @@ module CreditNotes
 
       credit_note.precise_coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents
       credit_note.coupons_adjustment_amount_cents = taxes_result.coupons_adjustment_amount_cents.round
-      credit_note.precise_taxes_amount_cents = taxes_result.taxes_amount_cents
+      credit_note.precise_taxes_amount_cents = taxes_result.precise_taxes_amount_cents
       adjust_credit_note_tax_rounding if credit_note_for_all_remaining_amount?
 
       credit_note.taxes_amount_cents = credit_note.precise_taxes_amount_cents.round
