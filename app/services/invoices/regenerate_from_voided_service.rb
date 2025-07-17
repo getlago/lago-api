@@ -21,8 +21,9 @@ module Invoices
 
       ActiveRecord::Base.transaction do
         invoice = create_regenerated_invoice
-        process_fees(invoice)
         create_invoice_subscription(invoice) if invoice.invoice_type == "subscription"
+        process_fees(invoice)
+        adjust_feea(invoice)
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice: invoice)
         Invoices::ComputeAmountsFromFees.call(invoice: invoice)
         Invoices::TransitionToFinalStatusService.call(invoice: invoice)
@@ -60,39 +61,60 @@ module Invoices
       end
     end
 
-    def process_fees(invoice)
-      fees_params.each do |fee_params|
-        if !fee_params[:id].blank?
-          voided_fee = voided_invoice.fees.find_by(id: fee_params[:id])
-          duplicate_fee(voided_fee, fee_params, invoice) if voided_fee
-        else
-          pp "fazer esta parte"
-          ##create_new_fee(fee, invoice)
-        end
+    def adjust_feea(invoice)
+      invoice.fees.each do |fee|
+        adjusted_fee = fee.adjusted_fee
+        fee.invoice_display_name = fee.adjusted_fee.invoice_display_name if adjusted_fee.invoice_display_name.present?
+        byebug
+        fee.charge_id = adjusted_fee.charge_id if adjusted_fee.charge_id.present?
+        fee.subscription_id = adjusted_fee.subscription_id if adjusted_fee.subscription_id.present?
+
+        fee.units = adjusted_fee.units if adjusted_fee.units.present?
+
+
+        units = fee.units
+        subunit = invoice.total_amount.currency.subunit_to_unit
+        unit_precise_amount_cents = adjusted_fee.unit_precise_amount_cents
+        fee.unit_amount_cents = unit_precise_amount_cents.round
+        fee.precise_unit_amount = unit_precise_amount_cents.to_d / subunit
+        fee.amount_cents = (units * unit_precise_amount_cents).round
+        fee.precise_amount_cents = units * unit_precise_amount_cents
+        fee.save!
       end
     end
 
-    def duplicate_fee(voided_fee, fee_params, invoice)
-      unit_precise_amount_cents = fee_params[:unit_amount_cents].to_f || voided_fee.unit_amount_cents
-      unit_precise_amount_cents = unit_precise_amount_cents * voided_fee.amount.currency.subunit_to_unit
-      units = fee_params[:units]&.to_f || voided_fee.units
+    def process_fees(invoice)
+      fees_params.each do |fee_params|
 
+        if !fee_params[:id].blank?
+          voided_fee = voided_invoice.fees.find_by(id: fee_params[:id])
+          dep_fee = duplicate_fee(voided_fee, fee_params, invoice) if voided_fee
+        end
 
-      voided_fee.dup.tap do |dup_fee|
-        dup_fee.invoice = invoice
-        dup_fee.payment_status = :pending
-        dup_fee.taxes_amount_cents = 0
-        dup_fee.taxes_precise_amount_cents = 0.to_d
+        adjusted_fee_params = {
+          invoice_display_name: fee_params[:invoice_display_name],
+          units: fee_params[:units],
+          unit_precise_amount: fee_params[:unit_amount_cents],
+          charge_id: fee_params[:charge_id],
+          subscription_id: fee_params[:subscription_id]
+        }
 
-        dup_fee.invoice_display_name = fee_params[:invoice_display_name] if fee_params[:invoice_display_name].present?
-        dup_fee.units = units
-        dup_fee.amount_cents =  (unit_precise_amount_cents * units).round
-        dup_fee.precise_amount_cents = unit_precise_amount_cents * units
-        dup_fee.unit_amount_cents = fee_params[:unit_amount_cents] if fee_params[:unit_amount_cents].present?
-        dup_fee.precise_unit_amount = fee_params[:unit_amount_cents] if fee_params[:unit_amount_cents].present?
+        adjusted_fee_params[:fee_id] = dep_fee.id if dep_fee
 
-        dup_fee.save!
+        AdjustedFees::CreateService.call(
+          invoice: invoice,
+          params: adjusted_fee_params
+        )
       end
+    end
+    def duplicate_fee(voided_fee, fee_params, invoice)
+      dup_fee = voided_fee.dup
+      dup_fee.invoice = invoice
+      dup_fee.payment_status = :pending
+      dup_fee.taxes_amount_cents = 0
+      dup_fee.taxes_precise_amount_cents = 0.to_d
+      dup_fee.save!
+      dup_fee
     end
   end
 end

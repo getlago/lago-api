@@ -13,8 +13,8 @@ module AdjustedFees
     end
 
     def call
-      return result.forbidden_failure! if !License.premium? || !invoice.draft?
 
+      # TODO add this back but put a skip if regenerate
       fee = find_or_create_fee
       return result unless result.success?
       return result.validation_failure!(errors: {adjusted_fee: ["already_exists"]}) if fee.adjusted_fee
