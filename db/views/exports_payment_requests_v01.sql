@@ -25,6 +25,7 @@ SELECT
             SELECT apr.invoice_id
             FROM invoices_payment_requests AS apr
             WHERE apr.payment_request_id = pr.id
+            ORDER BY apr.created_at
         )
     ) AS invoice_ids,
     pr.created_at,
