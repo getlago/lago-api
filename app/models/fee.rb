@@ -21,7 +21,7 @@ class Fee < ApplicationRecord
 
   has_one :adjusted_fee, dependent: :nullify
   has_one :billable_metric, -> { with_discarded }, through: :charge
-  has_one :fixed_charge_add_on, -> { with_discarded }, through: :fixed_charge
+  has_one :fixed_charge_add_on, -> { with_discarded }, class_name: "AddOn", through: :fixed_charge, source: :add_on
   has_one :customer, through: :subscription
   has_one :pricing_unit_usage, dependent: :destroy
   has_one :true_up_fee, class_name: "Fee", foreign_key: :true_up_parent_fee_id, dependent: :destroy
