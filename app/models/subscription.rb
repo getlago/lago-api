@@ -18,8 +18,11 @@ class Subscription < ApplicationRecord
   has_many :fees
   has_many :daily_usages
   has_many :usage_thresholds, through: :plan
+<<<<<<< HEAD
   has_many :entitlements, class_name: "Entitlement::Entitlement"
   has_many :entitlement_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
+=======
+>>>>>>> 7b873c07a (add more relations in the models)
   has_many :subscription_fixed_charge_units_overrides, dependent: :destroy
 
   has_many :activity_logs,
