@@ -13,6 +13,8 @@ RSpec.describe Plan, type: :model do
     expect(subject).to have_many(:commitments)
     expect(subject).to have_many(:charges).dependent(:destroy)
     expect(subject).to have_many(:billable_metrics).through(:charges)
+    expect(subject).to have_many(:fixed_charges).dependent(:destroy)
+    expect(subject).to have_many(:add_ons).through(:fixed_charges)
     expect(subject).to have_many(:subscriptions)
     expect(subject).to have_many(:customers).through(:subscriptions)
     expect(subject).to have_many(:children).class_name("Plan").dependent(:destroy)

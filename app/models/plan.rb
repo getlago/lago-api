@@ -14,6 +14,8 @@ class Plan < ApplicationRecord
   has_many :commitments
   has_many :charges, dependent: :destroy
   has_many :billable_metrics, through: :charges
+  has_many :fixed_charges, dependent: :destroy
+  has_many :add_ons, through: :fixed_charges
   has_many :subscriptions
   has_many :customers, through: :subscriptions
   has_many :children, class_name: "Plan", foreign_key: :parent_id, dependent: :destroy
