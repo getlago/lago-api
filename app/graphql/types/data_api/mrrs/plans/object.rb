@@ -20,7 +20,7 @@ module Types
           field :active_customers_share, Float, null: false
 
           field :mrr, Float, null: false
-          field :mrr_share, Float, null: false
+          field :mrr_share, Float, null: true
         end
       end
     end
