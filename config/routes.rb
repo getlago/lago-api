@@ -25,6 +25,10 @@ Rails.application.routes.draw do
 
       get "analytics/usage", to: "data_api/usages#index", as: :usage
 
+      namespace :data_api do
+        get "charges/:id/forecasted_usage_amount", to: "charges#forecasted_usage_amount", as: :forecasted_usage_amount
+      end
+
       resources :billing_entities, param: :code, only: %i[index show update create]
 
       resources :customers, param: :external_id, only: %i[create index show destroy] do
