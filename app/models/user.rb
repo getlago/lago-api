@@ -7,6 +7,10 @@ class User < ApplicationRecord
   has_many :password_resets
 
   has_many :memberships
+  has_many :organizations, through: :memberships, class_name: "Organization"
+
+  has_many :active_memberships, -> { where(status: "active") }, class_name: "Membership"
+  has_many :active_organizations, through: :active_memberships, source: :organization
 
   has_many :billable_metrics, through: :organizations
   has_many :customers, through: :organizations
@@ -22,10 +26,6 @@ class User < ApplicationRecord
 
   def can?(permission, organization:)
     memberships.find { |m| m.organization_id == organization.id }&.can?(permission)
-  end
-
-  def organizations
-    Organization.joins(:memberships).where(memberships: { user_id: id, status: 'active' })
   end
 end
 

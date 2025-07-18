@@ -8,7 +8,7 @@ class UsersService < BaseService
       return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
-    unless result.user.organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+    unless result.user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
       return result.single_validation_failure!(
         error_code: "login_method_not_authorized",
         field: Organizations::AuthenticationMethods::EMAIL_PASSWORD

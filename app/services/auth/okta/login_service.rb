@@ -20,7 +20,7 @@ module Auth
         find_or_create_user
         find_or_create_membership
 
-        unless result.user.organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::OKTA)
+        unless result.user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::OKTA)
           return result.single_validation_failure!(
             error_code: "login_method_not_authorized",
             field: Organizations::AuthenticationMethods::OKTA
