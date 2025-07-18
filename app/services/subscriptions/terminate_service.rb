@@ -29,11 +29,15 @@ module Subscriptions
 
           if generate_credit_note_for_unconsumed_subscription?
             # NOTE: As subscription was payed in advance and terminated before the end of the period,
-            #       we have to create a credit note for the days that were not consumed
+            #       we have to create a credit note for the days that were not consumed.
+            #       Depending on the termination behaviour, we will optionally refund the portion of the unconsumed
+            #       subscription that was already paid.
+
             CreditNotes::CreateFromTermination.call!(
               subscription:,
               reason: "order_cancellation",
-              upgrade:
+              upgrade: upgrade,
+              refund: !upgrade && on_termination_credit_note == :refund
             )
           end
 
@@ -176,7 +180,9 @@ module Subscriptions
     end
 
     def generate_credit_note_for_unconsumed_subscription?
-      pay_in_advance? && pay_in_advance_invoice_issued? && on_termination_credit_note == :credit
+      pay_in_advance? &&
+        pay_in_advance_invoice_issued? &&
+        (on_termination_credit_note == :credit || on_termination_credit_note == :refund)
     end
 
     def pay_in_advance?
@@ -192,6 +198,7 @@ module Subscriptions
 
       return :credit if @on_termination_credit_note.blank? || @on_termination_credit_note.to_sym == :credit
       return :skip if @on_termination_credit_note.to_sym == :skip
+      return :refund if @on_termination_credit_note.to_sym == :refund
 
       # This will cause a validation error on update
       @on_termination_credit_note
