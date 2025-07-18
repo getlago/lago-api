@@ -4,7 +4,7 @@ module Types
   module Entitlement
     class PlanEntitlementPrivilegeObject < Types::BaseObject
       field :code, String, null: false
-      field :config, GraphQL::Types::JSON, null: false
+      field :config, Types::Entitlement::PrivilegeConfigObject, null: false
       field :name, String, null: true
       field :value_type, Types::Entitlement::PrivilegeValueTypeEnum, null: false
 
