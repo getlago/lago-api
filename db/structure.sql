@@ -755,7 +755,6 @@ DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
 DROP TABLE IF EXISTS public.invoices_payment_requests;
-DROP TABLE IF EXISTS public.invoice_subscriptions;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
@@ -785,6 +784,8 @@ DROP TABLE IF EXISTS public.invoices_taxes;
 DROP VIEW IF EXISTS public.exports_invoices;
 DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.invoice_metadata;
+DROP VIEW IF EXISTS public.exports_invoice_subscriptions;
+DROP TABLE IF EXISTS public.invoice_subscriptions;
 DROP VIEW IF EXISTS public.exports_fees_taxes;
 DROP TABLE IF EXISTS public.fees_taxes;
 DROP VIEW IF EXISTS public.exports_fees;
@@ -2639,6 +2640,49 @@ CREATE VIEW public.exports_fees_taxes AS
 
 
 --
+-- Name: invoice_subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoice_subscriptions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    invoice_id uuid NOT NULL,
+    subscription_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    recurring boolean,
+    "timestamp" timestamp(6) without time zone,
+    from_datetime timestamp(6) without time zone,
+    to_datetime timestamp(6) without time zone,
+    charges_from_datetime timestamp(6) without time zone,
+    charges_to_datetime timestamp(6) without time zone,
+    invoicing_reason public.subscription_invoicing_reason,
+    organization_id uuid NOT NULL,
+    regenerated_invoice_id uuid
+);
+
+
+--
+-- Name: exports_invoice_subscriptions; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_invoice_subscriptions AS
+ SELECT ins.organization_id,
+    ins.id AS lago_id,
+    ins.invoice_id AS lago_invoice_id,
+    ins.regenerated_invoice_id AS lago_regenerated_invoice_id,
+    ins.subscription_id AS lago_subscription_id,
+    ins.created_at,
+    ins.updated_at,
+    ins.from_datetime,
+    ins.to_datetime,
+    ins.charges_from_datetime,
+    ins.charges_to_datetime,
+    ins."timestamp",
+    (ins.invoicing_reason)::text AS invoicing_reason
+   FROM public.invoice_subscriptions ins;
+
+
+--
 -- Name: invoice_metadata; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3341,28 +3385,6 @@ CREATE TABLE public.invoice_custom_sections (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     section_type public.invoice_custom_section_type DEFAULT 'manual'::public.invoice_custom_section_type NOT NULL
-);
-
-
---
--- Name: invoice_subscriptions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoice_subscriptions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_id uuid NOT NULL,
-    subscription_id uuid NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    recurring boolean,
-    "timestamp" timestamp(6) without time zone,
-    from_datetime timestamp(6) without time zone,
-    to_datetime timestamp(6) without time zone,
-    charges_from_datetime timestamp(6) without time zone,
-    charges_to_datetime timestamp(6) without time zone,
-    invoicing_reason public.subscription_invoicing_reason,
-    organization_id uuid NOT NULL,
-    regenerated_invoice_id uuid
 );
 
 
@@ -9168,6 +9190,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250718140450'),
 ('20250717092012'),
 ('20250716150049'),
 ('20250716143358'),
