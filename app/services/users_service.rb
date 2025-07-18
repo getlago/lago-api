@@ -8,6 +8,13 @@ class UsersService < BaseService
       return result.single_validation_failure!(error_code: "incorrect_login_or_password")
     end
 
+    unless result.user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+      return result.single_validation_failure!(
+        error_code: "login_method_not_authorized",
+        field: Organizations::AuthenticationMethods::EMAIL_PASSWORD
+      )
+    end
+
     result.token = generate_token if result.user
 
     # NOTE: We're tracking the first membership linked to the user.
@@ -72,25 +79,12 @@ class UsersService < BaseService
     result
   end
 
-  def new_token(user)
-    result.user = user
-    result.token = generate_token
-    result
-  end
-
   private
 
   def generate_token
-    JWT.encode(payload, ENV["SECRET_KEY_BASE"], "HS256")
+    Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD)
   rescue => e
     result.service_failure!(code: "token_encoding_error", message: e.message)
-  end
-
-  def payload
-    {
-      sub: result.user.id,
-      exp: 3.hours.from_now.to_i
-    }
   end
 
   def track_organization_registered(organization, membership)

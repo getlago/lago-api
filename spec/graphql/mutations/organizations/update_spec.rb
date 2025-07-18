@@ -32,6 +32,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
             invoiceGracePeriod,
             documentLocale,
           }
+          authenticationMethods
         }
       }
     GQL
@@ -143,7 +144,8 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
             billingConfiguration: {
               invoiceGracePeriod: 3
             },
-            emailSettings: ["invoice_finalized"]
+            emailSettings: ["invoice_finalized"],
+            authenticationMethods: ["google_oauth"]
           }
         }
       )
@@ -154,6 +156,7 @@ RSpec.describe Mutations::Organizations::Update, type: :graphql do
         expect(result_data["timezone"]).to eq(timezone)
         expect(result_data["billingConfiguration"]["invoiceGracePeriod"]).to eq(3)
         expect(result_data["emailSettings"]).to eq(["invoice_finalized"])
+        expect(result_data["authenticationMethods"]).to eq(["google_oauth"])
       end
     end
 

@@ -29,6 +29,7 @@ RSpec.describe Organizations::UpdateService do
       timezone:,
       logo:,
       email_settings:,
+      authentication_methods: ["email_password"],
       billing_configuration: {
         invoice_footer: "invoice footer",
         document_locale: "fr",
@@ -53,6 +54,7 @@ RSpec.describe Organizations::UpdateService do
       expect(result.organization.country).to eq("FR")
       expect(result.organization.default_currency).to eq("EUR")
       expect(result.organization.timezone).to eq("UTC")
+      expect(result.organization.authentication_methods).to eq(["email_password"])
 
       expect(result.organization.invoice_footer).to eq("invoice footer")
       expect(result.organization.document_locale).to eq("fr")
@@ -317,6 +319,24 @@ RSpec.describe Organizations::UpdateService do
           expect(result.error).to be_a(BaseService::ValidationFailure)
           expect(result.error.messages[:base].first).to include("not a valid document_numbering")
         end
+      end
+    end
+
+    context "when authentication_methods change" do
+      subject { described_class.new(organization:, params:, user:) }
+
+      let(:params) { {authentication_methods: ["email_password", "okta"]} }
+      let(:user) { create(:user) }
+      let(:additions) { ["okta"] }
+      let(:deletions) { ["google_oauth"] }
+
+      before do
+        create(:membership, organization:, role: :admin, user:)
+      end
+
+      it "delivers a email notification" do
+        expect { subject.call }.to have_enqueued_mail(OrganizationMailer, :authentication_methods_updated)
+          .with(params: {organization:, user:, additions:, deletions:}, args: [])
       end
     end
   end

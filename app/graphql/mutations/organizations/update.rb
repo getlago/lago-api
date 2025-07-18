@@ -14,7 +14,11 @@ module Mutations
       type Types::Organizations::CurrentOrganizationType
 
       def resolve(**args)
-        result = ::Organizations::UpdateService.call(organization: current_organization, params: args)
+        result = ::Organizations::UpdateService.call(
+          organization: current_organization,
+          params: args,
+          user: context[:current_user]
+        )
         result.success? ? result.organization : result_error(result)
       end
     end

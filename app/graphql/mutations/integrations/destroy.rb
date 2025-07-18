@@ -17,9 +17,20 @@ module Mutations
 
       def resolve(id:)
         integration = current_organization.integrations.find_by(id:)
-        result = ::Integrations::DestroyService.call(integration:)
+        result = destroy_service(integration:).call(integration:)
 
         result.success? ? result.integration : result_error(result)
+      end
+
+      private
+
+      def destroy_service(integration:)
+        case integration
+        when ::Integrations::OktaIntegration
+          ::Integrations::Okta::DestroyService
+        else
+          ::Integrations::DestroyService
+        end
       end
     end
   end

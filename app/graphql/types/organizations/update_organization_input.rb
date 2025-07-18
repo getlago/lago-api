@@ -5,6 +5,7 @@ module Types
     class UpdateOrganizationInput < BaseInputObject
       description "Update Organization input arguments"
 
+      argument :authentication_methods, [Types::Organizations::AuthenticationMethodsEnum], required: false
       argument :default_currency, Types::CurrencyEnum, required: false
       argument :email, String, required: false
       argument :legal_name, String, required: false

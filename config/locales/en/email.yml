@@ -52,6 +52,14 @@ en:
         issue_date: Issue Date
         issued_on: issued on %{date}
         subject: 'Your Invoice from %{billing_entity_name} #%{invoice_number}'
+    organization:
+      authentication_methods_updated:
+        changes: The user %{user_email} made the following changes to authentication methods.
+        disabled: Disabled %{login_method}
+        email_info: If you weren't expecting this change, please review your authentication settings.
+        enabled: Enabled %{login_method}
+        reasoning: You're receiving this message because you're an admin of the organization.
+        subject: Login method updated in your Lago workspace
     password_reset:
       subject: Reset your Lago password
     payment_receipt:

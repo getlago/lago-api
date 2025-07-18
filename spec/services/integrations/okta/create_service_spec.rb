@@ -60,6 +60,11 @@ RSpec.describe Integrations::Okta::CreateService, type: :service do
             integration = Integrations::OktaIntegration.order(:created_at).last
             expect(integration.domain).to eq(domain)
           end
+
+          it "enables okta authentication" do
+            service_call
+            expect(organization.reload).to be_okta_authentication_enabled
+          end
         end
 
         context "with validation error" do

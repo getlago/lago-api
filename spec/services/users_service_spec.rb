@@ -35,6 +35,9 @@ RSpec.describe UsersService, type: :service do
       expect(result.membership).to be_present
       expect(result.token).to be_present
 
+      decoded = Auth::TokenService.decode(token: result.token)
+      expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+
       expect(result.organization)
         .to be_present
         .and have_attributes(name: "organization_name", document_numbering: "per_organization")
@@ -137,6 +140,26 @@ RSpec.describe UsersService, type: :service do
               membership_id: "membership/#{active_membership.id}"
             )
           end
+
+          context "when login succeed" do
+            it "saves the login method in token" do
+              expect(result).to be_success
+
+              decoded = Auth::TokenService.decode(token: result.token)
+              expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::EMAIL_PASSWORD)
+            end
+          end
+
+          context "when login method is not allowed" do
+            before { active_membership.organization.disable_email_password_authentication! }
+
+            it "fails with login method not authorized" do
+              expect(result).to be_failure
+              expect(result.user).to eq user
+              expect(result.token).to be nil
+              expect(result.error.messages).to match(email_password: ["login_method_not_authorized"])
+            end
+          end
         end
 
         context "when user has no active membership" do
@@ -212,18 +235,6 @@ RSpec.describe UsersService, type: :service do
 
         expect(SegmentIdentifyJob).not_to have_received(:perform_later)
       end
-    end
-  end
-
-  describe "new_token" do
-    let(:user) { create(:user) }
-
-    it "generates a jwt token for the user" do
-      result = user_service.new_token(user)
-
-      expect(result).to be_success
-      expect(result.user).to eq(user)
-      expect(result.token).to be_present
     end
   end
 end

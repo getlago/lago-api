@@ -13,7 +13,7 @@ module Mutations
       type Types::Payloads::RegisterUserType
 
       def resolve(**args)
-        result = ::Invites::AcceptService.new.call(**args)
+        result = ::Invites::AcceptService.new.call(**args.merge(login_method: ::Organizations::AuthenticationMethods::EMAIL_PASSWORD))
 
         result.success? ? result : result_error(result)
       end

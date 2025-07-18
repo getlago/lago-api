@@ -66,6 +66,9 @@ RSpec.describe Auth::GoogleService do
           expect(result).to be_success
           expect(result.user).to be_a(User)
           expect(result.token).to be_present
+
+          decoded = Auth::TokenService.decode(token: result.token)
+          expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
         end
       end
     end
@@ -77,6 +80,24 @@ RSpec.describe Auth::GoogleService do
         aggregate_failures do
           expect(result).not_to be_success
           expect(result.error.messages.values.flatten).to include("user_does_not_exist")
+        end
+      end
+    end
+
+    context "when login method is not allowed" do
+      let(:user) { create(:user, email: "foo@bar.com", password: "foobar") }
+      let(:membership) { create(:membership, :active, user:) }
+
+      before do
+        membership.organization.disable_google_oauth_authentication!
+      end
+
+      it "returns a validation failure" do
+        result = service.login("code")
+
+        aggregate_failures do
+          expect(result).not_to be_success
+          expect(result.error.messages).to match(google_oauth: ["login_method_not_authorized"])
         end
       end
     end
@@ -134,6 +155,9 @@ RSpec.describe Auth::GoogleService do
         expect(result).to be_success
         expect(result.user).to be_a(User)
         expect(result.token).to be_present
+
+        decoded = Auth::TokenService.decode(token: result.token)
+        expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
       end
     end
 
@@ -191,6 +215,9 @@ RSpec.describe Auth::GoogleService do
         expect(result.user).to be_a(User)
         expect(result.user.email).to eq(invite.email)
         expect(result.token).to be_present
+
+        decoded = Auth::TokenService.decode(token: result.token)
+        expect(decoded["login_method"]).to eq(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
       end
     end
 
