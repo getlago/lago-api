@@ -19,7 +19,7 @@ RSpec.describe V1::Entitlement::SubscriptionEntitlementsCollectionSerializer, ty
   let(:entitlement_value1) { create(:entitlement_value, entitlement:, privilege: privilege1, value: 30) }
   let(:entitlement_value2) { create(:entitlement_value, entitlement:, privilege: privilege2, value: :email) }
 
-  let(:sub_entitlement) { create(:entitlement, subscription_external_id: subscription.external_id, plan: nil, feature:) }
+  let(:sub_entitlement) { create(:entitlement, subscription:, plan: nil, feature:) }
   let(:entitlement_value3) { create(:entitlement_value, entitlement: sub_entitlement, privilege: privilege3, value: true) }
   let(:entitlement_value25) { create(:entitlement_value, entitlement: sub_entitlement, privilege: privilege2, value: :slack) }
 

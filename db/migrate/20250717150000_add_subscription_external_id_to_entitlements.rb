@@ -12,16 +12,16 @@ class AddSubscriptionExternalIdToEntitlements < ActiveRecord::Migration[8.0]
 
     change_column_null :entitlement_entitlements, :plan_id, true
 
-    add_column :entitlement_entitlements, :subscription_external_id, :string
+    add_reference :entitlement_entitlements, :subscription, index: {algorithm: :concurrently}, type: :uuid
 
     add_index :entitlement_entitlements, %w[entitlement_feature_id plan_id],
       unique: true,
-      where: "(deleted_at IS NULL AND subscription_external_id IS NULL)",
+      where: "(deleted_at IS NULL AND subscription_id IS NULL)",
       name: "idx_unique_feature_per_plan",
       algorithm: :concurrently,
       if_not_exists: true
 
-    add_index :entitlement_entitlements, %w[entitlement_feature_id subscription_external_id],
+    add_index :entitlement_entitlements, %w[entitlement_feature_id subscription_id],
       unique: true,
       where: "(deleted_at IS NULL AND plan_id IS NULL)",
       name: "idx_unique_feature_per_subscription",

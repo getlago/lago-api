@@ -42,7 +42,7 @@ RSpec.describe Entitlement::SubscriptionEntitlement, type: :model do
       "privilege_config" => {},
       "privilege_deleted_at" => nil,
       "plan_id" => entitlement.plan_id,
-      "subscription_external_id" => nil,
+      "subscription_id" => nil,
       "removed" => false,
       "plan_entitlement_id" => entitlement.id,
       "override_entitlement_id" => nil,

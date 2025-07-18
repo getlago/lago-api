@@ -11,6 +11,7 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoval, type: :model do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:feature).class_name("Entitlement::Feature")
+      expect(subject).to belong_to(:subscription)
     end
   end
 end

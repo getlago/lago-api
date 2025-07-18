@@ -80,7 +80,7 @@ module Entitlement
           entitlement = Entitlement.create!(
             organization: organization,
             feature: feature,
-            subscription_external_id: subscription.external_id
+            subscription_id: subscription.id
           )
         elsif !partial?
           delete_missing_entitlement_values(entitlement, privilege_values)

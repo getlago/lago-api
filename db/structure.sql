@@ -213,6 +213,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXIST
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_1454058c96;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_142809fee1;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
+ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_123667657c;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_103e187859;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_0f807322b1;
@@ -456,6 +457,7 @@ DROP INDEX IF EXISTS public.index_entitlement_subscription_feature_removals_on_d
 DROP INDEX IF EXISTS public.index_entitlement_privileges_on_organization_id;
 DROP INDEX IF EXISTS public.index_entitlement_privileges_on_entitlement_feature_id;
 DROP INDEX IF EXISTS public.index_entitlement_features_on_organization_id;
+DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_subscription_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_plan_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_organization_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_entitlement_feature_id;
@@ -602,8 +604,8 @@ DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_recurring_756a2a370
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_78eb24d06c;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_4290c95dec;
 DROP INDEX IF EXISTS public.idx_on_timestamp_charge_id_external_subscription_id;
-DROP INDEX IF EXISTS public.idx_on_subscription_external_id_entitlement_feature_9e6d8b4f41;
-DROP INDEX IF EXISTS public.idx_on_subscription_external_id_df6b76f717;
+DROP INDEX IF EXISTS public.idx_on_subscription_id_entitlement_feature_id_02bee9883b;
+DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
 DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
 DROP INDEX IF EXISTS public.idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
@@ -1926,7 +1928,7 @@ CREATE TABLE public.entitlement_entitlements (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    subscription_external_id character varying
+    subscription_id uuid
 );
 
 
@@ -1972,7 +1974,7 @@ CREATE TABLE public.entitlement_subscription_feature_removals (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     entitlement_feature_id uuid NOT NULL,
-    subscription_external_id character varying NOT NULL,
+    subscription_id uuid NOT NULL,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
@@ -1987,7 +1989,7 @@ CREATE VIEW public.entitlement_subscription_entitlements_view AS
  WITH subscription_entitlements AS (
          SELECT fe_1.entitlement_feature_id,
             fe_1.plan_id,
-            fe_1.subscription_external_id,
+            fe_1.subscription_id,
             fev.deleted_at,
             fev.id,
             fev.entitlement_privilege_id,
@@ -2006,8 +2008,8 @@ CREATE VIEW public.entitlement_subscription_entitlements_view AS
             ep.value AS plan_value,
             es.value AS override_value
            FROM (subscription_entitlements ep
-             FULL JOIN subscription_entitlements es ON (((ep.entitlement_privilege_id = es.entitlement_privilege_id) AND (ep.plan_id IS NOT NULL) AND (es.subscription_external_id IS NOT NULL))))
-          WHERE (((ep.plan_id IS NOT NULL) OR (es.subscription_external_id IS NOT NULL)) AND (ep.deleted_at IS NULL) AND (es.deleted_at IS NULL))
+             FULL JOIN subscription_entitlements es ON (((ep.entitlement_privilege_id = es.entitlement_privilege_id) AND (ep.plan_id IS NOT NULL) AND (es.subscription_id IS NOT NULL))))
+          WHERE (((ep.plan_id IS NOT NULL) OR (es.subscription_id IS NOT NULL)) AND (ep.deleted_at IS NULL) AND (es.deleted_at IS NULL))
         )
  SELECT f.id AS entitlement_feature_id,
     f.organization_id,
@@ -2022,7 +2024,7 @@ CREATE VIEW public.entitlement_subscription_entitlements_view AS
     pri.config AS privilege_config,
     pri.deleted_at AS privilege_deleted_at,
     fe.plan_id,
-    fe.subscription_external_id,
+    fe.subscription_id,
     (sfr.id IS NOT NULL) AS removed,
     av.plan_entitlement_id,
     av.override_entitlement_id,
@@ -4976,17 +4978,17 @@ CREATE INDEX idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb ON publ
 
 
 --
--- Name: idx_on_subscription_external_id_df6b76f717; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_on_subscription_id_295edd8bb3; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_on_subscription_external_id_df6b76f717 ON public.entitlement_subscription_feature_removals USING btree (subscription_external_id);
+CREATE INDEX idx_on_subscription_id_295edd8bb3 ON public.entitlement_subscription_feature_removals USING btree (subscription_id);
 
 
 --
--- Name: idx_on_subscription_external_id_entitlement_feature_9e6d8b4f41; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_on_subscription_id_entitlement_feature_id_02bee9883b; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_on_subscription_external_id_entitlement_feature_9e6d8b4f41 ON public.entitlement_subscription_feature_removals USING btree (subscription_external_id, entitlement_feature_id) WHERE (deleted_at IS NULL);
+CREATE UNIQUE INDEX idx_on_subscription_id_entitlement_feature_id_02bee9883b ON public.entitlement_subscription_feature_removals USING btree (subscription_id, entitlement_feature_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -5042,14 +5044,14 @@ CREATE UNIQUE INDEX idx_subscription_unique ON public.usage_monitoring_subscript
 -- Name: idx_unique_feature_per_plan; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_unique_feature_per_plan ON public.entitlement_entitlements USING btree (entitlement_feature_id, plan_id) WHERE ((deleted_at IS NULL) AND (subscription_external_id IS NULL));
+CREATE UNIQUE INDEX idx_unique_feature_per_plan ON public.entitlement_entitlements USING btree (entitlement_feature_id, plan_id) WHERE ((deleted_at IS NULL) AND (subscription_id IS NULL));
 
 
 --
 -- Name: idx_unique_feature_per_subscription; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_unique_feature_per_subscription ON public.entitlement_entitlements USING btree (entitlement_feature_id, subscription_external_id) WHERE ((deleted_at IS NULL) AND (plan_id IS NULL));
+CREATE UNIQUE INDEX idx_unique_feature_per_subscription ON public.entitlement_entitlements USING btree (entitlement_feature_id, subscription_id) WHERE ((deleted_at IS NULL) AND (plan_id IS NULL));
 
 
 --
@@ -6009,6 +6011,13 @@ CREATE INDEX index_entitlement_entitlements_on_organization_id ON public.entitle
 --
 
 CREATE INDEX index_entitlement_entitlements_on_plan_id ON public.entitlement_entitlements USING btree (plan_id);
+
+
+--
+-- Name: index_entitlement_entitlements_on_subscription_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_entitlement_entitlements_on_subscription_id ON public.entitlement_entitlements USING btree (subscription_id);
 
 
 --
@@ -7666,6 +7675,14 @@ ALTER TABLE ONLY public.fees_taxes
 
 ALTER TABLE ONLY public.applied_invoice_custom_sections
     ADD CONSTRAINT fk_rails_10428ecad2 FOREIGN KEY (invoice_id) REFERENCES public.invoices(id);
+
+
+--
+-- Name: entitlement_subscription_feature_removals fk_rails_123667657c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_subscription_feature_removals
+    ADD CONSTRAINT fk_rails_123667657c FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
 
 
 --

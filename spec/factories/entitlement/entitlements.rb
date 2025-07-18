@@ -8,7 +8,7 @@ FactoryBot.define do
 
     trait :subscription do
       plan { nil }
-      subscription_external_id { "sub_#{SecureRandom.hex}" }
+      association :subscription
     end
   end
 end

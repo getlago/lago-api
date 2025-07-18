@@ -11,7 +11,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementDestroyService, type: :servic
   let(:subscription) { create(:subscription, organization:, customer:, plan:) }
   let(:feature) { create(:feature, organization:, code: "seats") }
   let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
-  let(:entitlement) { create(:entitlement, subscription_external_id: subscription.external_id, plan: nil, feature:) }
+  let(:entitlement) { create(:entitlement, subscription_id: subscription.id, plan: nil, feature:) }
   let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: "30") }
 
   before do

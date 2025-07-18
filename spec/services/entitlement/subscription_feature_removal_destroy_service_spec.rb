@@ -11,7 +11,7 @@ RSpec.describe Entitlement::SubscriptionFeatureRemovalDestroyService, type: :ser
   let(:subscription) { create(:subscription, organization:, customer:, plan:) }
   let(:feature) { create(:feature, organization:, code: "seats") }
   let(:entitlement) { create(:entitlement, plan:, feature:) }
-  let(:subscription_feature_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_external_id: subscription.external_id) }
+  let(:subscription_feature_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_id: subscription.id) }
 
   before do
     entitlement

@@ -49,7 +49,7 @@ RSpec.describe Entitlement::SubscriptionFeatureRemovalCreateService, type: :serv
       removal = result.subscription_feature_removal
       expect(removal.organization).to eq(organization)
       expect(removal.feature).to eq(feature)
-      expect(removal.subscription_external_id).to eq(subscription.external_id)
+      expect(removal.subscription_id).to eq(subscription.id)
     end
 
     context "when subscription does not exist" do
@@ -92,7 +92,7 @@ RSpec.describe Entitlement::SubscriptionFeatureRemovalCreateService, type: :serv
     end
 
     context "when removal already exists" do
-      let(:existing_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_external_id: subscription.external_id) }
+      let(:existing_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_id: subscription.id) }
 
       it "returns validation failure" do
         existing_removal

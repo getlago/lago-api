@@ -10,7 +10,7 @@ class CreateEntitlementSubscriptionEntitlementsView < ActiveRecord::Migration[8.
                 SELECT
                     fe.entitlement_feature_id,
                     fe.plan_id,
-                    fe.subscription_external_id,
+                    fe.subscription_id,
                     fev.deleted_at AS deleted_at,
                     fev.id,
                     fev.entitlement_privilege_id,
@@ -36,11 +36,11 @@ class CreateEntitlementSubscriptionEntitlementsView < ActiveRecord::Migration[8.
                     subscription_entitlements ep
                     FULL OUTER JOIN subscription_entitlements es ON ep.entitlement_privilege_id = es.entitlement_privilege_id
                     AND ep.plan_id IS NOT NULL
-                    AND es.subscription_external_id IS NOT NULL
+                    AND es.subscription_id IS NOT NULL
                 WHERE
                     (
                         ep.plan_id IS NOT NULL
-                        OR es.subscription_external_id IS NOT NULL
+                        OR es.subscription_id IS NOT NULL
                     )
                     AND ep.deleted_at IS NULL
                     AND es.deleted_at IS NULL
@@ -59,7 +59,7 @@ class CreateEntitlementSubscriptionEntitlementsView < ActiveRecord::Migration[8.
             pri.config AS privilege_config,
             pri.deleted_at AS privilege_deleted_at,
             fe.plan_id AS plan_id,
-            fe.subscription_external_id AS subscription_external_id,
+            fe.subscription_id AS subscription_id,
             (sfr.id IS NOT NULL) AS removed,
             av.plan_entitlement_id,
             av.override_entitlement_id,

@@ -100,7 +100,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
     end
 
     context "when subscription has existing entitlements" do
-      let(:existing_entitlement) { create(:entitlement, organization:, subscription_external_id: subscription.external_id, plan: nil, feature:) }
+      let(:existing_entitlement) { create(:entitlement, organization:, subscription_id: subscription.id, plan: nil, feature:) }
       let(:existing_value) { create(:entitlement_value, entitlement: existing_entitlement, privilege:, value: "10", organization:) }
 
       before do
@@ -119,11 +119,11 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
     context "when partial is true" do
       subject(:result) { described_class.call(organization:, subscription:, entitlements_params:, partial: true) }
 
-      let(:existing_entitlement) { create(:entitlement, organization:, subscription_external_id: subscription.external_id, plan: nil, feature:) }
+      let(:existing_entitlement) { create(:entitlement, organization:, subscription_id: subscription.id, plan: nil, feature:) }
       let(:existing_value) { create(:entitlement_value, entitlement: existing_entitlement, privilege:, value: "10", organization:) }
       let(:other_feature) { create(:feature, organization:, code: "storage") }
       let(:other_privilege) { create(:privilege, organization:, feature: other_feature, code: "limit", value_type: "integer") }
-      let(:other_entitlement) { create(:entitlement, organization:, subscription_external_id: subscription.external_id, plan: nil, feature: other_feature) }
+      let(:other_entitlement) { create(:entitlement, organization:, subscription_id: subscription.id, plan: nil, feature: other_feature) }
       let(:other_value) { create(:entitlement_value, entitlement: other_entitlement, privilege: other_privilege, value: "100", organization:) }
 
       before do

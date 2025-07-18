@@ -18,6 +18,7 @@ class Subscription < ApplicationRecord
   has_many :fees
   has_many :daily_usages
   has_many :usage_thresholds, through: :plan
+  has_many :entitlements, class_name: "Entitlement::Entitlement"
 
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
@@ -70,13 +71,6 @@ class Subscription < ApplicationRecord
 
   def self.ransackable_associations(_ = nil)
     %w[customer plan]
-  end
-
-  # NOTE: We don't use has many with primary/foreign key on subscription external_id
-  #       because the external_id is provided by customer and 2 subscriptions from different orgs could use the same id.
-  #       we must ensure the entitlements belongs to the organization, which I cannot do with `has_may`
-  def entitlements
-    Entitlement::Entitlement.where(organization_id:, subscription_external_id: external_id)
   end
 
   def mark_as_active!(timestamp = Time.current)

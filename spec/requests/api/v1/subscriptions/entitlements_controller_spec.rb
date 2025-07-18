@@ -18,7 +18,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
 
     let(:entitlement) { create(:entitlement, plan:, feature:) }
     let(:entitlement_value1) { create(:entitlement_value, entitlement:, privilege: privilege1, value: 30) }
-    let(:sub_entitlement) { create(:entitlement, subscription_external_id: subscription.external_id, plan: nil, feature:) }
+    let(:sub_entitlement) { create(:entitlement, subscription_id: subscription.id, plan: nil, feature:) }
     let(:entitlement_value2) { create(:entitlement_value, entitlement: sub_entitlement, privilege: privilege2, value: true) }
 
     before do
@@ -237,7 +237,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
   describe "DELETE #destroy" do
     subject { delete_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}" }
 
-    let(:entitlement) { create(:entitlement, subscription_external_id: subscription.external_id, plan: nil, feature:) }
+    let(:entitlement) { create(:entitlement, subscription_id: subscription.id, plan: nil, feature:) }
     let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege: privilege1, value: 30, organization:) }
 
     before do
@@ -309,7 +309,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
     end
 
     context "when removal already exists" do
-      let(:existing_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_external_id: subscription.external_id) }
+      let(:existing_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_id: subscription.id) }
 
       it "returns validation error" do
         existing_removal
@@ -325,7 +325,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
   describe "DELETE #unremove" do
     subject { delete_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}/remove" }
 
-    let(:subscription_feature_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_external_id: subscription.external_id) }
+    let(:subscription_feature_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_id: subscription.id) }
 
     before do
       subscription_feature_removal

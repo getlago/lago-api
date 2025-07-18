@@ -10,7 +10,7 @@ module Entitlement
 
     scope :for_subscription, ->(sub) do
       where(organization_id: sub.organization_id, removed: false)
-        .where("subscription_external_id = ? OR plan_id = ?", sub.external_id, sub.plan.parent_id || sub.plan.id)
+        .where("subscription_id = ? OR plan_id = ?", sub.id, sub.plan.parent_id || sub.plan.id)
     end
 
     def readonly?
@@ -43,5 +43,5 @@ end
 #  plan_entitlement_id            :uuid
 #  plan_entitlement_values_id     :uuid
 #  plan_id                        :uuid
-#  subscription_external_id       :string
+#  subscription_id                :uuid
 #
