@@ -162,6 +162,7 @@ To create a webhook:
 
 # Migrations
 
+- Make sure to specify the latest available `ActiveRecord::Migration` version. For example, if the latest version is `8.0`, use `ActiveRecord::Migration[8.0]`.
 - Prefer `add_column` over `change_table` when adding single columns
 - Use `safety_assured` wrapper when required for complex operations
 - Never use hardcoded or fake timestamps in migration filenames. Migration timestamps should be generated using `date +"%Y%m%d%H%M%S"` command to ensure proper chronological ordering.
