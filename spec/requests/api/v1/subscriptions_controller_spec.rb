@@ -384,13 +384,70 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
     include_examples "requires API permission", "subscription", "write"
 
-    it "terminates a subscription" do
+    def test_termination(expected_on_termination_credit_note: nil)
       subject
 
       expect(response).to have_http_status(:success)
       expect(json[:subscription][:lago_id]).to eq(subscription.id)
       expect(json[:subscription][:status]).to eq("terminated")
       expect(json[:subscription][:terminated_at]).to be_present
+      expect(json[:subscription][:on_termination_credit_note]).to eq(expected_on_termination_credit_note)
+    end
+
+    it "terminates a subscription" do
+      test_termination(expected_on_termination_credit_note: nil)
+    end
+
+    context "when plan is pay_in_arrears" do
+      let(:params) { {on_termination_credit_note: "credit"} }
+
+      it "terminates subscription but ignores on_termination_credit_note" do
+        test_termination(expected_on_termination_credit_note: nil)
+      end
+    end
+
+    context "when plan is pay_in_advance" do
+      let(:plan) { create(:plan, :pay_in_advance, organization:) }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+
+      context "without on_termination_credit_note parameter" do
+        it "terminates subscription with credit note behavior" do
+          test_termination(expected_on_termination_credit_note: "credit")
+        end
+      end
+
+      context "with on_termination_credit_note parameter" do
+        [nil, "", "credit"].each do |on_termination_credit_note|
+          context "when on_termination_credit_note is #{on_termination_credit_note.inspect}" do
+            let(:params) { {on_termination_credit_note:}.compact }
+
+            it "terminates subscription with credit note behavior" do
+              test_termination(expected_on_termination_credit_note: "credit")
+            end
+          end
+        end
+
+        context "when on_termination_credit_note is skip" do
+          let(:params) { {on_termination_credit_note: "skip"} }
+
+          it "terminates subscription with skip behavior" do
+            test_termination(expected_on_termination_credit_note: "skip")
+          end
+        end
+
+        context "with invalid on_termination_credit_note value" do
+          let(:params) { {on_termination_credit_note: "invalid"} }
+
+          it "returns validation error" do
+            subject
+
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(json[:error_details]).to include(
+              on_termination_credit_note: ["invalid_value"]
+            )
+          end
+        end
+      end
     end
 
     context "when subscription is pending" do

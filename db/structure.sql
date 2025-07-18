@@ -851,6 +851,7 @@ DROP TABLE IF EXISTS public.active_storage_attachments;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.tax_status;
+DROP TYPE IF EXISTS public.subscription_on_termination_credit_note;
 DROP TYPE IF EXISTS public.subscription_invoicing_reason;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
@@ -1007,6 +1008,16 @@ CREATE TYPE public.subscription_invoicing_reason AS ENUM (
     'in_advance_charge',
     'in_advance_charge_periodic',
     'progressive_billing'
+);
+
+
+--
+-- Name: subscription_on_termination_credit_note; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_on_termination_credit_note AS ENUM (
+    'credit',
+    'skip'
 );
 
 
@@ -2477,7 +2488,8 @@ CREATE TABLE public.subscriptions (
     subscription_at timestamp(6) without time zone,
     ending_at timestamp(6) without time zone,
     trial_ended_at timestamp(6) without time zone,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    on_termination_credit_note public.subscription_on_termination_credit_note
 );
 
 
@@ -9166,6 +9178,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250715124108'),
 ('20250714131519'),
 ('20250710102337'),
+('20250709171329'),
 ('20250709085218'),
 ('20250709082136'),
 ('20250708094414'),

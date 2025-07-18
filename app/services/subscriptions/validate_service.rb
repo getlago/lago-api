@@ -8,6 +8,7 @@ module Subscriptions
 
       valid_subscription_at?
       valid_ending_at?
+      valid_on_termination_credit_note?
 
       if errors?
         result.validation_failure!(errors:)
@@ -55,6 +56,15 @@ module Subscriptions
 
       add_error(field: :ending_at, error_code: "invalid_date")
 
+      false
+    end
+
+    def valid_on_termination_credit_note?
+      return true if args[:on_termination_credit_note].blank?
+
+      return true if Subscription::ON_TERMINATION_CREDIT_NOTES.include?(args[:on_termination_credit_note].to_sym)
+
+      add_error(field: :on_termination_credit_note, error_code: "invalid_value")
       false
     end
 
