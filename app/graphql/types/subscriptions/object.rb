@@ -34,6 +34,7 @@ module Types
       field :next_subscription_type, Types::Subscriptions::NextSubscriptionTypeEnum
 
       field :activity_logs, [Types::ActivityLogs::Object], null: true
+      field :entitlements, [Types::Entitlement::SubscriptionEntitlementObject], null: true
       field :fees, [Types::Fees::Object], null: true
 
       field :lifetime_usage, Types::Subscriptions::LifetimeUsageObject, null: true
@@ -75,6 +76,19 @@ module Types
 
       def current_billing_period_ending_at
         dates_service.charges_to_datetime
+      end
+
+      def entitlements
+        subscription_entitlements = ::Entitlement::SubscriptionEntitlement.for_subscription(object)
+        serializer = ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(subscription_entitlements, nil)
+
+        serializer.serialize_models.map do |entitlement_data|
+          privileges = entitlement_data[:privileges].map do |_code, privilege|
+            privilege
+          end
+
+          entitlement_data.merge(privileges: privileges)
+        end
       end
 
       def dates_service

@@ -11,7 +11,8 @@ module V1
             code: feature_code,
             name: first_entitlement.feature_name,
             description: first_entitlement.feature_description,
-            privileges: feature_entitlements.map do |e|
+            privileges: feature_entitlements.filter_map do |e|
+              next if e.privilege_code.nil?
               {
                 code: e.privilege_code,
                 name: e.privilege_name,

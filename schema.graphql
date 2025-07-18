@@ -9052,6 +9052,7 @@ type Subscription {
   currentBillingPeriodStartedAt: ISO8601DateTime
   customer: Customer!
   endingAt: ISO8601DateTime
+  entitlements: [SubscriptionEntitlement!]
   externalId: String!
   fees: [Fee!]
   id: ID!
@@ -9084,6 +9085,23 @@ type SubscriptionCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type SubscriptionEntitlement {
+  code: String!
+  description: String
+  name: String!
+  privileges: [SubscriptionEntitlementPrivilegeObject!]!
+}
+
+type SubscriptionEntitlementPrivilegeObject {
+  code: String!
+  config: JSON!
+  name: String
+  overrideValue: String
+  planValue: String
+  value: String
+  valueType: PrivilegeValueTypeEnum!
 }
 
 type SubscriptionLifetimeUsage {
