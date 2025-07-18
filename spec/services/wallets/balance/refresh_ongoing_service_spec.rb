@@ -89,6 +89,53 @@ RSpec.describe Wallets::Balance::RefreshOngoingService, type: :service do
       expect(refresh_service.call.wallet).to eq(wallet)
     end
 
+    context "when there are wallet billable metric limitations" do
+      let(:wallet_target) { create(:wallet_target, wallet:, billable_metric:) }
+      let(:billable_metric2) { create(:billable_metric, aggregation_type: "count_agg") }
+      let(:second_charge) do
+        create(
+          :standard_charge,
+          plan: second_subscription.plan,
+          billable_metric: billable_metric2,
+          properties: {amount: "5"}
+        )
+      end
+      let(:events) do
+        create_list(
+          :event,
+          2,
+          organization: wallet.organization,
+          subscription: first_subscription,
+          customer: first_subscription.customer,
+          code: billable_metric.code,
+          timestamp:
+        ).push(
+          create(
+            :event,
+            organization: wallet.organization,
+            subscription: second_subscription,
+            customer: second_subscription.customer,
+            code: billable_metric2.code,
+            timestamp:
+          )
+        )
+      end
+
+      before { wallet_target }
+
+      it "updates wallet ongoing balance" do
+        expect { refresh_service.call }
+          .to change(wallet.reload, :ongoing_usage_balance_cents).from(200).to(600)
+          .and change(wallet, :credits_ongoing_usage_balance).from(2.0).to(6.0)
+          .and change(wallet, :ongoing_balance_cents).from(800).to(400)
+          .and change(wallet, :credits_ongoing_balance).from(8.0).to(4.0)
+      end
+
+      it "returns the wallet" do
+        expect(refresh_service.call.wallet).to eq(wallet)
+      end
+    end
+
     context "when there are paid in advance fees" do
       let(:third_charge) { create(:standard_charge, :pay_in_advance, plan: first_subscription.plan, billable_metric:, properties: {amount: "7"}) }
       let(:pay_in_advance_invoice) { create(:invoice, :subscription, subscriptions: [first_subscription], organization: organization, customer: customer) }
