@@ -10,6 +10,7 @@ class CreatePlanEntitlement < ActiveRecord::Migration[8.0]
       t.timestamps
 
       t.index %w[entitlement_feature_id plan_id],
+        name: "idx_on_entitlement_feature_id_plan_id_c45949ea26",
         unique: true,
         where: "deleted_at IS NULL"
     end
