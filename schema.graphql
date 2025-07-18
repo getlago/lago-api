@@ -2673,7 +2673,7 @@ input CreateFeatureInput {
   """
   The description of the feature
   """
-  description: String!
+  description: String
 
   """
   The name of the feature
@@ -4988,7 +4988,7 @@ type FeatureObject {
   createdAt: ISO8601DateTime!
   description: String
   id: ID!
-  name: String
+  name: String!
   privileges: [PrivilegeObject!]!
   subscriptionsCount: Int!
 }
@@ -10408,7 +10408,7 @@ input UpdateFeatureInput {
   """
   The description of the feature
   """
-  description: String!
+  description: String
 
   """
   The ID of the feature to update

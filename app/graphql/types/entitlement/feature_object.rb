@@ -6,8 +6,8 @@ module Types
       field :id, ID, null: false
 
       field :code, String, null: false
-      field :description, String
-      field :name, String
+      field :description, String, null: true
+      field :name, String, null: false
 
       field :privileges, [Types::Entitlement::PrivilegeObject], null: false
 
