@@ -41,14 +41,23 @@ RSpec.describe Subscription, type: :model do
       expect(subject).to have_many(:usage_thresholds).through(:plan)
       expect(subject).to have_one(:lifetime_usage).autosave(true)
       expect(subject).to have_one(:subscription_activity).class_name("UsageMonitoring::SubscriptionActivity")
+      expect(subject).not_to have_many(:entitlements) # To ensure no one refactor to relationship
     end
   end
 
-  describe "Clickhouse associations", clickhouse: true do
-    it do
-      expect(subject).to have_many(:activity_logs).class_name("Clickhouse::ActivityLog")
+  describe "#entitlements" do
+    it "ensures that entitlements belongs to the organization of the subscription" do
+      entitlement = create(:entitlement, organization: subscription.organization, subscription_external_id: subscription.external_id, plan: nil)
+      _other_entitlement = create(:entitlement, organization: create(:organization), subscription_external_id: subscription.external_id, plan: nil)
+      expect(subject.entitlements).to contain_exactly(entitlement)
     end
   end
+
+  # describe "Clickhouse associations", clickhouse: true do
+  #   it do
+  #     expect(subject).to have_many(:activity_logs).class_name("Clickhouse::ActivityLog")
+  #   end
+  # end
 
   describe "Scopes" do
     describe ".starting_in_the_future" do

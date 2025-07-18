@@ -31,6 +31,7 @@ class CreateEntitlementFeaturesAndPrivileges < ActiveRecord::Migration[8.0]
       t.index %w[code entitlement_feature_id],
         name: "idx_privileges_code_unique_per_feature",
         unique: true
+      # where: "deleted_at IS NULL" added in XXXXX
     end
   end
 end

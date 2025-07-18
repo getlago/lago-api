@@ -72,6 +72,13 @@ class Subscription < ApplicationRecord
     %w[customer plan]
   end
 
+  # NOTE: We don't use has many with primary/foreign key on subscription external_id
+  #       because the external_id is provided by customer and 2 subscriptions from different orgs could use the same id.
+  #       we must ensure the entitlements belongs to the organization, which I cannot do with `has_may`
+  def entitlements
+    Entitlement::Entitlement.where(organization_id:, subscription_external_id: external_id)
+  end
+
   def mark_as_active!(timestamp = Time.current)
     self.started_at ||= timestamp
     self.lifetime_usage ||= previous_subscription&.lifetime_usage || build_lifetime_usage(organization:)
