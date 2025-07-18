@@ -48,56 +48,77 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
   before { fee_and_invoice }
 
-  def generate_invoice_and_fee(amount_cents, coupons_amount_cents: coupon_amount, at: started_at, plan_amount_cents: nil)
-    taxes_amount_cents = ((amount_cents - coupons_amount_cents) * tax.rate / 100).round
+  def generate_invoice(fees_amount_cents:, coupons_amount_cents:, at:)
+    invoice_taxes_amount_cents = ((fees_amount_cents - coupons_amount_cents) * tax.rate / 100).round
+    total_amount_cents = fees_amount_cents + invoice_taxes_amount_cents
     invoice = create(
       :invoice,
       organization:,
       customer:,
       currency: "EUR",
       coupons_amount_cents:,
-      fees_amount_cents: amount_cents,
-      total_amount_cents: amount_cents + taxes_amount_cents,
+      fees_amount_cents:,
+      total_amount_cents:,
       created_at: at
     )
+    create(:invoice_applied_tax, invoice:, tax:, tax_rate: tax.rate, amount_cents: invoice_taxes_amount_cents)
+
+    invoice
+  end
+
+  def generate_subscription_fee(invoice:, amount_cents:, coupons_amount_cents:, at:, plan_amount_cents:)
+    taxes_amount_cents = (amount_cents - coupons_amount_cents) * tax.rate / 100
     subscription_fee = create(
       :fee,
       subscription:,
       invoice:,
       amount_cents:,
-      taxes_amount_cents:,
-      invoiceable_type: "Subscription",
-      invoiceable_id: subscription.id,
+      taxes_amount_cents: taxes_amount_cents,
+      precise_amount_cents: amount_cents,
       precise_coupons_amount_cents: coupons_amount_cents,
+      taxes_precise_amount_cents: taxes_amount_cents,
       taxes_rate: tax.rate,
       created_at: at,
       **(plan_amount_cents ? {amount_details: {plan_amount_cents:}} : {})
     )
     create(:fee_applied_tax, tax:, fee: subscription_fee, amount_cents: taxes_amount_cents)
-    invoice_applied_tax = create(:invoice_applied_tax, invoice:, tax:, tax_rate: tax.rate, amount_cents: taxes_amount_cents)
+    subscription_fee
+  end
+
+  def generate_invoice_and_fee(amount_cents, coupons_amount_cents: coupon_amount, at: started_at, plan_amount_cents: nil)
+    invoice = generate_invoice(fees_amount_cents: amount_cents, coupons_amount_cents:, at:)
+    subscription_fee = generate_subscription_fee(invoice:, amount_cents:, coupons_amount_cents:, at:, plan_amount_cents:)
 
     {
       subscription_fee:,
-      invoice:,
-      invoice_applied_tax:
+      invoice:
     }
   end
 
-  def expect_credit_note_to_be_properly_defined(credit_note, precise_item_amount_cents:, total_amount_cents:, tax_amount_cents:, fee: subscription_fee)
+  def expect_credit_note_to_be_properly_defined(
+    credit_note,
+    precise_item_amount_cents:,
+    total_amount_cents:,
+    tax_amount_cents:,
+    refund_amount_cents: 0,
+    fee: subscription_fee
+  )
+    credit_amount_cents = total_amount_cents - refund_amount_cents
+
     expect(credit_note).to be_available
     expect(credit_note).to be_order_change
 
     expect(credit_note.total_amount_cents).to eq(total_amount_cents)
     expect(credit_note.total_amount_currency).to eq("EUR")
-    expect(credit_note.credit_amount_cents).to eq(total_amount_cents)
-    expect(credit_note.credit_amount_currency).to eq("EUR")
-    expect(credit_note.refund_amount_cents).to eq(0)
+    expect(credit_note.refund_amount_cents).to eq(refund_amount_cents)
     expect(credit_note.refund_amount_currency).to eq("EUR")
+    expect(credit_note.credit_amount_cents).to eq(credit_amount_cents)
+    expect(credit_note.credit_amount_currency).to eq("EUR")
     expect(credit_note.taxes_amount_cents).to eq(tax_amount_cents)
-    expect(credit_note.balance_amount_cents).to eq(total_amount_cents)
+    expect(credit_note.balance_amount_cents).to eq(credit_amount_cents)
     expect(credit_note.balance_amount_currency).to eq("EUR")
     expect(credit_note.applied_taxes.length).to eq(1)
-    expect(credit_note.applied_taxes.first.tax_code).to eq(invoice_applied_tax.tax_code)
+    expect(credit_note.applied_taxes.first.tax_code).to eq(tax.code)
 
     expect(credit_note.items.size).to eq(1)
 
@@ -114,11 +135,18 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       result = create_service.call
 
       expect(result).to be_success
+      expect(result).to be_a(CreditNotes::CreateService::Result)
 
       credit_note = result.credit_note
 
-      # 16 days of unused subscription fee
-      # 16 * 1 euro per day + 20% tax = 19.2
+      # CREDITABLE AMOUNT CALCULATION
+      # Unused subscription (16 days)    €16.00
+      #                                  ------
+      # Subtotal                         €16.00
+      # Tax (20%)                        €3.20
+      #                                  ------
+      # Total creditable                 €19.20
+
       expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, precise_item_amount_cents: 16_00, tax_amount_cents: 3_20)
     end
 
@@ -132,8 +160,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        # 16 days of unused subscription fee
-        # 16 * 2 euro per day + 20% tax = 38.4
+        # CREDITABLE AMOUNT CALCULATION
+        # Unused subscription (16 days)    €32.00  (16 × €2.00/day)
+        #                                  ------
+        # Subtotal                         €32.00
+        # Tax (20%)                        €6.40
+        #                                  ------
+        # Total creditable                 €38.40
+
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 38_40, precise_item_amount_cents: 32_00, tax_amount_cents: 6_40)
       end
     end
@@ -150,7 +184,9 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       let(:plan_amount_cents) { 0 }
 
       it "does not create a credit note" do
-        expect { create_service.call }.not_to change(CreditNote, :count)
+        expect do
+          expect(create_service.call.credit_note).to be_nil
+        end.not_to change(CreditNote, :count)
       end
     end
 
@@ -170,8 +206,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        # 16 days of unused subscription fee
-        # 16 * 2 euro per day + 20% tax = 38.4
+        # CREDITABLE AMOUNT CALCULATION
+        # Unused subscription (16 days)    €32.00  (16 × €2.00/day)
+        #                                  ------
+        # Subtotal                         €32.00
+        # Tax (20%)                        €6.40
+        #                                  ------
+        # Total creditable                 €38.40
+
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 38_40, precise_item_amount_cents: 32_00, tax_amount_cents: 6_40, fee: subscription_fee_2)
       end
     end
@@ -199,8 +241,15 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        # 16 days of unused subscription fee
-        # 16 * 1 euro per day - 10 euro already credited + 20% tax = 7.2
+        # CREDITABLE AMOUNT CALCULATION
+        # Unused subscription (16 days)    €16.00
+        # Previous credit notes            -€10.00
+        #                                  ------
+        # Subtotal                         €6.00
+        # Tax (20%)                        €1.20
+        #                                  ------
+        # Total creditable                 €7.20
+
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 7_20, precise_item_amount_cents: 6_00, tax_amount_cents: 1_20)
       end
     end
@@ -215,8 +264,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        # 15 days of unused subscription fee
-        # 15 * 1 euro per day + 20% tax = 18
+        # CREDITABLE AMOUNT CALCULATION
+        # Unused subscription (15 days)    €15.00  (excluding trial)
+        #                                  ------
+        # Subtotal                         €15.00
+        # Tax (20%)                        €3.00
+        #                                  ------
+        # Total creditable                 €18.00
+
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 18_00, precise_item_amount_cents: 15_00, tax_amount_cents: 3_00)
       end
 
@@ -237,6 +292,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
+        # CREDITABLE AMOUNT CALCULATION
+        # Unused subscription (17 days)    €17.00  (upgrade calculation)
+        #                                  ------
+        # Subtotal                         €17.00
+        # Tax (20%)                        €3.40
+        #                                  ------
+        # Total creditable                 €20.40
+
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 20_40, precise_item_amount_cents: 17_00, tax_amount_cents: 3_40)
       end
     end
@@ -255,8 +318,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
           credit_note = result.credit_note
 
-          # 17 days of unused subscription fee
-          # 17 * 1 euro per day + 20% tax = 20.4
+          # CREDITABLE AMOUNT CALCULATION
+          # Unused subscription (17 days)    €17.00  (timezone adjusted)
+          #                                  ------
+          # Subtotal                         €17.00
+          # Tax (20%)                        €3.40
+          #                                  ------
+          # Total creditable                 €20.40
+
           expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 20_40, precise_item_amount_cents: 17_00, tax_amount_cents: 3_40)
         end
       end
@@ -271,8 +340,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
           credit_note = result.credit_note
 
-          # 16 days of unused subscription fee
-          # 16 * 1 euro per day + 20% tax = 19.2
+          # CREDITABLE AMOUNT CALCULATION
+          # Unused subscription (16 days)    €16.00  (timezone adjusted)
+          #                                  ------
+          # Subtotal                         €16.00
+          # Tax (20%)                        €3.20
+          #                                  ------
+          # Total creditable                 €19.20
+
           expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, precise_item_amount_cents: 16_00, tax_amount_cents: 3_20)
         end
       end
@@ -306,8 +381,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        # 15 days of unused subscription fee out of 30 days
-        # 15 * (9.99/30) euro per day + 0% tax = 4.99
+        # CREDITABLE AMOUNT CALCULATION
+        # Unused subscription (15 days)    €4.995  (15/30 × €9.99)
+        #                                  ------
+        # Subtotal                         €4.995
+        # Tax (0%)                         €0.00
+        #                                  ------
+        # Total creditable                 €4.99
+
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 4_99, precise_item_amount_cents: 4_99.49999, tax_amount_cents: 0)
       end
     end
@@ -322,8 +403,15 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
 
         credit_note = result.credit_note
 
-        # 16 days of unused subscription fee
-        # (16 * 1 euro per day - (10 euro coupon * 16/31)) + 20% tax = 13.01
+        # CREDITABLE AMOUNT CALCULATION
+        # Unused subscription (16 days)    €16.00
+        # Coupon allocation (16/31)        -€5.16
+        #                                  ------
+        # Subtotal                         €10.84
+        # Tax (20%)                        €2.17
+        #                                  ------
+        # Total creditable                 €13.01
+
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 13_01, precise_item_amount_cents: 16_00, tax_amount_cents: 2_17)
       end
     end
@@ -337,6 +425,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         expect(result).to be_success
 
         credit_note = result.credit_note
+
+        # CREDITABLE AMOUNT CALCULATION
+        # Unused subscription (16 days)    €16.00
+        #                                  ------
+        # Subtotal                         €16.00
+        # Tax (20%)                        €3.20
+        #                                  ------
+        # Total creditable                 €19.20
 
         expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, precise_item_amount_cents: 16_00, tax_amount_cents: 3_20)
 

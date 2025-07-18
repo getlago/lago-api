@@ -2,6 +2,8 @@
 
 module CreditNotes
   class CreateFromTermination < BaseService
+    Result = CreditNotes::CreateService::Result
+
     def initialize(subscription:, reason: "order_change", upgrade: false, context: nil)
       @subscription = subscription
       @reason = reason
@@ -14,27 +16,19 @@ module CreditNotes
     def call
       return result if (last_subscription_fee&.amount_cents || 0).zero? || last_subscription_fee.invoice.voided?
 
-      amount = compute_amount
-      return result unless amount.positive?
+      base_creditable_amount = calculate_base_creditable_amount
+      return result if base_creditable_amount.zero?
 
-      # NOTE: In some cases, if the fee was already prorated (in case of multiple upgrade) the amount
-      #       could be greater than the last subscription fee amount.
-      #       In that case, we have to use the last subscription fee amount
-      amount = last_subscription_fee.amount_cents if amount > last_subscription_fee.amount_cents
-
-      # NOTE: if credit notes were already issued on the fee,
-      #       we have to deduct them from the prorated amount
-      amount -= last_subscription_fee.credit_note_items.sum(:amount_cents)
-      return result unless amount.positive?
+      credit_amount_cents, refund_amount_cents = calculate_credit_and_refund_amounts(base_creditable_amount)
 
       CreditNotes::CreateService.call(
         invoice: last_subscription_fee.invoice,
-        credit_amount_cents: creditable_amount_cents(amount),
-        refund_amount_cents: 0,
+        credit_amount_cents:,
+        refund_amount_cents:,
         items: [
           {
             fee_id: last_subscription_fee.id,
-            amount_cents: amount.truncate(CreditNote::DB_PRECISION_SCALE)
+            amount_cents: base_creditable_amount.truncate(CreditNote::DB_PRECISION_SCALE)
           }
         ],
         reason: reason.to_sym,
@@ -49,11 +43,28 @@ module CreditNotes
 
     delegate :plan, :terminated_at, :customer, to: :subscription
 
+    def calculate_base_creditable_amount
+      amount = calculate_base_unused_amount
+      return 0 unless amount.positive?
+
+      # NOTE: In some cases, if the fee was already prorated (in case of multiple upgrade) the amount
+      #       could be greater than the last subscription fee amount.
+      #       In that case, we have to use the last subscription fee amount
+      amount = last_subscription_fee.amount_cents if amount > last_subscription_fee.amount_cents
+
+      # NOTE: if credit notes were already issued on the fee,
+      #       we have to deduct them from the prorated amount
+      amount -= last_subscription_fee.credit_note_items.sum(:amount_cents)
+      return 0 unless amount.positive?
+
+      amount
+    end
+
     def last_subscription_fee
       @last_subscription_fee ||= subscription.fees.subscription.order(created_at: :desc).first
     end
 
-    def compute_amount
+    def calculate_base_unused_amount
       day_price * remaining_duration
     end
 
@@ -97,19 +108,24 @@ module CreditNotes
       duration.negative? ? 0 : duration
     end
 
-    def creditable_amount_cents(item_amount)
-      taxes_result = CreditNotes::ApplyTaxesService.call(
-        invoice: last_subscription_fee.invoice,
-        items: [
-          CreditNoteItem.new(
-            fee_id: last_subscription_fee.id,
-            precise_amount_cents: item_amount.truncate(CreditNote::DB_PRECISION_SCALE)
-          )
-        ]
-      )
+    def calculate_credit_and_refund_amounts(base_creditable_amount)
+      # Calculate the total creditable amount (including taxes)
+      total_creditable_amount = adjust_for_coupon_and_taxes(base_creditable_amount)
+
+      refund_amount_cents = 0
+
+      credit_amount_cents = total_creditable_amount - refund_amount_cents
+
+      [credit_amount_cents, refund_amount_cents]
+    end
+
+    def adjust_for_coupon_and_taxes(item_amount)
+      precise_amount_cents = item_amount.truncate(CreditNote::DB_PRECISION_SCALE)
+      item = CreditNoteItem.new(fee_id: last_subscription_fee.id, precise_amount_cents:)
+      taxes_result = CreditNotes::ApplyTaxesService.call(invoice: last_subscription_fee.invoice, items: [item])
 
       (
-        item_amount.truncate(CreditNote::DB_PRECISION_SCALE) -
+        precise_amount_cents -
         taxes_result.coupons_adjustment_amount_cents +
         taxes_result.taxes_amount_cents
       ).round
