@@ -7425,6 +7425,11 @@ input OktaLoginInput {
   state: String!
 }
 
+enum OnTerminationCreditNoteEnum {
+  credit
+  skip
+}
+
 enum OrderByEnum {
   gross_revenue_amount_cents
   net_revenue_amount_cents
@@ -9062,6 +9067,7 @@ type Subscription {
   nextSubscription: Subscription
   nextSubscriptionAt: ISO8601DateTime
   nextSubscriptionType: NextSubscriptionTypeEnum
+  onTerminationCreditNote: OnTerminationCreditNoteEnum
   periodEndDate: ISO8601Date
   plan: Plan!
   startedAt: ISO8601DateTime
@@ -9354,6 +9360,7 @@ input TerminateSubscriptionInput {
   """
   clientMutationId: String
   id: ID!
+  onTerminationCreditNote: OnTerminationCreditNoteEnum
 }
 
 input ThresholdInput {

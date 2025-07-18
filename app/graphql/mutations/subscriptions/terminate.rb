@@ -12,12 +12,13 @@ module Mutations
       description "Terminate a Subscription"
 
       argument :id, ID, required: true
+      argument :on_termination_credit_note, Types::Subscriptions::OnTerminationCreditNoteEnum, required: false
 
       type Types::Subscriptions::Object
 
-      def resolve(**args)
-        subscription = current_organization.subscriptions.find_by(id: args[:id])
-        result = ::Subscriptions::TerminateService.call(subscription:)
+      def resolve(id:, **args)
+        subscription = current_organization.subscriptions.find_by(id:)
+        result = ::Subscriptions::TerminateService.call(subscription:, **args.compact)
 
         result.success? ? result.subscription : result_error(result)
       end

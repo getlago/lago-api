@@ -34939,6 +34939,29 @@
         },
         {
           "kind": "ENUM",
+          "name": "OnTerminationCreditNoteEnum",
+          "description": null,
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": null,
+          "enumValues": [
+            {
+              "name": "credit",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "skip",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ]
+        },
+        {
+          "kind": "ENUM",
           "name": "OrderByEnum",
           "description": null,
           "interfaces": null,
@@ -47813,6 +47836,18 @@
               "args": []
             },
             {
+              "name": "onTerminationCreditNote",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "OnTerminationCreditNoteEnum",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "periodEndDate",
               "description": null,
               "type": {
@@ -49249,6 +49284,18 @@
                   "name": "ID",
                   "ofType": null
                 }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "onTerminationCreditNote",
+              "description": null,
+              "type": {
+                "kind": "ENUM",
+                "name": "OnTerminationCreditNoteEnum",
+                "ofType": null
               },
               "defaultValue": null,
               "isDeprecated": false,
