@@ -753,7 +753,6 @@ DROP TABLE IF EXISTS public.password_resets;
 DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
-DROP TABLE IF EXISTS public.invoice_subscriptions;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
@@ -786,6 +785,8 @@ DROP TABLE IF EXISTS public.invoices_taxes;
 DROP VIEW IF EXISTS public.exports_invoices;
 DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.invoice_metadata;
+DROP VIEW IF EXISTS public.exports_invoice_subscriptions;
+DROP TABLE IF EXISTS public.invoice_subscriptions;
 DROP VIEW IF EXISTS public.exports_fees_taxes;
 DROP TABLE IF EXISTS public.fees_taxes;
 DROP VIEW IF EXISTS public.exports_fees;
@@ -852,6 +853,7 @@ DROP TABLE IF EXISTS public.active_storage_attachments;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.tax_status;
+DROP TYPE IF EXISTS public.subscription_on_termination_credit_note;
 DROP TYPE IF EXISTS public.subscription_invoicing_reason;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
@@ -1008,6 +1010,16 @@ CREATE TYPE public.subscription_invoicing_reason AS ENUM (
     'in_advance_charge',
     'in_advance_charge_periodic',
     'progressive_billing'
+);
+
+
+--
+-- Name: subscription_on_termination_credit_note; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_on_termination_credit_note AS ENUM (
+    'credit',
+    'skip'
 );
 
 
@@ -2478,7 +2490,8 @@ CREATE TABLE public.subscriptions (
     subscription_at timestamp(6) without time zone,
     ending_at timestamp(6) without time zone,
     trial_ended_at timestamp(6) without time zone,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    on_termination_credit_note public.subscription_on_termination_credit_note
 );
 
 
@@ -2625,6 +2638,49 @@ CREATE VIEW public.exports_fees_taxes AS
     ft.created_at,
     ft.updated_at
    FROM public.fees_taxes ft;
+
+
+--
+-- Name: invoice_subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoice_subscriptions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    invoice_id uuid NOT NULL,
+    subscription_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    recurring boolean,
+    "timestamp" timestamp(6) without time zone,
+    from_datetime timestamp(6) without time zone,
+    to_datetime timestamp(6) without time zone,
+    charges_from_datetime timestamp(6) without time zone,
+    charges_to_datetime timestamp(6) without time zone,
+    invoicing_reason public.subscription_invoicing_reason,
+    organization_id uuid NOT NULL,
+    regenerated_invoice_id uuid
+);
+
+
+--
+-- Name: exports_invoice_subscriptions; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_invoice_subscriptions AS
+ SELECT ins.organization_id,
+    ins.id AS lago_id,
+    ins.invoice_id AS lago_invoice_id,
+    ins.regenerated_invoice_id AS lago_regenerated_invoice_id,
+    ins.subscription_id AS lago_subscription_id,
+    ins.created_at,
+    ins.updated_at,
+    ins.from_datetime,
+    ins.to_datetime,
+    ins.charges_from_datetime,
+    ins.charges_to_datetime,
+    ins."timestamp",
+    (ins.invoicing_reason)::text AS invoicing_reason
+   FROM public.invoice_subscriptions ins;
 
 
 --
@@ -3398,28 +3454,6 @@ CREATE TABLE public.invoice_custom_sections (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     section_type public.invoice_custom_section_type DEFAULT 'manual'::public.invoice_custom_section_type NOT NULL
-);
-
-
---
--- Name: invoice_subscriptions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoice_subscriptions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_id uuid NOT NULL,
-    subscription_id uuid NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    recurring boolean,
-    "timestamp" timestamp(6) without time zone,
-    from_datetime timestamp(6) without time zone,
-    to_datetime timestamp(6) without time zone,
-    charges_from_datetime timestamp(6) without time zone,
-    charges_to_datetime timestamp(6) without time zone,
-    invoicing_reason public.subscription_invoicing_reason,
-    organization_id uuid NOT NULL,
-    regenerated_invoice_id uuid
 );
 
 
@@ -9183,6 +9217,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250718140450'),
 ('20250717142440'),
 ('20250717092012'),
 ('20250716150049'),
@@ -9194,6 +9229,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250715124108'),
 ('20250714131519'),
 ('20250710102337'),
+('20250709171329'),
 ('20250709085218'),
 ('20250709082136'),
 ('20250708094414'),
