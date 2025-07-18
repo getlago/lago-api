@@ -43,7 +43,7 @@ class Subscription < ApplicationRecord
     anniversary
   ].freeze
 
-  ON_TERMINATION_CREDIT_NOTES = {credit: "credit", skip: "skip"}.freeze
+  ON_TERMINATION_CREDIT_NOTES = {credit: "credit", skip: "skip", refund: "refund"}.freeze
 
   enum :status, STATUSES
   enum :billing_time, BILLING_TIME

@@ -210,6 +210,23 @@ RSpec.describe Subscriptions::TerminateService do
         end
       end
 
+      context "when on_termination_credit_note is refund" do
+        let(:on_termination_credit_note) { "refund" }
+
+        it "creates a credit note for the remaining days with refund" do
+          travel_to(Time.current.end_of_month - 4.days) do
+            expect { subject }.to change(CreditNote, :count).by(1)
+          end
+        end
+
+        it "updates the subscription termination behavior" do
+          travel_to(Time.current.end_of_month - 4.days) do
+            subject
+            expect(subscription.reload.on_termination_credit_note).to eq("refund")
+          end
+        end
+      end
+
       context "when on_termination_credit_note is not set" do
         subject(:result) { described_class.call(subscription:) }
 
