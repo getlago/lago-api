@@ -209,14 +209,28 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
   end
 
   context "when plan has entitlements" do
-    it "returns entitlements" do
-      feature = create(:feature, organization:, code: "seats")
-      entitlement = create(:entitlement, plan:, feature:)
-      create(:entitlement_value, entitlement:, privilege: create(:privilege, feature:, code: "max", value_type: "integer"), value: 10)
+    let(:feature) { create(:feature, organization:, code: "seats") }
+    let(:entitlement) { create(:entitlement, plan:, feature:) }
 
+    before do
+      create(:entitlement_value, entitlement:, privilege: create(:privilege, feature:, code: "max", value_type: "integer"), value: 10)
+    end
+
+    it "returns entitlements" do
       entitlements = result["data"]["plan"]["entitlements"]
       expect(entitlements.sole["code"]).to eq "seats"
       expect(entitlements.sole["privileges"].sole["value"]).to eq "10"
+    end
+
+    context "when plan is an override" do
+      let(:plan) { create(:plan, organization:, parent: create(:plan, organization:)) }
+      let(:entitlement) { create(:entitlement, plan: plan.parent, feature:) }
+
+      it "returns the parent entitlements" do
+        entitlements = result["data"]["plan"]["entitlements"]
+        expect(entitlements.sole["code"]).to eq "seats"
+        expect(entitlements.sole["privileges"].sole["value"]).to eq "10"
+      end
     end
   end
 

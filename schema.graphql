@@ -8604,6 +8604,11 @@ type Query {
   ): Subscription
 
   """
+  Query subscription entitlements
+  """
+  subscriptionEntitlements(subscriptionExternalId: String!): [SubscriptionEntitlement!]!
+
+  """
   Query subscriptions of an organization
   """
   subscriptions(externalCustomerId: String, limit: Int, overriden: Boolean, page: Int, planCode: String, searchTerm: String, status: [StatusTypeEnum!]): SubscriptionCollection!
@@ -9084,6 +9089,21 @@ type SubscriptionCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type SubscriptionEntitlement {
+  code: String!
+  privileges: [SubscriptionEntitlementPrivilegeObject!]!
+
+  """
+  Whether this feature is removed from the subscription
+  """
+  removed: Boolean!
+}
+
+type SubscriptionEntitlementPrivilegeObject {
+  code: String!
+  value: String!
 }
 
 type SubscriptionLifetimeUsage {
