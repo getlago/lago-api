@@ -12,18 +12,9 @@ class MoneyHelper
   end
 
   def self.format_with_precision(amount_cents, currency)
-    amount_cents = if amount_cents < 1
-      BigDecimal("%.6g" % amount_cents)
-    else
-      amount_cents.round(6)
-    end
-
+    amount_cents = normalize_precision(amount_cents)
     money = Utils::MoneyWithPrecision.from_amount(amount_cents, currency)
-    money.format(
-      format: currency_format(money.currency),
-      decimal_mark: I18n.t("money.decimal_mark"),
-      thousands_separator: I18n.t("money.thousands_separator")
-    )
+    format(money)
   end
 
   def self.currency_format(money_currency)
@@ -31,6 +22,14 @@ class MoneyHelper
       I18n.t("money.format")
     else
       I18n.t("money.custom_format", iso_code: money_currency&.iso_code)
+    end
+  end
+
+  def self.normalize_precision(amount_cents)
+    if amount_cents < 1
+      BigDecimal("%.6g" % amount_cents)
+    else
+      amount_cents.round(6)
     end
   end
 end
