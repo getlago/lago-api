@@ -745,7 +745,6 @@ DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.quantified_events;
 DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
-DROP TABLE IF EXISTS public.payment_requests;
 DROP TABLE IF EXISTS public.payment_receipts;
 DROP TABLE IF EXISTS public.payment_providers;
 DROP TABLE IF EXISTS public.payment_intents;
@@ -778,7 +777,9 @@ DROP VIEW IF EXISTS public.exports_subscriptions;
 DROP VIEW IF EXISTS public.exports_plans;
 DROP TABLE IF EXISTS public.plans_taxes;
 DROP VIEW IF EXISTS public.exports_payments;
+DROP VIEW IF EXISTS public.exports_payment_requests;
 DROP TABLE IF EXISTS public.payments;
+DROP TABLE IF EXISTS public.payment_requests;
 DROP TABLE IF EXISTS public.invoices_payment_requests;
 DROP VIEW IF EXISTS public.exports_invoices_taxes;
 DROP TABLE IF EXISTS public.invoices_taxes;
@@ -868,6 +869,14 @@ DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
+-- *not* dropping schema, since initdb creates it
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+-- *not* creating schema, since initdb creates it
+
+
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
@@ -2876,6 +2885,26 @@ CREATE TABLE public.invoices_payment_requests (
 
 
 --
+-- Name: payment_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_requests (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    customer_id uuid NOT NULL,
+    amount_cents bigint DEFAULT 0 NOT NULL,
+    amount_currency character varying NOT NULL,
+    email character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid NOT NULL,
+    payment_status integer DEFAULT 0 NOT NULL,
+    payment_attempts integer DEFAULT 0 NOT NULL,
+    ready_for_payment_processing boolean DEFAULT true NOT NULL,
+    dunning_campaign_id uuid
+);
+
+
+--
 -- Name: payments; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2901,6 +2930,38 @@ CREATE TABLE public.payments (
     organization_id uuid NOT NULL,
     customer_id uuid
 );
+
+
+--
+-- Name: exports_payment_requests; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_payment_requests AS
+ SELECT pr.organization_id,
+    pr.id AS lago_id,
+    pr.customer_id AS lago_customer_id,
+    pr.payment_attempts,
+    pr.amount_cents,
+    pr.amount_currency,
+    pr.email,
+    pr.ready_for_payment_processing,
+        CASE pr.payment_status
+            WHEN 0 THEN 'pending'::text
+            WHEN 1 THEN 'succeeded'::text
+            WHEN 2 THEN 'failed'::text
+            ELSE NULL::text
+        END AS payment_status,
+    to_json(ARRAY( SELECT p.id
+           FROM public.payments p
+          WHERE ((p.payable_id = pr.id) AND ((p.payable_type)::text = 'PaymentRequest'::text))
+          ORDER BY p.created_at)) AS payment_ids,
+    to_json(ARRAY( SELECT apr.invoice_id
+           FROM public.invoices_payment_requests apr
+          WHERE (apr.payment_request_id = pr.id)
+          ORDER BY apr.created_at)) AS invoice_ids,
+    pr.created_at,
+    pr.updated_at
+   FROM public.payment_requests pr;
 
 
 --
@@ -3586,26 +3647,6 @@ CREATE TABLE public.payment_receipts (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     billing_entity_id uuid NOT NULL
-);
-
-
---
--- Name: payment_requests; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.payment_requests (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    customer_id uuid NOT NULL,
-    amount_cents bigint DEFAULT 0 NOT NULL,
-    amount_currency character varying NOT NULL,
-    email character varying,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL,
-    payment_status integer DEFAULT 0 NOT NULL,
-    payment_attempts integer DEFAULT 0 NOT NULL,
-    ready_for_payment_processing boolean DEFAULT true NOT NULL,
-    dunning_campaign_id uuid
 );
 
 
@@ -9217,6 +9258,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250721091802'),
 ('20250718174008'),
 ('20250718140450'),
 ('20250717092012'),
