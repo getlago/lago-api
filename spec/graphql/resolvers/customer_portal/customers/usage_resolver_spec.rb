@@ -151,7 +151,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
         expect(usage_response["amountCents"]).to eq("405")
         expect(usage_response["projectedAmountCents"]).to eq("810")
         expect(usage_response["totalAmountCents"]).to eq("405")
-        expect(usage_response["taxesAmountCents"]).to eq("0")        
+        expect(usage_response["taxesAmountCents"]).to eq("0")
         charge_usage = usage_response["chargesUsage"].find { |usage| usage["billableMetric"]["code"] == metric.code }
         expect(charge_usage["billableMetric"]["name"]).to eq(metric.name)
         expect(charge_usage["billableMetric"]["aggregationType"]).to eq("count_agg")
