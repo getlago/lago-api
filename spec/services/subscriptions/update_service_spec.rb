@@ -107,6 +107,23 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
           end
         end
       end
+
+      context "when updating on_termination_invoice" do
+        let(:params) { {on_termination_invoice: "generate"} }
+
+        %w[generate skip].each do |value|
+          context "when on_termination_invoice is #{value}" do
+            let(:params) { {on_termination_invoice: value} }
+
+            it "accepts the value" do
+              result = update_service.call
+
+              expect(result).to be_success
+              expect(result.subscription.on_termination_invoice).to eq(value)
+            end
+          end
+        end
+      end
     end
 
     context "when subscription is starting in the future" do
@@ -269,6 +286,17 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
 
           expect(result).not_to be_success
           expect(result.error.messages).to eq({on_termination_credit_note: ["invalid_value"]})
+        end
+      end
+
+      context "with invalid on_termination_invoice" do
+        let(:params) { {on_termination_invoice: "invalid_value"} }
+
+        it "returns validation failure" do
+          result = update_service.call
+
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq({on_termination_invoice: ["invalid_value"]})
         end
       end
     end

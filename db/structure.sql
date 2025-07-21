@@ -868,6 +868,7 @@ DROP TABLE IF EXISTS public.active_storage_attachments;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.tax_status;
+DROP TYPE IF EXISTS public.subscription_on_termination_invoice;
 DROP TYPE IF EXISTS public.subscription_on_termination_credit_note;
 DROP TYPE IF EXISTS public.subscription_invoicing_reason;
 DROP TYPE IF EXISTS public.payment_type;
@@ -1034,6 +1035,16 @@ CREATE TYPE public.subscription_invoicing_reason AS ENUM (
 
 CREATE TYPE public.subscription_on_termination_credit_note AS ENUM (
     'credit',
+    'skip'
+);
+
+
+--
+-- Name: subscription_on_termination_invoice; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_on_termination_invoice AS ENUM (
+    'generate',
     'skip'
 );
 
@@ -2582,7 +2593,8 @@ CREATE TABLE public.subscriptions (
     ending_at timestamp(6) without time zone,
     trial_ended_at timestamp(6) without time zone,
     organization_id uuid NOT NULL,
-    on_termination_credit_note public.subscription_on_termination_credit_note
+    on_termination_credit_note public.subscription_on_termination_credit_note,
+    on_termination_invoice public.subscription_on_termination_invoice DEFAULT 'generate'::public.subscription_on_termination_invoice NOT NULL
 );
 
 
@@ -9434,6 +9446,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250721220908'),
 ('20250721212307'),
 ('20250721211820'),
+('20250721192051'),
 ('20250721150002'),
 ('20250721150001'),
 ('20250721150000'),

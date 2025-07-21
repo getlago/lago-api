@@ -461,7 +461,7 @@ RSpec.describe Subscriptions::CreateService, type: :service do
 
           it "enqueues the Hubspot update job", :aggregate_failures do
             create_service.call
-            expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to have_been_enqueued.with(subscription:)
+            expect(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).to have_been_enqueued.twice.with(subscription:)
           end
 
           it "creates a new subscription" do

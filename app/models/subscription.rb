@@ -45,10 +45,12 @@ class Subscription < ApplicationRecord
   ].freeze
 
   ON_TERMINATION_CREDIT_NOTES = {credit: "credit", skip: "skip"}.freeze
+  ON_TERMINATION_INVOICES = {generate: "generate", skip: "skip"}.freeze
 
   enum :status, STATUSES
   enum :billing_time, BILLING_TIME
-  enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES
+  enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES, prefix: true
+  enum :on_termination_invoice, ON_TERMINATION_INVOICES, prefix: true
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
 
@@ -251,6 +253,7 @@ end
 #  ending_at                  :datetime
 #  name                       :string
 #  on_termination_credit_note :enum
+#  on_termination_invoice     :enum             default("generate"), not null
 #  started_at                 :datetime
 #  status                     :integer          not null
 #  subscription_at            :datetime

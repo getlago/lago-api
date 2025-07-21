@@ -24,6 +24,11 @@ RSpec.describe Subscription, type: :model do
       expect(subject).to define_enum_for(:on_termination_credit_note)
         .backed_by_column_of_type(:enum)
         .with_values(credit: "credit", skip: "skip")
+        .with_prefix(:on_termination_credit_note)
+      expect(subject).to define_enum_for(:on_termination_invoice)
+        .backed_by_column_of_type(:enum)
+        .with_values(generate: "generate", skip: "skip")
+        .with_prefix(:on_termination_invoice)
     end
   end
 
