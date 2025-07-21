@@ -5,5 +5,10 @@ FactoryBot.define do
     organization { feature&.organization || plan&.organization || association(:organization) }
     association :feature, factory: :feature
     association :plan
+
+    trait :subscription do
+      plan { nil }
+      association :subscription
+    end
   end
 end
