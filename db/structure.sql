@@ -209,6 +209,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EX
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_19c47827ba;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_189f2a3949;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_173327f0dc;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_150139409e;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_1454058c96;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_142809fee1;
@@ -1942,7 +1943,8 @@ CREATE TABLE public.entitlement_entitlements (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    subscription_id uuid
+    subscription_id uuid,
+    CONSTRAINT entitlement_check_exactly_one_parent CHECK (((plan_id IS NOT NULL) <> (subscription_id IS NOT NULL)))
 );
 
 
@@ -5138,14 +5140,14 @@ CREATE UNIQUE INDEX idx_subscription_unique ON public.usage_monitoring_subscript
 -- Name: idx_unique_feature_per_plan; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_unique_feature_per_plan ON public.entitlement_entitlements USING btree (entitlement_feature_id, plan_id) WHERE ((deleted_at IS NULL) AND (subscription_id IS NULL));
+CREATE UNIQUE INDEX idx_unique_feature_per_plan ON public.entitlement_entitlements USING btree (entitlement_feature_id, plan_id) WHERE (deleted_at IS NULL);
 
 
 --
 -- Name: idx_unique_feature_per_subscription; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_unique_feature_per_subscription ON public.entitlement_entitlements USING btree (entitlement_feature_id, subscription_id) WHERE ((deleted_at IS NULL) AND (plan_id IS NULL));
+CREATE UNIQUE INDEX idx_unique_feature_per_subscription ON public.entitlement_entitlements USING btree (entitlement_feature_id, subscription_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -7812,6 +7814,14 @@ ALTER TABLE ONLY public.invoice_subscriptions
 
 
 --
+-- Name: entitlement_entitlements fk_rails_173327f0dc; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlements
+    ADD CONSTRAINT fk_rails_173327f0dc FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+
+
+--
 -- Name: coupon_targets fk_rails_189f2a3949; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9418,12 +9428,12 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250721150002'),
+('20250721150001'),
+('20250721150000'),
 ('20250721091802'),
 ('20250718174008'),
 ('20250718140450'),
-('20250717150002'),
-('20250717150001'),
-('20250717150000'),
 ('20250717092012'),
 ('20250716150049'),
 ('20250716143358'),
