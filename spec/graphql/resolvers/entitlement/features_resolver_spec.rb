@@ -17,6 +17,7 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
             name
             description
             privileges {
+              id
               code
               name
               valueType
@@ -95,6 +96,7 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
               name
               description
               privileges {
+                id
                 code
                 name
                 valueType
