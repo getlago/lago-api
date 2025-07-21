@@ -346,8 +346,10 @@ RSpec.describe Organization, type: :model do
     let(:scoped) { create(:membership, organization:).user }
 
     before do
+      scoped
       create(:membership)
       create(:membership, organization:, role: [:manager, :finance].sample)
+      create(:membership, organization:, role: :admin, status: :revoked)
     end
 
     it "returns admins of the organization" do
