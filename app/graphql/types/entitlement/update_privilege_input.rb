@@ -6,7 +6,7 @@ module Types
       description "Input for updating a privilege"
 
       argument :code, String, required: true
-      argument :config, GraphQL::Types::JSON, required: false
+      argument :config, Types::Entitlement::PrivilegeConfigInput, required: false
       argument :name, String, required: false
       argument :value_type, PrivilegeValueTypeEnum, required: false
     end
