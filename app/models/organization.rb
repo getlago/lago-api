@@ -25,7 +25,10 @@ class Organization < ApplicationRecord
   has_many :billing_entities, -> { active }
   has_many :all_billing_entities, class_name: "BillingEntity"
   has_many :memberships
+  has_many :active_memberships, -> { active }, class_name: "Membership"
+  has_many :admins_memberships, -> { active.admin }, class_name: "Membership"
   has_many :users, through: :memberships
+  has_many :admins, through: :admins_memberships, source: :user
   has_many :billable_metrics
   has_many :plans
   has_many :pricing_units
@@ -151,10 +154,6 @@ class Organization < ApplicationRecord
 
   def using_lifetime_usage?
     lifetime_usage_enabled? || progressive_billing_enabled?
-  end
-
-  def admins
-    users.joins(:memberships).merge!(memberships.admin)
   end
 
   def logo_url
