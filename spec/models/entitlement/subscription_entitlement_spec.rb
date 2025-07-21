@@ -59,7 +59,7 @@ RSpec.describe Entitlement::SubscriptionEntitlement, type: :model do
 
   describe "#readonly?" do
     it do
-      expect(subject.readonly?).to be_truthy
+      expect(subject).to be_readonly
     end
   end
 
