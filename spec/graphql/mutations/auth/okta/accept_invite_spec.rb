@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Mutations::Auth::Okta::AcceptInvite, type: :graphql, cache: :memory do
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, premium_integrations: ["okta"]) }
   let(:invite) { create(:invite, email: "foo@bar.com", organization:) }
   let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo", organization:) }
   let(:lago_http_client) { instance_double(LagoHttpClient::Client) }
@@ -24,9 +24,13 @@ RSpec.describe Mutations::Auth::Okta::AcceptInvite, type: :graphql, cache: :memo
     GQL
   end
 
+  around { |test| lago_premium!(&test) }
+
   before do
     invite
     okta_integration
+
+    organization.enable_okta_authentication!
 
     Rails.cache.write(state, "foo@bar.com")
 

@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
   subject(:service) { described_class.new(invite_token:, code: "code", state:) }
 
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, premium_integrations: ["okta"]) }
   let(:okta_integration) { create(:okta_integration, domain: "bar.com", organization_name: "foo", organization:) }
   let(:invite) { create(:invite, email: "foo@bar.com", organization:) }
   let(:invite_token) { invite.token }
@@ -14,9 +14,13 @@ RSpec.describe Auth::Okta::AcceptInviteService, cache: :memory do
   let(:okta_userinfo_response) { OpenStruct.new({email: "foo@bar.com"}) }
   let(:state) { SecureRandom.uuid }
 
+  around { |test| lago_premium!(&test) }
+
   before do
     okta_integration
     invite_token
+
+    organization.enable_okta_authentication!
 
     Rails.cache.write(state, "foo@bar.com")
 
