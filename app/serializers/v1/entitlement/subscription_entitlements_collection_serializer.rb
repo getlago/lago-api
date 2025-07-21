@@ -17,30 +17,15 @@ module V1
                 name: e.privilege_name,
                 value_type: e.privilege_value_type,
                 config: e.privilege_config,
-                value: cast_value(e.privilege_override_value.presence || e.privilege_plan_value, e.privilege_value_type),
-                plan_value: cast_value(e.privilege_plan_value, e.privilege_value_type),
-                override_value: cast_value(e.privilege_override_value, e.privilege_value_type)
+                value: Utils::Entitlement.cast_value(e.privilege_override_value.presence || e.privilege_plan_value, e.privilege_value_type),
+                plan_value: Utils::Entitlement.cast_value(e.privilege_plan_value, e.privilege_value_type),
+                override_value: Utils::Entitlement.cast_value(e.privilege_override_value, e.privilege_value_type)
               }
             end.index_by { it[:code] },
             overrides: feature_entitlements.filter_map do |e|
-              [e.privilege_code, cast_value(e.privilege_override_value, e.privilege_value_type)] unless e.privilege_override_value.nil?
+              [e.privilege_code, Utils::Entitlement.cast_value(e.privilege_override_value, e.privilege_value_type)] unless e.privilege_override_value.nil?
             end.to_h
           }
-        end
-      end
-
-      private
-
-      def cast_value(value, type)
-        return nil if value.blank?
-
-        case type
-        when "integer"
-          value.to_i
-        when "boolean"
-          ActiveModel::Type::Boolean.new.cast(value)
-        else
-          value
         end
       end
     end

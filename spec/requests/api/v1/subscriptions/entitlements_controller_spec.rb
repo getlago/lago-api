@@ -143,7 +143,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
 
     context "when entitlement does not exist" do
       let(:new_feature) { create(:feature, organization:, code: "storage") }
-      let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_gb") }
+      let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_gb", value_type: "integer") }
       let(:params) do
         {
           "entitlements" => {
