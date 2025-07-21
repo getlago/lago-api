@@ -57,6 +57,7 @@ class Organization < ApplicationRecord
   has_many :privileges, class_name: "Entitlement::Privilege"
   has_many :entitlements, class_name: "Entitlement::Entitlement"
   has_many :entitlement_values, class_name: "Entitlement::EntitlementValue"
+  has_many :subscription_feature_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
 
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"

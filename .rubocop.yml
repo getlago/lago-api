@@ -51,6 +51,10 @@ Rails/ApplicationJob:
   Exclude:
     - "spec/support/jobs/**/*"
 
+# strong_migration does not work with bulk changes
+Rails/BulkChangeTable:
+  Enabled: false
+
 Rails/InverseOf:
   Description: "Checks for associations where the inverse cannot be determined automatically."
   Enabled: false

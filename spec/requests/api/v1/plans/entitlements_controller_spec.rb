@@ -10,7 +10,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
   around { |test| lago_premium!(&test) }
 
-  describe "GET #index" do
+  describe "GET /api/v1/plans/:plan_code/entitlements" do
     subject { get_with_token organization, "/api/v1/plans/#{plan.code}/entitlements" }
 
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
@@ -33,7 +33,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
     end
   end
 
-  describe "GET #show" do
+  describe "GET /api/v1/plans/:plan_code/entitlements/:feature_code" do
     subject { get_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}" }
 
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
@@ -67,7 +67,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
     end
   end
 
-  describe "POST #create" do
+  describe "POST /api/v1/plans/:plan_code/entitlements" do
     subject { post_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params }
 
     let(:params) do
@@ -246,7 +246,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
     end
   end
 
-  describe "PATCH #update" do
+  describe "PATCH /api/v1/plans/:plan_code/entitlements" do
     subject { patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params }
 
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
@@ -405,7 +405,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
     end
   end
 
-  describe "DELETE #destroy" do
+  describe "DELETE /api/v1/plans/:plan_code/entitlements/:feature_code" do
     subject { delete_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}" }
 
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
