@@ -41,8 +41,8 @@ end
 #
 # Indexes
 #
-#  idx_unique_feature_per_plan                               (entitlement_feature_id,plan_id) UNIQUE WHERE ((deleted_at IS NULL) AND (subscription_id IS NULL))
-#  idx_unique_feature_per_subscription                       (entitlement_feature_id,subscription_id) UNIQUE WHERE ((deleted_at IS NULL) AND (plan_id IS NULL))
+#  idx_unique_feature_per_plan                               (entitlement_feature_id,plan_id) UNIQUE WHERE (deleted_at IS NULL)
+#  idx_unique_feature_per_subscription                       (entitlement_feature_id,subscription_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_entitlement_entitlements_on_entitlement_feature_id  (entitlement_feature_id)
 #  index_entitlement_entitlements_on_organization_id         (organization_id)
 #  index_entitlement_entitlements_on_plan_id                 (plan_id)
@@ -53,4 +53,5 @@ end
 #  fk_rails_...  (entitlement_feature_id => entitlement_features.id)
 #  fk_rails_...  (organization_id => organizations.id)
 #  fk_rails_...  (plan_id => plans.id)
+#  fk_rails_...  (subscription_id => subscriptions.id)
 #
