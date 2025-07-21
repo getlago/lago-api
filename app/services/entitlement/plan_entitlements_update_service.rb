@@ -2,6 +2,8 @@
 
 module Entitlement
   class PlanEntitlementsUpdateService < BaseService
+    include Concerns::CreateOrUpdateConcern
+
     Result = BaseResult[:entitlements]
 
     def initialize(organization:, plan:, entitlements_params:, partial:)
@@ -113,7 +115,7 @@ module Entitlement
         entitlement_value = entitlement.values.find { it.entitlement_privilege_id == privilege.id }
 
         if entitlement_value
-          entitlement_value.update!(value: validate_and_stringify(value, privilege))
+          entitlement_value.update!(value: validate_value(value, privilege))
         else
           create_entitlement_value(entitlement, privilege, value)
         end
@@ -125,24 +127,8 @@ module Entitlement
         organization: organization,
         entitlement: entitlement,
         privilege: privilege,
-        value: validate_and_stringify(value, privilege)
+        value: validate_value(value, privilege)
       )
-    end
-
-    def validate_and_stringify(value, privilege)
-      return value if value.nil?
-
-      if privilege.value_type == "select"
-        unless privilege.config.dig("select_options").include?(value)
-          raise ValidationFailure.new(result, messages: {"#{privilege.code}_privilege_value": ["value_not_in_select_options"]})
-        end
-      end
-
-      if value.is_a?(String) || value.is_a?(Integer) || [true, false].include?(value)
-        value.to_s
-      else
-        raise ValidationFailure.new(result, messages: {"#{privilege.code}_privilege_value": ["value_is_invalid"]})
-      end
     end
   end
 end
