@@ -7,7 +7,7 @@ RSpec.describe Types::Entitlement::UpdatePrivilegeInput do
 
   it do
     expect(subject).to accept_argument(:code).of_type("String!")
-    expect(subject).to accept_argument(:config).of_type("JSON")
+    expect(subject).to accept_argument(:config).of_type("PrivilegeConfigInput")
     expect(subject).to accept_argument(:name).of_type("String")
     expect(subject).to accept_argument(:value_type).of_type("PrivilegeValueTypeEnum")
   end
