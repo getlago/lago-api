@@ -60,7 +60,7 @@ SELECT
         'lago_item_id', CASE f.fee_type
             WHEN 0 THEN bm.id -- 0 is charge
             WHEN 1 THEN ao.id -- 1 is add_on
-            WHEN 3 THEN invoiceable_id -- 3 is credit
+            WHEN 3 THEN f.invoiceable_id -- 3 is credit
             ELSE f.subscription_id -- everything else is subscription
         END,
         'item_type', CASE f.fee_type
