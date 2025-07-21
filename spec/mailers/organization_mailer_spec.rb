@@ -24,7 +24,7 @@ RSpec.describe OrganizationMailer, type: :mailer do
   describe "#authentication_methods_updated" do
     specify do
       expect(subject.subject).to eq("Login method updated in your Lago workspace")
-      expect(subject.bcc).to eq([admin1.email, admin2.email])
+      expect(subject.bcc).to eq([admin0.email, admin1.email, admin2.email])
       expect(subject.from).to eq(["noreply@getlago.com"])
       expect(subject.reply_to).to eq(["noreply@getlago.com"])
 
@@ -32,16 +32,6 @@ RSpec.describe OrganizationMailer, type: :mailer do
       expect(email_body).to include(admin0.email)
       expect(email_body).to include("Enabled Okta")
       expect(email_body).to include("Disabled Google Oauth")
-    end
-
-    context "without other admins" do
-      before do
-        organization.memberships.where.not(user: admin0).destroy_all
-      end
-
-      it "returns a message with nil values" do
-        expect(subject.message).to be_a(ActionMailer::Base::NullMail)
-      end
     end
 
     context "without changes" do

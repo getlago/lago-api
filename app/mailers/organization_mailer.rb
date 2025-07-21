@@ -10,13 +10,10 @@ class OrganizationMailer < ApplicationMailer
     return if @organization.nil? || @user.nil?
     return if @additions.empty? && @deletions.empty?
 
-    admins = @organization.admins.where.not(users: {id: @user.id})
-    return if admins.empty?
-
     I18n.locale = @organization.document_locale
 
     mail(
-      bcc: admins.map(&:email),
+      bcc: @organization.admins.map(&:email),
       from: email_address_with_name(@organization.from_email_address, @organization.name),
       reply_to: email_address_with_name(@organization.from_email_address, @organization.name),
       subject: I18n.t(
