@@ -869,7 +869,6 @@ DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
-
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
