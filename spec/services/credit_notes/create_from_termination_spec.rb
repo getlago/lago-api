@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe CreditNotes::CreateFromTermination, type: :service do
-  subject(:create_service) { described_class.new(subscription:, context:) }
+  subject(:create_service) { described_class.new(subscription:, context:, **kwargs) }
+
+  let(:kwargs) { {} }
 
   let(:started_at) { Time.zone.parse("2022-09-01 10:00") }
   let(:subscription_at) { Time.zone.parse("2022-09-01 10:00") }
@@ -100,11 +102,10 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     precise_item_amount_cents:,
     total_amount_cents:,
     tax_amount_cents:,
-    refund_amount_cents: 0,
-    fee: subscription_fee
+    refund_amount_cents:,
+    fee:
   )
     credit_amount_cents = total_amount_cents - refund_amount_cents
-
     expect(credit_note).to be_available
     expect(credit_note).to be_order_change
 
@@ -130,15 +131,30 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     expect(credit_note_item.amount_currency).to eq("EUR")
   end
 
+  def test_credit_note_creation_from_termination(expectations:)
+    total_amount_cents = expectations.fetch(:total_amount_cents)
+    precise_item_amount_cents = expectations.fetch(:precise_item_amount_cents)
+    tax_amount_cents = expectations.fetch(:tax_amount_cents)
+    refund_amount_cents = expectations.fetch(:refund_amount_cents, 0)
+    fee = expectations.fetch(:fee, subscription_fee)
+
+    refund_amount_cents ||= 0
+    fee ||= subscription_fee
+
+    result = create_service.call
+
+    expect(result).to be_success
+    expect(result).to be_a(CreditNotes::CreateService::Result)
+
+    credit_note = result.credit_note
+
+    expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents:, precise_item_amount_cents:, tax_amount_cents:, refund_amount_cents:, fee:)
+
+    credit_note
+  end
+
   describe "#call" do
     it "creates a credit note" do
-      result = create_service.call
-
-      expect(result).to be_success
-      expect(result).to be_a(CreditNotes::CreateService::Result)
-
-      credit_note = result.credit_note
-
       # CREDITABLE AMOUNT CALCULATION
       # Unused subscription (16 days)    €16.00
       #                                  ------
@@ -147,19 +163,17 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       #                                  ------
       # Total creditable                 €19.20
 
-      expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, precise_item_amount_cents: 16_00, tax_amount_cents: 3_20)
+      test_credit_note_creation_from_termination(expectations: {
+        total_amount_cents: 19_20,
+        precise_item_amount_cents: 16_00,
+        tax_amount_cents: 3_20
+      })
     end
 
     context "with amount details attached to the fee" do
       let(:fee_and_invoice) { generate_invoice_and_fee(62_00, plan_amount_cents: 62_00) }
 
       it "creates a credit note based on the amount details" do
-        result = create_service.call
-
-        expect(result).to be_success
-
-        credit_note = result.credit_note
-
         # CREDITABLE AMOUNT CALCULATION
         # Unused subscription (16 days)    €32.00  (16 × €2.00/day)
         #                                  ------
@@ -168,7 +182,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         #                                  ------
         # Total creditable                 €38.40
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 38_40, precise_item_amount_cents: 32_00, tax_amount_cents: 6_40)
+        test_credit_note_creation_from_termination(expectations: {
+          total_amount_cents: 38_40,
+          precise_item_amount_cents: 32_00,
+          tax_amount_cents: 6_40
+        })
       end
     end
 
@@ -200,12 +218,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       before { fee_and_invoice_2 }
 
       it "takes the last fee as reference" do
-        result = create_service.call
-
-        expect(result).to be_success
-
-        credit_note = result.credit_note
-
         # CREDITABLE AMOUNT CALCULATION
         # Unused subscription (16 days)    €32.00  (16 × €2.00/day)
         #                                  ------
@@ -214,7 +226,12 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         #                                  ------
         # Total creditable                 €38.40
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 38_40, precise_item_amount_cents: 32_00, tax_amount_cents: 6_40, fee: subscription_fee_2)
+        test_credit_note_creation_from_termination(expectations: {
+          total_amount_cents: 38_40,
+          precise_item_amount_cents: 32_00,
+          tax_amount_cents: 6_40,
+          fee: subscription_fee_2
+        })
       end
     end
 
@@ -229,18 +246,13 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         )
       end
       let(:credit_note_item) do
-        create(:credit_note_item, credit_note:, fee: subscription_fee, amount_cents: 10_00, precise_amount_cents: 10_00)
+        create(:credit_note_item, credit_note:,
+          fee: subscription_fee, amount_cents: 10_00, precise_amount_cents: 10_00)
       end
 
       before { credit_note_item }
 
       it "takes the remaining creditable amount" do
-        result = create_service.call
-
-        expect(result).to be_success
-
-        credit_note = result.credit_note
-
         # CREDITABLE AMOUNT CALCULATION
         # Unused subscription (16 days)    €16.00
         # Previous credit notes            -€10.00
@@ -250,7 +262,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         #                                  ------
         # Total creditable                 €7.20
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 7_20, precise_item_amount_cents: 6_00, tax_amount_cents: 1_20)
+        test_credit_note_creation_from_termination(expectations: {
+          total_amount_cents: 7_20,
+          precise_item_amount_cents: 6_00,
+          tax_amount_cents: 1_20
+        })
       end
     end
 
@@ -258,12 +274,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       let(:trial_period) { 46 }
 
       it "excludes the trial from the credit amount" do
-        result = create_service.call
-
-        expect(result).to be_success
-
-        credit_note = result.credit_note
-
         # CREDITABLE AMOUNT CALCULATION
         # Unused subscription (15 days)    €15.00  (excluding trial)
         #                                  ------
@@ -272,7 +282,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         #                                  ------
         # Total creditable                 €18.00
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 18_00, precise_item_amount_cents: 15_00, tax_amount_cents: 3_00)
+        test_credit_note_creation_from_termination(expectations: {
+          total_amount_cents: 18_00,
+          precise_item_amount_cents: 15_00,
+          tax_amount_cents: 3_00
+        })
       end
 
       context "when trial ends after the end of the billing period" do
@@ -285,13 +299,9 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     end
 
     context "when plan has been upgraded" do
+      let(:kwargs) { {upgrade: true} }
+
       it "calculates credit note correctly" do
-        result = described_class.new(subscription:, upgrade: true).call
-
-        expect(result).to be_success
-
-        credit_note = result.credit_note
-
         # CREDITABLE AMOUNT CALCULATION
         # Unused subscription (17 days)    €17.00  (upgrade calculation)
         #                                  ------
@@ -300,7 +310,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         #                                  ------
         # Total creditable                 €20.40
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 20_40, precise_item_amount_cents: 17_00, tax_amount_cents: 3_40)
+        test_credit_note_creation_from_termination(expectations: {
+          total_amount_cents: 20_40,
+          precise_item_amount_cents: 17_00,
+          tax_amount_cents: 3_40
+        })
       end
     end
 
@@ -312,12 +326,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         let(:customer_timezone) { "America/Los_Angeles" }
 
         it "takes the timezone into account" do
-          result = create_service.call
-
-          expect(result).to be_success
-
-          credit_note = result.credit_note
-
           # CREDITABLE AMOUNT CALCULATION
           # Unused subscription (17 days)    €17.00  (timezone adjusted)
           #                                  ------
@@ -326,7 +334,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           #                                  ------
           # Total creditable                 €20.40
 
-          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 20_40, precise_item_amount_cents: 17_00, tax_amount_cents: 3_40)
+          test_credit_note_creation_from_termination(expectations: {
+            total_amount_cents: 20_40,
+            precise_item_amount_cents: 17_00,
+            tax_amount_cents: 3_40
+          })
         end
       end
 
@@ -334,12 +346,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         let(:customer_timezone) { "Europe/Paris" }
 
         it "takes the timezone into account" do
-          result = create_service.call
-
-          expect(result).to be_success
-
-          credit_note = result.credit_note
-
           # CREDITABLE AMOUNT CALCULATION
           # Unused subscription (16 days)    €16.00  (timezone adjusted)
           #                                  ------
@@ -348,7 +354,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           #                                  ------
           # Total creditable                 €19.20
 
-          expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, precise_item_amount_cents: 16_00, tax_amount_cents: 3_20)
+          test_credit_note_creation_from_termination(expectations: {
+            total_amount_cents: 19_20,
+            precise_item_amount_cents: 16_00,
+            tax_amount_cents: 3_20
+          })
         end
       end
     end
@@ -375,12 +385,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       let(:tax_rate) { 0 }
 
       it "creates a credit note" do
-        result = create_service.call
-
-        expect(result).to be_success
-
-        credit_note = result.credit_note
-
         # CREDITABLE AMOUNT CALCULATION
         # Unused subscription (15 days)    €4.995  (15/30 × €9.99)
         #                                  ------
@@ -389,7 +393,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         #                                  ------
         # Total creditable                 €4.99
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 4_99, precise_item_amount_cents: 4_99.49999, tax_amount_cents: 0)
+        test_credit_note_creation_from_termination(expectations: {
+          total_amount_cents: 4_99,
+          precise_item_amount_cents: 4_99.49999,
+          tax_amount_cents: 0
+        })
       end
     end
 
@@ -397,12 +405,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       let(:coupon_amount) { 10_00 }
 
       it "takes the coupon into account" do
-        result = create_service.call
-
-        expect(result).to be_success
-
-        credit_note = result.credit_note
-
         # CREDITABLE AMOUNT CALCULATION
         # Unused subscription (16 days)    €16.00
         # Coupon allocation (16/31)        -€5.16
@@ -412,7 +414,11 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         #                                  ------
         # Total creditable                 €13.01
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 13_01, precise_item_amount_cents: 16_00, tax_amount_cents: 2_17)
+        test_credit_note_creation_from_termination(expectations: {
+          total_amount_cents: 13_01,
+          precise_item_amount_cents: 16_00,
+          tax_amount_cents: 2_17
+        })
       end
     end
 
@@ -420,12 +426,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
       let(:context) { :preview }
 
       it "builds a credit note" do
-        result = create_service.call
-
-        expect(result).to be_success
-
-        credit_note = result.credit_note
-
         # CREDITABLE AMOUNT CALCULATION
         # Unused subscription (16 days)    €16.00
         #                                  ------
@@ -434,7 +434,14 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
         #                                  ------
         # Total creditable                 €19.20
 
-        expect_credit_note_to_be_properly_defined(credit_note, total_amount_cents: 19_20, precise_item_amount_cents: 16_00, tax_amount_cents: 3_20)
+        credit_note = test_credit_note_creation_from_termination(
+          expectations: {
+            total_amount_cents: 19_20,
+            precise_item_amount_cents: 16_00,
+            tax_amount_cents: 3_20,
+            fee: subscription_fee
+          }
+        )
 
         expect(credit_note).to be_a(CreditNote).and be_new_record
         expect(credit_note.items).to all be_new_record
