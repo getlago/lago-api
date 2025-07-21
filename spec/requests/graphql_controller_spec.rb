@@ -199,7 +199,5 @@ RSpec.describe GraphqlController, type: :request do
         expect(json["errors"]).not_to be_present
       end
     end
-
-    
   end
 end
