@@ -13,7 +13,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
 
   around { |test| lago_premium!(&test) }
 
-  describe "GET #index" do
+  describe "GET /api/v1/subscriptions/:external_id/entitlements" do
     subject { get_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements" }
 
     let(:entitlement) { create(:entitlement, plan:, feature:) }
@@ -22,7 +22,6 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
     let(:entitlement_value2) { create(:entitlement_value, entitlement: sub_entitlement, privilege: privilege2, value: true) }
 
     before do
-      entitlement
       entitlement_value1
       entitlement_value2
     end
@@ -66,7 +65,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
     end
   end
 
-  describe "PATCH #update" do
+  describe "PATCH /api/v1/subscriptions/:external_id/entitlements" do
     subject { patch_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements", params }
 
     let(:entitlement) { create(:entitlement, plan: subscription.plan, feature:) }
@@ -234,7 +233,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
     end
   end
 
-  describe "DELETE #destroy" do
+  describe "DELETE /api/v1/subscriptions/external_id/entitlements/:feature_code" do
     subject { delete_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}" }
 
     let(:entitlement) { create(:entitlement, subscription_id: subscription.id, plan: nil, feature:) }
@@ -267,7 +266,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
     end
   end
 
-  describe "POST #remove" do
+  describe "POST /api/v1/subscriptions/external_id/entitlements/:feature_code/remove" do
     subject { post_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}/remove" }
 
     let(:entitlement) { create(:entitlement, plan:, feature:) }
@@ -322,7 +321,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
     end
   end
 
-  describe "DELETE #unremove" do
+  describe "DELETE /api/v1/subscriptions/external_id/entitlements/:feature_code/remove" do
     subject { delete_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}/remove" }
 
     let(:subscription_feature_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_id: subscription.id) }

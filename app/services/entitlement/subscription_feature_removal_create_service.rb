@@ -52,14 +52,12 @@ module Entitlement
     def feature_available_in_plan?
       Entitlement.joins(:feature)
         .where(plan_id: subscription.plan.parent_id || subscription.plan.id, feature: feature)
-        .where(deleted_at: nil)
         .exists?
     end
 
     def feature_already_removed?
       SubscriptionFeatureRemoval
         .where(subscription_id: subscription.id, feature: feature)
-        .where(deleted_at: nil)
         .first
     end
   end

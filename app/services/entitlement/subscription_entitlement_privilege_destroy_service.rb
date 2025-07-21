@@ -4,9 +4,12 @@ module Entitlement
   class SubscriptionEntitlementPrivilegeDestroyService < BaseService
     Result = BaseResult[:entitlement_value]
 
-    def initialize(subscription:, entitlement:, privilege_code:)
+    def initialize(subscription:, feature_code:, privilege_code:)
       @subscription = subscription
-      @entitlement = entitlement
+      @entitlement = subscription.entitlements
+        .joins(:feature)
+        .where(feature: {code: feature_code})
+        .first
       @privilege_code = privilege_code
       super
     end

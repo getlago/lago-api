@@ -17,13 +17,49 @@ RSpec.describe Entitlement::SubscriptionEntitlement, type: :model do
     entitlement_value
   end
 
-  # it { expect(described_class).to be_soft_deletable }
-
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
       expect(subject).to belong_to(:feature).class_name("Entitlement::Feature")
       expect(subject).to belong_to(:privilege).class_name("Entitlement::Privilege").optional
+    end
+  end
+
+  describe "scopes" do
+    describe ".for_subscription" do
+      let(:subscription) { create(:subscription) }
+
+      it "sets hash-based where conditions correctly" do
+        scope = described_class.for_subscription(subscription)
+
+        expect(scope.where_values_hash).to include(
+          "organization_id" => subscription.organization_id,
+          "removed" => false
+        )
+        expect(scope.to_sql).to match(/subscription_id = '#{subscription.id}' OR plan_id = '#{subscription.plan.id}'/)
+      end
+
+      context "when the plan is an override" do
+        let(:subscription) do
+          create(:subscription, organization:, plan: create(:plan, organization:, parent: create(:plan, organization:)))
+        end
+
+        it "sets hash-based where conditions correctly" do
+          scope = described_class.for_subscription(subscription)
+
+          expect(scope.where_values_hash).to include(
+            "organization_id" => subscription.organization_id,
+            "removed" => false
+          )
+          expect(scope.to_sql).to match(/subscription_id = '#{subscription.id}' OR plan_id = '#{subscription.plan.parent_id}'/)
+        end
+      end
+    end
+  end
+
+  describe "#readonly?" do
+    it do
+      expect(subject.readonly?).to be_truthy
     end
   end
 

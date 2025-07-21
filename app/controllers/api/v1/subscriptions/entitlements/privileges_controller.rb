@@ -7,19 +7,12 @@ module Api
         class PrivilegesController < Api::BaseController
           include PremiumFeatureOnly
 
-          attr_reader :subscription, :entitlement
-
           before_action :find_subscription
 
           def destroy
-            entitlement = subscription.entitlements
-              .joins(:feature)
-              .where(feature: {code: params[:entitlement_code]})
-              .first
-
             result = ::Entitlement::SubscriptionEntitlementPrivilegeDestroyService.call(
               subscription:,
-              entitlement:,
+              feature_code: params[:entitlement_code],
               privilege_code: params[:code]
             )
 
@@ -37,6 +30,8 @@ module Api
           end
 
           private
+
+          attr_reader :subscription
 
           def find_subscription
             @subscription = current_organization.subscriptions

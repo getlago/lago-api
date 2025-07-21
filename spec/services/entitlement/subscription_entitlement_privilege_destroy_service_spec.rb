@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::SubscriptionEntitlementPrivilegeDestroyService, type: :service do
-  subject(:result) { described_class.call(subscription:, entitlement:, privilege_code:) }
+  subject(:result) { described_class.call(subscription:, feature_code:, privilege_code:) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -13,6 +13,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementPrivilegeDestroyService, type
   let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
   let(:entitlement) { create(:entitlement, subscription_id: subscription.id, plan: nil, feature:) }
   let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: "30", organization:) }
+  let(:feature_code) { feature.code }
   let(:privilege_code) { privilege.code }
 
   before do
@@ -47,8 +48,9 @@ RSpec.describe Entitlement::SubscriptionEntitlementPrivilegeDestroyService, type
     end
 
     context "when entitlement does not exist" do
+      let(:feature_code) { "nonexistent_feature" }
+
       it "returns not found failure" do
-        result = described_class.call(subscription:, entitlement: nil, privilege_code:)
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("entitlement_not_found")
       end

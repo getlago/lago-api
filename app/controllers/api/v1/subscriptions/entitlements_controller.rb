@@ -6,7 +6,6 @@ module Api
       class EntitlementsController < Api::BaseController
         include PremiumFeatureOnly
 
-        attr_reader :subscription
         # TODO: Share this with SubscriptionController and AlertsController
         before_action :find_subscription
 
@@ -42,12 +41,7 @@ module Api
         end
 
         def destroy
-          entitlement = subscription.entitlements
-            .joins(:feature)
-            .where(feature: {code: params[:code]})
-            .first
-
-          result = ::Entitlement::SubscriptionEntitlementDestroyService.call(subscription:, entitlement:)
+          result = ::Entitlement::SubscriptionEntitlementDestroyService.call(subscription:, code: params[:code])
 
           if result.success?
             render(
@@ -80,7 +74,7 @@ module Api
           end
         end
 
-        def unremove
+        def restore
           feature = current_organization.features.find_by(code: params[:code])
           return not_found_error(resource: "feature") unless feature
 
@@ -100,6 +94,8 @@ module Api
         end
 
         private
+
+        attr_reader :subscription
 
         def update_params
           params.fetch(:entitlements, {}).permit!

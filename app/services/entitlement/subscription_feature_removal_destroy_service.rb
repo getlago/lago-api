@@ -38,7 +38,6 @@ module Entitlement
     def find_removal
       SubscriptionFeatureRemoval
         .where(subscription_id: subscription.id, feature: feature)
-        .where(deleted_at: nil)
         .first
     end
   end

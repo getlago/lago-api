@@ -92,9 +92,7 @@ module Entitlement
 
     def create_entitlement_values(entitlement, feature, privilege_values)
       privilege_values.each do |privilege_code, value|
-        privilege = feature.privileges.find { it.code == privilege_code }
-
-        raise ActiveRecord::RecordNotFound.new("Entitlement::Privilege") unless privilege
+        privilege = find_privilege!(feature.privileges, privilege_code)
 
         create_entitlement_value(entitlement, privilege, value)
       end
@@ -104,9 +102,7 @@ module Entitlement
       return if privilege_values.blank?
 
       privilege_values.each do |privilege_code, value|
-        privilege = feature.privileges.find { it.code == privilege_code }
-
-        raise ActiveRecord::RecordNotFound.new("Entitlement::Privilege") unless privilege
+        privilege = find_privilege!(feature.privileges, privilege_code)
 
         entitlement_value = entitlement.values.find { it.entitlement_privilege_id == privilege.id }
 
@@ -125,6 +121,11 @@ module Entitlement
         privilege: privilege,
         value: validate_and_stringify(value, privilege)
       )
+    end
+
+    def find_privilege!(privileges, privilege_code)
+      privilege = privileges.find { it.code == privilege_code }
+      privilege || raise(ActiveRecord::RecordNotFound.new("Entitlement::Privilege"))
     end
 
     def validate_and_stringify(value, privilege)
