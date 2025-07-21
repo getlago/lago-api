@@ -36,7 +36,7 @@ class GraphqlController < ApplicationController
     if query.present? && query.length > MAX_QUERY_LENGTH
       return render_graphql_error(
         code: "query_is_too_large",
-        status: 413, 
+        status: 413,
         message: "Max query length is #{MAX_QUERY_LENGTH}, your query is #{query.length}"
       )
     end
@@ -85,6 +85,8 @@ class GraphqlController < ApplicationController
   end
 
   def render_graphql_error(code:, status:, message: nil)
+    # TODO: we currently return a 200 even if we have an error
+    # We should refactor this and return the right http status
     render(
       json: {
         data: {},

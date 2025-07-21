@@ -169,7 +169,7 @@ RSpec.describe GraphqlController, type: :request do
           }
 
         expect(response.status).to be(200)
-        
+
         json = JSON.parse(response.body)
         expect(json["errors"]).to be_present
         expect(json["errors"].first["message"]).to include("Max query length is 15000")
