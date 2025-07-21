@@ -8,4 +8,4 @@ module Types
       field :select_options, [String], null: true, description: "Available options for select type privileges"
     end
   end
-end 
+end
