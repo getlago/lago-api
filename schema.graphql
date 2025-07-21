@@ -2673,12 +2673,12 @@ input CreateFeatureInput {
   """
   The description of the feature
   """
-  description: String!
+  description: String
 
   """
   The name of the feature
   """
-  name: String!
+  name: String
 
   """
   The privileges configuration
@@ -7806,7 +7806,7 @@ input PlanEntitlementPrivilegeInput {
 
 type PlanEntitlementPrivilegeObject {
   code: String!
-  config: JSON!
+  config: PrivilegeConfigObject!
   name: String
   value: String!
   valueType: PrivilegeValueTypeEnum!
@@ -7895,10 +7895,29 @@ type PricingUnitUsage {
   updatedAt: ISO8601DateTime!
 }
 
+"""
+Input for privilege configuration
+"""
+input PrivilegeConfigInput {
+  """
+  Available options for select type privileges
+  """
+  selectOptions: [String!]
+}
+
+"""
+Configuration object for privileges
+"""
+type PrivilegeConfigObject {
+  """
+  Available options for select type privileges
+  """
+  selectOptions: [String!]
+}
+
 type PrivilegeObject {
   code: String!
-  config: JSON!
-  id: ID!
+  config: PrivilegeConfigObject!
   name: String
   valueType: PrivilegeValueTypeEnum!
 }
@@ -10388,7 +10407,7 @@ input UpdateFeatureInput {
   """
   The description of the feature
   """
-  description: String!
+  description: String
 
   """
   The ID of the feature to update
@@ -10398,7 +10417,7 @@ input UpdateFeatureInput {
   """
   The name of the feature
   """
-  name: String!
+  name: String
 
   """
   The privileges configuration
@@ -10688,7 +10707,7 @@ Input for updating a privilege
 """
 input UpdatePrivilegeInput {
   code: String!
-  config: JSON
+  config: PrivilegeConfigInput
   name: String
   valueType: PrivilegeValueTypeEnum
 }
