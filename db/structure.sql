@@ -883,6 +883,14 @@ DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP EXTENSION IF EXISTS unaccent;
 DROP EXTENSION IF EXISTS pgcrypto;
+-- *not* dropping schema, since initdb creates it
+--
+-- Name: public; Type: SCHEMA; Schema: -; Owner: -
+--
+
+-- *not* creating schema, since initdb creates it
+
+
 --
 -- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
 --
@@ -2658,6 +2666,7 @@ CREATE VIEW public.exports_fees AS
     f.precise_unit_amount,
     f.precise_coupons_amount_cents,
     (f.precise_amount_cents + f.taxes_precise_amount_cents) AS precise_total_amount_cents,
+    f.precise_credit_notes_amount_cents,
     f.events_count,
         CASE f.payment_status
             WHEN 0 THEN 'pending'::text
@@ -9428,6 +9437,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250721211820'),
 ('20250721150002'),
 ('20250721150001'),
 ('20250721150000'),
