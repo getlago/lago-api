@@ -16,12 +16,12 @@ SELECT
     WHEN 2 THEN 'failed'
   END AS refund_status,
   CASE cn.reason
-    WHEN 0 then 'duplicated_charge'
-    WHEN 1 then 'product_unsatisfactory'
-    WHEN 2 then 'order_change'
-    when 3 then 'order_cancellation'
-    when 4 then 'fraudulent_charge'
-    when 5 then 'other'
+    WHEN 0 THEN 'duplicated_charge'
+    WHEN 1 THEN 'product_unsatisfactory'
+    WHEN 2 THEN 'order_change'
+    WHEN 3 THEN 'order_cancellation'
+    WHEN 4 THEN 'fraudulent_charge'
+    WHEN 5 THEN 'other'
   END as reason,
   cn.description,
   cn.total_amount_currency AS currency,
