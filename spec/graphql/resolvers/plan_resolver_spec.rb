@@ -55,7 +55,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
             invoiceDisplayName
             taxes { id rate }
           }
-          entitlements { code name description privileges { code value name valueType config } }
+          entitlements { code name description privileges { code value name valueType } }
         }
       }
     GQL

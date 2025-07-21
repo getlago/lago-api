@@ -20,7 +20,6 @@ RSpec.describe Mutations::Entitlement::CreateFeature, type: :graphql do
             code
             name
             valueType
-            config
           }
         }
       }
@@ -80,7 +79,6 @@ RSpec.describe Mutations::Entitlement::CreateFeature, type: :graphql do
       expect(result_data["privileges"].sole["code"]).to eq(privilege_code)
       expect(result_data["privileges"].sole["name"]).to eq(privilege_name)
       expect(result_data["privileges"].sole["valueType"]).to eq("string")
-      expect(result_data["privileges"].sole["config"]).to eq({})
     end
   end
 end

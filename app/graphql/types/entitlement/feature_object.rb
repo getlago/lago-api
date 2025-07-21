@@ -7,7 +7,7 @@ module Types
 
       field :code, String, null: false
       field :description, String, null: true
-      field :name, String, null: false
+      field :name, String, null: true
 
       field :privileges, [Types::Entitlement::PrivilegeObject], null: false
 
