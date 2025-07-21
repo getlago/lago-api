@@ -48,7 +48,7 @@ module V1
 
       {
         conversion_rate: model.applied_pricing_unit.conversion_rate,
-        lago_pricing_unit_id: model.applied_pricing_unit.pricing_unit_id
+        code: model.pricing_unit.code
       }
     end
 

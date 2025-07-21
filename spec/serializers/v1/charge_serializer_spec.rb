@@ -41,7 +41,7 @@ RSpec.describe ::V1::ChargeSerializer do
 
       expect(result["charge"]["applied_pricing_unit"]).to eq({
         "conversion_rate" => applied_pricing_unit.conversion_rate.to_s,
-        "lago_pricing_unit_id" => applied_pricing_unit.pricing_unit_id
+        "code" => applied_pricing_unit.pricing_unit.code
       })
     end
   end

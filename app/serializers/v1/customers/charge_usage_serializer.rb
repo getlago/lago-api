@@ -11,7 +11,7 @@ module V1
             units: fees.map { |f| BigDecimal(f.units) }.sum.to_s,
             events_count: fees.sum(0) { |f| f.events_count.to_i },
             amount_cents: fees.sum(&:amount_cents),
-            pricing_unit_usage: pricing_unit_usage(fees),
+            pricing_unit_details: pricing_unit_details(fees),
             amount_currency: fee.amount_currency,
             charge: {
               lago_id: charge_id,
@@ -39,7 +39,7 @@ module V1
           {
             units: grouped_fees.map { |f| BigDecimal(f.units) }.sum.to_s,
             amount_cents: grouped_fees.sum(&:amount_cents),
-            pricing_unit_usage: pricing_unit_usage(grouped_fees),
+            pricing_unit_details: pricing_unit_details(grouped_fees),
             events_count: grouped_fees.sum(&:events_count),
             invoice_display_name: grouped_fees.first.charge_filter&.invoice_display_name,
             values: grouped_fees.first.charge_filter&.to_h
@@ -53,7 +53,7 @@ module V1
         fees.group_by(&:grouped_by).values.map do |grouped_fees|
           {
             amount_cents: grouped_fees.sum(&:amount_cents),
-            pricing_unit_usage: pricing_unit_usage(grouped_fees),
+            pricing_unit_details: pricing_unit_details(grouped_fees),
             events_count: grouped_fees.sum(&:events_count),
             units: grouped_fees.map { |f| BigDecimal(f.units) }.sum.to_s,
             grouped_by: grouped_fees.first.grouped_by,
@@ -62,7 +62,7 @@ module V1
         end
       end
 
-      def pricing_unit_usage(fees)
+      def pricing_unit_details(fees)
         fee = fees.first
         return if fee.pricing_unit_usage.nil?
 

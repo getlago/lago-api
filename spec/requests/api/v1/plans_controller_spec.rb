@@ -108,7 +108,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
 
           expect(charge[:applied_pricing_unit]).to eq({
             conversion_rate: "1.25",
-            lago_pricing_unit_id: pricing_unit.id
+            code: pricing_unit.code
           })
         end
       end

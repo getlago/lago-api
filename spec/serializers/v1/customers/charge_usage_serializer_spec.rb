@@ -53,7 +53,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       "units" => "20.0",
       "events_count" => 24,
       "amount_cents" => 200,
-      "pricing_unit_usage" => nil,
+      "pricing_unit_details" => nil,
       "amount_currency" => "EUR",
       "charge" => {
         "lago_id" => charge.id,
@@ -70,7 +70,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       "grouped_usage" => [
         {
           "amount_cents" => 100,
-          "pricing_unit_usage" => nil,
+          "pricing_unit_details" => nil,
           "events_count" => 12,
           "units" => "10.0",
           "grouped_by" => {"card_type" => "visa"},
@@ -78,7 +78,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         },
         {
           "amount_cents" => 100,
-          "pricing_unit_usage" => nil,
+          "pricing_unit_details" => nil,
           "events_count" => 12,
           "units" => "10.0",
           "grouped_by" => {"card_type" => "mastercard"},
@@ -98,7 +98,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         "units" => "20.0",
         "events_count" => 24,
         "amount_cents" => 200,
-        "pricing_unit_usage" => {
+        "pricing_unit_details" => {
           "amount_cents" => 400,
           "short_name" => "CR",
           "conversion_rate" => "0.5"
@@ -119,7 +119,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         "grouped_usage" => [
           {
             "amount_cents" => 100,
-            "pricing_unit_usage" => {
+            "pricing_unit_details" => {
               "amount_cents" => 200,
               "short_name" => "CR",
               "conversion_rate" => "0.5"
@@ -131,7 +131,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           },
           {
             "amount_cents" => 100,
-            "pricing_unit_usage" => {
+            "pricing_unit_details" => {
               "amount_cents" => 200,
               "short_name" => "CR",
               "conversion_rate" => "0.5"
@@ -199,7 +199,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         expect(result["charges"].first["filters"].first).to include(
           "units" => "30.0",
           "amount_cents" => 300,
-          "pricing_unit_usage" => {
+          "pricing_unit_details" => {
             "amount_cents" => 600,
             "short_name" => "CR",
             "conversion_rate" => "0.5"
@@ -212,7 +212,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         expect(result["charges"].first["grouped_usage"].first["filters"].first).to include(
           "units" => "30.0",
           "amount_cents" => 300,
-          "pricing_unit_usage" => {
+          "pricing_unit_details" => {
             "amount_cents" => 600,
             "short_name" => "CR",
             "conversion_rate" => "0.5"

@@ -5,6 +5,7 @@ module V1
     def serialize
       {
         lago_pricing_unit_id: model.pricing_unit_id,
+        pricing_unit_code: model.pricing_unit.code,
         short_name: model.short_name,
         amount_cents: model.amount_cents,
         precise_amount_cents: model.precise_amount_cents,

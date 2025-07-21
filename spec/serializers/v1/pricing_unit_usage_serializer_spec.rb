@@ -11,6 +11,7 @@ RSpec.describe ::V1::PricingUnitUsageSerializer do
   it "serializes the pricing unit usage" do
     expect(result["pricing_unit_usage"]).to include(
       "lago_pricing_unit_id" => pricing_unit_usage.pricing_unit_id,
+      "pricing_unit_code" => pricing_unit_usage.pricing_unit.code,
       "short_name" => pricing_unit_usage.short_name,
       "amount_cents" => pricing_unit_usage.amount_cents,
       "precise_amount_cents" => pricing_unit_usage.precise_amount_cents.to_s,
