@@ -10,6 +10,11 @@ module Entitlement
       super
     end
 
+    activity_loggable(
+      action: "feature.created",
+      record: -> { result.feature }
+    )
+
     def call
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "organization") unless organization

@@ -68,7 +68,7 @@ module Api
               ::V1::WalletSerializer,
               collection_name: "wallets",
               meta: pagination_metadata(result.wallets),
-              includes: %i[recurring_transaction_rules]
+              includes: %i[recurring_transaction_rules limitations]
             )
           )
         else

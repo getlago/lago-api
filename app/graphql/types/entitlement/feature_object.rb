@@ -11,6 +11,8 @@ module Types
 
       field :privileges, [Types::Entitlement::PrivilegeObject], null: false
 
+      field :subscriptions_count, Integer, null: false
+
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
     end
   end

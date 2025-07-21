@@ -8,13 +8,13 @@ class PricingUnitUsage < ApplicationRecord
   validates :short_name, :conversion_rate, presence: true
   validates :conversion_rate, numericality: {greater_than: 0}
 
-  def self.build_from_aggregation(aggregation, applied_pricing_unit)
+  def self.build_from_fiat_amounts(amount:, unit_amount:, applied_pricing_unit:)
     pricing_unit = applied_pricing_unit.pricing_unit
 
-    rounded_amount = aggregation.amount.round(pricing_unit.exponent)
+    rounded_amount = amount.round(pricing_unit.exponent)
     amount_cents = rounded_amount * pricing_unit.subunit_to_unit
-    precise_amount_cents = aggregation.amount * pricing_unit.subunit_to_unit.to_d
-    unit_amount_cents = aggregation.unit_amount * pricing_unit.subunit_to_unit
+    precise_amount_cents = amount * pricing_unit.subunit_to_unit.to_d
+    unit_amount_cents = unit_amount * pricing_unit.subunit_to_unit
 
     new(
       organization: pricing_unit.organization,
@@ -24,7 +24,7 @@ class PricingUnitUsage < ApplicationRecord
       amount_cents:,
       precise_amount_cents:,
       unit_amount_cents:,
-      precise_unit_amount: aggregation.unit_amount
+      precise_unit_amount: unit_amount
     )
   end
 

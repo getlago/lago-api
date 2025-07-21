@@ -2,10 +2,13 @@
 
 module Subscriptions
   class TerminateService < BaseService
-    def initialize(subscription:, async: true, upgrade: false)
+    Result = BaseResult[:subscription]
+
+    def initialize(subscription:, async: true, upgrade: false, on_termination_credit_note: subscription&.on_termination_credit_note)
       @subscription = subscription
       @async = async
       @upgrade = upgrade
+      @on_termination_credit_note = on_termination_credit_note
 
       super
     end
@@ -18,12 +21,13 @@ module Subscriptions
           subscription.mark_as_canceled!
         elsif !subscription.terminated?
           subscription.mark_as_terminated!
+          update_on_termination_credit_note! if pay_in_advance?
 
           if subscription.should_sync_hubspot_subscription?
             Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription:)
           end
 
-          if subscription.plan.pay_in_advance? && pay_in_advance_invoice_issued?
+          if generate_credit_note_for_unconsumed_subscription?
             # NOTE: As subscription was payed in advance and terminated before the end of the period,
             #       we have to create a credit note for the days that were not consumed
             CreditNotes::CreateFromTermination.call!(
@@ -169,6 +173,32 @@ module Subscriptions
       )
 
       dates_service.previous_beginning_of_period(current_period: true).to_datetime
+    end
+
+    def generate_credit_note_for_unconsumed_subscription?
+      pay_in_advance? && pay_in_advance_invoice_issued? && on_termination_credit_note == :credit
+    end
+
+    def pay_in_advance?
+      subscription.plan.pay_in_advance?
+    end
+
+    def pay_in_arrears?
+      !pay_in_advance?
+    end
+
+    def on_termination_credit_note
+      return nil if pay_in_arrears?
+
+      return :credit if @on_termination_credit_note.blank? || @on_termination_credit_note.to_sym == :credit
+      return :skip if @on_termination_credit_note.to_sym == :skip
+
+      # This will cause a validation error on update
+      @on_termination_credit_note
+    end
+
+    def update_on_termination_credit_note!
+      Subscriptions::UpdateService.call!(subscription:, params: {on_termination_credit_note:})
     end
   end
 end

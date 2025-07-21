@@ -63,7 +63,12 @@ module Fees
       charge_model_result = apply_charge_model(aggregation_result:, properties:)
 
       if charge.applied_pricing_unit
-        pricing_unit_usage = PricingUnitUsage.build_from_aggregation(charge_model_result, charge.applied_pricing_unit)
+        pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
+          amount: charge_model_result.amount / charge.pricing_unit.subunit_to_unit.to_d,
+          unit_amount: charge_model_result.unit_amount,
+          applied_pricing_unit: charge.applied_pricing_unit
+        )
+
         amount_cents, precise_amount_cents, unit_amount_cents, precise_unit_amount = pricing_unit_usage
           .to_fiat_currency_cents(subscription.plan.amount.currency)
           .values_at(:amount_cents, :precise_amount_cents, :unit_amount_cents, :precise_unit_amount)

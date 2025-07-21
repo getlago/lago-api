@@ -23,6 +23,7 @@ ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF E
 ALTER TABLE IF EXISTS ONLY public.payment_provider_customers DROP CONSTRAINT IF EXISTS fk_rails_ecb466254b;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_eaca9421be;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_ea80151038;
+ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_e95f72749e;
 ALTER TABLE IF EXISTS ONLY public.recurring_transaction_rules DROP CONSTRAINT IF EXISTS fk_rails_e8bac9c5bb;
 ALTER TABLE IF EXISTS ONLY public.plans_taxes DROP CONSTRAINT IF EXISTS fk_rails_e88403f4b9;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_e86903e081;
@@ -67,6 +68,7 @@ ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_ab16de0b32;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_aaa12f7d3e;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_aa34dd5db6;
+ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_aa04ceacf6;
 ALTER TABLE IF EXISTS ONLY public.integration_items DROP CONSTRAINT IF EXISTS fk_rails_a9dc2ea536;
 ALTER TABLE IF EXISTS ONLY public.charges DROP CONSTRAINT IF EXISTS fk_rails_a710519346;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS fk_rails_a2d2cb3819;
@@ -133,6 +135,7 @@ ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_
 ALTER TABLE IF EXISTS ONLY public.payments DROP CONSTRAINT IF EXISTS fk_rails_62d18ea517;
 ALTER TABLE IF EXISTS ONLY public.credit_notes_taxes DROP CONSTRAINT IF EXISTS fk_rails_626209b8d2;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_6023b3f2dd;
+ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_5e06da3c18;
 ALTER TABLE IF EXISTS ONLY public.credit_notes DROP CONSTRAINT IF EXISTS fk_rails_5cb67dee79;
 ALTER TABLE IF EXISTS ONLY public.credit_note_items DROP CONSTRAINT IF EXISTS fk_rails_5cb2f24c3d;
 ALTER TABLE IF EXISTS ONLY public.payment_receipts DROP CONSTRAINT IF EXISTS fk_rails_5c2e0b6d34;
@@ -306,6 +309,7 @@ DROP INDEX IF EXISTS public.index_plans_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_plans_on_organization_id;
 DROP INDEX IF EXISTS public.index_plans_on_deleted_at;
 DROP INDEX IF EXISTS public.index_plans_on_created_at;
+DROP INDEX IF EXISTS public.index_plans_on_bill_fixed_charges_monthly;
 DROP INDEX IF EXISTS public.index_payments_on_provider_payment_id_and_payment_provider_id;
 DROP INDEX IF EXISTS public.index_payments_on_payment_type;
 DROP INDEX IF EXISTS public.index_payments_on_payment_provider_id;
@@ -412,6 +416,11 @@ DROP INDEX IF EXISTS public.index_group_properties_on_group_id;
 DROP INDEX IF EXISTS public.index_group_properties_on_deleted_at;
 DROP INDEX IF EXISTS public.index_group_properties_on_charge_id_and_group_id;
 DROP INDEX IF EXISTS public.index_group_properties_on_charge_id;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_plan_id;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_parent_id;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_organization_id;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_deleted_at;
+DROP INDEX IF EXISTS public.index_fixed_charges_on_add_on_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_fees_taxes_on_fee_id_and_tax_id;
@@ -667,6 +676,7 @@ ALTER TABLE IF EXISTS ONLY public.inbound_webhooks DROP CONSTRAINT IF EXISTS inb
 ALTER TABLE IF EXISTS ONLY public.idempotency_records DROP CONSTRAINT IF EXISTS idempotency_records_pkey;
 ALTER TABLE IF EXISTS ONLY public.groups DROP CONSTRAINT IF EXISTS groups_pkey;
 ALTER TABLE IF EXISTS ONLY public.group_properties DROP CONSTRAINT IF EXISTS group_properties_pkey;
+ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fixed_charges_pkey;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fees_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fees_pkey;
 ALTER TABLE IF EXISTS ONLY public.events DROP CONSTRAINT IF EXISTS events_pkey;
@@ -735,8 +745,6 @@ DROP TABLE IF EXISTS public.recurring_transaction_rules;
 DROP TABLE IF EXISTS public.quantified_events;
 DROP TABLE IF EXISTS public.pricing_units;
 DROP TABLE IF EXISTS public.pricing_unit_usages;
-DROP TABLE IF EXISTS public.payments;
-DROP TABLE IF EXISTS public.payment_requests;
 DROP TABLE IF EXISTS public.payment_receipts;
 DROP TABLE IF EXISTS public.payment_providers;
 DROP TABLE IF EXISTS public.payment_intents;
@@ -744,8 +752,6 @@ DROP TABLE IF EXISTS public.password_resets;
 DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
-DROP TABLE IF EXISTS public.invoices_payment_requests;
-DROP TABLE IF EXISTS public.invoice_subscriptions;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
@@ -760,6 +766,7 @@ DROP TABLE IF EXISTS public.idempotency_records;
 DROP TABLE IF EXISTS public.groups;
 DROP TABLE IF EXISTS public.group_properties;
 DROP VIEW IF EXISTS public.flat_filters;
+DROP TABLE IF EXISTS public.fixed_charges;
 DROP VIEW IF EXISTS public.exports_wallets;
 DROP TABLE IF EXISTS public.wallets;
 DROP VIEW IF EXISTS public.exports_wallet_transactions;
@@ -769,11 +776,18 @@ DROP TABLE IF EXISTS public.taxes;
 DROP VIEW IF EXISTS public.exports_subscriptions;
 DROP VIEW IF EXISTS public.exports_plans;
 DROP TABLE IF EXISTS public.plans_taxes;
+DROP VIEW IF EXISTS public.exports_payments;
+DROP VIEW IF EXISTS public.exports_payment_requests;
+DROP TABLE IF EXISTS public.payments;
+DROP TABLE IF EXISTS public.payment_requests;
+DROP TABLE IF EXISTS public.invoices_payment_requests;
 DROP VIEW IF EXISTS public.exports_invoices_taxes;
 DROP TABLE IF EXISTS public.invoices_taxes;
 DROP VIEW IF EXISTS public.exports_invoices;
 DROP TABLE IF EXISTS public.invoices;
 DROP TABLE IF EXISTS public.invoice_metadata;
+DROP VIEW IF EXISTS public.exports_invoice_subscriptions;
+DROP TABLE IF EXISTS public.invoice_subscriptions;
 DROP VIEW IF EXISTS public.exports_fees_taxes;
 DROP TABLE IF EXISTS public.fees_taxes;
 DROP VIEW IF EXISTS public.exports_fees;
@@ -840,11 +854,13 @@ DROP TABLE IF EXISTS public.active_storage_attachments;
 DROP FUNCTION IF EXISTS public.set_payment_receipt_number();
 DROP TYPE IF EXISTS public.usage_monitoring_alert_types;
 DROP TYPE IF EXISTS public.tax_status;
+DROP TYPE IF EXISTS public.subscription_on_termination_credit_note;
 DROP TYPE IF EXISTS public.subscription_invoicing_reason;
 DROP TYPE IF EXISTS public.payment_type;
 DROP TYPE IF EXISTS public.payment_payable_payment_status;
 DROP TYPE IF EXISTS public.invoice_custom_section_type;
 DROP TYPE IF EXISTS public.inbound_webhook_status;
+DROP TYPE IF EXISTS public.fixed_charge_charge_model;
 DROP TYPE IF EXISTS public.entity_document_numbering;
 DROP TYPE IF EXISTS public.entitlement_privilege_value_types;
 DROP TYPE IF EXISTS public.customer_type;
@@ -930,6 +946,17 @@ CREATE TYPE public.entity_document_numbering AS ENUM (
 
 
 --
+-- Name: fixed_charge_charge_model; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.fixed_charge_charge_model AS ENUM (
+    'standard',
+    'graduated',
+    'volume'
+);
+
+
+--
 -- Name: inbound_webhook_status; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -984,6 +1011,16 @@ CREATE TYPE public.subscription_invoicing_reason AS ENUM (
     'in_advance_charge',
     'in_advance_charge_periodic',
     'progressive_billing'
+);
+
+
+--
+-- Name: subscription_on_termination_credit_note; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.subscription_on_termination_credit_note AS ENUM (
+    'credit',
+    'skip'
 );
 
 
@@ -2428,7 +2465,8 @@ CREATE TABLE public.plans (
     parent_id uuid,
     deleted_at timestamp(6) without time zone,
     pending_deletion boolean DEFAULT false NOT NULL,
-    invoice_display_name character varying
+    invoice_display_name character varying,
+    bill_fixed_charges_monthly boolean DEFAULT false
 );
 
 
@@ -2453,7 +2491,8 @@ CREATE TABLE public.subscriptions (
     subscription_at timestamp(6) without time zone,
     ending_at timestamp(6) without time zone,
     trial_ended_at timestamp(6) without time zone,
-    organization_id uuid NOT NULL
+    organization_id uuid NOT NULL,
+    on_termination_credit_note public.subscription_on_termination_credit_note
 );
 
 
@@ -2600,6 +2639,49 @@ CREATE VIEW public.exports_fees_taxes AS
     ft.created_at,
     ft.updated_at
    FROM public.fees_taxes ft;
+
+
+--
+-- Name: invoice_subscriptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoice_subscriptions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    invoice_id uuid NOT NULL,
+    subscription_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    recurring boolean,
+    "timestamp" timestamp(6) without time zone,
+    from_datetime timestamp(6) without time zone,
+    to_datetime timestamp(6) without time zone,
+    charges_from_datetime timestamp(6) without time zone,
+    charges_to_datetime timestamp(6) without time zone,
+    invoicing_reason public.subscription_invoicing_reason,
+    organization_id uuid NOT NULL,
+    regenerated_invoice_id uuid
+);
+
+
+--
+-- Name: exports_invoice_subscriptions; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_invoice_subscriptions AS
+ SELECT ins.organization_id,
+    ins.id AS lago_id,
+    ins.invoice_id AS lago_invoice_id,
+    ins.regenerated_invoice_id AS lago_regenerated_invoice_id,
+    ins.subscription_id AS lago_subscription_id,
+    ins.created_at,
+    ins.updated_at,
+    ins.from_datetime,
+    ins.to_datetime,
+    ins.charges_from_datetime,
+    ins.charges_to_datetime,
+    ins."timestamp",
+    (ins.invoicing_reason)::text AS invoicing_reason
+   FROM public.invoice_subscriptions ins;
 
 
 --
@@ -2778,6 +2860,126 @@ CREATE VIEW public.exports_invoices_taxes AS
     it.created_at,
     it.updated_at
    FROM public.invoices_taxes it;
+
+
+--
+-- Name: invoices_payment_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invoices_payment_requests (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    invoice_id uuid NOT NULL,
+    payment_request_id uuid NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid NOT NULL
+);
+
+
+--
+-- Name: payment_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_requests (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    customer_id uuid NOT NULL,
+    amount_cents bigint DEFAULT 0 NOT NULL,
+    amount_currency character varying NOT NULL,
+    email character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id uuid NOT NULL,
+    payment_status integer DEFAULT 0 NOT NULL,
+    payment_attempts integer DEFAULT 0 NOT NULL,
+    ready_for_payment_processing boolean DEFAULT true NOT NULL,
+    dunning_campaign_id uuid
+);
+
+
+--
+-- Name: payments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    invoice_id uuid,
+    payment_provider_id uuid,
+    payment_provider_customer_id uuid,
+    amount_cents bigint NOT NULL,
+    amount_currency character varying NOT NULL,
+    provider_payment_id character varying,
+    status character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL,
+    payable_type character varying DEFAULT 'Invoice'::character varying NOT NULL,
+    payable_id uuid,
+    provider_payment_data jsonb DEFAULT '{}'::jsonb,
+    payable_payment_status public.payment_payable_payment_status,
+    payment_type public.payment_type DEFAULT 'provider'::public.payment_type NOT NULL,
+    reference character varying,
+    provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
+    provider_payment_method_id character varying,
+    organization_id uuid NOT NULL,
+    customer_id uuid
+);
+
+
+--
+-- Name: exports_payment_requests; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_payment_requests AS
+ SELECT pr.organization_id,
+    pr.id AS lago_id,
+    pr.customer_id AS lago_customer_id,
+    pr.payment_attempts,
+    pr.amount_cents,
+    pr.amount_currency,
+    pr.email,
+    pr.ready_for_payment_processing,
+        CASE pr.payment_status
+            WHEN 0 THEN 'pending'::text
+            WHEN 1 THEN 'succeeded'::text
+            WHEN 2 THEN 'failed'::text
+            ELSE NULL::text
+        END AS payment_status,
+    to_json(ARRAY( SELECT p.id
+           FROM public.payments p
+          WHERE ((p.payable_id = pr.id) AND ((p.payable_type)::text = 'PaymentRequest'::text))
+          ORDER BY p.created_at)) AS payment_ids,
+    to_json(ARRAY( SELECT apr.invoice_id
+           FROM public.invoices_payment_requests apr
+          WHERE (apr.payment_request_id = pr.id)
+          ORDER BY apr.created_at)) AS invoice_ids,
+    pr.created_at,
+    pr.updated_at
+   FROM public.payment_requests pr;
+
+
+--
+-- Name: exports_payments; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.exports_payments AS
+ SELECT p.organization_id,
+    p.id AS lago_id,
+    p.amount_cents,
+    p.amount_currency,
+    (p.payable_payment_status)::text AS payment_status,
+    (p.payment_type)::text AS payment_type,
+    p.reference,
+    p.provider_payment_id AS external_payment_id,
+    (p.created_at)::timestamp with time zone AS created_at,
+    (p.updated_at)::timestamp with time zone AS updated_at,
+        CASE
+            WHEN ((p.payable_type)::text = 'Invoice'::text) THEN to_json(ARRAY[p.payable_id])
+            WHEN ((p.payable_type)::text = 'PaymentRequest'::text) THEN to_json(ARRAY( SELECT ai.invoice_id
+               FROM public.invoices_payment_requests ai
+              WHERE (ai.payment_request_id = p.payable_id)
+              ORDER BY ai.created_at))
+            ELSE to_json(ARRAY[]::uuid[])
+        END AS invoice_ids
+   FROM public.payments p;
 
 
 --
@@ -3038,6 +3240,28 @@ CREATE VIEW public.exports_wallets AS
 
 
 --
+-- Name: fixed_charges; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.fixed_charges (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    add_on_id uuid NOT NULL,
+    parent_id uuid,
+    charge_model public.fixed_charge_charge_model DEFAULT 'standard'::public.fixed_charge_charge_model NOT NULL,
+    properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    invoice_display_name character varying,
+    pay_in_advance boolean DEFAULT false NOT NULL,
+    prorated boolean DEFAULT false NOT NULL,
+    units numeric(30,10) DEFAULT 0.0 NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: flat_filters; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -3287,42 +3511,6 @@ CREATE TABLE public.invoice_custom_sections (
 
 
 --
--- Name: invoice_subscriptions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoice_subscriptions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_id uuid NOT NULL,
-    subscription_id uuid NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    recurring boolean,
-    "timestamp" timestamp(6) without time zone,
-    from_datetime timestamp(6) without time zone,
-    to_datetime timestamp(6) without time zone,
-    charges_from_datetime timestamp(6) without time zone,
-    charges_to_datetime timestamp(6) without time zone,
-    invoicing_reason public.subscription_invoicing_reason,
-    organization_id uuid NOT NULL,
-    regenerated_invoice_id uuid
-);
-
-
---
--- Name: invoices_payment_requests; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.invoices_payment_requests (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_id uuid NOT NULL,
-    payment_request_id uuid NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL
-);
-
-
---
 -- Name: last_hour_events_mv; Type: MATERIALIZED VIEW; Schema: public; Owner: -
 --
 
@@ -3451,54 +3639,6 @@ CREATE TABLE public.payment_receipts (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     billing_entity_id uuid NOT NULL
-);
-
-
---
--- Name: payment_requests; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.payment_requests (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    customer_id uuid NOT NULL,
-    amount_cents bigint DEFAULT 0 NOT NULL,
-    amount_currency character varying NOT NULL,
-    email character varying,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    organization_id uuid NOT NULL,
-    payment_status integer DEFAULT 0 NOT NULL,
-    payment_attempts integer DEFAULT 0 NOT NULL,
-    ready_for_payment_processing boolean DEFAULT true NOT NULL,
-    dunning_campaign_id uuid
-);
-
-
---
--- Name: payments; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.payments (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    invoice_id uuid,
-    payment_provider_id uuid,
-    payment_provider_customer_id uuid,
-    amount_cents bigint NOT NULL,
-    amount_currency character varying NOT NULL,
-    provider_payment_id character varying,
-    status character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
-    payable_type character varying DEFAULT 'Invoice'::character varying NOT NULL,
-    payable_id uuid,
-    provider_payment_data jsonb DEFAULT '{}'::jsonb,
-    payable_payment_status public.payment_payable_payment_status,
-    payment_type public.payment_type DEFAULT 'provider'::public.payment_type NOT NULL,
-    reference character varying,
-    provider_payment_method_data jsonb DEFAULT '{}'::jsonb NOT NULL,
-    provider_payment_method_id character varying,
-    organization_id uuid NOT NULL,
-    customer_id uuid
 );
 
 
@@ -4218,6 +4358,14 @@ ALTER TABLE ONLY public.fees_taxes
 
 
 --
+-- Name: fixed_charges fixed_charges_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charges
+    ADD CONSTRAINT fixed_charges_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: group_properties group_properties_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4860,7 +5008,7 @@ CREATE UNIQUE INDEX idx_on_usage_threshold_id_invoice_id_cb82cdf163 ON public.ap
 -- Name: idx_privileges_code_unique_per_feature; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_privileges_code_unique_per_feature ON public.entitlement_privileges USING btree (code, entitlement_feature_id);
+CREATE UNIQUE INDEX idx_privileges_code_unique_per_feature ON public.entitlement_privileges USING btree (code, entitlement_feature_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -6054,6 +6202,41 @@ CREATE INDEX index_fees_taxes_on_tax_id ON public.fees_taxes USING btree (tax_id
 
 
 --
+-- Name: index_fixed_charges_on_add_on_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charges_on_add_on_id ON public.fixed_charges USING btree (add_on_id);
+
+
+--
+-- Name: index_fixed_charges_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charges_on_deleted_at ON public.fixed_charges USING btree (deleted_at);
+
+
+--
+-- Name: index_fixed_charges_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charges_on_organization_id ON public.fixed_charges USING btree (organization_id);
+
+
+--
+-- Name: index_fixed_charges_on_parent_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charges_on_parent_id ON public.fixed_charges USING btree (parent_id);
+
+
+--
+-- Name: index_fixed_charges_on_plan_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_fixed_charges_on_plan_id ON public.fixed_charges USING btree (plan_id);
+
+
+--
 -- Name: index_group_properties_on_charge_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -6793,6 +6976,13 @@ CREATE INDEX index_payments_on_payment_type ON public.payments USING btree (paym
 --
 
 CREATE UNIQUE INDEX index_payments_on_provider_payment_id_and_payment_provider_id ON public.payments USING btree (provider_payment_id, payment_provider_id) WHERE (provider_payment_id IS NOT NULL);
+
+
+--
+-- Name: index_plans_on_bill_fixed_charges_monthly; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_plans_on_bill_fixed_charges_monthly ON public.plans USING btree (bill_fixed_charges_monthly) WHERE ((deleted_at IS NULL) AND (bill_fixed_charges_monthly IS TRUE));
 
 
 --
@@ -8038,6 +8228,14 @@ ALTER TABLE ONLY public.credit_notes
 
 
 --
+-- Name: fixed_charges fk_rails_5e06da3c18; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charges
+    ADD CONSTRAINT fk_rails_5e06da3c18 FOREIGN KEY (plan_id) REFERENCES public.plans(id);
+
+
+--
 -- Name: fees fk_rails_6023b3f2dd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8566,6 +8764,14 @@ ALTER TABLE ONLY public.integration_items
 
 
 --
+-- Name: fixed_charges fk_rails_aa04ceacf6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charges
+    ADD CONSTRAINT fk_rails_aa04ceacf6 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: entitlement_entitlement_values fk_rails_aa34dd5db6; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8918,6 +9124,14 @@ ALTER TABLE ONLY public.recurring_transaction_rules
 
 
 --
+-- Name: fixed_charges fk_rails_e95f72749e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fixed_charges
+    ADD CONSTRAINT fk_rails_e95f72749e FOREIGN KEY (add_on_id) REFERENCES public.add_ons(id);
+
+
+--
 -- Name: integration_customers fk_rails_ea80151038; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9036,12 +9250,20 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250721091802'),
+('20250718174008'),
+('20250718140450'),
+('20250717092012'),
+('20250716150049'),
 ('20250716143358'),
 ('20250716142613'),
 ('20250716132759'),
 ('20250716132649'),
+('20250716123425'),
+('20250715124108'),
 ('20250714131519'),
 ('20250710102337'),
+('20250709171329'),
 ('20250709085218'),
 ('20250709082136'),
 ('20250708094414'),

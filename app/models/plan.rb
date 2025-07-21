@@ -14,6 +14,8 @@ class Plan < ApplicationRecord
   has_many :commitments
   has_many :charges, dependent: :destroy
   has_many :billable_metrics, through: :charges
+  has_many :fixed_charges, dependent: :destroy
+  has_many :add_ons, through: :fixed_charges
   has_many :subscriptions
   has_many :customers, through: :subscriptions
   has_many :children, class_name: "Plan", foreign_key: :parent_id, dependent: :destroy
@@ -118,31 +120,33 @@ end
 #
 # Table name: plans
 #
-#  id                   :uuid             not null, primary key
-#  amount_cents         :bigint           not null
-#  amount_currency      :string           not null
-#  bill_charges_monthly :boolean
-#  code                 :string           not null
-#  deleted_at           :datetime
-#  description          :string
-#  interval             :integer          not null
-#  invoice_display_name :string
-#  name                 :string           not null
-#  pay_in_advance       :boolean          default(FALSE), not null
-#  pending_deletion     :boolean          default(FALSE), not null
-#  trial_period         :float
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  organization_id      :uuid             not null
-#  parent_id            :uuid
+#  id                         :uuid             not null, primary key
+#  amount_cents               :bigint           not null
+#  amount_currency            :string           not null
+#  bill_charges_monthly       :boolean
+#  bill_fixed_charges_monthly :boolean          default(FALSE)
+#  code                       :string           not null
+#  deleted_at                 :datetime
+#  description                :string
+#  interval                   :integer          not null
+#  invoice_display_name       :string
+#  name                       :string           not null
+#  pay_in_advance             :boolean          default(FALSE), not null
+#  pending_deletion           :boolean          default(FALSE), not null
+#  trial_period               :float
+#  created_at                 :datetime         not null
+#  updated_at                 :datetime         not null
+#  organization_id            :uuid             not null
+#  parent_id                  :uuid
 #
 # Indexes
 #
-#  index_plans_on_created_at                (created_at)
-#  index_plans_on_deleted_at                (deleted_at)
-#  index_plans_on_organization_id           (organization_id)
-#  index_plans_on_organization_id_and_code  (organization_id,code) UNIQUE WHERE ((deleted_at IS NULL) AND (parent_id IS NULL))
-#  index_plans_on_parent_id                 (parent_id)
+#  index_plans_on_bill_fixed_charges_monthly  (bill_fixed_charges_monthly) WHERE ((deleted_at IS NULL) AND (bill_fixed_charges_monthly IS TRUE))
+#  index_plans_on_created_at                  (created_at)
+#  index_plans_on_deleted_at                  (deleted_at)
+#  index_plans_on_organization_id             (organization_id)
+#  index_plans_on_organization_id_and_code    (organization_id,code) UNIQUE WHERE ((deleted_at IS NULL) AND (parent_id IS NULL))
+#  index_plans_on_parent_id                   (parent_id)
 #
 # Foreign Keys
 #

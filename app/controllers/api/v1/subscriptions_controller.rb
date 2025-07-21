@@ -90,7 +90,9 @@ module Api
           query.active
         end.first
 
-        result = ::Subscriptions::TerminateService.call(subscription:)
+        kwargs = params.permit(:on_termination_credit_note).to_h.symbolize_keys
+
+        result = ::Subscriptions::TerminateService.call(subscription:, **kwargs)
 
         if result.success?
           render_subscription(result.subscription)
@@ -184,6 +186,7 @@ module Api
           :subscription_date,
           :subscription_at,
           :ending_at,
+          :on_termination_credit_note,
           plan_overrides:
         )
       end

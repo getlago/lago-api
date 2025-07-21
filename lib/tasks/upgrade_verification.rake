@@ -6,8 +6,8 @@ require "yaml"
 namespace :upgrade do
   # Note: this task is to be filled with jobs needed to be run before the upgrade
   #       and is to be changed depending on what is required for the next version.
-  desc "Checks data and performs required jobs to fix the data before the upgrade"
-  task check_readiness: :environment do
+  desc "Performs required jobs that need to be run after the upgrade"
+  task perform_required_jobs: :environment do
     Rails.logger.level = Logger::Severity::ERROR
 
     resources_to_fill = [

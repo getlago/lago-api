@@ -313,6 +313,20 @@ input AddCashfreePaymentProviderInput {
 }
 
 """
+Flutterwave input arguments
+"""
+input AddFlutterwavePaymentProviderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String!
+  name: String!
+  secretKey: String!
+  successRedirectUrl: String
+}
+
+"""
 Gocardless input arguments
 """
 input AddGocardlessPaymentProviderInput {
@@ -4209,7 +4223,7 @@ type DataApiMrrPlan {
   amountCurrency: CurrencyEnum!
   dt: ISO8601Date!
   mrr: Float!
-  mrrShare: Float!
+  mrrShare: Float
   planCode: String!
   planDeletedAt: ISO8601DateTime
   planId: ID!
@@ -4981,6 +4995,7 @@ type FeatureObject {
   id: ID!
   name: String
   privileges: [PrivilegeObject!]!
+  subscriptionsCount: Int!
 }
 
 """
@@ -5187,6 +5202,15 @@ type FinalizedInvoiceCollectionCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type FlutterwaveProvider {
+  code: String!
+  id: ID!
+  name: String!
+  secretKey: ObfuscatedString
+  successRedirectUrl: String
+  webhookSecret: String
 }
 
 """
@@ -5929,6 +5953,16 @@ type Mutation {
     """
     input: AddCashfreePaymentProviderInput!
   ): CashfreeProvider
+
+  """
+  Add Flutterwave payment provider
+  """
+  addFlutterwavePaymentProvider(
+    """
+    Parameters for AddFlutterwavePaymentProvider
+    """
+    input: AddFlutterwavePaymentProviderInput!
+  ): FlutterwaveProvider
 
   """
   Add or update Gocardless payment provider
@@ -7071,6 +7105,16 @@ type Mutation {
   ): FeatureObject
 
   """
+  Update Flutterwave payment provider
+  """
+  updateFlutterwavePaymentProvider(
+    """
+    Parameters for UpdateFlutterwavePaymentProvider
+    """
+    input: UpdateFlutterwavePaymentProviderInput!
+  ): FlutterwaveProvider
+
+  """
   Update Gocardless payment provider
   """
   updateGocardlessPaymentProvider(
@@ -7388,6 +7432,11 @@ input OktaLoginInput {
   state: String!
 }
 
+enum OnTerminationCreditNoteEnum {
+  credit
+  skip
+}
+
 enum OrderByEnum {
   gross_revenue_amount_cents
   net_revenue_amount_cents
@@ -7481,7 +7530,7 @@ type PaymentCollection {
   metadata: CollectionMetadata!
 }
 
-union PaymentProvider = AdyenProvider | CashfreeProvider | GocardlessProvider | MoneyhashProvider | StripeProvider
+union PaymentProvider = AdyenProvider | CashfreeProvider | FlutterwaveProvider | GocardlessProvider | MoneyhashProvider | StripeProvider
 
 """
 PaymentProviderCollection type
@@ -7929,6 +7978,7 @@ enum ProviderPaymentMethodsEnum {
 enum ProviderTypeEnum {
   adyen
   cashfree
+  flutterwave
   gocardless
   moneyhash
   stripe
@@ -9024,6 +9074,7 @@ type Subscription {
   nextSubscription: Subscription
   nextSubscriptionAt: ISO8601DateTime
   nextSubscriptionType: NextSubscriptionTypeEnum
+  onTerminationCreditNote: OnTerminationCreditNoteEnum
   periodEndDate: ISO8601Date
   plan: Plan!
   startedAt: ISO8601DateTime
@@ -9316,6 +9367,7 @@ input TerminateSubscriptionInput {
   """
   clientMutationId: String
   id: ID!
+  onTerminationCreditNote: OnTerminationCreditNoteEnum
 }
 
 input ThresholdInput {
@@ -10359,6 +10411,21 @@ input UpdateFeatureInput {
   The privileges configuration
   """
   privileges: [UpdatePrivilegeInput!]!
+}
+
+"""
+Update input arguments
+"""
+input UpdateFlutterwavePaymentProviderInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  code: String
+  flowId: String
+  id: ID!
+  name: String
+  successRedirectUrl: String
 }
 
 """

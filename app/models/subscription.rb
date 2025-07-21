@@ -43,8 +43,13 @@ class Subscription < ApplicationRecord
     anniversary
   ].freeze
 
+  ON_TERMINATION_CREDIT_NOTES = {credit: "credit", skip: "skip"}.freeze
+
   enum :status, STATUSES
   enum :billing_time, BILLING_TIME
+  enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES
+
+  validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
 
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
 
@@ -239,23 +244,24 @@ end
 #
 # Table name: subscriptions
 #
-#  id                       :uuid             not null, primary key
-#  billing_time             :integer          default("calendar"), not null
-#  canceled_at              :datetime
-#  ending_at                :datetime
-#  name                     :string
-#  started_at               :datetime
-#  status                   :integer          not null
-#  subscription_at          :datetime
-#  terminated_at            :datetime
-#  trial_ended_at           :datetime
-#  created_at               :datetime         not null
-#  updated_at               :datetime         not null
-#  customer_id              :uuid             not null
-#  external_id              :string           not null
-#  organization_id          :uuid             not null
-#  plan_id                  :uuid             not null
-#  previous_subscription_id :uuid
+#  id                         :uuid             not null, primary key
+#  billing_time               :integer          default("calendar"), not null
+#  canceled_at                :datetime
+#  ending_at                  :datetime
+#  name                       :string
+#  on_termination_credit_note :enum
+#  started_at                 :datetime
+#  status                     :integer          not null
+#  subscription_at            :datetime
+#  terminated_at              :datetime
+#  trial_ended_at             :datetime
+#  created_at                 :datetime         not null
+#  updated_at                 :datetime         not null
+#  customer_id                :uuid             not null
+#  external_id                :string           not null
+#  organization_id            :uuid             not null
+#  plan_id                    :uuid             not null
+#  previous_subscription_id   :uuid
 #
 # Indexes
 #

@@ -105,22 +105,20 @@ module Fees
         return
       end
 
-      @pricing_unit_usage = if adjusted_fee.adjusted_units?
-        PricingUnitUsage.build_from_aggregation(amount_result, charge.applied_pricing_unit)
+      if adjusted_fee.adjusted_units?
+        amount = amount_result.amount
+        unit_amount = amount_result.unit_amount
       else
-        unit_precise_amount_cents = adjusted_fee.unit_precise_amount_cents
-        precise_amount_cents = adjusted_fee.units * unit_precise_amount_cents
-
-        PricingUnitUsage.new(
-          pricing_unit: charge.pricing_unit,
-          short_name: charge.pricing_unit.short_name,
-          conversion_rate: charge.applied_pricing_unit.conversion_rate,
-          amount_cents: precise_amount_cents.round,
-          precise_amount_cents:,
-          unit_amount_cents: unit_precise_amount_cents.round,
-          precise_unit_amount: unit_precise_amount_cents / charge.pricing_unit.subunit_to_unit
-        )
+        precise_amount_cents = adjusted_fee.units * adjusted_fee.unit_precise_amount_cents
+        amount = precise_amount_cents / charge.pricing_unit.subunit_to_unit.to_d
+        unit_amount = adjusted_fee.unit_precise_amount_cents / charge.pricing_unit.subunit_to_unit.to_d
       end
+
+      @pricing_unit_usage = PricingUnitUsage.build_from_fiat_amounts(
+        amount:,
+        unit_amount:,
+        applied_pricing_unit: charge.applied_pricing_unit
+      )
     end
   end
 end

@@ -17,6 +17,6 @@ RSpec.describe Types::DataApi::Mrrs::Plans::Object do
     expect(subject).to have_field(:active_customers_count).of_type("BigInt!")
     expect(subject).to have_field(:active_customers_share).of_type("Float!")
     expect(subject).to have_field(:mrr).of_type("Float!")
-    expect(subject).to have_field(:mrr_share).of_type("Float!")
+    expect(subject).to have_field(:mrr_share).of_type("Float")
   end
 end

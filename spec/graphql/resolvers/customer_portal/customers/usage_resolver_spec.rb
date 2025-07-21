@@ -151,28 +151,23 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
         expect(usage_response["amountCents"]).to eq("405")
         expect(usage_response["projectedAmountCents"]).to eq("810")
         expect(usage_response["totalAmountCents"]).to eq("405")
-        expect(usage_response["taxesAmountCents"]).to eq("0")
-
-        charge_usage = usage_response["chargesUsage"].first
+        expect(usage_response["taxesAmountCents"]).to eq("0")        
+        charge_usage = usage_response["chargesUsage"].find { |usage| usage["billableMetric"]["code"] == metric.code }
         expect(charge_usage["billableMetric"]["name"]).to eq(metric.name)
-        expect(charge_usage["billableMetric"]["code"]).to eq(metric.code)
         expect(charge_usage["billableMetric"]["aggregationType"]).to eq("count_agg")
         expect(charge_usage["charge"]["chargeModel"]).to eq("graduated")
         expect(charge_usage["units"]).to eq(4.0)
         expect(charge_usage["projectedUnits"]).to eq(8.0)
         expect(charge_usage["amountCents"]).to eq("5")
         expect(charge_usage["projectedAmountCents"]).to eq("10")
-
-        charge_usage = usage_response["chargesUsage"].last
+        charge_usage = usage_response["chargesUsage"].find { |usage| usage["billableMetric"]["code"] == sum_metric.code }
         expect(charge_usage["billableMetric"]["name"]).to eq(sum_metric.name)
-        expect(charge_usage["billableMetric"]["code"]).to eq(sum_metric.code)
         expect(charge_usage["billableMetric"]["aggregationType"]).to eq("sum_agg")
         expect(charge_usage["charge"]["chargeModel"]).to eq("standard")
         expect(charge_usage["units"]).to eq(4.0)
         expect(charge_usage["projectedUnits"]).to eq(8.0)
         expect(charge_usage["amountCents"]).to eq("400")
         expect(charge_usage["projectedAmountCents"]).to eq("800")
-
         grouped_usage = charge_usage["groupedUsage"].first
         expect(grouped_usage["amountCents"]).to eq("400")
         expect(grouped_usage["projectedAmountCents"]).to eq("800")

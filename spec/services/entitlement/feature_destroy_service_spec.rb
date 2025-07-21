@@ -40,6 +40,11 @@ RSpec.describe Entitlement::FeatureDestroyService, type: :service do
       expect { subject }.to have_enqueued_job_after_commit(SendWebhookJob).with("feature.deleted", feature)
     end
 
+    it "produces an activity log" do
+      result = subject
+      expect(Utils::ActivityLog).to have_produced("feature.deleted").after_commit.with(result.feature)
+    end
+
     context "when feature is nil" do
       it "returns a not found failure" do
         result = described_class.call(feature: nil)
@@ -79,10 +84,16 @@ RSpec.describe Entitlement::FeatureDestroyService, type: :service do
         privilege2_value
       end
 
-      it "discard all values and entitlement" do
+      it "discard all values and entitlement and send webhooks" do
         expect { subject }.to change(feature.entitlement_values, :count).from(2).to(0)
           .and change(feature.entitlements, :count).from(1).to(0)
-          .and have_enqueued_job_after_commit(SendWebhookJob).with("plan.updated", entitlement.plan)
+          .and have_enqueued_job(SendWebhookJob).with("feature.deleted", feature)
+          .and have_enqueued_job(SendWebhookJob).with("plan.updated", entitlement.plan)
+      end
+
+      it "produces plan.updated logs" do
+        subject
+        expect(Utils::ActivityLog).to have_produced("plan.updated").after_commit.with(entitlement.plan)
       end
     end
   end

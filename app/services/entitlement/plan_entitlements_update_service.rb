@@ -12,6 +12,11 @@ module Entitlement
       super
     end
 
+    activity_loggable(
+      action: "plan.updated",
+      record: -> { plan }
+    )
+
     def call
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "plan") unless plan
