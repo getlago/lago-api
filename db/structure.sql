@@ -2457,8 +2457,7 @@ CREATE VIEW public.exports_customers AS
           WHERE (ct.customer_id = c.id))) AS lago_taxes_ids
    FROM ((public.customers c
      LEFT JOIN public.organizations o ON ((o.id = c.organization_id)))
-     LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL))))
-  WHERE (c.deleted_at IS NULL);
+     LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL))));
 
 
 --
@@ -9428,6 +9427,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250721220908'),
 ('20250721150002'),
 ('20250721150001'),
 ('20250721150000'),
