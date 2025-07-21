@@ -29,11 +29,11 @@ SELECT
   COALESCE(c.timezone, o.timezone, 'UTC') AS applicable_timezone,
   c.net_payment_term,
   c.external_salesforce_id,
-  case c.finalize_zero_amount_invoice
-    WHEN 0 then 'inherit'
-    WHEN 1 then 'skip'
-    WHEN 2 then 'finalize'
-  END as finalize_zero_amount_invoice,
+  CASE c.finalize_zero_amount_invoice
+    WHEN 0 THEN 'inherit'
+    WHEN 1 THEN 'skip'
+    WHEN 2 THEN 'finalize'
+  END AS finalize_zero_amount_invoice,
   c.skip_invoice_custom_sections,
   c.payment_provider,
   c.payment_provider_code,
