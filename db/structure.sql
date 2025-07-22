@@ -1975,7 +1975,7 @@ CREATE TABLE public.entitlement_privileges (
     code character varying NOT NULL,
     name character varying,
     value_type public.entitlement_privilege_value_types DEFAULT 'string'::public.entitlement_privilege_value_types NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb,
+    config jsonb DEFAULT '{}'::jsonb NOT NULL,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
@@ -9430,6 +9430,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250722094047'),
 ('20250721220908'),
 ('20250721212307'),
 ('20250721211820'),
