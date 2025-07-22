@@ -53,7 +53,8 @@ module Integrations
                 "duedate" => due_date,
                 "taxdetailsoverride" => true,
                 "custbody_lago_id" => invoice.id,
-                "entity" => integration_customer.external_customer_id
+                "entity" => integration_customer.external_customer_id,
+                "lago_plan_code" => invoice.plan.code
               }
             )
 
