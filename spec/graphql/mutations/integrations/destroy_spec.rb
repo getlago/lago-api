@@ -35,4 +35,31 @@ RSpec.describe Mutations::Integrations::Destroy, type: :graphql do
       )
     end.to change(::Integrations::BaseIntegration, :count).by(-1)
   end
+
+  context "when okta integration" do
+    let(:integration) { create(:okta_integration, organization:) }
+
+    around { |test| lago_premium!(&test) }
+
+    before do
+      organization.enable_okta_authentication!
+
+      allow(::Integrations::Okta::DestroyService).to receive(:call).with(integration:).and_call_original
+    end
+
+    it "deletes calling the okta destroy service" do
+      expect do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: membership.organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {id: integration.id}
+          }
+        )
+      end.to change(::Integrations::BaseIntegration, :count).by(-1)
+      expect(::Integrations::Okta::DestroyService).to have_received(:call).with(integration:)
+    end
+  end
 end

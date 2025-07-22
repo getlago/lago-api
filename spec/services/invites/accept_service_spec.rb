@@ -12,7 +12,8 @@ RSpec.describe Invites::AcceptService, type: :service do
   let(:accept_args) do
     {
       token: invite.token,
-      password: "ILoveLago!"
+      password: "ILoveLago!",
+      login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD
     }
   end
 
@@ -49,7 +50,8 @@ RSpec.describe Invites::AcceptService, type: :service do
       it "sets user, membership and organization" do
         result = accept_service.call(
           password: accept_args[:password],
-          token: new_invite[:token]
+          token: new_invite[:token],
+          login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD
         )
 
         expect(result).to be_success
@@ -66,7 +68,8 @@ RSpec.describe Invites::AcceptService, type: :service do
       it "returns invite_not_found error" do
         result = accept_service.call(
           password: accept_args[:password],
-          token: accepted_invite[:token]
+          token: accepted_invite[:token],
+          login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD
         )
 
         expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -80,7 +83,8 @@ RSpec.describe Invites::AcceptService, type: :service do
       it "returns invite_not_found error" do
         result = accept_service.call(
           password: accept_args[:password],
-          token: revoked_invite[:token]
+          token: revoked_invite[:token],
+          login_method: Organizations::AuthenticationMethods::EMAIL_PASSWORD
         )
 
         expect(result.error).to be_a(BaseService::NotFoundFailure)
@@ -92,7 +96,7 @@ RSpec.describe Invites::AcceptService, type: :service do
       let(:invite) { create(:invite, organization:, email: Faker::Internet.email) }
 
       it "returns an error" do
-        result = accept_service.call(password: nil, token: accept_args[:token])
+        result = accept_service.call(password: nil, **accept_args.slice(:token, :login_method))
 
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ValidationFailure)
@@ -106,6 +110,22 @@ RSpec.describe Invites::AcceptService, type: :service do
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(result.error.message).to eq("invite_not_found")
         end
+      end
+    end
+
+    context "with invalid login_method" do
+      let(:invite) { create(:invite, organization:, email: Faker::Internet.email) }
+
+      before do
+        organization.disable_email_password_authentication!
+      end
+
+      it "returns an error" do
+        result = accept_service.call(**accept_args)
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:email_password]).to eq(["login_method_not_authorized"])
       end
     end
   end

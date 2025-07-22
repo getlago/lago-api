@@ -25,6 +25,7 @@ class GraphqlController < ApplicationController
     operation_name = params[:operationName]
     context = {
       current_user:,
+      login_method:,
       current_organization:,
       customer_portal_user:,
       request:,
