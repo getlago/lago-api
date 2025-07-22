@@ -2308,6 +2308,7 @@ CREATE VIEW public.exports_credit_notes AS
     cn.taxes_rate,
     cn.created_at,
     cn.updated_at,
+    cn.refunded_at,
     ( SELECT json_agg(json_build_object('lago_id', ci.id, 'amount_cents', ci.amount_cents, 'amount_currency', ci.amount_currency, 'lago_fee_id', ci.fee_id)) AS json_agg
            FROM public.credit_note_items ci
           WHERE (ci.credit_note_id = cn.id)) AS items,
@@ -2657,6 +2658,7 @@ CREATE VIEW public.exports_fees AS
     f.precise_unit_amount,
     f.precise_coupons_amount_cents,
     (f.precise_amount_cents + f.taxes_precise_amount_cents) AS precise_total_amount_cents,
+    f.precise_credit_notes_amount_cents,
     f.events_count,
         CASE f.payment_status
             WHEN 0 THEN 'pending'::text
@@ -9428,6 +9430,8 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250721220908'),
+('20250721212307'),
+('20250721211820'),
 ('20250721150002'),
 ('20250721150001'),
 ('20250721150000'),
