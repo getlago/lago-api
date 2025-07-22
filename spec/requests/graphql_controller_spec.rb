@@ -154,7 +154,7 @@ RSpec.describe GraphqlController, type: :request do
 
     context "with query length validation" do
       let(:token) do
-        UsersService.new.new_token(user).token
+        Auth::TokenService.encode(user:)
       end
 
       it "rejects queries that exceed maximum length" do
