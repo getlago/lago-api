@@ -85,8 +85,6 @@ class GraphqlController < ApplicationController
   end
 
   def render_graphql_error(code:, status:, message: nil)
-    # TODO: we currently return a 200 even if we have an error
-    # We should refactor this and return the right http status
     render(
       json: {
         data: {},
