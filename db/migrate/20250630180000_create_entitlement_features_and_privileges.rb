@@ -24,6 +24,7 @@ class CreateEntitlementFeaturesAndPrivileges < ActiveRecord::Migration[8.0]
       t.string :code, null: false
       t.string :name
       t.enum :value_type, enum_type: "entitlement_privilege_value_types", null: false
+      # NOTE: NOT NULL see: db/migrate/20250722094047_change_privilege_config_to_not_null.rb
       t.jsonb :config, default: {}
       t.datetime :deleted_at
       t.timestamps
