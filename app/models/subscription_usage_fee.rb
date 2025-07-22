@@ -28,6 +28,17 @@ class SubscriptionUsageFee
     (time_ratio > 0) ? (current_units / BigDecimal(time_ratio.to_s)).round(2) : BigDecimal("0")
   end
 
+  def current_pricing_unit_amount_cents
+    fees.map(&:pricing_unit_usage).compact.sum(&:amount_cents)
+  end
+
+  def projected_pricing_unit_amount_cents
+    return current_pricing_unit_amount_cents if recurring?
+    return 0 if time_ratio.zero?
+
+    (current_pricing_unit_amount_cents / BigDecimal(time_ratio.to_s)).round.to_i
+  end
+
   private
 
   def time_ratio

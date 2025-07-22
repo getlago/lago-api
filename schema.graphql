@@ -886,6 +886,7 @@ type ChargeFilterUsage {
   id: ID
   invoiceDisplayName: String
   pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
   projectedUnits: Float!
   units: Float!
@@ -941,6 +942,7 @@ type ChargeUsage {
   groupedUsage: [GroupedChargeUsage!]!
   id: ID!
   pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
   projectedUnits: Float!
   units: Float!
@@ -5348,6 +5350,7 @@ type GroupedChargeUsage {
   groupedBy: JSON
   id: ID!
   pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
   projectedAmountCents: BigInt!
   projectedUnits: Float!
   units: Float!

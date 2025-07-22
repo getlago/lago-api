@@ -92,7 +92,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           "projected_units" => expected_projected_units.to_s,
           "grouped_by" => {"card_type" => "visa"},
           "filters" => []
-        },
+        }
       ]
     )
   end
@@ -141,7 +141,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             "projected_units" => expected_projected_units.to_s,
             "grouped_by" => {"card_type" => "visa"},
             "filters" => []
-          },
+          }
         ]
       )
     end

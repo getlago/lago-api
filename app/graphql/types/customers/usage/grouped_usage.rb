@@ -12,6 +12,7 @@ module Types
         field :events_count, Integer, null: false
         field :id, ID, null: false
         field :pricing_unit_amount_cents, GraphQL::Types::BigInt, null: true
+        field :pricing_unit_projected_amount_cents, GraphQL::Types::BigInt, null: true
         field :projected_amount_cents, GraphQL::Types::BigInt, null: false
         field :projected_units, GraphQL::Types::Float, null: false
         field :units, GraphQL::Types::Float, null: false
@@ -31,6 +32,12 @@ module Types
           return if object.first.charge.applied_pricing_unit.nil?
 
           object.map(&:pricing_unit_usage).sum(&:amount_cents)
+        end
+
+        def pricing_unit_projected_amount_cents
+          return if object.first.charge.applied_pricing_unit.nil?
+
+          object.map(&:pricing_unit_usage).sum(&:projected_amount_cents)
         end
 
         def events_count

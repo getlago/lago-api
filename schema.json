@@ -5461,6 +5461,18 @@
               "args": []
             },
             {
+              "name": "pricingUnitProjectedAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "projectedAmountCents",
               "description": null,
               "type": {
@@ -6048,6 +6060,18 @@
             },
             {
               "name": "pricingUnitAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "pricingUnitProjectedAmountCents",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -25889,6 +25913,18 @@
             },
             {
               "name": "pricingUnitAmountCents",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "BigInt",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "pricingUnitProjectedAmountCents",
               "description": null,
               "type": {
                 "kind": "SCALAR",
