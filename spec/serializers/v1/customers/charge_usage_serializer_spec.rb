@@ -111,6 +111,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         "projected_amount_cents" => expected_projected_amount_cents,
         "pricing_unit_details" => {
           "amount_cents" => 200,
+          "projected_amount_cents" => 282,
           "short_name" => "CR",
           "conversion_rate" => "0.5"
         },
@@ -133,6 +134,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
             "projected_amount_cents" => expected_projected_amount_cents,
             "pricing_unit_details" => {
               "amount_cents" => 200,
+              "projected_amount_cents" => 282,
               "short_name" => "CR",
               "conversion_rate" => "0.5"
             },
@@ -220,6 +222,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           "amount_cents" => 300,
           "pricing_unit_details" => {
             "amount_cents" => 600,
+            "projected_amount_cents" => 845,
             "short_name" => "CR",
             "conversion_rate" => "0.5"
           },
@@ -233,6 +236,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           "amount_cents" => 300,
           "pricing_unit_details" => {
             "amount_cents" => 600,
+            "projected_amount_cents" => 845,
             "short_name" => "CR",
             "conversion_rate" => "0.5"
           },
