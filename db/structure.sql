@@ -2308,6 +2308,7 @@ CREATE VIEW public.exports_credit_notes AS
     cn.taxes_rate,
     cn.created_at,
     cn.updated_at,
+    cn.refunded_at,
     ( SELECT json_agg(json_build_object('lago_id', ci.id, 'amount_cents', ci.amount_cents, 'amount_currency', ci.amount_currency, 'lago_fee_id', ci.fee_id)) AS json_agg
            FROM public.credit_note_items ci
           WHERE (ci.credit_note_id = cn.id)) AS items,
@@ -9429,6 +9430,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250721212307'),
 ('20250721211820'),
 ('20250721150002'),
 ('20250721150001'),
