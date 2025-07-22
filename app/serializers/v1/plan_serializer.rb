@@ -36,7 +36,7 @@ module V1
 
     def charges
       ::CollectionSerializer.new(
-        model.charges,
+        model.charges.includes(:applied_pricing_unit),
         ::V1::ChargeSerializer,
         collection_name: "charges",
         includes: include?(:taxes) ? %i[taxes] : []
