@@ -321,8 +321,8 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
     end
   end
 
-  describe "DELETE /api/v1/subscriptions/external_id/entitlements/:feature_code/remove" do
-    subject { delete_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}/remove" }
+  describe "POST /api/v1/subscriptions/external_id/entitlements/:feature_code/restore" do
+    subject { post_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}/restore" }
 
     let(:subscription_feature_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_id: subscription.id) }
 
@@ -339,13 +339,13 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
     end
 
     it "returns not found error when subscription does not exist" do
-      delete_with_token organization, "/api/v1/subscriptions/invalid_subscription/entitlements/#{feature.code}/remove"
+      post_with_token organization, "/api/v1/subscriptions/invalid_subscription/entitlements/#{feature.code}/restore"
 
       expect(response).to be_not_found_error("subscription")
     end
 
     it "returns not found error when feature does not exist" do
-      delete_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/invalid_feature/remove"
+      post_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/invalid_feature/restore"
 
       expect(response).to be_not_found_error("feature")
     end
@@ -354,7 +354,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
       let(:other_feature) { create(:feature, organization:, code: "other_feature") }
 
       it "returns not found error" do
-        delete_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{other_feature.code}/remove"
+        post_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{other_feature.code}/restore"
 
         expect(response).to be_not_found_error("subscription_feature_removal")
       end
