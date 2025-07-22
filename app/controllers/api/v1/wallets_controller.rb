@@ -108,7 +108,8 @@ module Api
             ]
           ],
           applies_to: [
-            fee_types: []
+            fee_types: [],
+            billable_metric_codes: []
           ]
         )
       end
@@ -140,7 +141,8 @@ module Api
             ]
           ],
           applies_to: [
-            fee_types: []
+            fee_types: [],
+            billable_metric_codes: []
           ]
         )
       end
