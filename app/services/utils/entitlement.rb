@@ -2,6 +2,13 @@
 
 module Utils
   class Entitlement
+    def self.privilege_code_is_duplicated?(privileges_params)
+      return false if privileges_params.blank?
+
+      seen = Set.new
+      privileges_params.any? { !seen.add?(it[:code]) }
+    end
+
     def self.cast_value(value, type)
       return nil if value.blank?
 

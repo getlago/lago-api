@@ -32,13 +32,13 @@ RSpec.describe V1::Entitlement::FeatureSerializer, type: :serializer do
         created_at: feature.created_at.iso8601
       )
 
-      expect(result[:privileges]).to include(
-        "max_admins" => {
+      expect(result[:privileges]).to contain_exactly(
+        {
           code: "max_admins",
           name: nil,
           value_type: "integer"
         },
-        "max" => {
+        {
           code: "max",
           name: "Maximum",
           value_type: "integer"
@@ -72,7 +72,7 @@ RSpec.describe V1::Entitlement::FeatureSerializer, type: :serializer do
       it "returns empty privileges hash" do
         result = subject.serialize
 
-        expect(result[:privileges]).to eq({})
+        expect(result[:privileges]).to eq([])
       end
     end
   end

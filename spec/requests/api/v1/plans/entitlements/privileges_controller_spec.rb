@@ -28,9 +28,7 @@ RSpec.describe Api::V1::Plans::Entitlements::PrivilegesController, type: :reques
       expect { subject }.to change(privilege.values, :count).by(-1)
 
       expect(response).to have_http_status(:success)
-
-      expect(json[:entitlement][:privileges]).to have_key(privilege2.code.to_sym)
-      expect(json[:entitlement][:privileges]).not_to have_key(privilege.code.to_sym)
+      expect(json[:entitlement][:privileges].pluck(:code)).to eq(["max_admins"])
     end
 
     it "returns not found error when plan does not exist" do
@@ -58,8 +56,10 @@ RSpec.describe Api::V1::Plans::Entitlements::PrivilegesController, type: :reques
 
       json = JSON.parse(response.body, symbolize_names: true)
       expect(json[:entitlement][:code]).to eq(feature.code)
-      expect(json[:entitlement][:privileges]).not_to have_key(privilege.code.to_sym)
-      expect(json[:entitlement][:privileges][privilege2.code.to_sym][:value]).to eq(entitlement_value2.value)
+      expect(json[:entitlement][:privileges].sole).to include({
+        code: "max_admins",
+        value: entitlement_value2.value
+      })
     end
   end
 end

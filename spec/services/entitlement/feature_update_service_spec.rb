@@ -27,6 +27,26 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
     context "when update is full" do
       let(:partial) { false }
 
+      context "when privilege code is duplicated" do
+        let(:params) do
+          {
+            code: "seats",
+            privileges: [
+              {code: "max_admins"},
+              {code: "max_admins"}
+            ]
+          }
+        end
+
+        it "returns a validation failure" do
+          result = subject
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:"privilege.code"]).to eq ["value_is_duplicated"]
+        end
+      end
+
       context "when updating feature attributes" do
         let(:params) do
           {
@@ -67,10 +87,10 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
       context "when updating privileges" do
         let(:params) do
           {
-            privileges: {
-              "max" => {name: "Max."},
-              "min" => {name: "Min."}
-            }
+            privileges: [
+              {code: "max", name: "Max."},
+              {code: "min", name: "Min."}
+            ]
           }
         end
 
@@ -86,7 +106,10 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
 
         it "only updates provided privilege attributes" do
           original_name = privilege1.name
-          params[:privileges]["max"].delete(:name)
+          params[:privileges] = [
+            {code: "max"},
+            {code: "min", name: "Min."}
+          ]
 
           result = subject
 
@@ -101,9 +124,9 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
           {
             name: "Updated Feature Name",
             description: "Updated feature description",
-            privileges: {
-              "max" => {name: "Max."}
-            }
+            privileges: [
+              {code: "max", name: "Max."}
+            ]
           }
         end
 
@@ -124,9 +147,9 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
 
         let(:params) do
           {
-            privileges: {
-              "opt" => {config: {select_options: %w[one two three]}}
-            }
+            privileges: [
+              {code: "opt", config: {select_options: %w[one two three]}}
+            ]
           }
         end
 
@@ -146,9 +169,9 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
 
         let(:params) do
           {
-            privileges: {
-              "max" => {name: "Max."}
-            }
+            privileges: [
+              {code: "max", name: "Max."}
+            ]
           }
         end
 
@@ -185,9 +208,9 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         let(:new_privilege_code) { "new_privilege" }
         let(:params) do
           {
-            privileges: {
-              new_privilege_code => {name: "New Privilege"}
-            }
+            privileges: [
+              {code: new_privilege_code, name: "New Privilege"}
+            ]
           }
         end
 
@@ -204,9 +227,9 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         context "when new privilege params are invalid" do
           let(:params) do
             {
-              privileges: {
-                new_privilege_code => {name: "New Privilege", value_type: "invalid_type"}
-              }
+              privileges: [
+                {code: new_privilege_code, name: "New Privilege", value_type: "invalid_type"}
+              ]
             }
           end
 
@@ -235,9 +258,9 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
       context "when privilege name is empty" do
         let(:params) do
           {
-            privileges: {
-              "max" => {name: ""} # Empty name is allowed
-            }
+            privileges: [
+              {code: "max", name: ""} # Empty name is allowed
+            ]
           }
         end
 
@@ -312,6 +335,26 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
     describe "when update is partial" do
       let(:partial) { true }
 
+      context "when privilege code is duplicated" do
+        let(:params) do
+          {
+            code: "seats",
+            privileges: [
+              {code: "max_admins"},
+              {code: "max_admins"}
+            ]
+          }
+        end
+
+        it "returns a validation failure" do
+          result = subject
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:"privilege.code"]).to eq ["value_is_duplicated"]
+        end
+      end
+
       context "when updating feature attributes" do
         let(:params) do
           {
@@ -352,10 +395,10 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
       context "when updating privilege names" do
         let(:params) do
           {
-            privileges: {
-              "max" => {name: "Max."},
-              "min" => {name: "Min."}
-            }
+            privileges: [
+              {code: "max", name: "Max."},
+              {code: "min", name: "Min."}
+            ]
           }
         end
 
@@ -368,7 +411,7 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         end
 
         it "only updates privileges that exist" do
-          params[:privileges]["nonexistent"] = {name: "New Name"}
+          params[:privileges] << {code: "nonexistent", name: "New Name"}
 
           result = subject
 
@@ -379,7 +422,10 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
 
         it "only updates provided privilege attributes" do
           original_name = privilege1.name
-          params[:privileges]["max"].delete(:name)
+          params[:privileges] = [
+            {code: "max"},
+            {code: "min", name: "Min."}
+          ]
 
           result = subject
 
@@ -394,9 +440,9 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
 
         let(:params) do
           {
-            privileges: {
-              "opt" => {config: {select_options: %w[one two three]}}
-            }
+            privileges: [
+              {code: "opt", config: {select_options: %w[one two three]}}
+            ]
           }
         end
 
@@ -413,9 +459,9 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
           {
             name: "Updated Feature Name",
             description: "Updated feature description",
-            privileges: {
-              "max" => {name: "Max."}
-            }
+            privileges: [
+              {code: "max", name: "Max."}
+            ]
           }
         end
 
@@ -445,9 +491,9 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
       context "when privilege name is empty" do
         let(:params) do
           {
-            privileges: {
-              "max" => {name: ""} # Empty name is allowed
-            }
+            privileges: [
+              {code: "max", name: ""} # Empty name is allowed
+            ]
           }
         end
 
@@ -474,9 +520,9 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         let(:new_privilege_code) { "new_privilege" }
         let(:params) do
           {
-            privileges: {
-              new_privilege_code => {name: "New Privilege"}
-            }
+            privileges: [
+              {code: new_privilege_code, name: "New Privilege"}
+            ]
           }
         end
 
@@ -493,9 +539,9 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         context "when new privilege params are invalid" do
           let(:params) do
             {
-              privileges: {
-                new_privilege_code => {name: "New Privilege", value_type: "invalid_type"}
-              }
+              privileges: [
+                {code: new_privilege_code, name: "New Privilege", value_type: "invalid_type"}
+              ]
             }
           end
 

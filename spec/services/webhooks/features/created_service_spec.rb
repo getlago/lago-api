@@ -14,7 +14,7 @@ RSpec.describe Webhooks::Features::CreatedService do
       "code" => String,
       "name" => String,
       "description" => String,
-      "privileges" => Hash,
+      "privileges" => Array,
       "created_at" => String
     }
   end

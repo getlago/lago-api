@@ -55,7 +55,7 @@ RSpec.describe V1::Entitlement::SubscriptionEntitlementsCollectionSerializer, ty
         name: "Feature Name",
         description: "Feature Description"
       })
-      expect(seats[:privileges][:root?]).to eq({
+      expect(seats[:privileges]).to contain_exactly({
         code: "root?",
         name: nil,
         value_type: "boolean",
@@ -63,8 +63,7 @@ RSpec.describe V1::Entitlement::SubscriptionEntitlementsCollectionSerializer, ty
         value: true,
         plan_value: nil,
         override_value: true
-      })
-      expect(seats[:privileges][:max]).to eq({
+      }, {
         code: "max",
         name: nil,
         value_type: "integer",
@@ -72,8 +71,7 @@ RSpec.describe V1::Entitlement::SubscriptionEntitlementsCollectionSerializer, ty
         value: 30,
         plan_value: 30,
         override_value: nil
-      })
-      expect(seats[:privileges][:reset]).to eq({
+      }, {
         code: "reset",
         name: nil,
         value_type: "string",
@@ -94,7 +92,7 @@ RSpec.describe V1::Entitlement::SubscriptionEntitlementsCollectionSerializer, ty
         name: nil,
         description: nil
       })
-      expect(storage[:privileges][:limit]).to eq({
+      expect(storage[:privileges]).to contain_exactly({
         code: "limit",
         name: "L",
         value_type: "integer",

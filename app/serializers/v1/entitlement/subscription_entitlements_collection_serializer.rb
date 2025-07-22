@@ -21,7 +21,7 @@ module V1
                 plan_value: Utils::Entitlement.cast_value(e.privilege_plan_value, e.privilege_value_type),
                 override_value: Utils::Entitlement.cast_value(e.privilege_override_value, e.privilege_value_type)
               }
-            end.index_by { it[:code] },
+            end,
             overrides: feature_entitlements.filter_map do |e|
               [e.privilege_code, Utils::Entitlement.cast_value(e.privilege_override_value, e.privilege_value_type)] unless e.privilege_override_value.nil?
             end.to_h
