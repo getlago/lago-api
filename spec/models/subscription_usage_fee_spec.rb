@@ -8,8 +8,7 @@ RSpec.describe SubscriptionUsageFee, type: :model do
       fees: fees,
       from_datetime: from_datetime,
       to_datetime: to_datetime,
-      charges_duration_in_days: charges_duration_in_days,
-      amount_cents: amount_cents
+      charges_duration_in_days: charges_duration_in_days
     )
   end
 
@@ -88,17 +87,6 @@ RSpec.describe SubscriptionUsageFee, type: :model do
         it "returns 0" do
           travel_to(Time.parse("2025-06-30T00:00:00Z")) do
             expect(subscription_usage_fee.projected_amount_cents).to eq(0)
-          end
-        end
-      end
-
-      context "when an amount_cents override is provided" do
-        let(:amount_cents) { 5000 }
-
-        it "uses the override amount for the projection" do
-          travel_to(Time.parse("2025-07-16T12:00:00Z")) do
-            # Projection = 5000 / 0.516 = ~9688
-            expect(subscription_usage_fee.projected_amount_cents).to eq(9688)
           end
         end
       end

@@ -181,21 +181,23 @@ module Invoices
         issuing_date: invoice.issuing_date.iso8601,
         currency: invoice.currency,
         amount_cents: invoice.fees_amount_cents,
-        projected_amount_cents: fees_usage_calculator.projected_amount_cents,
+        projected_amount_cents: total_projected_amount_cents,
         total_amount_cents: invoice.total_amount_cents,
         taxes_amount_cents: invoice.taxes_amount_cents,
         fees: invoice.fees
       )
     end
 
-    def fees_usage_calculator
-      @fees_usage_calculator ||= SubscriptionUsageFee.new(
-        fees: invoice.fees,
-        from_datetime: boundaries[:from_datetime],
-        to_datetime: boundaries[:to_datetime],
-        charges_duration_in_days: boundaries[:charges_duration],
-        amount_cents: invoice.fees_amount_cents
-      )
+    def total_projected_amount_cents
+      invoice.fees.sum do |fee|
+        individual_calculator = SubscriptionUsageFee.new(
+          fees: [fee.dup],
+          from_datetime: boundaries[:charges_from_datetime].iso8601,
+          to_datetime: boundaries[:charges_to_datetime].iso8601,
+          charges_duration_in_days: boundaries[:charges_duration]
+        )
+        individual_calculator.projected_amount_cents
+      end
     end
 
     def customer_provider_taxation?

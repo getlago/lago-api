@@ -1,14 +1,13 @@
 # frozen_string_literal: true
 
 class SubscriptionUsageFee
-  attr_reader :fees, :from_datetime, :to_datetime, :charges_duration_in_days, :amount_cents
+  attr_reader :fees, :from_datetime, :to_datetime, :charges_duration_in_days
 
-  def initialize(fees:, from_datetime:, to_datetime:, charges_duration_in_days: nil, amount_cents: nil)
+  def initialize(fees:, from_datetime:, to_datetime:, charges_duration_in_days: nil)
     @fees = fees
     @from_datetime = from_datetime
     @to_datetime = to_datetime
     @charges_duration_in_days = charges_duration_in_days
-    @amount_cents = amount_cents
   end
 
   def current_amount_cents
@@ -17,7 +16,7 @@ class SubscriptionUsageFee
 
   def projected_amount_cents
     return current_amount_cents if recurring?
-    (time_ratio > 0) ? ((amount_cents || current_amount_cents) / BigDecimal(time_ratio.to_s)).round.to_i : 0
+    (time_ratio > 0) ? (current_amount_cents / BigDecimal(time_ratio.to_s)).round.to_i : 0
   end
 
   def current_units
