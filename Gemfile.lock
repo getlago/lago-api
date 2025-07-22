@@ -917,7 +917,7 @@ GEM
     temple (0.8.2)
     terminal-table (4.0.0)
       unicode-display_width (>= 1.1.1, < 4)
-    thor (1.3.2)
+    thor (1.4.0)
     throttling (0.4.0)
     tilt (2.0.11)
     timecop (0.9.10)
