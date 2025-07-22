@@ -42,6 +42,7 @@ module V1
           events_count: fees.sum(0) { |f| f.events_count.to_i },
           amount_cents: usage_calculator.current_amount_cents,
           projected_amount_cents: projected_amount_cents,
+          pricing_unit_details: pricing_unit_details(fees),
           amount_currency: fees.first.amount_currency
         }
       end
@@ -98,6 +99,17 @@ module V1
           **usage_data.except(:amount_currency),
           grouped_by: grouped_fees.first.grouped_by,
           filters: filters(grouped_fees)
+        }
+      end
+
+      def pricing_unit_details(fees)
+        fee = fees.first
+        return if fee.pricing_unit_usage.nil?
+
+        {
+          amount_cents: fees.map(&:pricing_unit_usage).sum(&:amount_cents),
+          short_name: fee.pricing_unit_usage.short_name,
+          conversion_rate: fee.pricing_unit_usage.conversion_rate
         }
       end
     end

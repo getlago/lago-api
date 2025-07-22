@@ -119,6 +119,25 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
         end
       end
 
+      context "when updating select_options of a privilege" do
+        let(:privilege3) { create(:privilege, feature:, code: "opt", value_type: "select", config: {select_options: %w[zero one]}) }
+
+        let(:params) do
+          {
+            privileges: {
+              "opt" => {config: {select_options: %w[one two three]}}
+            }
+          }
+        end
+
+        it "appends the new options" do
+          result = subject
+
+          expect(result).to be_success
+          expect(privilege3.reload.config["select_options"]).to eq %w[zero one two three]
+        end
+      end
+
       context "when deleting privileges with associated entitlement values" do
         let(:entitlement) { create(:entitlement, feature:) }
         let(:privilege1_value) { create(:entitlement_value, entitlement:, privilege: privilege1, value: "10") }
@@ -367,6 +386,25 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
           expect(result).to be_success
           expect(privilege1.reload.name).to eq(original_name)
           expect(privilege2.reload.name).to eq("Min.")
+        end
+      end
+
+      context "when updating select_options of a privilege" do
+        let(:privilege3) { create(:privilege, feature:, code: "opt", value_type: "select", config: {select_options: %w[zero one]}) }
+
+        let(:params) do
+          {
+            privileges: {
+              "opt" => {config: {select_options: %w[one two three]}}
+            }
+          }
+        end
+
+        it "appends the new options" do
+          result = subject
+
+          expect(result).to be_success
+          expect(privilege3.reload.config["select_options"]).to eq %w[zero one two three]
         end
       end
 

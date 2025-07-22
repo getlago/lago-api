@@ -9,7 +9,7 @@ RSpec.describe Types::Entitlement::PrivilegeObject do
     expect(subject).to have_field(:id).of_type("ID!")
 
     expect(subject).to have_field(:code).of_type("String!")
-    expect(subject).to have_field(:config).of_type("JSON!")
+    expect(subject).to have_field(:config).of_type("PrivilegeConfigObject!")
     expect(subject).to have_field(:name).of_type("String")
     expect(subject).to have_field(:value_type).of_type("PrivilegeValueTypeEnum!")
   end

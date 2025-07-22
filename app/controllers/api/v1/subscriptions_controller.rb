@@ -223,7 +223,13 @@ module Api
                   }
                 ]
               },
-              {tax_codes: []}
+              {tax_codes: []},
+              {
+                applied_pricing_unit: [
+                  :code,
+                  :conversion_rate
+                ]
+              }
             ],
             usage_thresholds: [
               :id,

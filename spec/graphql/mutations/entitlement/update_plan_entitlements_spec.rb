@@ -20,7 +20,7 @@ RSpec.describe Mutations::Entitlement::UpdatePlanEntitlements, type: :graphql do
             code
             name
             description
-            privileges { code name value valueType config }
+            privileges { code name value valueType }
           }
         }
       }
@@ -91,8 +91,7 @@ RSpec.describe Mutations::Entitlement::UpdatePlanEntitlements, type: :graphql do
           "code" => "max",
           "name" => nil,
           "value" => "100",
-          "valueType" => "string",
-          "config" => {}
+          "valueType" => "string"
         })
       end
     end
@@ -144,8 +143,7 @@ RSpec.describe Mutations::Entitlement::UpdatePlanEntitlements, type: :graphql do
         "code" => "max",
         "name" => nil,
         "value" => "100",
-        "valueType" => "string",
-        "config" => {}
+        "valueType" => "string"
       })
       expect(salesforce_ent.reload).to be_discarded
       expect(root_value.reload).to be_discarded

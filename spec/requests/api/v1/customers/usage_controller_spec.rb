@@ -198,7 +198,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
                 invoice_display_name: nil,
                 units: "4.0",
                 projected_units: "41.33",
-                values: nil
+                values: nil,
+                pricing_unit_details: nil
               },
               {
                 units: "3.0",
@@ -207,7 +208,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
                 projected_amount_cents: 31000,
                 events_count: 3,
                 invoice_display_name: nil,
-                values: {cloud: ["aws"]}
+                values: {cloud: ["aws"]},
+                pricing_unit_details: nil
               },
               {
                 units: "1.0",
@@ -216,7 +218,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
                 projected_amount_cents: 20667,
                 events_count: 1,
                 invoice_display_name: nil,
-                values: {cloud: ["google"]}
+                values: {cloud: ["google"]},
+                pricing_unit_details: nil
               }
             )
           end
@@ -354,7 +357,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
                 projected_amount_cents: 0,
                 events_count: 4,
                 invoice_display_name: nil,
-                values: nil
+                values: nil,
+                pricing_unit_details: nil
               },
               {
                 units: "2.0",
@@ -363,7 +367,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
                 projected_amount_cents: 20667,
                 events_count: 2,
                 invoice_display_name: nil,
-                values: {cloud: ["aws"], region: ["usa"]}
+                values: {cloud: ["aws"], region: ["usa"]},
+                pricing_unit_details: nil
               },
               {
                 units: "1.0",
@@ -372,7 +377,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
                 projected_amount_cents: 20667,
                 events_count: 1,
                 invoice_display_name: nil,
-                values: {cloud: ["aws"], region: ["france"]}
+                values: {cloud: ["aws"], region: ["france"]},
+                pricing_unit_details: nil
               },
               {
                 units: "1.0",
@@ -381,7 +387,8 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
                 projected_amount_cents: 31000,
                 events_count: 1,
                 invoice_display_name: nil,
-                values: {cloud: ["google"], region: ["usa"]}
+                values: {cloud: ["google"], region: ["usa"]},
+                pricing_unit_details: nil
               }
             )
           end

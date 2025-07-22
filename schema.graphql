@@ -624,6 +624,15 @@ type AuthUrl {
   url: String!
 }
 
+"""
+Organization Authentication Methods Values
+"""
+enum AuthenticationMethodsEnum {
+  email_password
+  google_oauth
+  okta
+}
+
 type Authorize {
   url: String!
 }
@@ -2677,12 +2686,12 @@ input CreateFeatureInput {
   """
   The description of the feature
   """
-  description: String!
+  description: String
 
   """
   The name of the feature
   """
-  name: String!
+  name: String
 
   """
   The privileges configuration
@@ -3831,11 +3840,14 @@ enum CurrencyEnum {
 Current Organization Type
 """
 type CurrentOrganization {
+  accessibleByCurrentSession: Boolean!
   addressLine1: String
   addressLine2: String
   adyenPaymentProviders: [AdyenProvider!]
   apiKey: String
   appliedDunningCampaign: DunningCampaign
+  authenticatedMethod: AuthenticationMethodsEnum!
+  authenticationMethods: [AuthenticationMethodsEnum!]!
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   cashfreePaymentProviders: [CashfreeProvider!]
@@ -7446,6 +7458,7 @@ enum OrderByEnum {
 Safe Organization Type
 """
 type Organization {
+  accessibleByCurrentSession: Boolean!
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   defaultCurrency: CurrencyEnum!
@@ -7616,6 +7629,8 @@ type Permissions {
   analyticsOverdueBalancesView: Boolean!
   analyticsView: Boolean!
   auditLogsView: Boolean!
+  authenticationMethodsUpdate: Boolean!
+  authenticationMethodsView: Boolean!
   billableMetricsCreate: Boolean!
   billableMetricsDelete: Boolean!
   billableMetricsUpdate: Boolean!
@@ -7813,7 +7828,7 @@ input PlanEntitlementPrivilegeInput {
 
 type PlanEntitlementPrivilegeObject {
   code: String!
-  config: JSON!
+  config: PrivilegeConfigObject!
   name: String
   value: String!
   valueType: PrivilegeValueTypeEnum!
@@ -7902,9 +7917,29 @@ type PricingUnitUsage {
   updatedAt: ISO8601DateTime!
 }
 
+"""
+Input for privilege configuration
+"""
+input PrivilegeConfigInput {
+  """
+  Available options for select type privileges
+  """
+  selectOptions: [String!]
+}
+
+"""
+Configuration object for privileges
+"""
+type PrivilegeConfigObject {
+  """
+  Available options for select type privileges
+  """
+  selectOptions: [String!]
+}
+
 type PrivilegeObject {
   code: String!
-  config: JSON!
+  config: PrivilegeConfigObject!
   id: ID!
   name: String
   valueType: PrivilegeValueTypeEnum!
@@ -10395,7 +10430,7 @@ input UpdateFeatureInput {
   """
   The description of the feature
   """
-  description: String!
+  description: String
 
   """
   The ID of the feature to update
@@ -10405,7 +10440,7 @@ input UpdateFeatureInput {
   """
   The name of the feature
   """
-  name: String!
+  name: String
 
   """
   The privileges configuration
@@ -10611,6 +10646,7 @@ Update Organization input arguments
 input UpdateOrganizationInput {
   addressLine1: String
   addressLine2: String
+  authenticationMethods: [AuthenticationMethodsEnum!]
   billingConfiguration: OrganizationBillingConfigurationInput
   city: String
 
@@ -10695,7 +10731,7 @@ Input for updating a privilege
 """
 input UpdatePrivilegeInput {
   code: String!
-  config: JSON
+  config: PrivilegeConfigInput
   name: String
   valueType: PrivilegeValueTypeEnum
 }

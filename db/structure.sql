@@ -48,6 +48,7 @@ ALTER TABLE IF EXISTS ONLY public.pricing_units DROP CONSTRAINT IF EXISTS fk_rai
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_cc318ad1ff;
 ALTER TABLE IF EXISTS ONLY public.plans DROP CONSTRAINT IF EXISTS fk_rails_cbf700aeb8;
 ALTER TABLE IF EXISTS ONLY public.usage_thresholds DROP CONSTRAINT IF EXISTS fk_rails_caeb5a3949;
+ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_c9183c59d9;
 ALTER TABLE IF EXISTS ONLY public.invites DROP CONSTRAINT IF EXISTS fk_rails_c71f4b2026;
 ALTER TABLE IF EXISTS ONLY public.customers_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_c64033bcb0;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_c545103d57;
@@ -61,6 +62,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS fk_r
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS fk_rails_ba128983c2;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_b61aa73940;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_b50dc82c1e;
+ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_b3864df641;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_b283a89721;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_b07fc711f7;
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_aea6422e6a;
@@ -207,10 +209,12 @@ ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EX
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_19c47827ba;
 ALTER TABLE IF EXISTS ONLY public.customer_metadata DROP CONSTRAINT IF EXISTS fk_rails_195153290d;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_189f2a3949;
+ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_173327f0dc;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_150139409e;
 ALTER TABLE IF EXISTS ONLY public.coupon_targets DROP CONSTRAINT IF EXISTS fk_rails_1454058c96;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS fk_rails_142809fee1;
 ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rails_12d29bc654;
+ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_123667657c;
 ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAINT IF EXISTS fk_rails_10428ecad2;
 ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_103e187859;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_0f807322b1;
@@ -450,9 +454,11 @@ DROP INDEX IF EXISTS public.index_error_details_on_owner;
 DROP INDEX IF EXISTS public.index_error_details_on_organization_id;
 DROP INDEX IF EXISTS public.index_error_details_on_error_code;
 DROP INDEX IF EXISTS public.index_error_details_on_deleted_at;
+DROP INDEX IF EXISTS public.index_entitlement_subscription_feature_removals_on_deleted_at;
 DROP INDEX IF EXISTS public.index_entitlement_privileges_on_organization_id;
 DROP INDEX IF EXISTS public.index_entitlement_privileges_on_entitlement_feature_id;
 DROP INDEX IF EXISTS public.index_entitlement_features_on_organization_id;
+DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_subscription_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_plan_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_organization_id;
 DROP INDEX IF EXISTS public.index_entitlement_entitlements_on_entitlement_feature_id;
@@ -590,6 +596,8 @@ DROP INDEX IF EXISTS public.index_active_storage_attachments_on_blob_id;
 DROP INDEX IF EXISTS public.index_active_metric_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filter_values;
+DROP INDEX IF EXISTS public.idx_unique_feature_per_subscription;
+DROP INDEX IF EXISTS public.idx_unique_feature_per_plan;
 DROP INDEX IF EXISTS public.idx_subscription_unique;
 DROP INDEX IF EXISTS public.idx_privileges_code_unique_per_feature;
 DROP INDEX IF EXISTS public.idx_on_usage_threshold_id_invoice_id_cb82cdf163;
@@ -597,12 +605,15 @@ DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_recurring_756a2a370
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_78eb24d06c;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_4290c95dec;
 DROP INDEX IF EXISTS public.idx_on_timestamp_charge_id_external_subscription_id;
+DROP INDEX IF EXISTS public.idx_on_subscription_id_entitlement_feature_id_02bee9883b;
+DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
 DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
 DROP INDEX IF EXISTS public.idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
 DROP INDEX IF EXISTS public.idx_on_organization_id_external_subscription_id_df3a30d96d;
 DROP INDEX IF EXISTS public.idx_on_organization_id_deleted_at_225e3f789d;
 DROP INDEX IF EXISTS public.idx_on_organization_id_83703a45f4;
+DROP INDEX IF EXISTS public.idx_on_organization_id_7020c3c43a;
 DROP INDEX IF EXISTS public.idx_on_organization_id_376a587b04;
 DROP INDEX IF EXISTS public.idx_on_invoice_id_payment_request_id_aa550779a4;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_ccb39e9622;
@@ -610,7 +621,7 @@ DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_7edbcef7b5;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_5f37496c8c;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_6a228dc433;
-DROP INDEX IF EXISTS public.idx_on_entitlement_feature_id_plan_id_c45949ea26;
+DROP INDEX IF EXISTS public.idx_on_entitlement_feature_id_821ae72311;
 DROP INDEX IF EXISTS public.idx_on_entitlement_entitlement_id_48c0b3356a;
 DROP INDEX IF EXISTS public.idx_on_dunning_campaign_id_currency_fbf233b2ae;
 DROP INDEX IF EXISTS public.idx_on_billing_entity_id_invoice_custom_section_id_bd78c547d3;
@@ -681,6 +692,7 @@ ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fees_taxe
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fees_pkey;
 ALTER TABLE IF EXISTS ONLY public.events DROP CONSTRAINT IF EXISTS events_pkey;
 ALTER TABLE IF EXISTS ONLY public.error_details DROP CONSTRAINT IF EXISTS error_details_pkey;
+ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS entitlement_subscription_feature_removals_pkey;
 ALTER TABLE IF EXISTS ONLY public.entitlement_privileges DROP CONSTRAINT IF EXISTS entitlement_privileges_pkey;
 ALTER TABLE IF EXISTS ONLY public.entitlement_features DROP CONSTRAINT IF EXISTS entitlement_features_pkey;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS entitlement_entitlements_pkey;
@@ -806,6 +818,8 @@ DROP VIEW IF EXISTS public.exports_billable_metrics;
 DROP VIEW IF EXISTS public.exports_applied_coupons;
 DROP TABLE IF EXISTS public.events;
 DROP TABLE IF EXISTS public.error_details;
+DROP VIEW IF EXISTS public.entitlement_subscription_entitlements_view;
+DROP TABLE IF EXISTS public.entitlement_subscription_feature_removals;
 DROP TABLE IF EXISTS public.entitlement_privileges;
 DROP TABLE IF EXISTS public.entitlement_features;
 DROP TABLE IF EXISTS public.entitlement_entitlements;
@@ -1925,10 +1939,12 @@ CREATE TABLE public.entitlement_entitlements (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     entitlement_feature_id uuid NOT NULL,
-    plan_id uuid NOT NULL,
+    plan_id uuid,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    subscription_id uuid,
+    CONSTRAINT entitlement_check_exactly_one_parent CHECK (((plan_id IS NOT NULL) <> (subscription_id IS NOT NULL)))
 );
 
 
@@ -1959,11 +1975,84 @@ CREATE TABLE public.entitlement_privileges (
     code character varying NOT NULL,
     name character varying,
     value_type public.entitlement_privilege_value_types DEFAULT 'string'::public.entitlement_privilege_value_types NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb,
+    config jsonb DEFAULT '{}'::jsonb NOT NULL,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
+
+
+--
+-- Name: entitlement_subscription_feature_removals; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entitlement_subscription_feature_removals (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    entitlement_feature_id uuid NOT NULL,
+    subscription_id uuid NOT NULL,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: entitlement_subscription_entitlements_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.entitlement_subscription_entitlements_view AS
+ WITH subscription_entitlements AS (
+         SELECT fe_1.entitlement_feature_id,
+            fe_1.plan_id,
+            fe_1.subscription_id,
+            fev.deleted_at,
+            fev.id,
+            fev.entitlement_privilege_id,
+            fev.entitlement_entitlement_id,
+            fev.value
+           FROM (public.entitlement_entitlement_values fev
+             JOIN public.entitlement_entitlements fe_1 ON ((fe_1.id = fev.entitlement_entitlement_id)))
+          WHERE (fev.deleted_at IS NULL)
+        ), all_values AS (
+         SELECT ep.entitlement_feature_id,
+            COALESCE(ep.entitlement_privilege_id, es.entitlement_privilege_id) AS entitlement_privilege_id,
+            ep.entitlement_entitlement_id AS plan_entitlement_id,
+            es.entitlement_entitlement_id AS override_entitlement_id,
+            ep.id AS plan_entitlement_values_id,
+            es.id AS override_entitlement_values_id,
+            ep.value AS plan_value,
+            es.value AS override_value
+           FROM (subscription_entitlements ep
+             FULL JOIN subscription_entitlements es ON (((ep.entitlement_privilege_id = es.entitlement_privilege_id) AND (ep.plan_id IS NOT NULL) AND (es.subscription_id IS NOT NULL))))
+          WHERE (((ep.plan_id IS NOT NULL) OR (es.subscription_id IS NOT NULL)) AND (ep.deleted_at IS NULL) AND (es.deleted_at IS NULL))
+        )
+ SELECT f.id AS entitlement_feature_id,
+    f.organization_id,
+    f.code AS feature_code,
+    f.name AS feature_name,
+    f.description AS feature_description,
+    f.deleted_at AS feature_deleted_at,
+    pri.id AS entitlement_privilege_id,
+    pri.code AS privilege_code,
+    pri.name AS privilege_name,
+    pri.value_type AS privilege_value_type,
+    pri.config AS privilege_config,
+    pri.deleted_at AS privilege_deleted_at,
+    fe.plan_id,
+    fe.subscription_id,
+    (sfr.id IS NOT NULL) AS removed,
+    av.plan_entitlement_id,
+    av.override_entitlement_id,
+    av.plan_entitlement_values_id,
+    av.override_entitlement_values_id,
+    av.plan_value AS privilege_plan_value,
+    av.override_value AS privilege_override_value
+   FROM ((((public.entitlement_entitlements fe
+     LEFT JOIN public.entitlement_subscription_feature_removals sfr ON (((fe.entitlement_feature_id = sfr.entitlement_feature_id) AND (sfr.deleted_at IS NULL))))
+     LEFT JOIN all_values av ON ((COALESCE(av.override_entitlement_id, av.plan_entitlement_id) = fe.id)))
+     LEFT JOIN public.entitlement_features f ON ((f.id = fe.entitlement_feature_id)))
+     LEFT JOIN public.entitlement_privileges pri ON ((pri.id = av.entitlement_privilege_id)));
 
 
 --
@@ -2219,6 +2308,7 @@ CREATE VIEW public.exports_credit_notes AS
     cn.taxes_rate,
     cn.created_at,
     cn.updated_at,
+    cn.refunded_at,
     ( SELECT json_agg(json_build_object('lago_id', ci.id, 'amount_cents', ci.amount_cents, 'amount_currency', ci.amount_currency, 'lago_fee_id', ci.fee_id)) AS json_agg
            FROM public.credit_note_items ci
           WHERE (ci.credit_note_id = cn.id)) AS items,
@@ -2287,6 +2377,7 @@ CREATE TABLE public.organizations (
     finalize_zero_amount_invoice boolean DEFAULT true NOT NULL,
     clickhouse_events_store boolean DEFAULT false NOT NULL,
     hmac_key character varying NOT NULL,
+    authentication_methods character varying[] DEFAULT '{email_password,google_oauth}'::character varying[] NOT NULL,
     CONSTRAINT check_organizations_on_invoice_grace_period CHECK ((invoice_grace_period >= 0)),
     CONSTRAINT check_organizations_on_net_payment_term CHECK ((net_payment_term >= 0))
 );
@@ -2368,8 +2459,7 @@ CREATE VIEW public.exports_customers AS
           WHERE (ct.customer_id = c.id))) AS lago_taxes_ids
    FROM ((public.customers c
      LEFT JOIN public.organizations o ON ((o.id = c.organization_id)))
-     LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL))))
-  WHERE (c.deleted_at IS NULL);
+     LEFT JOIN public.payment_provider_customers ppc ON (((ppc.customer_id = c.id) AND (ppc.deleted_at IS NULL))));
 
 
 --
@@ -2569,6 +2659,7 @@ CREATE VIEW public.exports_fees AS
     f.precise_unit_amount,
     f.precise_coupons_amount_cents,
     (f.precise_amount_cents + f.taxes_precise_amount_cents) AS precise_total_amount_cents,
+    f.precise_credit_notes_amount_cents,
     f.events_count,
         CASE f.payment_status
             WHEN 0 THEN 'pending'::text
@@ -4326,6 +4417,14 @@ ALTER TABLE ONLY public.entitlement_privileges
 
 
 --
+-- Name: entitlement_subscription_feature_removals entitlement_subscription_feature_removals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_subscription_feature_removals
+    ADD CONSTRAINT entitlement_subscription_feature_removals_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: error_details error_details_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4872,10 +4971,10 @@ CREATE INDEX idx_on_entitlement_entitlement_id_48c0b3356a ON public.entitlement_
 
 
 --
--- Name: idx_on_entitlement_feature_id_plan_id_c45949ea26; Type: INDEX; Schema: public; Owner: -
+-- Name: idx_on_entitlement_feature_id_821ae72311; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX idx_on_entitlement_feature_id_plan_id_c45949ea26 ON public.entitlement_entitlements USING btree (entitlement_feature_id, plan_id) WHERE (deleted_at IS NULL);
+CREATE INDEX idx_on_entitlement_feature_id_821ae72311 ON public.entitlement_subscription_feature_removals USING btree (entitlement_feature_id);
 
 
 --
@@ -4928,6 +5027,13 @@ CREATE INDEX idx_on_organization_id_376a587b04 ON public.usage_monitoring_subscr
 
 
 --
+-- Name: idx_on_organization_id_7020c3c43a; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_organization_id_7020c3c43a ON public.entitlement_subscription_feature_removals USING btree (organization_id);
+
+
+--
 -- Name: idx_on_organization_id_83703a45f4; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4967,6 +5073,20 @@ CREATE UNIQUE INDEX idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca1
 --
 
 CREATE INDEX idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb ON public.charges USING btree (plan_id, billable_metric_id, pay_in_advance) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_on_subscription_id_295edd8bb3; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_subscription_id_295edd8bb3 ON public.entitlement_subscription_feature_removals USING btree (subscription_id);
+
+
+--
+-- Name: idx_on_subscription_id_entitlement_feature_id_02bee9883b; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_subscription_id_entitlement_feature_id_02bee9883b ON public.entitlement_subscription_feature_removals USING btree (subscription_id, entitlement_feature_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -5016,6 +5136,20 @@ CREATE UNIQUE INDEX idx_privileges_code_unique_per_feature ON public.entitlement
 --
 
 CREATE UNIQUE INDEX idx_subscription_unique ON public.usage_monitoring_subscription_activities USING btree (subscription_id);
+
+
+--
+-- Name: idx_unique_feature_per_plan; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_feature_per_plan ON public.entitlement_entitlements USING btree (entitlement_feature_id, plan_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_unique_feature_per_subscription; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_feature_per_subscription ON public.entitlement_entitlements USING btree (entitlement_feature_id, subscription_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -5978,6 +6112,13 @@ CREATE INDEX index_entitlement_entitlements_on_plan_id ON public.entitlement_ent
 
 
 --
+-- Name: index_entitlement_entitlements_on_subscription_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_entitlement_entitlements_on_subscription_id ON public.entitlement_entitlements USING btree (subscription_id);
+
+
+--
 -- Name: index_entitlement_features_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5996,6 +6137,13 @@ CREATE INDEX index_entitlement_privileges_on_entitlement_feature_id ON public.en
 --
 
 CREATE INDEX index_entitlement_privileges_on_organization_id ON public.entitlement_privileges USING btree (organization_id);
+
+
+--
+-- Name: index_entitlement_subscription_feature_removals_on_deleted_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_entitlement_subscription_feature_removals_on_deleted_at ON public.entitlement_subscription_feature_removals USING btree (deleted_at);
 
 
 --
@@ -7628,6 +7776,14 @@ ALTER TABLE ONLY public.applied_invoice_custom_sections
 
 
 --
+-- Name: entitlement_subscription_feature_removals fk_rails_123667657c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_subscription_feature_removals
+    ADD CONSTRAINT fk_rails_123667657c FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
+
+
+--
 -- Name: daily_usages fk_rails_12d29bc654; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7657,6 +7813,14 @@ ALTER TABLE ONLY public.coupon_targets
 
 ALTER TABLE ONLY public.invoice_subscriptions
     ADD CONSTRAINT fk_rails_150139409e FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: entitlement_entitlements fk_rails_173327f0dc; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_entitlements
+    ADD CONSTRAINT fk_rails_173327f0dc FOREIGN KEY (subscription_id) REFERENCES public.subscriptions(id);
 
 
 --
@@ -8828,6 +8992,14 @@ ALTER TABLE ONLY public.billing_entities_invoice_custom_sections
 
 
 --
+-- Name: entitlement_subscription_feature_removals fk_rails_b3864df641; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_subscription_feature_removals
+    ADD CONSTRAINT fk_rails_b3864df641 FOREIGN KEY (entitlement_feature_id) REFERENCES public.entitlement_features(id);
+
+
+--
 -- Name: fees fk_rails_b50dc82c1e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8929,6 +9101,14 @@ ALTER TABLE ONLY public.customers_invoice_custom_sections
 
 ALTER TABLE ONLY public.invites
     ADD CONSTRAINT fk_rails_c71f4b2026 FOREIGN KEY (membership_id) REFERENCES public.memberships(id);
+
+
+--
+-- Name: entitlement_subscription_feature_removals fk_rails_c9183c59d9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_subscription_feature_removals
+    ADD CONSTRAINT fk_rails_c9183c59d9 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -9250,6 +9430,13 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250722094047'),
+('20250721220908'),
+('20250721212307'),
+('20250721211820'),
+('20250721150002'),
+('20250721150001'),
+('20250721150000'),
 ('20250721091802'),
 ('20250718174008'),
 ('20250718140450'),
@@ -9318,6 +9505,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250707081825'),
 ('20250704800001'),
 ('20250703133126'),
+('20250701141017'),
+('20250701133139'),
 ('20250630180000'),
 ('20250627134933'),
 ('20250627134932'),
@@ -9358,6 +9547,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250627084852'),
 ('20250627084430'),
 ('20250626175249'),
+('20250619144939'),
+('20250619143820'),
 ('20250611083925'),
 ('20250611072251'),
 ('20250610173034'),

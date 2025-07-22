@@ -48,6 +48,7 @@ RSpec.describe Organization, type: :model do
       expect(subject).to have_many(:privileges).class_name("Entitlement::Privilege")
       expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement")
       expect(subject).to have_many(:entitlement_values).class_name("Entitlement::EntitlementValue")
+      expect(subject).to have_many(:subscription_feature_removals).class_name("Entitlement::SubscriptionFeatureRemoval")
 
       expect(subject).to have_one(:applied_dunning_campaign).conditions(applied_to_organization: true)
     end
@@ -345,8 +346,10 @@ RSpec.describe Organization, type: :model do
     let(:scoped) { create(:membership, organization:).user }
 
     before do
+      scoped
       create(:membership)
       create(:membership, organization:, role: [:manager, :finance].sample)
+      create(:membership, organization:, role: :admin, status: :revoked)
     end
 
     it "returns admins of the organization" do

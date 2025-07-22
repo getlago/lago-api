@@ -7,8 +7,6 @@ module Api
         class PrivilegesController < Api::BaseController
           include PremiumFeatureOnly
 
-          attr_reader :plan, :entitlement
-
           before_action :find_plan
           before_action :find_entitlement
 
@@ -31,6 +29,8 @@ module Api
           end
 
           private
+
+          attr_reader :plan, :entitlement
 
           def root_name
             "entitlement"

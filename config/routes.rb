@@ -43,6 +43,12 @@ Rails.application.routes.draw do
       resources :subscriptions, only: %i[create update show index], param: :external_id do
         resource :lifetime_usage, only: %i[show update], controller: "subscriptions/lifetime_usages"
         resources :alerts, only: %i[create index update show destroy], param: :code, controller: "subscriptions/alerts"
+        resources :entitlements, only: %i[index update destroy], param: :code, code: /.*/, controller: "subscriptions/entitlements" do
+          resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "subscriptions/entitlements/privileges"
+          post :remove, on: :member
+          post :restore, on: :member
+        end
+        patch :entitlements, to: "subscriptions/entitlements#update"
       end
       delete "/subscriptions/:external_id", to: "subscriptions#terminate", as: :terminate
 

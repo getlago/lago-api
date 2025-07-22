@@ -20,7 +20,7 @@ RSpec.describe Resolvers::Entitlement::FeatureResolver, type: :graphql do
             code
             name
             valueType
-            config
+            config { selectOptions }
           }
           createdAt
         }
@@ -57,7 +57,7 @@ RSpec.describe Resolvers::Entitlement::FeatureResolver, type: :graphql do
     expect(feature_response["privileges"].first["id"]).to eq(privilege.id)
     expect(feature_response["privileges"].first["code"]).to eq(privilege.code)
     expect(feature_response["privileges"].first["valueType"]).to eq(privilege.value_type)
-    expect(feature_response["privileges"].first["config"]).to eq(privilege.config)
+    expect(feature_response["privileges"].first["config"]).to eq({"selectOptions" => nil})
   end
 
   context "when feature is not found" do

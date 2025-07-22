@@ -52,7 +52,8 @@ RSpec.describe ::V1::FeeSerializer do
         "failed_at" => fee.failed_at&.iso8601,
         "refunded_at" => fee.refunded_at&.iso8601,
         "amount_details" => fee.amount_details,
-        "self_billed" => fee.invoice.self_billed
+        "self_billed" => fee.invoice.self_billed,
+        "pricing_unit_details" => nil
       )
       expect(result["fee"]["item"]).to include(
         "type" => fee.fee_type,
@@ -212,6 +213,19 @@ RSpec.describe ::V1::FeeSerializer do
           "invoiceable" => true
         )
       end
+    end
+  end
+
+  context "when pricing_unit_usage attributes are included" do
+    let!(:pricing_unit_usage) { create(:pricing_unit_usage, fee:) }
+
+    it "serializes the pricing_unit_usage" do
+      expect(result["fee"]["pricing_unit_details"]).to be_present
+      expect(result["fee"]["pricing_unit_details"]).to include(
+        "lago_pricing_unit_id" => pricing_unit_usage.pricing_unit_id,
+        "short_name" => pricing_unit_usage.short_name,
+        "amount_cents" => pricing_unit_usage.amount_cents
+      )
     end
   end
 end

@@ -8,10 +8,10 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
   let(:feature) { create(:feature, organization:) }
-  let(:privilege) { create(:privilege, feature:, code: "max") }
-  let(:privilege2) { create(:privilege, feature:, code: "max_admins") }
+  let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
+  let(:privilege2) { create(:privilege, feature:, code: "max_admins", value_type: "integer") }
   let(:entitlement) { create(:entitlement, plan:, feature:) }
-  let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, organization:, value: "10") }
+  let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, organization:, value: 10) }
   let(:entitlements_params) do
     {
       feature.code => {
@@ -84,7 +84,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
 
     context "when entitlement does not exist" do
       let(:new_feature) { create(:feature, organization:) }
-      let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_users") }
+      let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_users", value_type: "integer") }
       let(:entitlements_params) do
         {
           new_feature.code => {
@@ -115,7 +115,7 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
 
     context "when updating multiple features" do
       let(:feature2) { create(:feature, organization:) }
-      let(:privilege3) { create(:privilege, organization:, feature: feature2, code: "max_storage") }
+      let(:privilege3) { create(:privilege, organization:, feature: feature2, code: "max_storage", value_type: "integer") }
       let(:entitlement2) { create(:entitlement, organization:, plan:, feature: feature2) }
       let(:entitlement_value2) { create(:entitlement_value, entitlement: entitlement2, privilege: privilege3, organization:, value: "100") }
       let(:entitlements_params) do
@@ -217,12 +217,12 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService, type: :service do
         let(:feature) { create(:feature, organization:) }
         let(:feature2) { create(:feature, organization:, code: "storage") }
         let(:feature3) { create(:feature, organization:, code: "api") }
-        let(:privilege) { create(:privilege, feature:, code: "max") }
-        let(:privilege2) { create(:privilege, feature:, code: "max_admins") }
-        let(:privilege3) { create(:privilege, organization:, feature: feature2, code: "max_storage") }
-        let(:privilege4) { create(:privilege, organization:, feature: feature2, code: "max_bandwidth") }
-        let(:privilege5) { create(:privilege, organization:, feature: feature3, code: "max_requests") }
-        let(:privilege6) { create(:privilege, organization:, feature: feature3, code: "max_rate_limit") }
+        let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
+        let(:privilege2) { create(:privilege, feature:, code: "max_admins", value_type: "integer") }
+        let(:privilege3) { create(:privilege, organization:, feature: feature2, code: "max_storage", value_type: "integer") }
+        let(:privilege4) { create(:privilege, organization:, feature: feature2, code: "max_bandwidth", value_type: "integer") }
+        let(:privilege5) { create(:privilege, organization:, feature: feature3, code: "max_requests", value_type: "integer") }
+        let(:privilege6) { create(:privilege, organization:, feature: feature3, code: "max_rate_limit", value_type: "integer") }
         let(:entitlement2) { create(:entitlement, organization:, plan:, feature: feature2) }
         let(:entitlement3) { create(:entitlement, organization:, plan:, feature: feature3) }
         let(:entitlement_value2) { create(:entitlement_value, entitlement: entitlement2, privilege: privilege3, organization:, value: "100") }

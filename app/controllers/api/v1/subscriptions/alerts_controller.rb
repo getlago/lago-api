@@ -4,8 +4,6 @@ module Api
   module V1
     module Subscriptions
       class AlertsController < Api::BaseController
-        attr_reader :subscription, :alert
-
         before_action :find_subscription
         before_action :find_alert, only: %i[show update destroy]
 
@@ -78,6 +76,8 @@ module Api
         end
 
         private
+
+        attr_reader :subscription, :alert
 
         def find_alert
           @alert = current_organization.alerts.find_by!(
