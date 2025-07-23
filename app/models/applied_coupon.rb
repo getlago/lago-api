@@ -51,10 +51,11 @@ class AppliedCoupon < ApplicationRecord
         .where("charges_to_datetime > ?", timestamp)
         .where("charges_from_datetime <= ?", timestamp)
         .joins(:invoice)
-        .where(subscription_id: invoice.invoice_subscriptions.pluck(:subscription_id))
+        .where(subscription_id: invoice.invoice_subscriptions.pluck(:subscription_id)).pluck(:invoice_id)
 
     already_applied_amount = credits.active.where(invoice_id: invoice_ids).sum(&:amount_cents)
-    @remaining_amount_for_this_subscription_billing_period[invoice.id] = amount_cents - already_applied_amount
+    remaining_amount = amount_cents - already_applied_amount
+    @remaining_amount_for_this_subscription_billing_period[invoice.id] = remaining_amount.negative? ? 0 : remaining_amount
   end
 end
 

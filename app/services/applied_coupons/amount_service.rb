@@ -31,7 +31,6 @@ module AppliedCoupons
       end
 
       if applied_coupon.recurring? || applied_coupon.forever?
-        byebug
         return base_amount_cents if applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:) > base_amount_cents
 
         applied_coupon.remaining_amount_for_this_subscription_billing_period(invoice:)
