@@ -60,6 +60,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
   end
 
   let(:now) { Time.zone.parse("2025-07-22").in_time_zone }
+
   travel_to(now) do
     let(:result) { JSON.parse(serializer.to_json) }
 
