@@ -37,40 +37,29 @@ module Events
         def prorated_query
           <<-SQL
             #{events_cte_sql},
-            -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+            -- Only NOT ignore remove events if they are the last event of the day
             same_day_ignored AS (
               SELECT
-                e.property,
-                e.operation_type,
-                e.timestamp,
+                property,
+                operation_type,
+                timestamp,
                 CASE
-                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  -- Never ignore add events
                   WHEN operation_type = 'add' THEN false
-                  -- if the next event the same day is the opposite operation type, it should be ignored
-                  WHEN next_event.next_property IS NOT NULL
-                  THEN true
+                  -- Only ignore remove events if they are NOT the last event of the day
+                  WHEN operation_type = 'remove' AND NOT is_last_event_of_day THEN true
                   ELSE false
                 END AS is_ignored
               FROM (
                 SELECT
                   timestamp,
                   property,
-                  operation_type
+                  operation_type,
+                  -- Check if this is the last event of the day for this property
+                  timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp)) AS is_last_event_of_day
                 FROM events_data
                 ORDER BY timestamp ASC
               ) as e
-              LEFT JOIN (
-                SELECT
-                  timestamp as next_timestamp,
-                  property as next_property,
-                  operation_type as next_operation_type
-                FROM events_data
-              ) as next_event ON (
-                next_event.next_property = e.property
-                AND toDate(next_event.next_timestamp) = toDate(e.timestamp)
-                AND next_event.next_operation_type != e.operation_type
-                AND next_event.next_timestamp > e.timestamp
-              )
             ),
             -- Check if the operation type is the same as previous, so it nullifies this one
             event_values AS (
@@ -133,19 +122,18 @@ module Events
         def grouped_prorated_query
           <<-SQL
             #{grouped_events_cte_sql},
-            -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+            -- Only ignore remove events if they are NOT the last event of the day
             same_day_ignored AS (
               SELECT
-                e.#{group_names.join(", e.")},
-                e.property,
-                e.operation_type,
-                e.timestamp,
+                #{group_names.join(", ")},
+                property,
+                operation_type,
+                timestamp,
                 CASE
-                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  -- Never ignore add events
                   WHEN operation_type = 'add' THEN false
-                  -- if the next event the same day is the opposite operation type, it should be ignored
-                  WHEN next_event.next_property IS NOT NULL
-                  THEN true
+                  -- Only ignore remove events if they are NOT the last event of the day
+                  WHEN operation_type = 'remove' AND NOT is_last_event_of_day THEN true
                   ELSE false
                 END AS is_ignored
               FROM (
@@ -153,24 +141,12 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names.join(", ")}
+                  #{group_names.join(", ")},
+                  -- Check if this is the last event of the day for this property and group
+                  timestamp = MAX(timestamp) OVER (PARTITION BY #{group_names.join(", ")}, property, toDate(timestamp)) AS is_last_event_of_day
                 FROM events_data
                 ORDER BY timestamp ASC
               ) as e
-              LEFT JOIN (
-                SELECT
-                  timestamp as next_timestamp,
-                  property as next_property,
-                  operation_type as next_operation_type,
-                  #{group_names.map { |name| "#{name} as next_#{name}" }.join(", ")}
-                FROM events_data
-              ) as next_event ON (
-                next_event.next_property = e.property
-                AND #{group_names.map { |name| "next_event.next_#{name} = e.#{name}" }.join(" AND ")}
-                AND toDate(next_event.next_timestamp) = toDate(e.timestamp)
-                AND next_event.next_operation_type != e.operation_type
-                AND next_event.next_timestamp > e.timestamp
-              )
             ),
             -- Check if the operation type is the same as previous, so it nullifies this one
             event_values AS (
@@ -235,40 +211,29 @@ module Events
         def prorated_breakdown_query(with_remove: false)
           <<-SQL
             #{events_cte_sql},
-            -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+            -- Only ignore remove events if they are NOT the last event of the day
             same_day_ignored AS (
               SELECT
-                e.property,
-                e.operation_type,
-                e.timestamp,
+                property,
+                operation_type,
+                timestamp,
                 CASE
-                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  -- Never ignore add events
                   WHEN operation_type = 'add' THEN false
-                  -- if the next event the same day is the opposite operation type, it should be ignored
-                  WHEN next_event.next_property IS NOT NULL
-                  THEN true
+                  -- Only ignore remove events if they are NOT the last event of the day
+                  WHEN operation_type = 'remove' AND NOT is_last_event_of_day THEN true
                   ELSE false
                 END AS is_ignored
               FROM (
                 SELECT
                   timestamp,
                   property,
-                  operation_type
+                  operation_type,
+                  -- Check if this is the last event of the day for this property
+                  timestamp = MAX(timestamp) OVER (PARTITION BY property, toDate(timestamp)) AS is_last_event_of_day
                 FROM events_data
                 ORDER BY timestamp ASC
               ) as e
-              LEFT JOIN (
-                SELECT
-                  timestamp as next_timestamp,
-                  property as next_property,
-                  operation_type as next_operation_type
-                FROM events_data
-              ) as next_event ON (
-                next_event.next_property = e.property
-                AND toDate(next_event.next_timestamp) = toDate(e.timestamp)
-                AND next_event.next_operation_type != e.operation_type
-                AND next_event.next_timestamp > e.timestamp
-              )
             ),
             event_values AS (
               SELECT
