@@ -1,4 +1,4 @@
-tr.charge-name
+tr.charge-name.fee
   td.body-1
     = self.invoice_name + FeeDisplayHelper.grouped_by_display(self) + ' • ' + self.filter_display_name(separator: ' • ')
     - if self.billable_metric.weighted_sum_agg?
