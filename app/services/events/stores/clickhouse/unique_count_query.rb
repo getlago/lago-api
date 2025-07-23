@@ -34,6 +34,17 @@ module Events
           SQL
         end
 
+        # NOTE: current implementation of clickhouse's query is different from postgres's one:
+        # IN POSTGRES we do not ignore Add events at all (they will be handled by adjusted value)
+        # remove events are ignored if there is an Add event later on the save day. This query is done using
+        # next_event.operation_type != event.operation_type, which is not supported in current verison of
+        # Clickhouse we have on production, while this approach is more effective as it only queries one row and does not use
+        # window function.
+        # IN CLICKHOUSE we do not ignore Add events at all (they will be handled by adjusted value)
+        # remove events are not ignored only if they are the last event of the day
+        # this way we're not using not supported by clickhouse join on !=, but we use window function, which is less
+        # performant than the postgres approach.
+        # TODO: we should use the postgres approach in clickhouse as well, but it requires update CLickhouse
         def prorated_query
           <<-SQL
             #{events_cte_sql},
