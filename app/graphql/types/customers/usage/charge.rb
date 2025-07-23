@@ -46,8 +46,7 @@ module Types
 
         def pricing_unit_projected_amount_cents
           return if charge.applied_pricing_unit.nil?
-
-          object.map(&:pricing_unit_usage).sum(&:projected_amount_cents)
+          usage_calculator.projected_pricing_unit_amount_cents
         end
 
         def charge
