@@ -4,11 +4,12 @@ module Subscriptions
   class TerminateService < BaseService
     Result = BaseResult[:subscription]
 
-    def initialize(subscription:, async: true, upgrade: false, on_termination_credit_note: subscription&.on_termination_credit_note)
+    def initialize(subscription:, async: true, upgrade: false, on_termination_credit_note: subscription&.on_termination_credit_note, on_termination_invoice: subscription&.on_termination_invoice)
       @subscription = subscription
       @async = async
       @upgrade = upgrade
-      @on_termination_credit_note = on_termination_credit_note
+      @on_termination_credit_note = on_termination_credit_note.blank? ? :credit : on_termination_credit_note.to_sym
+      @on_termination_invoice = on_termination_invoice.blank? ? :generate : on_termination_invoice.to_sym
 
       super
     end
@@ -21,7 +22,7 @@ module Subscriptions
           subscription.mark_as_canceled!
         elsif !subscription.terminated?
           subscription.mark_as_terminated!
-          update_on_termination_credit_note! if pay_in_advance?
+          update_on_termination_actions!
 
           if subscription.should_sync_hubspot_subscription?
             Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob.perform_after_commit(subscription:)
@@ -102,7 +103,7 @@ module Subscriptions
 
     private
 
-    attr_reader :subscription, :async, :upgrade
+    attr_reader :subscription, :async, :upgrade, :on_termination_credit_note, :on_termination_invoice
 
     def cancel_next_subscription
       next_subscription = subscription.next_subscription
@@ -116,23 +117,27 @@ module Subscriptions
     end
 
     def bill_subscription
+      if bill_in_arrears_fees?
+        if async
+          BillSubscriptionJob.perform_after_commit(
+            [subscription],
+            subscription.terminated_at,
+            invoicing_reason: :subscription_terminating
+          )
+        else
+          BillSubscriptionJob.perform_now(
+            [subscription],
+            subscription.terminated_at,
+            invoicing_reason: :subscription_terminating
+          )
+        end
+      end
+
+      # We always bill pay-in-advance non-invoiceable charges unless it's an upgrade.
       if async
-        BillSubscriptionJob.perform_after_commit(
-          [subscription],
-          subscription.terminated_at,
-          invoicing_reason: :subscription_terminating
-        )
         BillNonInvoiceableFeesJob.perform_after_commit([subscription], subscription.terminated_at)
       else
-        BillSubscriptionJob.perform_now(
-          [subscription],
-          subscription.terminated_at,
-          invoicing_reason: :subscription_terminating
-        )
-        BillNonInvoiceableFeesJob.perform_now(
-          [subscription],
-          subscription.terminated_at
-        )
+        BillNonInvoiceableFeesJob.perform_now([subscription], subscription.terminated_at)
       end
     end
 
@@ -187,18 +192,17 @@ module Subscriptions
       !pay_in_advance?
     end
 
-    def on_termination_credit_note
-      return nil if pay_in_arrears?
-
-      return :credit if @on_termination_credit_note.blank? || @on_termination_credit_note.to_sym == :credit
-      return :skip if @on_termination_credit_note.to_sym == :skip
-
-      # This will cause a validation error on update
-      @on_termination_credit_note
+    def bill_in_arrears_fees?
+      on_termination_invoice == :generate
     end
 
-    def update_on_termination_credit_note!
-      Subscriptions::UpdateService.call!(subscription:, params: {on_termination_credit_note:})
+    def update_on_termination_actions!
+      params = {}
+      params[:on_termination_credit_note] = on_termination_credit_note if pay_in_advance? && subscription.on_termination_credit_note != on_termination_credit_note
+      params[:on_termination_invoice] = on_termination_invoice if subscription.on_termination_invoice != on_termination_invoice
+      return if params.empty?
+
+      Subscriptions::UpdateService.call!(subscription:, params:)
     end
   end
 end

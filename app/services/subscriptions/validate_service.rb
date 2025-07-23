@@ -9,6 +9,7 @@ module Subscriptions
       valid_subscription_at?
       valid_ending_at?
       valid_on_termination_credit_note?
+      valid_on_termination_invoice?
 
       if errors?
         result.validation_failure!(errors:)
@@ -65,6 +66,15 @@ module Subscriptions
       return true if Subscription::ON_TERMINATION_CREDIT_NOTES.include?(args[:on_termination_credit_note].to_sym)
 
       add_error(field: :on_termination_credit_note, error_code: "invalid_value")
+      false
+    end
+
+    def valid_on_termination_invoice?
+      return true if args[:on_termination_invoice].blank?
+
+      return true if Subscription::ON_TERMINATION_INVOICES.include?(args[:on_termination_invoice].to_sym)
+
+      add_error(field: :on_termination_invoice, error_code: "invalid_value")
       false
     end
 
