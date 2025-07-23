@@ -137,6 +137,7 @@ module Events
             }
           ]
         )
+
         ActiveRecord::Base.connection.select_all(sql).to_a
       end
 
