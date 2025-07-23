@@ -59,48 +59,9 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     ]
   end
 
-  let(:result) { JSON.parse(serializer.to_json) }
-
-  it "serializes the fee" do
-    expect(result["charges"].first).to include(
-      "units" => "10.0",
-      "projected_units" => expected_projected_units.to_s,
-      "events_count" => 12,
-      "amount_cents" => 100,
-      "projected_amount_cents" => expected_projected_amount_cents,
-      "pricing_unit_details" => nil,
-      "amount_currency" => "EUR",
-      "charge" => {
-        "lago_id" => charge.id,
-        "charge_model" => charge.charge_model,
-        "invoice_display_name" => charge.invoice_display_name
-      },
-      "billable_metric" => {
-        "lago_id" => billable_metric.id,
-        "name" => billable_metric.name,
-        "code" => billable_metric.code,
-        "aggregation_type" => billable_metric.aggregation_type
-      },
-      "filters" => [],
-      "grouped_usage" => [
-        {
-          "amount_cents" => 100,
-          "projected_amount_cents" => expected_projected_amount_cents,
-          "pricing_unit_details" => nil,
-          "events_count" => 12,
-          "units" => "10.0",
-          "projected_units" => expected_projected_units.to_s,
-          "grouped_by" => {"card_type" => "visa"},
-          "filters" => []
-        }
-      ]
-    )
-  end
-
-  context "when charge configured to use pricing units" do
-    let(:pricing_unit_usage) do
-      PricingUnitUsage.new(amount_cents: 200, conversion_rate: 0.5, short_name: "CR")
-    end
+  let(:now) { Time.zone.parse("2025-07-22").in_time_zone }
+  travel_to(now) do
+    let(:result) { JSON.parse(serializer.to_json) }
 
     it "serializes the fee" do
       expect(result["charges"].first).to include(
@@ -109,12 +70,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         "events_count" => 12,
         "amount_cents" => 100,
         "projected_amount_cents" => expected_projected_amount_cents,
-        "pricing_unit_details" => {
-          "amount_cents" => 200,
-          "projected_amount_cents" => 282,
-          "short_name" => "CR",
-          "conversion_rate" => "0.5"
-        },
+        "pricing_unit_details" => nil,
         "amount_currency" => "EUR",
         "charge" => {
           "lago_id" => charge.id,
@@ -132,12 +88,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           {
             "amount_cents" => 100,
             "projected_amount_cents" => expected_projected_amount_cents,
-            "pricing_unit_details" => {
-              "amount_cents" => 200,
-              "projected_amount_cents" => 282,
-              "short_name" => "CR",
-              "conversion_rate" => "0.5"
-            },
+            "pricing_unit_details" => nil,
             "events_count" => 12,
             "units" => "10.0",
             "projected_units" => expected_projected_units.to_s,
@@ -146,6 +97,58 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           }
         ]
       )
+    end
+
+    context "when charge configured to use pricing units" do
+      let(:pricing_unit_usage) do
+        PricingUnitUsage.new(amount_cents: 200, conversion_rate: 0.5, short_name: "CR")
+      end
+
+      it "serializes the fee" do
+        expect(result["charges"].first).to include(
+          "units" => "10.0",
+          "projected_units" => expected_projected_units.to_s,
+          "events_count" => 12,
+          "amount_cents" => 100,
+          "projected_amount_cents" => expected_projected_amount_cents,
+          "pricing_unit_details" => {
+            "amount_cents" => 200,
+            "projected_amount_cents" => 282,
+            "short_name" => "CR",
+            "conversion_rate" => "0.5"
+          },
+          "amount_currency" => "EUR",
+          "charge" => {
+            "lago_id" => charge.id,
+            "charge_model" => charge.charge_model,
+            "invoice_display_name" => charge.invoice_display_name
+          },
+          "billable_metric" => {
+            "lago_id" => billable_metric.id,
+            "name" => billable_metric.name,
+            "code" => billable_metric.code,
+            "aggregation_type" => billable_metric.aggregation_type
+          },
+          "filters" => [],
+          "grouped_usage" => [
+            {
+              "amount_cents" => 100,
+              "projected_amount_cents" => expected_projected_amount_cents,
+              "pricing_unit_details" => {
+                "amount_cents" => 200,
+                "projected_amount_cents" => 282,
+                "short_name" => "CR",
+                "conversion_rate" => "0.5"
+              },
+              "events_count" => 12,
+              "units" => "10.0",
+              "projected_units" => expected_projected_units.to_s,
+              "grouped_by" => {"card_type" => "visa"},
+              "filters" => []
+            }
+          ]
+        )
+      end
     end
   end
 
