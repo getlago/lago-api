@@ -33,6 +33,9 @@ module EInvoice
                 })
 
                 LineItem.new(xml).call(attrs: line_item)
+
+                TradeAgreement.new(xml).call
+                TradeDelivery.new(xml).call
               end
             end
           }
