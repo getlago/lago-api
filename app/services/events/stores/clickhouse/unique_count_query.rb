@@ -37,6 +37,42 @@ module Events
         def prorated_query
           <<-SQL
             #{events_cte_sql},
+            -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+            same_day_ignored AS (
+              SELECT
+                e.property,
+                e.operation_type,
+                e.timestamp,
+                CASE
+                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  WHEN operation_type = 'add' THEN false
+                  -- if the next event the same day is the opposite operation type, it should be ignored
+                  WHEN next_event.next_property IS NOT NULL
+                  THEN true
+                  ELSE false
+                END AS is_ignored
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) as e
+              LEFT JOIN (
+                SELECT
+                  timestamp as next_timestamp,
+                  property as next_property,
+                  operation_type as next_operation_type
+                FROM events_data
+              ) as next_event ON (
+                next_event.next_property = e.property
+                AND toDate(next_event.next_timestamp) = toDate(e.timestamp)
+                AND next_event.next_operation_type != e.operation_type
+                AND next_event.next_timestamp > e.timestamp
+              )
+            ),
+            -- Check if the operation type is the same as previous, so it nullifies this one
             event_values AS (
               SELECT
                 property,
@@ -48,11 +84,12 @@ module Events
                   property,
                   operation_type,
                   #{operation_value_sql} AS adjusted_value
-                FROM events_data
+                FROM same_day_ignored
+                WHERE is_ignored = false
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, timestamp, operation_type
+              GROUP BY property, operation_type, timestamp
             )
 
             SELECT coalesce(SUM(period_ratio), 0) as aggregation
@@ -69,7 +106,7 @@ module Events
 
             event_values AS (
               SELECT
-                #{group_names},
+                #{group_names.join(", ")},
                 property,
                 SUM(adjusted_value) AS sum_adjusted_value
               FROM (
@@ -77,29 +114,68 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names},
+                  #{group_names.join(", ")},
                   #{grouped_operation_value_sql} AS adjusted_value
                 FROM events_data
                 ORDER BY timestamp ASC
               ) adjusted_event_values
-              GROUP BY #{group_names}, property
+              GROUP BY #{group_names.join(", ")}, property
             )
 
             SELECT
-              #{group_names},
+              #{group_names.join(", ")},
               coalesce(SUM(sum_adjusted_value), 0) as aggregation
             FROM event_values
-            GROUP BY #{group_names}
+            GROUP BY #{group_names.join(", ")}
           SQL
         end
 
         def grouped_prorated_query
           <<-SQL
             #{grouped_events_cte_sql},
-
+            -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+            same_day_ignored AS (
+              SELECT
+                e.#{group_names.join(", e.")},
+                e.property,
+                e.operation_type,
+                e.timestamp,
+                CASE
+                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  WHEN operation_type = 'add' THEN false
+                  -- if the next event the same day is the opposite operation type, it should be ignored
+                  WHEN next_event.next_property IS NOT NULL
+                  THEN true
+                  ELSE false
+                END AS is_ignored
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type,
+                  #{group_names.join(", ")}
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) as e
+              LEFT JOIN (
+                SELECT
+                  timestamp as next_timestamp,
+                  property as next_property,
+                  operation_type as next_operation_type,
+                  #{group_names.map { |name| "#{name} as next_#{name}" }.join(", ")}
+                FROM events_data
+              ) as next_event ON (
+                next_event.next_property = e.property
+                AND #{group_names.map { |name| "next_event.next_#{name} = e.#{name}" }.join(" AND ")}
+                AND toDate(next_event.next_timestamp) = toDate(e.timestamp)
+                AND next_event.next_operation_type != e.operation_type
+                AND next_event.next_timestamp > e.timestamp
+              )
+            ),
+            -- Check if the operation type is the same as previous, so it nullifies this one
             event_values AS (
               SELECT
-                #{group_names},
+                #{group_names.join(", ")},
                 property,
                 operation_type,
                 timestamp
@@ -108,25 +184,26 @@ module Events
                   timestamp,
                   property,
                   operation_type,
-                  #{group_names},
+                  #{group_names.join(", ")},
                   #{grouped_operation_value_sql} AS adjusted_value
-                FROM events_data
+                FROM same_day_ignored
+                WHERE is_ignored = false
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY #{group_names}, property, operation_type, timestamp
+              GROUP BY #{group_names.join(", ")}, property, operation_type, timestamp
             )
 
             SELECT
-              #{group_names},
+              #{group_names.join(", ")},
               coalesce(SUM(period_ratio), 0) as aggregation
             FROM (
               SELECT
                 (#{grouped_period_ratio_sql}) AS period_ratio,
-                #{group_names}
+                #{group_names.join(", ")}
               FROM event_values
             ) cumulated_ratios
-            GROUP BY #{group_names}
+            GROUP BY #{group_names.join(", ")}
           SQL
         end
 
@@ -158,6 +235,41 @@ module Events
         def prorated_breakdown_query(with_remove: false)
           <<-SQL
             #{events_cte_sql},
+            -- Check if next event on same day has opposite operation type so it nullifies this one at the same day
+            same_day_ignored AS (
+              SELECT
+                e.property,
+                e.operation_type,
+                e.timestamp,
+                CASE
+                  -- we do not ignore ADDs, if they are duplicated they'll be cleaned by adjusted value calculation
+                  WHEN operation_type = 'add' THEN false
+                  -- if the next event the same day is the opposite operation type, it should be ignored
+                  WHEN next_event.next_property IS NOT NULL
+                  THEN true
+                  ELSE false
+                END AS is_ignored
+              FROM (
+                SELECT
+                  timestamp,
+                  property,
+                  operation_type
+                FROM events_data
+                ORDER BY timestamp ASC
+              ) as e
+              LEFT JOIN (
+                SELECT
+                  timestamp as next_timestamp,
+                  property as next_property,
+                  operation_type as next_operation_type
+                FROM events_data
+              ) as next_event ON (
+                next_event.next_property = e.property
+                AND toDate(next_event.next_timestamp) = toDate(e.timestamp)
+                AND next_event.next_operation_type != e.operation_type
+                AND next_event.next_timestamp > e.timestamp
+              )
+            ),
             event_values AS (
               SELECT
                 property,
@@ -169,11 +281,12 @@ module Events
                   property,
                   operation_type,
                   #{operation_value_sql} AS adjusted_value
-                FROM events_data
+                FROM same_day_ignored
+                WHERE is_ignored = false
                 ORDER BY timestamp ASC
               ) adjusted_event_values
               WHERE adjusted_value != 0 -- adjusted_value = 0 does not impact the total
-              GROUP BY property, operation_type, timestamp
+              GROUP BY property, timestamp, operation_type
             )
 
             SELECT
@@ -267,7 +380,7 @@ module Events
               ))
               ,
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
+                ifNull((anyOrNull(operation_type) OVER (PARTITION BY property ORDER BY timestamp ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)), 'remove') = 'remove',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(-1, :decimal_scale)
               ))
@@ -283,13 +396,13 @@ module Events
             if (
               operation_type = 'add',
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
+                (anyOrNull(operation_type) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'add',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(1, :decimal_scale)
               ))
               ,
               (if(
-                (anyOrNull(operation_type) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)) = 'remove',
+                ifNull((anyOrNull(operation_type) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING)), 'remove') = 'remove',
                 toDecimal128(0, :decimal_scale),
                 toDecimal128(-1, :decimal_scale)
               ))
@@ -303,17 +416,18 @@ module Events
               if(
                 operation_type = 'add',
                 -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
-                ceil(
-                  date_diff(
-                    'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
-                    if(
-                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
-                      toDateTime64(:from_datetime, 3, 'UTC'),
-                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
-                    ),
-                    :timezone
-                  ) / 86400
+                date_diff(
+                  'days',
+                  -- this is crasy: to_datetime is the 1 day of the NEXT billing period, so 1st of Aug - 31 of Jul returns correctly 1 day;
+                  -- the timestamp of remove is the LAST DAY, that still should be calculated, but 3 Jul - 1 Jul == 2 days, but we need 3,
+                  -- that's why for to_datetime when it's a timestamp we add 1 day to it
+                  if(toDate(timestamp) < toDate(:from_datetime, 'UTC'), toDate(:from_datetime, 'UTC'), toDate(timestamp)),
+                  if(
+                    toDate(leadInFrame(timestamp, 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDate(:from_datetime, 'UTC'),
+                    toDate(:from_datetime, 'UTC'),
+                    leadInFrame(addDays(toDate(timestamp), 1), 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                  ),
+                  :timezone
                 )
                 /
                 -- NOTE: full duration of the period
@@ -333,17 +447,15 @@ module Events
               if(
                 operation_type = 'add',
                 -- NOTE: duration in full days between current add and next remove - using end of period as final boundaries if no remove
-                ceil(
-                  date_diff(
-                    'seconds',
-                    if(timestamp < toDateTime64(:from_datetime, 3, 'UTC'), toDateTime64(:from_datetime, 3, 'UTC'), timestamp),
-                    if(
-                      (leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDateTime64(:from_datetime, 3, 'UTC'),
-                      toDateTime64(:to_datetime, 3, 'UTC'),
-                      leadInFrame(timestamp, 1, toDateTime64(:to_datetime, 3, 'UTC')) OVER (PARTITION BY #{group_names}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                date_diff(
+                  'days',
+                  if(toDate(timestamp) < toDate(:from_datetime, 'UTC'), toDate(:from_datetime, 'UTC'), toDate(timestamp)),
+                  if(
+                      toDate(leadInFrame(addDays(toDate(timestamp), 1), 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)) < toDate(:from_datetime, 'UTC'),
+                      toDate(:to_datetime, 'UTC'),
+                      leadInFrame(addDays(toDate(timestamp), 1), 1, toDate(:to_datetime, 'UTC')) OVER (PARTITION BY #{group_names.join(", ")}, property ORDER BY timestamp ASC ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
                     ),
-                    :timezone
-                  ) / 86400
+                  :timezone
                 )
                 /
                 -- NOTE: full duration of the period
@@ -358,7 +470,7 @@ module Events
         end
 
         def group_names
-          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }.join(", ")
+          @group_names ||= store.grouped_by.map.with_index { |_, index| "g_#{index}" }
         end
       end
     end
