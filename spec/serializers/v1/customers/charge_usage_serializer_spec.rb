@@ -37,6 +37,13 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       (ratio > 0) ? (200 / BigDecimal(ratio.to_s)).round.to_i : 0
     end
   end
+  let(:greater_expected_pricing_unit_projected_amount_cents) do
+    if is_recurring
+      600
+    else
+      (ratio > 0) ? (600 / BigDecimal(ratio.to_s)).round.to_i : 0
+    end
+  end
   let(:pricing_unit_usage) { nil }
 
   let(:usage) do
@@ -229,7 +236,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           "amount_cents" => 300,
           "pricing_unit_details" => {
             "amount_cents" => 600,
-            "projected_amount_cents" => expected_pricing_unit_projected_amount_cents,
+            "projected_amount_cents" => greater_expected_pricing_unit_projected_amount_cents,
             "short_name" => "CR",
             "conversion_rate" => "0.5"
           },
@@ -243,7 +250,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           "amount_cents" => 300,
           "pricing_unit_details" => {
             "amount_cents" => 600,
-            "projected_amount_cents" => expected_pricing_unit_projected_amount_cents,
+            "projected_amount_cents" => greater_expected_pricing_unit_projected_amount_cents,
             "short_name" => "CR",
             "conversion_rate" => "0.5"
           },
