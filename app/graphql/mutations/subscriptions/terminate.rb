@@ -11,8 +11,7 @@ module Mutations
       graphql_name "TerminateSubscription"
       description "Terminate a Subscription"
 
-      argument :id, ID, required: true
-      argument :on_termination_credit_note, Types::Subscriptions::OnTerminationCreditNoteEnum, required: false
+      input_object_class Types::Subscriptions::TerminateSubscriptionInput
 
       type Types::Subscriptions::Object
 

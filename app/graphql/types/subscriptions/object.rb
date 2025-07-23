@@ -17,7 +17,8 @@ module Types
       field :billing_time, Types::Subscriptions::BillingTimeEnum
       field :canceled_at, GraphQL::Types::ISO8601DateTime
       field :ending_at, GraphQL::Types::ISO8601DateTime
-      field :on_termination_credit_note, Types::Subscriptions::OnTerminationCreditNoteEnum, null: true
+      field :on_termination_credit_note, Types::Subscriptions::OnTerminationCreditNoteEnum
+      field :on_termination_invoice, Types::Subscriptions::OnTerminationInvoiceEnum, null: false
       field :started_at, GraphQL::Types::ISO8601DateTime
       field :subscription_at, GraphQL::Types::ISO8601DateTime
       field :terminated_at, GraphQL::Types::ISO8601DateTime

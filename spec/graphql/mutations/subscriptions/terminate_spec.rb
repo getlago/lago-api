@@ -22,6 +22,7 @@ RSpec.describe Mutations::Subscriptions::Terminate, type: :graphql do
           status,
           terminatedAt,
           onTerminationCreditNote
+          onTerminationInvoice
         }
       }
     GQL
@@ -42,6 +43,7 @@ RSpec.describe Mutations::Subscriptions::Terminate, type: :graphql do
       expect(result_data["status"]).to eq("terminated")
       expect(result_data["terminatedAt"]).to be_present
       expect(result_data["onTerminationCreditNote"]).to eq("credit")
+      expect(result_data["onTerminationInvoice"]).to eq("generate")
     end
 
     context "when on_termination_credit_note is provided" do
@@ -54,7 +56,22 @@ RSpec.describe Mutations::Subscriptions::Terminate, type: :graphql do
         expect(result_data["status"]).to eq("terminated")
         expect(result_data["terminatedAt"]).to be_present
         expect(result_data["onTerminationCreditNote"]).to eq("skip")
+        expect(result_data["onTerminationInvoice"]).to eq("generate")
         expect(subscription.reload.on_termination_credit_note).to eq("skip")
+      end
+    end
+
+    context "when on_termination_invoice is provided" do
+      let(:input) { {id: subscription.id, onTerminationInvoice: "skip"} }
+
+      it "sets the invoice behavior" do
+        result_data = result["data"]["terminateSubscription"]
+
+        expect(result_data["id"]).to eq(subscription.id)
+        expect(result_data["status"]).to eq("terminated")
+        expect(result_data["terminatedAt"]).to be_present
+        expect(result_data["onTerminationInvoice"]).to eq("skip")
+        expect(subscription.reload.on_termination_invoice).to eq("skip")
       end
     end
   end
