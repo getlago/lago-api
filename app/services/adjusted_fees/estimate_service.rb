@@ -20,8 +20,62 @@ module AdjustedFees
       charge = fee.charge
       return result.validation_failure!(errors: {charge: ["invalid_charge_model"]}) if disabled_charge_model?(charge)
 
-      unit_precise_amount_cents = params[:unit_precise_amount].to_f * fee.amount.currency.subunit_to_unit
-      adjusted_fee = AdjustedFee.new(
+      adjusted_fee = create_adjusted_fee(fee, charge, params)
+
+
+      if fee.fee_type == "subscription"
+        adjustement_result = adjust_subription_fee(fee, adjusted_fee)
+        Fees::ApplyTaxesService.call(fee: adjustement_result)
+        result.fee = adjustement_result
+        result
+      else
+        adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
+          adjusted_fee: adjusted_fee,
+          boundaries: adjusted_fee.properties,
+          properties: charge.properties
+        )
+
+        adjustement_result.fee.id = SecureRandom.uuid
+        adjusted_fee = adjustement_result.fee
+
+        Fees::ApplyTaxesService.call(fee: adjusted_fee)
+        result.fee = adjusted_fee
+        result
+      end
+    end
+
+    private
+
+    attr_reader :organization, :invoice, :params
+
+    def adjust_subription_fee(fee, adjusted_fee)
+      if adjusted_fee.adjusted_display_name?
+        fee.invoice_display_name = adjusted_fee.invoice_display_name
+
+        return fee
+      end
+
+      units = adjusted_fee.units
+      subunit = invoice.total_amount.currency.subunit_to_unit
+      unit_precise_amount_cents = adjusted_fee.unit_precise_amount_cents
+
+      fee.invoice_display_name = adjusted_fee.invoice_display_name if params[:invoice_display_name].present?
+      fee.units = units
+      fee.unit_amount_cents = unit_precise_amount_cents.round
+      fee.precise_unit_amount = unit_precise_amount_cents.to_d / subunit
+      fee.amount_cents = (units * unit_precise_amount_cents).round
+      fee.precise_amount_cents = units * unit_precise_amount_cents
+      fee
+    end
+
+    def create_adjusted_fee(fee, charge, params)
+      unit_precise_amount_cents = if params[:unit_precise_amount].present?
+        params[:unit_precise_amount].to_f * fee.amount.currency.subunit_to_unit
+      else
+        fee.unit_amount_cents
+      end
+
+      AdjustedFee.new(
         fee:,
         invoice: fee.invoice,
         subscription: fee.subscription,
@@ -38,25 +92,8 @@ module AdjustedFees
         charge_filter: fee.charge_filter,
         organization:
       )
-
-      adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
-        adjusted_fee: adjusted_fee,
-        boundaries: adjusted_fee.properties,
-        properties: charge.properties
-      )
-
-      adjustement_result.fee.id = SecureRandom.uuid
-      adjusted_fee = adjustement_result.fee
-
-      Fees::ApplyTaxesService.call(fee: adjusted_fee)
-      adjusted_fee.applied_taxes
-      result.fee = adjusted_fee
-      result
     end
 
-    private
-
-    attr_reader :organization, :invoice, :params
     def disabled_charge_model?(charge)
       unit_adjustment = params[:units].present? && params[:unit_precise_amount].blank?
 
