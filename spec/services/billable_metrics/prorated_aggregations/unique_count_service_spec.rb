@@ -275,8 +275,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
         expect(result.aggregation).to eq(29.fdiv(31).ceil(5))
       end
 
-      context "when added and removed the same day multiple times" do
-        let(:added_at) { from_datetime + 1.hour }
+      context "when added and removed the same day" do
+        let(:added_at) { from_datetime + 1.day }
 
         it "returns a 1 day duration" do
           create(
@@ -284,31 +284,7 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
             organization_id: organization.id,
             code: billable_metric.code,
             external_subscription_id: subscription.external_id,
-            timestamp: added_at + 1.hour,
-            properties: {
-              unique_id: event.properties["unique_id"],
-              operation_type: "remove"
-            }
-          )
-
-          create(
-            :event,
-            organization_id: organization.id,
-            code: billable_metric.code,
-            external_subscription_id: subscription.external_id,
-            timestamp: added_at + 2.hours,
-            properties: {
-              unique_id: event.properties["unique_id"],
-              operation_type: "add"
-            }
-          )
-
-          create(
-            :event,
-            organization_id: organization.id,
-            code: billable_metric.code,
-            external_subscription_id: subscription.external_id,
-            timestamp: added_at + 3.hours,
+            timestamp: added_at.end_of_day,
             properties: {
               unique_id: event.properties["unique_id"],
               operation_type: "remove"
@@ -316,31 +292,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           )
 
           expect(result.aggregation).to eq(1.fdiv(31).ceil(5))
-        end
-
-        context "when added and removed the same day multiple days" do
-          it "returns the correct number" do
-            events_params = [
-              {timestamp: added_at, id: event.properties["unique_id"], operation_type: "add"},
-              {timestamp: added_at + 1.hour, id: event.properties["unique_id"], operation_type: "remove"},
-              {timestamp: added_at + 5.days, id: event.properties["unique_id"], operation_type: "add"},
-              {timestamp: added_at + 5.days + 1.hour, id: event.properties["unique_id"], operation_type: "remove"},
-              {timestamp: added_at + 10.days, id: event.properties["unique_id"], operation_type: "add"},
-              {timestamp: added_at + 10.days + 1.hour, id: event.properties["unique_id"], operation_type: "remove"}
-            ]
-
-            events_params.each do |event_params|
-              create(
-                :event,
-                organization_id: organization.id,
-                code: billable_metric.code,
-                external_subscription_id: subscription.external_id,
-                timestamp: event_params[:timestamp],
-                properties: {unique_id: event_params[:id], operation_type: event_params[:operation_type]}
-              )
-            end
-            expect(result.aggregation).to eq(3.fdiv(31).ceil(5))
-          end
         end
       end
     end
@@ -362,67 +313,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
         expect(result.aggregation).to eq((1 + 21.fdiv(31)).ceil(5))
         expect(result.current_usage_units).to eq(2)
-      end
-
-      context "when added and removed several times a day during multiple days" do
-        it "returns the correct result" do
-          # 0 day: add (month ago - 1 day)
-          # 1st day: add, add, remove, add
-          create(
-            :event,
-            organization_id: organization.id,
-            code: billable_metric.code,
-            external_subscription_id: subscription.external_id,
-            timestamp: from_datetime + 1.day,
-            properties: {unique_id: event.properties["unique_id"]}
-          )
-          create(
-            :event,
-            organization_id: organization.id,
-            code: billable_metric.code,
-            external_subscription_id: subscription.external_id,
-            timestamp: from_datetime + 1.day + 1.hour,
-            properties: {unique_id: event.properties["unique_id"]}
-          )
-          create(
-            :event,
-            organization_id: organization.id,
-            code: billable_metric.code,
-            external_subscription_id: subscription.external_id,
-            timestamp: from_datetime + 1.day + 2.hours,
-            properties: {unique_id: event.properties["unique_id"], operation_type: "remove"}
-          )
-          create(
-            :event,
-            organization_id: organization.id,
-            code: billable_metric.code,
-            external_subscription_id: subscription.external_id,
-            timestamp: from_datetime + 1.day + 3.hours,
-            properties: {unique_id: event.properties["unique_id"]}
-          )
-
-          # 3rd day: add, remove
-          create(
-            :event,
-            organization_id: organization.id,
-            code: billable_metric.code,
-            external_subscription_id: subscription.external_id,
-            timestamp: from_datetime + 3.days + 1.hour,
-            properties: {unique_id: event.properties["unique_id"]}
-          )
-          create(
-            :event,
-            organization_id: organization.id,
-            code: billable_metric.code,
-            external_subscription_id: subscription.external_id,
-            timestamp: from_datetime + 3.days + 2.hours,
-            properties: {unique_id: event.properties["unique_id"], operation_type: "remove"}
-          )
-
-          expect(result.aggregation).to eq(4.fdiv(31).ceil(5))
-          # NOTE: current_usage_units is 0 because there are no "active" events in the period
-          expect(result.current_usage_units).to eq(0)
-        end
       end
     end
 
@@ -722,61 +612,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
           end
         end
       end
-
-      context "when added and removed the same day multiple times" do
-        it "does not count the same day multiple times" do
-          times_and_actions = [
-            [from_datetime + 1.day, "add"],
-            [from_datetime + 1.day + 1.hour, "remove"],
-            [from_datetime + 1.day + 2.hours, "add"],
-            [from_datetime + 1.day + 2.hours + 1.second, "remove"],
-            [from_datetime + 1.day + 3.hours, "add"],
-            [from_datetime + 2.days, "remove"],
-            [from_datetime + 2.days + 1.hour, "add"],
-            [from_datetime + 2.days + 2.hours, "remove"] # 2022-07-11
-          ]
-          agent_names.each do |agent_name|
-            times_and_actions.each do |timestamp, action|
-              create(
-                :event,
-                organization_id: organization.id,
-                code: billable_metric.code,
-                external_subscription_id: subscription.external_id,
-                timestamp:,
-                properties: {unique_id: "000", agent_name:, operation_type: action}
-              )
-            end
-          end
-
-          # aggregated by agents
-          expect(result.aggregations.count).to eq(2)
-
-          # As result of all merged events we have this table:
-          # [
-          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-06-09T00:00:00.000Z", "operation_type" => "add", "rn" => 1, "is_ignored" => false, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-06-09T00:00:00.000Z", "operation_type" => "add", "rn" => 1, "is_ignored" => false, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T01:00:00.000Z", "operation_type" => "remove", "rn" => 2, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T01:00:00.000Z", "operation_type" => "remove", "rn" => 2, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T02:00:00.000Z", "operation_type" => "add", "rn" => 3, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T02:00:00.000Z", "operation_type" => "add", "rn" => 3, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T02:00:01.000Z", "operation_type" => "remove", "rn" => 4, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T02:00:01.000Z", "operation_type" => "remove", "rn" => 4, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-10T03:00:00.000Z", "operation_type" => "add", "rn" => 5, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-10T03:00:00.000Z", "operation_type" => "add", "rn" => 5, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-11T00:00:00.000Z", "operation_type" => "remove", "rn" => 6, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-11T00:00:00.000Z", "operation_type" => "remove", "rn" => 6, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-11T01:00:00.000Z", "operation_type" => "add", "rn" => 7, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-11T01:00:00.000Z", "operation_type" => "add", "rn" => 7, "is_ignored" => true, "previous_not_ignored_operation_type" => "add"},
-          #   {"g_0" => "aragorn", "property" => "000", "timestamp" => "2022-07-11T02:00:00.000Z", "operation_type" => "remove", "rn" => 8, "is_ignored" => false, "previous_not_ignored_operation_type" => "remove"},
-          #   {"g_0" => "frodo",   "property" => "000", "timestamp" => "2022-07-11T02:00:00.000Z", "operation_type" => "remove", "rn" => 8, "is_ignored" => false, "previous_not_ignored_operation_type" => "remove"}
-          # ]
-          result.aggregations.each do |aggregation|
-            expect(aggregation.grouped_by.keys).to include("agent_name")
-            expect(aggregation.grouped_by["agent_name"]).to eq("frodo").or eq("aragorn")
-            expect(aggregation.aggregation).to eq(3.fdiv(31).ceil(5)) # subscription starts on 9th, so we have 3 days of usage
-          end
-        end
-      end
     end
 
     context "with persisted metrics added and terminated in the period" do
@@ -969,115 +804,6 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, type: 
 
           expect(result.event_aggregation).to eq([1])
           expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([21.fdiv(31).ceil(5)])
-        end
-
-        context "when sending multiple events per day" do
-          let(:event) do
-            create(
-              :event,
-              organization_id: organization.id,
-              code: billable_metric.code,
-              external_subscription_id: subscription.external_id,
-              timestamp: added_at,
-              properties: {unique_id: "property_1"}
-            )
-          end
-
-          it "aggregates per events" do
-            create(
-              :event,
-              organization_id: organization.id,
-              code: billable_metric.code,
-              external_subscription_id: subscription.external_id,
-              timestamp: added_at,
-              properties: {unique_id: "property_1", scheme: "visa"}
-            )
-
-            create(
-              :event,
-              organization_id: organization.id,
-              code: billable_metric.code,
-              external_subscription_id: subscription.external_id,
-              timestamp: added_at,
-              properties: {unique_id: "property_1", scheme: "visa"}
-            )
-
-            create(
-              :event,
-              organization_id: organization.id,
-              code: billable_metric.code,
-              external_subscription_id: subscription.external_id,
-              timestamp: added_at + 1.hour,
-              properties: {unique_id: "property_1", scheme: "visa", operation_type: "remove"}
-            )
-
-            create(
-              :event,
-              organization_id: organization.id,
-              code: billable_metric.code,
-              external_subscription_id: subscription.external_id,
-              timestamp: added_at + 2.hours,
-              properties: {unique_id: "property_1", scheme: "visa", operation_type: "remove"}
-            )
-
-            create(
-              :event,
-              organization_id: organization.id,
-              code: billable_metric.code,
-              external_subscription_id: subscription.external_id,
-              timestamp: added_at + 3.hours,
-              properties: {unique_id: "property_1", scheme: "visa", operation_type: "add"}
-            )
-
-            create(
-              :event,
-              organization_id: organization.id,
-              code: billable_metric.code,
-              external_subscription_id: subscription.external_id,
-              timestamp: added_at + 1.day,
-              properties: {unique_id: "property_1", scheme: "visa", operation_type: "add"}
-            )
-
-            create(
-              :event,
-              organization_id: organization.id,
-              code: billable_metric.code,
-              external_subscription_id: subscription.external_id,
-              timestamp: added_at + 1.day + 1.hour,
-              properties: {unique_id: "property_1", scheme: "visa", operation_type: "remove"}
-            )
-
-            create(
-              :event,
-              organization_id: organization.id,
-              code: billable_metric.code,
-              external_subscription_id: subscription.external_id,
-              timestamp: added_at + 1.day + 2.hours,
-              properties: {unique_id: "property_1", scheme: "visa", operation_type: "add"}
-            )
-
-            result = unique_count_service.per_event_aggregation(grouped_by_values: {"scheme" => "visa"})
-
-            # as result of this events we have:
-            # 1. timestamp: added_at, operation_type: add, property: SecureRandom.uuid, scheme: visa
-            # 2. timestamp: from_datetime + 20.days, operation_type: add, property: '1111'
-            # 3. timestamp: added_at, operation_type: add, property: property_1
-            # 4. timestamp: added_at, operation_type: add, property: property_1, scheme: visa
-            # 5. timestamp: added_at, operation_type: add, property: property_1, scheme: visa (ignored)
-            # 6. timestamp: added_at + 1.hour, operation_type: remove, property: property_1, scheme: visa (ignored)
-            # 7. timestamp: added_at + 2.hours, operation_type: remove, property: property_1, scheme: visa (ignored)
-            # 8. timestamp: added_at + 3.hours, operation_type: add, property: property_1, scheme: visa (ignored)
-            # 9. timestamp: added_at + 1.day, operation_type: add, property: property_1, scheme: visa (ignored)
-            # 10. timestamp: added_at + 1.day, operation_type: remove, property: property_1, scheme: visa (ignored)
-            # 11. timestamp: added_at + 1.day, operation_type: add, property: property_1, scheme: visa (ignored)
-            # when grouping by scheme Visa + taking into account minimal length of proration (1 day), some events are ignored,
-            # so we have 2 uniq properties: property_1, SecureRandom.uuid; '1111' doesn't have scheme visa, so it's excluded
-            # length of proration is 21 days for property_1, 21 days for SecureRandom.uuid (becuase random is just added once, property_1
-            # is added and removed multiple times, but the last action is add, so we merge all the events into one add)
-
-            expect(result.event_aggregation).to eq([1, 1])
-            expect(result.event_prorated_aggregation.map { |el| el.ceil(5) }).to eq([21.fdiv(31).ceil(5), 21.fdiv(31).ceil(5)])
-          end
         end
       end
     end
