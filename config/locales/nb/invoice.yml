@@ -22,6 +22,7 @@ nb:
     breakdown_for_days: "%{breakdown_duration} av %{breakdown_total_duration} dager"
     breakdown_of: Fordeling av %{fee_filter_display_name}
     clabe: CLABE
+    conversion_rate: Valutakurs
     country: Land
     coupons: Kuponger
     credit_notes: Kreditnotaer

@@ -22,6 +22,7 @@ es:
     breakdown_for_days: Utilizados %{breakdown_duration} de %{breakdown_total_duration} días
     breakdown_of: Desglose de %{fee_filter_display_name}
     clabe: CLABE
+    conversion_rate: Tipo de cambio
     country: País
     credit_notes: Notas de crédito
     date_from: Tarifas desde

@@ -61,8 +61,18 @@ RSpec.describe FeeDisplayHelper do
     let(:fee) { create(:fee, amount_currency: "USD") }
     let(:amount) { "0.12345678" }
 
-    it "returns the rounded amount with currency symbol" do
-      expect(subject).to eq "$0.123457"
+    context "when fee does not have pricing unit usage" do
+      it "returns the rounded amount with currency symbol" do
+        expect(subject).to eq "$0.123457"
+      end
+    end
+
+    context "when fee has pricing unit usage" do
+      let!(:pricing_unit_usage) { create(:pricing_unit_usage, fee:) }
+
+      it "returns the rounded amount with the pricing unit's short name" do
+        expect(subject).to eq "0.123457 #{pricing_unit_usage.short_name}"
+      end
     end
   end
 
@@ -70,10 +80,20 @@ RSpec.describe FeeDisplayHelper do
     subject { helper.format_as_currency(fee, amount) }
 
     let(:fee) { create(:fee, amount_currency: "USD") }
-    let(:amount) { "10.5" }
+    let(:amount) { "10.53" }
 
-    it "returns the amount with the appropriate currency symbol" do
-      expect(subject).to eq "$10.50"
+    context "when fee does not have pricing unit usage" do
+      it "returns the amount with the appropriate currency symbol" do
+        expect(subject).to eq "$10.53"
+      end
+    end
+
+    context "when fee has pricing unit usage" do
+      let!(:pricing_unit_usage) { create(:pricing_unit_usage, fee:) }
+
+      it "returns the amount with the pricing unit's short name" do
+        expect(subject).to eq "10.53 #{pricing_unit_usage.short_name}"
+      end
     end
   end
 
@@ -82,8 +102,18 @@ RSpec.describe FeeDisplayHelper do
 
     let(:fee) { create(:fee, amount_cents: 1000, amount_currency: "USD") }
 
-    it "returns fee amount with the appropriate currency symbol" do
-      expect(subject).to eq "$10.00"
+    context "when fee does not have pricing unit usage" do
+      it "returns fee amount with the appropriate currency symbol" do
+        expect(subject).to eq "$10.00"
+      end
+    end
+
+    context "when fee has pricing unit usage" do
+      let!(:pricing_unit_usage) { create(:pricing_unit_usage, fee:, amount_cents: 505) }
+
+      it "returns fee's pricing unit usage amount and with the unit's short name" do
+        expect(subject).to eq "5.05 #{pricing_unit_usage.short_name}"
+      end
     end
   end
 end

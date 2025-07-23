@@ -22,6 +22,7 @@ sv:
     breakdown_for_days: Använt %{breakdown_duration} av %{breakdown_total_duration} dagar
     breakdown_of: Specifikation för %{fee_filter_display_name}
     clabe: CLABE
+    conversion_rate: Växelkurs
     country: Land
     credit_notes: Kreditfakturor
     date_from: Avser period
