@@ -20,6 +20,10 @@ module Entitlement
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "feature") unless feature
 
+      if Utils::Entitlement.privilege_code_is_duplicated?(params[:privileges])
+        return result.single_validation_failure!(field: :"privilege.code", error_code: "value_is_duplicated")
+      end
+
       ActiveRecord::Base.transaction do
         update_feature_attributes
         delete_missing_privileges unless partial?
@@ -63,11 +67,11 @@ module Entitlement
     def update_privileges
       return if params[:privileges].blank?
 
-      params[:privileges].each do |code, privilege_params|
-        privilege = feature.privileges.find { it[:code] == code }
+      params[:privileges].each do |privilege_params|
+        privilege = feature.privileges.find { it[:code] == privilege_params[:code] }
 
         if privilege.nil?
-          create_privilege(code, privilege_params)
+          create_privilege(privilege_params)
         else
           privilege.name = privilege_params[:name] if privilege_params.key?(:name)
 
@@ -81,10 +85,10 @@ module Entitlement
       end
     end
 
-    def create_privilege(code, privilege_params)
+    def create_privilege(privilege_params)
       privilege = feature.privileges.new(
         organization: feature.organization,
-        code: code,
+        code: privilege_params[:code],
         name: privilege_params[:name]
       )
       privilege.value_type = privilege_params[:value_type] if privilege_params.has_key? :value_type
@@ -97,7 +101,7 @@ module Entitlement
       # Find privileges that are in the database but not in the params
       # Delete all EntitlementValues associated with those privileges
       # Then delete the privileges themselves
-      missing_privilege_codes = feature.privileges.pluck(:code) - (params[:privileges] || {}).keys
+      missing_privilege_codes = feature.privileges.pluck(:code) - (params[:privileges] || []).pluck(:code)
       EntitlementValue.where(privilege: feature.privileges.where(code: missing_privilege_codes)).discard_all!
       feature.privileges.where(code: missing_privilege_codes).discard_all!
       missing_privilege_codes.each do |code|

@@ -22,7 +22,7 @@ module V1
             name: privilege.name,
             value_type: privilege.value_type
           }
-        end.index_by { it[:code] }
+        end
       end
     end
   end

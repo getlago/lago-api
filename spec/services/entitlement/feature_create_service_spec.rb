@@ -11,10 +11,10 @@ RSpec.describe Entitlement::FeatureCreateService, type: :service do
       code: "seats",
       name: "Number of seats",
       description: "Number of users of the account",
-      privileges: {
-        "max_admins" => {value_type: "integer"},
-        "max" => {name: "Maximum", value_type: "integer"}
-      }
+      privileges: [
+        {code: "max_admins", value_type: "integer"},
+        {code: "max", name: "Maximum", value_type: "integer"}
+      ]
     }
   end
 
@@ -111,9 +111,9 @@ RSpec.describe Entitlement::FeatureCreateService, type: :service do
           code: "seats",
           name: "Number of seats",
           description: "Number of users of the account",
-          privileges: {
-            "max_admins" => {}
-          }
+          privileges: [
+            {code: "max_admins"}
+          ]
         }
       end
 
@@ -125,15 +125,35 @@ RSpec.describe Entitlement::FeatureCreateService, type: :service do
       end
     end
 
+    context "when privilege code is duplicated" do
+      let(:params) do
+        {
+          code: "seats",
+          privileges: [
+            {code: "max_admins"},
+            {code: "max_admins"}
+          ]
+        }
+      end
+
+      it "returns a validation failure" do
+        result = subject
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:"privilege.code"]).to eq ["value_is_duplicated"]
+      end
+    end
+
     context "when privilege value_type is invalid" do
       let(:params) do
         {
           code: "seats",
           name: "Number of seats",
           description: "Number of users of the account",
-          privileges: {
-            "max_admins" => {value_type: "invalid_type"}
-          }
+          privileges: [
+            {code: "max_admins", value_type: "invalid_type"}
+          ]
         }
       end
 
@@ -152,9 +172,9 @@ RSpec.describe Entitlement::FeatureCreateService, type: :service do
           code: "seats",
           name: "Number of seats",
           description: "Number of users of the account",
-          privileges: {
-            "" => {value_type: "integer"} # Invalid empty code
-          }
+          privileges: [
+            {value_type: "integer"} # Invalid empty code
+          ]
         }
       end
 
@@ -190,9 +210,9 @@ RSpec.describe Entitlement::FeatureCreateService, type: :service do
       let(:params) do
         {
           code: "seats",
-          privileges: {
-            "max_admins" => {value_type: "integer"}
-          }
+          privileges: [
+            {code: "max_admins", value_type: "integer"}
+          ]
         }
       end
 
@@ -211,13 +231,14 @@ RSpec.describe Entitlement::FeatureCreateService, type: :service do
       let(:params) do
         {
           code: "sso",
-          privileges: {
-            "provider" => {
+          privileges: [
+            {
+              code: "provider",
               name: "Provider Name",
               value_type: "select",
               config: {select_options: %w[okta ad google custom]}
             }
-          }
+          ]
         }
       end
 

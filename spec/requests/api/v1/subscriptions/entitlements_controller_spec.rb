@@ -36,9 +36,10 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
       expect(se).to include({
         code: "seats",
         name: "Feature Name",
-        description: "Feature Description"
+        description: "Feature Description",
+        overrides: {root?: true}
       })
-      expect(se[:privileges][:root?]).to eq({
+      expect(se[:privileges]).to contain_exactly({
         code: "root?",
         name: nil,
         value_type: "boolean",
@@ -46,8 +47,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
         value: true,
         plan_value: nil,
         override_value: true
-      })
-      expect(se[:privileges][:max]).to eq({
+      }, {
         code: "max",
         name: nil,
         value_type: "integer",
@@ -95,7 +95,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:entitlements]).to be_present
       expect(json[:entitlements].length).to eq(1)
-      expect(json[:entitlements].first[:privileges][:max]).to include({
+      expect(json[:entitlements].first[:privileges].find { it[:code] == "max" }).to include({
         value: 60,
         plan_value: 10,
         override_value: 60
@@ -137,7 +137,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:entitlements].first[:privileges][:max_admins][:value]).to eq(30)
+        expect(json[:entitlements].first[:privileges].find { it[:code] == "max_admins" }[:value]).to eq(30)
       end
     end
 
@@ -228,7 +228,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
 
         expect(response).to have_http_status(:success)
         expect(json[:entitlements]).to be_present
-        expect(json[:entitlements].first[:privileges][:max][:value]).to eq(10)
+        expect(json[:entitlements].first[:privileges].find { it[:code] == "max" }[:value]).to eq(10)
       end
     end
   end

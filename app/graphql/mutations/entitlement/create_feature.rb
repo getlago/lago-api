@@ -21,7 +21,7 @@ module Mutations
             code: args[:code],
             name: args[:name],
             description: args[:description],
-            privileges: args[:privileges].map(&:to_h).index_by { it[:code] }
+            privileges: args[:privileges].map(&:to_h)
           }
         )
 

@@ -23,7 +23,7 @@ module V1
             value: Utils::Entitlement.cast_value(ev.value, ev.privilege.value_type),
             config: ev.privilege.config
           }
-        end.index_by { it[:code] }
+        end
       end
     end
   end

@@ -29,7 +29,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:entitlements]).to be_present
       expect(json[:entitlements].length).to eq(1)
-      expect(json[:entitlements].first[:privileges][:max][:value]).to eq(30)
+      expect(json[:entitlements].first[:privileges].sole[:value]).to eq(30)
     end
   end
 
@@ -51,7 +51,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
       expect(response).to have_http_status(:success)
       expect(json[:entitlement][:code]).to eq("seats")
-      expect(json[:entitlement][:privileges][:max][:value]).to eq(30)
+      expect(json[:entitlement][:privileges].sole[:value]).to eq(30)
     end
 
     it "returns not found error when plan does not exist" do
@@ -94,7 +94,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:entitlements]).to be_present
       expect(json[:entitlements].length).to eq(1)
-      expect(json[:entitlements].first[:privileges][:max][:value]).to eq(25)
+      expect(json[:entitlements].first[:privileges].sole[:value]).to eq(25)
     end
 
     context "when plan has existing entitlements" do
@@ -110,7 +110,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:entitlements].first[:privileges][:max][:value]).to eq(25)
+        expect(json[:entitlements].first[:privileges].sole[:value]).to eq(25)
       end
     end
 
@@ -239,9 +239,19 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
         expect { subject }.to change(Entitlement::EntitlementValue, :count).by(2)
 
         expect(response).to have_http_status(:success)
-        entitlements = json[:entitlements].first[:privileges]
-        expect(entitlements[:max][:value]).to eq(25)
-        expect(entitlements[:max_admins][:value]).to eq(5)
+        expect(json[:entitlements].first[:privileges]).to contain_exactly({
+          code: "max",
+          name: nil,
+          value_type: "integer",
+          value: 25,
+          config: {}
+        }, {
+          code: "max_admins",
+          name: nil,
+          value_type: "integer",
+          value: 5,
+          config: {}
+        })
       end
     end
   end
@@ -274,7 +284,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:entitlements]).to be_present
       expect(json[:entitlements].length).to eq(1)
-      expect(json[:entitlements].first[:privileges][:max][:value]).to eq(60)
+      expect(json[:entitlements].first[:privileges].sole[:value]).to eq(60)
     end
 
     it "does not create new entitlement" do
@@ -309,7 +319,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:entitlements].first[:privileges][:max_admins][:value]).to eq(30)
+        expect(json[:entitlements].first[:privileges].find { it[:code] == "max_admins" }[:value]).to eq(30)
       end
     end
 
@@ -400,7 +410,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
         expect(response).to have_http_status(:success)
         expect(json[:entitlements]).to be_present
-        expect(json[:entitlements].first[:privileges][:max][:value]).to eq(10)
+        expect(json[:entitlements].first[:privileges].sole[:value]).to eq(10)
       end
     end
   end
