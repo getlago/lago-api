@@ -33,7 +33,7 @@ seats = Entitlement::Feature.create_with(
   description: "Number of users of the account"
 ).find_or_create_by!(organization:, code: "seats")
 
-Entitlement::EntitlementValue.where(organization:, privilege: seats.privileges).with_discarded.delete_all
+Entitlement::EntitlementValue.where(organization:, privilege: seats.privileges.with_discarded).with_discarded.delete_all
 Entitlement::Entitlement.where(organization:, feature: seats).with_discarded.delete_all
 seats.privileges.with_discarded.delete_all
 
@@ -60,14 +60,15 @@ analytics_api_feature.privileges.with_discarded.delete_all
 Entitlement::Entitlement.where(organization:, feature: analytics_api_feature, plan:).with_discarded.delete_all
 Entitlement::Entitlement.create!(organization:, feature: analytics_api_feature, plan:)
 
-# Feature was in the plan but deleted
+# Feature was in the plan but deleted, and in subscription but deleted
 acls = Entitlement::Feature.create_with(
   name: "Granular permissions"
 ).find_or_create_by!(organization:, code: "acls")
 acls.privileges.with_discarded.delete_all
 
-Entitlement::Entitlement.where(organization:, feature: acls, plan:).with_discarded.delete_all
+Entitlement::Entitlement.where(organization:, feature: acls).with_discarded.delete_all
 Entitlement::Entitlement.create!(organization:, feature: acls, plan:, deleted_at: Time.current)
+# Entitlement::Entitlement.create!(organization:, feature: acls, subscription: sub, deleted_at: Time.current)
 
 # Feature not in the plan but added to the subscription
 salesforce = Entitlement::Feature.create_with(

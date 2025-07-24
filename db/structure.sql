@@ -2024,7 +2024,7 @@ CREATE VIEW public.entitlement_subscription_entitlements_view AS
             fev.value
            FROM (public.entitlement_entitlement_values fev
              JOIN public.entitlement_entitlements fe_1 ON ((fe_1.id = fev.entitlement_entitlement_id)))
-          WHERE (fev.deleted_at IS NULL)
+          WHERE ((fev.deleted_at IS NULL) AND (fe_1.deleted_at IS NULL))
         ), all_values AS (
          SELECT ep.entitlement_feature_id,
             COALESCE(ep.entitlement_privilege_id, es.entitlement_privilege_id) AS entitlement_privilege_id,
@@ -2063,7 +2063,8 @@ CREATE VIEW public.entitlement_subscription_entitlements_view AS
      LEFT JOIN public.entitlement_subscription_feature_removals sfr ON (((fe.entitlement_feature_id = sfr.entitlement_feature_id) AND (sfr.deleted_at IS NULL))))
      LEFT JOIN all_values av ON ((COALESCE(av.override_entitlement_id, av.plan_entitlement_id) = fe.id)))
      LEFT JOIN public.entitlement_features f ON ((f.id = fe.entitlement_feature_id)))
-     LEFT JOIN public.entitlement_privileges pri ON ((pri.id = av.entitlement_privilege_id)));
+     LEFT JOIN public.entitlement_privileges pri ON ((pri.id = av.entitlement_privilege_id)))
+  WHERE (fe.deleted_at IS NULL);
 
 
 --
@@ -9442,6 +9443,7 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250724104251'),
 ('20250722094047'),
 ('20250721220908'),
 ('20250721212307'),
