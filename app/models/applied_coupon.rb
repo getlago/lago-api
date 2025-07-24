@@ -48,8 +48,8 @@ class AppliedCoupon < ApplicationRecord
     min_used_amount = invoice.invoice_subscriptions.map do |invoice_subscription|
       timestamp = invoice_subscription.timestamp
       invoice_ids = InvoiceSubscription
-        .where("charges_to_datetime > ?", timestamp)
-        .where("charges_from_datetime <= ?", timestamp)
+        .where("charges_to_datetime <= ?", invoice_subscription.charges_to_datetime)
+        .where("charges_from_datetime >= ?", invoice_subscription.charges_from_datetime)
         .joins(:invoice)
         .where(subscription_id: invoice_subscription.subscription_id)
         .pluck(:invoice_id)
