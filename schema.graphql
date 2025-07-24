@@ -5710,7 +5710,7 @@ Invoice Item
 interface InvoiceItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
-  id: ID!
+  id: ID
   itemCode: String!
   itemName: String!
   itemType: String!
