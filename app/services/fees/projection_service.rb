@@ -13,7 +13,7 @@ module Fees
       result = Result.new
 
       if fees.blank? || !(period_ratio > 0 && period_ratio < 1)
-        result.projected_amount = BigDecimal("0")
+        result.projected_amount_cents = BigDecimal("0")
         result.projected_units = BigDecimal("0")
         result.projected_pricing_unit_amount_cents = BigDecimal("0")
         return result
@@ -30,6 +30,13 @@ module Fees
       ).apply
 
       return result.fail_with_error!(charge_model_result.error) unless charge_model_result.success?
+
+      if charge_model_result.try(:grouped_results)
+        target_group_result = charge_model_result.grouped_results.find do |group_result|
+          group_result.grouped_by == first_fee.grouped_by
+        end
+        charge_model_result = target_group_result if target_group_result
+      end
 
       result.projected_amount_cents = calculate_projected_amount_cents(charge_model_result)
       result.projected_units = charge_model_result.projected_units

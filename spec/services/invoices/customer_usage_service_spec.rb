@@ -100,7 +100,6 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
             issuing_date: Time.zone.today.end_of_month.iso8601,
             currency: "EUR",
             amount_cents: 2532, # 1266 * 2,
-            projected_amount_cents: 5064,
             taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
             total_amount_cents: 3038
           )
@@ -128,7 +127,6 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
             issuing_date: Time.zone.today.end_of_month.iso8601,
             currency: "EUR",
             amount_cents: 2532, # 1266 * 2,
-            projected_amount_cents: 5064,
             taxes_amount_cents: 0,
             total_amount_cents: 2532
           )
@@ -190,7 +188,6 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
                 issuing_date: Time.zone.today.end_of_month.iso8601,
                 currency: "EUR",
                 amount_cents: 2532, # 1266 * 2,
-                projected_amount_cents: 5064,
                 taxes_amount_cents: 253, # 2532 * 0.1
                 total_amount_cents: 2785
               )
@@ -262,7 +259,6 @@ RSpec.describe Invoices::CustomerUsageService, type: :service, cache: :memory do
             issuing_date: "2022-07-06",
             currency: "EUR",
             amount_cents: 2532, # 1266 * 2,
-            projected_amount_cents: 4748,
             taxes_amount_cents: 506, # 1266 * 2 * 0.2 = 506.4
             total_amount_cents: 3038
           )

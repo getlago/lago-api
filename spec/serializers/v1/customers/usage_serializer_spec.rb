@@ -33,7 +33,10 @@ RSpec.describe ::V1::Customers::UsageSerializer do
             charge_id: SecureRandom.uuid,
             invoice_display_name: "Test Charge",
             filters: [],
-            billable_metric: OpenStruct.new(recurring: false)
+            billable_metric: OpenStruct.new(
+              recurring: false,
+              aggregation_type: "count_agg"
+            )
           ),
           charge_id: SecureRandom.uuid,
           units: "4.0",

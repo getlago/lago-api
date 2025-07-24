@@ -183,6 +183,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           },
           grouped_by: {"card_type" => "visa"},
           charge_filter:,
+          charge_filter_id: charge_filter.id,
           pricing_unit_usage:
         )
       end

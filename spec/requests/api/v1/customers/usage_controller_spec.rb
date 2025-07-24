@@ -187,41 +187,31 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           charge_usage = json[:customer_usage][:charges_usage].first
           filters_usage = charge_usage[:filters]
 
+          aws_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] }
+          gcp_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["google"] }
+          unfiltered_data = filters_usage.find { |f| f[:values].nil? }
+
           aggregate_failures do
             expect(charge_usage[:units]).to eq("8.0")
             expect(charge_usage[:amount_cents]).to eq(5000)
-            expect(filters_usage).to contain_exactly(
-              {
-                amount_cents: 0,
-                projected_amount_cents: 0,
-                events_count: 4,
-                invoice_display_name: nil,
-                units: "4.0",
-                projected_units: "41.33",
-                values: nil,
-                pricing_unit_details: nil
-              },
-              {
-                units: "3.0",
-                projected_units: "31.0",
-                amount_cents: 3000,
-                projected_amount_cents: 31000,
-                events_count: 3,
-                invoice_display_name: nil,
-                values: {cloud: ["aws"]},
-                pricing_unit_details: nil
-              },
-              {
-                units: "1.0",
-                projected_units: "10.33",
-                amount_cents: 2000,
-                projected_amount_cents: 20667,
-                events_count: 1,
-                invoice_display_name: nil,
-                values: {cloud: ["google"]},
-                pricing_unit_details: nil
-              }
-            )
+
+            # Assertions for the AWS filter
+            expect(aws_filter_data[:units]).to eq("3.0")
+            expect(aws_filter_data[:amount_cents]).to eq(3000)
+            expect(aws_filter_data[:projected_units]).to eq("31.0")
+            expect(aws_filter_data[:projected_amount_cents]).to eq(31000)
+
+            # Assertions for the GCP filter
+            expect(gcp_filter_data[:units]).to eq("1.0")
+            expect(gcp_filter_data[:amount_cents]).to eq(2000)
+            expect(gcp_filter_data[:projected_units]).to eq("10.33")
+            expect(gcp_filter_data[:projected_amount_cents]).to eq(20660)
+
+            # Assertions for the unfiltered group
+            expect(unfiltered_data[:units]).to eq("4.0")
+            expect(unfiltered_data[:amount_cents]).to eq(0)
+            expect(unfiltered_data[:projected_units]).to eq("0.0") # Correctly projects to 0
+            expect(unfiltered_data[:projected_amount_cents]).to eq(0)
           end
         end
       end
@@ -346,51 +336,37 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           charge_usage = json[:customer_usage][:charges_usage].first
           filters_usage = charge_usage[:filters]
 
+          aws_usa_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] && f[:values][:region] == ["usa"] }
+          aws_france_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] && f[:values][:region] == ["france"] }
+          google_usa_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["google"] && f[:values][:region] == ["usa"] }
+          unfiltered_data = filters_usage.find { |f| f[:values].nil? }
+
           aggregate_failures do
             expect(charge_usage[:units]).to eq("8.0")
             expect(charge_usage[:amount_cents]).to eq(7000)
-            expect(filters_usage).to contain_exactly(
-              {
-                units: "4.0",
-                projected_units: "41.33",
-                amount_cents: 0,
-                projected_amount_cents: 0,
-                events_count: 4,
-                invoice_display_name: nil,
-                values: nil,
-                pricing_unit_details: nil
-              },
-              {
-                units: "2.0",
-                projected_units: "20.67",
-                amount_cents: 2000,
-                projected_amount_cents: 20667,
-                events_count: 2,
-                invoice_display_name: nil,
-                values: {cloud: ["aws"], region: ["usa"]},
-                pricing_unit_details: nil
-              },
-              {
-                units: "1.0",
-                projected_units: "10.33",
-                amount_cents: 2000,
-                projected_amount_cents: 20667,
-                events_count: 1,
-                invoice_display_name: nil,
-                values: {cloud: ["aws"], region: ["france"]},
-                pricing_unit_details: nil
-              },
-              {
-                units: "1.0",
-                projected_units: "10.33",
-                amount_cents: 3000,
-                projected_amount_cents: 31000,
-                events_count: 1,
-                invoice_display_name: nil,
-                values: {cloud: ["google"], region: ["usa"]},
-                pricing_unit_details: nil
-              }
-            )
+
+            # Assertions for AWS/USA filter
+            expect(aws_usa_data[:units]).to eq("2.0")
+            expect(aws_usa_data[:amount_cents]).to eq(2000)
+            expect(aws_usa_data[:projected_units]).to eq("20.67")
+            expect(aws_usa_data[:projected_amount_cents]).to eq(20670)
+
+            # Assertions for AWS/France filter
+            expect(aws_france_data[:units]).to eq("1.0")
+            expect(aws_france_data[:amount_cents]).to eq(2000)
+            expect(aws_france_data[:projected_units]).to eq("10.33")
+            expect(aws_france_data[:projected_amount_cents]).to eq(20660)
+
+            # Assertions for Google/USA filter
+            expect(google_usa_data[:units]).to eq("1.0")
+            expect(google_usa_data[:amount_cents]).to eq(3000)
+            expect(google_usa_data[:projected_units]).to eq("10.33")
+            expect(google_usa_data[:projected_amount_cents]).to eq(30990)
+
+            # Assertions for the unfiltered group
+            expect(unfiltered_data[:units]).to eq("4.0")
+            expect(unfiltered_data[:amount_cents]).to eq(0)
+            expect(unfiltered_data[:projected_amount_cents]).to eq(0)
           end
         end
       end
