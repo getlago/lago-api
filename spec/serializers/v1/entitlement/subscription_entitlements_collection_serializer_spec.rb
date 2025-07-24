@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe V1::Entitlement::SubscriptionEntitlementsCollectionSerializer, type: :serializer do
-  subject(:serializer) { described_class.new(collection, nil, collection_name: "entitlements") }
+  subject(:serializer) { described_class.new(collection, collection_name: "entitlements") }
 
   let(:organization) { create(:organization) }
   let(:collection) { Entitlement::SubscriptionEntitlement.for_subscription(subscription).where(removed: false) }
