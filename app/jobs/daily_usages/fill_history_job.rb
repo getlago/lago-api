@@ -10,8 +10,8 @@ module DailyUsages
       end
     end
 
-    def perform(subscription:, from_datetime:, sandbox: false)
-      DailyUsages::FillHistoryService.call!(subscription:, from_datetime:, sandbox:)
+    def perform(subscription:, from_datetime:, to_datetime: nil, sandbox: false)
+      DailyUsages::FillHistoryService.call!(subscription:, from_datetime:, to_datetime:, sandbox:)
     end
   end
 end
