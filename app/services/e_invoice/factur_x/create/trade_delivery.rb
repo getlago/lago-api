@@ -9,7 +9,7 @@ module EInvoice
           xml["ram"].ApplicableHeaderTradeDelivery do
             xml["ram"].ActualDeliverySupplyChainEvent do
               xml["ram"].OccurrenceDateTime do
-                xml["udt"].DateTimeString '20250527', format: 102
+                xml["udt"].DateTimeString formatted_date("20250527".to_date), format: 102
               end
             end
           end
