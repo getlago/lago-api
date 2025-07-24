@@ -42,6 +42,9 @@ module EInvoice
                 TradeAllowanceCharge.call(xml:, invoice:, discount: Discount.new(indicator: false, rate: 0.19, amount: 0.16, reason: "Discount 02 (Plan) - 19% portion"))
                 TradeAllowanceCharge.call(xml:, invoice:, discount: Discount.new(indicator: false, rate: 0.20, amount: 8.84, reason: "Discount 02 (Plan) - 20% portion"))
                 TradeAllowanceCharge.call(xml:, invoice:, discount: Discount.new(indicator: false, rate: 0.21, amount: 1.00, reason: "Discount 02 (Plan) - 21% portion"))
+
+                PaymentTerms.call(xml:)
+                MonetarySummation.call(xml:, invoice:)
               end
             end
           }
