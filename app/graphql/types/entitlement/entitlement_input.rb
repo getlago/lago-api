@@ -2,11 +2,11 @@
 
 module Types
   module Entitlement
-    class PlanEntitlementInput < Types::BaseInputObject
+    class EntitlementInput < Types::BaseInputObject
       description "Input for updating a plan entitlement"
 
       argument :feature_code, String, required: true
-      argument :privileges, [PlanEntitlementPrivilegeInput], required: false, description: "The privileges configuration"
+      argument :privileges, [EntitlementPrivilegeInput], required: false, description: "The privileges configuration"
     end
   end
 end

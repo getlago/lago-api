@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Types::Entitlement::PlanEntitlementPrivilegeInput do
+RSpec.describe Types::Entitlement::EntitlementPrivilegeInput do
   subject { described_class }
 
   it do
