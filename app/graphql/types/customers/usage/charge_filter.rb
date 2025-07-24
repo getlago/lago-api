@@ -6,7 +6,7 @@ module Types
       class ChargeFilter < Types::BaseObject
         graphql_name "ChargeFilterUsage"
 
-        delegate :projected_units, :projected_amount_cents, to: :usage_calculator
+        delegate :projected_units, :projected_amount_cents, to: :projection_result
 
         field :id, ID, null: true, method: :charge_filter_id
 
@@ -29,7 +29,7 @@ module Types
         end
 
         def pricing_unit_projected_amount_cents
-          object.pricing_unit_usage&.projected_amount_cents
+          projection_result.projected_pricing_unit_amount_cents
         end
 
         def invoice_display_name
@@ -38,19 +38,8 @@ module Types
 
         private
 
-        def usage_calculator
-          @usage_calculator ||= begin
-            from = object.properties["from_datetime"]
-            to = object.properties["to_datetime"]
-            duration = object.properties["charges_duration"]
-
-            SubscriptionUsageFee.new(
-              fees: [object],
-              from_datetime: from,
-              to_datetime: to,
-              charges_duration_in_days: duration
-            )
-          end
+        def projection_result
+          @projection_result ||= ::Fees::ProjectionService.call(fees: [object]).raise_if_error!
         end
       end
     end

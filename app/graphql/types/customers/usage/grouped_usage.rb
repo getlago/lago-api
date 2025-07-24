@@ -6,7 +6,7 @@ module Types
       class GroupedUsage < Types::BaseObject
         graphql_name "GroupedChargeUsage"
 
-        delegate :projected_units, :projected_amount_cents, to: :usage_calculator
+        delegate :projected_units, :projected_amount_cents, to: :projection_result
 
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
@@ -25,7 +25,7 @@ module Types
         end
 
         def amount_cents
-          usage_calculator.current_amount_cents
+          object.sum(&:amount_cents)
         end
 
         def pricing_unit_amount_cents
@@ -35,8 +35,7 @@ module Types
         end
 
         def pricing_unit_projected_amount_cents
-          return if object.first.charge.applied_pricing_unit.nil?
-          usage_calculator.projected_pricing_unit_amount_cents
+          projection_result.projected_pricing_unit_amount_cents
         end
 
         def events_count
@@ -44,7 +43,7 @@ module Types
         end
 
         def units
-          usage_calculator.current_units
+          object.map { |f| BigDecimal(f.units) }.sum
         end
 
         def grouped_by
@@ -59,20 +58,8 @@ module Types
 
         private
 
-        def usage_calculator
-          @usage_calculator ||= begin
-            first_fee = object.first
-            from = first_fee.properties["from_datetime"]
-            to = first_fee.properties["to_datetime"]
-            duration = first_fee.properties["charges_duration"]
-
-            SubscriptionUsageFee.new(
-              fees: object,
-              from_datetime: from,
-              to_datetime: to,
-              charges_duration_in_days: duration
-            )
-          end
+        def projection_result
+          @projection_result ||= ::Fees::ProjectionService.call(fees: object).raise_if_error!
         end
       end
     end

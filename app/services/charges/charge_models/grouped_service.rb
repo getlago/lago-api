@@ -5,8 +5,8 @@ module Charges
     class GroupedService < BaseService
       Result = BaseResult[:grouped_results]
 
-      def initialize(charge_model:, charge:, aggregation_result:, properties:)
-        super(charge:, aggregation_result:, properties:)
+      def initialize(charge_model:, charge:, aggregation_result:, properties:, period_ratio:)
+        super(charge:, aggregation_result:, properties:, period_ratio:)
 
         @charge_model = charge_model
       end
@@ -19,7 +19,8 @@ module Charges
           group_result = charge_model.apply(
             charge:,
             aggregation_result: aggregation,
-            properties:
+            properties:,
+            period_ratio:
           )
           group_result.grouped_by = aggregation.grouped_by
           group_result

@@ -247,7 +247,12 @@ module Fees
         persist_recurring_value(aggregation_result.aggregations || [aggregation_result], charge_filter)
       end
 
-      Charges::ChargeModelFactory.new_instance(charge:, aggregation_result:, properties:).apply
+      Charges::ChargeModelFactory.new_instance(
+        charge:,
+        aggregation_result:,
+        properties:,
+        period_ratio: calculate_period_ratio
+      ).apply
     end
 
     def options(properties)
@@ -335,6 +340,24 @@ module Fees
       end
 
       filters
+    end
+
+    def calculate_period_ratio
+      from_date = boundaries.charges_from_datetime.to_date
+      to_date = boundaries.charges_to_datetime.to_date
+      current_date = Time.current.to_date
+
+      total_days = (to_date - from_date).to_i + 1
+
+      charges_duration = boundaries.charges_duration || total_days
+
+      return 1.0 if current_date >= to_date
+      return 0.0 if current_date < from_date
+
+      days_passed = (current_date - from_date).to_i + 1
+
+      ratio = days_passed.fdiv(charges_duration)
+      ratio.clamp(0.0, 1.0)
     end
   end
 end

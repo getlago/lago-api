@@ -21,32 +21,52 @@ module V1
       private
 
       def calculate_usage_data(fees)
-        usage_calculator = SubscriptionUsageFee.new(
-          fees:,
-          from_datetime: fees.first.properties["from_datetime"],
-          to_datetime: fees.first.properties["to_datetime"],
-          charges_duration_in_days: fees.first.properties["charges_duration"]
-        )
-
+        charge_has_filters = fees.first.charge&.filters&.any?
         is_past_usage = root_name == "past_usage"
-
+      
+        current_units = fees.sum { |f| BigDecimal(f.units) }
+        current_amount_cents = fees.sum(&:amount_cents)
+        events_count = fees.sum { |f| f.events_count.to_i }
+      
+        projected_units = BigDecimal("0")
+        projected_amount_cents = 0
+        projected_pricing_unit_amount_cents = 0
+      
+        unless is_past_usage
+          if charge_has_filters
+            fees_with_defined_filters = fees.select(&:charge_filter_id)
+      
+            fees_with_defined_filters.each do |fee|
+              result = ::Fees::ProjectionService.call(fees: [fee]).raise_if_error!
+              projected_units += result.projected_units
+              projected_amount_cents += result.projected_amount_cents
+              projected_pricing_unit_amount_cents += result.projected_pricing_unit_amount_cents
+            end
+          else
+            result = ::Fees::ProjectionService.call(fees: fees).raise_if_error!
+            projected_units = result.projected_units
+            projected_amount_cents = result.projected_amount_cents
+            projected_pricing_unit_amount_cents = result.projected_pricing_unit_amount_cents
+          end
+        end
+      
         pricing_details = fees.first.pricing_unit_usage&.then do |pricing_unit|
           {
-            amount_cents: usage_calculator.current_pricing_unit_amount_cents,
-            projected_amount_cents: is_past_usage ? 0 : usage_calculator.projected_pricing_unit_amount_cents,
+            amount_cents: fees.map(&:pricing_unit_usage).compact.sum(&:amount_cents),
+            projected_amount_cents: projected_pricing_unit_amount_cents.to_i,
             short_name: pricing_unit.short_name,
             conversion_rate: pricing_unit.conversion_rate
           }
         end
-
+      
         {
-          units: usage_calculator.current_units.to_s,
-          projected_units: is_past_usage ? "0.0" : usage_calculator.projected_units.to_s,
-          events_count: fees.sum(0) { |f| f.events_count.to_i },
-          amount_cents: usage_calculator.current_amount_cents,
-          projected_amount_cents: is_past_usage ? 0 : usage_calculator.projected_amount_cents.to_i,
-          pricing_unit_details: pricing_details,
-          amount_currency: fees.first.amount_currency
+          units: current_units.to_s,
+          events_count: events_count,
+          amount_cents: current_amount_cents,
+          amount_currency: fees.first.amount_currency,
+          projected_units: projected_units.to_s,
+          projected_amount_cents: projected_amount_cents.to_i,
+          pricing_unit_details: pricing_details
         }
       end
 

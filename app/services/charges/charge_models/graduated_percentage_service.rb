@@ -22,6 +22,10 @@ module Charges
         amount_details.fetch(:graduated_percentage_ranges).sum { |e| e[:total_with_flat_amount] }
       end
 
+      def compute_projected_amount
+        compute_amount
+      end
+
       def unit_amount
         total_units = aggregation_result.full_units_number || units
         return 0 if total_units.zero?

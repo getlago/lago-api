@@ -21,6 +21,10 @@ module Charges
         compute_amount / total_units
       end
 
+      def compute_projected_amount
+        compute_amount
+      end
+
       private
 
       def currency

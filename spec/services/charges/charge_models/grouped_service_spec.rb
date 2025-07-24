@@ -5,7 +5,11 @@ require "rails_helper"
 RSpec.describe Charges::ChargeModels::GroupedService do
   subject(:apply_grouped_service) do
     described_class.apply(
-      charge_model:, charge:, aggregation_result:, properties: charge.properties
+      charge_model:,
+      charge:,
+      aggregation_result:,
+      properties: charge.properties,
+      period_ratio: 1.0
     )
   end
 

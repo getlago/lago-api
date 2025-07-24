@@ -6,8 +6,6 @@ module Types
       class Charge < Types::BaseObject
         graphql_name "ChargeUsage"
 
-        delegate :projected_units, :projected_amount_cents, to: :usage_calculator
-
         field :amount_cents, GraphQL::Types::BigInt, null: false
         field :events_count, Integer, null: false
         field :id, ID, null: false
@@ -26,16 +24,16 @@ module Types
           SecureRandom.uuid
         end
 
-        def units
-          usage_calculator.current_units
-        end
-
         def events_count
           object.sum(&:events_count)
         end
 
+        def units
+          object.map { |f| BigDecimal(f.units) }.sum
+        end
+
         def amount_cents
-          usage_calculator.current_amount_cents
+          object.sum(&:amount_cents)
         end
 
         def pricing_unit_amount_cents
@@ -45,8 +43,7 @@ module Types
         end
 
         def pricing_unit_projected_amount_cents
-          return if charge.applied_pricing_unit.nil?
-          usage_calculator.projected_pricing_unit_amount_cents
+          projection_result.projected_pricing_unit_amount_cents
         end
 
         def charge
@@ -69,22 +66,38 @@ module Types
           object.group_by(&:grouped_by).values
         end
 
+        def projected_units
+          if charge.filters.any?
+            filter_groups = object.group_by(&:charge_filter_id).values
+            filter_groups.sum do |filter_fee_group|
+              next BigDecimal("0") unless filter_fee_group.first.charge_filter_id
+        
+              result = ::Fees::ProjectionService.call(fees: filter_fee_group).raise_if_error!
+              result.projected_units
+            end
+          else
+            projection_result.projected_units
+          end
+        end
+        
+        def projected_amount_cents
+          if charge.filters.any?
+            filter_groups = object.group_by(&:charge_filter_id).values
+            filter_groups.sum do |filter_fee_group|
+              next 0 unless filter_fee_group.first.charge_filter_id
+        
+              result = ::Fees::ProjectionService.call(fees: filter_fee_group).raise_if_error!
+              result.projected_amount_cents
+            end
+          else
+            projection_result.projected_amount_cents
+          end
+        end
+
         private
 
-        def usage_calculator
-          @usage_calculator ||= begin
-            first_fee = object.first
-            from = first_fee.properties["from_datetime"]
-            to = first_fee.properties["to_datetime"]
-            duration = first_fee.properties["charges_duration"]
-
-            SubscriptionUsageFee.new(
-              fees: object,
-              from_datetime: from,
-              to_datetime: to,
-              charges_duration_in_days: duration
-            )
-          end
+        def projection_result
+          @projection_result ||= ::Fees::ProjectionService.call(fees: object).raise_if_error!
         end
       end
     end
