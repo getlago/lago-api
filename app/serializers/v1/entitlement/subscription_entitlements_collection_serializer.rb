@@ -3,6 +3,10 @@
 module V1
   module Entitlement
     class SubscriptionEntitlementsCollectionSerializer < CollectionSerializer
+      def initialize(collection, options = nil)
+        super(collection, nil, options)
+      end
+
       def serialize_models
         collection.group_by(&:feature_code).map do |feature_code, feature_entitlements|
           first_entitlement = feature_entitlements.first

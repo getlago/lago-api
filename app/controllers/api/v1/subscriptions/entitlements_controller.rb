@@ -13,7 +13,6 @@ module Api
           render(
             json: ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(
               Entitlement::SubscriptionEntitlement.for_subscription(subscription),
-              nil,
               collection_name: "entitlements"
             ).serialize
           )
@@ -31,7 +30,6 @@ module Api
             render(
               json: ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(
                 Entitlement::SubscriptionEntitlement.for_subscription(subscription),
-                nil,
                 collection_name: "entitlements"
               ).serialize
             )
@@ -47,7 +45,6 @@ module Api
             render(
               json: ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(
                 Entitlement::SubscriptionEntitlement.for_subscription(subscription),
-                nil,
                 collection_name: "entitlements"
               ).serialize
             )
@@ -65,7 +62,6 @@ module Api
             render(
               json: ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(
                 Entitlement::SubscriptionEntitlement.for_subscription(subscription),
-                nil,
                 collection_name: "entitlements"
               ).serialize
             )
@@ -84,7 +80,6 @@ module Api
             render(
               json: ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(
                 Entitlement::SubscriptionEntitlement.for_subscription(subscription),
-                nil,
                 collection_name: "entitlements"
               ).serialize
             )
