@@ -46,6 +46,7 @@ Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege:
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: max_admins, value: 3_000, deleted_at: Time.current)
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: max_admins, value: 3)
 fe_sub = Entitlement::Entitlement.create!(organization:, feature: seats, subscription_id: sub.id)
+
 # Subscription override for max, root does not exist in the plan
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe_sub, privilege: max, value: 99)
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe_sub, privilege: root, value: true)
@@ -89,7 +90,7 @@ Entitlement::Entitlement.create!(organization:, feature: support, plan:)
 Entitlement::Entitlement.create!(organization:, feature: support, subscription_id: sub.id)
 Entitlement::SubscriptionFeatureRemoval.create!(organization:, feature: support, subscription_id: sub.id)
 
-# Feature with Select
+# Feature with Select and ALL PRIVILEGE OVERRIDDEN ("empty line" added)
 sso = Entitlement::Feature.create_with(
   name: "SSO"
 ).find_or_create_by!(organization:, code: "sso")
@@ -103,7 +104,11 @@ provider = sso.privileges.create!(organization:,
   value_type: "select",
   config: {select_options: %w[okta ad google custom]})
 
-Entitlement::Entitlement.where(organization:, feature: sso, plan:).with_discarded.delete_all
+Entitlement::Entitlement.where(organization:, feature: sso).with_discarded.delete_all
 fe = Entitlement::Entitlement.create!(organization:, feature: sso, plan:)
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: provider, value: "okta")
+
+fe_sub = Entitlement::Entitlement.create!(organization:, feature: sso, subscription: sub)
+Entitlement::EntitlementValue.create!(organization:, entitlement: fe_sub, privilege: provider, value: "google")
+
 Entitlement::SubscriptionFeatureRemoval.create!(organization:, feature: sso, deleted_at: Time.current, subscription_id: sub.id)

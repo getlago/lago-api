@@ -15,7 +15,12 @@ module V1
             code: feature_code,
             name: first_entitlement.feature_name,
             description: first_entitlement.feature_description,
-            privileges: feature_entitlements.map do |e|
+            privileges: feature_entitlements.filter_map do |e|
+              # NOTE: this can happen when ALL privileges are overridden in the subscription.
+              #       In this case, the view will return an empty line for the plan entitlements. Because it's grouped per feature it's okay
+              #       but ideally the view should be improved to remove these lines
+              next if e.privilege_code.blank?
+
               {
                 code: e.privilege_code,
                 name: e.privilege_name,

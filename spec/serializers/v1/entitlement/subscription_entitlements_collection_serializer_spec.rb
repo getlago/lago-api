@@ -27,15 +27,16 @@ RSpec.describe V1::Entitlement::SubscriptionEntitlementsCollectionSerializer, ty
   let(:privilege4) { create(:privilege, organization:, feature: feature2, code: "limit", name: "L", value_type: "integer") }
   let(:entitlement2) { create(:entitlement, plan:, feature: feature2) }
   let(:entitlement_value4) { create(:entitlement_value, entitlement: entitlement2, privilege: privilege4, value: 100) }
+  let(:entitlement25) { create(:entitlement, plan: nil, subscription:, feature: feature2) }
+  let(:entitlement_value45) { create(:entitlement_value, entitlement: entitlement25, privilege: privilege4, value: 999) }
 
   before do
-    entitlement
     entitlement_value1
     entitlement_value2
     entitlement_value25
     entitlement_value3
-    entitlement2
     entitlement_value4
+    entitlement_value45
   end
 
   describe "#serialize" do
@@ -97,11 +98,11 @@ RSpec.describe V1::Entitlement::SubscriptionEntitlementsCollectionSerializer, ty
         name: "L",
         value_type: "integer",
         config: {},
-        value: 100,
+        value: 999,
         plan_value: 100,
-        override_value: nil
+        override_value: 999
       })
-      expect(storage[:overrides]).to eq({})
+      expect(storage[:overrides]).to eq({limit: 999})
     end
 
     context "when there are no entitlements" do
