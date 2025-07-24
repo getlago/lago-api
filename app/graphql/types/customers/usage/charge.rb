@@ -71,7 +71,7 @@ module Types
             filter_groups = object.group_by(&:charge_filter_id).values
             filter_groups.sum do |filter_fee_group|
               next BigDecimal("0") unless filter_fee_group.first.charge_filter_id
-        
+
               result = ::Fees::ProjectionService.call(fees: filter_fee_group).raise_if_error!
               result.projected_units
             end
@@ -79,13 +79,13 @@ module Types
             projection_result.projected_units
           end
         end
-        
+
         def projected_amount_cents
           if charge.filters.any?
             filter_groups = object.group_by(&:charge_filter_id).values
             filter_groups.sum do |filter_fee_group|
               next 0 unless filter_fee_group.first.charge_filter_id
-        
+
               result = ::Fees::ProjectionService.call(fees: filter_fee_group).raise_if_error!
               result.projected_amount_cents
             end

@@ -23,19 +23,19 @@ module V1
       def calculate_usage_data(fees)
         charge_has_filters = fees.first.charge&.filters&.any?
         is_past_usage = root_name == "past_usage"
-      
+
         current_units = fees.sum { |f| BigDecimal(f.units) }
         current_amount_cents = fees.sum(&:amount_cents)
         events_count = fees.sum { |f| f.events_count.to_i }
-      
+
         projected_units = BigDecimal("0")
         projected_amount_cents = 0
         projected_pricing_unit_amount_cents = 0
-      
+
         unless is_past_usage
           if charge_has_filters
             fees_with_defined_filters = fees.select(&:charge_filter_id)
-      
+
             fees_with_defined_filters.each do |fee|
               result = ::Fees::ProjectionService.call(fees: [fee]).raise_if_error!
               projected_units += result.projected_units
@@ -49,7 +49,7 @@ module V1
             projected_pricing_unit_amount_cents = result.projected_pricing_unit_amount_cents
           end
         end
-      
+
         pricing_details = fees.first.pricing_unit_usage&.then do |pricing_unit|
           {
             amount_cents: fees.map(&:pricing_unit_usage).compact.sum(&:amount_cents),
@@ -58,7 +58,7 @@ module V1
             conversion_rate: pricing_unit.conversion_rate
           }
         end
-      
+
         {
           units: current_units.to_s,
           events_count: events_count,

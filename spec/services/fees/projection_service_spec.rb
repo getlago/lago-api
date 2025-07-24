@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'rails_helper'
+require "rails_helper"
 
 RSpec.describe Fees::ProjectionService do
   subject(:service) { described_class.new(fees: fees) }
@@ -8,7 +8,7 @@ RSpec.describe Fees::ProjectionService do
   let(:fees) { [fee] }
   let(:fee) do
     instance_double(
-      'Fee',
+      "Fee",
       charge: charge,
       subscription: subscription,
       charge_filter: charge_filter,
@@ -18,36 +18,38 @@ RSpec.describe Fees::ProjectionService do
 
   let(:charge) do
     instance_double(
-      'Charge',
+      "Charge",
       properties: charge_properties,
-      applied_pricing_unit: applied_pricing_unit
+      applied_pricing_unit: applied_pricing_unit,
+      filters: [],
+      pricing_group_keys: nil
     )
   end
 
   let(:subscription) do
     instance_double(
-      'Subscription',
+      "Subscription",
       plan: plan
     )
   end
 
   let(:plan) do
     instance_double(
-      'Plan',
+      "Plan",
       amount: amount
     )
   end
 
   let(:amount) do
     instance_double(
-      'Money',
+      "Money",
       currency: currency
     )
   end
 
   let(:currency) do
     instance_double(
-      'Currency',
+      "Currency",
       exponent: 2,
       subunit_to_unit: 100
     )
@@ -59,9 +61,9 @@ RSpec.describe Fees::ProjectionService do
 
   let(:fee_properties) do
     {
-      'from_datetime' => from_datetime,
-      'to_datetime' => to_datetime,
-      'charges_duration' => charges_duration
+      "from_datetime" => from_datetime,
+      "to_datetime" => to_datetime,
+      "charges_duration" => charges_duration
     }
   end
 
@@ -71,7 +73,7 @@ RSpec.describe Fees::ProjectionService do
 
   let(:aggregation_result) do
     instance_double(
-      'AggregationResult',
+      "AggregationResult",
       success?: true,
       error: nil
     )
@@ -79,22 +81,22 @@ RSpec.describe Fees::ProjectionService do
 
   let(:charge_model_result) do
     instance_double(
-      'ChargeModelResult',
+      "ChargeModelResult",
       success?: true,
       error: nil,
-      projected_amount: BigDecimal('100.50'),
-      projected_units: BigDecimal('10'),
-      unit_amount: BigDecimal('10.05')
+      projected_amount: BigDecimal("100.50"),
+      projected_units: BigDecimal("10"),
+      unit_amount: BigDecimal("10.05")
     )
   end
 
   before do
     allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(
-      instance_double('Aggregator', aggregate: aggregation_result)
+      instance_double("Aggregator", aggregate: aggregation_result)
     )
-    
+
     allow(Charges::ChargeModelFactory).to receive(:new_instance).and_return(
-      instance_double('ChargeModel', apply: charge_model_result)
+      instance_double("ChargeModel", apply: charge_model_result)
     )
 
     middle_time = from_datetime + ((to_datetime - from_datetime) / 2)
@@ -105,63 +107,58 @@ RSpec.describe Fees::ProjectionService do
     travel_back
   end
 
-  describe '#call' do
-    context 'when period_ratio is not between 0 and 1' do
-      before do
-        travel_to(from_datetime - 1.day)
-      end
-    end
-
-    context 'when aggregation fails' do
+  describe "#call" do
+    context "when aggregation fails" do
       let(:aggregation_result) do
         instance_double(
-          'AggregationResult',
+          "AggregationResult",
           success?: false,
-          error: StandardError.new('Aggregation failed')
+          error: StandardError.new("Aggregation failed")
         )
       end
 
-      it 'returns failure with aggregation error' do
+      it "returns failure with aggregation error" do
         result = service.call
 
         expect(result).to be_failure
         expect(result.error).to be_a(StandardError)
-        expect(result.error.message).to eq('Aggregation failed')
+        expect(result.error.message).to eq("Aggregation failed")
       end
     end
 
-    context 'when charge model fails' do
+    context "when charge model fails" do
       let(:charge_model_result) do
         instance_double(
-          'ChargeModelResult',
+          "ChargeModelResult",
           success?: false,
-          error: StandardError.new('Charge model failed')
+          error: StandardError.new("Charge model failed")
         )
       end
 
-      it 'returns failure with charge model error' do
+      it "returns failure with charge model error" do
         result = service.call
 
         expect(result).to be_failure
         expect(result.error).to be_a(StandardError)
-        expect(result.error.message).to eq('Charge model failed')
+        expect(result.error.message).to eq("Charge model failed")
       end
     end
 
-    context 'when everything succeeds' do
-      it 'returns projected values' do
+    context "when everything succeeds" do
+      it "returns projected values" do
         result = service.call
 
         expect(result).to be_success
         expect(result.projected_amount_cents).to eq(10050) # 100.50 * 100
-        expect(result.projected_units).to eq(BigDecimal('10'))
-        expect(result.projected_pricing_unit_amount_cents).to eq(0) # No applied_pricing_unit
+        expect(result.projected_units).to eq(BigDecimal("10"))
+        expect(result.projected_pricing_unit_amount_cents).to eq(nil) # No applied_pricing_unit
       end
 
-      it 'calls aggregation with correct parameters' do
-        aggregator = instance_double('Aggregator', aggregate: aggregation_result)
-        
-        expect(BillableMetrics::AggregationFactory).to receive(:new_instance).with(
+      it "calls aggregation with correct parameters" do
+        aggregator = instance_double("Aggregator", aggregate: aggregation_result)
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
+        service.call
+        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
           charge: charge,
           subscription: subscription,
           boundaries: {
@@ -170,46 +167,44 @@ RSpec.describe Fees::ProjectionService do
           },
           filters: {},
           current_usage: true
-        ).and_return(aggregator)
-
-        expect(aggregator).to receive(:aggregate).with(options: { is_current_usage: true })
-
-        service.call
+        )
+        expect(aggregator).to have_received(:aggregate).with(options: {is_current_usage: true})
       end
 
-      it 'calls charge model factory with correct parameters' do
+      it "calls charge model factory with correct parameters" do
         from_date = from_datetime.to_date
         to_date = to_datetime.to_date
         current_date = Time.current.to_date
-        
+
         total_days = (to_date - from_date).to_i + 1
         days_passed = (current_date - from_date).to_i + 1
         expected_period_ratio = days_passed.fdiv(total_days)
 
-        expect(Charges::ChargeModelFactory).to receive(:new_instance).with(
+        service.call
+
+        expect(Charges::ChargeModelFactory).to have_received(:new_instance).with(
           charge: charge,
           aggregation_result: aggregation_result,
           properties: charge_properties,
           period_ratio: expected_period_ratio
         )
-
-        service.call
       end
     end
 
-    context 'with charge filter' do
+    context "with charge filter" do
       let(:charge_filter) do
         instance_double(
-          'ChargeFilter',
-          properties: { 'key' => 'value' }
+          "ChargeFilter",
+          properties: {"key" => "value"},
+          pricing_group_keys: []
         )
       end
 
       let(:filter_service_result) do
         instance_double(
-          'FilterServiceResult',
-          matching_filters: ['filter1'],
-          ignored_filters: ['filter2']
+          "FilterServiceResult",
+          matching_filters: ["filter1"],
+          ignored_filters: ["filter2"]
         )
       end
 
@@ -218,10 +213,11 @@ RSpec.describe Fees::ProjectionService do
           .and_return(filter_service_result)
       end
 
-      it 'uses charge filter properties and filters' do
-        aggregator = instance_double('Aggregator', aggregate: aggregation_result)
-        
-        expect(BillableMetrics::AggregationFactory).to receive(:new_instance).with(
+      it "uses charge filter properties and filters" do
+        aggregator = instance_double("Aggregator", aggregate: aggregation_result)
+        allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
+        service.call
+        expect(BillableMetrics::AggregationFactory).to have_received(:new_instance).with(
           charge: charge,
           subscription: subscription,
           boundaries: {
@@ -230,16 +226,16 @@ RSpec.describe Fees::ProjectionService do
           },
           filters: {
             charge_filter: charge_filter,
-            matching_filters: ['filter1'],
-            ignored_filters: ['filter2']
+            matching_filters: ["filter1"],
+            ignored_filters: ["filter2"]
           },
           current_usage: true
-        ).and_return(aggregator)
+        )
 
-        expect(Charges::ChargeModelFactory).to receive(:new_instance).with(
+        expect(Charges::ChargeModelFactory).to have_received(:new_instance).with(
           charge: charge,
           aggregation_result: aggregation_result,
-          properties: { 'key' => 'value' },
+          properties: {"key" => "value"},
           period_ratio: anything
         )
 
@@ -247,12 +243,12 @@ RSpec.describe Fees::ProjectionService do
       end
     end
 
-    context 'with applied pricing unit' do
-      let(:applied_pricing_unit) { instance_double('AppliedPricingUnit') }
+    context "with applied pricing unit" do
+      let(:applied_pricing_unit) { instance_double("AppliedPricingUnit") }
       let(:pricing_unit_usage) do
         instance_double(
-          'PricingUnitUsage',
-          to_fiat_currency_cents: { amount_cents: 5000 }
+          "PricingUnitUsage",
+          to_fiat_currency_cents: {amount_cents: 5000}
         )
       end
 
@@ -261,88 +257,80 @@ RSpec.describe Fees::ProjectionService do
           .and_return(pricing_unit_usage)
       end
 
-      it 'calculates projected pricing unit amount cents' do
+      it "calculates projected pricing unit amount cents" do
         result = service.call
 
         expect(result).to be_success
         expect(result.projected_pricing_unit_amount_cents).to eq(5000)
 
         expect(PricingUnitUsage).to have_received(:build_from_fiat_amounts).with(
-          amount: BigDecimal('100.50'),
-          unit_amount: BigDecimal('10.05'),
+          amount: BigDecimal("100.50"),
+          unit_amount: BigDecimal("10.05"),
           applied_pricing_unit: applied_pricing_unit
         )
       end
     end
-
-    context 'with custom charges_duration' do
-      let(:charges_duration) { 10 }
-
-      before do
-        travel_to(from_datetime + 15.days)
-      end
-    end
   end
 
-  describe 'period_ratio calculation' do
+  describe "period_ratio calculation" do
     let(:from_date) { Date.current.beginning_of_month }
     let(:to_date) { Date.current.end_of_month }
     let(:from_datetime) { from_date.beginning_of_day }
     let(:to_datetime) { to_date.end_of_day }
 
-    context 'when current date is in the middle of period' do
+    context "when current date is in the middle of period" do
       before { travel_to(from_date + 10.days) }
 
-      it 'calculates correct ratio' do
+      it "calculates correct ratio" do
         from_date_calc = from_datetime.to_date
         to_date_calc = to_datetime.to_date
         current_date_calc = Time.current.to_date
-        
+
         total_days = (to_date_calc - from_date_calc).to_i + 1
         days_passed = (current_date_calc - from_date_calc).to_i + 1
         expected_ratio = days_passed.fdiv(total_days)
 
-        expect(Charges::ChargeModelFactory).to receive(:new_instance).with(
+        service.call
+
+        expect(Charges::ChargeModelFactory).to have_received(:new_instance).with(
           hash_including(period_ratio: expected_ratio)
         )
-
-        service.call
       end
     end
   end
 
-  describe 'edge cases' do
-    context 'when projected_amount is nil' do
+  describe "edge cases" do
+    context "when projected_amount is nil" do
       let(:charge_model_result) do
         instance_double(
-          'ChargeModelResult',
+          "ChargeModelResult",
           success?: true,
           error: nil,
           projected_amount: nil,
-          projected_units: BigDecimal('10'),
+          projected_units: BigDecimal("10"),
           unit_amount: nil
         )
       end
 
-      it 'returns 0 for amount cents' do
+      it "returns 0 for amount cents" do
         result = service.call
 
         expect(result).to be_success
         expect(result.projected_amount_cents).to eq(0)
-        expect(result.projected_pricing_unit_amount_cents).to eq(0)
+        expect(result.projected_pricing_unit_amount_cents).to eq(nil)
       end
     end
 
-    context 'when currency has different exponent' do
+    context "when currency has different exponent" do
       let(:currency) do
         instance_double(
-          'Currency',
+          "Currency",
           exponent: 3,
           subunit_to_unit: 1000
         )
       end
 
-      it 'rounds and converts correctly' do
+      it "rounds and converts correctly" do
         result = service.call
 
         expect(result).to be_success

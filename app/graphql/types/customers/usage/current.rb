@@ -23,9 +23,9 @@ module Types
           object.fees.group_by(&:charge_id).values
         end
 
-        def projected_amount_cents
+        def projected_amount_cents # rubocop:disable GraphQL/ResolverMethodLength
           fee_groups = object.fees.group_by(&:charge_id).values
-        
+
           fee_groups.sum do |fee_group|
             charge = fee_group.first.charge
             if charge.filters.any?
