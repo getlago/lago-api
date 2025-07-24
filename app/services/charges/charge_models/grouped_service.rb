@@ -3,7 +3,6 @@
 module Charges
   module ChargeModels
     class GroupedService < BaseService
-      # THE FIX, PART 1: Update the Result class to include all necessary attributes.
       Result = BaseResult[
         :grouped_results,
         :amount,
@@ -18,7 +17,6 @@ module Charges
       end
 
       def apply
-        # This part correctly calculates the result for each individual group.
         result.grouped_results = aggregation_result.aggregations.map do |aggregation|
           aggregation.aggregator = aggregation_result.aggregator
           group_result = charge_model.apply(
@@ -31,7 +29,6 @@ module Charges
           group_result
         end
 
-        # THE FIX, PART 2: Sum the values from each group into the final result.
         result.amount = result.grouped_results.sum(&:amount)
         result.units = result.grouped_results.sum(&:units)
         result.projected_amount = result.grouped_results.sum(&:projected_amount)
