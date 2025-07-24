@@ -11011,8 +11011,6 @@ input VoidedInvoiceFeeInput {
   invoiceDisplayName: String
   name: String
   subscriptionId: ID
-  taxCodes: [String!]
-  totalAggregatedUnits: Float
   unitAmountCents: BigInt
   units: Float
 }
