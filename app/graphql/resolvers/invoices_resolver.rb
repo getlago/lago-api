@@ -28,6 +28,7 @@ module Resolvers
     argument :search_term, String, required: false
     argument :self_billed, Boolean, required: false
     argument :status, [Types::Invoices::StatusTypeEnum], required: false
+    argument :subscription_id, ID, required: false
 
     type Types::Invoices::Object.collection_type, null: false
 
@@ -50,7 +51,8 @@ module Resolvers
       payment_status: nil,
       search_term: nil,
       self_billed: nil,
-      status: nil
+      status: nil,
+      subscription_id: nil
     )
       result = InvoicesQuery.call(
         organization: current_organization,
@@ -72,7 +74,8 @@ module Resolvers
           payment_status:,
           positive_due_amount:,
           self_billed:,
-          status:
+          status:,
+          subscription_id:
         }
       )
 
