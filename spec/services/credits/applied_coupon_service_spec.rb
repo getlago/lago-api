@@ -19,6 +19,7 @@ RSpec.describe Credits::AppliedCouponService do
       sub_total_excluding_taxes_amount_cents: base_amount_cents
     )
   end
+  let(:invoice_subscription) { create(:invoice_subscription, invoice:, timestamp: invoice.issuing_date, charges_to_datetime: invoice.issuing_date, charges_from_datetime: invoice.issuing_date - 1.month) }
   let(:base_amount_cents) { 300 }
 
   let(:coupon) { create(:coupon, organization:) }
@@ -30,6 +31,7 @@ RSpec.describe Credits::AppliedCouponService do
   before do
     fee1
     fee2
+    invoice_subscription
   end
 
   context "without lock" do
