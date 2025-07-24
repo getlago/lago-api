@@ -10954,7 +10954,6 @@ input VoidedInvoiceFeeInput {
   description: String
   id: ID
   invoiceDisplayName: String
-  name: String
   subscriptionId: ID
   unitAmountCents: BigInt
   units: Float

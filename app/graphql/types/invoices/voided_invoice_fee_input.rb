@@ -10,7 +10,6 @@ module Types
       argument :charge_id, ID, required: false
       argument :description, String, required: false
       argument :invoice_display_name, String, required: false
-      argument :name, String, required: false
       argument :subscription_id, ID, required: false
       argument :unit_amount_cents, GraphQL::Types::BigInt, required: false
       argument :units, GraphQL::Types::Float, required: false
