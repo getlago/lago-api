@@ -6,6 +6,7 @@ RSpec.describe ::V1::Customers::UsageSerializer do
   subject(:serializer) { described_class.new(usage, root_name: "customer_usage", includes: [:charges_usage]) }
 
   let(:fixed_date) { Date.new(2025, 7, 2) }
+  let(:result) { JSON.parse(serializer.to_json) }
   let(:from_datetime) { fixed_date.beginning_of_month }
   let(:to_datetime) { fixed_date.end_of_month }
   let(:issuing_date) { fixed_date.end_of_month }
@@ -51,20 +52,18 @@ RSpec.describe ::V1::Customers::UsageSerializer do
   before do
     allow(Date).to receive(:current).and_return(fixed_date)
     allow(Time).to receive(:current).and_return(fixed_date.to_time)
-    
+
     projection_result = instance_double(
       "Fees::ProjectionService::Result",
       projected_units: BigDecimal("60.0"),
       projected_amount_cents: 75,
       projected_pricing_unit_amount_cents: BigDecimal("0")
     )
-    
+
     allow(::Fees::ProjectionService).to receive(:call).and_return(
       instance_double("BaseService::Result", raise_if_error!: projection_result)
     )
   end
-
-  let(:result) { JSON.parse(serializer.to_json) }
 
   it "serializes the customer usage" do
     aggregate_failures do
