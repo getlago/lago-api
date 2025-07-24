@@ -26,6 +26,9 @@ module AdjustedFees
       if fee.fee_type == "subscription"
         adjustement_result = adjust_subription_fee(fee, adjusted_fee)
         Fees::ApplyTaxesService.call(fee: adjustement_result)
+        adjustement_result.applied_taxes.each do |applied_tax|
+          applied_tax.id = SecureRandom.uuid
+        end
         result.fee = adjustement_result
         result
       else
@@ -39,6 +42,9 @@ module AdjustedFees
         adjusted_fee = adjustement_result.fee
 
         Fees::ApplyTaxesService.call(fee: adjusted_fee)
+        adjusted_fee.applied_taxes.each do |applied_tax|
+          applied_tax.id = SecureRandom.uuid
+        end
         result.fee = adjusted_fee
         result
       end
