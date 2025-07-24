@@ -54,7 +54,7 @@ module Integrations
                 "taxdetailsoverride" => true,
                 "custbody_lago_id" => invoice.id,
                 "entity" => integration_customer.external_customer_id,
-                "lago_plan_code" => invoice.invoice_subscriptions.map(&:subscription).map(&:plan).map(&:code).join(",")
+                "lago_plan_codes" => invoice.invoice_subscriptions.map(&:subscription).map(&:plan).map(&:code).join(",")
               }
             )
 

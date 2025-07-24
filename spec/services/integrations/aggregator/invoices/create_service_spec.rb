@@ -151,7 +151,7 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         "custbody_lago_invoice_link" => invoice_url,
         "trandate" => anything,
         "duedate" => due_date,
-        "lago_plan_code" => invoice.invoice_subscriptions.map(&:subscription).map(&:plan).map(&:code).join(",")
+        "lago_plan_codes" => invoice.invoice_subscriptions.map(&:subscription).map(&:plan).map(&:code).join(",")
       },
       "lines" => [
         {
