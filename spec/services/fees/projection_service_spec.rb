@@ -16,13 +16,21 @@ RSpec.describe Fees::ProjectionService do
     )
   end
 
+  let(:billable_metric) do
+    instance_double(
+      "BillableMetric",
+      recurring?: false
+    )
+  end
+
   let(:charge) do
     instance_double(
       "Charge",
       properties: charge_properties,
       applied_pricing_unit: applied_pricing_unit,
       filters: [],
-      pricing_group_keys: nil
+      pricing_group_keys: nil,
+      billable_metric: billable_metric
     )
   end
 
@@ -163,7 +171,8 @@ RSpec.describe Fees::ProjectionService do
           subscription: subscription,
           boundaries: {
             from_datetime: from_datetime.to_date,
-            to_datetime: to_datetime.to_date
+            to_datetime: to_datetime.to_date,
+            charges_duration: charges_duration
           },
           filters: {},
           current_usage: true
@@ -222,7 +231,8 @@ RSpec.describe Fees::ProjectionService do
           subscription: subscription,
           boundaries: {
             from_datetime: from_datetime.to_date,
-            to_datetime: to_datetime.to_date
+            to_datetime: to_datetime.to_date,
+            charges_duration: charges_duration
           },
           filters: {
             charge_filter: charge_filter,
