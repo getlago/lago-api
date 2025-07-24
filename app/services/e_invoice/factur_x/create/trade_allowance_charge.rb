@@ -23,7 +23,7 @@ module EInvoice
             xml["ram"].CategoryTradeTax do
               xml["ram"].TypeCode VAT
               xml["ram"].CategoryCode S_CATEGORY
-              xml["ram"].RateApplicablePercent percent(discount.rate)
+              xml["ram"].RateApplicablePercent format_number(discount.rate * 100)
             end
           end
         end
