@@ -5,12 +5,15 @@ module EInvoice
     module Create
       class Builder < ::BaseService
         ROOT_NAMESPACES = {
+          "xmlns:xs" => "http://www.w3.org/2001/XMLSchema",
           "xmlns:rsm" => "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100",
           "xmlns:qdt" => "urn:un:unece:uncefact:data:standard:QualifiedDataType:100",
           "xmlns:ram" => "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
-          "xmlns:xs"  => "http://www.w3.org/2001/XMLSchema",
           "xmlns:udt" => "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100"
         }.freeze
+
+        VAT = "VAT"
+        S_CATEGORY = "S"
 
         Tax = Data.define(:rate, :amount)
         Payment = Data.define(:type, :amount)
@@ -61,14 +64,14 @@ module EInvoice
         end
 
         def formatted_date(date)
-          date.strftime('%Y%m%d')
+          date.strftime("%Y%m%d")
         end
 
         def percent(value)
           format_number(value * 100, "%.2f%%")
         end
 
-        def format_number(value, mask = '%.2f')
+        def format_number(value, mask = "%.2f")
           format(mask, value)
         end
       end

@@ -4,9 +4,6 @@ module EInvoice
   module FacturX
     module Create
       class ApplicableTradeTax < Builder
-        VAT = "VAT"
-        S_CATEGORY = "S"
-
         def initialize(xml:, invoice:, tax:)
           @tax = tax
           super(xml:, invoice:)

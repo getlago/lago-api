@@ -4,9 +4,6 @@ module EInvoice
   module FacturX
     module Create
       class TradeAllowanceCharge < Builder
-        VAT = "VAT"
-        S_CATEGORY = "S"
-
         def initialize(xml:, invoice:, discount:)
           @discount = discount
           super(xml:, invoice:)
