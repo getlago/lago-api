@@ -25,18 +25,64 @@ module Invoices
         process_fees(invoice)
         adjust_fees(invoice)
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice: invoice)
-        Invoices::ComputeAmountsFromFees.call(invoice: invoice)
+        invoice.fees_amount_cents = invoice.fees.sum(:amount_cents)
+        invoice.sub_total_excluding_taxes_amount_cents = invoice.fees.sum(:amount_cents)
+
+        Credits::ProgressiveBillingService.call(invoice:)
+        Credits::AppliedCouponsService.call(invoice: invoice) if should_create_coupon_credit?(invoice)
+
+        Invoices::ComputeTaxesAndTotalsService.call(invoice:, finalizing: true)
+        create_credit_note_credit(invoice) if should_create_credit_note_credit?(invoice)
+        create_applied_prepaid_credit(invoice) if should_create_applied_prepaid_credit?(invoice)
+        invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice: invoice)
         invoice.save!
       end
 
-      result.invoice = invoice
+      result.invoice = invoice.reload
       result
     end
 
     private
 
     attr_reader :voided_invoice, :fees_params
+
+    def should_create_credit_note_credit?(invoice)
+      return false unless invoice.total_amount_cents&.positive?
+
+      true
+    end
+
+    def should_create_coupon_credit?(invoice)
+      return false unless invoice.fees_amount_cents&.positive?
+
+      true
+    end
+
+    def should_create_applied_prepaid_credit?(invoice)
+      return false unless wallet&.active?
+      return false unless invoice.total_amount_cents&.positive?
+
+      wallet.balance.positive?
+    end
+
+    def create_applied_prepaid_credit(invoice)
+      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice:, wallet:)
+      prepaid_credit_result.raise_if_error!
+
+      refresh_amounts(invoice, credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
+    end
+
+    def create_credit_note_credit(invoice)
+      credit_result = Credits::CreditNoteService.new(invoice:).call
+      credit_result.raise_if_error!
+
+      refresh_amounts(invoice ,credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits
+    end
+
+    def refresh_amounts(invoice ,credit_amount_cents:)
+      invoice.total_amount_cents -= credit_amount_cents
+    end
 
     def create_regenerated_invoice
       generating_result = Invoices::CreateGeneratingService.call!(
@@ -132,9 +178,18 @@ module Invoices
       dup_fee.invoice = invoice
       dup_fee.payment_status = :pending
       dup_fee.taxes_amount_cents = 0
-      dup_fee.taxes_precise_amount_cents = 0.to_d
+      dup_fee.taxes_precise_amount_cents = 0
+      dup_fee.precise_coupons_amount_cents = 0
+      dup_fee.taxes_base_rate = 0
+      dup_fee.taxes_rate = 0
       dup_fee.save!
       dup_fee
+    end
+
+    def wallet
+      return @wallet if defined? @wallet
+
+      @wallet = voided_invoice.customer.wallets.active.first
     end
   end
 end
