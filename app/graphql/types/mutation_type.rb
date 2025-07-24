@@ -100,6 +100,7 @@ module Types
     field :download_invoice, mutation: Mutations::Invoices::Download
     field :finalize_all_invoices, mutation: Mutations::Invoices::FinalizeAll
     field :finalize_invoice, mutation: Mutations::Invoices::Finalize
+    field :generate_payment_url, mutation: Mutations::Invoices::GeneratePaymentUrl
     field :lose_invoice_dispute, mutation: Mutations::Invoices::LoseDispute
     field :refresh_invoice, mutation: Mutations::Invoices::Refresh
     field :retry_all_invoice_payments, mutation: Mutations::Invoices::RetryAllPayments
