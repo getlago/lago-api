@@ -127,7 +127,7 @@ module CreditNotes
       (
         precise_amount_cents -
         taxes_result.coupons_adjustment_amount_cents +
-        taxes_result.taxes_amount_cents
+        taxes_result.precise_taxes_amount_cents
       ).round
     end
   end
