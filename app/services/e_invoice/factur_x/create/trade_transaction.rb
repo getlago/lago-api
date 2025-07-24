@@ -6,7 +6,7 @@ module EInvoice
       class TradeTransaction < Builder
         def call(&block)
           xml.comment "Supply Chain Trade Transaction"
-          xml['rsm'].SupplyChainTradeTransaction do
+          xml["rsm"].SupplyChainTradeTransaction do
             yield xml
           end
         end
