@@ -5,7 +5,7 @@ module Types
     module AppliedTax
       include Types::BaseInterface
 
-      field :id, ID, null: true
+      field :id, ID, null: false
 
       field :tax, Types::Taxes::Object, null: true
       field :tax_code, String, null: false
