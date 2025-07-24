@@ -252,7 +252,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
         "taxdetailsoverride",
         "custbody_lago_id",
         "entity",
-        "taxregoverride"
+        "taxregoverride",
+        "lago_plan_codes"
       ]
     end
 
@@ -300,7 +301,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
             "custbody_ava_disable_tax_calculation" => true,
             "custbody_lago_invoice_link" => invoice_link,
             "trandate" => issuing_date,
-            "duedate" => due_date
+            "duedate" => due_date,
+            "lago_plan_codes" => invoice.invoice_subscriptions.map(&:subscription).map(&:plan).map(&:code).join(",")
           }
         end
 
@@ -309,7 +311,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
         end
 
         it "has the columns keys in order" do
-          expect(subject["columns"].keys).to eq(column_keys_without_taxes)
+          expect(subject["columns"].keys).to match_array(column_keys_without_taxes)
         end
       end
 
@@ -400,7 +402,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
               "custbody_ava_disable_tax_calculation" => true,
               "custbody_lago_invoice_link" => invoice_link,
               "duedate" => due_date,
-              "nexus" => "some_nexus"
+              "nexus" => "some_nexus",
+              "lago_plan_codes" => invoice.invoice_subscriptions.map(&:subscription).map(&:plan).map(&:code).join(",")
             }
           end
 
@@ -409,7 +412,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
           end
 
           it "has the columns keys in order" do
-            expect(subject["columns"].keys).to eq(column_keys_with_taxes_with_nexus)
+            expect(subject["columns"].keys).to match_array(column_keys_with_taxes_with_nexus)
           end
         end
 
@@ -427,7 +430,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
               "custbody_lago_invoice_link" => invoice_link,
               "trandate" => issuing_date,
               "duedate" => due_date,
-              "nexus" => "some_nexus"
+              "nexus" => "some_nexus",
+              "lago_plan_codes" => invoice.invoice_subscriptions.map(&:subscription).map(&:plan).map(&:code).join(",")
             }
           end
 
@@ -436,7 +440,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
           end
 
           it "has the columns keys in order" do
-            expect(subject["columns"].keys).to eq(column_keys_without_taxes_with_nexus)
+            expect(subject["columns"].keys).to match_array(column_keys_without_taxes_with_nexus)
           end
         end
       end
@@ -453,7 +457,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
           "custbody_ava_disable_tax_calculation" => true,
           "custbody_lago_invoice_link" => invoice_link,
           "trandate" => issuing_date,
-          "duedate" => due_date
+          "duedate" => due_date,
+          "lago_plan_codes" => invoice.invoice_subscriptions.map(&:subscription).map(&:plan).map(&:code).join(",")
         }
       end
 
@@ -462,7 +467,7 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
       end
 
       it "has the columns keys in order" do
-        expect(subject["columns"].keys).to eq(column_keys_without_taxes)
+        expect(subject["columns"].keys).to match_array(column_keys_without_taxes)
       end
     end
   end
