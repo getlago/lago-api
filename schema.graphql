@@ -8750,6 +8750,7 @@ type Query {
     searchTerm: String
     selfBilled: Boolean
     status: [InvoiceStatusTypeEnum!]
+    subscriptionId: ID
   ): InvoiceCollection!
 
   """
