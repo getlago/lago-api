@@ -40,13 +40,13 @@ module V1
               result = ::Fees::ProjectionService.call(fees: [fee]).raise_if_error!
               projected_units += result.projected_units
               projected_amount_cents += result.projected_amount_cents
-              projected_pricing_unit_amount_cents += result.projected_pricing_unit_amount_cents
+              projected_pricing_unit_amount_cents += result.projected_pricing_unit_amount_cents.to_i
             end
           else
             result = ::Fees::ProjectionService.call(fees: fees).raise_if_error!
             projected_units = result.projected_units
             projected_amount_cents = result.projected_amount_cents
-            projected_pricing_unit_amount_cents = result.projected_pricing_unit_amount_cents
+            projected_pricing_unit_amount_cents = result.projected_pricing_unit_amount_cents.to_i
           end
         end
 

@@ -22,7 +22,7 @@ module Charges
         new(...).apply
       end
 
-      def initialize(charge:, aggregation_result:, properties:, period_ratio:)
+      def initialize(charge:, aggregation_result:, properties:, period_ratio: nil)
         super(nil)
         @charge = charge
         @aggregation_result = aggregation_result
