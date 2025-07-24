@@ -582,7 +582,7 @@ interface AppliedTax {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
-  id: ID
+  id: ID!
   tax: Tax
   taxCode: String!
   taxDescription: String
@@ -3040,7 +3040,7 @@ type CreditNoteAppliedTax implements AppliedTax {
   baseAmountCents: BigInt!
   createdAt: ISO8601DateTime!
   creditNote: CreditNote!
-  id: ID
+  id: ID!
   tax: Tax
   taxCode: String!
   taxDescription: String
@@ -5061,7 +5061,7 @@ type Fee implements InvoiceItem {
   eventsCount: BigInt
   feeType: FeeTypesEnum!
   groupedBy: JSON!
-  id: ID
+  id: ID!
   invoiceDisplayName: String
   invoiceName: String
   itemCode: String!
@@ -5122,7 +5122,7 @@ type FeeAppliedTax implements AppliedTax {
   amountCurrency: CurrencyEnum!
   createdAt: ISO8601DateTime!
   fee: Fee!
-  id: ID
+  id: ID!
   tax: Tax
   taxCode: String!
   taxDescription: String
@@ -5637,7 +5637,7 @@ type InvoiceAppliedTax implements AppliedTax {
   createdAt: ISO8601DateTime!
   enumedTaxCode: InvoiceAppliedTaxOnWholeInvoiceCodeEnum
   feesAmountCents: BigInt!
-  id: ID
+  id: ID!
   invoice: Invoice!
   tax: Tax
   taxCode: String!
@@ -5710,7 +5710,7 @@ Invoice Item
 interface InvoiceItem {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
-  id: ID
+  id: ID!
   itemCode: String!
   itemName: String!
   itemType: String!
