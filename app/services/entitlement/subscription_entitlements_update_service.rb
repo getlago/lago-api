@@ -2,7 +2,7 @@
 
 module Entitlement
   class SubscriptionEntitlementsUpdateService < BaseService
-    include Concerns::CreateOrUpdateConcern
+    include ::Entitlement::Concerns::CreateOrUpdateConcern
 
     Result = BaseResult
 

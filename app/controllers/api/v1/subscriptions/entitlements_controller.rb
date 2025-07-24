@@ -92,6 +92,10 @@ module Api
 
         attr_reader :subscription
 
+        def resource_name
+          "subscription"
+        end
+
         def update_params
           params.fetch(:entitlements, {}).permit!
         end

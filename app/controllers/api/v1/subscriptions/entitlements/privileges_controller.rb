@@ -32,6 +32,10 @@ module Api
 
           attr_reader :subscription
 
+          def resource_name
+            "subscription"
+          end
+
           def find_subscription
             @subscription = current_organization.subscriptions
               .order("terminated_at DESC NULLS FIRST, started_at DESC") # TODO: Confirm

@@ -34,7 +34,7 @@ module Api
         end
 
         def resource_name
-          "privilege"
+          "feature"
         end
       end
     end

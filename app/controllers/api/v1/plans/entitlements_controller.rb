@@ -102,7 +102,7 @@ module Api
         end
 
         def resource_name
-          "entitlement"
+          "plan"
         end
 
         def find_plan

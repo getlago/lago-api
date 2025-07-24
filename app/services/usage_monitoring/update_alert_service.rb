@@ -2,7 +2,7 @@
 
 module UsageMonitoring
   class UpdateAlertService < BaseService
-    include Concerns::CreateOrUpdateConcern
+    include ::UsageMonitoring::Concerns::CreateOrUpdateConcern
 
     Result = BaseResult[:alert]
 
