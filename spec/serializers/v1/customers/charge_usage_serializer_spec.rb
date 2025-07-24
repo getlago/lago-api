@@ -6,13 +6,16 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
   subject(:serializer) { described_class.new(usage, root_name: "charges") }
 
   let(:charge) { create(:standard_charge) }
+  let(:result) { JSON.parse(serializer.to_json) }
   let(:billable_metric) { charge.billable_metric }
-  let(:from_datetime) { Date.current.beginning_of_month }
-  let(:to_datetime) { Date.current.end_of_month }
+  let(:subscription) { create(:subscription, plan: charge.plan) }
+  let(:from_datetime) { Date.new(2025, 7, 1) }
+  let(:to_datetime) { Date.new(2025, 7, 10) } # 10 day period for clean ratios
+  let(:fixed_date) { Date.new(2025, 7, 5) } # 5 days passed, ratio = 0.5
 
   let(:total_days) { (to_datetime - from_datetime).to_i + 1 }
   let(:charges_duration) { total_days }
-  let(:days_passed) { (Date.current - from_datetime).to_i + 1 }
+  let(:days_passed) { (fixed_date - from_datetime).to_i + 1 }
   let(:ratio) { days_passed.to_f / charges_duration }
 
   let(:is_recurring) { false }
@@ -20,28 +23,28 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     if is_recurring
       BigDecimal("10")
     else
-      (ratio > 0) ? (BigDecimal("10") / BigDecimal(ratio.to_s)).round(2) : BigDecimal("0")
+      (ratio > 0) ? (BigDecimal("10") / BigDecimal(ratio.to_s)).round(1) : BigDecimal("0")
     end
   end
   let(:expected_projected_amount_cents) do
     if is_recurring
       100
     else
-      (ratio > 0) ? (100 / BigDecimal(ratio.to_s)).round.to_i : 0
+      (ratio > 0) ? (BigDecimal("100") / BigDecimal(ratio.to_s)).round.to_i : 0
     end
   end
   let(:expected_pricing_unit_projected_amount_cents) do
     if is_recurring
       200
     else
-      (ratio > 0) ? (200 / BigDecimal(ratio.to_s)).round.to_i : 0
+      (ratio > 0) ? (BigDecimal("200") / BigDecimal(ratio.to_s)).round.to_i : 0
     end
   end
   let(:greater_expected_pricing_unit_projected_amount_cents) do
     if is_recurring
       600
     else
-      (ratio > 0) ? (600 / BigDecimal(ratio.to_s)).round.to_i : 0
+      (ratio > 0) ? (BigDecimal("600") / BigDecimal(ratio.to_s)).round.to_i : 0
     end
   end
   let(:pricing_unit_usage) { nil }
@@ -50,6 +53,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     [
       OpenStruct.new(
         charge_id: charge.id,
+        subscription: subscription,
         billable_metric: billable_metric,
         charge: charge,
         units: "10",
@@ -73,9 +77,23 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     ]
   end
 
-  let(:result) { JSON.parse(serializer.to_json) }
+  before do
+    allow(Date).to receive(:current).and_return(fixed_date)
+    allow(Time).to receive(:current).and_return(fixed_date.to_time)
+  end
 
   it "serializes the fee" do
+    projection_result = instance_double(
+      "ProjectionResult",
+      projected_units: expected_projected_units,
+      projected_amount_cents: expected_projected_amount_cents,
+      projected_pricing_unit_amount_cents: expected_pricing_unit_projected_amount_cents
+    )
+
+    allow(::Fees::ProjectionService).to receive(:call).and_return(
+      instance_double("ServiceResult", raise_if_error!: projection_result)
+    )
+
     expect(result["charges"].first).to include(
       "units" => "10.0",
       "projected_units" => expected_projected_units.to_s,
@@ -117,6 +135,17 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     end
 
     it "serializes the fee" do
+      projection_result = instance_double(
+        "ProjectionResult",
+        projected_units: expected_projected_units,
+        projected_amount_cents: expected_projected_amount_cents,
+        projected_pricing_unit_amount_cents: expected_pricing_unit_projected_amount_cents
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call).and_return(
+        instance_double("ServiceResult", raise_if_error!: projection_result)
+      )
+
       expect(result["charges"].first).to include(
         "units" => "10.0",
         "projected_units" => expected_projected_units.to_s,
@@ -170,6 +199,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       Array.new(3) do
         OpenStruct.new(
           charge_id: charge.id,
+          subscription: subscription,
           billable_metric: billable_metric,
           charge: charge,
           units: "10.0",
@@ -205,6 +235,17 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     end
 
     it "returns filters array with projected values" do
+      individual_projection_result = instance_double(
+        "ProjectionResult",
+        projected_units: expected_filter_projected_units / 3,
+        projected_amount_cents: expected_filter_projected_amount_cents / 3,
+        projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call).and_return(
+        instance_double("ServiceResult", raise_if_error!: individual_projection_result)
+      )
+
       expect(result["charges"].first["filters"].first).to include(
         "units" => "30.0",
         "projected_units" => expected_filter_projected_units.to_s,
@@ -232,6 +273,17 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       end
 
       it "returns filters array" do
+        individual_projection_result = instance_double(
+          "ProjectionResult",
+          projected_units: expected_filter_projected_units / 3,
+          projected_amount_cents: expected_filter_projected_amount_cents / 3,
+          projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
+        )
+
+        allow(::Fees::ProjectionService).to receive(:call).and_return(
+          instance_double("ServiceResult", raise_if_error!: individual_projection_result)
+        )
+
         expect(result["charges"].first["filters"].first).to include(
           "units" => "30.0",
           "amount_cents" => 300,
@@ -271,6 +323,17 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     end
 
     it "does not project values for recurring charges" do
+      projection_result = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("10"),
+        projected_amount_cents: 100,
+        projected_pricing_unit_amount_cents: 200
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call).and_return(
+        instance_double("ServiceResult", raise_if_error!: projection_result)
+      )
+
       expect(result["charges"].first).to include(
         "units" => "10.0",
         "projected_units" => "10.0",

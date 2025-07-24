@@ -12,6 +12,17 @@ module Fees
     def call
       result = Result.new
 
+      if charge&.billable_metric&.recurring?
+        current_amount_cents = fees.sum(&:amount_cents)
+        current_units = fees.sum { |f| BigDecimal(f.units) }
+        current_pricing_unit_amount_cents = fees.sum { |f| f.pricing_unit_usage&.amount_cents || 0 }
+
+        result.projected_amount_cents = current_amount_cents
+        result.projected_units = current_units
+        result.projected_pricing_unit_amount_cents = current_pricing_unit_amount_cents
+        return result
+      end
+
       if fees.blank? || !(period_ratio > 0 && period_ratio < 1)
         result.projected_amount_cents = BigDecimal("0")
         result.projected_units = BigDecimal("0")
@@ -104,7 +115,8 @@ module Fees
     def run_aggregation
       boundaries = {
         from_datetime: from_datetime.to_date,
-        to_datetime: to_datetime.to_date
+        to_datetime: to_datetime.to_date,
+        charges_duration: charges_duration_in_days
       }
 
       aggregator = BillableMetrics::AggregationFactory.new_instance(
