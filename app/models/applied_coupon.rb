@@ -54,7 +54,7 @@ class AppliedCoupon < ApplicationRecord
         .where(subscription_id: invoice_subscription.subscription_id)
         .pluck(:invoice_id)
 
-      credits.active.where(invoice_id: invoice_ids).sum(&:amount_cents)
+      credits.active.where(invoice_id: invoice_ids).joins(:invoice).where.not(invoices: {status: :voided}).sum(&:amount_cents)
     end.min
 
     remaining_amount = amount_cents - min_used_amount

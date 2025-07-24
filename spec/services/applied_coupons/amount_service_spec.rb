@@ -112,6 +112,48 @@ RSpec.describe AppliedCoupons::AmountService do
           expect(result.amount).to eq(6)
         end
       end
+
+      context "when the coupon was already applied to some invoice" do
+        let(:prev_invoice) { create(:invoice, customer:, organization:, issuing_date: 2.weeks.ago) }
+        let(:prev_invoice_subscription) { create(:invoice_subscription, invoice: prev_invoice, timestamp: prev_invoice.issuing_date, charges_to_datetime: invoice.issuing_date, charges_from_datetime: invoice.issuing_date - 1.month) }
+        let(:credit) { create(:credit, applied_coupon:, invoice: prev_invoice, amount_cents: 10) }
+
+        before do
+          prev_invoice_subscription
+          credit
+        end
+
+        it "calculates the remaining amount" do
+          result = amount_service.call
+
+          expect(result).to be_success
+          expect(result.amount).to eq(2)
+        end
+
+        context "when coupon is completely used" do
+          let(:credit) { create(:credit, applied_coupon:, invoice: prev_invoice, amount_cents: 12) }
+
+          it "returns 0" do
+            result = amount_service.call
+
+            expect(result).to be_success
+            expect(result.amount).to eq(0)
+          end
+        end
+
+        context "when previous invoice is from another billing period" do
+          before do
+            prev_invoice_subscription.update(charges_from_datetime: prev_invoice.issuing_date - 2.months, charges_to_datetime: prev_invoice.issuing_date - 1.month)
+          end
+
+          it "calculates the remaining amount" do
+            result = amount_service.call
+
+            expect(result).to be_success
+            expect(result.amount).to eq(12)
+          end
+        end
+      end
     end
 
     context "when coupon is forever and fixed amount" do
@@ -168,35 +210,6 @@ RSpec.describe AppliedCoupons::AmountService do
 
         expect(result).to be_success
         expect(result.amount).to eq(60)
-      end
-    end
-  end
-
-  context "when the coupon was already applied to some invoice" do
-    let(:prev_invoice) { create(:invoice, customer:, organization:, issuing_date: 2.weeks.ago) }
-    let(:prev_invoice_subscription) { create(:invoice_subscription, invoice: prev_invoice, timestamp: prev_invoice.issuing_date, charges_to_datetime: invoice.issuing_date, charges_from_datetime: invoice.issuing_date - 1.month) }
-    let(:credit) { create(:credit, applied_coupon:, invoice: prev_invoice, amount_cents: 10) }
-
-    before do
-      prev_invoice_subscription
-      credit
-    end
-
-    it "calculates the remaining amount" do
-      result = amount_service.call
-
-      expect(result).to be_success
-      expect(result.amount).to eq(2)
-    end
-
-    context "when coupon is completely used" do
-      let(:credit) { create(:credit, applied_coupon:, invoice: prev_invoice, amount_cents: 12) }
-
-      it "returns 0" do
-        result = amount_service.call
-
-        expect(result).to be_success
-        expect(result.amount).to eq(0)
       end
     end
   end
