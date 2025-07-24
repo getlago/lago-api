@@ -611,4 +611,39 @@ RSpec.describe Resolvers::InvoicesResolver, type: :graphql do
       expect(invoices_response["metadata"]["totalCount"]).to eq(1)
     end
   end
+
+  context "when filtering by subscription_id" do
+    let(:invoice_with_subscription_1) { create(:invoice, :subscription, organization:) }
+    let(:invoice_with_subscription_2) { create(:invoice, :subscription, organization:) }
+
+    let(:query) do
+      <<~GQL
+        query($subscriptionId: ID) {
+          invoices(subscriptionId: $subscriptionId) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    let(:result) do
+      execute_query(query:, variables: {subscriptionId: invoice_with_subscription_1.subscriptions.first.id})
+    end
+
+    before do
+      invoice_with_subscription_1
+      invoice_with_subscription_2
+    end
+
+    it "returns invoices for the specified subscription" do
+      invoices_response = result["data"]["invoices"]
+
+      expect(invoices_response["collection"].count).to eq(1)
+      expect(invoices_response["collection"].first["id"]).to eq(invoice_with_subscription_1.id)
+
+      expect(invoices_response["metadata"]["currentPage"]).to eq(1)
+      expect(invoices_response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
 end
