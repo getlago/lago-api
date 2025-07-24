@@ -2,7 +2,7 @@
 
 module Entitlement
   class PlanEntitlementsUpdateService < BaseService
-    include Concerns::CreateOrUpdateConcern
+    include ::Entitlement::Concerns::CreateOrUpdateConcern
 
     Result = BaseResult[:entitlements]
 
