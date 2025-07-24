@@ -77,11 +77,11 @@ module Wallets
         WalletTarget.create!(wallet:, billable_metric: bm, organization_id: wallet.organization_id)
       end
 
-      sanitize_wallet_billable_metrics
+      sanitize_wallet_billable_metrics(existing_wallet_billable_metric_ids) if existing_wallet_billable_metric_ids.present?
     end
 
-    def sanitize_wallet_billable_metrics
-      not_needed_wallet_target_ids = wallet.wallet_targets.pluck(:billable_metric_id).compact - billable_metrics.pluck(:id)
+    def sanitize_wallet_billable_metrics(existing_wallet_billable_metric_ids)
+      not_needed_wallet_target_ids = existing_wallet_billable_metric_ids - billable_metrics.pluck(:id)
       not_needed_wallet_target_ids.each do |wallet_billable_metric_id|
         WalletTarget.find_by(wallet:, billable_metric_id: wallet_billable_metric_id, organization: wallet.organization)&.destroy!
       end
