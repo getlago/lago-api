@@ -4948,6 +4948,26 @@ enum EmailSettingsEnum {
   payment_receipt_created
 }
 
+"""
+Input for updating a plan entitlement
+"""
+input EntitlementInput {
+  featureCode: String!
+
+  """
+  The privileges configuration
+  """
+  privileges: [EntitlementPrivilegeInput!]
+}
+
+"""
+Input for updating a plan entitlement privilege value
+"""
+input EntitlementPrivilegeInput {
+  privilegeCode: String!
+  value: String!
+}
+
 enum ErrorCodesEnum {
   invoice_generation_error
   not_provided
@@ -7804,26 +7824,6 @@ type PlanEntitlementCollection {
   metadata: CollectionMetadata!
 }
 
-"""
-Input for updating a plan entitlement
-"""
-input PlanEntitlementInput {
-  featureCode: String!
-
-  """
-  The privileges configuration
-  """
-  privileges: [PlanEntitlementPrivilegeInput!]
-}
-
-"""
-Input for updating a plan entitlement privilege value
-"""
-input PlanEntitlementPrivilegeInput {
-  privilegeCode: String!
-  value: String!
-}
-
 type PlanEntitlementPrivilegeObject {
   code: String!
   config: PrivilegeConfigObject!
@@ -9097,6 +9097,7 @@ type Subscription {
   currentBillingPeriodStartedAt: ISO8601DateTime
   customer: Customer!
   endingAt: ISO8601DateTime
+  entitlements: [SubscriptionEntitlement!]!
   externalId: String!
   fees: [Fee!]
   id: ID!
@@ -9131,6 +9132,23 @@ type SubscriptionCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type SubscriptionEntitlement {
+  code: String!
+  description: String
+  name: String!
+  privileges: [SubscriptionEntitlementPrivilegeObject!]!
+}
+
+type SubscriptionEntitlementPrivilegeObject {
+  code: String!
+  config: JSON!
+  name: String
+  overrideValue: String
+  planValue: String
+  value: String
+  valueType: PrivilegeValueTypeEnum!
 }
 
 type SubscriptionLifetimeUsage {
@@ -10681,7 +10699,7 @@ input UpdatePlanEntitlementsInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  entitlements: [PlanEntitlementInput!]!
+  entitlements: [EntitlementInput!]!
   planId: ID!
 }
 
