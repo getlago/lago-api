@@ -47,20 +47,27 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
   let(:invoice) { fee_and_invoice[:invoice] }
   let(:subscription_fee) { fee_and_invoice[:subscription_fee] }
   let(:invoice_applied_tax) { fee_and_invoice[:invoice_applied_tax] }
+  let(:paid_amount) { 0 }
 
   before { fee_and_invoice }
 
   def generate_invoice(fees_amount_cents:, coupons_amount_cents:, at:)
-    invoice_taxes_amount_cents = ((fees_amount_cents - coupons_amount_cents) * tax.rate / 100).round
-    total_amount_cents = fees_amount_cents + invoice_taxes_amount_cents
+    amount_after_coupons = fees_amount_cents - coupons_amount_cents
+    invoice_taxes_amount_cents = (amount_after_coupons * tax.rate / 100).round
+    sub_total_including_taxes_amount_cents = amount_after_coupons + invoice_taxes_amount_cents
+    total_amount_cents = sub_total_including_taxes_amount_cents
     invoice = create(
       :invoice,
       organization:,
       customer:,
       currency: "EUR",
       coupons_amount_cents:,
+      sub_total_excluding_taxes_amount_cents: amount_after_coupons,
+      sub_total_including_taxes_amount_cents: sub_total_including_taxes_amount_cents,
       fees_amount_cents:,
-      total_amount_cents:,
+      total_amount_cents: total_amount_cents,
+      total_paid_amount_cents: paid_amount,
+      payment_status: ((paid_amount == total_amount_cents) ? :succeeded : :pending),
       created_at: at
     )
     create(:invoice_applied_tax, invoice:, tax:, tax_rate: tax.rate, amount_cents: invoice_taxes_amount_cents)
@@ -87,9 +94,25 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     subscription_fee
   end
 
-  def generate_invoice_and_fee(amount_cents, coupons_amount_cents: coupon_amount, at: started_at, plan_amount_cents: nil)
-    invoice = generate_invoice(fees_amount_cents: amount_cents, coupons_amount_cents:, at:)
+  def generate_second_subscription_fee(invoice:, amount_cents:, at:)
+    second_subscription = create(:subscription, customer:, plan:, subscription_at:, started_at:, billing_time: :calendar)
+    second_taxes_amount_cents = (amount_cents * tax.rate / 100).round
+    second_subscription_fee = create(:fee,
+      subscription: second_subscription,
+      invoice:,
+      amount_cents: amount_cents,
+      taxes_amount_cents: second_taxes_amount_cents,
+      precise_amount_cents: amount_cents,
+      taxes_precise_amount_cents: second_taxes_amount_cents,
+      created_at: at)
+    create(:fee_applied_tax, tax:, fee: second_subscription_fee, amount_cents: second_taxes_amount_cents)
+  end
+
+  def generate_invoice_and_fee(amount_cents, coupons_amount_cents: coupon_amount, at: started_at, plan_amount_cents: nil, with_second_subscription: false)
+    fees_amount_cents = with_second_subscription ? amount_cents * 2 : amount_cents
+    invoice = generate_invoice(fees_amount_cents: fees_amount_cents, coupons_amount_cents:, at:)
     subscription_fee = generate_subscription_fee(invoice:, amount_cents:, coupons_amount_cents:, at:, plan_amount_cents:)
+    generate_second_subscription_fee(invoice:, amount_cents:, at:) if with_second_subscription
 
     {
       subscription_fee:,
@@ -105,7 +128,6 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     refund_amount_cents:,
     fee:
   )
-    credit_amount_cents = total_amount_cents - refund_amount_cents
     expect(credit_note).to be_available
     expect(credit_note).to be_order_change
 
@@ -113,6 +135,7 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
     expect(credit_note.total_amount_currency).to eq("EUR")
     expect(credit_note.refund_amount_cents).to eq(refund_amount_cents)
     expect(credit_note.refund_amount_currency).to eq("EUR")
+    credit_amount_cents = total_amount_cents - refund_amount_cents
     expect(credit_note.credit_amount_cents).to eq(credit_amount_cents)
     expect(credit_note.credit_amount_currency).to eq("EUR")
     expect(credit_note.taxes_amount_cents).to eq(tax_amount_cents)
@@ -187,6 +210,322 @@ RSpec.describe CreditNotes::CreateFromTermination, type: :service do
           precise_item_amount_cents: 32_00,
           tax_amount_cents: 6_40
         })
+      end
+    end
+
+    context "when refund is requested" do
+      subject(:create_service) { described_class.new(subscription:, refund: true, context:) }
+
+      let(:fee_and_invoice) { generate_invoice_and_fee(plan_amount_cents, with_second_subscription: true) }
+
+      context "when invoice is fully paid" do
+        let(:paid_amount) { 7440 }
+
+        it "creates a credit note with refund for full amount" do
+          # CREDITABLE AMOUNT CALCULATION
+          # Unused subscription (16 days)    €16.00
+          #                                  ------
+          # Subtotal                         €16.00
+          # Tax (20%)                        €3.20
+          #                                  ------
+          # Total creditable                 €19.20
+          #
+          # REFUND CALCULATION
+          # Invoice total paid               €74.40
+          # Subscription portion (50%)       €37.20
+          #
+          # Used subscription (15 days)      €15.00
+          #                                  ------
+          # Used subtotal                    €15.00
+          # Tax (20%)                        €3.00
+          #                                  ------
+          # Total used                       €18.00
+          #
+          # Available for refund             €19.20  (€37.20 - €18.00)
+          #
+          # FINAL AMOUNTS
+          # Refund amount                    €19.20
+          # Credit amount                    €0.00   (€19.20 - €19.20)
+          #                                  ------
+          # Total credit note                €19.20
+
+          test_credit_note_creation_from_termination(expectations: {
+            total_amount_cents: 19_20,
+            precise_item_amount_cents: 16_00,
+            tax_amount_cents: 3_20,
+            refund_amount_cents: 19_20,
+            fee: subscription_fee
+          })
+        end
+      end
+
+      context "when invoice is partially paid" do
+        context "when payment covers the subscription fee" do
+          let(:paid_amount) { 55_80 }
+
+          it "creates a credit note with refund and credit" do
+            # CREDITABLE AMOUNT CALCULATION
+            # Unused subscription (16 days)    €16.00
+            #                                  ------
+            # Subtotal                         €16.00
+            # Tax (20%)                        €3.20
+            #                                  ------
+            # Total creditable                 €19.20
+            #
+            # REFUND CALCULATION
+            # Invoice total paid               €55.80
+            # Subscription portion (50%)       €27.90
+            #
+            # Used subscription (15 days)      €15.00
+            #                                  ------
+            # Used subtotal                    €15.00
+            # Tax (20%)                        €3.00
+            #                                  ------
+            # Total used                       €18.00
+            #
+            # Available for refund             €9.90   (€27.90 - €18.00)
+            #
+            # FINAL AMOUNTS
+            # Refund amount                    €9.90
+            # Credit amount                    €9.30   (€19.20 - €9.90)
+            #                                  ------
+            # Total credit note                €19.20
+
+            test_credit_note_creation_from_termination(expectations: {
+              total_amount_cents: 19_20,
+              precise_item_amount_cents: 16_00,
+              tax_amount_cents: 3_20,
+              refund_amount_cents: 9_90,
+              fee: subscription_fee
+            })
+          end
+        end
+
+        context "when payment does not cover the subscription fee" do
+          let(:paid_amount) { 9_30 }
+
+          it "creates a credit note without refund" do
+            # CREDITABLE AMOUNT CALCULATION
+            # Unused subscription (16 days)    €16.00
+            #                                  ------
+            # Subtotal                         €16.00
+            # Tax (20%)                        €3.20
+            #                                  ------
+            # Total creditable                 €19.20
+            #
+            # REFUND CALCULATION
+            # Invoice total paid               €9.30
+            # Subscription portion (50%)       €4.65
+            #
+            # Used subscription (15 days)      €15.00
+            #                                  ------
+            # Used subtotal                    €15.00
+            # Tax (20%)                        €3.00
+            #                                  ------
+            # Total used                       €18.00
+            #
+            # Available for refund             €0.00   (€4.65 - €18.00, min 0)
+            #
+            # FINAL AMOUNTS
+            # Refund amount                    €0.00
+            # Credit amount                    €19.20  (€19.20 - €0.00)
+            #                                  ------
+            # Total credit note                €19.20
+
+            test_credit_note_creation_from_termination(expectations: {
+              total_amount_cents: 19_20,
+              precise_item_amount_cents: 16_00,
+              tax_amount_cents: 3_20,
+              refund_amount_cents: 0,
+              fee: subscription_fee
+            })
+          end
+        end
+
+        context "when there are credit notes on the fee" do
+          let(:paid_amount) { 55_80 }
+          let(:credit_note) do
+            create(:credit_note, customer:, invoice:, credit_amount_cents: 2_00, taxes_amount_cents: 40, refund_amount_cents: 0)
+          end
+          let(:credit_note_item) do
+            create(:credit_note_item, credit_note:,
+              fee: subscription_fee, amount_cents: 2_00, precise_amount_cents: 2_00)
+          end
+
+          before { credit_note_item }
+
+          context "when there are no coupons" do
+            it "creates a credit note with refund and credit" do
+              # CREDITABLE AMOUNT CALCULATION
+              # Unused subscription (16 days)    €16.00
+              # Previous credit notes            -€2.00
+              #                                  ------
+              # Subtotal                         €14.00
+              # Tax (20%)                        €2.80
+              #                                  ------
+              # Total creditable                 €16.80
+              #
+              # REFUND CALCULATION
+              # Invoice total paid               €55.80
+              # Subscription portion (50%)       €27.90
+              #
+              # Used subscription (15 days)      €15.00
+              #                                  ------
+              # Used subtotal                    €15.00
+              # Tax (20%)                        €3.00
+              #                                  ------
+              # Total used                       €18.00
+              #
+              # Available for refund             €9.90  (€27.90 - €18.00)
+              #
+              # FINAL AMOUNTS
+              # Refund amount                    €9.90
+              # Credit amount                    €6.90   (€16.80 - €9.90)
+              #                                  ------
+              # Total credit note                €16.80
+
+              test_credit_note_creation_from_termination(expectations: {
+                total_amount_cents: 16_80,
+                precise_item_amount_cents: 14_00,
+                tax_amount_cents: 2_80,
+                refund_amount_cents: 9_90,
+                fee: subscription_fee
+              })
+            end
+          end
+
+          context "when there are coupons" do
+            let(:coupon_amount) { 5_00 }
+            let(:fee_and_invoice) do
+              generate_invoice_and_fee(
+                31_00,
+                plan_amount_cents: 31_00,
+                coupons_amount_cents: coupon_amount,
+                with_second_subscription: true
+              )
+            end
+
+            it "creates a credit note with refund and credit" do
+              # CREDITABLE AMOUNT CALCULATION
+              # Unused subscription (16 days)    €16.00
+              # Previous credit notes            -€2.00
+              #                                  ------
+              # Subtotal                         €14.00
+              # Coupons (14€/31€ * 5€)           -€2.26
+              # Tax (20%)                        €2.35
+              #                                  ------
+              # Total creditable                 €14.09
+              #
+              # REFUND CALCULATION
+              # Invoice total paid               €55.80
+              # Subscription portion (45.61%)    €25.45
+              #
+              # Used subscription (15 days)      €15.00
+              #                                  ------
+              # Used subtotal                    €15.00
+              # Coupons (15€/31€ * 5€)           -€2.42
+              # Tax (20%)                        €2.52
+              #                                  ------
+              # Total used                       €15.10
+              #
+              # Available for refund             €10.35  (€25.45 - €15.10)
+              #
+              # FINAL AMOUNTS
+              # Refund amount                    €10.35
+              # Credit amount                    €3.74   (€14.09 - €10.35)
+              #                                  ------
+              # Total credit note                €14.09
+
+              test_credit_note_creation_from_termination(expectations: {
+                total_amount_cents: 14_09,
+                precise_item_amount_cents: 14_00,
+                tax_amount_cents: 2_35,
+                refund_amount_cents: 10_35,
+                fee: subscription_fee
+              })
+            end
+          end
+        end
+      end
+
+      context "when invoice has not been paid" do
+        let(:paid_amount) { 0 }
+
+        it "creates a credit note with no refund amount" do
+          # CREDITABLE AMOUNT CALCULATION
+          # Unused subscription (16 days)    €16.00
+          #                                  ------
+          # Subtotal                         €16.00
+          # Tax (20%)                        €3.20
+          #                                  ------
+          # Total creditable                 €19.20
+          #
+          # REFUND CALCULATION
+          # Invoice not paid                 €0.00
+          #
+          # FINAL AMOUNTS
+          # Refund amount                    €0.00
+          # Credit amount                    €19.20
+          #                                  ------
+          # Total credit note                €19.20
+
+          test_credit_note_creation_from_termination(expectations: {
+            total_amount_cents: 19_20,
+            precise_item_amount_cents: 16_00,
+            tax_amount_cents: 3_20,
+            refund_amount_cents: 0,
+            fee: subscription_fee
+          })
+        end
+      end
+
+      context "when it's an upgrade" do
+        subject(:create_service) { described_class.new(subscription:, refund: true, upgrade: true, context:) }
+
+        it "raises NotImplementedError" do
+          expect { create_service.call }.to raise_error(NotImplementedError)
+        end
+      end
+
+      context "when subscription has trial period" do
+        let(:trial_period) { 41 }
+        let(:paid_amount) { 19_20 }
+        let(:fee_and_invoice) { generate_invoice_and_fee(31_00) }
+
+        it "accounts for trial period in refund calculation" do
+          # CREDITABLE AMOUNT CALCULATION
+          # Unused subscription (16 days)          €16.00
+          #                                        ------
+          # Subtotal                               €16.00
+          # Tax (20%)                              €3.20
+          #                                        ------
+          # Total creditable                       €19.20
+          #
+          # REFUND CALCULATION
+          # Invoice total paid                     €19.20
+          #
+          # Used subscription (4 days after trial) €4.00
+          #                                        ------
+          # Used subtotal                          €4.00
+          # Tax (20%)                              €0.80
+          #                                        ------
+          # Total used                             €4.80
+          #
+          # Available for refund                   €14.40   (€19.20 - €4.80)
+          #
+          # FINAL AMOUNTS
+          # Refund amount                          €14.40
+          # Credit amount                          €4.80   (€19.20 - €14.40)
+          #                                        ------
+          # Total credit note                      €19.20
+          test_credit_note_creation_from_termination(expectations: {
+            total_amount_cents: 19_20,
+            precise_item_amount_cents: 16_00,
+            tax_amount_cents: 3_20,
+            refund_amount_cents: 14_40,
+            fee: subscription_fee
+          })
+        end
       end
     end
 
