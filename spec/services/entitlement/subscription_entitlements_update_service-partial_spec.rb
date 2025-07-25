@@ -62,11 +62,11 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
     it "creates the entitlement with correct values and leave existing untouched" do
       result
 
-      expect(entitlement.reload.values.map(&:value)).to eq(["100", "true"])
+      expect(entitlement.reload.values.map(&:value)).to eq(["100", "t"])
       new_entitlement = subscription.entitlements.order(:created_at).last
       expect(new_entitlement.feature).to eq(feature)
       expect(new_entitlement.values.sole.privilege).to eq privilege
-      expect(new_entitlement.values.sole.privilege).to eq "25"
+      expect(new_entitlement.values.sole.value).to eq "25"
     end
 
     context "when subscription does not exist" do
