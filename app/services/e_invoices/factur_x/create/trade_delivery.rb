@@ -9,10 +9,17 @@ module EInvoices
           xml["ram"].ApplicableHeaderTradeDelivery do
             xml["ram"].ActualDeliverySupplyChainEvent do
               xml["ram"].OccurrenceDateTime do
-                xml["udt"].DateTimeString formatted_date("20250527".to_date), format: 102
+                xml["udt"].DateTimeString formatted_date(oldest_subscription_start_date), format: YYMMDD
               end
             end
           end
+        end
+
+        private
+
+        def oldest_subscription_start_date
+          # TODO Confirm with Raffi if this is correct!!
+          invoice.subscriptions.order(subscriptions: {started_at: :asc}).first.started_at
         end
       end
     end
