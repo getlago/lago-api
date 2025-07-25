@@ -20,7 +20,7 @@ module Entitlement
 
         if privilege.value_type == "integer"
           return value if value.is_a?(Integer)
-          return value if value.to_i.to_s == value
+          return value if value.is_a?(String) && value.to_i.to_s == value
         end
         return value if privilege.value_type == "string" && value.is_a?(String)
 
