@@ -26,9 +26,17 @@ module EInvoices
 
         def call
           xml["rsm"].CrossIndustryInvoice(ROOT_NAMESPACES) {
-            Context.call(xml:)
+            xml.comment "Exchange Document Context"
+            xml["rsm"].ExchangedDocumentContext do
+              xml["ram"].GuidelineSpecifiedDocumentContextParameter do
+                xml["ram"].ID "urn:cen.eu:en16931:2017"
+              end
+            end
+
             Header.call(xml:, invoice:)
-            TradeTransaction.call(xml:, invoice:) do
+
+            xml.comment "Supply Chain Trade Transaction"
+            xml["rsm"].SupplyChainTradeTransaction do
               build_line_items_for_fees(xml)
 
               TradeAgreement.call(xml:)
