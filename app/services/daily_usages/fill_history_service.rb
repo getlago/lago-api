@@ -4,10 +4,10 @@ require "timecop"
 
 module DailyUsages
   class FillHistoryService < BaseService
-    def initialize(subscription:, from_datetime:, to_datetime: nil, sandbox: false)
+    def initialize(subscription:, from_date:, to_date: nil, sandbox: false)
       @subscription = subscription
-      @from_datetime = from_datetime
-      @to_datetime = to_datetime
+      @from_date = from_date
+      @to_date = to_date
       @sandbox = sandbox
 
       super
@@ -17,27 +17,20 @@ module DailyUsages
       previous_daily_usage = nil
 
       (from..to).each do |date|
+        next if !sandbox && subscription.daily_usages.where(usage_date: date).exists?
+
         datetime = date.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day.utc
         datetime = date.beginning_of_day.utc if datetime < date # Handle last day for timezone with positive offset
 
-        next if !sandbox && subscription.daily_usages.where(usage_date: datetime.to_date - 1.day).exists?
-
-        ds = Subscriptions::DatesService.new_instance(subscription, date, current_usage: true)
-
-        time_to_freeze = if ds.previous_beginning_of_period.to_date == date
-          (datetime - 1.day).end_of_day
-        else
-          datetime + 1.second
-        end
-
         Timecop.thread_safe = true
+        time_to_freeze = datetime.in_time_zone(subscription.customer.applicable_timezone).end_of_day
         Timecop.freeze(time_to_freeze) do
           usage = Invoices::CustomerUsageService.call(
             customer: subscription.customer,
             subscription: subscription,
             apply_taxes: false,
             with_cache: false,
-            max_to_datetime: datetime,
+            max_to_datetime: Time.current,
             with_zero_units_filters: false
           ).raise_if_error!.usage
           next if sandbox
@@ -60,7 +53,7 @@ module DailyUsages
               to_datetime: usage.to_datetime,
               refreshed_at: datetime,
               usage_diff: {},
-              usage_date: datetime.to_date - 1.day
+              usage_date: date
             )
 
             if date != from
@@ -91,22 +84,18 @@ module DailyUsages
       result
     end
 
-    attr_reader :subscription, :from_datetime, :to_datetime, :sandbox
+    attr_reader :subscription, :from_date, :to_date, :sandbox
     delegate :organization, to: :subscription
 
     def from
-      return @from if defined?(@from)
-
-      @from = subscription.started_at.to_date
-      @from = from_datetime.to_date if @from < from_datetime
-      @from
+      @from ||= [subscription.started_at.to_date, from_date].max
     end
 
     def to
       @to ||= if subscription.terminated?
         subscription.terminated_at.to_date
       else
-        (to_datetime || Time.current).to_date
+        to_date || Time.zone.yesterday
       end
     end
   end
