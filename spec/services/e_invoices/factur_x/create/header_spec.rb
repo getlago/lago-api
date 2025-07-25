@@ -9,10 +9,7 @@ RSpec.describe EInvoices::FacturX::Create::Header, type: :service do
     end
   end
 
-  let(:membership) { create(:membership) }
-  let(:organization) { membership.organization }
-  let(:customer) { create(:customer, organization:) }
-  let(:invoice) { create(:invoice, customer:, organization:, issuing_date: issuing_date.to_date) }
+  let(:invoice) { create(:invoice, issuing_date: issuing_date.to_date) }
   let(:issuing_date) { "20250316" }
 
   before { invoice }
