@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# TODO: check with frontend after release if this is necessary
 module Mutations
   module Entitlement
     class UpdatePlanEntitlements < BaseMutation

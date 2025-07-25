@@ -10,6 +10,14 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
   let(:minimum_commitment_invoice_display_name) { "Minimum spending" }
   let(:minimum_commitment_amount_cents) { 100 }
   let(:commitment_tax) { create(:tax, organization:) }
+
+  let(:feature) { create(:feature, code: :seats, organization:) }
+  let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
+  let(:entitlement) { create(:entitlement, feature:, plan:) }
+  let(:entitlement_value) { create(:entitlement_value, privilege:, entitlement:, value: "99") }
+
+  let(:feature2) { create(:feature, code: "sso", organization:) }
+
   let(:mutation) do
     <<~GQL
       mutation($input: UpdatePlanInput!) {
@@ -59,6 +67,10 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             amountCents,
             thresholdDisplayName,
             recurring
+          }
+          entitlements {
+            code
+            privileges { code value }
           }
         }
       }
@@ -192,13 +204,21 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
               thresholdDisplayName: "Threshold 3 Recurring",
               recurring: true
             }
+          ],
+          entitlements: [
+            {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]},
+            {featureCode: feature2.code, privileges: []}
           ]
         }
       }
     }
   end
 
-  before { minimum_commitment }
+  before do
+    minimum_commitment
+    entitlement_value
+    feature2
+  end
 
   it_behaves_like "requires current user"
   it_behaves_like "requires permission", "plans:update"
@@ -283,6 +303,16 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
         "amountCents" => "1",
         "recurring" => true
       )
+
+      expect(result_data["entitlements"]).to contain_exactly(
+        {
+          "code" => "seats",
+          "privileges" => [{"code" => "max", "value" => "22"}]
+        }, {
+          "code" => "sso",
+          "privileges" => []
+        }
+      )
     end
 
     it "updates minimum commitment" do
@@ -340,6 +370,8 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       volume_charge = result_data["charges"][4]
       expect(volume_charge["chargeModel"]).to eq("volume")
       expect(volume_charge["properties"]["volumeRanges"].count).to eq(2)
+
+      expect(result_data["entitlements"].sole["privileges"].sole["value"]).to eq("99") # not updated
     end
 
     it "does not update minimum commitment" do

@@ -13,12 +13,29 @@ module Mutations
       input_object_class Types::Plans::UpdateInput
       type Types::Plans::Object
 
-      def resolve(**args)
+      def resolve(entitlements:, **args)
         args[:charges].map!(&:to_h)
         plan = context[:current_user].plans.find_by(id: args[:id])
 
         result = ::Plans::UpdateService.call(plan:, params: args)
-        result.success? ? result.plan : result_error(result)
+
+        return result_error(result) unless result.success?
+
+        if entitlements.present? && License.premium?
+          result = ::Entitlement::PlanEntitlementsUpdateService.call(
+            organization: plan.organization,
+            plan:,
+            entitlements_params: entitlements.map do |ent|
+              [
+                ent.feature_code,
+                ent.privileges&.map { [it.privilege_code, it.value] }.to_h
+              ]
+            end.to_h,
+            partial: false
+          )
+        end
+
+        result.success? ? plan.reload : result_error(result)
       end
     end
   end
