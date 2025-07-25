@@ -17,27 +17,17 @@ module DailyUsages
       previous_daily_usage = nil
 
       (from..to).each do |date|
-        datetime = date.in_time_zone(subscription.customer.applicable_timezone).beginning_of_day.utc
-        datetime = date.beginning_of_day.utc if datetime < date # Handle last day for timezone with positive offset
-
-        next if !sandbox && subscription.daily_usages.where(usage_date: datetime.to_date - 1.day).exists?
-
-        ds = Subscriptions::DatesService.new_instance(subscription, date, current_usage: true)
-
-        time_to_freeze = if ds.previous_beginning_of_period.to_date == date
-          (datetime - 1.day).end_of_day
-        else
-          datetime + 1.second
-        end
+        datetime = date.beginning_of_day
+        next if !sandbox && subscription.daily_usages.where(usage_date: datetime.to_date).exists?
 
         Timecop.thread_safe = true
-        Timecop.freeze(time_to_freeze) do
+        Timecop.freeze(datetime) do
           usage = Invoices::CustomerUsageService.call(
             customer: subscription.customer,
             subscription: subscription,
             apply_taxes: false,
             with_cache: false,
-            max_to_datetime: datetime
+            max_to_datetime: datetime.in_time_zone(subscription.customer.applicable_timezone).end_of_day
           ).raise_if_error!.usage
           next if sandbox
 
@@ -57,9 +47,9 @@ module DailyUsages
               usage: ::V1::Customers::UsageSerializer.new(usage, includes: %i[charges_usage]).serialize,
               from_datetime: usage.from_datetime,
               to_datetime: usage.to_datetime,
-              refreshed_at: datetime,
+              refreshed_at: datetime.end_of_day,
               usage_diff: {},
-              usage_date: datetime.to_date - 1.day
+              usage_date: datetime.to_date
             )
 
             if date != from
