@@ -1,46 +1,39 @@
 # frozen_string_literal: true
 
-# spec
+require "rails_helper"
+
 RSpec.describe DailyUsages::FillHistoryService do
-  let(:service) { described_class.new(subscription:, from_datetime:, to_datetime:) }
+  let(:service) { described_class.new(subscription:, from_date:, to_date:) }
 
   describe "#to" do
     subject(:to) { service.to }
 
     let(:subscription) { create(:subscription, started_at: Time.current - 1.month) }
-    let(:from_datetime) { Time.current - 2.weeks }
-    let(:to_datetime) { nil }
+    let(:from_date) { Time.zone.today - 2.weeks }
+    let(:to_date) { nil }
 
     context "when subscription is terminated" do
       before { Subscriptions::TerminateService.call(subscription:) }
 
-      context "when to_datetime is provided" do
-        let(:to_datetime) { Time.current + 1.week }
+      let(:to_date) { Time.zone.today + 1.week }
 
-        it "returns the to_datetime date" do
-          expect(subject).to eq(subscription.terminated_at.to_date)
-        end
-      end
-
-      context "when to_datetime is nil" do
-        it "returns the current date" do
-          expect(subject).to eq(Time.current.to_date)
-        end
+      it "returns the terminated_at date" do
+        expect(subject).to eq(subscription.terminated_at.to_date)
       end
     end
 
     context "when subscription is active" do
-      context "when to_datetime is provided" do
-        let(:to_datetime) { Time.current + 1.week }
+      context "when to_date is provided" do
+        let(:to_date) { Time.zone.today + 1.week }
 
-        it "returns the to_datetime date" do
-          expect(subject).to eq(to_datetime.to_date)
+        it "returns the to_date date" do
+          expect(subject).to eq(to_date)
         end
       end
 
-      context "when to_datetime is nil" do
-        it "returns the current date" do
-          expect(subject).to eq(Time.current.to_date)
+      context "when to_date is nil" do
+        it "returns yesterday" do
+          expect(subject).to eq(Time.zone.yesterday)
         end
       end
     end
