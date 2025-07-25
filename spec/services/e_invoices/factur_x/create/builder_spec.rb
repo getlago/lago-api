@@ -16,7 +16,7 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
 
   shared_examples "xml section" do |section|
     it "contains the section tag" do
-      expect(subject).to xml_document_have_node(section[:xpath])
+      expect(subject).to contains_xml_node(section[:xpath])
     end
 
     it "contains section name before tag" do
@@ -48,10 +48,9 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
 
     context "with Exchange Document Context section" do
       it "have the document schema version number" do
-        expect(subject).to xml_document_have_node(
-          "//rsm:ExchangedDocumentContext/ram:GuidelineSpecifiedDocumentContextParameter/ram:ID",
-          "urn:cen.eu:en16931:2017"
-        )
+        expect(subject).to contains_xml_node(
+          "//rsm:ExchangedDocumentContext/ram:GuidelineSpecifiedDocumentContextParameter/ram:ID"
+        ).with_value("urn:cen.eu:en16931:2017")
       end
     end
   end

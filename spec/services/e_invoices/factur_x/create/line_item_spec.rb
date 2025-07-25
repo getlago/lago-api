@@ -12,60 +12,54 @@ RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
   let(:fee) { create(:fee) }
   let(:line_id) { 1 }
 
+  let(:root) { "//ram:IncludedSupplyChainTradeLineItem" }
+
   describe ".call" do
     it { is_expected.not_to be_nil }
 
     it "contains section name as comment" do
-      expect(subject).to xml_document_have_comment("Line Item #{line_id}: #{fee.invoice_name}")
+      expect(subject).to contains_xml_comment("Line Item #{line_id}: #{fee.invoice_name}")
     end
 
     it "have the line id" do
-      expect(subject).to xml_document_have_node(
-        "//ram:IncludedSupplyChainTradeLineItem/ram:AssociatedDocumentLineDocument/ram:LineID",
-        line_id
-      )
+      expect(subject).to contains_xml_node("#{root}/ram:AssociatedDocumentLineDocument/ram:LineID")
+        .with_value(line_id)
     end
 
     it "have the item name" do
-      expect(subject).to xml_document_have_node(
-        "//ram:IncludedSupplyChainTradeLineItem/ram:SpecifiedTradeProduct/ram:Name",
-        fee.item_name
-      )
+      expect(subject).to contains_xml_node("#{root}/ram:SpecifiedTradeProduct/ram:Name").with_value(fee.item_name)
     end
 
     it "have the item description" do
-      expect(subject).to xml_document_have_node(
-        "//ram:IncludedSupplyChainTradeLineItem/ram:SpecifiedTradeProduct/ram:Description",
-        fee.invoice_name
-      )
+      expect(subject).to contains_xml_node("#{root}/ram:SpecifiedTradeProduct/ram:Description").with_value(fee.invoice_name)
     end
 
     it "have the item amount" do
-      expect(subject).to xml_document_have_node(
-        "//ram:IncludedSupplyChainTradeLineItem/ram:SpecifiedLineTradeAgreement/ram:NetPriceProductTradePrice/ram:ChargeAmount",
-        fee.amount
-      )
+      expect(subject).to contains_xml_node(
+        "#{root}/ram:SpecifiedLineTradeAgreement/ram:NetPriceProductTradePrice/ram:ChargeAmount"
+      ).with_value(fee.amount)
     end
 
-    it "have the item units" do
-      expect(subject).to xml_document_have_node(
-        "//ram:IncludedSupplyChainTradeLineItem/ram:SpecifiedLineTradeDelivery/ram:BilledQuantity",
-        fee.units
-      )
+    context "with BilledQuantity" do
+      let(:xpath) { "#{root}/ram:SpecifiedLineTradeDelivery/ram:BilledQuantity" }
+
+      it "have the item units" do
+        expect(subject).to contains_xml_node(xpath)
+          .with_value(fee.units)
+          .with_attribute("unitCode", "C62")
+      end
     end
 
     it "have the item taxes rate" do
-      expect(subject).to xml_document_have_node(
-        "//ram:IncludedSupplyChainTradeLineItem/ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:RateApplicablePercent",
-        fee.taxes_rate
-      )
+      expect(subject).to contains_xml_node(
+        "#{root}/ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:RateApplicablePercent"
+      ).with_value(fee.taxes_rate)
     end
 
     it "have the item total amount" do
-      expect(subject).to xml_document_have_node(
-        "//ram:IncludedSupplyChainTradeLineItem/ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount",
-        fee.total_amount
-      )
+      expect(subject).to contains_xml_node(
+        "#{root}/ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount"
+      ).with_value(fee.total_amount)
     end
   end
 end
