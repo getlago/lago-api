@@ -60,7 +60,7 @@ module Customers
         customer.address_line2 = params[:address_line2] if params.key?(:address_line2)
         customer.state = params[:state] if params.key?(:state)
         customer.zipcode = params[:zipcode] if params.key?(:zipcode)
-        customer.email = params[:email] if params.key?(:email)
+        customer.email = remove_invisible_chars(params[:email]) if params.key?(:email)
         customer.city = params[:city] if params.key?(:city)
         customer.shipping_address_line1 = shipping_address[:address_line1] if shipping_address.key?(:address_line1)
         customer.shipping_address_line2 = shipping_address[:address_line2] if shipping_address.key?(:address_line2)
@@ -273,6 +273,10 @@ module Customers
 
     def should_create_billing_configuration?(billing, customer)
       (billing[:sync_with_provider] || billing[:provider_customer_id].present?) && customer.provider_customer&.provider_customer_id.nil?
+    end
+
+    def remove_invisible_chars(str)
+      str.gsub(Regex::INVISIBLE_CHARS, "")
     end
   end
 end
