@@ -10722,6 +10722,7 @@ input UpdatePlanInput {
   clientMutationId: String
   code: String!
   description: String
+  entitlements: [EntitlementInput!]
   id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
@@ -10826,6 +10827,7 @@ input UpdateSubscriptionInput {
   """
   clientMutationId: String
   endingAt: ISO8601DateTime
+  entitlements: [EntitlementInput!]
   id: ID!
   name: String
   planOverrides: PlanOverridesInput

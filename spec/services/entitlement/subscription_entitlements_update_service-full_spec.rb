@@ -73,7 +73,74 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
 
         expect(result).to be_success
         expect(existing_value.value).to eq "10"
-        expect(subscription.entitlements.except(existing_entitlement).sole.values.sole.value).to eq("25")
+        expect(subscription.entitlements.sole.values.sole.value).to eq("25")
+      end
+    end
+
+    context "when plan already has the same feature and privilege values" do
+      let(:existing_entitlement) { create(:entitlement, organization:, plan:, feature:) }
+      let(:existing_value) { create(:entitlement_value, entitlement: existing_entitlement, privilege:, value: "25", organization:) }
+
+      before { existing_value }
+
+      it "does not create an override" do
+        result
+
+        expect(result).to be_success
+        expect(existing_value.value).to eq "25"
+        expect(subscription.entitlements.reload).to be_empty
+      end
+
+      context "when there is an override with a different value" do
+        let(:existing_override_entitlement) { create(:entitlement, organization:, plan: nil, subscription:, feature:) }
+        let(:existing_override_value) { create(:entitlement_value, entitlement: existing_override_entitlement, privilege:, value: "3453453", organization:) }
+
+        it "removes the subscription override" do
+          existing_override_value
+          result
+
+          expect(existing_override_entitlement.reload.deleted_at).to be_present
+          expect(existing_override_value.reload.deleted_at).to be_present
+          expect(subscription.entitlements.reload).to be_empty
+
+          final_ent = Entitlement::SubscriptionEntitlement.for_subscription(subscription).where(privilege_code: "max").sole
+          expect(final_ent.privilege_plan_value).to eq("25")
+          expect(final_ent.privilege_override_value).to be_nil
+        end
+      end
+
+      context "when feature was removed" do
+        let(:removal) { create(:subscription_feature_removal, feature: existing_entitlement.feature, subscription:) }
+
+        before { removal }
+
+        it "removes the feature removal" do
+          result
+
+          expect(removal.reload.deleted_at).to be_present
+          expect(subscription.entitlements.reload).to be_empty
+
+          final_ent = Entitlement::SubscriptionEntitlement.for_subscription(subscription).where(privilege_code: "max").sole
+          expect(final_ent.privilege_plan_value).to eq("25")
+          expect(final_ent.privilege_override_value).to be_nil
+        end
+
+        context "when the value is different from plan" do
+          let(:entitlements_params) do
+            {
+              "seats" => {
+                "max" => 3
+              }
+            }
+          end
+
+          it "restore the feature and create an override" do
+            result
+
+            expect(removal.reload.deleted_at).to be_present
+            expect(subscription.entitlements.reload.sole.values.sole.value).to eq "3"
+          end
+        end
       end
     end
 
@@ -82,7 +149,6 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
       let(:existing_value) { create(:entitlement_value, entitlement: existing_entitlement, privilege:, value: "10", organization:) }
 
       before do
-        existing_entitlement
         existing_value
       end
 

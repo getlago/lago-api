@@ -24,7 +24,9 @@ module Entitlement
       return result.not_found_failure!(resource: "subscription") unless subscription
 
       ActiveRecord::Base.transaction do
-        remove_or_delete_missing_entitlements if full?
+        if full?
+          remove_or_delete_missing_entitlements
+        end
         update_entitlements
       end
 
@@ -60,6 +62,14 @@ module Entitlement
       !partial?
     end
 
+    def subscription_plan_entitlements_as_params
+      @subscription_plan_entitlements_as_params ||= (subscription.plan.parent || subscription.plan)
+        .entitlements
+        .includes(:feature, values: :privilege)
+        .map { |entitlement| [entitlement.feature.code, entitlement.values.map { |v| [v.privilege.code, v.value] }.to_h] }
+        .to_h
+    end
+
     def remove_or_delete_missing_entitlements
       missing_codes = SubscriptionEntitlement.for_subscription(subscription).where.not(feature_code: entitlements_params.keys).pluck(:feature_code).uniq
 
@@ -79,17 +89,25 @@ module Entitlement
       end
     end
 
-    def delete_missing_entitlements
-      # Delete missing
-      missing = subscription.entitlements.joins(:feature).where.not(feature: {code: entitlements_params.keys})
-      EntitlementValue.where(entitlement: missing).discard_all!
-      missing.discard_all!
-    end
-
     def delete_missing_entitlement_values(entitlement, privilege_values)
       return if privilege_values.blank?
 
       entitlement.values.joins(:privilege).where.not(privilege: {code: privilege_values.keys}).discard_all!
+    end
+
+    def feature_config_same_as_plan?(feature_code, privilege_values)
+      return false if subscription_plan_entitlements_as_params[feature_code].nil?
+      return false if privilege_values.keys != subscription_plan_entitlements_as_params[feature_code].keys
+
+      subscription_plan_entitlements_as_params[feature_code].all? do |privilege_code, value|
+        if value == "t"
+          ["true", true, "t", 1].include? privilege_values[privilege_code]
+        elsif value == "f"
+          ["false", false, "f", 0].include? privilege_values[privilege_code]
+        else
+          privilege_values[privilege_code].to_s == value.to_s
+        end
+      end
     end
 
     def update_entitlements
@@ -100,7 +118,23 @@ module Entitlement
 
         raise ActiveRecord::RecordNotFound.new("Entitlement::Feature") unless feature
 
+        # if the feature was previously removed, we restore it
+        removal = subscription.entitlement_removals.find { it.entitlement_feature_id == feature.id }
+        if removal
+          removal.discard!
+        end
+
         entitlement = subscription.entitlements.includes(:values).find { it.entitlement_feature_id == feature.id }
+
+        # When the params contains the same info as the plan, we delete the override if found or don't create overrides
+        if full? && feature_config_same_as_plan?(feature_code, privilege_values)
+          if entitlement
+            entitlement.values.discard_all!
+            entitlement.discard!
+          end
+
+          next
+        end
 
         if entitlement.nil?
           entitlement = Entitlement.create!(
