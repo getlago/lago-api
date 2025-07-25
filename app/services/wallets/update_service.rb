@@ -69,7 +69,8 @@ module Wallets
     end
 
     def process_billable_metrics
-      existing_wallet_billable_metric_ids = wallet.wallet_targets.pluck(:billable_metric_id).compact
+      # In case of adding new type of limitation in wallet_targets, query from below should use compact to avoid nil values in the array
+      existing_wallet_billable_metric_ids = wallet.wallet_targets.pluck(:billable_metric_id)
 
       billable_metrics.each do |bm|
         next if existing_wallet_billable_metric_ids.include?(bm.id)

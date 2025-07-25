@@ -49,10 +49,8 @@ module Wallets
           Wallets::RecurringTransactionRules::CreateService.call(wallet:, wallet_params: params)
         end
 
-        if billable_metric_identifiers.present?
-          billable_metrics.each do |bm|
-            WalletTarget.create!(wallet:, billable_metric: bm, organization_id: wallet.organization_id)
-          end
+        billable_metrics.each do |bm|
+          WalletTarget.create!(wallet:, billable_metric: bm, organization_id: wallet.organization_id)
         end
       end
 
