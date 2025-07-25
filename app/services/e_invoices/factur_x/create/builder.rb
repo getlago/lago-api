@@ -14,6 +14,7 @@ module EInvoices
 
         VAT = "VAT"
         S_CATEGORY = "S"
+        YYMMDD = 102
 
         Tax = Data.define(:rate, :amount)
         Payment = Data.define(:type, :amount)
