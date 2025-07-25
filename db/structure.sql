@@ -271,7 +271,7 @@ DROP INDEX IF EXISTS public.index_usage_monitoring_alerts_on_billable_metric_id;
 DROP INDEX IF EXISTS public.index_usage_monitoring_alert_thresholds_on_organization_id;
 DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
-DROP INDEX IF EXISTS public.index_unique_starting_subscription_invoice;
+DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_taxes_on_code_and_organization_id;
@@ -7434,10 +7434,10 @@ CREATE UNIQUE INDEX index_unique_applied_to_organization_per_organization ON pub
 
 
 --
--- Name: index_unique_starting_subscription_invoice; Type: INDEX; Schema: public; Owner: -
+-- Name: index_unique_starting_invoice_subscription; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX index_unique_starting_subscription_invoice ON public.invoice_subscriptions USING btree (subscription_id, invoicing_reason) WHERE (invoicing_reason = 'subscription_starting'::public.subscription_invoicing_reason);
+CREATE UNIQUE INDEX index_unique_starting_invoice_subscription ON public.invoice_subscriptions USING btree (subscription_id, invoicing_reason) WHERE ((invoicing_reason = 'subscription_starting'::public.subscription_invoicing_reason) AND (regenerated_invoice_id IS NULL));
 
 
 --
@@ -9455,6 +9455,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250721091802'),
 ('20250718174008'),
 ('20250718140450'),
+('20250717193826'),
+('20250717193700'),
 ('20250717092012'),
 ('20250716150049'),
 ('20250716143358'),
