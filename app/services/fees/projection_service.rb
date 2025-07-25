@@ -16,6 +16,7 @@ module Fees
         current_amount_cents = fees.sum(&:amount_cents)
         current_units = fees.sum { |f| BigDecimal(f.units) }
         current_pricing_unit_amount_cents = fees.sum { |f| f.pricing_unit_usage&.amount_cents || 0 }
+        current_pricing_unit_amount_cents = nil if current_pricing_unit_amount_cents.zero?
 
         result.projected_amount_cents = current_amount_cents
         result.projected_units = current_units
@@ -101,14 +102,13 @@ module Fees
       current_date = Time.current.to_date
 
       total_days = (to_date - from_date).to_i + 1
-      charges_duration = charges_duration_in_days || total_days
 
       return 1.0 if current_date >= to_date
       return 0.0 if current_date < from_date
 
       days_passed = (current_date - from_date).to_i + 1
 
-      ratio = days_passed.fdiv(charges_duration)
+      ratio = days_passed.fdiv(total_days)
       ratio.clamp(0.0, 1.0)
     end
 
