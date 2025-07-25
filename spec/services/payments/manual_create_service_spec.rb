@@ -41,6 +41,19 @@ RSpec.describe Payments::ManualCreateService, type: :service do
         end
       end
 
+      context "when invoice is in status that does not allow manual payment" do
+        let(:invoice) { create(:invoice, :draft, customer:, organization:) }
+
+        it "returns forbidden failure" do
+          result = service.call
+
+          aggregate_failures do
+            expect(result).not_to be_success
+            expect(result.error).to be_a(BaseService::ForbiddenFailure)
+          end
+        end
+      end
+
       context "when invoice's payment request is succeeded" do
         let(:payment_request) { create(:payment_request, payment_status: "succeeded") }
 
