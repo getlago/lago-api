@@ -21,5 +21,14 @@ module Utils
         value
       end
     end
+
+    def self.convert_gql_input_to_params(entitlements)
+      entitlements.map do |ent|
+        [
+          ent.feature_code,
+          ent.privileges&.map { [it.privilege_code, it.value] }.to_h
+        ]
+      end.to_h
+    end
   end
 end

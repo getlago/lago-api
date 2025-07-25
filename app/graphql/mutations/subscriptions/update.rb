@@ -22,12 +22,7 @@ module Mutations
           result = ::Entitlement::SubscriptionEntitlementsUpdateService.call(
             organization: subscription.organization,
             subscription:,
-            entitlements_params: entitlements.map do |ent|
-              [
-                ent.feature_code,
-                ent.privileges&.map { [it.privilege_code, it.value] }.to_h
-              ]
-            end.to_h,
+            entitlements_params: Utils::Entitlement.convert_gql_input_to_params(entitlements),
             partial: false
           )
         end
