@@ -3205,6 +3205,26 @@
           "fields": null,
           "inputFields": [
             {
+              "name": "billableMetricIds",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
+                  }
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "feeTypes",
               "description": null,
               "type": {
@@ -56737,6 +56757,26 @@
           "interfaces": [],
           "possibleTypes": null,
           "fields": [
+            {
+              "name": "billableMetrics",
+              "description": null,
+              "type": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "BillableMetric",
+                    "ofType": null
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
             {
               "name": "feeTypes",
               "description": null,
