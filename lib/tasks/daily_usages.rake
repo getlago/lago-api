@@ -7,17 +7,17 @@ namespace :daily_usages do
 
     Rails.logger.level = Logger::INFO
 
-    days_ago = (args[:days_ago] || 120).to_i.days.ago
+    from_date = (args[:days_ago] || DailyUsage::DEFAULT_HISTORY_DAYS).days.ago.to_date
     organization = Organization.find(args[:organization_id])
 
     subscriptions = organization.subscriptions
       .where(status: [:active, :terminated])
       .where.not(started_at: nil)
-      .where("terminated_at IS NULL OR terminated_at >= ?", days_ago)
+      .where("terminated_at IS NULL OR terminated_at >= ?", from_date)
       .includes(customer: :organization)
 
     subscriptions.find_each do |subscription|
-      DailyUsages::FillHistoryJob.perform_later(subscription:, from_datetime: days_ago)
+      DailyUsages::FillHistoryJob.perform_later(subscription:, from_date:)
     end
   end
 end
