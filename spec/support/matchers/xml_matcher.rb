@@ -10,9 +10,9 @@ RSpec::Matchers.define :xml_document_have_node do |xpath, value|
 
   failure_message do |document|
     if @node.nil?
-      "expected xpath #{@xpath} would have been present in the XML"
+      "expected XPath #{@xpath} to be present, but it was not found in the XML"
     else
-      "xpath #{@xpath} value is #{@node.text} and was expected #{@value}"
+      "expected XPath #{@xpath} to have value #{@value}, but was #{@node.text}"
     end
   end
 end
