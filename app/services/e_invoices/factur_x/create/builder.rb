@@ -41,7 +41,7 @@ module EInvoices
               build_line_items_for_fees(xml)
 
               TradeAgreement.call(xml:, invoice:)
-              TradeDelivery.call(xml:)
+              TradeDelivery.call(xml:, invoice:)
               TradeSettlement.call(xml:, invoice:) do
                 TradeSettlementPayment.call(xml:, invoice:, payment: Payment.new(type: TradeSettlementPayment::STANDARD, amount: nil))
                 TradeSettlementPayment.call(xml:, invoice:, payment: Payment.new(type: TradeSettlementPayment::PREPAID, amount: 10))
