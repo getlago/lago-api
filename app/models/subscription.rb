@@ -19,6 +19,7 @@ class Subscription < ApplicationRecord
   has_many :daily_usages
   has_many :usage_thresholds, through: :plan
   has_many :entitlements, class_name: "Entitlement::Entitlement"
+  has_many :entitlement_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
 
   has_many :activity_logs,
     -> { order(logged_at: :desc) },

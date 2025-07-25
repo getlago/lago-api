@@ -2877,6 +2877,7 @@ input CreatePlanInput {
   clientMutationId: String
   code: String!
   description: String
+  entitlements: [EntitlementInput!]
   interval: PlanInterval!
   invoiceDisplayName: String
   minimumCommitment: CommitmentInput
@@ -2957,6 +2958,7 @@ input CreateSubscriptionInput {
   clientMutationId: String
   customerId: ID!
   endingAt: ISO8601DateTime
+  entitlements: [EntitlementInput!]
   externalId: String
   name: String
   planId: ID!
@@ -10720,6 +10722,7 @@ input UpdatePlanInput {
   clientMutationId: String
   code: String!
   description: String
+  entitlements: [EntitlementInput!]
   id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
@@ -10824,6 +10827,7 @@ input UpdateSubscriptionInput {
   """
   clientMutationId: String
   endingAt: ISO8601DateTime
+  entitlements: [EntitlementInput!]
   id: ID!
   name: String
   planOverrides: PlanOverridesInput
