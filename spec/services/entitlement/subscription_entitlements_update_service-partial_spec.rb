@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :service do
-  subject(:result) { described_class.call(organization:, subscription:, entitlements_params:, partial: false) }
+  subject(:result) { described_class.call(organization:, subscription:, entitlements_params:, partial: true) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -19,9 +19,18 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
     }
   end
 
+  let(:feature2) { create(:feature, code: "storage", organization:) }
+  let(:privilege2) { create(:privilege, feature: feature2, code: "limit", value_type: "integer") }
+  let(:privilege3) { create(:privilege, feature: feature2, code: "allow_overage", value_type: "boolean") }
+  let(:entitlement) { create(:entitlement, feature:, plan:) }
+  let(:entitlement_value2) { create(:entitlement_value, entitlement:, privilege: privilege2, value: "100") }
+  let(:entitlement_value3) { create(:entitlement_value, entitlement:, privilege: privilege3, value: true) }
+
   before do
     feature
     privilege
+    entitlement_value2
+    entitlement_value3
   end
 
   it_behaves_like "a premium service"
@@ -50,14 +59,14 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
       expect(Utils::ActivityLog).to have_produced("subscription.updated").after_commit.with(subscription)
     end
 
-    it "creates the entitlement with correct values" do
+    it "creates the entitlement with correct values and leave existing untouched" do
       result
-      entitlement = subscription.entitlements.first
-      entitlement_value = entitlement.values.first
 
-      expect(entitlement.feature).to eq(feature)
-      expect(entitlement_value.privilege).to eq(privilege)
-      expect(entitlement_value.value).to eq("25")
+      expect(entitlement.reload.values.map(&:value)).to eq(["100", "true"])
+      new_entitlement = subscription.entitlements.order(:created_at).last
+      expect(new_entitlement.feature).to eq(feature)
+      expect(new_entitlement.values.sole.privilege).to eq privilege
+      expect(new_entitlement.values.sole.privilege).to eq "25"
     end
 
     context "when subscription does not exist" do
@@ -96,49 +105,6 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
       it "returns not found failure" do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("privilege_not_found")
-      end
-    end
-
-    context "when subscription has existing entitlements" do
-      let(:existing_entitlement) { create(:entitlement, organization:, subscription_id: subscription.id, plan: nil, feature:) }
-      let(:existing_value) { create(:entitlement_value, entitlement: existing_entitlement, privilege:, value: "10", organization:) }
-
-      before do
-        existing_entitlement
-        existing_value
-      end
-
-      it "replaces existing entitlements" do
-        result
-
-        expect(result).to be_success
-        expect(subscription.entitlements.first.values.first.value).to eq("25")
-      end
-    end
-
-    context "when partial is true" do
-      subject(:result) { described_class.call(organization:, subscription:, entitlements_params:, partial: true) }
-
-      let(:existing_entitlement) { create(:entitlement, organization:, subscription_id: subscription.id, plan: nil, feature:) }
-      let(:existing_value) { create(:entitlement_value, entitlement: existing_entitlement, privilege:, value: "10", organization:) }
-      let(:other_feature) { create(:feature, organization:, code: "storage") }
-      let(:other_privilege) { create(:privilege, organization:, feature: other_feature, code: "limit", value_type: "integer") }
-      let(:other_entitlement) { create(:entitlement, organization:, subscription_id: subscription.id, plan: nil, feature: other_feature) }
-      let(:other_value) { create(:entitlement_value, entitlement: other_entitlement, privilege: other_privilege, value: "100", organization:) }
-
-      before do
-        existing_entitlement
-        existing_value
-        other_entitlement
-        other_value
-      end
-
-      it "keeps existing entitlements not in params" do
-        result
-
-        expect(result).to be_success
-        expect(subscription.entitlements.count).to eq(2)
-        expect(subscription.entitlements.find_by(feature: other_feature)).to be_present
       end
     end
   end
