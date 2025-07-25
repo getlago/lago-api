@@ -1,4 +1,4 @@
-module EInvoice
+module EInvoices
   class BaseService
     COMMERCIAL_INVOICE = 380
     UNITS_CODE = "C62"
