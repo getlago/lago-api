@@ -24,7 +24,7 @@ module Entitlement
       return result.not_found_failure!(resource: "subscription") unless subscription
 
       ActiveRecord::Base.transaction do
-        delete_missing_entitlements unless partial?
+        remove_or_delete_missing_entitlements if full?
         update_entitlements
       end
 
@@ -56,7 +56,31 @@ module Entitlement
     attr_reader :organization, :subscription, :entitlements_params, :partial
     alias_method :partial?, :partial
 
+    def full?
+      !partial?
+    end
+
+    def remove_or_delete_missing_entitlements
+      missing_codes = SubscriptionEntitlement.for_subscription(subscription).where.not(feature_code: entitlements_params.keys).pluck(:feature_code).uniq
+
+      # If the feature was added as a subscription override, delete it
+      sub_entitlements = subscription.entitlements.joins(:feature).where(feature: {code: missing_codes})
+      EntitlementValue.where(entitlement: sub_entitlements).discard_all!
+      sub_entitlements.discard_all!
+
+      # If the feature is from the plan, create a SubscriptionFeatureRemoval
+      plan_entitlements = subscription.plan.entitlements.joins(:feature).where(feature: {code: missing_codes})
+      plan_entitlements.each do |entitlement|
+        SubscriptionFeatureRemoval.create!(
+          organization: subscription.organization,
+          feature: entitlement.feature,
+          subscription: subscription
+        )
+      end
+    end
+
     def delete_missing_entitlements
+      # Delete missing
       missing = subscription.entitlements.joins(:feature).where.not(feature: {code: entitlements_params.keys})
       EntitlementValue.where(entitlement: missing).discard_all!
       missing.discard_all!
@@ -84,7 +108,7 @@ module Entitlement
             feature: feature,
             subscription_id: subscription.id
           )
-        elsif !partial?
+        elsif full?
           delete_missing_entitlement_values(entitlement, privilege_values)
         end
 
