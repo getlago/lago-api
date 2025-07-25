@@ -245,6 +245,46 @@ RSpec.describe Api::V1::CustomersController, type: :request do
       end
     end
 
+    context "with invisible characters in email" do
+      let(:create_params) do
+        {
+          external_id: SecureRandom.uuid,
+          name: "Foo Bar Inc.",
+          email: "foo\u200Cbar@example.com",
+          firstname: "Foo",
+          lastname: "Bar",
+          customer_type: "company",
+          currency: "EUR",
+          timezone: "America/New_York"
+        }
+      end
+
+      it "removes invisible characters from email" do
+        subject
+        expect(response).to have_http_status(:success)
+        expect(json[:customer][:email]).to eq("foobar@example.com")
+      end
+
+      context "with full range of invisible characters" do
+        let(:create_params) do
+          {
+            external_id: SecureRandom.uuid,
+            name: "Foo Bar Inc.",
+            email: "foo\u200B\u200C\u200D\u00A0\u200E\u200Fbar@example.com",
+            firstname: "Foo",
+            lastname: "Bar",
+            customer_type: "company"
+          }
+        end
+
+        it "removes all invisible characters from email" do
+          subject
+          expect(response).to have_http_status(:success)
+          expect(json[:customer][:email]).to eq("foobar@example.com")
+        end
+      end
+    end
+
     context "with invalid params" do
       let(:create_params) do
         {name: "Foo Bar", currency: "invalid"}
