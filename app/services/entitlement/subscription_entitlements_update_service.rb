@@ -120,9 +120,7 @@ module Entitlement
 
         # if the feature was previously removed, we restore it
         removal = subscription.entitlement_removals.find { it.entitlement_feature_id == feature.id }
-        if removal
-          removal.discard!
-        end
+        removal&.discard!
 
         entitlement = subscription.entitlements.includes(:values).find { it.entitlement_feature_id == feature.id }
 
