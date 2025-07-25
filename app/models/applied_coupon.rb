@@ -40,6 +40,26 @@ class AppliedCoupon < ApplicationRecord
     already_applied_amount = credits.active.sum(&:amount_cents)
     @remaining_amount = amount_cents - already_applied_amount
   end
+
+  def remaining_amount_for_this_subscription_billing_period(invoice:)
+    @remaining_amount_for_this_subscription_billing_period ||= {}
+    return @remaining_amount_for_this_subscription_billing_period[invoice.id] if @remaining_amount_for_this_subscription_billing_period[invoice.id].present?
+
+    min_used_amount = invoice.invoice_subscriptions.map do |invoice_subscription|
+      timestamp = invoice_subscription.timestamp
+      invoice_ids = InvoiceSubscription
+        .where("charges_to_datetime <= ?", invoice_subscription.charges_to_datetime)
+        .where("charges_from_datetime >= ?", invoice_subscription.charges_from_datetime)
+        .joins(:invoice)
+        .where(subscription_id: invoice_subscription.subscription_id)
+        .pluck(:invoice_id)
+
+      credits.active.where(invoice_id: invoice_ids).joins(:invoice).where.not(invoices: {status: :voided}).sum(&:amount_cents)
+    end.min
+
+    remaining_amount = amount_cents - min_used_amount
+    @remaining_amount_for_this_subscription_billing_period[invoice.id] = remaining_amount.negative? ? 0 : remaining_amount
+  end
 end
 
 # == Schema Information

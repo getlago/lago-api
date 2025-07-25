@@ -18,7 +18,7 @@ module Credits
       return result if already_applied?
       return result unless fees.any?
 
-      credit_amount = AppliedCoupons::AmountService.call(applied_coupon:, base_amount_cents:).amount
+      credit_amount = AppliedCoupons::AmountService.call(applied_coupon:, base_amount_cents:, invoice:).amount
 
       new_credit = Credit.create!(
         organization_id: invoice.organization_id,
