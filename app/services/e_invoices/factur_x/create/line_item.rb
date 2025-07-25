@@ -11,14 +11,14 @@ module EInvoices
         end
 
         def call
-          xml.comment "Line Item #{line_id}: #{fee.invoice_name}"
+          xml.comment "Line Item #{line_id}: #{item_description}"
           xml["ram"].IncludedSupplyChainTradeLineItem do
             xml["ram"].AssociatedDocumentLineDocument do
               xml["ram"].LineID line_id
             end
             xml["ram"].SpecifiedTradeProduct do
               xml["ram"].Name fee.item_name
-              xml["ram"].Description fee.invoice_name
+              xml["ram"].Description item_description
             end
             xml["ram"].SpecifiedLineTradeAgreement do
               xml["ram"].NetPriceProductTradePrice do
@@ -44,6 +44,16 @@ module EInvoices
         private
 
         attr_accessor :line_id, :fee
+
+        def item_description
+          return fee.invoice_display_name if fee.invoice_display_name.present?
+
+          I18n.t(
+            "invoice.subscription_interval",
+            plan_interval: I18n.t("invoice.#{fee.subscription.plan.interval}"),
+            plan_name: fee.subscription.plan.invoice_name
+          )
+        end
       end
     end
   end
