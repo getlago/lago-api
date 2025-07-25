@@ -40,7 +40,7 @@ module EInvoices
             xml["rsm"].SupplyChainTradeTransaction do
               build_line_items_for_fees(xml)
 
-              TradeAgreement.call(xml:)
+              TradeAgreement.call(xml:, invoice:)
               TradeDelivery.call(xml:)
               TradeSettlement.call(xml:, invoice:) do
                 TradeSettlementPayment.call(xml:, invoice:, payment: Payment.new(type: TradeSettlementPayment::STANDARD, amount: nil))
