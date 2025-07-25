@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module EInvoice
+module EInvoices
   module FacturX
     class CreateService < ::BaseService
       def initialize(invoice:)
