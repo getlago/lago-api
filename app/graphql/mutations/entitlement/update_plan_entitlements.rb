@@ -12,7 +12,7 @@ module Mutations
 
       argument :plan_id, ID, required: true
 
-      argument :entitlements, [Types::Entitlement::PlanEntitlementInput], required: true
+      argument :entitlements, [Types::Entitlement::EntitlementInput], required: true
 
       type Types::Entitlement::PlanEntitlementObject.collection_type
 
