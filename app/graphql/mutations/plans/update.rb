@@ -13,7 +13,7 @@ module Mutations
       input_object_class Types::Plans::UpdateInput
       type Types::Plans::Object
 
-      def resolve(entitlements:, **args)
+      def resolve(entitlements: nil, **args)
         args[:charges].map!(&:to_h)
         plan = context[:current_user].plans.find_by(id: args[:id])
 
