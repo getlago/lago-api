@@ -56789,6 +56789,18 @@
               "deprecationReason": null
             },
             {
+              "name": "chargeFilterId",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ID",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "description",
               "description": null,
               "type": {

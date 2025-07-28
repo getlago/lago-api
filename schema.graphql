@@ -11005,6 +11005,7 @@ Fee input for creating or updating invoice from voided invoice
 """
 input VoidedInvoiceFeeInput {
   addOnId: ID
+  chargeFilterId: ID
   chargeId: ID
   description: String
   id: ID

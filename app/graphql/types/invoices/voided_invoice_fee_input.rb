@@ -8,6 +8,7 @@ module Types
       argument :id, ID, required: false
       argument :add_on_id, ID, required: false
       argument :charge_id, ID, required: false
+      argument :charge_filter_id, ID, required: false
       argument :description, String, required: false
       argument :invoice_display_name, String, required: false
       argument :subscription_id, ID, required: false

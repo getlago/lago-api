@@ -147,8 +147,6 @@ module AdjustedFees
         end
       end
 
-      byebug
-
       fee = invoice.fees.find_by(
         subscription_id: subscription.id,
         charge_id: charge.id,
