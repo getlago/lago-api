@@ -202,7 +202,7 @@ RSpec.describe "Create and edit plans with charge filters", :scenarios, type: :r
       expect(json[:customer_usage][:charges_usage].count).to eq(1)
 
       charges_usage = json[:customer_usage][:charges_usage].first
-      expect(charges_usage[:filters].count).to eq(2)
+      expect(charges_usage[:filters].count).to eq(6)
 
       f2_filter = charges_usage[:filters].find { it[:invoice_display_name] == "f2" }
       expect(f2_filter[:amount_cents]).to eq(5000)

@@ -2,14 +2,24 @@
 
 module Fees
   class ChargeService < BaseService
-    def initialize(invoice:, charge:, subscription:, boundaries:, context: nil, cache_middleware: nil, bypass_aggregation: false, apply_taxes: false)
+    def initialize(
+      invoice:,
+      charge:,
+      subscription:,
+      boundaries:,
+      context: nil,
+      cache_middleware: nil,
+      bypass_aggregation: false,
+      apply_taxes: false,
+      with_zero_units_filters: true
+    )
       @invoice = invoice
       @charge = charge
       @subscription = subscription
       @boundaries = OpenStruct.new(boundaries)
       @currency = subscription.plan.amount.currency
       @apply_taxes = apply_taxes
-
+      @with_zero_units_filters = with_zero_units_filters
       @context = context
       @current_usage = context == :current_usage
       @cache_middleware = cache_middleware || Subscriptions::ChargeCacheMiddleware.new(
@@ -56,7 +66,7 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes, :with_zero_units_filters
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -86,7 +96,7 @@ module Fees
         end
 
         charge_model_result.grouped_results.map do |amount_result|
-          next if current_usage && charge_filter && amount_result.units.zero?
+          next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
 
           init_fee(amount_result, properties:, charge_filter:)
         end.compact
