@@ -39,7 +39,9 @@ module Credits
         fee.save!
       end
 
-      applied_coupon.frequency_duration_remaining -= 1 if applied_coupon.recurring?
+      is_subscription_invoice = invoice.invoice_subscriptions.any? { |invoice_subscription| invoice_subscription.invoicing_reason.include?("subscription") }
+      applied_coupon.frequency_duration_remaining -= 1 if applied_coupon.recurring? && is_subscription_invoice
+      # applied_coupon.frequency_duration_remaining -= 1 if applied_coupon.recurring?
       if should_terminate_applied_coupon?(credit_amount)
         applied_coupon.mark_as_terminated!
       elsif applied_coupon.recurring?
