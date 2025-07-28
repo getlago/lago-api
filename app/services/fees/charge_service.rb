@@ -85,7 +85,11 @@ module Fees
           return []
         end
 
-        charge_model_result.grouped_results.map { |amount_result| init_fee(amount_result, properties:, charge_filter:) }
+        charge_model_result.grouped_results.map do |amount_result|
+          next if current_usage && charge_filter && amount_result.units.zero?
+
+          init_fee(amount_result, properties:, charge_filter:)
+        end.compact
       end
 
       result.fees.concat(fees.compact)
