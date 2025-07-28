@@ -2,7 +2,7 @@
 
 module Fees
   class ApplyTaxesService < BaseService
-    def initialize(fee:, tax_codes: nil)
+    def initialize(fee:, tax_codes: nil, preloaded_customer_taxes: nil)
       @fee = fee
       @tax_codes = tax_codes
 
@@ -55,7 +55,7 @@ module Fees
 
     private
 
-    attr_reader :fee, :tax_codes
+    attr_reader :fee, :tax_codes, :preloaded_customer_taxes
 
     def customer
       @customer ||= fee.invoice&.customer || fee.subscription.customer
@@ -70,6 +70,7 @@ module Fees
       if (fee.charge? || fee.subscription? || fee.commitment?) && fee.subscription.plan.taxes.any?
         return fee.subscription.plan.taxes
       end
+      return preloaded_customer_taxes if preloaded_customer_taxes.present?
       return customer.taxes if customer.taxes.any?
 
       # billing_entity.taxes - are the default taxes applied on the billing entity

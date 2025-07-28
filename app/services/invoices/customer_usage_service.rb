@@ -81,11 +81,8 @@ module Invoices
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
         .order(Arel.sql("lower(unaccent(billable_metrics.name)) ASC"))
 
-      # we're capturing the context here so we can re-use inside the threads. This will correctly propagate spans to this current span
-      context = OpenTelemetry::Context.current
-
-      invoice.fees = Parallel.flat_map(query.all, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
-        OpenTelemetry::Context.with_current(context) do
+      invoice.fees = Parallel.flat_map(query.all, in_threads: parallel_threads_count) do |charge|
+        OpenTelemetry::Context.with_current(current_tracing_context) do
           ActiveRecord::Base.connection_pool.with_connection do
             charge_usage(charge)
           end
@@ -131,10 +128,21 @@ module Invoices
 
     def compute_amounts
       invoice.fees_amount_cents = invoice.fees.sum(&:amount_cents)
+      preloaded_customer_taxes = customer.taxes.load
+      fees = invoice.fees.includes(
+        add_on: :taxes,
+        charge: :taxes,
+        invoiceable: :taxes,
+        subscription: {plan: :taxes}
+      )
 
-      invoice.fees.each do |fee|
-        taxes_result = Fees::ApplyTaxesService.call(fee:)
-        taxes_result.raise_if_error!
+      Parallel.each(fees, in_threads: parallel_threads_count) do |fee|
+        OpenTelemetry::Context.with_current(current_tracing_context) do
+          ActiveRecord::Base.connection_pool.with_connection do
+            taxes_result = Fees::ApplyTaxesService.call(fee:, preloaded_customer_taxes:)
+            taxes_result.raise_if_error!
+          end
+        end
       end
 
       taxes_result = Invoices::ApplyTaxesService.call(invoice:)
@@ -189,6 +197,14 @@ module Invoices
 
     def customer_provider_taxation?
       @customer_provider_taxation ||= invoice.customer.tax_customer
+    end
+
+    def parallel_threads_count
+      @parallel_threads_count ||= ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0
+    end
+
+    def current_tracing_context
+      OpenTelemetry::Context.current
     end
   end
 end
