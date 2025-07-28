@@ -17,7 +17,6 @@ module EInvoices
         YYMMDD = 102
 
         Tax = Data.define(:rate, :amount)
-        Payment = Data.define(:type, :amount)
         Discount = Data.define(:indicator, :rate, :amount, :reason)
 
         def initialize(xml:, invoice: nil)
@@ -43,9 +42,7 @@ module EInvoices
               TradeAgreement.call(xml:, invoice:)
               TradeDelivery.call(xml:, invoice:)
               TradeSettlement.call(xml:, invoice:) do
-                TradeSettlementPayment.call(xml:, invoice:, payment: Payment.new(type: TradeSettlementPayment::STANDARD, amount: nil))
-                TradeSettlementPayment.call(xml:, invoice:, payment: Payment.new(type: TradeSettlementPayment::PREPAID, amount: 10))
-                TradeSettlementPayment.call(xml:, invoice:, payment: Payment.new(type: TradeSettlementPayment::CREDIT_NOTE, amount: 10))
+                build_settlement_payments(xml, invoice)
 
                 ApplicableTradeTax.call(xml:, invoice:, tax: Tax.new(rate: 0.19, amount: 15.35))
                 ApplicableTradeTax.call(xml:, invoice:, tax: Tax.new(rate: 0.20, amount: 875.65))
@@ -69,6 +66,16 @@ module EInvoices
         def build_line_items_for_fees(xml)
           invoice.fees.each_with_index do |fee, index|
             LineItem.call(xml:, line_id: index + 1, fee:)
+          end
+        end
+
+        def build_settlement_payments(xml, invoice)
+          {
+            TradeSettlementPayment::STANDARD => invoice.total_due_amount,
+            TradeSettlementPayment::PREPAID => invoice.prepaid_credit_amount,
+            TradeSettlementPayment::CREDIT_NOTE => invoice.credit_notes_amount
+          }.each do |type, amount|
+            TradeSettlementPayment.call(xml:, invoice:, type:, amount:) if amount.positive?
           end
         end
 
