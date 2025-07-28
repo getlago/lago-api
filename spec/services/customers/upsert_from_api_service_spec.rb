@@ -171,18 +171,20 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
-  context "without email" do
+  context "with email nil" do
     let(:create_args) do
       {
         external_id:,
+        email: nil,
         billing_configuration: {
           document_locale: "fr"
         }
       }
     end
-    it "creates the customer" do
+
+    it "creates customer with email nil" do
       expect(result).to be_success
-      expect(result.customer).to eq(customer)
+      expect(result.customer.email).to be_nil
     end
   end
 
@@ -720,6 +722,20 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
         result
 
         expect(Customers::UpdateInvoiceGracePeriodService).to have_received(:call).with(customer:, grace_period: 2)
+      end
+    end
+
+    context "when updating email to nil" do
+      let(:create_args) do
+        {
+          external_id:,
+          email: nil
+        }
+      end
+
+      it "updates customer to not have email" do
+        expect(result).to be_success
+        expect(result.customer.email).to be_nil
       end
     end
   end
