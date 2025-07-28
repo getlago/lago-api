@@ -110,10 +110,11 @@ module Invoices
     def adjust_fees(invoice)
       invoice.fees.each do |fee|
         if fee.fee_type == "charge"
+          properties = fee.charge_filter&.properties || fee.charge.properties
           result = Fees::InitFromAdjustedChargeFeeService.call(
             adjusted_fee: fee.adjusted_fee,
             boundaries: fee.properties,
-            properties: fee.charge.properties
+            properties: properties
           )
           adjusted_fee = result.fee
           attrs = adjusted_fee.attributes.slice(
@@ -125,7 +126,8 @@ module Invoices
             "precise_unit_amount",
             "amount_cents",
             "precise_amount_cents",
-            "amount_details"
+            "amount_details",
+            "charge_filter"
           )
           fee.assign_attributes(attrs)
           fee.save!
@@ -162,6 +164,7 @@ module Invoices
           invoice_display_name: fee_params[:invoice_display_name],
           units: fee_params[:units],
           charge_id: fee_params[:charge_id],
+          charge_filter_id: fee_params[:charge_filter_id],
           subscription_id: fee_params[:subscription_id]
         }
         adjusted_fee_params[:unit_precise_amount] = fee_params[:unit_amount_cents] if fee_params[:unit_amount_cents].present?

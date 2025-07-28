@@ -20,8 +20,6 @@ module AdjustedFees
       charge = fee.charge
       return result.validation_failure!(errors: {charge: ["invalid_charge_model"]}) if disabled_charge_model?(charge)
 
-      charge_filter = charge.filters.find_by(id: params[:charge_filter_id]) if params[:charge_filter_id].present?
-
       adjusted_fee = create_adjusted_fee(fee, charge, params)
 
 
@@ -34,7 +32,7 @@ module AdjustedFees
         result.fee = adjustement_result
         result
       else
-        properties = charge_filter&.properties || charge.properties
+        properties = adjusted_fee.charge_filter&.properties || charge.properties
         adjustement_result = Fees::InitFromAdjustedChargeFeeService.call(
           adjusted_fee: adjusted_fee,
           boundaries: adjusted_fee.properties,
