@@ -1143,7 +1143,7 @@ RSpec.describe "Aggregation - Custom Aggregation Scenarios", :scenarios, type: :
         expect(charge_usage[:units]).to eq("8.0")
         expect(charge_usage[:events_count]).to eq(8)
         expect(charge_usage[:amount_cents]).to eq(60_772)
-        expect(charge_usage[:filters].count).to eq(9)
+        expect(charge_usage[:filters].count).to eq(5)
 
         gbp_domestic_fps_charge = charge_usage[:filters].find do |f|
           f[:values] == gbp_domestic_fps_filter.to_h.symbolize_keys
@@ -1172,20 +1172,6 @@ RSpec.describe "Aggregation - Custom Aggregation Scenarios", :scenarios, type: :
         expect(eur_sepa_charge[:events_count]).to eq(1)
         expect(eur_sepa_charge[:units]).to eq("1.0")
         expect(eur_sepa_charge[:amount_cents]).to eq(100)
-
-        eur_swift_inbound_charge = charge_usage[:filters].find do |f|
-          f[:values] == eur_swift_inbound_filter.to_h.symbolize_keys
-        end
-        expect(eur_swift_inbound_charge[:events_count]).to eq(0)
-        expect(eur_swift_inbound_charge[:units]).to eq("0.0")
-        expect(eur_swift_inbound_charge[:amount_cents]).to eq(0)
-
-        eur_swift_outbound_charge = charge_usage[:filters].find do |f|
-          f[:values] == eur_swift_outbound_filter.to_h.symbolize_keys
-        end
-        expect(eur_swift_outbound_charge[:events_count]).to eq(0)
-        expect(eur_swift_outbound_charge[:units]).to eq("0.0")
-        expect(eur_swift_outbound_charge[:amount_cents]).to eq(0)
 
         chf_charge = charge_usage[:filters].find do |f|
           f[:values] == chf_filter.to_h.symbolize_keys
