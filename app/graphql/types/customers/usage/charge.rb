@@ -66,7 +66,7 @@ module Types
           object.group_by(&:grouped_by).values
         end
 
-        def projected_units
+        def projected_units # rubocop:disable GraphQL/ResolverMethodLength
           if charge.filters.any?
             filter_groups = object.group_by(&:charge_filter_id).values
             filter_groups.sum do |filter_fee_group|
@@ -75,12 +75,17 @@ module Types
               result = ::Fees::ProjectionService.call(fees: filter_fee_group).raise_if_error!
               result.projected_units
             end
+          elsif object.any? { |f| f.grouped_by.present? }
+            grouped_fees = object.group_by(&:grouped_by).values
+            grouped_fees.sum do |group_fee_list|
+              ::Fees::ProjectionService.call(fees: group_fee_list).raise_if_error!.projected_units
+            end
           else
             projection_result.projected_units
           end
         end
 
-        def projected_amount_cents
+        def projected_amount_cents # rubocop:disable GraphQL/ResolverMethodLength
           if charge.filters.any?
             filter_groups = object.group_by(&:charge_filter_id).values
             filter_groups.sum do |filter_fee_group|
@@ -88,6 +93,11 @@ module Types
 
               result = ::Fees::ProjectionService.call(fees: filter_fee_group).raise_if_error!
               result.projected_amount_cents
+            end
+          elsif object.any? { |f| f.grouped_by.present? }
+            grouped_fees = object.group_by(&:grouped_by).values
+            grouped_fees.sum do |group_fee_list|
+              ::Fees::ProjectionService.call(fees: group_fee_list).raise_if_error!.projected_amount_cents
             end
           else
             projection_result.projected_amount_cents

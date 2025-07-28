@@ -22,6 +22,7 @@ module V1
 
       def calculate_usage_data(fees)
         charge_has_filters = fees.first.charge&.filters&.any?
+        charge_has_grouping = fees.any? { |f| f.grouped_by.present? }
         is_past_usage = root_name == "past_usage"
 
         current_units = fees.sum { |f| BigDecimal(f.units) }
@@ -38,6 +39,15 @@ module V1
 
             fees_with_defined_filters.each do |fee|
               result = ::Fees::ProjectionService.call(fees: [fee]).raise_if_error!
+              projected_units += result.projected_units
+              projected_amount_cents += result.projected_amount_cents
+              projected_pricing_unit_amount_cents += result.projected_pricing_unit_amount_cents.to_i
+            end
+          elsif charge_has_grouping
+            grouped_fees = fees.group_by(&:grouped_by).values
+
+            grouped_fees.each do |group_fee_list|
+              result = ::Fees::ProjectionService.call(fees: group_fee_list).raise_if_error!
               projected_units += result.projected_units
               projected_amount_cents += result.projected_amount_cents
               projected_pricing_unit_amount_cents += result.projected_pricing_unit_amount_cents.to_i
