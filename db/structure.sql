@@ -1035,7 +1035,8 @@ CREATE TYPE public.subscription_invoicing_reason AS ENUM (
 
 CREATE TYPE public.subscription_on_termination_credit_note AS ENUM (
     'credit',
-    'skip'
+    'skip',
+    'refund'
 );
 
 
@@ -9464,6 +9465,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250716123425'),
 ('20250715124108'),
 ('20250714131519'),
+('20250712000000'),
 ('20250710102337'),
 ('20250709171329'),
 ('20250709085218'),
