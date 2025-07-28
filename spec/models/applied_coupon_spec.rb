@@ -76,8 +76,7 @@ RSpec.describe AppliedCoupon do
           applied_coupon: applied_coupon,
           invoice: other_invoice,
           amount_cents: 30,
-          organization: organization
-        )
+          organization: organization)
       end
 
       before do
@@ -100,8 +99,7 @@ RSpec.describe AppliedCoupon do
           applied_coupon: applied_coupon,
           invoice: other_invoice,
           amount_cents: 40,
-          organization: organization
-        )
+          organization: organization)
       end
 
       it "excludes credits from invoices with non-overlapping billing periods" do
@@ -115,8 +113,7 @@ RSpec.describe AppliedCoupon do
           applied_coupon: applied_coupon,
           invoice: invoice,
           amount_cents: 150,
-          organization: organization
-        )
+          organization: organization)
       end
 
       before do
@@ -137,8 +134,7 @@ RSpec.describe AppliedCoupon do
           applied_coupon: applied_coupon,
           invoice: voided_invoice,
           amount_cents: 50,
-          organization: organization
-        )
+          organization: organization)
       end
 
       it "ignores voided invoice credits" do
@@ -165,8 +161,7 @@ RSpec.describe AppliedCoupon do
           organization: organization,
           timestamp: current_time + 1.day,
           charges_from_datetime: (current_time + 1.day).beginning_of_month,
-          charges_to_datetime: (current_time + 1.day).end_of_month
-        )
+          charges_to_datetime: (current_time + 1.day).end_of_month)
       end
 
       # this credit is associated to subscription 1 and subscription 2
@@ -176,8 +171,7 @@ RSpec.describe AppliedCoupon do
           applied_coupon: applied_coupon,
           invoice: invoice,
           amount_cents: 20,
-          organization: organization
-        )
+          organization: organization)
       end
 
       it "calculates based on the minimum used amount across all subscriptions" do

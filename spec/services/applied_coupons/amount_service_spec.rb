@@ -14,6 +14,7 @@ RSpec.describe AppliedCoupons::AmountService do
   let(:applied_coupon) { create(:applied_coupon, amount_cents: 12, coupon:, customer:) }
   let(:invoice) { create(:invoice, customer:, organization:) }
   let(:invoice_subscription) { create(:invoice_subscription, invoice:, timestamp: invoice.issuing_date, charges_to_datetime: invoice.issuing_date, charges_from_datetime: invoice.issuing_date - 1.month) }
+  let(:subscription) { invoice_subscription.subscription }
 
   describe "call" do
     before do
@@ -115,8 +116,17 @@ RSpec.describe AppliedCoupons::AmountService do
 
       context "when the coupon was already applied to some invoice" do
         let(:prev_invoice) { create(:invoice, customer:, organization:, issuing_date: 2.weeks.ago) }
-        let(:prev_invoice_subscription) { create(:invoice_subscription, invoice: prev_invoice, timestamp: prev_invoice.issuing_date, charges_to_datetime: invoice.issuing_date, charges_from_datetime: invoice.issuing_date - 1.month) }
         let(:credit) { create(:credit, applied_coupon:, invoice: prev_invoice, amount_cents: 10) }
+        let(:prev_invoice_subscription) do
+          create(
+            :invoice_subscription,
+            subscription:,
+            invoice: prev_invoice,
+            timestamp: prev_invoice.issuing_date,
+            charges_to_datetime: invoice.issuing_date,
+            charges_from_datetime: invoice.issuing_date - 1.month
+          )
+        end
 
         before do
           prev_invoice_subscription

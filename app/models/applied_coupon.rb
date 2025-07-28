@@ -46,7 +46,6 @@ class AppliedCoupon < ApplicationRecord
     return @remaining_amount_for_this_subscription_billing_period[invoice.id] if @remaining_amount_for_this_subscription_billing_period[invoice.id].present?
 
     min_used_amount = invoice.invoice_subscriptions.map do |invoice_subscription|
-      timestamp = invoice_subscription.timestamp
       invoice_ids = InvoiceSubscription
         .where("charges_to_datetime <= ?", invoice_subscription.charges_to_datetime)
         .where("charges_from_datetime >= ?", invoice_subscription.charges_from_datetime)
