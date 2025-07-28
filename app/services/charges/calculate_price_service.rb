@@ -5,9 +5,8 @@ module Charges
     Result = BaseResult[:charge_amount_cents, :subscription_amount_cents, :total_amount_cents]
     AggregationResult = Struct.new(:aggregation, :total_aggregated_units, :current_usage_units, :full_units_number, :precise_total_amount_cents, :custom_aggregation, :options)
 
-    def initialize(subscription:, units:, charge:, charge_filter: nil)
-      @subscription = subscription
-      @units = units
+    def initialize(units:, charge:, charge_filter: nil)
+      @units = BigDecimal(units || 0)
       @charge = charge
       @charge_filter = charge_filter
       @billable_metric = charge&.billable_metric
@@ -16,18 +15,19 @@ module Charges
     end
 
     def call
+      return result.not_found_failure!(resource: "charge") unless charge
+
       result.charge_amount_cents = calculate_charge_amount
-      result.subscription_amount_cents = plan.amount_cents
+      result.subscription_amount_cents = BigDecimal(plan.amount_cents)
       result.total_amount_cents = result.charge_amount_cents + result.subscription_amount_cents
       result
     end
 
     private
 
-    attr_reader :subscription, :units, :billable_metric, :charge, :charge_filter
+    attr_reader :units, :charge, :charge_filter, :billable_metric
 
-    delegate :plan, to: :subscription
-    delegate :customer, to: :subscription
+    delegate :plan, to: :charge
 
     def calculate_charge_amount
       return 0 unless charge
