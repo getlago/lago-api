@@ -28,10 +28,17 @@ module Types
 
           fee_groups.sum do |fee_group|
             charge = fee_group.first.charge
+            charge_has_grouping = fee_group.any? { |f| f.grouped_by.present? }
+
             if charge.filters.any?
               defined_filter_fees = fee_group.select(&:charge_filter_id)
               defined_filter_fees.sum do |fee|
                 ::Fees::ProjectionService.call(fees: [fee]).raise_if_error!.projected_amount_cents
+              end
+            elsif charge_has_grouping
+              groups = fee_group.group_by(&:grouped_by).values
+              groups.sum do |single_group_fees|
+                ::Fees::ProjectionService.call(fees: single_group_fees).raise_if_error!.projected_amount_cents
               end
             else
               ::Fees::ProjectionService.call(fees: fee_group).raise_if_error!.projected_amount_cents
