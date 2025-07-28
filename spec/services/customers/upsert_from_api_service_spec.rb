@@ -171,6 +171,21 @@ RSpec.describe Customers::UpsertFromApiService, type: :service do
     end
   end
 
+  context "without email" do
+    let(:create_args) do
+      {
+        external_id:,
+        billing_configuration: {
+          document_locale: "fr"
+        }
+      }
+    end
+    it "creates the customer" do
+      expect(result).to be_success
+      expect(result.customer).to eq(customer)
+    end
+  end
+
   context "with invalid email" do
     let(:create_args) do
       {

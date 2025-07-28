@@ -276,7 +276,7 @@ module Customers
     end
 
     def remove_invisible_chars(str)
-      str.gsub(Regex::INVISIBLE_CHARS, "")
+      str&.gsub(Regex::INVISIBLE_CHARS, "")
     end
   end
 end
