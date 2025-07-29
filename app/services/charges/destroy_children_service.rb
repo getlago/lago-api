@@ -14,8 +14,11 @@ module Charges
       return result unless charge.discarded?
 
       ActiveRecord::Base.transaction do
-        charge.children.joins(plan: :subscriptions).where(subscriptions: {status: %w[active pending]}).distinct.find_each do |charge|
-          Charges::DestroyService.call!(charge:)
+        # skip touching to avoid deadlocks
+        Plan.no_touching do
+          charge.children.joins(plan: :subscriptions).where(subscriptions: {status: %w[active pending]}).distinct.find_each do |charge|
+            Charges::DestroyService.call!(charge:)
+          end
         end
       end
 
