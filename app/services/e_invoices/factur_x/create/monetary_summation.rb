@@ -7,14 +7,14 @@ module EInvoices
         def call
           xml.comment "Monetary Summation"
           xml["ram"].SpecifiedTradeSettlementHeaderMonetarySummation do
-            xml["ram"].LineTotalAmount format_number(1000)
-            xml["ram"].ChargeTotalAmount format_number(0.0)
-            xml["ram"].AllowanceTotalAmount format_number(10.0)
-            xml["ram"].TaxBasisTotalAmount format_number(990.00)
-            xml["ram"].TaxTotalAmount format_number(198.84), currencyID: invoice.currency
-            xml["ram"].GrandTotalAmount format_number(1188.84)
-            xml["ram"].TotalPrepaidAmount format_number(21.86)
-            xml["ram"].DuePayableAmount format_number(1166.98)
+            xml["ram"].LineTotalAmount format_number(invoice.fees_amount)
+            xml["ram"].ChargeTotalAmount format_number(0)
+            xml["ram"].AllowanceTotalAmount format_number(invoice.coupons_amount)
+            xml["ram"].TaxBasisTotalAmount format_number(invoice.sub_total_excluding_taxes_amount)
+            xml["ram"].TaxTotalAmount format_number(invoice.taxes_amount), currencyID: invoice.currency
+            xml["ram"].GrandTotalAmount format_number(invoice.sub_total_including_taxes_amount)
+            xml["ram"].TotalPrepaidAmount format_number(invoice.prepaid_credit_amount + invoice.credit_notes_amount)
+            xml["ram"].DuePayableAmount format_number(invoice.total_due_amount)
           end
         end
       end
