@@ -111,6 +111,12 @@ RSpec.describe Charges::UpdateChildrenService, type: :service do
         )
         expect(child_charge.applied_pricing_unit.conversion_rate).to eq 2.5
       end
+
+      it "does not touch plan" do
+        freeze_time do
+          expect { update_service.call }.not_to change { child_plan.reload.updated_at }
+        end
+      end
     end
 
     context "when charge has children that has been modified" do

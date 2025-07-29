@@ -37,6 +37,12 @@ RSpec.describe Charges::DestroyChildrenService, type: :service do
       end
     end
 
+    it "does not touch plan" do
+      freeze_time do
+        expect { destroy_service.call }.not_to change { child_plan.reload.updated_at }
+      end
+    end
+
     context "when charge is not found" do
       let(:charge) { nil }
       let(:child_charge) { nil }
