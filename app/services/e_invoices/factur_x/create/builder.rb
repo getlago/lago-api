@@ -55,7 +55,7 @@ module EInvoices
                 build_applied_taxes(xml, invoice)
                 build_allowance_charges(xml, invoice)
 
-                PaymentTerms.call(xml:)
+                PaymentTerms.call(xml:, invoice:)
                 MonetarySummation.call(xml:, invoice:)
               end
             end
