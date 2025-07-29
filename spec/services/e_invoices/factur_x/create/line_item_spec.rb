@@ -59,7 +59,7 @@ RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
     it "have the item total amount" do
       expect(subject).to contains_xml_node(
         "#{root}/ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount"
-      ).with_value(fee.total_amount)
+      ).with_value(fee.amount_cents)
     end
   end
 end

@@ -35,7 +35,7 @@ module EInvoices
                 xml["ram"].RateApplicablePercent fee.taxes_rate
               end
               xml["ram"].SpecifiedTradeSettlementLineMonetarySummation do
-                xml["ram"].LineTotalAmount fee.total_amount
+                xml["ram"].LineTotalAmount fee.amount_cents
               end
             end
           end

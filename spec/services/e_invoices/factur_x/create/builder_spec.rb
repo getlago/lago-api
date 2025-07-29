@@ -11,8 +11,8 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
 
   let(:invoice_subscription) { create(:invoice_subscription, :boundaries, invoice:, subscription: subscription) }
   let(:subscription) { create(:subscription, started_at: "2025-03-16".to_date) }
-  let(:invoice) { create(:invoice, total_amount_cents: 30_00, currency: "USD") }
-  let(:fee) { create(:fee, invoice:) }
+  let(:invoice) { create(:invoice, total_amount_cents: 30_00, currency: "USD", coupons_amount_cents: 1000) }
+  let(:fee) { create(:fee, invoice:, amount_cents: 10000, taxes_rate: 20.00) }
   let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice:, tax_rate: 20.00) }
 
   before do
@@ -105,6 +105,56 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
 
         it_behaves_like "xml section", {name: "Tax Information 20.00% VAT", xpath: "(#{applied_taxes_tag})[1]"}
         it_behaves_like "xml section", {name: "Tax Information 19.00% VAT", xpath: "(#{applied_taxes_tag})[2]"}
+      end
+    end
+
+    context "when discounts" do
+      discount_tag = "//ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeAllowanceCharge"
+
+      it_behaves_like "xml section", {name: "Allowance/Charge - Discount 20.00% portion", xpath: "(#{discount_tag})[1]"}
+
+      context "with multiple fees" do
+        let(:fee) { create(:fee, invoice:, amount_cents: 1551, taxes_rate: 19.00) }
+        let(:fee2) { create(:fee, invoice:, amount_cents: 88449, taxes_rate: 20.00) }
+        let(:fee3) { create(:fee, invoice:, amount_cents: 10000, taxes_rate: 21.00) }
+
+        before {
+          fee2
+          fee3
+        }
+
+        context "with 19% tax discount" do
+          xpath = "(#{discount_tag})[1]"
+
+          it_behaves_like "xml section", {name: "Allowance/Charge - Discount 19.00% portion", xpath:}
+
+          it "calculates the correct discount amount and tax" do
+            expect(subject).to contains_xml_node("#{xpath}/ram:ActualAmount").with_value("0.16")
+            expect(subject).to contains_xml_node("#{xpath}/ram:CategoryTradeTax/ram:RateApplicablePercent").with_value("19.00")
+          end
+        end
+
+        context "with 20% tax discount" do
+          xpath = "(#{discount_tag})[2]"
+
+          it_behaves_like "xml section", {name: "Allowance/Charge - Discount 20.00% portion", xpath:}
+
+          it "calculates the correct discount amount and tax" do
+            expect(subject).to contains_xml_node("#{xpath}/ram:ActualAmount").with_value("8.84")
+            expect(subject).to contains_xml_node("#{xpath}/ram:CategoryTradeTax/ram:RateApplicablePercent").with_value("20.00")
+          end
+        end
+
+        context "with 21% tax discount" do
+          xpath = "(#{discount_tag})[3]"
+
+          it_behaves_like "xml section", {name: "Allowance/Charge - Discount 21.00% portion", xpath:}
+
+          it "calculates the correct discount amount and tax" do
+            expect(subject).to contains_xml_node("#{xpath}/ram:ActualAmount").with_value("1.00")
+            expect(subject).to contains_xml_node("#{xpath}/ram:CategoryTradeTax/ram:RateApplicablePercent").with_value("21.00")
+          end
+        end
       end
     end
   end

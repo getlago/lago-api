@@ -28,8 +28,6 @@ module EInvoices
         # https://docs.peppol.eu/pracc/catalogue/1.0/codelist/UNECERec20/
         UNIT_CODE = "C62"
 
-        Discount = Data.define(:indicator, :rate, :amount, :reason)
-
         def initialize(xml:, invoice: nil)
           @xml = xml
           @invoice = invoice
@@ -55,9 +53,7 @@ module EInvoices
               TradeSettlement.call(xml:, invoice:) do
                 build_settlement_payments(xml, invoice)
                 build_applied_taxes(xml, invoice)
-                TradeAllowanceCharge.call(xml:, invoice:, discount: Discount.new(indicator: false, rate: 19.0, amount: 0.16, reason: "Discount 02 (Plan) - 19% portion"))
-                TradeAllowanceCharge.call(xml:, invoice:, discount: Discount.new(indicator: false, rate: 20.0, amount: 8.84, reason: "Discount 02 (Plan) - 20% portion"))
-                TradeAllowanceCharge.call(xml:, invoice:, discount: Discount.new(indicator: false, rate: 21.0, amount: 1.00, reason: "Discount 02 (Plan) - 21% portion"))
+                build_allowance_charges(xml, invoice)
 
                 PaymentTerms.call(xml:)
                 MonetarySummation.call(xml:, invoice:)
@@ -89,6 +85,19 @@ module EInvoices
         def build_applied_taxes(xml, invoice)
           invoice.applied_taxes.each do |applied_tax|
             ApplicableTradeTax.call(xml:, invoice:, applied_tax:)
+          end
+        end
+
+        def build_allowance_charges(xml, invoice)
+          return unless invoice.coupons_amount_cents.positive?
+
+          sum_by_taxes_rate = invoice.fees.group(:taxes_rate).order(taxes_rate: :asc).sum(:amount_cents)
+          total_without_taxes = sum_by_taxes_rate.values.sum
+          coupon_proportions = sum_by_taxes_rate.transform_values do |value|
+            Money.new((value.to_f / total_without_taxes) * invoice.coupons_amount_cents)
+          end
+          coupon_proportions.each do |tax_rate, amount|
+            TradeAllowanceCharge.call(xml:, invoice:, tax_rate:, amount:)
           end
         end
 
