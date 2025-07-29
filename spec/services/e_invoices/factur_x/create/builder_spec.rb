@@ -13,10 +13,12 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
   let(:subscription) { create(:subscription, started_at: "2025-03-16".to_date) }
   let(:invoice) { create(:invoice, total_amount_cents: 30_00, currency: "USD") }
   let(:fee) { create(:fee, invoice:) }
+  let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice:, tax_rate: 20.00) }
 
   before do
     fee
     invoice_subscription
+    invoice_applied_tax
   end
 
   shared_examples "xml section" do |section|
@@ -59,9 +61,11 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
       end
     end
 
-    context "when payments tags" do
+    context "when payments" do
+      payment_tag = "//ram:SpecifiedTradeSettlementPaymentMeans"
+
       context "when something to pay" do
-        it_behaves_like "xml section", {name: "Payment Means: Standard payment", xpath: "(//ram:SpecifiedTradeSettlementPaymentMeans)[1]"}
+        it_behaves_like "xml section", {name: "Payment Means: Standard payment", xpath: "(#{payment_tag})[1]"}
       end
 
       context "with prepaid and credit note" do
@@ -72,9 +76,9 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
           )
         end
 
-        it_behaves_like "xml section", {name: "Payment Means: Standard payment", xpath: "(//ram:SpecifiedTradeSettlementPaymentMeans)[1]"}
-        it_behaves_like "xml section", {name: "Payment Means: Prepaid credit", xpath: "(//ram:SpecifiedTradeSettlementPaymentMeans)[2]"}
-        it_behaves_like "xml section", {name: "Payment Means: Credit note", xpath: "(//ram:SpecifiedTradeSettlementPaymentMeans)[3]"}
+        it_behaves_like "xml section", {name: "Payment Means: Standard payment", xpath: "(#{payment_tag})[1]"}
+        it_behaves_like "xml section", {name: "Payment Means: Prepaid credit", xpath: "(#{payment_tag})[2]"}
+        it_behaves_like "xml section", {name: "Payment Means: Credit note", xpath: "(#{payment_tag})[3]"}
       end
 
       context "when nothing else to pay" do
@@ -85,7 +89,22 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
           )
         end
 
-        it_behaves_like "xml section", {name: "Payment Means: Credit note", xpath: "(//ram:SpecifiedTradeSettlementPaymentMeans)[1]"}
+        it_behaves_like "xml section", {name: "Payment Means: Credit note", xpath: "(#{payment_tag})[1]"}
+      end
+    end
+
+    context "when has applied taxes" do
+      applied_taxes_tag = "//ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax"
+
+      it_behaves_like "xml section", {name: "Tax Information 20.00% VAT", xpath: "(#{applied_taxes_tag})[1]"}
+
+      context "with multiple taxes" do
+        let(:invoice_applied_tax2) { create(:invoice_applied_tax, invoice:, tax_rate: 19.00) }
+
+        before { invoice_applied_tax2 }
+
+        it_behaves_like "xml section", {name: "Tax Information 20.00% VAT", xpath: "(#{applied_taxes_tag})[1]"}
+        it_behaves_like "xml section", {name: "Tax Information 19.00% VAT", xpath: "(#{applied_taxes_tag})[2]"}
       end
     end
   end
