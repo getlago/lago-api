@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :invoice_subscription do
     subscription
+    invoicing_reason { "subscription_periodic" }
     invoice
     organization { subscription&.organization || invoice&.organization || association(:organization) }
 
