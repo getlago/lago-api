@@ -9,7 +9,7 @@ module EInvoices
           xml["ram"].SpecifiedTradePaymentTerms do
             xml["ram"].Description "Net payment term: 0 days"
             xml["ram"].DueDateDateTime do
-              xml["udt"].DateTimeString formatted_date("20250626".to_date), format: YYMMDD
+              xml["udt"].DateTimeString formatted_date("20250626".to_date), format: CCYYMMDD
             end
           end
         end

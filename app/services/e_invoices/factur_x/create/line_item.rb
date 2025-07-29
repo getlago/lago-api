@@ -26,7 +26,7 @@ module EInvoices
               end
             end
             xml["ram"].SpecifiedLineTradeDelivery do
-              xml["ram"].BilledQuantity fee.units, unitCode: "C62"
+              xml["ram"].BilledQuantity fee.units, unitCode: UNIT_CODE
             end
             xml["ram"].SpecifiedLineTradeSettlement do
               xml["ram"].ApplicableTradeTax do

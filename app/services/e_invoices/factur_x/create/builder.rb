@@ -12,9 +12,21 @@ module EInvoices
           "xmlns:udt" => "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100"
         }.freeze
 
+        # More taxations defined on UNTDID 5153 here
+        # https://service.unece.org/trade/untdid/d00a/tred/tred5153.htm
         VAT = "VAT"
+
+        # More categories for UNTDID 5305 here
+        # https://service.unece.org/trade/untdid/d00a/tred/tred5305.htm
         S_CATEGORY = "S"
-        YYMMDD = 102
+
+        # More date formats for UNTDID 2379 here
+        # https://service.unece.org/trade/untdid/d15a/tred/tred2379.htm
+        CCYYMMDD = 102
+
+        # More measures codes defined in UNECE Recommendation 20 here
+        # https://docs.peppol.eu/pracc/catalogue/1.0/codelist/UNECERec20/
+        UNIT_CODE = "C62"
 
         Tax = Data.define(:rate, :amount)
         Discount = Data.define(:indicator, :rate, :amount, :reason)

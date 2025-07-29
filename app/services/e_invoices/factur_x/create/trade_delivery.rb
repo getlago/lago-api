@@ -9,7 +9,7 @@ module EInvoices
           xml["ram"].ApplicableHeaderTradeDelivery do
             xml["ram"].ActualDeliverySupplyChainEvent do
               xml["ram"].OccurrenceDateTime do
-                xml["udt"].DateTimeString formatted_date(oldest_charges_from_datetime), format: YYMMDD
+                xml["udt"].DateTimeString formatted_date(oldest_charges_from_datetime), format: CCYYMMDD
               end
             end
           end

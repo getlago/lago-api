@@ -12,7 +12,7 @@ module EInvoices
             xml["ram"].ID invoice.number
             xml["ram"].TypeCode COMMERCIAL_INVOICE
             xml["ram"].IssueDateTime do
-              xml["udt"].DateTimeString formatted_date(invoice.issuing_date), format: YYMMDD
+              xml["udt"].DateTimeString formatted_date(invoice.issuing_date), format: CCYYMMDD
             end
             xml["ram"].IncludedNote do
               xml["ram"].Content "Invoice ID: #{invoice.id}"
