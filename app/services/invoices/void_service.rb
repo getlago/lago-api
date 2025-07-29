@@ -42,7 +42,7 @@ module Invoices
           create_credit_notes!
         else
           invoice.wallet_transactions.outbound.each do |wallet_transaction|
-            WalletTransactions::RecreditService.call!(wallet_transaction:)
+            WalletTransactions::RecreditService.call!(wallet_transaction:) if wallet_transaction.wallet.active?
           end
         end
       end
