@@ -41,19 +41,30 @@ class AppliedCoupon < ApplicationRecord
     @remaining_amount = amount_cents - already_applied_amount
   end
 
+  def credits_for_invoice_subscription(invoice_subscription)
+    invoice_ids = InvoiceSubscription
+      .where("charges_to_datetime <= ?", invoice_subscription.charges_to_datetime)
+      .where("charges_from_datetime >= ?", invoice_subscription.charges_from_datetime)
+      .joins(:invoice)
+      .where(subscription_id: invoice_subscription.subscription_id)
+      .pluck(:invoice_id)
+
+    credits.active.where(invoice_id: invoice_ids).joins(:invoice).where.not(invoices: {status: :voided})
+  end
+
+
+  def credits_applied_in_billing_period(invoice)
+    invoice.invoice_subscriptions.map do |invoice_subscription|
+      credits_for_invoice_subscription(invoice_subscription)
+    end.flatten
+  end
+
   def remaining_amount_for_this_subscription_billing_period(invoice:)
     @remaining_amount_for_this_subscription_billing_period ||= {}
     return @remaining_amount_for_this_subscription_billing_period[invoice.id] if @remaining_amount_for_this_subscription_billing_period[invoice.id].present?
 
     min_used_amount = invoice.invoice_subscriptions.map do |invoice_subscription|
-      invoice_ids = InvoiceSubscription
-        .where("charges_to_datetime <= ?", invoice_subscription.charges_to_datetime)
-        .where("charges_from_datetime >= ?", invoice_subscription.charges_from_datetime)
-        .joins(:invoice)
-        .where(subscription_id: invoice_subscription.subscription_id)
-        .pluck(:invoice_id)
-
-      credits.active.where(invoice_id: invoice_ids).joins(:invoice).where.not(invoices: {status: :voided}).sum(&:amount_cents)
+      credits_for_invoice_subscription(invoice_subscription).sum(&:amount_cents)
     end.min
 
     remaining_amount = amount_cents - min_used_amount
