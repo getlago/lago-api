@@ -143,12 +143,11 @@ module Invoices
           unit_precise_amount_cents = if adjusted_fee.unit_precise_amount_cents.zero?
             fee.precise_unit_amount
           else
-            adjusted_fee.unit_precise_amount_cents
+            adjusted_fee.unit_precise_amount_cents.to_d / subunit
           end
 
-
           fee.unit_amount_cents = unit_precise_amount_cents.round
-          fee.precise_unit_amount = unit_precise_amount_cents.to_d / subunit
+          fee.precise_unit_amount = unit_precise_amount_cents
           fee.amount_cents = (units * unit_precise_amount_cents).round
           fee.precise_amount_cents = units * unit_precise_amount_cents
           fee.save!
