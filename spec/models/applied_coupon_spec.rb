@@ -316,9 +316,10 @@ RSpec.describe AppliedCoupon do
     end
 
     context "when fees exist but outside billing period boundaries" do
+      let(:other_invoice) { create(:invoice, customer:, organization:, billing_entity:) }
       let(:fee) do
         create(:fee,
-          invoice:,
+          invoice: other_invoice,
           subscription:,
           organization:,
           billing_entity:,
@@ -330,7 +331,7 @@ RSpec.describe AppliedCoupon do
       let(:credit) do
         create(:credit,
           applied_coupon:,
-          invoice:,
+          invoice: other_invoice,
           amount_cents: 50,
           organization:)
       end
@@ -405,26 +406,6 @@ RSpec.describe AppliedCoupon do
       it "returns 0" do
         result = applied_coupon.credits_sum_for_invoice_subscription(invoice_subscription, invoice)
         expect(result).to eq(0)
-      end
-    end
-
-    # this will not work, right?
-    context "when boundaries come from invoice_subscription instead of fee properties" do
-      let(:credit) do
-        create(:credit,
-          applied_coupon:,
-          invoice:,
-          amount_cents: 30,
-          organization:)
-      end
-
-      before do
-        credit
-      end
-
-      it "uses invoice_subscription boundaries when no fee properties exist" do
-        result = applied_coupon.credits_sum_for_invoice_subscription(invoice_subscription, invoice)
-        expect(result).to eq(30)
       end
     end
 
@@ -653,9 +634,10 @@ RSpec.describe AppliedCoupon do
     end
 
     context "when credits exist but for invoice with fees outside billing period boundaries" do
+      let(:other_invoice) { create(:invoice, customer:, organization:, billing_entity:) }
       let(:fee) do
         create(:fee,
-          invoice:,
+          invoice: other_invoice,
           subscription:,
           organization:,
           billing_entity:,
@@ -667,7 +649,7 @@ RSpec.describe AppliedCoupon do
       let(:credit) do
         create(:credit,
           applied_coupon:,
-          invoice:,
+          invoice: other_invoice,
           amount_cents: 50,
           organization:)
       end
