@@ -19,6 +19,7 @@ module EInvoices
         # More categories for UNTDID 5305 here
         # https://service.unece.org/trade/untdid/d00a/tred/tred5305.htm
         S_CATEGORY = "S"
+        Z_CATEGORY = "Z"
 
         # More date formats for UNTDID 2379 here
         # https://service.unece.org/trade/untdid/d15a/tred/tred2379.htm
@@ -83,8 +84,13 @@ module EInvoices
         end
 
         def build_applied_taxes(xml, invoice)
-          invoice.applied_taxes.each do |applied_tax|
-            ApplicableTradeTax.call(xml:, invoice:, applied_tax:)
+          if invoice.applied_taxes.empty?
+            zero_tax = Invoice::AppliedTax.new(fees_amount: invoice.sub_total_excluding_taxes_amount)
+            ApplicableTradeTax.call(xml:, invoice:, applied_tax: zero_tax)
+          else
+            invoice.applied_taxes.each do |applied_tax|
+              ApplicableTradeTax.call(xml:, invoice:, applied_tax:)
+            end
           end
         end
 
@@ -111,6 +117,10 @@ module EInvoices
 
         def format_number(value, mask = "%.2f")
           format(mask, value)
+        end
+
+        def tax_category(rate)
+          rate.zero? ? Z_CATEGORY : S_CATEGORY
         end
       end
     end

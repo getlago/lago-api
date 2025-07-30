@@ -34,6 +34,10 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
     end
   end
 
+  applied_taxes_tag = "//ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax"
+  discount_tag = "//ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeAllowanceCharge"
+  payment_tag = "//ram:SpecifiedTradeSettlementPaymentMeans"
+
   describe ".call" do
     it { is_expected.not_to be_nil }
 
@@ -45,8 +49,8 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
       trade_agreement: {name: "Applicable Header Trade Agreement", xpath: "//rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement"},
       trade_delivery: {name: "Applicable Header Trade Delivery", xpath: "//rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeDelivery"},
       trade_settlement: {name: "Applicable Header Trade Settlement", xpath: "//rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement"},
-      trade_tax: {name: /Tax Information \d{2,3}\.\d{2}% VAT/, xpath: "//ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax"},
-      trade_allowance_charge: {name: /Allowance\/Charge - Discount \d{2,3}\.\d{2}% portion/, xpath: "//ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeAllowanceCharge"},
+      trade_tax: {name: /Tax Information \d{2,3}\.\d{2}% VAT/, xpath: applied_taxes_tag},
+      trade_allowance_charge: {name: /Allowance\/Charge - Discount \d{2,3}\.\d{2}% portion/, xpath: discount_tag},
       payment_terms: {name: "Payment Terms", xpath: "//ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradePaymentTerms"},
       monetary_summation: {name: "Monetary Summation", xpath: "//ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeSettlementHeaderMonetarySummation"}
     }.each do |reference, section|
@@ -62,8 +66,6 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
     end
 
     context "when payments" do
-      payment_tag = "//ram:SpecifiedTradeSettlementPaymentMeans"
-
       context "when something to pay" do
         it_behaves_like "xml section", {name: "Payment Means: Standard payment", xpath: "(#{payment_tag})[1]"}
       end
@@ -93,7 +95,7 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
       end
     end
 
-    context "when has applied taxes" do
+    context "with applied taxes" do
       applied_taxes_tag = "//ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax"
 
       it_behaves_like "xml section", {name: "Tax Information 20.00% VAT", xpath: "(#{applied_taxes_tag})[1]"}
@@ -108,9 +110,13 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
       end
     end
 
-    context "when discounts" do
-      discount_tag = "//ram:ApplicableHeaderTradeSettlement/ram:SpecifiedTradeAllowanceCharge"
+    context "without applied taxes" do
+      let(:invoice_applied_tax) { nil }
 
+      it_behaves_like "xml section", {name: "Tax Information 0.00% VAT", xpath: "(#{applied_taxes_tag})[1]"}
+    end
+
+    context "when discounts" do
       it_behaves_like "xml section", {name: "Allowance/Charge - Discount 20.00% portion", xpath: "(#{discount_tag})[1]"}
 
       context "with multiple fees" do

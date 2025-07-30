@@ -9,7 +9,8 @@ RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
     end
   end
 
-  let(:fee) { create(:fee, precise_unit_amount: 0.059) }
+  let(:fee) { create(:fee, precise_unit_amount: 0.059, taxes_rate:) }
+  let(:taxes_rate) { 20.00 }
   let(:line_id) { 1 }
 
   let(:root) { "//ram:IncludedSupplyChainTradeLineItem" }
@@ -30,8 +31,18 @@ RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
       expect(subject).to contains_xml_node("#{root}/ram:SpecifiedTradeProduct/ram:Name").with_value(fee.item_name)
     end
 
-    it "have the item description" do
-      expect(subject).to contains_xml_node("#{root}/ram:SpecifiedTradeProduct/ram:Description").with_value(fee.invoice_name)
+    context "when Description tag" do
+      it "uses name when description not available" do
+        expect(subject).to contains_xml_node("#{root}/ram:SpecifiedTradeProduct/ram:Description").with_value(fee.invoice_name)
+      end
+
+      context "with description field" do
+        before { fee.update(description: "Test me") }
+
+        it "uses description field" do
+          expect(subject).to contains_xml_node("#{root}/ram:SpecifiedTradeProduct/ram:Description").with_value("Test me")
+        end
+      end
     end
 
     it "have the item unit amount" do
@@ -47,6 +58,24 @@ RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
         expect(subject).to contains_xml_node(xpath)
           .with_value(fee.units)
           .with_attribute("unitCode", "C62")
+      end
+    end
+
+    context "with CategoryCode" do
+      let(:xpath) { "#{root}/ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:CategoryCode" }
+
+      context "when taxes are not zero" do
+        it "has the S category code" do
+          expect(subject).to contains_xml_node(xpath).with_value("S")
+        end
+      end
+
+      context "when taxes are zero" do
+        let(:taxes_rate) { 0.00 }
+
+        it "has the Z category code" do
+          expect(subject).to contains_xml_node(xpath).with_value("Z")
+        end
       end
     end
 

@@ -15,7 +15,7 @@ module EInvoices
             xml["ram"].CalculatedAmount format_number(applied_tax.amount)
             xml["ram"].TypeCode VAT
             xml["ram"].BasisAmount format_number(applied_tax.fees_amount)
-            xml["ram"].CategoryCode S_CATEGORY
+            xml["ram"].CategoryCode tax_category(applied_tax.tax_rate)
             xml["ram"].RateApplicablePercent format_number(applied_tax.tax_rate)
           end
         end

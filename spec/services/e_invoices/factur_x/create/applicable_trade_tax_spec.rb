@@ -10,8 +10,8 @@ RSpec.describe EInvoices::FacturX::Create::ApplicableTradeTax, type: :service do
   end
 
   let(:invoice) { create(:invoice) }
-  let(:applied_tax) { create(:invoice_applied_tax, invoice:, tax_rate: 20.00, fees_amount_cents: 1000) }
-
+  let(:applied_tax) { create(:invoice_applied_tax, invoice:, tax_rate:, fees_amount_cents: 1000) }
+  let(:tax_rate) { 20.00 }
   let(:root) { "//ram:ApplicableTradeTax" }
 
   before do
@@ -37,8 +37,18 @@ RSpec.describe EInvoices::FacturX::Create::ApplicableTradeTax, type: :service do
       expect(subject).to contains_xml_node("#{root}/ram:BasisAmount").with_value("10.00")
     end
 
-    it "has the tax category code" do
-      expect(subject).to contains_xml_node("#{root}/ram:CategoryCode").with_value("S")
+    context "with tax_category" do
+      it "has the S tax category code" do
+        expect(subject).to contains_xml_node("#{root}/ram:CategoryCode").with_value("S")
+      end
+
+      context "when taxes are zero" do
+        let(:tax_rate) { 0.00 }
+
+        it "has the Z category code" do
+          expect(subject).to contains_xml_node("#{root}/ram:CategoryCode").with_value("Z")
+        end
+      end
     end
 
     it "has the tax rate applicable percent" do

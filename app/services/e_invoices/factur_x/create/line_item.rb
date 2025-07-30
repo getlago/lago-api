@@ -18,7 +18,7 @@ module EInvoices
             end
             xml["ram"].SpecifiedTradeProduct do
               xml["ram"].Name fee.item_name
-              xml["ram"].Description item_description
+              xml["ram"].Description fee.description.presence || item_description
             end
             xml["ram"].SpecifiedLineTradeAgreement do
               xml["ram"].NetPriceProductTradePrice do
@@ -31,7 +31,7 @@ module EInvoices
             xml["ram"].SpecifiedLineTradeSettlement do
               xml["ram"].ApplicableTradeTax do
                 xml["ram"].TypeCode VAT
-                xml["ram"].CategoryCode S_CATEGORY
+                xml["ram"].CategoryCode tax_category(fee.taxes_rate)
                 xml["ram"].RateApplicablePercent fee.taxes_rate
               end
               xml["ram"].SpecifiedTradeSettlementLineMonetarySummation do
@@ -46,7 +46,7 @@ module EInvoices
         attr_accessor :line_id, :fee
 
         def item_description
-          return fee.invoice_display_name if fee.invoice_display_name.present?
+          return fee.invoice_name if fee.invoice_name.present?
 
           I18n.t(
             "invoice.subscription_interval",
