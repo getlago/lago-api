@@ -58,9 +58,15 @@ RSpec.describe AppliedCoupon do
     let(:subscription) { create(:subscription, customer: customer, organization: organization) }
     let(:current_time) { Time.current }
     let(:invoice) { create(:invoice, :subscription, customer: customer, organization: organization, subscriptions: [subscription]) }
+    let(:invoice_fee) do
+      create(:fee, invoice: invoice, subscription:, amount_cents: 20, organization:,
+        properties: {charges_from_datetime: current_time.beginning_of_month,
+        charges_to_datetime: current_time.end_of_month})
+    end
 
     before do
       invoice.invoice_subscriptions.update(timestamp: current_time, charges_from_datetime: current_time.beginning_of_month, charges_to_datetime: current_time.end_of_month)
+      invoice_fee
     end
 
     context "when no credits exist for the billing period" do
@@ -78,10 +84,16 @@ RSpec.describe AppliedCoupon do
           amount_cents: 30,
           organization: organization)
       end
+      let(:other_invoice_fee) do
+        create(:fee, invoice: other_invoice, subscription:, amount_cents: 20,
+          properties: {charges_from_datetime: current_time.beginning_of_month,
+          charges_to_datetime: current_time.end_of_month})
+      end
 
       before do
         other_invoice.invoice_subscriptions.update(timestamp: current_time, charges_from_datetime: current_time.beginning_of_month,
           charges_to_datetime: current_time.end_of_month)
+        other_invoice_fee
         credit
       end
 
@@ -92,9 +104,15 @@ RSpec.describe AppliedCoupon do
 
     context "when credits exist in non-overlapping billing periods" do
       let(:other_invoice) { create(:invoice, :subscription, customer: customer, organization: organization, subscriptions: [subscription]) }
+      let(:other_invoice_fee) do
+        create(:fee, invoice: other_invoice, subscription:, amount_cents: 20, organization:,
+          properties: {charges_from_datetime: current_time.beginning_of_month - 1.month,
+          charges_to_datetime: current_time.end_of_month - 1.month})
+      end
 
       before do
         other_invoice.invoice_subscriptions.update(timestamp: current_time, charges_from_datetime: current_time.beginning_of_month - 1.month, charges_to_datetime: current_time.end_of_month - 1.month)
+        other_invoice_fee
         create(:credit,
           applied_coupon: applied_coupon,
           invoice: other_invoice,
@@ -127,9 +145,15 @@ RSpec.describe AppliedCoupon do
 
     context "when invoice has voided credits" do
       let(:voided_invoice) { create(:invoice, :subscription, status: :voided, customer: customer, organization: organization, subscriptions: [subscription]) }
+      let(:voided_invoice_fee) do
+        create(:fee, invoice: voided_invoice, subscription:, amount_cents: 20,
+          properties: {charges_from_datetime: current_time.beginning_of_month,
+          charges_to_datetime: current_time.end_of_month})
+      end
 
       before do
         voided_invoice.invoice_subscriptions.update(timestamp: current_time, charges_from_datetime: current_time.beginning_of_month, charges_to_datetime: current_time.end_of_month)
+        voided_invoice_fee
         create(:credit,
           applied_coupon: applied_coupon,
           invoice: voided_invoice,
@@ -159,9 +183,14 @@ RSpec.describe AppliedCoupon do
           invoice: invoice,
           subscription: subscription_2,
           organization: organization,
-          timestamp: current_time + 1.day,
-          charges_from_datetime: (current_time + 1.day).beginning_of_month,
-          charges_to_datetime: (current_time + 1.day).end_of_month)
+          timestamp: current_time,
+          charges_from_datetime: (current_time).beginning_of_month,
+          charges_to_datetime: (current_time).end_of_month)
+      end
+      let(:invoice_fee_2) do
+        create(:fee, invoice: invoice, subscription: subscription_2, amount_cents: 20, organization:,
+          properties: {charges_from_datetime: current_time.beginning_of_month,
+          charges_to_datetime: current_time.end_of_month})
       end
 
       # this credit is associated to subscription 1 and subscription 2
@@ -172,6 +201,7 @@ RSpec.describe AppliedCoupon do
           invoice: invoice,
           amount_cents: 20,
           organization: organization)
+        invoice_fee_2
       end
 
       it "calculates based on the minimum used amount across all subscriptions" do
@@ -180,6 +210,11 @@ RSpec.describe AppliedCoupon do
 
       context "when each subscription has different remaining amount of the coupon" do
         let(:invoice_2) { create(:invoice, :subscription, customer: customer, organization: organization, subscriptions: [subscription_2]) }
+        let(:invoice_2_fee) do
+          create(:fee, invoice: invoice_2, subscription: subscription_2, amount_cents: 20, organization:,
+            properties: {charges_from_datetime: current_time.beginning_of_month,
+            charges_to_datetime: current_time.end_of_month})
+        end
 
         # this credit is associated only to subscription 2
         let(:credit_2) { create(:credit, applied_coupon: applied_coupon, invoice: invoice_2, amount_cents: 30, organization: organization) }
@@ -187,6 +222,7 @@ RSpec.describe AppliedCoupon do
         before do
           invoice_2.invoice_subscriptions.update(timestamp: current_time, charges_from_datetime: current_time.beginning_of_month, charges_to_datetime: current_time.end_of_month)
           credit_2
+          invoice_2_fee
         end
 
         # Note: subscription_2 has 50 credits, becasue it's associated to invoice and invoice_2,
@@ -200,9 +236,15 @@ RSpec.describe AppliedCoupon do
       context "when one of subscription has no usage" do
         let(:subscription_3) { create(:subscription, customer: customer, organization: organization) }
         let(:invoice_3) { create(:invoice, :subscription, customer: customer, organization: organization, subscriptions: [subscription_3, subscription_2]) }
+        let(:invoice_3_fee) do
+          create(:fee, invoice: invoice_3, subscription: subscription_3, amount_cents: 20, organization:,
+            properties: {charges_from_datetime: current_time.beginning_of_month,
+            charges_to_datetime: current_time.end_of_month})
+        end
 
         before do
           invoice_3.invoice_subscriptions.update(timestamp: current_time, charges_from_datetime: current_time.beginning_of_month, charges_to_datetime: current_time.end_of_month)
+          invoice_3_fee
         end
 
         it "calculates based on the minimum used amount across all subscriptions" do
