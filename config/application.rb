@@ -29,6 +29,8 @@ module LagoApi
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq
 
+    config.active_support.isolation_level = :fiber
+
     # Configuration for active record encryption
     config.active_record.encryption.hash_digest_class = OpenSSL::Digest::SHA1
     config.active_record.encryption.primary_key = ENV["ENCRYPTION_PRIMARY_KEY"] || ENV["LAGO_ENCRYPTION_PRIMARY_KEY"]
