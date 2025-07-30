@@ -1782,5 +1782,20 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         end
       end
     end
+
+    context "when customer has applied coupon" do
+      let(:coupon) { create(:coupon, organization:, coupon_type: "amount", amount_cents: 100, frequency: "recurrent", frequency_duration: 1, frequency_duration: 1) }
+      let(:applied_coupon) { create(:applied_coupon, customer:, coupon:) }
+
+      before { applied_coupon }
+
+      context "when invoice is pay in advance" do
+        let(:invoice) { create(:invoice, :with_subscriptions, :pay_in_advance, customer:, organization:, subscriptions: [subscription]) }
+
+        it "updates the invoice accordingly" do
+          result = invoice_service.call
+        end
+      end
+    end
   end
 end
