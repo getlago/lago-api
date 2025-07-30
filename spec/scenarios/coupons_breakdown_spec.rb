@@ -3,7 +3,7 @@
 require "rails_helper"
 
 describe "Coupons breakdown Spec", :premium do
-  let(:organization) { create(:organization, webhook_url: nil, l, premium_integrations: ["progressive_billing"]) }
+  let(:organization) { create(:organization, webhook_url: nil, premium_integrations: ["progressive_billing"]) }
 
   before do
     organization

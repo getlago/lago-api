@@ -47,7 +47,6 @@ class AppliedCoupon < ApplicationRecord
     boundaries = invoice.fees.where(subscription_id: invoice_subscription.subscription_id).first&.properties ||
       {"charges_from_datetime" => invoice_subscription.charges_from_datetime, "charges_to_datetime" => invoice_subscription.charges_to_datetime}
 
-    # note: fee's precise coupon amount cents also includes progressive billing
     invoice_ids = Fee.where(organization_id: invoice.organization_id,
       billing_entity_id: invoice.billing_entity_id,
       subscription_id: invoice_subscription.subscription_id)
