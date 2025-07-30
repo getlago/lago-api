@@ -94,23 +94,61 @@ RSpec.describe Credits::AppliedCouponService do
       end
 
       context "when coupon amount is higher than invoice amount" do
-        let(:base_amount_cents) { 6 }
+        context "when coupon is applied once" do
+          let(:base_amount_cents) { 6 }
 
-        it "limits the credit amount to the invoice amount" do
-          result = credit_service.call
+          it "limits the credit amount to the invoice amount" do
+            result = credit_service.call
 
-          expect(result).to be_success
-          expect(result.credit.amount_cents).to eq(6)
+            expect(result).to be_success
+            expect(result.credit.amount_cents).to eq(6)
 
-          expect(fee1.reload.precise_coupons_amount_cents).to eq(4)
-          expect(fee2.reload.precise_coupons_amount_cents).to eq(2)
+            expect(fee1.reload.precise_coupons_amount_cents).to eq(4)
+            expect(fee2.reload.precise_coupons_amount_cents).to eq(2)
+          end
+
+          it "does not terminate the applied coupon" do
+            result = credit_service.call
+
+            expect(result).to be_success
+            expect(applied_coupon.reload).not_to be_terminated
+          end
         end
 
-        it "does not terminate the applied coupon" do
-          result = credit_service.call
+        context "when applied coupon is recurring" do
+          let(:coupon) { create(:coupon, frequency: "recurring", frequency_duration: 3) }
+          let(:applied_coupon) { create(:applied_coupon, customer:, coupon:, frequency: "recurring", frequency_duration_remaining: 1) }
 
-          expect(result).to be_success
-          expect(applied_coupon.reload).not_to be_terminated
+          context "when invoice is for subscription" do
+            it "reduces frequency_duration" do
+              result = credit_service.call
+
+              expect(result).to be_success
+              expect(applied_coupon.reload.frequency_duration_remaining).to eq(0)
+              expect(applied_coupon.reload).to be_terminated
+            end
+          end
+
+          context "when invoice is for charge" do
+            let(:invoice_subscription) do
+              create(
+                :invoice_subscription,
+                invoicing_reason: "in_advance_charge",
+                invoice:,
+                timestamp: invoice.issuing_date,
+                charges_to_datetime: invoice.issuing_date,
+                charges_from_datetime: invoice.issuing_date - 1.month
+              )
+            end
+
+            it "does not reduce frequency_duration" do
+              result = credit_service.call
+
+              expect(result).to be_success
+              expect(applied_coupon.reload.frequency_duration_remaining).to eq(1)
+              expect(applied_coupon.reload).not_to be_terminated
+            end
+          end
         end
       end
 

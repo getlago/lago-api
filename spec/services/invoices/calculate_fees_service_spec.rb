@@ -1783,17 +1783,62 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
       end
     end
 
-    context "when customer has applied coupon" do
-      let(:coupon) { create(:coupon, organization:, coupon_type: "amount", amount_cents: 100, frequency: "recurrent", frequency_duration: 1, frequency_duration: 1) }
-      let(:applied_coupon) { create(:applied_coupon, customer:, coupon:) }
+    context "when customer has applied recurring coupon" do
+      let(:coupon) { create(:coupon, organization:, coupon_type: "fixed_amount", amount_cents: 100, frequency: "recurring") }
+      let(:applied_coupon) { create(:applied_coupon, customer:, coupon:, frequency: "recurring", frequency_duration_remaining: 3) }
 
       before { applied_coupon }
 
-      context "when invoice is pay in advance" do
-        let(:invoice) { create(:invoice, :with_subscriptions, :pay_in_advance, customer:, organization:, subscriptions: [subscription]) }
+      context "when invoice is for pay_in_advance charge" do
+        before { invoice.invoice_subscriptions.first.update!(invoicing_reason: "in_advance_charge") }
 
-        it "updates the invoice accordingly" do
-          result = invoice_service.call
+        it "does not deduct coupon's frequency_duration" do
+          expect { invoice_service.call }.not_to change { applied_coupon.reload.frequency_duration_remaining }
+        end
+      end
+
+      context "when it's a subscription invoice with total 0" do
+        let(:event) { nil }
+        let(:plan) { create(:plan, organization:, amount_cents: 0) }
+
+        context "when no credits were used in this billing period" do
+          it "does not reduce frequency_duration" do
+            expect { invoice_service.call }.not_to change { applied_coupon.reload.frequency_duration_remaining }
+          end
+        end
+
+        context "when credits were used in this billing period" do
+          let(:previous_invoice) { create(:invoice, :with_subscriptions, customer:, organization:, subscriptions: [subscription]) }
+          let(:previous_invoice_fee) do
+            create(:fee, invoice: previous_invoice, subscription:, amount_cents: 100, 
+            properties: {charges_to_datetime: date_service.charges_to_datetime,
+            charges_from_datetime: date_service.charges_from_datetime})
+          end
+          let(:previous_invoice_credit) { create(:credit, applied_coupon:, invoice: previous_invoice, amount_cents: 10) }
+
+          before do
+            previous_invoice_fee
+            previous_invoice_credit
+          end
+
+          it "reduces frequency_duration" do
+            expect { invoice_service.call }.to change { applied_coupon.reload.frequency_duration_remaining }.by(-1)
+          end
+        end
+      end
+
+      context "when it's a subscription invoice with total > 0" do
+        it "reduces frequency_duration" do
+          expect { invoice_service.call }.to change { applied_coupon.reload.frequency_duration_remaining }.by(-1)
+        end
+      end
+
+      context "when applied_coupon has frequency_duration_remaining of 1" do
+        let(:applied_coupon) { create(:applied_coupon, customer:, coupon:, frequency_duration_remaining: 1, frequency: "recurring") }
+
+        it "reduces frequency_duration and marks coupon as terminated" do
+          expect { invoice_service.call }.to change { applied_coupon.reload.frequency_duration_remaining }.by(-1)
+          expect(applied_coupon.reload.status).to eq("terminated")
         end
       end
     end
