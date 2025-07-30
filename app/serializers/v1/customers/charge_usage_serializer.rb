@@ -21,63 +21,125 @@ module V1
       private
 
       def calculate_usage_data(fees)
-        charge_has_filters = fees.first.charge&.filters&.any?
-        charge_has_grouping = fees.any? { |f| f.grouped_by.present? }
-        is_past_usage = root_name == "past_usage"
+        {
+          **current_usage_data(fees),
+          **projected_usage_data(fees),
+          pricing_unit_details: pricing_unit_details(fees)
+        }
+      end
 
-        current_units = fees.sum { |f| BigDecimal(f.units) }
-        current_amount_cents = fees.sum(&:amount_cents)
-        events_count = fees.sum { |f| f.events_count.to_i }
+      def current_usage_data(fees)
+        {
+          units: current_units(fees).to_s,
+          events_count: fees.sum { |f| f.events_count.to_i },
+          amount_cents: fees.sum(&:amount_cents),
+          amount_currency: fees.first.amount_currency
+        }
+      end
 
-        projected_units = BigDecimal("0")
-        projected_amount_cents = 0
-        projected_pricing_unit_amount_cents = 0
+      def current_units(fees)
+        fees.sum { |f| BigDecimal(f.units) }
+      end
 
-        unless is_past_usage
-          if charge_has_filters
-            fees_with_defined_filters = fees.select(&:charge_filter_id)
+      def projected_usage_data(fees)
+        return zero_projected_usage if past_usage?
 
-            fees_with_defined_filters.each do |fee|
-              result = ::Fees::ProjectionService.call(fees: [fee]).raise_if_error!
-              projected_units += result.projected_units
-              projected_amount_cents += result.projected_amount_cents
-              projected_pricing_unit_amount_cents += result.projected_pricing_unit_amount_cents.to_i
-            end
-          elsif charge_has_grouping
-            grouped_fees = fees.group_by(&:grouped_by).values
+        projection = calculate_projection(fees)
 
-            grouped_fees.each do |group_fee_list|
-              result = ::Fees::ProjectionService.call(fees: group_fee_list).raise_if_error!
-              projected_units += result.projected_units
-              projected_amount_cents += result.projected_amount_cents
-              projected_pricing_unit_amount_cents += result.projected_pricing_unit_amount_cents.to_i
-            end
-          else
-            result = ::Fees::ProjectionService.call(fees: fees).raise_if_error!
-            projected_units = result.projected_units
-            projected_amount_cents = result.projected_amount_cents
-            projected_pricing_unit_amount_cents = result.projected_pricing_unit_amount_cents.to_i
-          end
+        {
+          projected_units: projection[:units].to_s,
+          projected_amount_cents: projection[:amount_cents].to_i
+        }
+      end
+
+      def zero_projected_usage
+        {
+          projected_units: "0",
+          projected_amount_cents: 0
+        }
+      end
+
+      def past_usage?
+        root_name == "past_usage"
+      end
+
+      def calculate_projection(fees)
+        if charge_has_filters?(fees)
+          calculate_filtered_projection(fees)
+        elsif charge_has_grouping?(fees)
+          calculate_grouped_projection(fees)
+        else
+          calculate_simple_projection(fees)
         end
+      end
 
-        pricing_details = fees.first.pricing_unit_usage&.then do |pricing_unit|
+      def charge_has_filters?(fees)
+        fees.first.charge&.filters&.any?
+      end
+
+      def charge_has_grouping?(fees)
+        fees.any? { |f| f.grouped_by.present? }
+      end
+
+      def calculate_filtered_projection(fees)
+        fees_with_defined_filters = fees.select(&:charge_filter_id)
+
+        fees_with_defined_filters.reduce(initial_projection_values) do |totals, fee|
+          result = ::Fees::ProjectionService.call(fees: [fee]).raise_if_error!
+          accumulate_projection(totals, result)
+        end
+      end
+
+      def calculate_grouped_projection(fees)
+        grouped_fees = fees.group_by(&:grouped_by).values
+
+        grouped_fees.reduce(initial_projection_values) do |totals, group_fee_list|
+          result = ::Fees::ProjectionService.call(fees: group_fee_list).raise_if_error!
+          accumulate_projection(totals, result)
+        end
+      end
+
+      def calculate_simple_projection(fees)
+        result = ::Fees::ProjectionService.call(fees: fees).raise_if_error!
+
+        {
+          units: result.projected_units,
+          amount_cents: result.projected_amount_cents,
+          pricing_unit_amount_cents: result.projected_pricing_unit_amount_cents.to_i
+        }
+      end
+
+      def initial_projection_values
+        {
+          units: BigDecimal("0"),
+          amount_cents: 0,
+          pricing_unit_amount_cents: 0
+        }
+      end
+
+      def accumulate_projection(totals, result)
+        {
+          units: totals[:units] + result.projected_units,
+          amount_cents: totals[:amount_cents] + result.projected_amount_cents,
+          pricing_unit_amount_cents: totals[:pricing_unit_amount_cents] + result.projected_pricing_unit_amount_cents.to_i
+        }
+      end
+
+      def pricing_unit_details(fees)
+        fees.first.pricing_unit_usage&.then do |pricing_unit|
           {
             amount_cents: fees.map(&:pricing_unit_usage).compact.sum(&:amount_cents),
-            projected_amount_cents: projected_pricing_unit_amount_cents.to_i,
+            projected_amount_cents: projected_pricing_unit_amount_cents(fees),
             short_name: pricing_unit.short_name,
             conversion_rate: pricing_unit.conversion_rate
           }
         end
+      end
 
-        {
-          units: current_units.to_s,
-          events_count: events_count,
-          amount_cents: current_amount_cents,
-          amount_currency: fees.first.amount_currency,
-          projected_units: projected_units.to_s,
-          projected_amount_cents: projected_amount_cents.to_i,
-          pricing_unit_details: pricing_details
-        }
+      def projected_pricing_unit_amount_cents(fees)
+        return 0 if past_usage?
+
+        calculate_projection(fees)[:pricing_unit_amount_cents]
       end
 
       def charge_data(fee)

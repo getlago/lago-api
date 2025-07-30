@@ -6,6 +6,17 @@ module Fees
 
     def initialize(fees:)
       @fees = fees
+      @first_fee = fees.first
+
+      @charge = @first_fee&.charge
+      @subscription = @first_fee&.subscription
+      @charge_filter = @first_fee&.charge_filter
+      @from_datetime = @first_fee&.properties&.dig("from_datetime")
+      @to_datetime = @first_fee&.properties&.dig("to_datetime")
+      @charges_duration_in_days = @first_fee&.properties&.dig("charges_duration")
+      @currency = @subscription&.plan&.amount&.currency
+      @properties_for_charge_model = @charge_filter&.properties || @charge&.properties
+
       super(nil)
     end
 
@@ -58,58 +69,26 @@ module Fees
 
     private
 
-    attr_reader :fees
-
-    def first_fee
-      @first_fee ||= fees.first
-    end
-
-    def properties_for_charge_model
-      first_fee.charge_filter&.properties || charge.properties
-    end
-
-    def charge_filter
-      first_fee&.charge_filter
-    end
-
-    def from_datetime
-      first_fee.properties["from_datetime"]
-    end
-
-    def to_datetime
-      first_fee.properties["to_datetime"]
-    end
-
-    def charges_duration_in_days
-      first_fee.properties["charges_duration"]
-    end
-
-    def charge
-      first_fee&.charge
-    end
-
-    def subscription
-      first_fee&.subscription
-    end
-
-    def currency
-      subscription.plan.amount.currency
-    end
+    attr_reader :fees, :first_fee, :charge, :subscription, :charge_filter,
+      :from_datetime, :to_datetime, :charges_duration_in_days,
+      :currency, :properties_for_charge_model
 
     def period_ratio
+      return @period_ratio if defined?(@period_ratio)
+
       from_date = from_datetime.to_date
       to_date = to_datetime.to_date
       current_date = Time.current.to_date
 
       total_days = (to_date - from_date).to_i + 1
 
-      return 1.0 if current_date >= to_date
-      return 0.0 if current_date < from_date
+      return @period_ratio = 1.0 if current_date >= to_date
+      return @period_ratio = 0.0 if current_date < from_date
 
       days_passed = (current_date - from_date).to_i + 1
 
       ratio = days_passed.fdiv(total_days)
-      ratio.clamp(0.0, 1.0)
+      @period_ratio = ratio.clamp(0.0, 1.0)
     end
 
     def run_aggregation

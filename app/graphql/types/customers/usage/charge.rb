@@ -66,45 +66,49 @@ module Types
           object.group_by(&:grouped_by).values
         end
 
-        def projected_units # rubocop:disable GraphQL/ResolverMethodLength
-          if charge.filters.any?
-            filter_groups = object.group_by(&:charge_filter_id).values
-            filter_groups.sum do |filter_fee_group|
-              next BigDecimal("0") unless filter_fee_group.first.charge_filter_id
-
-              result = ::Fees::ProjectionService.call(fees: filter_fee_group).raise_if_error!
-              result.projected_units
-            end
-          elsif object.any? { |f| f.grouped_by.present? }
-            grouped_fees = object.group_by(&:grouped_by).values
-            grouped_fees.sum do |group_fee_list|
-              ::Fees::ProjectionService.call(fees: group_fee_list).raise_if_error!.projected_units
-            end
-          else
-            projection_result.projected_units
-          end
+        def projected_units
+          calculate_projection(:projected_units, BigDecimal("0"))
         end
 
-        def projected_amount_cents # rubocop:disable GraphQL/ResolverMethodLength
-          if charge.filters.any?
-            filter_groups = object.group_by(&:charge_filter_id).values
-            filter_groups.sum do |filter_fee_group|
-              next 0 unless filter_fee_group.first.charge_filter_id
-
-              result = ::Fees::ProjectionService.call(fees: filter_fee_group).raise_if_error!
-              result.projected_amount_cents
-            end
-          elsif object.any? { |f| f.grouped_by.present? }
-            grouped_fees = object.group_by(&:grouped_by).values
-            grouped_fees.sum do |group_fee_list|
-              ::Fees::ProjectionService.call(fees: group_fee_list).raise_if_error!.projected_amount_cents
-            end
-          else
-            projection_result.projected_amount_cents
-          end
+        def projected_amount_cents
+          calculate_projection(:projected_amount_cents, 0)
         end
 
         private
+
+        def calculate_projection(attribute, zero_value)
+          if charge.filters.any?
+            calculate_filtered_projection(attribute, zero_value)
+          elsif has_grouping?
+            calculate_grouped_projection(attribute)
+          else
+            projection_result.public_send(attribute)
+          end
+        end
+
+        def calculate_filtered_projection(attribute, zero_value)
+          filter_groups = object.group_by(&:charge_filter_id).values
+
+          filter_groups.sum do |filter_fee_group|
+            next zero_value unless filter_fee_group.first.charge_filter_id
+
+            result = ::Fees::ProjectionService.call(fees: filter_fee_group).raise_if_error!
+            result.public_send(attribute)
+          end
+        end
+
+        def calculate_grouped_projection(attribute)
+          grouped_fees = object.group_by(&:grouped_by).values
+
+          grouped_fees.sum do |group_fee_list|
+            result = ::Fees::ProjectionService.call(fees: group_fee_list).raise_if_error!
+            result.public_send(attribute)
+          end
+        end
+
+        def has_grouping?
+          object.any? { |f| f.grouped_by.present? }
+        end
 
         def projection_result
           @projection_result ||= ::Fees::ProjectionService.call(fees: object).raise_if_error!
