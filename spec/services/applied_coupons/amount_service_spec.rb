@@ -127,9 +127,14 @@ RSpec.describe AppliedCoupons::AmountService do
             charges_from_datetime: invoice.issuing_date - 1.month
           )
         end
+        let(:prev_invoice_fee) do
+          create(:fee, invoice: prev_invoice, subscription:, amount_cents: 20,
+            properties: {charges_from_datetime: prev_invoice_subscription.charges_from_datetime,
+            charges_to_datetime: prev_invoice_subscription.charges_to_datetime})
+        end
 
         before do
-          prev_invoice_subscription
+          prev_invoice_fee
           credit
         end
 
@@ -154,6 +159,7 @@ RSpec.describe AppliedCoupons::AmountService do
         context "when previous invoice is from another billing period" do
           before do
             prev_invoice_subscription.update(charges_from_datetime: prev_invoice.issuing_date - 2.months, charges_to_datetime: prev_invoice.issuing_date - 1.month)
+            prev_invoice_fee.update(properties: {charges_from_datetime: prev_invoice_subscription.charges_from_datetime, charges_to_datetime: prev_invoice_subscription.charges_to_datetime})
           end
 
           it "calculates the remaining amount" do

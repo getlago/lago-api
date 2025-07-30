@@ -45,15 +45,15 @@ class AppliedCoupon < ApplicationRecord
     # unfortunately it's a known issue that when we create an invoice_subscription for paid_in_advance fees,
     # the boundaries are taken from the prev billing period, while fees have correct boundaries
     boundaries = invoice.fees.where(subscription_id: invoice_subscription.subscription_id).first&.properties ||
-      {charges_from_datetime: invoice_subscription.charges_from_datetime, charges_to_datetime: invoice_subscription.charges_to_datetime}
+      {"charges_from_datetime" => invoice_subscription.charges_from_datetime, "charges_to_datetime" => invoice_subscription.charges_to_datetime}
 
     # note: fee's precise coupon amount cents also includes progressive billing
     invoice_ids = Fee.where(organization_id: invoice.organization_id,
       billing_entity_id: invoice.billing_entity_id,
       subscription_id: invoice_subscription.subscription_id)
-      .where("properties->>'charges_from_datetime' >= ?", boundaries["charges_from_datetime"])
-      .where("properties->>'charges_to_datetime' <= ?", boundaries["charges_to_datetime"])
-      .map(&:invoice_id).uniq
+      .where("(properties->>'charges_from_datetime')::timestamptz >= ?::timestamptz", boundaries["charges_from_datetime"])
+      .where("(properties->>'charges_to_datetime')::timestamptz <= ?::timestamptz", boundaries["charges_to_datetime"])
+      .pluck(:invoice_id).uniq
 
     credits.active.where(invoice_id: invoice_ids).joins(:invoice).where.not(invoices: {status: :voided}).sum(&:amount_cents)
   end
