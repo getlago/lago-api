@@ -1810,9 +1810,9 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         context "when credits were used in this billing period" do
           let(:previous_invoice) { create(:invoice, :with_subscriptions, customer:, organization:, subscriptions: [subscription]) }
           let(:previous_invoice_fee) do
-            create(:fee, invoice: previous_invoice, subscription:, amount_cents: 100, 
-            properties: {charges_to_datetime: date_service.charges_to_datetime,
-            charges_from_datetime: date_service.charges_from_datetime})
+            create(:fee, invoice: previous_invoice, subscription:, amount_cents: 100,
+              properties: {charges_to_datetime: date_service.charges_to_datetime,
+                           charges_from_datetime: date_service.charges_from_datetime})
           end
           let(:previous_invoice_credit) { create(:credit, applied_coupon:, invoice: previous_invoice, amount_cents: 10) }
 
