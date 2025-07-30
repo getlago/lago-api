@@ -61,7 +61,7 @@ RSpec.describe AppliedCoupon do
     let(:invoice_fee) do
       create(:fee, invoice: invoice, subscription:, amount_cents: 20, organization:,
         properties: {charges_from_datetime: current_time.beginning_of_month,
-        charges_to_datetime: current_time.end_of_month})
+                     charges_to_datetime: current_time.end_of_month})
     end
 
     before do
@@ -87,7 +87,7 @@ RSpec.describe AppliedCoupon do
       let(:other_invoice_fee) do
         create(:fee, invoice: other_invoice, subscription:, amount_cents: 20,
           properties: {charges_from_datetime: current_time.beginning_of_month,
-          charges_to_datetime: current_time.end_of_month})
+                       charges_to_datetime: current_time.end_of_month})
       end
 
       before do
@@ -107,7 +107,7 @@ RSpec.describe AppliedCoupon do
       let(:other_invoice_fee) do
         create(:fee, invoice: other_invoice, subscription:, amount_cents: 20, organization:,
           properties: {charges_from_datetime: current_time.beginning_of_month - 1.month,
-          charges_to_datetime: current_time.end_of_month - 1.month})
+                       charges_to_datetime: current_time.end_of_month - 1.month})
       end
 
       before do
@@ -148,7 +148,7 @@ RSpec.describe AppliedCoupon do
       let(:voided_invoice_fee) do
         create(:fee, invoice: voided_invoice, subscription:, amount_cents: 20,
           properties: {charges_from_datetime: current_time.beginning_of_month,
-          charges_to_datetime: current_time.end_of_month})
+                       charges_to_datetime: current_time.end_of_month})
       end
 
       before do
@@ -184,13 +184,13 @@ RSpec.describe AppliedCoupon do
           subscription: subscription_2,
           organization: organization,
           timestamp: current_time,
-          charges_from_datetime: (current_time).beginning_of_month,
-          charges_to_datetime: (current_time).end_of_month)
+          charges_from_datetime: current_time.beginning_of_month,
+          charges_to_datetime: current_time.end_of_month)
       end
       let(:invoice_fee_2) do
         create(:fee, invoice: invoice, subscription: subscription_2, amount_cents: 20, organization:,
           properties: {charges_from_datetime: current_time.beginning_of_month,
-          charges_to_datetime: current_time.end_of_month})
+                       charges_to_datetime: current_time.end_of_month})
       end
 
       # this credit is associated to subscription 1 and subscription 2
@@ -213,7 +213,7 @@ RSpec.describe AppliedCoupon do
         let(:invoice_2_fee) do
           create(:fee, invoice: invoice_2, subscription: subscription_2, amount_cents: 20, organization:,
             properties: {charges_from_datetime: current_time.beginning_of_month,
-            charges_to_datetime: current_time.end_of_month})
+                         charges_to_datetime: current_time.end_of_month})
         end
 
         # this credit is associated only to subscription 2
@@ -239,7 +239,7 @@ RSpec.describe AppliedCoupon do
         let(:invoice_3_fee) do
           create(:fee, invoice: invoice_3, subscription: subscription_3, amount_cents: 20, organization:,
             properties: {charges_from_datetime: current_time.beginning_of_month,
-            charges_to_datetime: current_time.end_of_month})
+                         charges_to_datetime: current_time.end_of_month})
         end
 
         before do
