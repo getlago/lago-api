@@ -9572,7 +9572,6 @@ ALTER TABLE ONLY public.dunning_campaign_thresholds
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-<<<<<<< HEAD
 ('20250724104251'),
 ('20250722094047'),
 ('20250721220908'),
@@ -9585,10 +9584,8 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250721091802'),
 ('20250718174008'),
 ('20250718140450'),
-=======
 ('20250717142942'),
 ('20250717140238'),
->>>>>>> b7c39e65e (add fixed_charge_id to fees)
 ('20250717092012'),
 ('20250717071548'),
 ('20250716150049'),
