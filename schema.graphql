@@ -7840,6 +7840,7 @@ type PlanCollection {
 type PlanEntitlement {
   code: String!
   description: String
+  feature: FeatureObject!
   name: String!
   privileges: [PlanEntitlementPrivilegeObject!]!
 }
