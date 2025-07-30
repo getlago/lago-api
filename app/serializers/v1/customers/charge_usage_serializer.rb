@@ -54,7 +54,7 @@ module V1
 
       def zero_projected_usage
         {
-          projected_units: "0",
+          projected_units: "0.0",
           projected_amount_cents: 0
         }
       end
@@ -111,7 +111,7 @@ module V1
 
       def initial_projection_values
         {
-          units: BigDecimal("0"),
+          units: BigDecimal("0.0"),
           amount_cents: 0,
           pricing_unit_amount_cents: 0
         }
