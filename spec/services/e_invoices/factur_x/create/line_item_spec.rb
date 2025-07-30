@@ -9,7 +9,7 @@ RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
     end
   end
 
-  let(:fee) { create(:fee) }
+  let(:fee) { create(:fee, precise_unit_amount: 0.059) }
   let(:line_id) { 1 }
 
   let(:root) { "//ram:IncludedSupplyChainTradeLineItem" }
@@ -34,10 +34,10 @@ RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
       expect(subject).to contains_xml_node("#{root}/ram:SpecifiedTradeProduct/ram:Description").with_value(fee.invoice_name)
     end
 
-    it "have the item amount" do
+    it "have the item unit amount" do
       expect(subject).to contains_xml_node(
         "#{root}/ram:SpecifiedLineTradeAgreement/ram:NetPriceProductTradePrice/ram:ChargeAmount"
-      ).with_value(fee.amount)
+      ).with_value("0.059")
     end
 
     context "with BilledQuantity" do
@@ -59,7 +59,7 @@ RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
     it "have the item total amount" do
       expect(subject).to contains_xml_node(
         "#{root}/ram:SpecifiedLineTradeSettlement/ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount"
-      ).with_value(fee.amount_cents)
+      ).with_value(fee.amount)
     end
   end
 end

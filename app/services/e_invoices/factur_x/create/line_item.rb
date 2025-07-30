@@ -22,7 +22,7 @@ module EInvoices
             end
             xml["ram"].SpecifiedLineTradeAgreement do
               xml["ram"].NetPriceProductTradePrice do
-                xml["ram"].ChargeAmount fee.amount
+                xml["ram"].ChargeAmount fee.precise_unit_amount
               end
             end
             xml["ram"].SpecifiedLineTradeDelivery do
@@ -35,7 +35,7 @@ module EInvoices
                 xml["ram"].RateApplicablePercent fee.taxes_rate
               end
               xml["ram"].SpecifiedTradeSettlementLineMonetarySummation do
-                xml["ram"].LineTotalAmount fee.amount_cents
+                xml["ram"].LineTotalAmount format_number(fee.amount)
               end
             end
           end
