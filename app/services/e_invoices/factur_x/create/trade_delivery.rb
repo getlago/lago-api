@@ -18,12 +18,15 @@ module EInvoices
         private
 
         def oldest_charges_from_datetime
-          return invoice.created_at if invoice.one_off?
-
-          invoice.subscriptions.map do |subscription|
-            ::Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true)
-              .charges_from_datetime
-          end.min
+          case invoice.invoice_type
+          when "one_off", "credit"
+            invoice.created_at
+          when "subscription"
+            invoice.subscriptions.map do |subscription|
+              ::Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true)
+                .charges_from_datetime
+            end.min
+          end
         end
       end
     end

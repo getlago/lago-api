@@ -22,8 +22,10 @@ module EInvoices
                 xml["ram"].CityName billing_entity.city
                 xml["ram"].CountryID billing_entity.country
               end
-              xml["ram"].SpecifiedTaxRegistration do
-                xml["ram"].ID billing_entity.tax_identification_number, schemeID: TAX_SCHEMA_ID
+              unless invoice.credit?
+                xml["ram"].SpecifiedTaxRegistration do
+                  xml["ram"].ID billing_entity.tax_identification_number, schemeID: TAX_SCHEMA_ID
+                end
               end
             end
             xml["ram"].BuyerTradeParty do

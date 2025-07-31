@@ -9,7 +9,8 @@ RSpec.describe EInvoices::FacturX::Create::Header, type: :service do
     end
   end
 
-  let(:invoice) { create(:invoice, issuing_date: issuing_date.to_date) }
+  let(:invoice) { create(:invoice, issuing_date: issuing_date.to_date, invoice_type:) }
+  let(:invoice_type) { :subscription }
   let(:issuing_date) { "20250316" }
 
   before { invoice }
@@ -28,8 +29,18 @@ RSpec.describe EInvoices::FacturX::Create::Header, type: :service do
         expect(subject).to contains_xml_node("#{root}/ram:ID").with_value(invoice.number)
       end
 
-      it "expects to have a type code" do
-        expect(subject).to contains_xml_node("#{root}/ram:TypeCode").with_value(380)
+      context "when TypeCode" do
+        it "expects to have a type code" do
+          expect(subject).to contains_xml_node("#{root}/ram:TypeCode").with_value(380)
+        end
+
+        context "with credit invoice" do
+          let(:invoice_type) { :credit }
+
+          it "expects to have a type code" do
+            expect(subject).to contains_xml_node("#{root}/ram:TypeCode").with_value(386)
+          end
+        end
       end
 
       it "expects to have invoice issuing date" do

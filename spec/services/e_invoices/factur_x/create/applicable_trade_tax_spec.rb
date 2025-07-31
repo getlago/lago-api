@@ -9,9 +9,10 @@ RSpec.describe EInvoices::FacturX::Create::ApplicableTradeTax, type: :service do
     end
   end
 
-  let(:invoice) { create(:invoice) }
+  let(:invoice) { create(:invoice, invoice_type:) }
   let(:applied_tax) { create(:invoice_applied_tax, invoice:, tax_rate:, fees_amount_cents: 1000) }
   let(:tax_rate) { 20.00 }
+  let(:invoice_type) { "subscription" }
   let(:root) { "//ram:ApplicableTradeTax" }
 
   before do
@@ -48,6 +49,26 @@ RSpec.describe EInvoices::FacturX::Create::ApplicableTradeTax, type: :service do
         it "has the Z category code" do
           expect(subject).to contains_xml_node("#{root}/ram:CategoryCode").with_value("Z")
         end
+      end
+
+      context "when credit invoice" do
+        let(:invoice_type) { "credit" }
+
+        it "has the O category code" do
+          expect(subject).to contains_xml_node("#{root}/ram:CategoryCode").with_value("O")
+        end
+      end
+    end
+
+    context "when credit invoice" do
+      let(:invoice_type) { "credit" }
+
+      it "has ExemptionReasonCode" do
+        expect(subject).to contains_xml_node("#{root}/ram:ExemptionReasonCode").with_value("VATEX-EU-O")
+      end
+
+      it "does not has RateApplicablePercent" do
+        expect(subject).not_to contains_xml_node("#{root}/ram:RateApplicablePercent")
       end
     end
 

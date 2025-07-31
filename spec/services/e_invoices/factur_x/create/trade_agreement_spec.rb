@@ -11,7 +11,8 @@ RSpec.describe EInvoices::FacturX::Create::TradeAgreement, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:invoice) { create(:invoice, customer:, organization:, billing_entity:) }
+  let(:invoice) { create(:invoice, customer:, organization:, billing_entity:, invoice_type:) }
+  let(:invoice_type) { :subscription }
   let(:customer) do
     create(:customer,
       organization:,
@@ -76,6 +77,14 @@ RSpec.describe EInvoices::FacturX::Create::TradeAgreement, type: :service do
           expect(subject).to contains_xml_node("#{seller_tax_root}/ram:ID")
             .with_value(billing_entity.tax_identification_number)
             .with_attribute("schemeID", "VA")
+        end
+
+        context "with credit invoice" do
+          let(:invoice_type) { :credit }
+
+          it "dont have the tax id" do
+            expect(subject).not_to contains_xml_node("#{seller_tax_root}/ram:ID")
+          end
         end
       end
     end

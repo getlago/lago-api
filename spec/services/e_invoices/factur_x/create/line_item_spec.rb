@@ -9,8 +9,9 @@ RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
     end
   end
 
-  let(:fee) { create(:fee, precise_unit_amount: 0.059, taxes_rate:) }
+  let(:fee) { create(:fee, precise_unit_amount: 0.059, taxes_rate:, fee_type:) }
   let(:taxes_rate) { 20.00 }
+  let(:fee_type) { :subscription }
   let(:line_id) { 1 }
 
   let(:root) { "//ram:IncludedSupplyChainTradeLineItem" }
@@ -77,12 +78,32 @@ RSpec.describe EInvoices::FacturX::Create::LineItem, type: :service do
           expect(subject).to contains_xml_node(xpath).with_value("Z")
         end
       end
+
+      context "when credit fee" do
+        let(:fee_type) { :credit }
+
+        it "has the O category code" do
+          expect(subject).to contains_xml_node(xpath).with_value("O")
+        end
+      end
     end
 
-    it "have the item taxes rate" do
-      expect(subject).to contains_xml_node(
-        "#{root}/ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:RateApplicablePercent"
-      ).with_value(fee.taxes_rate)
+    context "when RateApplicablePercent" do
+      it "have the item taxes rate" do
+        expect(subject).to contains_xml_node(
+          "#{root}/ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:RateApplicablePercent"
+        ).with_value(fee.taxes_rate)
+      end
+
+      context "when credit fee" do
+        let(:fee_type) { :credit }
+
+        it "doesnt have the tag" do
+          expect(subject).not_to contains_xml_node(
+            "#{root}/ram:SpecifiedLineTradeSettlement/ram:ApplicableTradeTax/ram:RateApplicablePercent"
+          )
+        end
+      end
     end
 
     it "have the item total amount" do

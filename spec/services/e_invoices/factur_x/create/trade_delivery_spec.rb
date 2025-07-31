@@ -52,6 +52,14 @@ RSpec.describe EInvoices::FacturX::Create::TradeDelivery, type: :service do
           expect(subject).to contains_xml_node(xpath).with_value(invoice_created_at).with_attribute("format", 102)
         end
       end
+
+      context "when credit" do
+        let(:invoice_type) { :credit }
+
+        it "have the creation date" do
+          expect(subject).to contains_xml_node(xpath).with_value(invoice_created_at).with_attribute("format", 102)
+        end
+      end
     end
   end
 end
