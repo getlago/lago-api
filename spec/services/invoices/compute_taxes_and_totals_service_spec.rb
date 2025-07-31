@@ -196,5 +196,48 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
         expect(Invoices::ComputeAmountsFromFees).to have_received(:call)
       end
     end
+
+    context "when a VIES check is in progress" do
+      subject(:result) { described_class.call(invoice:, finalizing:) }
+
+      let(:billing_entity) { create(:billing_entity, eu_tax_management: true) }
+      let(:customer) { create(:customer, organization:, billing_entity:) }
+
+      context "when finalizing" do
+        let(:finalizing) { true }
+
+        it "sets the invoice status to pending and tax_status to failed" do
+          subject
+
+          expect(invoice.reload.status).to eq("pending")
+          expect(invoice.reload.tax_status).to eq("failed")
+        end
+
+        it "returns an unknown_tax_failure with the appropriate message" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::UnknownTaxFailure)
+          expect(result.error.message).to eq("tax_error: vies check in progress")
+        end
+      end
+
+      context "when not finalizing" do
+        let(:finalizing) { false }
+
+        before { invoice.update!(status: :draft) }
+
+        it "sets the only tax_status to failed" do
+          subject
+
+          expect(invoice.reload.status).to eq("draft")
+          expect(invoice.reload.tax_status).to eq("failed")
+        end
+
+        it "returns an unknown_tax_failure with the appropriate message" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::UnknownTaxFailure)
+          expect(result.error.message).to eq("tax_error: vies check in progress")
+        end
+      end
+    end
   end
 end

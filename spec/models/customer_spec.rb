@@ -998,4 +998,41 @@ RSpec.describe Customer do
       end
     end
   end
+
+  describe "#vies_check_in_progress?" do
+    subject { customer.vies_check_in_progress? }
+
+    let(:organization) { create(:organization) }
+    let(:billing_entity) { create(:billing_entity, organization:, eu_tax_management:) }
+    let(:customer) { create(:customer, organization:, billing_entity:) }
+
+    context "when billing_entity has no EU tax management" do
+      let(:eu_tax_management) { false }
+
+      it "returns false" do
+        expect(subject).to be false
+      end
+    end
+
+    context "when billing_entity has EU tax management" do
+      let(:eu_tax_management) { true }
+
+      context "when VIES tax exist" do
+        before do
+          tax = create(:tax, organization:, code: "lago_eu_vat")
+          create(:customer_applied_tax, customer:, tax:)
+        end
+
+        it "returns false" do
+          expect(subject).to be false
+        end
+      end
+
+      context "when VIES tax do not exist" do
+        it "returns true" do
+          expect(subject).to be true
+        end
+      end
+    end
+  end
 end
