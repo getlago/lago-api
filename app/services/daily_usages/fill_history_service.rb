@@ -30,7 +30,7 @@ module DailyUsages
             subscription: subscription,
             apply_taxes: false,
             with_cache: false,
-            max_to_datetime: Time.current
+            max_to_datetime: time_to_freeze
           ).raise_if_error!.usage
           next if sandbox
 
