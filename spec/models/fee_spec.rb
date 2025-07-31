@@ -112,21 +112,21 @@ RSpec.describe Fee, type: :model do
       end
 
       context "when it is a fixed charge fee" do
-        let(:fee) { build(:fixed_charge_fee, invoice_display_name:) }
+        let(:fee) { build(:fixed_charge_fee, invoice_display_name:, fixed_charge:) }
 
         context "when fixed charge has invoice display name present" do
           let(:fixed_charge) { create(:fixed_charge, invoice_display_name: Faker::Fantasy::Tolkien.location) }
 
           it "returns related fixed charge add on code" do
-            expect(fee_invoice_name).to eq(fee.fixed_charge.add_on.code)
+            expect(fee_invoice_name).to eq(fee.fixed_charge.invoice_display_name)
           end
         end
 
         context "when fixed charge has invoice display name blank" do
           let(:fixed_charge) { create(:fixed_charge, invoice_display_name: [nil, ""].sample) }
 
-          it "returns related fixed charge add on code" do
-            expect(fee_invoice_name).to eq(fee.fixed_charge.add_on.name)
+          it "returns related fixed charge add on invoice name" do
+            expect(fee_invoice_name).to eq(fee.fixed_charge.add_on.invoice_name)
           end
         end
       end
