@@ -147,9 +147,9 @@ RSpec.describe Invoices::VoidService, type: :service do
             allow(CreditNotes::RecreditService).to receive(:call!).and_call_original
           end
 
-          it "calls the recredit service for credit notes" do
+          it "dont call the recredit service for credit notes" do
             void_service.call
-            expect(CreditNotes::RecreditService).to have_received(:call!).with(credit: credit)
+            expect(CreditNotes::RecreditService).not_to have_received(:call!).with(credit: credit)
           end
         end
 
