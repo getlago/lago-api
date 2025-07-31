@@ -124,6 +124,24 @@ RSpec.describe Invoices::VoidService, type: :service do
           end
         end
 
+        context "when the invoice has applied credits from inactive wallet" do
+          let(:wallet) { create(:wallet, credits_balance: 100, balance_cents: 100) }
+          let(:wallet_transaction) { create(:wallet_transaction, wallet:, invoice:, transaction_type: "outbound", amount: 100, credit_amount: 100) }
+
+          before do
+            wallet_transaction
+            allow(WalletTransactions::RecreditService).to receive(:call).and_call_original
+          end
+
+          it "dont recredit the wallet transaction" do
+            wallet.mark_as_terminated!
+            void_service.call
+            expect(WalletTransactions::RecreditService).not_to have_received(:call)
+            expect(wallet.wallet_transactions.count).to eq(1)
+            expect(wallet.reload.credits_balance).to eq(100)
+          end
+        end
+
         context "when the invoice has credits from applied coupons" do
           let(:coupon) { create(:coupon) }
           let(:applied_coupon) { create(:applied_coupon, coupon: coupon) }
