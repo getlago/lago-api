@@ -44,7 +44,6 @@ module CustomerPortal
         customer.reload
 
         tax_codes = []
-        # This service does not return a 'result' object but a string
         eu_tax_code_result = Customers::EuAutoTaxesService.call(
           customer:,
           new_record: false,
