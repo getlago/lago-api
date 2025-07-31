@@ -110,4 +110,51 @@ describe "Daily Usages: Fill History", :time_travel, :scenarios, type: :request,
       usage_diff: match(including("amount_cents" => 0))
     )
   end
+
+  context "with recurring metric and prorated charge" do
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+    let(:charge) { create(:standard_charge, billable_metric:, plan:, properties: {amount: "1"}, prorated: true) }
+
+    it "fills daily usage history" do
+      started_at = DateTime.new(2025, 4, 1, 11)
+      from = DateTime.new(2025, 5, 1, 11)
+      to = DateTime.new(2025, 5, 31, 11)
+
+      travel_to(started_at) do
+        create_subscription(
+          external_customer_id: customer.external_id,
+          external_id: customer.external_id,
+          plan_code: plan.code,
+          billing_time: "calendar"
+        )
+      end
+
+      travel_to(started_at + 1.day) do
+        create_event(
+          {
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            properties: {"item_id" => 1}
+          }
+        )
+      end
+
+      travel_to(DateTime.new(2025, 5, 1, 10)) do
+        perform_billing
+      end
+
+      travel_back
+
+      DailyUsages::FillHistoryService.call!(subscription:, from_date: from.to_date, to_date: to.to_date)
+
+      usages = DailyUsage.where(usage_date: from.to_date..to.to_date)
+      expect(usages.count).to eq(31)
+
+      # NOTE: The last usage of the month should be 100 and the usage diff should be 0.
+      last_daily_usage = DailyUsage.find_by(usage_date: to.to_date)
+      expect(last_daily_usage.usage["amount_cents"]).to eq(100)
+      expect(last_daily_usage.usage_diff["amount_cents"]).to eq(0)
+    end
+  end
 end
