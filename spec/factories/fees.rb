@@ -4,6 +4,7 @@ FactoryBot.define do
   factory :fee do
     invoice
     charge { nil }
+    fixed_charge { nil }
     add_on { nil }
     fee_type { "subscription" }
     subscription
@@ -114,5 +115,33 @@ FactoryBot.define do
 
     invoiceable_type { "Commitment" }
     invoiceable_id { commitment.id }
+  end
+
+  factory :fixed_charge_fee, class: "Fee" do
+    invoice
+    fee_type { "fixed_charge" }
+    subscription { nil }
+
+    organization { invoice&.organization || association(:organization) }
+    billing_entity { invoice&.billing_entity || association(:billing_entity) }
+
+    amount_cents { 200 }
+    precise_amount_cents { 200.0000000001 }
+    amount_currency { "EUR" }
+    taxes_amount_cents { 2 }
+    taxes_precise_amount_cents { 2.0000000001 }
+
+    invoiceable_type { "FixedCharge" }
+    invoiceable_id { fixed_charge.id }
+
+    invoice_display_name { Faker::Fantasy::Tolkien.character }
+
+    transient do
+      fixed_charge { create(:fixed_charge) }
+    end
+
+    after(:build) do |fee, evaluator|
+      fee.write_attribute(:fixed_charge_id, evaluator.fixed_charge.id)
+    end
   end
 end
