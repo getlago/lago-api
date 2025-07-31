@@ -120,7 +120,7 @@ module Plans
         prorated: args[:prorated] || false
       )
 
-      properties = args[:properties].presence || Charges::BuildDefaultPropertiesService.call(args[:charge_model])
+      properties = args[:properties].presence || ChargeModels::BuildDefaultPropertiesService.call(args[:charge_model])
       charge.properties = Charges::FilterChargeModelPropertiesService.call(
         charge:,
         properties:

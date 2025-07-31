@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::BuildDefaultPropertiesService, type: :service do
+RSpec.describe ChargeModels::BuildDefaultPropertiesService, type: :service do
   subject(:service) { described_class.new(charge_model) }
 
   describe "call" do
