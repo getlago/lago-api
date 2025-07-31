@@ -28,6 +28,7 @@ Rails.application.configure do
   config.active_support.deprecation = :stderr
   config.active_support.disallowed_deprecation = :raise
   config.active_support.disallowed_deprecation_warnings = []
+  config.active_support.isolation_level = :thread
 
   config.action_controller.raise_on_missing_callback_actions = true
 
