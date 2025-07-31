@@ -9,7 +9,7 @@ module Charges
       pricing_group_keys = properties["pricing_group_keys"].presence || properties["grouped_by"]
 
       if pricing_group_keys.present? && !aggregation_result.aggregations.nil?
-        Charges::ChargeModels::GroupedService.new(charge_model: charge_model, charge:, aggregation_result:, properties:)
+        ChargeModels::GroupedService.new(charge_model: charge_model, charge:, aggregation_result:, properties:)
       else
         charge_model.new(charge:, aggregation_result:, properties:)
       end
@@ -18,25 +18,25 @@ module Charges
     def self.charge_model_class(charge:)
       case charge.charge_model.to_sym
       when :standard
-        Charges::ChargeModels::StandardService
+        ChargeModels::StandardService
       when :graduated
         if charge.prorated?
-          Charges::ChargeModels::ProratedGraduatedService
+          ChargeModels::ProratedGraduatedService
         else
-          Charges::ChargeModels::GraduatedService
+          ChargeModels::GraduatedService
         end
       when :graduated_percentage
-        Charges::ChargeModels::GraduatedPercentageService
+        ChargeModels::GraduatedPercentageService
       when :package
-        Charges::ChargeModels::PackageService
+        ChargeModels::PackageService
       when :percentage
-        Charges::ChargeModels::PercentageService
+        ChargeModels::PercentageService
       when :volume
-        Charges::ChargeModels::VolumeService
+        ChargeModels::VolumeService
       when :custom
-        Charges::ChargeModels::CustomService
+        ChargeModels::CustomService
       when :dynamic
-        Charges::ChargeModels::DynamicService
+        ChargeModels::DynamicService
       else
         raise(NotImplementedError)
       end

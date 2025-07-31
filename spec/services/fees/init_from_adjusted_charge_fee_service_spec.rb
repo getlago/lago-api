@@ -257,10 +257,10 @@ RSpec.describe Fees::InitFromAdjustedChargeFeeService, type: :service do
       end
     end
 
-    let(:charge_model_instance) { instance_double(Charges::ChargeModels::StandardService) }
+    let(:charge_model_instance) { instance_double(ChargeModels::StandardService) }
 
     it "returns an error" do
-      allow(Charges::ChargeModels::StandardService).to receive(:new).and_return(charge_model_instance)
+      allow(ChargeModels::StandardService).to receive(:new).and_return(charge_model_instance)
       allow(charge_model_instance).to receive(:apply).and_return(error_result)
 
       result = init_service.call
