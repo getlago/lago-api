@@ -110,30 +110,18 @@ describe "Daily Usages: Fill History - Multiple Scenarios", :time_travel, :scena
 
         context "when customer is in UTC timezone" do
           it_behaves_like "fills daily usage history correctly", {
-            bp1_first_day_usage: 100,
-            bp1_first_day_usage_diff: 100,
-            bp1_second_day_usage: 197,
-            bp1_second_day_usage_diff: 97,
-            bp1_second_last_day_usage: 1597,
-            bp1_second_last_day_usage_diff: 7,
-            bp1_last_day_usage: 1600,
-            bp1_last_day_usage_diff: 3,
-            bp2_first_day_usage: 100,
-            bp2_first_day_usage_diff: 100,
-            bp2_second_day_usage: 197,
-            bp2_second_day_usage_diff: 97,
-            bp2_second_last_day_usage: 1597,
-            bp2_second_last_day_usage_diff: 7,
-            bp2_last_day_usage: 1600,
-            bp2_last_day_usage_diff: 3,
-            bp3_first_day_usage: 100,
-            bp3_first_day_usage_diff: 100,
-            bp3_second_day_usage: 197,
-            bp3_second_day_usage_diff: 97,
-            bp1_second_last_day_usage: 1597,
-            bp1_second_last_day_usage_diff: 7,
-            bp1_last_day_usage: 1600,
-            bp1_last_day_usage_diff: 3,
+            april_29: {usage: 2966.67, usage_diff: 100},
+            april_30: {usage: 3100, usage_diff: 100},
+            may_1: {usage: 100, usage_diff: 100},
+            may_2: {usage: 200, usage_diff: 100},
+            may_30: {usage: 300, usage_diff: 100},
+            may_31: {usage: 3100, usage_diff: 100},
+            june_1: {usage: 103.33, usage_diff: 103.33},
+            june_2: {usage: 206.66, usage_diff: 103.33},
+            june_29: {usage: 2966.67, usage_diff: 103.33},
+            june_30: {usage: 3100, usage_diff: 103.33},
+            july_1: {usage: 100, usage_diff: 100},
+            july_2: {usage: 200, usage_diff: 100}
           }
         end
 
