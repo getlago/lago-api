@@ -6,7 +6,6 @@ module Types
       graphql_name "Fee"
       implements Types::Invoices::InvoiceItem
 
-
       field :add_on, Types::AddOns::Object, null: true
       field :charge, Types::Charges::Object, null: true
       field :currency, Types::CurrencyEnum, null: false
