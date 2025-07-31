@@ -23,7 +23,7 @@ module EInvoices
             xml["ram"].Reason reason
             xml["ram"].CategoryTradeTax do
               xml["ram"].TypeCode VAT
-              xml["ram"].CategoryCode S_CATEGORY
+              xml["ram"].CategoryCode tax_category(tax_rate)
               xml["ram"].RateApplicablePercent format_number(tax_rate)
             end
           end

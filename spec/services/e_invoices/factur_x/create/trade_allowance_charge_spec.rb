@@ -45,9 +45,18 @@ RSpec.describe EInvoices::FacturX::Create::TradeAllowanceCharge, type: :service 
           .with_value("VAT")
       end
 
-      it "has the CategoryCode" do
-        expect(subject).to contains_xml_node("#{trade_tax_root}/ram:CategoryCode")
-          .with_value("S")
+      context "with tax_category" do
+        it "has the S tax category code" do
+          expect(subject).to contains_xml_node("#{trade_tax_root}/ram:CategoryCode").with_value("S")
+        end
+
+        context "when taxes are zero" do
+          let(:tax_rate) { 0.00 }
+
+          it "has the Z category code" do
+            expect(subject).to contains_xml_node("#{trade_tax_root}/ram:CategoryCode").with_value("Z")
+          end
+        end
       end
 
       it "has the RateApplicablePercent" do
