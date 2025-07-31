@@ -19,7 +19,7 @@ module Mutations
 
       def resolve(voided_invoice_id:, fees:)
         invoice = current_organization.invoices.visible.find_by(id: voided_invoice_id)
-        result = ::Invoices::RegenerateFromVoidedService.new(voided_invoice: invoice, fees:).call
+        result = ::Invoices::RegenerateFromVoidedService.new(voided_invoice: invoice, fees_params: fees).call
 
         result.success? ? result.invoice : result_error(result)
       end
