@@ -9,6 +9,7 @@ ruby "3.4.4"
 gem "aasm"
 gem "activejob-uniqueness", require: "active_job/uniqueness/sidekiq_patch"
 gem "active_storage_validations"
+gem "async"
 gem "bootsnap", require: false
 gem "clockwork", require: false
 gem "parallel"

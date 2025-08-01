@@ -2,7 +2,7 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    def initialize(customer:, subscription:, timestamp: Time.current, apply_taxes: true, with_cache: true, max_to_datetime: nil)
+    def initialize(customer:, subscription:, timestamp: Time.current, apply_taxes: true, with_cache: true, with_async: false, max_to_datetime: nil)
       super
 
       @apply_taxes = apply_taxes
@@ -10,6 +10,7 @@ module Invoices
       @subscription = subscription
       @timestamp = timestamp # To not set this value if without disabling the cache
       @with_cache = with_cache
+      @with_async = with_async
 
       # NOTE: used to force charges_to_datetime boundary
       @max_to_datetime = max_to_datetime
@@ -44,7 +45,7 @@ module Invoices
 
     private
 
-    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime
+    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :with_async, :max_to_datetime
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
     delegate :billing_entity, to: :customer
@@ -81,13 +82,22 @@ module Invoices
         .includes(:taxes, billable_metric: :organization, filters: {values: :billable_metric_filter})
         .order(Arel.sql("lower(unaccent(billable_metrics.name)) ASC"))
 
-      # we're capturing the context here so we can re-use inside the threads. This will correctly propagate spans to this current span
-      context = OpenTelemetry::Context.current
+      if with_async
+        context = OpenTelemetry::Context.current
 
-      invoice.fees = Parallel.flat_map(query.all, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
-        OpenTelemetry::Context.with_current(context) do
-          ActiveRecord::Base.connection_pool.with_connection do
+        fees = query.all.map do |charge|
+          OpenTelemetry::Context.with_current(context) do
             charge_usage(charge)
+          end
+        end.flatten
+
+        return invoice.fees = fees
+      else
+        invoice.fees = Parallel.flat_map(query.all, in_threads: ENV["LAGO_PARALLEL_THREADS_COUNT"]&.to_i || 0) do |charge|
+          OpenTelemetry::Context.with_current(context) do
+            ActiveRecord::Base.connection_pool.with_connection do
+              charge_usage(charge)
+            end
           end
         end
       end
@@ -105,7 +115,7 @@ module Invoices
       applied_boundaries = applied_boundaries.merge(charges_to_datetime: max_to_datetime) if max_to_datetime
 
       Fees::ChargeService
-        .call(invoice:, charge:, subscription:, boundaries: applied_boundaries, context: :current_usage, cache_middleware:)
+        .call(invoice:, charge:, subscription:, boundaries: applied_boundaries, context: :current_usage, with_async:, cache_middleware:)
         .raise_if_error!
         .fees
     end

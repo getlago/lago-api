@@ -9,6 +9,7 @@ development:
     password: changeme
     database: lago
     port: 5432
+    pool: 200
   events:
     <<: *default
     host: db
