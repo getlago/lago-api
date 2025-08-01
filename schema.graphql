@@ -4310,9 +4310,9 @@ type DataApiRevenueStreamCustomer {
   customerName: String
   externalCustomerId: String!
   grossRevenueAmountCents: BigInt!
-  grossRevenueShare: Float!
+  grossRevenueShare: Float
   netRevenueAmountCents: BigInt!
-  netRevenueShare: Float!
+  netRevenueShare: Float
 }
 
 type DataApiRevenueStreamPlan {
@@ -4320,9 +4320,9 @@ type DataApiRevenueStreamPlan {
   customersCount: Int!
   customersShare: Float!
   grossRevenueAmountCents: BigInt!
-  grossRevenueShare: Float!
+  grossRevenueShare: Float
   netRevenueAmountCents: BigInt!
-  netRevenueShare: Float!
+  netRevenueShare: Float
   planCode: String!
   planDeletedAt: ISO8601DateTime
   planId: ID!
