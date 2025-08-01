@@ -86,7 +86,6 @@ ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_98980b326b;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
-ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_90fd72ac8f;
 ALTER TABLE IF EXISTS ONLY public.invoice_subscriptions DROP CONSTRAINT IF EXISTS fk_rails_90d93bd016;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_909197908c;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_8fa6f0d920;
