@@ -616,10 +616,6 @@ DROP INDEX IF EXISTS public.idx_on_subscription_id_fixed_charge_id_d85b30a9bf;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_entitlement_feature_id_02bee9883b;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_bd763c5aa3;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
-DROP INDEX IF EXISTS public.idx_on_subscription_id_fixed_charge_id_d85b30a9bf;
-DROP INDEX IF EXISTS public.idx_on_subscription_id_entitlement_feature_id_02bee9883b;
-DROP INDEX IF EXISTS public.idx_on_subscription_id_bd763c5aa3;
-DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
 DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
 DROP INDEX IF EXISTS public.idx_on_pay_in_advance_event_transaction_id_charge_i_16302ca167;
 DROP INDEX IF EXISTS public.idx_on_organization_id_organization_sequential_id_2387146f54;
@@ -5161,17 +5157,6 @@ CREATE INDEX idx_on_subscription_id_295edd8bb3 ON public.entitlement_subscriptio
 
 
 --
--- Name: idx_on_subscription_id_bd763c5aa3; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_on_subscription_id_bd763c5aa3 ON public.subscription_fixed_charge_units_overrides USING btree (subscription_id);
-
-
---
--- Name: idx_on_subscription_id_entitlement_feature_id_02bee9883b; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_on_subscription_id_entitlement_feature_id_02bee9883b ON public.entitlement_subscription_feature_removals USING btree (subscription_id, entitlement_feature_id) WHERE (deleted_at IS NULL);
 -- Name: idx_on_subscription_id_bd763c5aa3; Type: INDEX; Schema: public; Owner: -
 --
 
