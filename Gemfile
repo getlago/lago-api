@@ -71,6 +71,10 @@ gem "newrelic_rpm"
 gem "opentelemetry-exporter-otlp"
 gem "opentelemetry-instrumentation-all"
 gem "opentelemetry-sdk"
+gem "yabeda"
+gem "yabeda-rails"
+gem "yabeda-puma-plugin"
+gem "yabeda-prometheus"
 
 gem "stackprof", require: false, platforms: [:ruby, :mri]
 gem "sentry-rails"
