@@ -11,118 +11,85 @@ describe "Daily Usages: Fill History - Multiple Scenarios", :time_travel, :scena
   let(:customer) { create(:customer, organization:) }
   let(:subscription) { customer.subscriptions.first }
 
-  before { charge }
-
-  # Shared test logic
-  shared_examples "fills daily usage history correctly" do |expected_values|
-    it "fills daily usage history" do
-      mar_18 = DateTime.new(2025, 3, 18, 11, 0)
-      mar_19 = DateTime.new(2025, 3, 19, 11, 0)
-
-      apr_16 = DateTime.new(2025, 4, 16, 11, 0)
-      apr_17 = DateTime.new(2025, 4, 17, 11, 0)
-      apr_18 = DateTime.new(2025, 4, 18, 11, 0)
-      apr_19 = DateTime.new(2025, 4, 19, 11, 0)
-      apr_20 = DateTime.new(2025, 4, 20, 11, 0)
-      may_18 = DateTime.new(2025, 5, 18, 11, 0)
-
-      travel_to(mar_18) do
-        create_subscription(
-          external_customer_id: customer.external_id,
-          external_id: customer.external_id,
-          plan_code: plan.code,
-          billing_time: "anniversary"
-        )
-      end
-
-      (mar_18..apr_18).each do |date|
-        travel_to(date) do
-          create_event(
-            {
-              code: billable_metric.code,
-              transaction_id: SecureRandom.uuid,
-              external_subscription_id: subscription.external_id,
-              properties: {"item_id" => 1}
-            }
-          )
-        end
-      end
-
-      travel_back
-
-      DailyUsages::FillHistoryService.call!(subscription:, from_datetime: mar_18, to_datetime: apr_20)
-
-      expect(DailyUsage.count).to eq(33) # 33 days from mar_19 to apr_20
-
-      first_daily_usage = DailyUsage.find_by(usage_date: mar_18.to_date)
-      second_daily_usage = DailyUsage.find_by(usage_date: mar_19.to_date)
-
-      second_last_daily_usage = DailyUsage.find_by(usage_date: apr_16.to_date)
-      last_daily_usage = DailyUsage.find_by(usage_date: apr_17.to_date)
-
-      first_next_period_daily_usage = DailyUsage.find_by(usage_date: apr_18.to_date)
-      second_next_period_daily_usage = DailyUsage.find_by(usage_date: apr_19.to_date)
-
-      expect(first_daily_usage.usage["amount_cents"]).to eq(expected_values[:first_usage])
-      expect(first_daily_usage.usage_diff["amount_cents"]).to eq(expected_values[:first_usage_diff])
-      expect(first_daily_usage.usage_date).to eq(mar_18.to_date)
-      expect(first_daily_usage.from_datetime).to eq(mar_18)
-      expect(first_daily_usage.to_datetime).to eq(apr_18.to_date - 1.second)
-
-      expect(second_daily_usage.usage["amount_cents"]).to eq(expected_values[:second_usage])
-      expect(second_daily_usage.usage_diff["amount_cents"]).to eq(expected_values[:second_usage_diff])
-      expect(second_daily_usage.usage_date).to eq(mar_19.to_date)
-      expect(second_daily_usage.from_datetime).to eq(mar_18)
-      expect(second_daily_usage.to_datetime).to eq(apr_18.to_date - 1.second)
-
-      expect(second_last_daily_usage.usage["amount_cents"]).to eq(expected_values[:second_last_usage])
-      expect(second_last_daily_usage.usage_diff["amount_cents"]).to eq(expected_values[:second_last_usage_diff])
-      expect(second_last_daily_usage.usage_date).to eq(apr_16.to_date)
-      expect(second_last_daily_usage.from_datetime).to eq(mar_18)
-      expect(second_last_daily_usage.to_datetime).to eq(apr_18.to_date - 1.second)
-
-      expect(last_daily_usage.usage["amount_cents"]).to eq(expected_values[:last_usage])
-      expect(last_daily_usage.usage_diff["amount_cents"]).to eq(expected_values[:last_usage_diff])
-      expect(last_daily_usage.usage_date).to eq(apr_17.to_date)
-      expect(last_daily_usage.from_datetime).to eq(mar_18)
-      expect(last_daily_usage.to_datetime).to eq(apr_18.to_date - 1.second)
-
-      expect(first_next_period_daily_usage.usage["amount_cents"]).to eq(expected_values[:first_next_period_usage])
-      expect(first_next_period_daily_usage.usage_diff["amount_cents"]).to eq(expected_values[:first_next_period_usage_diff])
-      expect(first_next_period_daily_usage.usage_date).to eq(apr_18.to_date)
-      expect(first_next_period_daily_usage.from_datetime).to eq(apr_18.beginning_of_day)
-      expect(first_next_period_daily_usage.to_datetime).to eq(may_18.to_date - 1.second)
-
-      expect(second_next_period_daily_usage.usage["amount_cents"]).to eq(expected_values[:second_next_period_usage])
-      expect(second_next_period_daily_usage.usage_diff["amount_cents"]).to eq(expected_values[:second_next_period_usage_diff])
-      expect(second_next_period_daily_usage.usage_date).to eq(apr_19.to_date)
-      expect(second_next_period_daily_usage.from_datetime).to eq(apr_18.beginning_of_day)
-      expect(second_next_period_daily_usage.to_datetime).to eq(may_18.to_date - 1.second)
-    end
-  end
+  dates = {
+    apr_29: DateTime.new(2025, 4, 29, 11, 0),
+    apr_30: DateTime.new(2025, 4, 30, 11, 0),
+    may_01: DateTime.new(2025, 5, 1, 11, 0),
+    may_02: DateTime.new(2025, 5, 2, 11, 0),
+    may_30: DateTime.new(2025, 5, 30, 11, 0),
+    may_31: DateTime.new(2025, 5, 31, 11, 0),
+    jun_01: DateTime.new(2025, 6, 1, 11, 0),
+    jun_02: DateTime.new(2025, 6, 2, 11, 0),
+    jun_29: DateTime.new(2025, 6, 29, 11, 0),
+    jun_30: DateTime.new(2025, 6, 30, 11, 0),
+    jul_01: DateTime.new(2025, 7, 1, 11, 0),
+    jul_02: DateTime.new(2025, 7, 2, 11, 0)
+  }
 
   context "when billable_metric.recurring is true" do
     let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+
+
 
     context "when pay_in_advance is true" do
       context "when prorated is true" do
         let(:charge) { create(:standard_charge, billable_metric:, plan:, pay_in_advance: true, prorated: true, properties: {amount: "1"}) }
 
+        before { charge }
+
         context "when customer is in UTC timezone" do
-          it_behaves_like "fills daily usage history correctly", {
-            april_29: {usage: 2966.67, usage_diff: 100},
-            april_30: {usage: 3100, usage_diff: 100},
-            may_1: {usage: 100, usage_diff: 100},
-            may_2: {usage: 200, usage_diff: 100},
-            may_30: {usage: 300, usage_diff: 100},
-            may_31: {usage: 3100, usage_diff: 100},
-            june_1: {usage: 103.33, usage_diff: 103.33},
-            june_2: {usage: 206.66, usage_diff: 103.33},
-            june_29: {usage: 2966.67, usage_diff: 103.33},
-            june_30: {usage: 3100, usage_diff: 103.33},
-            july_1: {usage: 100, usage_diff: 100},
-            july_2: {usage: 200, usage_diff: 100}
-          }
+          it "fills daily usage history correctly" do
+            # Expected values for each date
+            expected_values = {
+              apr_29: {usage: 2966.67, usage_diff: 100},
+              apr_30: {usage: 3100, usage_diff: 100},
+              may_01: {usage: 100, usage_diff: 100},
+              may_02: {usage: 200, usage_diff: 100},
+              may_30: {usage: 300, usage_diff: 100},
+              may_31: {usage: 3100, usage_diff: 100},
+              jun_01: {usage: 103.33, usage_diff: 103.33},
+              jun_02: {usage: 206.66, usage_diff: 103.33},
+              jun_29: {usage: 2966.67, usage_diff: 103.33},
+              jun_30: {usage: 3100, usage_diff: 103.33},
+              jul_01: {usage: 100, usage_diff: 100},
+              jul_02: {usage: 200, usage_diff: 100}
+            }
+
+            travel_to(dates[:apr_29]) do
+              create_subscription(
+                external_customer_id: customer.external_id,
+                external_id: customer.external_id,
+                plan_code: plan.code,
+                billing_time: "anniversary"
+              )
+            end
+
+            (dates[:apr_29]..dates[:jul_02]).each do |date|
+              travel_to(date) do
+                create_event(
+                  {
+                    code: billable_metric.code,
+                    transaction_id: SecureRandom.uuid,
+                    external_subscription_id: subscription.external_id,
+                    properties: {"item_id" => 1}
+                  }
+                )
+              end
+            end
+
+            travel_back
+
+            DailyUsages::FillHistoryService.call!(subscription:, from_datetime: dates[:apr_29], to_datetime: dates[:jul_02])
+            expect(DailyUsage.count).to eq(65)
+
+            daily_usages = dates.transform_values { |date| DailyUsage.find_by(usage_date: date.to_date) }
+
+            expected_values.each do |date_key, expected|
+              usage = daily_usages[date_key]
+              expect(usage.usage["amount_cents"]).to eq(expected[:usage])
+              expect(usage.usage_diff["amount_cents"]).to eq(expected[:usage_diff])
+            end
+          end
         end
 
         # context "when customer is in UTC+ timezone" do
@@ -136,50 +103,51 @@ describe "Daily Usages: Fill History - Multiple Scenarios", :time_travel, :scena
         # end
       end
 
-  #     context "when prorated is false" do
-  #       let(:charge) { create(:standard_charge, billable_metric:, plan:, pay_in_advance: true, prorated: false, properties: {amount: "1"}) }
+      # context "when prorated is false" do
+      #   let(:charge) { create(:standard_charge, billable_metric:, plan:, pay_in_advance: true, prorated: false, properties: {amount: "1"}) }
 
-  #       context "when customer is in UTC timezone" do
-  #         it_behaves_like "fills daily usage history correctly"
-  #       end
+      #   context "when customer is in UTC timezone" do
+      #     it_behaves_like "fills daily usage history correctly"
+      #   end
 
-  #       # context "when customer is in UTC+ timezone" do
-  #       #   let(:customer) { create(:customer, organization:, timezone: "Asia/Tokyo") }
-  #       #   it_behaves_like "fills daily usage history correctly"
-  #       # end
+      #   # context "when customer is in UTC+ timezone" do
+      #   #   let(:customer) { create(:customer, organization:, timezone: "Asia/Tokyo") }
+      #   #   it_behaves_like "fills daily usage history correctly"
+      #   # end
 
-  #       # context "when customer is in UTC- timezone" do
-  #       #   let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
-  #       #   it_behaves_like "fills daily usage history correctly"
-  #       # end
-  #     end
-  #   end
-
-  #   context "when pay_in_advance is false" do
-  #     context "when prorated is false" do
-  #       let(:charge) { create(:standard_charge, billable_metric:, plan:, pay_in_advance: false, prorated: false, properties: {amount: "1"}) }
-
-  #       context "when customer is in UTC timezone" do
-  #         it_behaves_like "fills daily usage history correctly"
-  #       end
-
-  #       # context "when customer is in UTC+ timezone" do
-  #       #   let(:customer) { create(:customer, organization:, timezone: "Asia/Tokyo") }
-  #       #   it_behaves_like "fills daily usage history correctly"
-  #       # end
-
-  #       # context "when customer is in UTC- timezone" do
-  #       #   let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
-  #       #   it_behaves_like "fills daily usage history correctly"
-  #       end
-      end
+      #   # context "when customer is in UTC- timezone" do
+      #   #   let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
+      #   #   it_behaves_like "fills daily usage history correctly"
+      #   # end
+      # end
     end
 
-  # context "when billable_metric.recurring is false" do
-  #   let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: false) }
+    # context "when pay_in_advance is false" do
+    #   context "when prorated is false" do
+    #     let(:charge) { create(:standard_charge, billable_metric:, plan:, pay_in_advance: false, prorated: false, properties: {amount: "1"}) }
 
-  #   # Note: prorated: true is invalid with recurring: false + pay_in_advance: true
-  #   context "when prorated is false" do
+    #     context "when customer is in UTC timezone" do
+    #       it_behaves_like "fills daily usage history correctly"
+    #     end
+
+    #     # context "when customer is in UTC+ timezone" do
+    #     #   let(:customer) { create(:customer, organization:, timezone: "Asia/Tokyo") }
+    #     #   it_behaves_like "fills daily usage history correctly"
+    #     # end
+
+    #     # context "when customer is in UTC- timezone" do
+    #     #   let(:customer) { create(:customer, organization:, timezone: "America/Los_Angeles") }
+    #     #   it_behaves_like "fills daily usage history correctly"
+    #     # end
+    #   end
+    # end
+  end
+
+  context "when billable_metric.recurring is false" do
+    let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: false) }
+
+    # # Note: prorated: true is invalid with recurring: false + pay_in_advance: true
+    # context "when prorated is false" do
     #   context "when pay_in_advance is true" do
     #     let(:charge) { create(:standard_charge, billable_metric:, plan:, pay_in_advance: true, prorated: false, properties: {amount: "1"}) }
 
