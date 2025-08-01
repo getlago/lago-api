@@ -47,6 +47,7 @@ RSpec.describe Subscription, type: :model do
       expect(subject).to have_many(:fees)
       expect(subject).to have_many(:daily_usages)
       expect(subject).to have_many(:usage_thresholds).through(:plan)
+      expect(subject).to have_many(:subscription_fixed_charge_units_overrides).dependent(:destroy)
       expect(subject).to have_one(:lifetime_usage).autosave(true)
       expect(subject).to have_one(:subscription_activity).class_name("UsageMonitoring::SubscriptionActivity")
       expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement")
