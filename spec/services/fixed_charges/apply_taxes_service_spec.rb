@@ -69,4 +69,4 @@ RSpec.describe FixedCharges::ApplyTaxesService, type: :service do
       end
     end
   end
-end 
+end

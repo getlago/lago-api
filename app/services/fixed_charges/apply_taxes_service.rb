@@ -38,4 +38,4 @@ module FixedCharges
       @taxes ||= fixed_charge.plan.organization.taxes.where(code: tax_codes)
     end
   end
-end 
+end
