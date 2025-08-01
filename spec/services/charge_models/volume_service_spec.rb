@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
+RSpec.describe ChargeModels::VolumeService, type: :service do
   subject(:apply_volume_service) do
     described_class.apply(
       charge:,
