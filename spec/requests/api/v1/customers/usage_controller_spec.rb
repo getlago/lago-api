@@ -191,7 +191,6 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
 
           aws_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] }
           gcp_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["google"] }
-          unfiltered_data = filters_usage.find { |f| f[:values].nil? }
 
           aggregate_failures do
             expect(charge_usage[:units]).to eq("4.0")
@@ -337,7 +336,6 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           aws_usa_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] && f[:values][:region] == ["usa"] }
           aws_france_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] && f[:values][:region] == ["france"] }
           google_usa_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["google"] && f[:values][:region] == ["usa"] }
-          unfiltered_data = filters_usage.find { |f| f[:values].nil? }
 
           aggregate_failures do
             expect(charge_usage[:units]).to eq("4.0")
