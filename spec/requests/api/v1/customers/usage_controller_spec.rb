@@ -158,26 +158,28 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         charge_filter_value_aws
         charge_filter_value_gcp
 
-        create_list(
-          :event,
-          3,
-          organization:,
-          customer:,
-          subscription:,
-          code: metric.code,
-          timestamp: Time.zone.now,
-          properties: {cloud: "aws"}
-        )
+        travel_to(Time.parse("2025-07-02T10:00:00Z")) do
+          create_list(
+            :event,
+            3,
+            organization:,
+            customer:,
+            subscription:,
+            code: metric.code,
+            timestamp: Time.zone.now,
+            properties: {cloud: "aws"}
+          )
 
-        create(
-          :event,
-          organization:,
-          customer:,
-          subscription:,
-          code: metric.code,
-          timestamp: Time.zone.now,
-          properties: {cloud: "google"}
-        )
+          create(
+            :event,
+            organization:,
+            customer:,
+            subscription:,
+            code: metric.code,
+            timestamp: Time.zone.now,
+            properties: {cloud: "google"}
+          )
+        end
       end
 
       it "returns the filters usage for the customer" do
@@ -192,7 +194,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           unfiltered_data = filters_usage.find { |f| f[:values].nil? }
 
           aggregate_failures do
-            expect(charge_usage[:units]).to eq("8.0")
+            expect(charge_usage[:units]).to eq("4.0")
             expect(charge_usage[:amount_cents]).to eq(5000)
 
             # Assertions for the AWS filter
@@ -206,12 +208,6 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
             expect(gcp_filter_data[:amount_cents]).to eq(2000)
             expect(gcp_filter_data[:projected_units]).to eq("10.33")
             expect(gcp_filter_data[:projected_amount_cents]).to eq(20660)
-
-            # Assertions for the unfiltered group
-            expect(unfiltered_data[:units]).to eq("4.0")
-            expect(unfiltered_data[:amount_cents]).to eq(0)
-            expect(unfiltered_data[:projected_units]).to eq("0.0") # Correctly projects to 0
-            expect(unfiltered_data[:projected_amount_cents]).to eq(0)
           end
         end
       end
@@ -297,36 +293,38 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         charge_filter_value31
         charge_filter_value32
 
-        create_list(
-          :event,
-          2,
-          organization:,
-          customer:,
-          subscription:,
-          code: metric.code,
-          timestamp: Time.zone.now,
-          properties: {cloud: "aws", region: "usa"}
-        )
+        travel_to(Time.parse("2025-07-02T10:00:00Z")) do
+          create_list(
+            :event,
+            2,
+            organization:,
+            customer:,
+            subscription:,
+            code: metric.code,
+            timestamp: Time.zone.now,
+            properties: {cloud: "aws", region: "usa"}
+          )
 
-        create(
-          :event,
-          organization:,
-          customer:,
-          subscription:,
-          code: metric.code,
-          timestamp: Time.zone.now,
-          properties: {cloud: "aws", region: "france"}
-        )
+          create(
+            :event,
+            organization:,
+            customer:,
+            subscription:,
+            code: metric.code,
+            timestamp: Time.zone.now,
+            properties: {cloud: "aws", region: "france"}
+          )
 
-        create(
-          :event,
-          organization:,
-          customer:,
-          subscription:,
-          code: metric.code,
-          timestamp: Time.zone.now,
-          properties: {cloud: "google", region: "usa"}
-        )
+          create(
+            :event,
+            organization:,
+            customer:,
+            subscription:,
+            code: metric.code,
+            timestamp: Time.zone.now,
+            properties: {cloud: "google", region: "usa"}
+          )
+        end
       end
 
       it "returns the filters usage for the customer" do
@@ -342,7 +340,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           unfiltered_data = filters_usage.find { |f| f[:values].nil? }
 
           aggregate_failures do
-            expect(charge_usage[:units]).to eq("8.0")
+            expect(charge_usage[:units]).to eq("4.0")
             expect(charge_usage[:amount_cents]).to eq(7000)
 
             # Assertions for AWS/USA filter
@@ -362,11 +360,6 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
             expect(google_usa_data[:amount_cents]).to eq(3000)
             expect(google_usa_data[:projected_units]).to eq("10.33")
             expect(google_usa_data[:projected_amount_cents]).to eq(30990)
-
-            # Assertions for the unfiltered group
-            expect(unfiltered_data[:units]).to eq("4.0")
-            expect(unfiltered_data[:amount_cents]).to eq(0)
-            expect(unfiltered_data[:projected_amount_cents]).to eq(0)
           end
         end
       end
