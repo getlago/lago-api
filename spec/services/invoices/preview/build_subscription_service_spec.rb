@@ -38,7 +38,7 @@ RSpec.describe Invoices::Preview::BuildSubscriptionService, type: :service do
 
         before do
           create(:plan, organization: customer.organization, code: plan.code, parent: plan)
-          plan.touch
+          plan.touch # rubocop:disable Rails/SkipsModelValidations
         end
 
         context "when valid billing time and subscribed at are provided" do

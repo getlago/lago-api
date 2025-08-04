@@ -59,7 +59,7 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
         before do
           travel_to Time.zone.parse("05-02-2025 12:34:56")
           create(:plan, organization:, code: target_plan.code, parent: target_plan)
-          target_plan.touch
+          target_plan.touch # rubocop:disable Rails/SkipsModelValidations
         end
 
         context "when target plan is pay in advance" do
