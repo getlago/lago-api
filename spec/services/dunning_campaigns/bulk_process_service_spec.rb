@@ -96,7 +96,7 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
 
           context "with overdue balance greater than zero" do
             it "sends valid webhook" do
-              expect { result }.to have_enqueued_job(SendWebhookJob).with("dunning_campaign.finished", customer, { dunning_campaign_id: dunning_campaign.id })
+              expect { result }.to have_enqueued_job(SendWebhookJob).with("dunning_campaign.finished", customer, {dunning_campaign_id: dunning_campaign.id})
             end
           end
         end
