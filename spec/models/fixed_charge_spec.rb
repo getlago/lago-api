@@ -15,6 +15,8 @@ RSpec.describe FixedCharge, type: :model do
   it { is_expected.to have_many(:children).class_name("FixedCharge").dependent(:nullify) }
   it { is_expected.to have_many(:applied_taxes).class_name("FixedCharge::AppliedTax").dependent(:destroy) }
   it { is_expected.to have_many(:taxes).through(:applied_taxes) }
+  it { is_expected.to have_many(:subscription_fixed_charge_units_overrides).dependent(:destroy) }
+  it { is_expected.to have_many(:fees) }
 
   it { is_expected.to validate_numericality_of(:units).is_greater_than_or_equal_to(0) }
   it { is_expected.to validate_presence_of(:charge_model) }

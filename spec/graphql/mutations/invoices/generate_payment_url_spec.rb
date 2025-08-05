@@ -95,5 +95,32 @@ RSpec.describe Mutations::Invoices::GeneratePaymentUrl, type: :graphql do
         message: "Unprocessable Entity"
       )
     end
+
+    context "when error is ThirdPartyFailure" do
+      let(:service_result) do
+        result = BaseService::Result.new
+        result.third_party_failure!(third_party: "stripe", error_code: 500, error_message: "Hummm, there's an error!")
+        result
+      end
+
+      it "returns a GraphQL error" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {
+              invoiceId: invoice.id
+            }
+          }
+        )
+
+        expect_graphql_error(
+          result:,
+          message: "Unprocessable Entity"
+        )
+      end
+    end
   end
 end

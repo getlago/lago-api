@@ -2,12 +2,13 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service do
+RSpec.describe ChargeModels::ProratedGraduatedService, type: :service do
   subject(:apply_graduated_service) do
     described_class.apply(
       charge:,
       aggregation_result:,
-      properties: charge.properties
+      properties: charge.properties,
+      period_ratio: 1.0
     )
   end
 
