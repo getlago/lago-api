@@ -24,18 +24,18 @@ module Invoices
         create_invoice_subscriptions if regenerated_invoice.invoice_type == "subscription"
         process_fees
         adjust_fees
-        Invoices::ApplyInvoiceCustomSectionsService.call(invoice: regenerated_invoice)
+        Invoices::ApplyInvoiceCustomSectionsService.call!(invoice: regenerated_invoice)
         regenerated_invoice.fees_amount_cents = regenerated_invoice.fees.sum(:amount_cents)
         regenerated_invoice.sub_total_excluding_taxes_amount_cents = regenerated_invoice.fees.sum(:amount_cents)
 
         # apply taxes credits and coupons
-        Credits::ProgressiveBillingService.call(invoice: regenerated_invoice)
-        Credits::AppliedCouponsService.call(invoice: regenerated_invoice) if should_create_coupon_credit?
-        Invoices::ComputeTaxesAndTotalsService.call(invoice: regenerated_invoice, finalizing: true)
+        Credits::ProgressiveBillingService.call!(invoice: regenerated_invoice)
+        Credits::AppliedCouponsService.call!(invoice: regenerated_invoice) if should_create_coupon_credit?
+        Invoices::ComputeTaxesAndTotalsService.call!(invoice: regenerated_invoice, finalizing: true)
         create_credit_note_credit if should_create_credit_note_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
         regenerated_invoice.payment_status = regenerated_invoice.total_amount_cents.positive? ? :pending : :succeeded
-        Invoices::TransitionToFinalStatusService.call(invoice: regenerated_invoice)
+        Invoices::TransitionToFinalStatusService.call!(invoice: regenerated_invoice)
         regenerated_invoice.save!
       end
 
@@ -74,15 +74,13 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice: regenerated_invoice, wallet:)
-      prepaid_credit_result.raise_if_error!
+      prepaid_credit_result = Credits::AppliedPrepaidCreditService.call!(invoice: regenerated_invoice, wallet:)
 
       refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
 
     def create_credit_note_credit
-      credit_result = Credits::CreditNoteService.new(invoice: regenerated_invoice).call
-      credit_result.raise_if_error!
+      credit_result = Credits::CreditNoteService.new(invoice: regenerated_invoice).call!
 
       refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits
     end
@@ -101,7 +99,7 @@ module Invoices
         if fee.fee_type == "charge"
           properties = fee.charge_filter&.properties || fee.charge.properties
 
-          result = Fees::InitFromAdjustedChargeFeeService.call(
+          result = Fees::InitFromAdjustedChargeFeeService.call!(
             adjusted_fee:,
             boundaries: fee.properties,
             properties:
