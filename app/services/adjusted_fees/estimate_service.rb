@@ -36,7 +36,7 @@ module AdjustedFees
     attr_reader :organization, :invoice, :params
 
     def apply_taxes_and_assign_ids(fee)
-      Fees::ApplyTaxesService.call(fee:)
+      Fees::ApplyTaxesService.call!(fee:)
       fee.applied_taxes.each { |tax| tax.id = SecureRandom.uuid }
     end
 
