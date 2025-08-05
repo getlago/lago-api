@@ -17,9 +17,11 @@ class Fee < ApplicationRecord
   belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
   belongs_to :organization
   belongs_to :billing_entity
+  belongs_to :fixed_charge, -> { with_discarded }, optional: true
 
   has_one :adjusted_fee, dependent: :nullify
   has_one :billable_metric, -> { with_discarded }, through: :charge
+  has_one :fixed_charge_add_on, -> { with_discarded }, class_name: "AddOn", through: :fixed_charge, source: :add_on
   has_one :customer, through: :subscription
   has_one :pricing_unit_usage, dependent: :destroy
   has_one :true_up_fee, class_name: "Fee", foreign_key: :true_up_parent_fee_id, dependent: :destroy
@@ -243,6 +245,7 @@ end
 #  billing_entity_id                   :uuid             not null
 #  charge_filter_id                    :uuid
 #  charge_id                           :uuid
+#  fixed_charge_id                     :uuid
 #  group_id                            :uuid
 #  invoice_id                          :uuid
 #  invoiceable_id                      :uuid
@@ -262,6 +265,7 @@ end
 #  index_fees_on_charge_id                                         (charge_id)
 #  index_fees_on_charge_id_and_invoice_id                          (charge_id,invoice_id) WHERE (deleted_at IS NULL)
 #  index_fees_on_deleted_at                                        (deleted_at)
+#  index_fees_on_fixed_charge_id                                   (fixed_charge_id)
 #  index_fees_on_group_id                                          (group_id)
 #  index_fees_on_invoice_id                                        (invoice_id)
 #  index_fees_on_invoiceable                                       (invoiceable_type,invoiceable_id)
@@ -276,6 +280,7 @@ end
 #  fk_rails_...  (applied_add_on_id => applied_add_ons.id)
 #  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (charge_id => charges.id)
+#  fk_rails_...  (fixed_charge_id => fixed_charges.id)
 #  fk_rails_...  (group_id => groups.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)
