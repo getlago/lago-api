@@ -17,6 +17,9 @@ class FixedCharge < ApplicationRecord
   has_many :subscription_fixed_charge_units_overrides, dependent: :destroy
   has_many :fees
 
+  has_many :applied_taxes, class_name: "FixedCharge::AppliedTax", dependent: :destroy
+  has_many :taxes, through: :applied_taxes
+
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
 
   CHARGE_MODELS = {
