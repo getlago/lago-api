@@ -4,6 +4,8 @@ module AdjustedFees
   class CreateService < BaseService
     Result = BaseResult[:fee, :adjusted_fee]
 
+    # preview - if true, fee will not be saved to the database
+    # we use it for previewing fee on when frontend is regenerating invoice
     def initialize(invoice:, params:, preview: false)
       @invoice = invoice
       @organization = invoice.organization
