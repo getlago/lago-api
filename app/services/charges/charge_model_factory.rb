@@ -15,7 +15,7 @@ module Charges
       pricing_group_keys = properties["pricing_group_keys"].presence || properties["grouped_by"]
 
       if pricing_group_keys.present? && !aggregation_result.aggregations.nil?
-        Charges::ChargeModels::GroupedService.new(**common_args.merge(charge_model: charge_model_class))
+        ChargeModels::GroupedService.new(**common_args.merge(charge_model: charge_model_class))
       else
         charge_model_class.new(**common_args)
       end
@@ -24,25 +24,25 @@ module Charges
     def self.charge_model_class(charge:)
       case charge.charge_model.to_sym
       when :standard
-        Charges::ChargeModels::StandardService
+        ChargeModels::StandardService
       when :graduated
         if charge.prorated?
-          Charges::ChargeModels::ProratedGraduatedService
+          ChargeModels::ProratedGraduatedService
         else
-          Charges::ChargeModels::GraduatedService
+          ChargeModels::GraduatedService
         end
       when :graduated_percentage
-        Charges::ChargeModels::GraduatedPercentageService
+        ChargeModels::GraduatedPercentageService
       when :package
-        Charges::ChargeModels::PackageService
+        ChargeModels::PackageService
       when :percentage
-        Charges::ChargeModels::PercentageService
+        ChargeModels::PercentageService
       when :volume
-        Charges::ChargeModels::VolumeService
+        ChargeModels::VolumeService
       when :custom
-        Charges::ChargeModels::CustomService
+        ChargeModels::CustomService
       when :dynamic
-        Charges::ChargeModels::DynamicService
+        ChargeModels::DynamicService
       else
         raise NotImplementedError, "Charge model #{charge.charge_model} is not implemented"
       end

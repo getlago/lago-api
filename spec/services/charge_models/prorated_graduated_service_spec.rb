@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::ChargeModels::ProratedGraduatedService, type: :service do
+RSpec.describe ChargeModels::ProratedGraduatedService, type: :service do
   subject(:apply_graduated_service) do
     described_class.apply(
       charge:,

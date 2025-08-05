@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::ChargeModels::GraduatedPercentageService, type: :service do
+RSpec.describe ChargeModels::GraduatedPercentageService, type: :service do
   subject(:apply_graduated_percentage_service) do
     described_class.apply(
       charge:,

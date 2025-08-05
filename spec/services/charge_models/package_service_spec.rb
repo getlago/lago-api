@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::ChargeModels::PackageService, type: :service do
+RSpec.describe ChargeModels::PackageService, type: :service do
   subject(:apply_package_service) do
     described_class.apply(
       charge:,
