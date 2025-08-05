@@ -14,6 +14,21 @@ module ChargeModels
       per_unit_total_amount + flat_unit_amount
     end
 
+    def compute_projected_amount
+      return BigDecimal("0") if projected_units.zero?
+
+      range_for_projection = ranges.find do |range|
+        range[:from_value] <= projected_units.ceil && (!range[:to_value] || projected_units <= range[:to_value])
+      end
+
+      return BigDecimal("0") unless range_for_projection
+
+      per_unit_price = BigDecimal(range_for_projection[:per_unit_amount] || 0)
+      flat_fee = BigDecimal(range_for_projection[:flat_amount] || 0)
+
+      (projected_units * per_unit_price) + flat_fee
+    end
+
     def unit_amount
       return 0 if number_of_units.zero?
 

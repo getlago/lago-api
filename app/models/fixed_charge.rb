@@ -12,6 +12,8 @@ class FixedCharge < ApplicationRecord
   belongs_to :add_on, -> { with_discarded }, touch: true
   belongs_to :parent, class_name: "FixedCharge", optional: true
   has_many :children, class_name: "FixedCharge", foreign_key: :parent_id, dependent: :nullify
+  has_many :subscription_fixed_charge_units_overrides, dependent: :destroy
+  has_many :fees
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
 
