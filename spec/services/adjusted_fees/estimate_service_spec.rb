@@ -44,9 +44,6 @@ RSpec.describe AdjustedFees::EstimateService, type: :service do
     )
   end
 
-  let(:code) { "tax_code" }
-  let(:refresh_service) { instance_double(Invoices::RefreshDraftService) }
-
   describe "#call" do
     before do
       fee_subscription
