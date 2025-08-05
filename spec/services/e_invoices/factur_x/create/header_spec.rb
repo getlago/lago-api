@@ -41,6 +41,14 @@ RSpec.describe EInvoices::FacturX::Create::Header, type: :service do
             expect(subject).to contains_xml_node("#{root}/ram:TypeCode").with_value(386)
           end
         end
+
+        context "with self billed invoice" do
+          before { invoice.update(self_billed: true) }
+
+          it "expects to have a type code" do
+            expect(subject).to contains_xml_node("#{root}/ram:TypeCode").with_value(389)
+          end
+        end
       end
 
       it "expects to have invoice issuing date" do
