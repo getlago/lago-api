@@ -9,7 +9,7 @@ module Fees
       super(nil)
     end
 
-    def create
+    def call
       fees_result = []
 
       ActiveRecord::Base.transaction do
@@ -17,6 +17,7 @@ module Fees
           add_on = add_on(identifier: fee[add_on_identifier])
 
           result.not_found_failure!(resource: "add_on").raise_if_error! unless add_on
+          result.single_validation_failure!(field: :boundaries, error_code: "values_are_invalid").raise_if_error! unless valid_boundaries?(fee)
 
           unit_amount_cents = fee[:unit_amount_cents] || add_on.amount_cents
           units = fee[:units]&.to_f || 1
@@ -39,7 +40,12 @@ module Fees
             units:,
             payment_status: :pending,
             taxes_amount_cents: 0,
-            taxes_precise_amount_cents: 0.to_d
+            taxes_precise_amount_cents: 0.to_d,
+            properties: {
+              from_datetime: from_datetime(fee),
+              to_datetime: to_datetime(fee),
+              timestamp: Time.current
+            }
           )
           fee.precise_unit_amount = fee.unit_amount.to_f
 
@@ -131,6 +137,32 @@ module Fees
         }
       )
       error_result.raise_if_error!
+    end
+
+    def valid_boundaries?(fee)
+      (fee[:from_datetime].nil? || Utils::Datetime.valid_format?(fee[:from_datetime])) &&
+        (fee[:to_datetime].nil? || Utils::Datetime.valid_format?(fee[:to_datetime])) &&
+        from_datetime(fee) < to_datetime(fee)
+    end
+
+    def from_datetime(fee)
+      if fee[:from_datetime].is_a?(String)
+        fee[:from_datetime].include?(".") ?
+          DateTime.strptime(fee[:from_datetime], "%Y-%m-%dT%H:%M:%S.%LZ") :
+          DateTime.strptime(fee[:from_datetime])
+      else
+        fee[:from_datetime] || Time.current.beginning_of_day
+      end
+    end
+
+    def to_datetime(fee)
+      if fee[:to_datetime].is_a?(String)
+        fee[:to_datetime].include?(".") ?
+          DateTime.strptime(fee[:to_datetime], "%Y-%m-%dT%H:%M:%S.%LZ") :
+          DateTime.strptime(fee[:to_datetime])
+      else
+        fee[:to_datetime] || Time.current.end_of_day
+      end
     end
   end
 end

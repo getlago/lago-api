@@ -90,7 +90,7 @@ module Invoices
     end
 
     def create_one_off_fees(invoice)
-      fees_result = Fees::OneOffService.new(invoice:, fees:).create
+      fees_result = Fees::OneOffService.new(invoice:, fees:).call
       fees_result.raise_if_error! unless tax_error?(fees_result)
 
       result.fees_taxes = fees_result.fees_taxes
