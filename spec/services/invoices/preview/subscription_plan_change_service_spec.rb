@@ -56,7 +56,11 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
       context "when target plan is not the same as current subscription's plan" do
         let(:target_plan) { create(:plan, organization:, pay_in_advance:, amount_cents:) }
 
-        before { travel_to Time.zone.parse("05-02-2025 12:34:56") }
+        before do
+          travel_to Time.zone.parse("05-02-2025 12:34:56")
+          create(:plan, organization:, code: target_plan.code, parent: target_plan)
+          target_plan.touch # rubocop:disable Rails/SkipsModelValidations
+        end
 
         context "when target plan is pay in advance" do
           let(:pay_in_advance) { true }
@@ -76,7 +80,7 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
 
               expect(subscriptions.second)
                 .to be_new_record
-                .and have_attributes(status: "active", started_at: Time.current, name: target_plan.name)
+                .and have_attributes(status: "active", started_at: Time.current, name: target_plan.name, plan: target_plan)
             end
 
             it "does not persist any changes to the current subscription" do
@@ -104,7 +108,7 @@ RSpec.describe Invoices::Preview::SubscriptionPlanChangeService, type: :service 
 
               expect(subscriptions.second)
                 .to be_new_record
-                .and have_attributes(status: "active", started_at: start_of_next_billing_period, name: target_plan.name)
+                .and have_attributes(status: "active", started_at: start_of_next_billing_period, name: target_plan.name, plan: target_plan)
             end
 
             it "does not persist any changes to the current subscription" do

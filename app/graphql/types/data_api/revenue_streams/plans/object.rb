@@ -18,9 +18,9 @@ module Types
 
           field :amount_currency, Types::CurrencyEnum, null: false
           field :gross_revenue_amount_cents, GraphQL::Types::BigInt, null: false
-          field :gross_revenue_share, Float, null: false
+          field :gross_revenue_share, Float, null: true
           field :net_revenue_amount_cents, GraphQL::Types::BigInt, null: false
-          field :net_revenue_share, Float, null: false
+          field :net_revenue_share, Float, null: true
         end
       end
     end

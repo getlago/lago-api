@@ -14,7 +14,8 @@ module Resolvers
     type Types::ActivityLogs::Object, null: true
 
     def resolve(activity_id: nil)
-      raise unauthorized_error unless License.premium? && Utils::ActivityLog.available?
+      raise unauthorized_error unless License.premium?
+      raise forbidden_error(code: "feature_unavailable") unless Utils::ActivityLog.available?
 
       current_organization.activity_logs.find_by!(activity_id: activity_id)
     rescue ActiveRecord::RecordNotFound

@@ -2,12 +2,13 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::ChargeModels::DynamicService, type: :service do
+RSpec.describe ChargeModels::DynamicService, type: :service do
   subject(:apply_dynamic_service) do
     described_class.apply(
       charge:,
       aggregation_result:,
-      properties: charge.properties
+      properties: charge.properties,
+      period_ratio: 1.0
     )
   end
 

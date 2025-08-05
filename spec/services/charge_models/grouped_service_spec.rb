@@ -2,15 +2,19 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::ChargeModels::GroupedService do
+RSpec.describe ChargeModels::GroupedService do
   subject(:apply_grouped_service) do
     described_class.apply(
-      charge_model:, charge:, aggregation_result:, properties: charge.properties
+      charge_model:,
+      charge:,
+      aggregation_result:,
+      properties: charge.properties,
+      period_ratio: 1.0
     )
   end
 
   context "with standard charge model" do
-    let(:charge_model) { Charges::ChargeModels::StandardService }
+    let(:charge_model) { ChargeModels::StandardService }
 
     let(:aggregation_result) do
       BaseService::Result.new.tap do |result|
@@ -68,7 +72,7 @@ RSpec.describe Charges::ChargeModels::GroupedService do
   end
 
   context "with dynamic charge model" do
-    let(:charge_model) { Charges::ChargeModels::DynamicService }
+    let(:charge_model) { ChargeModels::DynamicService }
     let(:charge) { create(:dynamic_charge) }
 
     let(:aggregation_result) do

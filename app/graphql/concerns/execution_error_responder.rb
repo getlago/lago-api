@@ -57,6 +57,15 @@ module ExecutionErrorResponder
     )
   end
 
+  def third_party_failure(messages:)
+    execution_error(
+      error: "Unprocessable Entity",
+      status: 422,
+      code: "third_party_error",
+      details: {error: messages}
+    )
+  end
+
   def result_error(service_result)
     case service_result.error
     when BaseService::NotFoundFailure
@@ -67,6 +76,8 @@ module ExecutionErrorResponder
       validation_error(messages: service_result.error.messages)
     when BaseService::ForbiddenFailure
       forbidden_error(code: service_result.error.code)
+    when BaseService::ThirdPartyFailure
+      third_party_failure(messages: service_result.error.message)
     else
       execution_error(
         error: "Internal error",

@@ -47,7 +47,7 @@ module Invoices
       end
 
       def plan
-        @plan ||= organization.plans.find_by(code: params[:plan_code])
+        @plan ||= organization.plans.parents.find_by(code: params[:plan_code])
       end
     end
   end

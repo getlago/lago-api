@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-module Charges
-  class BuildDefaultPropertiesService < BaseService
+module ChargeModels
+  class BuildDefaultPropertiesService < ::BaseService
     def initialize(charge_model)
       @charge_model = charge_model
       super

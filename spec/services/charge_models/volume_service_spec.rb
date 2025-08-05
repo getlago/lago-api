@@ -2,12 +2,13 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::ChargeModels::VolumeService, type: :service do
+RSpec.describe ChargeModels::VolumeService, type: :service do
   subject(:apply_volume_service) do
     described_class.apply(
       charge:,
       aggregation_result:,
-      properties: charge.properties
+      properties: charge.properties,
+      period_ratio: 1.0
     )
   end
 
