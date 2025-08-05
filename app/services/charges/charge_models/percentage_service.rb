@@ -13,6 +13,13 @@ module Charges
         compute_percentage_amount + compute_fixed_amount
       end
 
+      def compute_projected_amount
+        current_amount = compute_amount
+        return BigDecimal("0") if current_amount.zero? || period_ratio.nil? || period_ratio.zero?
+
+        current_amount / BigDecimal(period_ratio.to_s)
+      end
+
       def amount_details
         paid_units = units - free_units_value
         paid_units = 0 if paid_units.negative?

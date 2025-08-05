@@ -78,7 +78,7 @@ module Invoices
       end
 
       def target_plan
-        @target_plan ||= organization.plans.find_by(code: target_plan_code)
+        @target_plan ||= organization.plans.parents.find_by(code: target_plan_code)
       end
     end
   end

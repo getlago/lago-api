@@ -887,6 +887,9 @@ type ChargeFilterUsage {
   id: ID
   invoiceDisplayName: String
   pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
   units: Float!
   values: ChargeFilterValues!
 }
@@ -940,6 +943,9 @@ type ChargeUsage {
   groupedUsage: [GroupedChargeUsage!]!
   id: ID!
   pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
   units: Float!
 }
 
@@ -4186,6 +4192,7 @@ type CustomerUsage {
   currency: CurrencyEnum!
   fromDatetime: ISO8601DateTime!
   issuingDate: ISO8601Date!
+  projectedAmountCents: BigInt!
   taxesAmountCents: BigInt!
   toDatetime: ISO8601DateTime!
   totalAmountCents: BigInt!
@@ -4310,9 +4317,9 @@ type DataApiRevenueStreamCustomer {
   customerName: String
   externalCustomerId: String!
   grossRevenueAmountCents: BigInt!
-  grossRevenueShare: Float!
+  grossRevenueShare: Float
   netRevenueAmountCents: BigInt!
-  netRevenueShare: Float!
+  netRevenueShare: Float
 }
 
 type DataApiRevenueStreamPlan {
@@ -4320,9 +4327,9 @@ type DataApiRevenueStreamPlan {
   customersCount: Int!
   customersShare: Float!
   grossRevenueAmountCents: BigInt!
-  grossRevenueShare: Float!
+  grossRevenueShare: Float
   netRevenueAmountCents: BigInt!
-  netRevenueShare: Float!
+  netRevenueShare: Float
   planCode: String!
   planDeletedAt: ISO8601DateTime
   planId: ID!
@@ -5389,6 +5396,9 @@ type GroupedChargeUsage {
   groupedBy: JSON
   id: ID!
   pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
   units: Float!
 }
 

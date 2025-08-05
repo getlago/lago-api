@@ -23,7 +23,6 @@ class Subscription < ApplicationRecord
   has_many :subscription_fixed_charge_units_overrides, dependent: :destroy
   has_many :fixed_charges, through: :plan
   has_many :add_ons, through: :fixed_charges
-
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
     class_name: "Clickhouse::ActivityLog",

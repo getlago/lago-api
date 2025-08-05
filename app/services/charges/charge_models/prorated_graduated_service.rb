@@ -77,6 +77,13 @@ module Charges
         result_with_flat_amount(result_amount, full_sum, max_full_sum)
       end
 
+      def compute_projected_amount
+        current_amount = compute_amount
+        return BigDecimal("0") if current_amount.zero? || period_ratio.nil? || period_ratio.zero?
+
+        current_amount / BigDecimal(period_ratio.to_s)
+      end
+
       def unit_amount
         total_units = per_event_aggregation_result.event_aggregation.sum
         return 0 if total_units.zero?
