@@ -237,6 +237,18 @@ ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_06
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_0480ef4ad3;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_01a4c0c7db;
 DROP TRIGGER IF EXISTS before_payment_receipt_insert ON public.payment_receipts;
+CREATE OR REPLACE VIEW public.flat_filters AS
+SELECT
+    NULL::uuid AS organization_id,
+    NULL::character varying AS billable_metric_code,
+    NULL::uuid AS plan_id,
+    NULL::uuid AS charge_id,
+    NULL::timestamp(6) without time zone AS charge_updated_at,
+    NULL::uuid AS charge_filter_id,
+    NULL::timestamp(6) without time zone AS charge_filter_updated_at,
+    NULL::jsonb AS filters,
+    NULL::jsonb AS properties,
+    NULL::jsonb AS pricing_group_keys;
 CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
 SELECT
     NULL::uuid AS organization_id,
@@ -3385,28 +3397,17 @@ CREATE TABLE public.fixed_charges (
 --
 
 CREATE VIEW public.flat_filters AS
- SELECT billable_metrics.organization_id,
-    billable_metrics.code AS billable_metric_code,
-    charges.plan_id,
-    charges.id AS charge_id,
-    charges.updated_at AS charge_updated_at,
-    charge_filters.id AS charge_filter_id,
-    charge_filters.updated_at AS charge_filter_updated_at,
-        CASE
-            WHEN (charge_filters.id IS NOT NULL) THEN jsonb_object_agg(COALESCE(billable_metric_filters.key, ''::character varying),
-            CASE
-                WHEN ((charge_filter_values."values")::text[] && ARRAY['__ALL_FILTER_VALUES__'::text]) THEN billable_metric_filters."values"
-                ELSE charge_filter_values."values"
-            END)
-            ELSE NULL::jsonb
-        END AS filters
-   FROM ((((public.billable_metrics
-     JOIN public.charges ON ((charges.billable_metric_id = billable_metrics.id)))
-     LEFT JOIN public.charge_filters ON ((charge_filters.charge_id = charges.id)))
-     LEFT JOIN public.charge_filter_values ON ((charge_filter_values.charge_filter_id = charge_filters.id)))
-     LEFT JOIN public.billable_metric_filters ON ((billable_metric_filters.id = charge_filter_values.billable_metric_filter_id)))
-  WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
-  GROUP BY billable_metrics.organization_id, billable_metrics.code, charges.plan_id, charges.id, charges.updated_at, charge_filters.id, charge_filters.updated_at;
+SELECT
+    NULL::uuid AS organization_id,
+    NULL::character varying AS billable_metric_code,
+    NULL::uuid AS plan_id,
+    NULL::uuid AS charge_id,
+    NULL::timestamp(6) without time zone AS charge_updated_at,
+    NULL::uuid AS charge_filter_id,
+    NULL::timestamp(6) without time zone AS charge_filter_updated_at,
+    NULL::jsonb AS filters,
+    NULL::jsonb AS properties,
+    NULL::jsonb AS pricing_group_keys;
 
 
 --
@@ -7743,6 +7744,37 @@ CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
 
 
 --
+-- Name: flat_filters _RETURN; Type: RULE; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE VIEW public.flat_filters AS
+ SELECT billable_metrics.organization_id,
+    billable_metrics.code AS billable_metric_code,
+    charges.plan_id,
+    charges.id AS charge_id,
+    charges.updated_at AS charge_updated_at,
+    charge_filters.id AS charge_filter_id,
+    charge_filters.updated_at AS charge_filter_updated_at,
+        CASE
+            WHEN (charge_filters.id IS NOT NULL) THEN jsonb_object_agg(COALESCE(billable_metric_filters.key, ''::character varying),
+            CASE
+                WHEN ((charge_filter_values."values")::text[] && ARRAY['__ALL_FILTER_VALUES__'::text]) THEN billable_metric_filters."values"
+                ELSE charge_filter_values."values"
+            END)
+            ELSE NULL::jsonb
+        END AS filters,
+    COALESCE(charge_filters.properties, charges.properties) AS properties,
+    (COALESCE(charge_filters.properties, charges.properties) -> 'pricing_group_keys'::text) AS pricing_group_keys
+   FROM ((((public.billable_metrics
+     JOIN public.charges ON ((charges.billable_metric_id = billable_metrics.id)))
+     LEFT JOIN public.charge_filters ON ((charge_filters.charge_id = charges.id)))
+     LEFT JOIN public.charge_filter_values ON ((charge_filter_values.charge_filter_id = charge_filters.id)))
+     LEFT JOIN public.billable_metric_filters ON ((billable_metric_filters.id = charge_filter_values.billable_metric_filter_id)))
+  WHERE ((billable_metrics.deleted_at IS NULL) AND (charges.deleted_at IS NULL) AND (charge_filters.deleted_at IS NULL) AND (charge_filter_values.deleted_at IS NULL) AND (billable_metric_filters.deleted_at IS NULL))
+  GROUP BY billable_metrics.organization_id, billable_metrics.code, charges.plan_id, charges.id, charges.updated_at, charge_filters.id, charge_filters.updated_at;
+
+
+--
 -- Name: payment_receipts before_payment_receipt_insert; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -9584,6 +9616,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250721150001'),
 ('20250721150000'),
 ('20250721091802'),
+('20250721090704'),
 ('20250718174008'),
 ('20250718140450'),
 ('20250717142942'),
