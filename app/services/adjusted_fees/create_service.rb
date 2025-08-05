@@ -14,7 +14,7 @@ module AdjustedFees
     end
 
     def call
-      return result.forbidden_failure! if not_authorized?
+      return result.forbidden_failure! if forbidden?
 
       fee = find_or_create_fee
       return result unless result.success?
@@ -61,7 +61,7 @@ module AdjustedFees
 
     attr_reader :organization, :invoice, :params, :preview
 
-    def not_authorized?
+    def forbidden?
       !preview && (!License.premium? || !invoice.draft?)
     end
 
