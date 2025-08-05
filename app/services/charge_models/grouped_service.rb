@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module ChargeModels
-  class GroupedService < BaseService
+  class GroupedService < ChargeModels::BaseService
     Result = BaseResult[
       :grouped_results,
       :amount,
