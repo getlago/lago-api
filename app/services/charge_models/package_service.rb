@@ -8,9 +8,21 @@ module ChargeModels
       return 0 if paid_units.negative?
 
       # NOTE: Check how many packages (groups of units) are consumed
-      #       It's rounded up, because a group counts from its first unit
+      # It's rounded up, because a group counts from its first unit
       package_count = paid_units.fdiv(per_package_size).ceil
       package_count * per_package_unit_amount
+    end
+
+    def compute_projected_amount
+      return 0 if projected_units.zero?
+
+      # Calculate projected paid units (after free units)
+      proj_paid_units = projected_units - BigDecimal(free_units.to_s)
+      return 0 if proj_paid_units <= 0
+
+      # Calculate how many packages are needed for projected usage
+      proj_package_count = (proj_paid_units / BigDecimal(per_package_size.to_s)).ceil
+      proj_package_count * per_package_unit_amount
     end
 
     def unit_amount
