@@ -26,7 +26,7 @@ module AdjustedFees
         init_from_charge_fee(adjusted_fee)
       end
 
-      apply_taxes_and_assign_ids(estimated_fee)
+      apply_taxes_and_assign_ids(estimated_fee) unless customer.tax_customer
       result.fee = estimated_fee
       result
     end
