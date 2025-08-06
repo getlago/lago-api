@@ -31,7 +31,7 @@ module DunningCampaigns
 
       def call
         return result unless threshold
-        return result if max_attempts_reached?
+        return send_campaign_finished_webhook if max_attempts_reached?
         return result unless days_between_attempts_satisfied?
 
         DunningCampaigns::ProcessAttemptJob.perform_later(customer:, dunning_campaign_threshold: threshold)
@@ -66,6 +66,18 @@ module DunningCampaigns
         next_attempt_date = customer.last_dunning_campaign_attempt_at + dunning_campaign.days_between_attempts.days
 
         Time.zone.now >= next_attempt_date
+      end
+
+      def send_campaign_finished_webhook
+        return result unless customer.overdue_balance_cents.positive?
+
+        SendWebhookJob.perform_later(
+          "dunning_campaign.finished",
+          customer,
+          dunning_campaign_code: dunning_campaign.code
+        )
+
+        result
       end
     end
   end
