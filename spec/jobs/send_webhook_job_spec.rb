@@ -677,7 +677,7 @@ RSpec.describe SendWebhookJob, type: :job do
     let(:customer) { create(:customer) }
     let(:webhook_options) do
       {
-        dunning_campaign_id: "campaign_id"
+        dunning_campaign_code: "campaign_code"
       }
     end
 

@@ -74,7 +74,7 @@ module DunningCampaigns
         SendWebhookJob.perform_later(
           "dunning_campaign.finished",
           customer,
-          dunning_campaign_id: dunning_campaign.id
+          dunning_campaign_code: dunning_campaign.code
         )
 
         result

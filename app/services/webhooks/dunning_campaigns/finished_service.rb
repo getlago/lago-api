@@ -9,7 +9,7 @@ module Webhooks
         ::V1::DunningCampaignFinishedSerializer.new(
           object,
           root_name: object_type,
-          dunning_campaign_id: options[:dunning_campaign_id]
+          dunning_campaign_code: options[:dunning_campaign_code]
         )
       end
 
