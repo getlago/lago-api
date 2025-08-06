@@ -4,6 +4,7 @@ module Utils
   class ActivityLog
     IGNORED_FIELDS = %i[updated_at].freeze
     IGNORED_EXTERNAL_CUSTOMER_ID_CLASSES = %w[BillableMetric Coupon Plan BillingEntity Entitlement::Feature].freeze
+    MAX_SERIALIZED_FEES = 25
     SERIALIZED_INCLUDED_OBJECTS = {
       billing_entity: %i[taxes],
       credit_note: %i[items applied_taxes error_details],
@@ -126,7 +127,7 @@ module Utils
     def serializer_includes(root_name)
       return SERIALIZED_INCLUDED_OBJECTS[root_name] || [] if root_name != :invoice
 
-      if object.fees.count > 25
+      if object.fees.count > MAX_SERIALIZED_FEES
         SERIALIZED_INCLUDED_OBJECTS[:invoice] - [:fees]
       else
         SERIALIZED_INCLUDED_OBJECTS[:invoice]

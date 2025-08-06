@@ -273,7 +273,7 @@ RSpec.describe Utils::ActivityLog, type: :service do
     end
   end
 
-  describe "object_serialized" do
+  describe "#object_serialized" do
     subject(:method_call) do
       activity_log.new(object, "object.created").send(:object_serialized)
     end
