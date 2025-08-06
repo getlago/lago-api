@@ -5142,7 +5142,7 @@ type FeeAppliedTax implements AppliedTax {
 Fee input for creating invoice
 """
 input FeeInput {
-  addOnId: ID!
+  addOnId: ID
   description: String
   invoiceDisplayName: String
   name: String
