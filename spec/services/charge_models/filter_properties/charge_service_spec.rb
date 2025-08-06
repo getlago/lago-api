@@ -2,12 +2,12 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::FilterChargeModelPropertiesService, type: :service do
-  subject(:filter_service) { described_class.new(charge:, properties:) }
+RSpec.describe ChargeModels::FilterProperties::ChargeService, type: :service do
+  subject(:filter_service) { described_class.new(model:, properties:) }
 
   let(:charge_model) { nil }
   let(:billable_metric) { build(:billable_metric) }
-  let(:charge) { build(:charge, charge_model:, billable_metric:) }
+  let(:model) { build(:charge, charge_model:, billable_metric:) }
 
   let(:properties) do
     {

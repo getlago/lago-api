@@ -36,7 +36,7 @@ module Charges
         charge.properties.presence ||
         ChargeModels::BuildDefaultPropertiesService.call(charge.charge_model)
 
-      filtered_properties = Charges::FilterChargeModelPropertiesService.call(charge:, properties:).properties
+      filtered_properties = ChargeModels::FilterPropertiesService.call(chargeable: charge, properties:).properties
 
       charge_model = ChargeModelFactory.new_instance(
         charge:,
