@@ -2,6 +2,8 @@
 
 module ChargeModels
   class FilterPropertiesService < BaseService
+    Result = BaseResult[:properties]
+
     def initialize(chargeable:, properties:)
       @chargeable = chargeable
       @properties = properties&.with_indifferent_access || {}
@@ -10,7 +12,7 @@ module ChargeModels
     end
 
     def call
-      result.properties = filter_service.call.properties
+      result.properties = filter_service_result.properties
       result
     end
 
@@ -18,12 +20,12 @@ module ChargeModels
 
     attr_reader :chargeable, :properties
 
-    def filter_service
+    def filter_service_result
       case chargeable
       when Charge
-        ChargeModels::FilterProperties::ChargeService.new(chargeable:, properties:)
+        ChargeModels::FilterProperties::ChargeService.call(chargeable:, properties:)
       when FixedCharge
-        ChargeModels::FilterProperties::FixedChargeService.new(chargeable:, properties:)
+        ChargeModels::FilterProperties::FixedChargeService.call(chargeable:, properties:)
       else
         raise ArgumentError, "Unsupported chargeable type: #{chargeable.class}"
       end

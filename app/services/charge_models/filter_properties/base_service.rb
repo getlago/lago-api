@@ -3,6 +3,8 @@
 module ChargeModels
   module FilterProperties
     class BaseService < ::BaseService
+      Result = BaseResult[:properties]
+
       def initialize(model:, properties:)
         @model = model
         @properties = properties&.with_indifferent_access || {}

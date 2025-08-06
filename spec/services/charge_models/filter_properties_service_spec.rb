@@ -11,24 +11,32 @@ RSpec.describe ChargeModels::FilterPropertiesService, type: :service do
     context "with a charge" do
       let(:chargeable) { build(:charge, charge_model: "standard") }
 
+      before do
+        allow(ChargeModels::FilterProperties::ChargeService).to receive(:call)
+      end
+
       it "delegates to ChargeService" do
-        expect(ChargeModels::FilterProperties::ChargeService).to receive(:new)
+        filter_service.call
+
+        expect(ChargeModels::FilterProperties::ChargeService).to have_received(:call)
           .with(chargeable:, properties:)
           .and_call_original
-
-        filter_service.call
       end
     end
 
     context "with a fixed charge" do
       let(:chargeable) { build(:fixed_charge, charge_model: "standard") }
 
+      before do
+        allow(ChargeModels::FilterProperties::FixedChargeService).to receive(:call)
+      end
+
       it "delegates to FixedChargeService" do
-        expect(ChargeModels::FilterProperties::FixedChargeService).to receive(:new)
+        filter_service.call
+
+        expect(ChargeModels::FilterProperties::FixedChargeService).to have_received(:call)
           .with(chargeable:, properties:)
           .and_call_original
-
-        filter_service.call
       end
     end
 
