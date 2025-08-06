@@ -122,7 +122,7 @@ module Plans
 
       properties = args[:properties].presence || ChargeModels::BuildDefaultPropertiesService.call(args[:charge_model])
       charge.properties = ChargeModels::FilterPropertiesService.call(
-        model: charge,
+        chargeable: charge,
         properties:
       ).properties
 

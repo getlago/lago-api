@@ -3,10 +3,10 @@
 require "rails_helper"
 
 RSpec.describe ChargeModels::FilterProperties::FixedChargeService, type: :service do
-  subject(:filter_service) { described_class.new(model:, properties:) }
+  subject(:filter_service) { described_class.new(chargeable:, properties:) }
 
   let(:charge_model) { nil }
-  let(:model) { build(:fixed_charge, charge_model:) }
+  let(:chargeable) { build(:fixed_charge, charge_model:) }
 
   let(:properties) do
     {
