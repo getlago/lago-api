@@ -6,7 +6,7 @@ module ChargeModels
       protected
 
       def base_attributes
-        model.billable_metric.custom_agg? ? [:custom_properties] : []
+        chargeable.billable_metric.custom_agg? ? [:custom_properties] : []
       end
 
       def charge_model_attributes

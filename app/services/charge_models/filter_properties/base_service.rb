@@ -5,8 +5,8 @@ module ChargeModels
     class BaseService < ::BaseService
       Result = BaseResult[:properties]
 
-      def initialize(model:, properties:)
-        @model = model
+      def initialize(chargeable:, properties:)
+        @chargeable = chargeable
         @properties = properties&.with_indifferent_access || {}
 
         super
@@ -28,7 +28,7 @@ module ChargeModels
 
       protected
 
-      attr_reader :model, :properties
+      attr_reader :chargeable, :properties
 
       def slice_properties
         attributes = base_attributes + charge_model_attributes
@@ -70,7 +70,7 @@ module ChargeModels
       end
 
       def charge_model
-        @charge_model ||= model.charge_model
+        @charge_model ||= chargeable.charge_model
       end
     end
   end
