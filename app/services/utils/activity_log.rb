@@ -120,7 +120,17 @@ module Utils
       serializer = "V1::#{object.class.name}Serializer".constantize
       root_name = object.class.name.underscore.to_sym
 
-      serializer.new(object, root_name:, includes: SERIALIZED_INCLUDED_OBJECTS[root_name] || []).serialize
+      serializer.new(object, root_name:, includes: serializer_includes(root_name)).serialize
+    end
+
+    def serializer_includes(root_name)
+      return SERIALIZED_INCLUDED_OBJECTS[root_name] || [] if root_name != :invoice
+
+      if object.fees.count > 25
+        SERIALIZED_INCLUDED_OBJECTS[:invoice] - [:fees]
+      else
+        SERIALIZED_INCLUDED_OBJECTS[:invoice]
+      end
     end
 
     def object_changes(changes)

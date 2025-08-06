@@ -272,4 +272,80 @@ RSpec.describe Utils::ActivityLog, type: :service do
       end
     end
   end
+
+  describe "object_serialized" do
+    subject(:method_call) do
+      activity_log.new(object, "object.created").send(:object_serialized)
+    end
+
+    let(:object) { create(:credit_note, organization:) }
+
+    let(:serialized_object) do
+      V1::CreditNoteSerializer.new(
+        object, root_name: :credit_note, includes: Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:credit_note]
+      ).serialize
+    end
+
+    it "returns the serialized object" do
+      expect(subject).to eq(serialized_object)
+    end
+
+    context "when the object is an invoice" do
+      let(:object) { create(:invoice, organization:) }
+
+      let(:serialized_object) do
+        V1::InvoiceSerializer.new(
+          object, root_name: :invoice, includes: Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:invoice] - [:fees]
+        ).serialize
+      end
+
+      before { create_list(:fee, 26, invoice: object) }
+
+      it "returns the serialized invoice without fees" do
+        expect(subject).to eq(serialized_object)
+      end
+    end
+  end
+
+  describe "#serializer_includes" do
+    subject(:method_call) do
+      activity_log.new(object, "object.created").send(:serializer_includes, root_name)
+    end
+
+    let(:root_name) { object.class.name.underscore.to_sym }
+
+    context "when object is not an invoice" do
+      let(:object) { create(:credit_note, organization:) }
+
+      let(:serialized_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:credit_note] }
+
+      it "returns the default includes for the object" do
+        expect(method_call).to eq(serialized_includes)
+      end
+    end
+
+    context "when object is an invoice" do
+      let(:object) { create(:invoice, organization:) }
+
+      context "when invoice has more than 25 fees" do
+        let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:invoice] - [:fees] }
+
+        before { create_list(:fee, 26, invoice: object) }
+
+        it "excludes fees from the includes" do
+          expect(subject).to eq(serializer_includes)
+        end
+      end
+
+      context "when invoice has 25 or fewer fees" do
+        let(:serializer_includes) { Utils::ActivityLog::SERIALIZED_INCLUDED_OBJECTS[:invoice] }
+
+        before { create_list(:fee, 25, invoice: object) }
+
+        it "includes fees in the includes" do
+          expect(subject).to eq(serializer_includes)
+        end
+      end
+    end
+  end
 end
