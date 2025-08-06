@@ -27,6 +27,8 @@ RSpec.describe ChargeModels::FilterProperties::FixedChargeService, type: :servic
     }
   end
 
+  let(:custom_properties) { {custom: "prop"} }
+
   describe "#call" do
     context "without charge_model" do
       it "returns empty hash" do
