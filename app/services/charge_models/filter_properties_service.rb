@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module ChargeModels
-  class FilterPropertiesService < BaseService
+  class FilterPropertiesService < ::BaseService
     Result = BaseResult[:properties]
 
     def initialize(chargeable:, properties:)

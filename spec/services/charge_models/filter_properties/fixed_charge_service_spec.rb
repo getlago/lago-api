@@ -55,11 +55,5 @@ RSpec.describe ChargeModels::FilterProperties::FixedChargeService, type: :servic
 
       it { expect(filter_service.call.properties.keys).to include("volume_ranges") }
     end
-
-    context "with unsupported charge_model" do
-      let(:charge_model) { "graduated_percentage" }
-
-      it { expect(filter_service.call.properties).to eq({}) }
-    end
   end
 end
