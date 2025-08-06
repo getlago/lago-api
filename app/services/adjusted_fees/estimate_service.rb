@@ -114,6 +114,10 @@ module AdjustedFees
       charge && unit_adjustment && (charge.percentage? || (charge.prorated? && charge.graduated?))
     end
 
+    def customer
+      @customer ||= invoice.customer
+    end
+
     def find_or_create_fee
       return find_existing_fee if params.key?(:fee_id)
 
