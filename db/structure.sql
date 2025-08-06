@@ -293,6 +293,7 @@ DROP INDEX IF EXISTS public.index_unique_transaction_id;
 DROP INDEX IF EXISTS public.index_unique_terminating_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_starting_invoice_subscription;
 DROP INDEX IF EXISTS public.index_unique_applied_to_organization_per_organization;
+DROP INDEX IF EXISTS public.index_uniq_invoice_subscriptions_on_charges_from_to_datetime;
 DROP INDEX IF EXISTS public.index_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_taxes_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_subscriptions_on_status;
@@ -394,7 +395,6 @@ DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_regenerated_invoice_i
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id_and_subscription_id;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_invoice_id;
-DROP INDEX IF EXISTS public.index_invoice_subscriptions_on_charges_from_and_to_datetime;
 DROP INDEX IF EXISTS public.index_invoice_subscriptions_boundaries;
 DROP INDEX IF EXISTS public.index_invoice_metadata_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoice_metadata_on_invoice_id_and_key;
@@ -6862,13 +6862,6 @@ CREATE INDEX index_invoice_subscriptions_boundaries ON public.invoice_subscripti
 
 
 --
--- Name: index_invoice_subscriptions_on_charges_from_and_to_datetime; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_invoice_subscriptions_on_charges_from_and_to_datetime ON public.invoice_subscriptions USING btree (subscription_id, charges_from_datetime, charges_to_datetime) WHERE ((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE));
-
-
---
 -- Name: index_invoice_subscriptions_on_invoice_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -7573,6 +7566,13 @@ CREATE UNIQUE INDEX index_taxes_on_code_and_organization_id ON public.taxes USIN
 --
 
 CREATE INDEX index_taxes_on_organization_id ON public.taxes USING btree (organization_id);
+
+
+--
+-- Name: index_uniq_invoice_subscriptions_on_charges_from_to_datetime; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_uniq_invoice_subscriptions_on_charges_from_to_datetime ON public.invoice_subscriptions USING btree (subscription_id, charges_from_datetime, charges_to_datetime) WHERE ((created_at >= '2023-06-09 00:00:00'::timestamp without time zone) AND (recurring IS TRUE) AND (regenerated_invoice_id IS NULL));
 
 
 --
@@ -9687,6 +9687,8 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250806174150'),
+('20250806173900'),
 ('20250801072722'),
 ('20250731145640'),
 ('20250731144632'),
