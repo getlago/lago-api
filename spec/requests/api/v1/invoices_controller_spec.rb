@@ -895,9 +895,15 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
       context "when invoice is voided" do
         let(:status) { :voided }
 
-        it "returns method not allowed error" do
+        it "marks the dispute as lost" do
+          expect { subject }.to change { invoice.reload.payment_dispute_lost_at }.from(nil)
+        end
+
+        it "returns the invoice" do
           subject
-          expect(response).to have_http_status(:method_not_allowed)
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoice][:lago_id]).to eq(invoice.id)
         end
       end
 

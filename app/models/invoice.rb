@@ -329,7 +329,7 @@ class Invoice < ApplicationRecord
   end
 
   def payment_dispute_losable?
-    finalized?
+    finalized? || voided?
   end
 
   def voidable?

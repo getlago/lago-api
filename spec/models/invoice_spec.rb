@@ -37,7 +37,7 @@ RSpec.describe Invoice, type: :model do
 
   describe "validation" do
     describe "of payment dispute lost absence" do
-      context "when invoice is not voided" do
+      context "when invoice is finalized" do
         let(:invoice) { create(:invoice) }
 
         specify do
@@ -46,7 +46,39 @@ RSpec.describe Invoice, type: :model do
       end
 
       context "when invoice is voided" do
-        let(:invoice) { create(:invoice, status: :voided) }
+        let(:invoice) { create(:invoice, :voided) }
+
+        specify do
+          expect(invoice).not_to validate_absence_of(:payment_dispute_lost_at)
+        end
+      end
+
+      context "when invoice is pending" do
+        let(:invoice) { create(:invoice, :pending) }
+
+        specify do
+          expect(invoice).to validate_absence_of(:payment_dispute_lost_at)
+        end
+      end
+
+      context "when invoice is draft" do
+        let(:invoice) { create(:invoice, :draft) }
+
+        specify do
+          expect(invoice).to validate_absence_of(:payment_dispute_lost_at)
+        end
+      end
+
+      context "when invoice is failed" do
+        let(:invoice) { create(:invoice, :failed) }
+
+        specify do
+          expect(invoice).to validate_absence_of(:payment_dispute_lost_at)
+        end
+      end
+
+      context "when invoice is invisible" do
+        let(:invoice) { create(:invoice, :invisible) }
 
         specify do
           expect(invoice).to validate_absence_of(:payment_dispute_lost_at)
