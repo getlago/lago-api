@@ -81,7 +81,7 @@ RSpec.describe Plans::ChargeablesValidationService do
         it "returns not found failure" do
           expect(validation_service).to be_a_failure
           expect(validation_service.error).to be_a(BaseService::NotFoundFailure)
-          expect(validation_service.error.message).to eq("fixed_charges_not_found")
+          expect(validation_service.error.message).to eq("add_ons_not_found")
         end
       end
 
@@ -106,7 +106,7 @@ RSpec.describe Plans::ChargeablesValidationService do
           it "returns not found failure" do
             expect(validation_service).to be_a_failure
             expect(validation_service.error).to be_a(BaseService::NotFoundFailure)
-            expect(validation_service.error.message).to eq("fixed_charges_not_found")
+            expect(validation_service.error.message).to eq("add_ons_not_found")
           end
         end
       end
@@ -192,7 +192,7 @@ RSpec.describe Plans::ChargeablesValidationService do
         it "returns not found failure for fixed charges" do
           expect(validation_service).to be_a_failure
           expect(validation_service.error).to be_a(BaseService::NotFoundFailure)
-          expect(validation_service.error.message).to eq("fixed_charges_not_found")
+          expect(validation_service.error.message).to eq("add_ons_not_found")
         end
       end
     end

@@ -27,12 +27,12 @@ module Plans
         bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil
       )
 
-      validation_result = Plans::ChargeablesValidationService.call(
+      chargeables_validation_result = Plans::ChargeablesValidationService.call(
         organization: plan.organization,
         charges: args[:charges],
         fixed_charges: args[:fixed_charges]
       )
-      return validation_result if validation_result.failure?
+      return chargeables_validation_result if chargeables_validation_result.failure?
 
       ActiveRecord::Base.transaction do
         plan.save!

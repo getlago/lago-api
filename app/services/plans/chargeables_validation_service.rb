@@ -51,7 +51,7 @@ module Plans
       return if add_on_ids.blank?
 
       if organization.add_ons.where(id: add_on_ids).count != add_on_ids.count
-        result.not_found_failure!(resource: "fixed_charges")
+        result.not_found_failure!(resource: "add_ons")
       end
     end
 
@@ -60,7 +60,7 @@ module Plans
       return if add_on_codes.blank?
 
       if organization.add_ons.where(code: add_on_codes).count != add_on_codes.count
-        result.not_found_failure!(resource: "fixed_charges")
+        result.not_found_failure!(resource: "add_ons")
       end
     end
   end
