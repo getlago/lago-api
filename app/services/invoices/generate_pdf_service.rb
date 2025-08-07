@@ -36,13 +36,30 @@ module Invoices
         pdf_service = Utils::PdfGenerator.new(template:, context: invoice)
         pdf_result = pdf_service.call
 
+        # TODO add tests for this class when attributes for billing_entity are created!
+        pdf_file = Tempfile.new([invoice.number, ".pdf"])
+        pdf_file.binmode
+        pdf_file.write(pdf_result.io.read)
+        pdf_file.flush
+
+        if invoice.billing_entity&.country == "FR"
+          xml_file = Tempfile.new([invoice.number, ".xml"])
+          xml_file.write(EInvoices::FacturX::CreateService.call(invoice:))
+          xml_file.flush
+
+          Invoices::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
+        end
+
         invoice.file.attach(
-          io: pdf_result.io,
+          io: File.open(pdf_file.path),
           filename: "#{invoice.number}.pdf",
           content_type: "application/pdf"
         )
 
         invoice.save!
+      ensure
+        pdf_file&.unlink
+        xml_file&.unlink
       end
     end
 
