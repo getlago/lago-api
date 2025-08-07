@@ -77,6 +77,12 @@ class Fee < ApplicationRecord
   scope :from_customer_pay_in_advance, ->(org, external_customer_id) do
     from_organization_pay_in_advance(org).joins(subscription: :customer).where("customers.external_id = ?", external_customer_id)
   end
+  scope :ordered_by_period, -> do
+    from = Arel.sql("(properties->>'from_datetime')::timestamptz NULLS LAST")
+    to = Arel.sql("(properties->>'to_datetime')::timestamptz NULLS LAST")
+
+    order(from, to)
+  end
 
   def item_key
     id || object_id

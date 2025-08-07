@@ -33,6 +33,7 @@ sv:
     due_date: Förfaller %{date}
     fee_prorated: Avgiften är proraterad för användningsdagar, det visade enhetspriset är ett genomsnitt
     fees_from_to_date: Avgifter från %{from_date} till %{to_date}
+    from_to_date: Från %{from_date} till %{to_date}
     graduated:
       fee_per_unit_for_the_first: Avgift per enhet för de första %{to}
       fee_per_unit_for_the_last: Avgift per enhet för %{from} och högre
