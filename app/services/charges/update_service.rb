@@ -26,7 +26,7 @@ module Charges
           properties = params.delete(:properties).presence || ChargeModels::BuildDefaultPropertiesService.call(
             params[:charge_model]
           )
-          charge.properties = Charges::FilterChargeModelPropertiesService.call(charge:, properties:).properties
+          charge.properties = ChargeModels::FilterPropertiesService.call(chargeable: charge, properties:).properties
         end
 
         charge.save!
