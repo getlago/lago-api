@@ -35,6 +35,20 @@ module Plans
         end
       end
 
+      # Validates fixed charges
+      if args[:fixed_charges].present?
+
+        addon_ids = args[:fixed_charges].map { |c| c[:addon_id] }.uniq.compact
+        if addon_ids.present? && plan.organization.addons.where(id: addon_ids).count != addon_ids.count
+          return result.not_found_failure!(resource: "fixed_charges")
+        end
+
+        addon_codes = args[:fixed_charges].map { |c| c[:addon_code] }.uniq.compact
+        if addon_codes.present? && plan.organization.addons.where(code: addon_codes).count != addon_codes.count
+          return result.not_found_failure!(resource: "fixed_charges")
+        end
+      end
+
       ActiveRecord::Base.transaction do
         plan.save!
 
