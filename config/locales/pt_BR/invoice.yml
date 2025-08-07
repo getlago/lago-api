@@ -34,6 +34,7 @@ pt_BR:
     due_date: Vencimento %{date}
     fee_prorated: A taxa é proporcional aos dias de uso, o preço unitário exibido é uma média
     fees_from_to_date: Taxas de %{from_date} até %{to_date}
+    from_to_date: De %{from_date} até %{to_date}
     graduated:
       fee_per_unit_for_the_first: Taxa por unidade para os primeiros %{to}
       fee_per_unit_for_the_last: Taxa por unidade para %{from} e acima

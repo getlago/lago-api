@@ -15,6 +15,45 @@ RSpec.describe Fee, type: :model do
   it { is_expected.to have_one(:pricing_unit_usage).dependent(:destroy) }
   it { is_expected.to have_one(:true_up_fee).with_foreign_key(:true_up_parent_fee_id).class_name("Fee").dependent(:destroy) }
 
+  describe "#ordered_by_period" do
+    let(:fee1) do
+      create(:fee, properties: {
+        "from_datetime" => "2021-02-01T00:00:00Z",
+        "to_datetime" => "2021-03-31T23:59:59Z"
+      })
+    end
+    let(:fee2) do
+      create(:fee, properties: {
+        "from_datetime" => "2021-03-01T00:00:00Z",
+        "to_datetime" => "2021-04-20T23:59:59Z"
+      })
+    end
+    let(:fee3) do
+      create(:fee, properties: {
+        "from_datetime" => "2021-01-01T00:00:00Z",
+        "to_datetime" => "2021-02-18T23:59:59Z"
+      })
+    end
+    let(:fee4) do
+      create(:fee, properties: {
+        "from_datetime" => "2021-01-01T00:00:00Z",
+        "to_datetime" => "2021-01-31T23:59:59Z"
+      })
+    end
+
+    before do
+      Fee.destroy_all
+      fee1
+      fee2
+      fee3
+      fee4
+    end
+
+    it "returns fees in right order" do
+      expect(Fee.ordered_by_period).to eq([fee4, fee3, fee1, fee2])
+    end
+  end
+
   describe "#item_code" do
     context "when it is a subscription fee" do
       let(:subscription) { create(:subscription) }
