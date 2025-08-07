@@ -2,22 +2,16 @@
 
 module Charges
   class ChargeModelFactory
-    def self.new_instance(charge:, aggregation_result:, properties:, period_ratio: nil)
-      charge_model_class = charge_model_class(charge:)
-      common_args = {
-        charge:,
-        aggregation_result:,
-        properties:,
-        period_ratio:
-      }
+    def self.new_instance(charge:, aggregation_result:, properties:)
+      charge_model = charge_model_class(charge:)
 
       # TODO(pricing_group_keys): remove after deprecation of grouped_by
       pricing_group_keys = properties["pricing_group_keys"].presence || properties["grouped_by"]
 
       if pricing_group_keys.present? && !aggregation_result.aggregations.nil?
-        ChargeModels::GroupedService.new(**common_args.merge(charge_model: charge_model_class))
+        Charges::ChargeModels::GroupedService.new(charge_model: charge_model, charge:, aggregation_result:, properties:)
       else
-        charge_model_class.new(**common_args)
+        charge_model.new(charge:, aggregation_result:, properties:)
       end
     end
 
@@ -44,7 +38,7 @@ module Charges
       when :dynamic
         ChargeModels::DynamicService
       else
-        raise NotImplementedError, "Charge model #{charge.charge_model} is not implemented"
+        raise(NotImplementedError)
       end
     end
   end

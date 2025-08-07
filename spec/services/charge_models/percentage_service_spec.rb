@@ -7,8 +7,7 @@ RSpec.describe ChargeModels::PercentageService, type: :service do
     described_class.apply(
       charge:,
       aggregation_result:,
-      properties: charge.properties,
-      period_ratio: 1.0
+      properties: charge.properties
     )
   end
 
