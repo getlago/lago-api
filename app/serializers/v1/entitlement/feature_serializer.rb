@@ -16,7 +16,7 @@ module V1
       private
 
       def privileges
-        model.privileges.map do |privilege|
+        model.privileges.order(:created_at).map do |privilege|
           {
             code: privilege.code,
             name: privilege.name,

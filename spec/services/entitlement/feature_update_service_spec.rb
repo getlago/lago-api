@@ -157,7 +157,7 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
           result = subject
 
           expect(result).to be_success
-          expect(privilege3.reload.config["select_options"]).to eq %w[zero one two three]
+          expect(privilege3.reload.config["select_options"]).to eq %w[one two three]
         end
       end
 

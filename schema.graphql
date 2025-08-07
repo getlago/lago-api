@@ -153,6 +153,21 @@ enum ActivityTypeEnum {
   customer_updated
 
   """
+  feature.created
+  """
+  feature_created
+
+  """
+  feature.deleted
+  """
+  feature_deleted
+
+  """
+  feature.updated
+  """
+  feature_updated
+
+  """
   invoice.created
   """
   invoice_created
@@ -9000,6 +9015,11 @@ enum ResourceTypeEnum {
   Customer
   """
   customer
+
+  """
+  Feature
+  """
+  feature
 
   """
   Invoice

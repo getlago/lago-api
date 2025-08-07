@@ -674,6 +674,24 @@
               "description": "payment_request.created",
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "feature_created",
+              "description": "feature.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "feature_deleted",
+              "description": "feature.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "feature_updated",
+              "description": "feature.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -47581,6 +47599,12 @@
             {
               "name": "payment_request",
               "description": "PaymentRequest",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "feature",
+              "description": "Feature",
               "isDeprecated": false,
               "deprecationReason": null
             }
