@@ -80,7 +80,8 @@ module Clickhouse
       coupon_deleted: "coupon.deleted",
       applied_coupon_created: "applied_coupon.created",
       applied_coupon_deleted: "applied_coupon.deleted",
-      payment_request_created: "payment_request.created"
+      payment_request_created: "payment_request.created",
+      feature_updated: "feature.updated"
     }
 
     before_save :ensure_activity_id
