@@ -42,14 +42,16 @@ module V1
       end
 
       def projected_usage_data(fees)
-        return zero_projected_usage if past_usage?
+        return zero_projected_usage
 
-        projection = calculate_projection(fees)
+        # return zero_projected_usage if past_usage?
 
-        {
-          projected_units: projection[:units].to_s,
-          projected_amount_cents: projection[:amount_cents].to_i
-        }
+        # projection = calculate_projection(fees)
+
+        # {
+        #   projected_units: projection[:units].to_s,
+        #   projected_amount_cents: projection[:amount_cents].to_i
+        # }
       end
 
       def zero_projected_usage
@@ -137,9 +139,11 @@ module V1
       end
 
       def projected_pricing_unit_amount_cents(fees)
-        return 0 if past_usage?
+        return 0
 
-        calculate_projection(fees)[:pricing_unit_amount_cents]
+        # return 0 if past_usage?
+
+        # calculate_projection(fees)[:pricing_unit_amount_cents]
       end
 
       def charge_data(fee)

@@ -199,14 +199,14 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
             # Assertions for the AWS filter
             expect(aws_filter_data[:units]).to eq("3.0")
             expect(aws_filter_data[:amount_cents]).to eq(3000)
-            expect(aws_filter_data[:projected_units]).to eq("31.0")
-            expect(aws_filter_data[:projected_amount_cents]).to eq(31000)
+            expect(aws_filter_data[:projected_units]).to eq("0.0")
+            expect(aws_filter_data[:projected_amount_cents]).to eq(0)
 
             # Assertions for the GCP filter
             expect(gcp_filter_data[:units]).to eq("1.0")
             expect(gcp_filter_data[:amount_cents]).to eq(2000)
-            expect(gcp_filter_data[:projected_units]).to eq("10.33")
-            expect(gcp_filter_data[:projected_amount_cents]).to eq(20660)
+            expect(gcp_filter_data[:projected_units]).to eq("0.0")
+            expect(gcp_filter_data[:projected_amount_cents]).to eq(0)
           end
         end
       end
@@ -344,20 +344,20 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
             # Assertions for AWS/USA filter
             expect(aws_usa_data[:units]).to eq("2.0")
             expect(aws_usa_data[:amount_cents]).to eq(2000)
-            expect(aws_usa_data[:projected_units]).to eq("20.67")
-            expect(aws_usa_data[:projected_amount_cents]).to eq(20670)
+            expect(aws_usa_data[:projected_units]).to eq("0.0")
+            expect(aws_usa_data[:projected_amount_cents]).to eq(0)
 
             # Assertions for AWS/France filter
             expect(aws_france_data[:units]).to eq("1.0")
             expect(aws_france_data[:amount_cents]).to eq(2000)
-            expect(aws_france_data[:projected_units]).to eq("10.33")
-            expect(aws_france_data[:projected_amount_cents]).to eq(20660)
+            expect(aws_france_data[:projected_units]).to eq("0.0")
+            expect(aws_france_data[:projected_amount_cents]).to eq(0)
 
             # Assertions for Google/USA filter
             expect(google_usa_data[:units]).to eq("1.0")
             expect(google_usa_data[:amount_cents]).to eq(3000)
-            expect(google_usa_data[:projected_units]).to eq("10.33")
-            expect(google_usa_data[:projected_amount_cents]).to eq(30990)
+            expect(google_usa_data[:projected_units]).to eq("0.0")
+            expect(google_usa_data[:projected_amount_cents]).to eq(0)
           end
         end
       end

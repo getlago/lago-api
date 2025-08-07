@@ -20,32 +20,36 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
 
   let(:is_recurring) { false }
   let(:expected_projected_units) do
-    if is_recurring
-      BigDecimal("10")
-    else
-      (ratio > 0) ? (BigDecimal("10") / BigDecimal(ratio.to_s)).round(1) : BigDecimal("0")
-    end
+    "0.0"
+    # if is_recurring
+    #   BigDecimal("10")
+    # else
+    #   (ratio > 0) ? (BigDecimal("10") / BigDecimal(ratio.to_s)).round(1) : BigDecimal("0")
+    # end
   end
   let(:expected_projected_amount_cents) do
-    if is_recurring
-      100
-    else
-      (ratio > 0) ? (BigDecimal("100") / BigDecimal(ratio.to_s)).round.to_i : 0
-    end
+    0
+    # if is_recurring
+    #   100
+    # else
+    #   (ratio > 0) ? (BigDecimal("100") / BigDecimal(ratio.to_s)).round.to_i : 0
+    # end
   end
   let(:expected_pricing_unit_projected_amount_cents) do
-    if is_recurring
-      200
-    else
-      (ratio > 0) ? (BigDecimal("200") / BigDecimal(ratio.to_s)).round.to_i : 0
-    end
+    0
+    # if is_recurring
+    #   200
+    # else
+    #   (ratio > 0) ? (BigDecimal("200") / BigDecimal(ratio.to_s)).round.to_i : 0
+    # end
   end
   let(:greater_expected_pricing_unit_projected_amount_cents) do
-    if is_recurring
-      600
-    else
-      (ratio > 0) ? (BigDecimal("600") / BigDecimal(ratio.to_s)).round.to_i : 0
-    end
+    0
+    # if is_recurring
+    #   600
+    # else
+    #   (ratio > 0) ? (BigDecimal("600") / BigDecimal(ratio.to_s)).round.to_i : 0
+    # end
   end
   let(:pricing_unit_usage) { nil }
 
@@ -220,26 +224,31 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     end
 
     let(:expected_filter_projected_units) do
-      if is_recurring
-        BigDecimal("30")
-      else
-        (ratio > 0) ? (BigDecimal("30") / BigDecimal(ratio.to_s)).round(2) : BigDecimal("0")
-      end
+      "0.0"
+      # if is_recurring
+      #   BigDecimal("30")
+      # else
+      #   (ratio > 0) ? (BigDecimal("30") / BigDecimal(ratio.to_s)).round(2) : BigDecimal("0")
+      # end
     end
     let(:expected_filter_projected_amount_cents) do
-      if is_recurring
-        300
-      else
-        (ratio > 0) ? (300 / BigDecimal(ratio.to_s)).round.to_i : 0
-      end
+      0
+      # if is_recurring
+      #   300
+      # else
+      #   (ratio > 0) ? (300 / BigDecimal(ratio.to_s)).round.to_i : 0
+      # end
     end
 
     it "returns filters array with projected values" do
       individual_projection_result = instance_double(
         "ProjectionResult",
-        projected_units: expected_filter_projected_units / 3,
-        projected_amount_cents: expected_filter_projected_amount_cents / 3,
-        projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
+        projected_units: "0.0",
+        # projected_units: expected_filter_projected_units / 3,
+        projected_amount_cents: 0,
+        # projected_amount_cents: expected_filter_projected_amount_cents / 3,
+        projected_pricing_unit_amount_cents: 0
+        # projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
       )
 
       allow(::Fees::ProjectionService).to receive(:call).and_return(
@@ -275,9 +284,12 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       it "returns filters array" do
         individual_projection_result = instance_double(
           "ProjectionResult",
-          projected_units: expected_filter_projected_units / 3,
-          projected_amount_cents: expected_filter_projected_amount_cents / 3,
-          projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
+          projected_units: "0.0",
+          # projected_units: expected_filter_projected_units / 3,
+          projected_amount_cents: 0,
+          # projected_amount_cents: expected_filter_projected_amount_cents / 3, 
+          projected_pricing_unit_amount_cents: 0
+          # projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
         )
 
         allow(::Fees::ProjectionService).to receive(:call).and_return(
@@ -325,9 +337,12 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     it "does not project values for recurring charges" do
       projection_result = instance_double(
         "ProjectionResult",
-        projected_units: BigDecimal("10"),
-        projected_amount_cents: 100,
-        projected_pricing_unit_amount_cents: 200
+        projected_units: "0.0",
+        # projected_units: BigDecimal("10"),
+        projected_amount_cents: 0,
+        # projected_amount_cents: 100,
+        projected_pricing_unit_amount_cents: 0
+        # projected_pricing_unit_amount_cents: 200
       )
 
       allow(::Fees::ProjectionService).to receive(:call).and_return(
@@ -336,8 +351,8 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
 
       expect(result["charges"].first).to include(
         "units" => "10.0",
-        "projected_units" => "10.0",
-        "projected_amount_cents" => 100
+        "projected_units" => "0.0",
+        "projected_amount_cents" => 0
       )
     end
   end
