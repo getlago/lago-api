@@ -31,7 +31,16 @@ module Invoices
         # apply taxes credits and coupons
         Credits::ProgressiveBillingService.call!(invoice: regenerated_invoice)
         Credits::AppliedCouponsService.call!(invoice: regenerated_invoice) if should_create_coupon_credit?
-        Invoices::ComputeTaxesAndTotalsService.call!(invoice: regenerated_invoice, finalizing: true)
+        totals_result = Invoices::ComputeTaxesAndTotalsService.call(invoice: regenerated_invoice, finalizing: true)
+
+        # We intentionally return early from the transaction block if tax computation fails this is an async call,
+        # we still want to persist the regenerated invoice in its current state it will be finalized later when
+        # we get the taxes back check Invoices::ProviderTaxes::PullTaxesAndApplyJob.perform_later(invoice:)
+        if !totals_result.success? && regenerated_invoice.tax_status == "pending"
+          result.invoice = regenerated_invoice
+          return result # rubocop:disable Rails/TransactionExitStatement
+        end
+
         create_credit_note_credit if should_create_credit_note_credit?
         create_applied_prepaid_credit if should_create_applied_prepaid_credit?
         regenerated_invoice.payment_status = regenerated_invoice.total_amount_cents.positive? ? :pending : :succeeded
