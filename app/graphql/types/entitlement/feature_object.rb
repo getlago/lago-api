@@ -14,6 +14,10 @@ module Types
       field :subscriptions_count, Integer, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      def privileges
+        object.privileges.order(created_at: :asc) # ou :desc
+      end
     end
   end
 end
