@@ -1,0 +1,3 @@
+development:
+  adapter: redis
+  url: redis://redis:6379

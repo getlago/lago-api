@@ -63,6 +63,9 @@ Rails.application.configure do
 
   config.license_url = ENV.fetch("LAGO_LICENSE_URL", "http://license:3000")
 
+  config.action_cable.url = "wss://app.lago.dev/cable"
+  config.action_cable.allowed_request_origins = ["https://app.lago.dev"]
+
   config.action_mailer.perform_caching = false
   config.action_mailer.perform_deliveries = true
   config.action_mailer.raise_delivery_errors = true
