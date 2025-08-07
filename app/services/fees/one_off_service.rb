@@ -140,8 +140,12 @@ module Fees
     end
 
     def valid_boundaries?(fee)
-      (fee[:from_datetime].nil? || Utils::Datetime.valid_format?(fee[:from_datetime])) &&
-        (fee[:to_datetime].nil? || Utils::Datetime.valid_format?(fee[:to_datetime])) &&
+      return true if fee[:from_datetime].nil? && fee[:to_datetime].nil?
+
+      fee[:from_datetime] &&
+        fee[:to_datetime] &&
+        Utils::Datetime.valid_format?(fee[:from_datetime]) &&
+        Utils::Datetime.valid_format?(fee[:to_datetime]) &&
         from_datetime(fee) < to_datetime(fee)
     end
 
