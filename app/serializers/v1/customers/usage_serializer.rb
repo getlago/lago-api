@@ -3,6 +3,11 @@
 module V1
   module Customers
     class UsageSerializer < ModelSerializer
+      def initialize(model, options = {})
+        @calculate_projected_usage = options.fetch(:calculate_projected_usage, false)
+        super
+      end
+
       def serialize
         payload = {
           from_datetime: model.from_datetime,
@@ -10,7 +15,7 @@ module V1
           issuing_date: model.issuing_date,
           currency: model.currency,
           amount_cents: model.amount_cents,
-          projected_amount_cents: 0,
+          projected_amount_cents: @calculate_projected_usage ? projected_amount_cents : 0,
           total_amount_cents: model.total_amount_cents,
           taxes_amount_cents: model.taxes_amount_cents,
           lago_invoice_id: nil
@@ -30,9 +35,14 @@ module V1
 
       private
 
+      attr_reader :calculate_projected_usage
+
       def charges_usage
         {
-          charges_usage: ::V1::Customers::ChargeUsageSerializer.new(model.fees).serialize
+          charges_usage: ::V1::Customers::ChargeUsageSerializer.new(
+            model.fees,
+            calculate_projected_usage: @calculate_projected_usage
+          ).serialize
         }
       end
     end

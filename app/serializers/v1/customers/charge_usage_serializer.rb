@@ -3,6 +3,11 @@
 module V1
   module Customers
     class ChargeUsageSerializer < ModelSerializer
+      def initialize(model, options = {})
+        @calculate_projected_usage = options.fetch(:calculate_projected_usage, false)
+        super
+      end
+
       def serialize
         model.group_by(&:charge_id).map do |charge_id, fees|
           fee = fees.first
@@ -42,16 +47,15 @@ module V1
       end
 
       def projected_usage_data(fees)
-        zero_projected_usage
+        return zero_projected_usage unless @calculate_projected_usage
+        return zero_projected_usage if past_usage?
 
-        # return zero_projected_usage if past_usage?
+        projection = calculate_projection(fees)
 
-        # projection = calculate_projection(fees)
-
-        # {
-        #   projected_units: projection[:units].to_s,
-        #   projected_amount_cents: projection[:amount_cents].to_i
-        # }
+        {
+          projected_units: projection[:units].to_s,
+          projected_amount_cents: projection[:amount_cents].to_i
+        }
       end
 
       def zero_projected_usage
@@ -139,11 +143,10 @@ module V1
       end
 
       def projected_pricing_unit_amount_cents(fees)
-        0
+        return 0 unless @calculate_projected_usage
+        return 0 if past_usage?
 
-        # return 0 if past_usage?
-
-        # calculate_projection(fees)[:pricing_unit_amount_cents]
+        calculate_projection(fees)[:pricing_unit_amount_cents]
       end
 
       def charge_data(fee)
