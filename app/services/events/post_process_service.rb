@@ -2,6 +2,8 @@
 
 module Events
   class PostProcessService < BaseService
+    Result = BaseResult[:event]
+
     def initialize(event:)
       @organization = event.organization
       @event = event
