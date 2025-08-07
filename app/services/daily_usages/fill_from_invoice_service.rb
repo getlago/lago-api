@@ -24,7 +24,7 @@ module DailyUsages
             customer: invoice.customer,
             subscription: subscription,
             external_subscription_id: subscription.external_id,
-            usage: ::V1::Customers::UsageSerializer.new(usage, includes: %i[charges_usage]).serialize,
+            usage: ::V1::Customers::UsageSerializer.new(usage, includes: %i[charges_usage], calculate_projected_usage: false).serialize,
             from_datetime: invoice_subscription.charges_from_datetime.change(usec: 0),
             to_datetime: invoice_subscription.charges_to_datetime.change(usec: 0),
             refreshed_at: invoice_subscription.timestamp,

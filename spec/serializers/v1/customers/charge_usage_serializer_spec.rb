@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe ::V1::Customers::ChargeUsageSerializer do
-  subject(:serializer) { described_class.new(usage, root_name: "charges") }
+  subject(:serializer) { described_class.new(usage, root_name: "charges", calculate_projected_usage: true) }
 
   let(:charge) { create(:standard_charge) }
   let(:result) { JSON.parse(serializer.to_json) }

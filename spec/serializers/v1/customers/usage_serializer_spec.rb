@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe ::V1::Customers::UsageSerializer do
-  subject(:serializer) { described_class.new(usage, root_name: "customer_usage", includes: [:charges_usage]) }
+  subject(:serializer) { described_class.new(usage, root_name: "customer_usage", includes: [:charges_usage], calculate_projected_usage: true) }
 
   let(:fixed_date) { Date.new(2025, 7, 2) }
   let(:result) { JSON.parse(serializer.to_json) }
