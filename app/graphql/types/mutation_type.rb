@@ -199,5 +199,7 @@ module Types
     field :update_feature, mutation: Mutations::Entitlement::UpdateFeature
 
     field :update_plan_entitlements, mutation: Mutations::Entitlement::UpdatePlanEntitlements
+
+    field :create_ai_conversation, mutation: Mutations::AiConversations::Create
   end
 end
