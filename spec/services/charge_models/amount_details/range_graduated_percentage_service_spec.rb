@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Charges::AmountDetails::RangeGraduatedPercentageService, type: :service do
+RSpec.describe ChargeModels::AmountDetails::RangeGraduatedPercentageService, type: :service do
   subject(:service) { described_class.new(range:, total_units:) }
 
   let(:total_units) { 15 }

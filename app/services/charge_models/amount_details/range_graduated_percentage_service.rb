@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Charges
+module ChargeModels
   module AmountDetails
     class RangeGraduatedPercentageService < ::BaseService
       def initialize(range:, total_units:)
