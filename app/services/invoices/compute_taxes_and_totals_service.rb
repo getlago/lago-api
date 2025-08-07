@@ -19,6 +19,12 @@ module Invoices
         after_commit { Invoices::ProviderTaxes::PullTaxesAndApplyJob.perform_later(invoice:) }
 
         return result.unknown_tax_failure!(code: "tax_error", message: "unknown taxes")
+      elsif customer.vies_check_in_progress?
+        invoice.status = "pending" if finalizing
+        invoice.tax_status = "failed"
+        invoice.save!
+
+        return result.unknown_tax_failure!(code: "tax_error", message: "vies check in progress")
       else
         Invoices::ComputeAmountsFromFees.call(invoice:)
       end
@@ -30,6 +36,8 @@ module Invoices
     private
 
     attr_reader :invoice, :finalizing
+
+    delegate :customer, to: :invoice
 
     def customer_provider_taxation?
       @customer_provider_taxation ||= invoice.customer.tax_customer
