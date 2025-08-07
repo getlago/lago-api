@@ -198,6 +198,11 @@ enum ActivityTypeEnum {
   invoice_payment_status_updated
 
   """
+  invoice.regenerated
+  """
+  invoice_regenerated
+
+  """
   invoice.voided
   """
   invoice_voided

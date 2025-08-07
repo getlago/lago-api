@@ -526,6 +526,12 @@
               "deprecationReason": null
             },
             {
+              "name": "invoice_regenerated",
+              "description": "invoice.regenerated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "invoice_payment_failure",
               "description": "invoice.payment_failure",
               "isDeprecated": false,
