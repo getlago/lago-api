@@ -16,7 +16,7 @@ module Types
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
 
       def privileges
-        object.privileges.order(created_at: :asc) # ou :desc
+        object.privileges.order(created_at: :asc)
       end
     end
   end
