@@ -15,6 +15,7 @@ RSpec.describe Fees::OneOffService do
   let(:tax2) { create(:tax, organization:, applied_to_organization: false) }
   let(:add_on_first) { create(:add_on, organization:) }
   let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
+  let(:current_time) { DateTime.new(2023, 7, 19, 12, 12) }
   let(:fees) do
     [
       {
@@ -36,52 +37,63 @@ RSpec.describe Fees::OneOffService do
     before { CurrentContext.source = "api" }
 
     it "creates fees" do
-      result = one_off_service.call
+      travel_to(current_time) do
+        result = one_off_service.call
 
-      expect(result).to be_success
+        expect(result).to be_success
 
-      first_fee = result.fees[0]
-      second_fee = result.fees[1]
+        first_fee = result.fees[0]
+        second_fee = result.fees[1]
 
-      expect(first_fee).to have_attributes(
-        id: String,
-        organization_id: organization.id,
-        billing_entity_id: billing_entity.id,
-        invoice_id: invoice.id,
-        add_on_id: add_on_first.id,
-        description: "desc-123",
-        unit_amount_cents: 1200,
-        precise_unit_amount: 12,
-        units: 2,
-        amount_cents: 2400,
-        precise_amount_cents: 2400.0,
-        amount_currency: "EUR",
-        fee_type: "add_on",
-        payment_status: "pending"
-      )
-      expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
+        expect(first_fee).to have_attributes(
+          id: String,
+          organization_id: organization.id,
+          billing_entity_id: billing_entity.id,
+          invoice_id: invoice.id,
+          add_on_id: add_on_first.id,
+          description: "desc-123",
+          unit_amount_cents: 1200,
+          precise_unit_amount: 12,
+          units: 2,
+          amount_cents: 2400,
+          precise_amount_cents: 2400.0,
+          amount_currency: "EUR",
+          fee_type: "add_on",
+          payment_status: "pending",
+          properties: {
+            "from_datetime" => current_time.beginning_of_day.to_time.utc.iso8601(3),
+            "to_datetime" => current_time.end_of_day.to_time.utc.iso8601(3),
+            "timestamp" => current_time
+          }
+        )
+        expect(first_fee.taxes.map(&:code)).to contain_exactly(tax2.code)
 
-      expect(second_fee).to have_attributes(
-        id: String,
-        organization_id: organization.id,
-        billing_entity_id: billing_entity.id,
-        invoice_id: invoice.id,
-        add_on_id: add_on_second.id,
-        description: add_on_second.description,
-        unit_amount_cents: 400,
-        precise_unit_amount: 4,
-        units: 1,
-        amount_cents: 400,
-        precise_amount_cents: 400.0,
-        amount_currency: "EUR",
-        fee_type: "add_on",
-        payment_status: "pending"
-      )
-      expect(second_fee.taxes.map(&:code)).to contain_exactly(tax.code)
+        expect(second_fee).to have_attributes(
+          id: String,
+          organization_id: organization.id,
+          billing_entity_id: billing_entity.id,
+          invoice_id: invoice.id,
+          add_on_id: add_on_second.id,
+          description: add_on_second.description,
+          unit_amount_cents: 400,
+          precise_unit_amount: 4,
+          units: 1,
+          amount_cents: 400,
+          precise_amount_cents: 400.0,
+          amount_currency: "EUR",
+          fee_type: "add_on",
+          payment_status: "pending",
+          properties: {
+            "from_datetime" => current_time.beginning_of_day.to_time.utc.iso8601(3),
+            "to_datetime" => current_time.end_of_day.to_time.utc.iso8601(3),
+            "timestamp" => current_time
+          }
+        )
+        expect(second_fee.taxes.map(&:code)).to contain_exactly(tax.code)
+      end
     end
 
     context "with passed boundaries" do
-      let(:current_time) { DateTime.new(2023, 7, 19, 12, 12) }
       let(:fees) do
         [
           {
@@ -192,6 +204,35 @@ RSpec.describe Fees::OneOffService do
             description: "desc-123",
             from_datetime: "2022-01-01T00:00:00Z",
             to_datetime: "invalid",
+            tax_codes: [tax2.code]
+          }
+        ]
+      end
+
+      it "does not create an invalid fee" do
+        one_off_service.call
+
+        expect(Fee.find_by(description: add_on_first.description)).to be_nil
+      end
+
+      it "returns validation failure" do
+        result = one_off_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages[:boundaries]).to include("values_are_invalid")
+      end
+    end
+
+    context "when one boundary is missing" do
+      let(:fees) do
+        [
+          {
+            add_on_code: add_on_first.code,
+            unit_amount_cents: 1200,
+            units: 2,
+            description: "desc-123",
+            from_datetime: "2022-01-01T00:00:00Z",
             tax_codes: [tax2.code]
           }
         ]
