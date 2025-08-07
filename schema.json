@@ -24015,6 +24015,18 @@
               "args": []
             },
             {
+              "name": "properties",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "JSON",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
               "name": "subscription",
               "description": null,
               "type": {
