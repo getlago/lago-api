@@ -27,27 +27,12 @@ module Plans
         bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil
       )
 
-      # Validates billable metrics
-      if args[:charges].present?
-        metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
-        if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.not_found_failure!(resource: "billable_metrics")
-        end
-      end
-
-      # Validates fixed charges
-      if args[:fixed_charges].present?
-
-        addon_ids = args[:fixed_charges].map { |c| c[:addon_id] }.uniq.compact
-        if addon_ids.present? && plan.organization.addons.where(id: addon_ids).count != addon_ids.count
-          return result.not_found_failure!(resource: "fixed_charges")
-        end
-
-        addon_codes = args[:fixed_charges].map { |c| c[:addon_code] }.uniq.compact
-        if addon_codes.present? && plan.organization.addons.where(code: addon_codes).count != addon_codes.count
-          return result.not_found_failure!(resource: "fixed_charges")
-        end
-      end
+      validation_result = Plans::ChargeablesValidationService.call(
+        organization: plan.organization,
+        charges: args[:charges],
+        fixed_charges: args[:fixed_charges]
+      )
+      return validation_result if validation_result.failure?
 
       ActiveRecord::Base.transaction do
         plan.save!
