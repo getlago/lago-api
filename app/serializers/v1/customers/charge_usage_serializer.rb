@@ -42,7 +42,7 @@ module V1
       end
 
       def projected_usage_data(fees)
-        return zero_projected_usage
+        zero_projected_usage
 
         # return zero_projected_usage if past_usage?
 
@@ -139,7 +139,7 @@ module V1
       end
 
       def projected_pricing_unit_amount_cents(fees)
-        return 0
+        0
 
         # return 0 if past_usage?
 

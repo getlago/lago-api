@@ -287,7 +287,7 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           projected_units: "0.0",
           # projected_units: expected_filter_projected_units / 3,
           projected_amount_cents: 0,
-          # projected_amount_cents: expected_filter_projected_amount_cents / 3, 
+          # projected_amount_cents: expected_filter_projected_amount_cents / 3,
           projected_pricing_unit_amount_cents: 0
           # projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
         )
