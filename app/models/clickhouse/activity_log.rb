@@ -34,7 +34,8 @@ module Clickhouse
       subscription: "Subscription",
       wallet: "Wallet",
       coupon: "Coupon",
-      payment_request: "PaymentRequest"
+      payment_request: "PaymentRequest",
+      feature: "Feature"
     }.freeze
 
     ACTIVITY_TYPES = {
@@ -81,6 +82,8 @@ module Clickhouse
       applied_coupon_created: "applied_coupon.created",
       applied_coupon_deleted: "applied_coupon.deleted",
       payment_request_created: "payment_request.created",
+      feature_created: "feature.created",
+      feature_deleted: "feature.deleted",
       feature_updated: "feature.updated"
     }
 

@@ -76,8 +76,13 @@ module Entitlement
           privilege.name = privilege_params[:name] if privilege_params.key?(:name)
 
           if privilege_params.dig(:config, :select_options)
-            privilege.config["select_options"] ||= []
-            privilege.config["select_options"] |= privilege_params[:config][:select_options]
+            byebug
+            if partial?
+              privilege.config["select_options"] ||= []
+              privilege.config["select_options"] |= privilege_params[:config][:select_options]
+            else
+              privilege.config["select_options"] = privilege_params[:config][:select_options]
+            end
           end
 
           privilege.save!
