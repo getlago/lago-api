@@ -431,7 +431,6 @@ RSpec.describe Plans::CreateService, type: :service do
       end
     end
 
-
     context "with add ons from other organization" do
       let(:add_on) { create(:add_on) }
 
@@ -445,7 +444,7 @@ RSpec.describe Plans::CreateService, type: :service do
           pay_in_advance: false,
           amount_cents: 200,
           amount_currency: "EUR",
-          fixed_charges: fixed_charges_args,
+          fixed_charges: fixed_charges_args
         }
       end
 
