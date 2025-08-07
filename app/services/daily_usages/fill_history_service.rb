@@ -37,6 +37,7 @@ module DailyUsages
             subscription: subscription,
             apply_taxes: false,
             with_cache: false,
+            with_async: false,
             max_to_datetime: datetime
           ).raise_if_error!.usage
           next if sandbox

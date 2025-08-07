@@ -1,14 +1,18 @@
 # frozen_string_literal: true
 
+require "async/barrier"
+require "async/semaphore"
+
 module Fees
   class ChargeService < BaseService
-    def initialize(invoice:, charge:, subscription:, boundaries:, context: nil, cache_middleware: nil, bypass_aggregation: false, apply_taxes: false)
+    def initialize(invoice:, charge:, subscription:, boundaries:, context: nil, cache_middleware: nil, bypass_aggregation: false, apply_taxes: false, with_async: false)
       @invoice = invoice
       @charge = charge
       @subscription = subscription
       @boundaries = OpenStruct.new(boundaries)
       @currency = subscription.plan.amount.currency
       @apply_taxes = apply_taxes
+      @with_async = with_async
 
       @context = context
       @current_usage = context == :current_usage
@@ -56,7 +60,7 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes, :with_async
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -68,12 +72,63 @@ module Fees
       return init_charge_fees(properties: charge.properties) unless charge.filters.any?
 
       # NOTE: Create a fee for each filters defined on the charge.
-      charge.filters.each do |charge_filter|
-        init_charge_fees(properties: charge_filter.properties, charge_filter:)
+      if with_async
+        filter_fees = process_filters_fees
+        result.fees.concat(filter_fees.compact)
+      else
+        charge.filters.each do |charge_filter|
+          init_charge_fees(properties: charge_filter.properties, charge_filter:)
+        end
       end
 
       # NOTE: Create a fee for events not matching any filters.
       init_charge_fees(properties: charge.properties, charge_filter: ChargeFilter.new(charge:))
+    end
+
+    def process_filters_fees
+      collected_fees = []
+
+      Sync do
+        barrier = Async::Barrier.new
+        semaphore = Async::Semaphore.new(20, parent: barrier)
+        tasks = []
+
+        charge.filters.each do |charge_filter|
+          tasks << semaphore.async do
+            process_single_filter(charge_filter)
+          end
+        end
+
+        barrier.wait do |task|
+          task_result = task.wait
+          collected_fees.concat(task_result) if task_result.is_a?(Array)
+        end
+      ensure
+        barrier&.stop
+      end
+
+      collected_fees
+    end
+
+    def process_single_filter(charge_filter)
+      ActiveRecord::Base.connection_pool.with_connection do
+        charge_model_result = apply_aggregation_and_charge_model(
+          properties: charge_filter.properties,
+          charge_filter:
+        )
+
+        if charge_model_result.success?
+          charge_model_result.grouped_results.map do |amount_result|
+            init_fee(
+              amount_result,
+              properties: charge_filter.properties,
+              charge_filter:
+            )
+          end
+        else
+          raise StandardError, charge_model_result.error.message
+        end
+      end
     end
 
     def init_charge_fees(properties:, charge_filter: nil)
