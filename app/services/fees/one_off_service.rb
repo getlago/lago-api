@@ -155,7 +155,7 @@ module Fees
           DateTime.strptime(fee[:from_datetime], "%Y-%m-%dT%H:%M:%S.%LZ") :
           DateTime.strptime(fee[:from_datetime])
       else
-        fee[:from_datetime] || Time.current.beginning_of_day
+        fee[:from_datetime] || Time.current
       end
     end
 
@@ -165,7 +165,7 @@ module Fees
           DateTime.strptime(fee[:to_datetime], "%Y-%m-%dT%H:%M:%S.%LZ") :
           DateTime.strptime(fee[:to_datetime])
       else
-        fee[:to_datetime] || Time.current.end_of_day
+        fee[:to_datetime] || Time.current
       end
     end
   end

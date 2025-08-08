@@ -61,8 +61,8 @@ RSpec.describe Fees::OneOffService do
           fee_type: "add_on",
           payment_status: "pending",
           properties: {
-            "from_datetime" => current_time.beginning_of_day.to_time.utc.iso8601(3),
-            "to_datetime" => current_time.end_of_day.to_time.utc.iso8601(3),
+            "from_datetime" => current_time.to_time.utc.iso8601(3),
+            "to_datetime" => current_time.to_time.utc.iso8601(3),
             "timestamp" => current_time
           }
         )
@@ -84,8 +84,8 @@ RSpec.describe Fees::OneOffService do
           fee_type: "add_on",
           payment_status: "pending",
           properties: {
-            "from_datetime" => current_time.beginning_of_day.to_time.utc.iso8601(3),
-            "to_datetime" => current_time.end_of_day.to_time.utc.iso8601(3),
+            "from_datetime" => current_time.to_time.utc.iso8601(3),
+            "to_datetime" => current_time.to_time.utc.iso8601(3),
             "timestamp" => current_time
           }
         )
