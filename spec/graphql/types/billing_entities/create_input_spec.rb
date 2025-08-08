@@ -27,5 +27,5 @@ RSpec.describe Types::BillingEntities::CreateInput do
   it { is_expected.to accept_argument(:billing_configuration).of_type("BillingEntityBillingConfigurationInput") }
   it { is_expected.to accept_argument(:email_settings).of_type("[BillingEntityEmailSettingsEnum!]") }
   it { is_expected.to accept_argument(:finalize_zero_amount_invoice).of_type("Boolean") }
-  it { is_expected.to accept_argument(:einvoicing).of_type("Boolean!") }
+  it { is_expected.to accept_argument(:einvoicing).of_type("Boolean") }
 end
