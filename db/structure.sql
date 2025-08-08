@@ -1468,7 +1468,8 @@ CREATE TABLE public.billing_entities (
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    applied_dunning_campaign_id uuid
+    applied_dunning_campaign_id uuid,
+    einvoicing boolean DEFAULT false NOT NULL
 );
 
 
@@ -9697,6 +9698,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250818154000'),
 ('20250812132802'),
 ('20250812082721'),
+('20250808170148'),
 ('20250806174150'),
 ('20250806173900'),
 ('20250801072722'),
