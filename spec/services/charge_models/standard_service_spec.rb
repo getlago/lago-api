@@ -8,7 +8,8 @@ RSpec.describe ChargeModels::StandardService, type: :service do
       charge:,
       aggregation_result:,
       properties: charge.properties,
-      period_ratio: 1.0
+      period_ratio: 1.0,
+      calculate_projected_usage: true
     )
   end
 
