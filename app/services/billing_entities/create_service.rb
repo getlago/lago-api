@@ -24,6 +24,7 @@ module BillingEntities
         billing_entity.id = params[:id] if params[:id]
         billing_entity.invoice_footer = billing_config[:invoice_footer]
         billing_entity.document_locale = billing_config[:document_locale] if billing_config[:document_locale]
+        billing_entity.einvoicing = params[:einvoicing] if params[:einvoicing]
 
         handle_eu_tax_management if params[:eu_tax_management]
         handle_base64_logo
