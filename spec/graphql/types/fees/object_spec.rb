@@ -26,6 +26,6 @@ RSpec.describe Types::Fees::Object do
 
     expect(subject).to have_field(:charge_filter).of_type("ChargeFilter")
     expect(subject).to have_field(:pricing_unit_usage).of_type("PricingUnitUsage")
-    expect(subject).to have_field(:properties).of_type("JSON")
+    expect(subject).to have_field(:properties).of_type("FeeProperties")
   end
 end

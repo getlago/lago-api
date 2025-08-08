@@ -40,7 +40,14 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
           invoiceType,
           issuingDate,
           appliedTaxes { id taxCode taxRate },
-          fees { units preciseUnitAmount properties },
+          fees {
+            units
+            preciseUnitAmount
+            properties {
+              fromDatetime
+              toDatetime
+            }
+          },
         }
       }
     GQL
@@ -87,18 +94,16 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
             "units" => 2.0,
             "preciseUnitAmount" => 12.0,
             "properties" => {
-              "from_datetime" => current_time.beginning_of_day.to_time.utc.iso8601(3),
-              "to_datetime" => current_time.end_of_day.to_time.utc.iso8601(3),
-              "timestamp" => current_time
+              "fromDatetime" => current_time.beginning_of_day.to_time.utc.iso8601,
+              "toDatetime" => current_time.end_of_day.to_time.utc.iso8601
             }
           },
           {
             "units" => 1.0,
             "preciseUnitAmount" => 4.0,
             "properties" => {
-              "from_datetime" => current_time.beginning_of_day.to_time.utc.iso8601(3),
-              "to_datetime" => current_time.end_of_day.to_time.utc.iso8601(3),
-              "timestamp" => current_time
+              "fromDatetime" => current_time.beginning_of_day.to_time.utc.iso8601,
+              "toDatetime" => current_time.end_of_day.to_time.utc.iso8601
             }
           }
         )

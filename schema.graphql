@@ -5086,7 +5086,7 @@ type Fee implements InvoiceItem {
   itemType: String!
   preciseUnitAmount: Float!
   pricingUnitUsage: PricingUnitUsage
-  properties: JSON
+  properties: FeeProperties
   subscription: Subscription
   succeededAt: ISO8601DateTime
   taxesAmountCents: BigInt!
@@ -5162,6 +5162,11 @@ input FeeInput {
   toDatetime: ISO8601DateTime
   unitAmountCents: BigInt
   units: Float
+}
+
+type FeeProperties {
+  fromDatetime: ISO8601DateTime
+  toDatetime: ISO8601DateTime
 }
 
 enum FeeTypesEnum {

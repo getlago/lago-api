@@ -24018,8 +24018,8 @@
               "name": "properties",
               "description": null,
               "type": {
-                "kind": "SCALAR",
-                "name": "JSON",
+                "kind": "OBJECT",
+                "name": "FeeProperties",
                 "ofType": null
               },
               "isDeprecated": false,
@@ -24841,6 +24841,41 @@
               "deprecationReason": null
             }
           ],
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "FeeProperties",
+          "description": null,
+          "interfaces": [],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "fromDatetime",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "toDatetime",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "ISO8601DateTime",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            }
+          ],
+          "inputFields": null,
           "enumValues": null
         },
         {

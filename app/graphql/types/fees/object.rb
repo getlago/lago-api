@@ -37,7 +37,7 @@ module Types
 
       field :charge_filter, Types::ChargeFilters::Object, null: true
       field :pricing_unit_usage, Types::PricingUnitUsages::Object, null: true
-      field :properties, GraphQL::Types::JSON
+      field :properties, Types::Fees::Properties, null: true, method: :itself
 
       def item_type
         object.fee_type
