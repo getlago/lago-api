@@ -10,7 +10,8 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, type: :service
       subscription:,
       boundaries: {
         from_datetime:,
-        to_datetime:
+        to_datetime:,
+        charges_duration: 31
       },
       filters:
     )
