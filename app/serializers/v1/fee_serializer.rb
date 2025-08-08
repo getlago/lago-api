@@ -54,7 +54,7 @@ module V1
         pricing_unit_details:
       }
 
-      payload.merge!(date_boundaries) if model.charge? || model.subscription?
+      payload.merge!(date_boundaries) if model.charge? || model.subscription? || model.add_on?
       payload.merge!(pay_in_advance_charge_attributes) if model.pay_in_advance?
       payload.merge!(applied_taxes) if include?(:applied_taxes)
 

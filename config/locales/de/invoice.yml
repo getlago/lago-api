@@ -34,6 +34,7 @@ de:
     due_date: Fälligkeit %{date}
     fee_prorated: Die Gebühr wird anteilig nach Nutzungstagen berechnet, der angezeigte Stückpreis ist ein Durchschnitt
     fees_from_to_date: Gebühren vom %{from_date} bis %{to_date}
+    from_to_date: Vom %{from_date} bis %{to_date}
     graduated:
       fee_per_unit_for_the_first: Gebühr pro Einheit für die ersten %{to}
       fee_per_unit_for_the_last: Gebühr pro Einheit für %{from} und höher

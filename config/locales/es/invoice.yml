@@ -33,6 +33,7 @@ es:
     due_date: Vence el %{date}
     fee_prorated: La tarifa se prorratea según los días de uso, el precio unitario mostrado es un promedio
     fees_from_to_date: Cargos desde %{from_date} hasta %{to_date}
+    from_to_date: Desde %{from_date} hasta %{to_date}
     graduated:
       fee_per_unit_for_the_first: Tarifa por unidad para las %{to} primeras
       fee_per_unit_for_the_last: Tarifa por unidad para %{from} y superiores
