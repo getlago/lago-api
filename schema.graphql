@@ -5155,11 +5155,11 @@ Fee input for creating invoice
 input FeeInput {
   addOnId: ID
   description: String
-  fromDatetime: ISO8601DateTime
+  fromDatetime: ISO8601DateTime!
   invoiceDisplayName: String
   name: String
   taxCodes: [String!]
-  toDatetime: ISO8601DateTime
+  toDatetime: ISO8601DateTime!
   unitAmountCents: BigInt
   units: Float
 }
