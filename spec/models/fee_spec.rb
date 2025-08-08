@@ -42,7 +42,7 @@ RSpec.describe Fee, type: :model do
     end
 
     before do
-      Fee.destroy_all
+      described_class.destroy_all
       fee1
       fee2
       fee3
@@ -50,7 +50,7 @@ RSpec.describe Fee, type: :model do
     end
 
     it "returns fees in right order" do
-      expect(Fee.ordered_by_period).to eq([fee4, fee3, fee1, fee2])
+      expect(described_class.ordered_by_period).to eq([fee4, fee3, fee1, fee2])
     end
   end
 
