@@ -224,7 +224,7 @@ RSpec.describe Fees::ProjectionService do
       end
 
       it "uses charge filter properties and filters" do
-        allow(service).to receive(:period_ratio).and_return(0.5)
+        allow(service).to receive(:period_ratio).and_return(0.5) # rubocop:disable RSpec/SubjectStub
         aggregator = instance_double("Aggregator", aggregate: aggregation_result)
         allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
         service.call
