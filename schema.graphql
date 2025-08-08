@@ -780,6 +780,7 @@ type BillingEntity {
   defaultCurrency: CurrencyEnum!
   documentNumberPrefix: String!
   documentNumbering: BillingEntityDocumentNumberingEnum!
+  einvoicing: Boolean!
   email: String
   emailSettings: [BillingEntityEmailSettingsEnum!]
   euTaxManagement: Boolean!
@@ -2530,6 +2531,7 @@ input CreateBillingEntityInput {
   defaultCurrency: CurrencyEnum
   documentNumberPrefix: String
   documentNumbering: BillingEntityDocumentNumberingEnum
+  einvoicing: Boolean
   email: String
   emailSettings: [BillingEntityEmailSettingsEnum!]
   euTaxManagement: Boolean
@@ -10628,6 +10630,7 @@ input UpdateBillingEntityInput {
   defaultCurrency: CurrencyEnum
   documentNumberPrefix: String
   documentNumbering: BillingEntityDocumentNumberingEnum
+  einvoicing: Boolean
   email: String
   emailSettings: [BillingEntityEmailSettingsEnum!]
   euTaxManagement: Boolean
