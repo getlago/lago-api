@@ -172,4 +172,44 @@ RSpec.describe Resolvers::CustomersResolver, type: :graphql do
       expect(customers_response["metadata"]["totalCount"]).to eq(2)
     end
   end
+
+  context "when filtering by active subscriptions" do
+    let(:customer) { create(:customer, organization:) }
+
+    let(:query) do
+      <<~GQL
+        query($activeSubscriptionsCountFrom: Int, $activeSubscriptionsCountTo: Int) {
+          customers(limit: 5, activeSubscriptionsCountFrom: $activeSubscriptionsCountFrom, activeSubscriptionsCountTo: $activeSubscriptionsCountTo) {
+            collection { id }
+            metadata { currentPage, totalCount }
+          }
+        }
+      GQL
+    end
+
+    before do
+      create(:customer, organization:)
+      2.times do
+        create(:subscription, customer:)
+      end
+    end
+
+    it "returns all customers with 2 active subscriptions" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: organization,
+        permissions: required_permission,
+        query:,
+        variables: {activeSubscriptionsCountFrom: 2, activeSubscriptionsCountTo: 2}
+      )
+
+      customers_response = result["data"]["customers"]
+
+      expect(customers_response["collection"].count).to eq(1)
+      expect(customers_response["collection"].map { |c| c["id"] }).to include(customer.id)
+
+      expect(customers_response["metadata"]["currentPage"]).to eq(1)
+      expect(customers_response["metadata"]["totalCount"]).to eq(1)
+    end
+  end
 end
