@@ -2,6 +2,8 @@
 
 module Events
   class CreateService < BaseService
+    Result = BaseResult[:event]
+
     def initialize(organization:, params:, timestamp:, metadata:)
       @organization = organization
       @params = params

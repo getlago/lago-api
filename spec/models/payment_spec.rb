@@ -528,4 +528,18 @@ RSpec.describe Payment, type: :model do
       expect(payments).not_to include(other_org_payment_request_payment)
     end
   end
+
+  describe ".customer" do
+    context "with discarded customer" do
+      before do
+        payment.customer.discard
+        payment.save!
+      end
+
+      it "loads the discarded customer" do
+        payment.reload
+        expect(payment.customer).not_to be_nil
+      end
+    end
+  end
 end

@@ -38,6 +38,26 @@ RSpec.describe Wallets::ValidateLimitationsService, type: :service do
       end
     end
 
+    context "with billable metric limitations" do
+      let(:billable_metric) { create(:billable_metric, organization:) }
+      let(:billable_metric_identifiers) { [billable_metric.id, "invalid"] }
+      let(:limitations) do
+        {
+          billable_metric_ids: billable_metric_identifiers
+        }
+      end
+
+      before do
+        result.billable_metrics = [billable_metric]
+        result.billable_metric_identifiers = billable_metric_identifiers
+      end
+
+      it "returns false and result has errors if BM is invalid" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:billable_metrics]).to eq(["invalid_identifier"])
+      end
+    end
+
     context "when limitations are valid" do
       let(:limitations) do
         {

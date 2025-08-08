@@ -2,6 +2,8 @@
 
 module Events
   class PayInAdvanceService < BaseService
+    Result = BaseResult[:event]
+
     def initialize(event:)
       @event = Events::CommonFactory.new_instance(source: event)
       super

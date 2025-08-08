@@ -55,9 +55,22 @@ RSpec.describe Invoices::CreateOneOffService, type: :service do
         expect(result.invoice.applied_taxes.count).to eq(1)
 
         expect(result.invoice.total_amount_cents).to eq(3360)
+        expect(result.invoice.voided_invoice_id).to be_nil
 
         expect(result.invoice).to be_finalized
         expect(Invoices::TransitionToFinalStatusService).to have_received(:call).with(invoice: result.invoice)
+      end
+    end
+
+    context "when voided invoice id is passed" do
+      let(:voided_invoice_id) { SecureRandom.uuid }
+      let(:args) { {customer:, timestamp: timestamp.to_i, fees:, currency:, voided_invoice_id:} }
+
+      it "creates an invoice" do
+        result = described_class.call(**args)
+
+        expect(result).to be_success
+        expect(result.invoice.voided_invoice_id).to eq(voided_invoice_id)
       end
     end
 

@@ -54,4 +54,50 @@ RSpec.describe Utils::Entitlement do
       end
     end
   end
+
+  describe ".convert_gql_input_to_params" do
+    context "when entitlements array is empty" do
+      it "returns an empty hash" do
+        result = utils_entitlement.convert_gql_input_to_params([])
+        expect(result).to eq({})
+      end
+    end
+
+    context "when multiple entitlements are provided" do
+      let(:entitlement1) do
+        instance_double(::Types::Entitlement::EntitlementInput,
+          feature_code: "seats",
+          privileges: [
+            instance_double(::Types::Entitlement::EntitlementPrivilegeInput, privilege_code: "max_seats", value: 50)
+          ])
+      end
+      let(:entitlement2) do
+        instance_double(::Types::Entitlement::EntitlementInput,
+          feature_code: "storage",
+          privileges: [
+            instance_double(::Types::Entitlement::EntitlementPrivilegeInput, privilege_code: "limit", value: "1TB"),
+            instance_double(::Types::Entitlement::EntitlementPrivilegeInput, privilege_code: "enabled", value: false)
+          ])
+      end
+      let(:entitlement3) do
+        instance_double(::Types::Entitlement::EntitlementInput,
+          feature_code: "api_access",
+          privileges: [])
+      end
+
+      it "returns hash with all entitlements mapped correctly" do
+        result = utils_entitlement.convert_gql_input_to_params([entitlement1, entitlement2, entitlement3])
+        expect(result).to eq({
+          "seats" => {
+            "max_seats" => 50
+          },
+          "storage" => {
+            "limit" => "1TB",
+            "enabled" => false
+          },
+          "api_access" => {}
+        })
+      end
+    end
+  end
 end

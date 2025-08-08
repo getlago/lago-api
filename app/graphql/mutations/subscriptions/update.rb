@@ -14,11 +14,20 @@ module Mutations
 
       type Types::Subscriptions::Object
 
-      def resolve(**args)
+      def resolve(entitlements: nil, **args)
         subscription = context[:current_user].subscriptions.find_by(id: args[:id])
         result = ::Subscriptions::UpdateService.call(subscription:, params: args)
 
-        result.success? ? result.subscription : result_error(result)
+        if entitlements.present? && License.premium?
+          result = ::Entitlement::SubscriptionEntitlementsUpdateService.call(
+            organization: subscription.organization,
+            subscription:,
+            entitlements_params: Utils::Entitlement.convert_gql_input_to_params(entitlements),
+            partial: false
+          )
+        end
+
+        result.success? ? subscription.reload : result_error(result)
       end
     end
   end

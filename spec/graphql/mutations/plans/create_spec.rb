@@ -12,6 +12,13 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
   let(:minimum_commitment_invoice_display_name) { "Minimum spending" }
   let(:minimum_commitment_amount_cents) { 100 }
 
+  let(:feature) { create(:feature, code: :seats, organization:) }
+  let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
+  let(:entitlement) { create(:entitlement, feature:, plan:) }
+  let(:entitlement_value) { create(:entitlement_value, privilege:, entitlement:, value: "99") }
+
+  let(:feature2) { create(:feature, code: "sso", organization:) }
+
   let(:mutation) do
     <<~GQL
       mutation($input: CreatePlanInput!) {
@@ -66,6 +73,10 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
             amountCents,
             thresholdDisplayName,
             recurring
+          }
+          entitlements {
+            code
+            privileges { code value }
           }
         }
       }
@@ -231,6 +242,10 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               thresholdDisplayName: "Threshold 3 Recurring",
               recurring: true
             }
+          ],
+          entitlements: [
+            {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]},
+            {featureCode: feature2.code, privileges: []}
           ]
         }
       }
@@ -314,6 +329,16 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       "thresholdDisplayName" => "Threshold 3 Recurring",
       "amountCents" => "1",
       "recurring" => true
+    )
+
+    expect(result_data["entitlements"]).to contain_exactly(
+      {
+        "code" => "seats",
+        "privileges" => [{"code" => "max", "value" => "22"}]
+      }, {
+        "code" => "sso",
+        "privileges" => []
+      }
     )
   end
 end

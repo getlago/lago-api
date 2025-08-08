@@ -159,7 +159,6 @@ RSpec.describe Mutations::Entitlement::UpdatePlanEntitlements, type: :graphql do
     end
 
     it "returns not found error" do
-      pps subject
       expect_graphql_error(result: subject, message: "not_found")
     end
   end

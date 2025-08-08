@@ -50,16 +50,8 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       expect(json[:feature][:name]).to eq("New Feature")
       expect(json[:feature][:description]).to eq("A new feature")
       expect(json[:feature][:privileges]).to contain_exactly(
-        {
-          code: "priv1",
-          name: nil,
-          value_type: "boolean"
-        },
-        {
-          code: "priv2",
-          name: "Maximum",
-          value_type: "boolean"
-        }
+        {code: "priv1", name: nil, value_type: "boolean", config: {}},
+        {code: "priv2", name: "Maximum", value_type: "boolean", config: {}}
       )
     end
 
@@ -185,16 +177,8 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       )
 
       expect(feature_response[:privileges]).to contain_exactly(
-        {
-          code: "max_admins",
-          name: "",
-          value_type: "integer"
-        },
-        {
-          code: "max",
-          name: "Maximum",
-          value_type: "integer"
-        }
+        {code: "max_admins", name: "", value_type: "integer", config: {}},
+        {code: "max", name: "Maximum", value_type: "integer", config: {}}
       )
     end
 
@@ -258,8 +242,8 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       expect(json[:feature][:name]).to eq("Number of seats")
       expect(json[:feature][:description]).to eq("Number of users of the account")
       expect(json[:feature][:privileges]).to contain_exactly(
-        {code: "max_admins", name: "", value_type: "integer"},
-        {code: "max", name: "Maximum", value_type: "integer"}
+        {code: "max_admins", name: "", value_type: "integer", config: {}},
+        {code: "max", name: "Maximum", value_type: "integer", config: {}}
       )
     end
 

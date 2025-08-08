@@ -24,9 +24,9 @@ module Charges
           prorated: params[:prorated] || false
         )
 
-        properties = params[:properties].presence || Charges::BuildDefaultPropertiesService.call(charge.charge_model)
-        charge.properties = Charges::FilterChargeModelPropertiesService.call(
-          charge:,
+        properties = params[:properties].presence || ChargeModels::BuildDefaultPropertiesService.call(charge.charge_model)
+        charge.properties = ChargeModels::FilterPropertiesService.call(
+          chargeable: charge,
           properties:
         ).properties
 

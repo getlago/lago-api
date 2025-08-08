@@ -254,7 +254,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
                   "region" => customer.billing_entity&.state,
                   "country" => customer.billing_entity&.country
                 },
-                "fees" => [
+                "fees" => an_array_matching([
                   {
                     "item_key" => fee_add_on.item_key,
                     "item_id" => fee_add_on.id,
@@ -269,7 +269,7 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateService do
                     "unit" => 0.00,
                     "amount" => "-2.0"
                   }
-                ]
+                ])
               }
             ]
           end

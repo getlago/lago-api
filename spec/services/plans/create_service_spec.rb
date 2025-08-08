@@ -15,6 +15,7 @@ RSpec.describe Plans::CreateService, type: :service do
     let(:plan_invoice_display_name) { "Some plan invoice name" }
     let(:billable_metric) { create(:billable_metric, organization:) }
     let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+    let(:add_on) { create(:add_on, organization:) }
     let(:plan_tax) { create(:tax, organization:) }
     let(:charge_tax) { create(:tax, organization:) }
     let(:pricing_unit) { create(:pricing_unit, organization:) }
@@ -35,6 +36,7 @@ RSpec.describe Plans::CreateService, type: :service do
         amount_currency: "EUR",
         tax_codes: [plan_tax.code],
         charges: charges_args,
+        fixed_charges: fixed_charges_args,
         usage_thresholds: usage_thresholds_args,
         minimum_commitment: minimum_commitment_args
       }
@@ -89,6 +91,15 @@ RSpec.describe Plans::CreateService, type: :service do
               }
             ]
           }
+        }
+      ]
+    end
+
+    let(:fixed_charges_args) do
+      [
+        {
+          add_on_id: add_on.id,
+          charge_model: "standard"
         }
       ]
     end
@@ -417,6 +428,38 @@ RSpec.describe Plans::CreateService, type: :service do
       it "returns an error" do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("billable_metrics_not_found")
+      end
+    end
+
+    context "with add ons from other organization" do
+      let(:add_on) { create(:add_on) }
+
+      let(:create_args) do
+        {
+          name: plan_name,
+          invoice_display_name: plan_invoice_display_name,
+          organization_id: organization.id,
+          code: "new_plan",
+          interval: "monthly",
+          pay_in_advance: false,
+          amount_cents: 200,
+          amount_currency: "EUR",
+          fixed_charges: fixed_charges_args
+        }
+      end
+
+      let(:fixed_charges_args) do
+        [
+          {
+            add_on_id: add_on.id,
+            charge_model: "standard"
+          }
+        ]
+      end
+
+      it "returns an error" do
+        expect(result).not_to be_success
+        expect(result.error.error_code).to eq("add_ons_not_found")
       end
     end
   end

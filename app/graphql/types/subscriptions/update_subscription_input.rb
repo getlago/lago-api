@@ -11,6 +11,8 @@ module Types
       argument :name, String, required: false
       argument :plan_overrides, Types::Subscriptions::PlanOverridesInput, required: false
       argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
+
+      argument :entitlements, [Types::Entitlement::EntitlementInput], required: false
     end
   end
 end

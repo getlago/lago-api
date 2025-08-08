@@ -93,6 +93,12 @@ RSpec.describe DunningCampaigns::BulkProcessService, type: :service, aggregate_f
             result
             expect(DunningCampaigns::ProcessAttemptJob).not_to have_been_enqueued
           end
+
+          context "with overdue balance greater than zero" do
+            it "sends valid webhook" do
+              expect { result }.to have_enqueued_job(SendWebhookJob).with("dunning_campaign.finished", customer, {dunning_campaign_code: dunning_campaign.code})
+            end
+          end
         end
 
         context "when not enough days have passed since last attempt" do

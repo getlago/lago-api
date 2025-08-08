@@ -290,6 +290,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
 
     context "with limitations" do
+      let(:bm) { create(:billable_metric, organization:) }
       let(:create_params) do
         {
           external_customer_id: customer.external_id,
@@ -300,7 +301,8 @@ RSpec.describe Api::V1::WalletsController, type: :request do
           granted_credits: "10",
           expiration_at:,
           applies_to: {
-            fee_types: %w[charge]
+            fee_types: %w[charge],
+            billable_metric_codes: [bm.code]
           }
         }
       end
@@ -313,6 +315,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         expect(response).to have_http_status(:success)
         expect(limitations).to be_present
         expect(limitations[:fee_types]).to eq(%w[charge])
+        expect(limitations[:billable_metric_codes]).to eq([bm.code])
       end
     end
   end
@@ -367,11 +370,13 @@ RSpec.describe Api::V1::WalletsController, type: :request do
     end
 
     context "with limitations" do
+      let(:bm) { create(:billable_metric, organization:) }
       let(:update_params) do
         {
           name: "wallet1",
           applies_to: {
-            fee_types: %w[charge]
+            fee_types: %w[charge],
+            billable_metric_codes: [bm.code]
           }
         }
       end
@@ -383,6 +388,7 @@ RSpec.describe Api::V1::WalletsController, type: :request do
         expect(json[:wallet][:lago_id]).to eq(wallet.id)
         expect(json[:wallet][:name]).to eq(update_params[:name])
         expect(json[:wallet][:applies_to][:fee_types]).to eq(%w[charge])
+        expect(json[:wallet][:applies_to][:billable_metric_codes]).to eq([bm.code])
 
         expect(SendWebhookJob).to have_been_enqueued.with("wallet.updated", Wallet)
       end

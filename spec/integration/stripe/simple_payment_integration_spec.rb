@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-# This file does not run on CI because it's suffixed `_real_spec.rb`
+# This file does not run on CI because it's suffixed `_integration_spec.rb`
 #
 # The goal is to use Rspec to run real HTTP request against Stripe API to ensure
 # things still work when upgrading the API version.

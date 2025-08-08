@@ -23,10 +23,10 @@ module Charges
         cascade_pricing_group_keys if cascade
 
         if !cascade || cascade_options[:equal_properties]
-          properties = params.delete(:properties).presence || Charges::BuildDefaultPropertiesService.call(
+          properties = params.delete(:properties).presence || ChargeModels::BuildDefaultPropertiesService.call(
             params[:charge_model]
           )
-          charge.properties = Charges::FilterChargeModelPropertiesService.call(charge:, properties:).properties
+          charge.properties = ChargeModels::FilterPropertiesService.call(chargeable: charge, properties:).properties
         end
 
         charge.save!

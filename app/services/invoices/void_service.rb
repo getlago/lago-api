@@ -34,7 +34,6 @@ module Invoices
 
         invoice.credits.each do |credit|
           AppliedCoupons::RecreditService.call!(credit:) if credit.applied_coupon_id.present?
-          CreditNotes::RecreditService.call!(credit:) if credit.credit_note_id.present?
         end
 
         # when generate_credit_note, we count the wallet value on the creditable value
@@ -43,7 +42,7 @@ module Invoices
           create_credit_notes!
         else
           invoice.wallet_transactions.outbound.each do |wallet_transaction|
-            WalletTransactions::RecreditService.call!(wallet_transaction:)
+            WalletTransactions::RecreditService.call!(wallet_transaction:) if wallet_transaction.wallet.active?
           end
         end
       end

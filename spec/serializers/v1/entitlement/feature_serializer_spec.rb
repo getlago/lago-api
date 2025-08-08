@@ -36,12 +36,14 @@ RSpec.describe V1::Entitlement::FeatureSerializer, type: :serializer do
         {
           code: "max_admins",
           name: nil,
-          value_type: "integer"
+          value_type: "integer",
+          config: {}
         },
         {
           code: "max",
           name: "Maximum",
-          value_type: "integer"
+          value_type: "integer",
+          config: {}
         }
       )
     end

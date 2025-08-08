@@ -7,6 +7,7 @@ RSpec.describe Types::AdjustedFees::CreateInput do
 
   it do
     expect(subject).to accept_argument(:invoice_id).of_type("ID!")
+    expect(subject).to accept_argument(:invoice_subscription_id).of_type("ID")
     expect(subject).to accept_argument(:fee_id).of_type("ID")
     expect(subject).to accept_argument(:charge_id).of_type("ID")
     expect(subject).to accept_argument(:charge_filter_id).of_type("ID")

@@ -2,6 +2,8 @@
 
 module Events
   class PostValidationService < BaseService
+    Result = BaseResult[:errors]
+
     def initialize(organization:)
       @organization = organization
 

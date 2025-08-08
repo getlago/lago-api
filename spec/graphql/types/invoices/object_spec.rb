@@ -69,5 +69,9 @@ RSpec.describe Types::Invoices::Object do
     expect(subject).to have_field(:payments).of_type("[Payment!]")
 
     expect(subject).to have_field(:tax_provider_id).of_type("String")
+
+    expect(subject).to have_field(:regenerated_invoice_id).of_type("String")
+    expect(subject).to have_field(:voided_at).of_type("ISO8601DateTime")
+    expect(subject).to have_field(:voided_invoice_id).of_type("String")
   end
 end

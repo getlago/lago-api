@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Fee, type: :model do
+  subject { build(:fee) }
+
+  it { is_expected.to belong_to(:add_on).optional }
+  it { is_expected.to belong_to(:charge).optional }
+  it { is_expected.to belong_to(:fixed_charge).optional }
+  it { is_expected.to have_one(:fixed_charge_add_on).through(:fixed_charge) }
   it { is_expected.to have_one(:adjusted_fee).dependent(:nullify) }
   it { is_expected.to have_one(:billable_metric).through(:charge) }
   it { is_expected.to have_one(:customer).through(:subscription) }
@@ -51,6 +57,14 @@ RSpec.describe Fee, type: :model do
           .to eq(charge.billable_metric.code)
       end
     end
+
+    context "when it is a fixed charge fee" do
+      let(:fee) { create(:fixed_charge_fee) }
+
+      it "returns related fixed charge add on code" do
+        expect(fee.item_code).to eq(fee.fixed_charge.add_on.code)
+      end
+    end
   end
 
   describe "#invoice_name" do
@@ -93,6 +107,26 @@ RSpec.describe Fee, type: :model do
 
           it "returns related billable metric name" do
             expect(fee_invoice_name).to eq(charge.billable_metric.name)
+          end
+        end
+      end
+
+      context "when it is a fixed charge fee" do
+        let(:fee) { build(:fixed_charge_fee, invoice_display_name:, fixed_charge:) }
+
+        context "when fixed charge has invoice display name present" do
+          let(:fixed_charge) { create(:fixed_charge, invoice_display_name: Faker::Fantasy::Tolkien.location) }
+
+          it "returns related fixed charge add on code" do
+            expect(fee_invoice_name).to eq(fee.fixed_charge.invoice_display_name)
+          end
+        end
+
+        context "when fixed charge has invoice display name blank" do
+          let(:fixed_charge) { create(:fixed_charge, invoice_display_name: [nil, ""].sample) }
+
+          it "returns related fixed charge add on invoice name" do
+            expect(fee_invoice_name).to eq(fee.fixed_charge.add_on.invoice_name)
           end
         end
       end
@@ -156,6 +190,14 @@ RSpec.describe Fee, type: :model do
       end
     end
 
+    context "when it is a fixed charge fee" do
+      let(:fee) { create(:fixed_charge_fee) }
+
+      it "returns related fixed charge add on name" do
+        expect(fee.item_name).to eq(fee.fixed_charge.add_on.name)
+      end
+    end
+
     context "when it is a add-on fee" do
       let(:applied_add_on) { create(:applied_add_on) }
 
@@ -197,6 +239,14 @@ RSpec.describe Fee, type: :model do
       it "returns related billable metric description" do
         expect(described_class.new(charge:, fee_type: "charge").item_description)
           .to eq(charge.billable_metric.description)
+      end
+    end
+
+    context "when it is a fixed charge fee" do
+      let(:fee) { create(:fixed_charge_fee) }
+
+      it "returns related fixed charge add on description" do
+        expect(fee.item_description).to eq(fee.fixed_charge.add_on.description)
       end
     end
 
@@ -244,6 +294,14 @@ RSpec.describe Fee, type: :model do
       end
     end
 
+    context "when it is a fixed charge fee" do
+      let(:fee) { create(:fixed_charge_fee) }
+
+      it "returns fixed charge" do
+        expect(fee.item_type).to eq("AddOn")
+      end
+    end
+
     context "when it is a add-on fee" do
       let(:applied_add_on) { create(:applied_add_on) }
 
@@ -285,6 +343,14 @@ RSpec.describe Fee, type: :model do
       it "returns the billable metric id" do
         expect(described_class.new(charge:, fee_type: "charge").item_id)
           .to eq(charge.billable_metric.id)
+      end
+    end
+
+    context "when it is a fixed charge fee" do
+      let(:fee) { create(:fixed_charge_fee) }
+
+      it "returns the fixed charge add on id" do
+        expect(fee.item_id).to eq(fee.fixed_charge.add_on.id)
       end
     end
 

@@ -351,6 +351,11 @@ RSpec.describe AdjustedFees::CreateService, type: :service do
           expect(result.error.code).to eq("feature_unavailable")
         end
       end
+
+      it "returns the estimated adjusted fee" do
+        result = described_class.new(invoice:, params:, preview: true).call
+        expect(result).to be_success
+      end
     end
   end
 end

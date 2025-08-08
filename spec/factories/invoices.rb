@@ -48,6 +48,10 @@ FactoryBot.define do
       status { :pending }
     end
 
+    trait :voided do
+      status { :voided }
+    end
+
     trait :with_subscriptions do
       transient do
         subscriptions { [create(:subscription)] }

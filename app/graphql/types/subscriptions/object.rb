@@ -40,6 +40,8 @@ module Types
 
       field :lifetime_usage, Types::Subscriptions::LifetimeUsageObject, null: true
 
+      field :entitlements, [Types::Entitlement::SubscriptionEntitlementObject], null: false
+
       def next_plan
         object.next_subscription&.plan
       end
@@ -81,6 +83,12 @@ module Types
 
       def dates_service
         @dates_service ||= ::Subscriptions::DatesService.new_instance(object, Time.current, current_usage: true)
+      end
+
+      def entitlements
+        entitlements = ::Entitlement::SubscriptionEntitlement.for_subscription(object)
+
+        ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(entitlements).serialize_models
       end
     end
   end

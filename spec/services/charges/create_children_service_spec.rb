@@ -59,6 +59,12 @@ RSpec.describe Charges::CreateChildrenService, type: :service do
         expect { create_service.call }.to change(Charge, :count).by(1)
       end
 
+      it "does not touch plan" do
+        freeze_time do
+          expect { create_service.call }.not_to change { child_plan.reload.updated_at }
+        end
+      end
+
       it "sets correctly attributes" do
         create_service.call
 

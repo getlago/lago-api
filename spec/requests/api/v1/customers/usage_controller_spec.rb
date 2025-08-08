@@ -158,63 +158,56 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         charge_filter_value_aws
         charge_filter_value_gcp
 
-        create_list(
-          :event,
-          3,
-          organization:,
-          customer:,
-          subscription:,
-          code: metric.code,
-          timestamp: Time.zone.now,
-          properties: {cloud: "aws"}
-        )
+        travel_to(Time.parse("2025-07-02T10:00:00Z")) do
+          create_list(
+            :event,
+            3,
+            organization:,
+            customer:,
+            subscription:,
+            code: metric.code,
+            timestamp: Time.zone.now,
+            properties: {cloud: "aws"}
+          )
 
-        create(
-          :event,
-          organization:,
-          customer:,
-          subscription:,
-          code: metric.code,
-          timestamp: Time.zone.now,
-          properties: {cloud: "google"}
-        )
+          create(
+            :event,
+            organization:,
+            customer:,
+            subscription:,
+            code: metric.code,
+            timestamp: Time.zone.now,
+            properties: {cloud: "google"}
+          )
+        end
       end
 
       it "returns the filters usage for the customer" do
-        subject
+        travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+          subject
 
-        charge_usage = json[:customer_usage][:charges_usage].first
-        filters_usage = charge_usage[:filters]
+          charge_usage = json[:customer_usage][:charges_usage].first
+          filters_usage = charge_usage[:filters]
 
-        aggregate_failures do
-          expect(charge_usage[:units]).to eq("8.0")
-          expect(charge_usage[:amount_cents]).to eq(5000)
-          expect(filters_usage).to contain_exactly(
-            {
-              amount_cents: 0,
-              events_count: 4,
-              invoice_display_name: nil,
-              units: "4.0",
-              values: nil,
-              pricing_unit_details: nil
-            },
-            {
-              units: "3.0",
-              amount_cents: 3000,
-              events_count: 3,
-              invoice_display_name: nil,
-              values: {cloud: ["aws"]},
-              pricing_unit_details: nil
-            },
-            {
-              units: "1.0",
-              amount_cents: 2000,
-              events_count: 1,
-              invoice_display_name: nil,
-              values: {cloud: ["google"]},
-              pricing_unit_details: nil
-            }
-          )
+          aws_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] }
+          gcp_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["google"] }
+
+          aggregate_failures do
+            expect(charge_usage[:units]).to eq("4.0")
+            expect(charge_usage[:amount_cents]).to eq(5000)
+
+            # Assertions for the AWS filter
+            expect(aws_filter_data[:units]).to eq("3.0")
+            expect(aws_filter_data[:amount_cents]).to eq(3000)
+            expect(aws_filter_data[:projected_units]).to eq("31.0")
+            expect(aws_filter_data[:projected_amount_cents]).to eq(31000)
+
+            # Assertions for the GCP filter
+            expect(gcp_filter_data[:units]).to eq("1.0")
+            expect(gcp_filter_data[:amount_cents]).to eq(2000)
+            expect(gcp_filter_data[:projected_units]).to eq("10.33")
+            expect(gcp_filter_data[:projected_amount_cents]).to eq(20660)
+          end
         end
       end
     end
@@ -299,81 +292,73 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         charge_filter_value31
         charge_filter_value32
 
-        create_list(
-          :event,
-          2,
-          organization:,
-          customer:,
-          subscription:,
-          code: metric.code,
-          timestamp: Time.zone.now,
-          properties: {cloud: "aws", region: "usa"}
-        )
+        travel_to(Time.parse("2025-07-02T10:00:00Z")) do
+          create_list(
+            :event,
+            2,
+            organization:,
+            customer:,
+            subscription:,
+            code: metric.code,
+            timestamp: Time.zone.now,
+            properties: {cloud: "aws", region: "usa"}
+          )
 
-        create(
-          :event,
-          organization:,
-          customer:,
-          subscription:,
-          code: metric.code,
-          timestamp: Time.zone.now,
-          properties: {cloud: "aws", region: "france"}
-        )
+          create(
+            :event,
+            organization:,
+            customer:,
+            subscription:,
+            code: metric.code,
+            timestamp: Time.zone.now,
+            properties: {cloud: "aws", region: "france"}
+          )
 
-        create(
-          :event,
-          organization:,
-          customer:,
-          subscription:,
-          code: metric.code,
-          timestamp: Time.zone.now,
-          properties: {cloud: "google", region: "usa"}
-        )
+          create(
+            :event,
+            organization:,
+            customer:,
+            subscription:,
+            code: metric.code,
+            timestamp: Time.zone.now,
+            properties: {cloud: "google", region: "usa"}
+          )
+        end
       end
 
       it "returns the filters usage for the customer" do
-        subject
+        travel_to(Time.parse("2025-07-03T10:00:00Z")) do
+          subject
 
-        charge_usage = json[:customer_usage][:charges_usage].first
-        filters_usage = charge_usage[:filters]
+          charge_usage = json[:customer_usage][:charges_usage].first
+          filters_usage = charge_usage[:filters]
 
-        aggregate_failures do
-          expect(charge_usage[:units]).to eq("8.0")
-          expect(charge_usage[:amount_cents]).to eq(7000)
-          expect(filters_usage).to contain_exactly(
-            {
-              units: "4.0",
-              amount_cents: 0,
-              events_count: 4,
-              invoice_display_name: nil,
-              values: nil,
-              pricing_unit_details: nil
-            },
-            {
-              units: "2.0",
-              amount_cents: 2000,
-              events_count: 2,
-              invoice_display_name: nil,
-              values: {cloud: ["aws"], region: ["usa"]},
-              pricing_unit_details: nil
-            },
-            {
-              units: "1.0",
-              amount_cents: 2000,
-              events_count: 1,
-              invoice_display_name: nil,
-              values: {cloud: ["aws"], region: ["france"]},
-              pricing_unit_details: nil
-            },
-            {
-              units: "1.0",
-              amount_cents: 3000,
-              events_count: 1,
-              invoice_display_name: nil,
-              values: {cloud: ["google"], region: ["usa"]},
-              pricing_unit_details: nil
-            }
-          )
+          aws_usa_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] && f[:values][:region] == ["usa"] }
+          aws_france_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] && f[:values][:region] == ["france"] }
+          google_usa_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["google"] && f[:values][:region] == ["usa"] }
+
+          aggregate_failures do
+            expect(charge_usage[:units]).to eq("4.0")
+            expect(charge_usage[:amount_cents]).to eq(7000)
+
+            # Assertions for AWS/USA filter
+            expect(aws_usa_data[:units]).to eq("2.0")
+            expect(aws_usa_data[:amount_cents]).to eq(2000)
+            expect(aws_usa_data[:projected_units]).to eq("20.67")
+            expect(aws_usa_data[:projected_amount_cents]).to eq(20670)
+
+            # Assertions for AWS/France filter
+            expect(aws_france_data[:units]).to eq("1.0")
+            expect(aws_france_data[:amount_cents]).to eq(2000)
+            expect(aws_france_data[:projected_units]).to eq("10.33")
+            expect(aws_france_data[:projected_amount_cents]).to eq(20660)
+
+            # Assertions for Google/USA filter
+            expect(google_usa_data[:units]).to eq("1.0")
+            expect(google_usa_data[:amount_cents]).to eq(3000)
+            expect(google_usa_data[:projected_units]).to eq("10.33")
+            expect(google_usa_data[:projected_amount_cents]).to eq(30990)
+          end
         end
       end
     end

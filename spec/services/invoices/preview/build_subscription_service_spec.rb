@@ -36,6 +36,11 @@ RSpec.describe Invoices::Preview::BuildSubscriptionService, type: :service do
           }
         end
 
+        before do
+          create(:plan, organization: customer.organization, code: plan.code, parent: plan)
+          plan.touch # rubocop:disable Rails/SkipsModelValidations
+        end
+
         context "when valid billing time and subscribed at are provided" do
           let(:billing_time) { Subscription::BILLING_TIME.sample.to_s }
           let(:subscription_at) { generate(:past_date) }

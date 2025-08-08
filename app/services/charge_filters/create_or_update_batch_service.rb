@@ -60,8 +60,8 @@ module ChargeFilters
           filter ||= charge.filters.new(organization_id: charge.organization_id)
 
           filter.invoice_display_name = filter_param[:invoice_display_name]
-          filter.properties = Charges::FilterChargeModelPropertiesService.call(
-            charge:,
+          filter.properties = ChargeModels::FilterPropertiesService.call(
+            chargeable: charge,
             properties: filter_param[:properties]
           ).properties
           if filter.save! && touch && !filter.changed?

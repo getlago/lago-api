@@ -27,7 +27,7 @@ RSpec.describe Resolvers::ActivityLogsResolver, type: :graphql, clickhouse: true
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "audit_logs:view"
 
-  shared_examples "unauthorized error" do
+  shared_examples "blocked feature" do |message|
     it "returns an error" do
       result = execute_graphql(
         current_user: membership.user,
@@ -36,12 +36,12 @@ RSpec.describe Resolvers::ActivityLogsResolver, type: :graphql, clickhouse: true
         query:
       )
 
-      expect_graphql_error(result:, message: "unauthorized")
+      expect_graphql_error(result:, message:)
     end
   end
 
   context "without premium feature" do
-    it_behaves_like "unauthorized error"
+    it_behaves_like "blocked feature", "unauthorized"
   end
 
   context "without database configuration" do
@@ -53,7 +53,7 @@ RSpec.describe Resolvers::ActivityLogsResolver, type: :graphql, clickhouse: true
       ENV["LAGO_CLICKHOUSE_ENABLED"] = nil
     end
 
-    it_behaves_like "unauthorized error"
+    it_behaves_like "blocked feature", "feature_unavailable"
   end
 
   context "with premium feature" do

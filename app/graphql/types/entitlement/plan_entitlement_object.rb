@@ -7,6 +7,7 @@ module Types
 
       field :code, String, null: false
       field :description, String, null: true
+      field :feature, Types::Entitlement::FeatureObject, null: false
       field :name, String, null: false
       field :privileges, [PlanEntitlementPrivilegeObject], null: false, method: :values
 

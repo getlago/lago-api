@@ -90,13 +90,13 @@ RSpec.describe "Create and edit plans with charge filters", :scenarios, type: :r
 
     charge.reload
     f1 = charge.filters.find_by(invoice_display_name: "f1")
-    expect(f1.to_h.keys.sort).to eq(%w[steps model_name].sort)
+    expect(f1.to_h.keys).to match_array(%w[steps model_name])
 
     f2 = charge.filters.find_by(invoice_display_name: "f2")
     expect(f2.to_h.keys).to eq(%w[steps])
 
     f3 = charge.filters.find_by(invoice_display_name: "f3")
-    expect(f3.to_h.keys).to eq(%w[image_size steps])
+    expect(f3.to_h.keys).to match_array(%w[image_size steps])
 
     f4 = charge.filters.find_by(invoice_display_name: "f4")
     expect(f4.to_h.keys).to eq(%w[image_size])

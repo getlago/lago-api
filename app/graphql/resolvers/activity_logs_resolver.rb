@@ -27,7 +27,8 @@ module Resolvers
     type Types::ActivityLogs::Object.collection_type, null: true
 
     def resolve(**args)
-      raise unauthorized_error unless License.premium? && Utils::ActivityLog.available?
+      raise unauthorized_error unless License.premium?
+      raise forbidden_error(code: "feature_unavailable") unless Utils::ActivityLog.available?
 
       result = ActivityLogsQuery.call(
         organization: current_organization,

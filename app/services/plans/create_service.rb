@@ -27,13 +27,12 @@ module Plans
         bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil
       )
 
-      # Validates billable metrics
-      if args[:charges].present?
-        metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
-        if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.not_found_failure!(resource: "billable_metrics")
-        end
-      end
+      chargeables_validation_result = Plans::ChargeablesValidationService.call(
+        organization: plan.organization,
+        charges: args[:charges],
+        fixed_charges: args[:fixed_charges]
+      )
+      return chargeables_validation_result if chargeables_validation_result.failure?
 
       ActiveRecord::Base.transaction do
         plan.save!
@@ -120,9 +119,9 @@ module Plans
         prorated: args[:prorated] || false
       )
 
-      properties = args[:properties].presence || Charges::BuildDefaultPropertiesService.call(args[:charge_model])
-      charge.properties = Charges::FilterChargeModelPropertiesService.call(
-        charge:,
+      properties = args[:properties].presence || ChargeModels::BuildDefaultPropertiesService.call(args[:charge_model])
+      charge.properties = ChargeModels::FilterPropertiesService.call(
+        chargeable: charge,
         properties:
       ).properties
 

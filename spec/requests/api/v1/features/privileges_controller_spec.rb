@@ -33,7 +33,7 @@ RSpec.describe Api::V1::Features::PrivilegesController, type: :request do
       expect(json[:feature][:code]).to eq("seats")
       expect(json[:feature][:privileges]).not_to include(:max_admins)
       expect(json[:feature][:privileges]).to contain_exactly(
-        {code: "max", name: "Maximum", value_type: "integer"}
+        {code: "max", name: "Maximum", value_type: "integer", config: {}}
       )
     end
 
