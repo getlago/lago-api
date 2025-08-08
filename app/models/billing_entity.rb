@@ -158,6 +158,7 @@ end
 #  document_locale              :string           default("en"), not null
 #  document_number_prefix       :string
 #  document_numbering           :enum             default("per_customer"), not null
+#  einvoicing                   :boolean          default(FALSE), not null
 #  email                        :string
 #  email_settings               :string           default([]), not null, is an Array
 #  eu_tax_management            :boolean          default(FALSE)
