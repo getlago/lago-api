@@ -125,7 +125,8 @@ module Integrations
               "taxdetailsreference" => fee.id,
               "custcol_service_period_date_from" => fee.properties[from_property]&.to_date&.strftime("%-m/%-d/%Y"),
               "custcol_service_period_date_to" => fee.properties[to_property]&.to_date&.strftime("%-m/%-d/%Y"),
-              "description" => fee.item_name
+              "description" => fee.item_name,
+              "item_source" => fee.item_source
             }
           end
 
@@ -139,7 +140,8 @@ module Integrations
                 "quantity" => 1,
                 "rate" => -amount(invoice.coupons_amount_cents, resource: invoice),
                 "taxdetailsreference" => "coupon_item",
-                "description" => invoice.credits.coupon_kind.map(&:item_name).join(",")
+                "description" => invoice.credits.coupon_kind.map(&:item_name).join(","),
+                "item_source" => "coupons"
               }
             end
 
@@ -150,7 +152,8 @@ module Integrations
                 "quantity" => 1,
                 "rate" => -amount(invoice.prepaid_credit_amount_cents, resource: invoice),
                 "taxdetailsreference" => "credit_item",
-                "description" => "Prepaid credits"
+                "description" => "Prepaid credits",
+                "item_source" => "prepaid_credits"
               }
             end
 
@@ -161,7 +164,8 @@ module Integrations
                 "quantity" => 1,
                 "rate" => -amount(invoice.progressive_billing_credit_amount_cents, resource: invoice),
                 "taxdetailsreference" => "credit_item_progressive_billing",
-                "description" => invoice.credits.progressive_billing_invoice_kind.map(&:item_name).join(",")
+                "description" => invoice.credits.progressive_billing_invoice_kind.map(&:item_name).join(","),
+                "item_source" => "progressive_billing_credits"
               }
             end
 
@@ -172,7 +176,8 @@ module Integrations
                 "quantity" => 1,
                 "rate" => -amount(invoice.credit_notes_amount_cents, resource: invoice),
                 "taxdetailsreference" => "credit_note_item",
-                "description" => invoice.credits.credit_note_kind.map(&:item_name).join(",")
+                "description" => invoice.credits.credit_note_kind.map(&:item_name).join(","),
+                "item_source" => "credit_note_credits"
               }
             end
 
