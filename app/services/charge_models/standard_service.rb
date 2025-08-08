@@ -5,6 +5,7 @@ module ChargeModels
     protected
 
     def compute_amount
+      Rails.logger.info "=============================" + [units, properties["amount"]]
       (units * BigDecimal(properties["amount"]))
     end
 

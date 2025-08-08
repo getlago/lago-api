@@ -45,6 +45,12 @@ GEM
       nio4r (~> 2.0)
       websocket-driver (>= 0.6.1)
       zeitwerk (~> 2.6)
+    actioncable-next (0.2.0)
+      actionpack (>= 7.0, <= 8.1)
+      activesupport (>= 7.0, <= 8.1)
+      nio4r (~> 2.0)
+      websocket-driver (>= 0.6.1)
+      zeitwerk (~> 2.6)
     actionmailbox (8.0.2)
       actionpack (= 8.0.2)
       activejob (= 8.0.2)
@@ -129,6 +135,51 @@ GEM
     analytics-ruby (2.4.0)
     annotaterb (4.14.0)
     ast (2.4.3)
+    async (2.27.2)
+      console (~> 1.29)
+      fiber-annotation
+      io-event (~> 1.11)
+      metrics (~> 0.12)
+      traces (~> 0.15)
+    async-cable (0.3.0)
+      actioncable-next
+      async (~> 2.9)
+      async-websocket
+    async-container (0.25.0)
+      async (~> 2.22)
+    async-container-supervisor (0.5.2)
+      async-container (~> 0.22)
+      async-service
+      io-endpoint
+      io-stream
+      memory-leak (~> 0.5)
+    async-http (0.90.1)
+      async (>= 2.10.2)
+      async-pool (~> 0.11)
+      io-endpoint (~> 0.14)
+      io-stream (~> 0.6)
+      metrics (~> 0.12)
+      protocol-http (~> 0.49)
+      protocol-http1 (~> 0.30)
+      protocol-http2 (~> 0.22)
+      traces (~> 0.10)
+    async-http-cache (0.4.5)
+      async-http (~> 0.56)
+    async-job (0.10.1)
+      async (~> 2.9)
+    async-job-adapter-active_job (0.17.0)
+      async-job (~> 0.9)
+      async-service (~> 0.12)
+    async-pool (0.11.0)
+      async (>= 2.0)
+    async-service (0.13.0)
+      async
+      async-container (~> 0.16)
+    async-websocket (0.30.0)
+      async-http (~> 0.76)
+      protocol-http (~> 0.34)
+      protocol-rack (~> 0.7)
+      protocol-websocket (~> 0.17)
     awesome_print (1.9.2)
     aws-eventstream (1.3.0)
     aws-partitions (1.967.0)
@@ -146,6 +197,9 @@ GEM
       aws-sigv4 (~> 1.5)
     aws-sigv4 (1.9.1)
       aws-eventstream (~> 1, >= 1.0.2)
+    bake (0.24.0)
+      bigdecimal
+      samovar (~> 2.1)
     base64 (0.2.0)
     bcrypt (3.1.20)
     benchmark (0.4.0)
@@ -176,6 +230,14 @@ GEM
     coffee-script-source (1.12.2)
     concurrent-ruby (1.3.5)
     connection_pool (2.5.3)
+    console (1.33.0)
+      fiber-annotation
+      fiber-local (~> 1.1)
+      json
+    console-adapter-rails (0.4.1)
+      console (~> 1.21)
+      fiber-storage (~> 1.0)
+      rails (>= 6.1)
     countries (5.7.2)
       unaccent (~> 0.3)
     crack (0.4.6)
@@ -244,6 +306,28 @@ GEM
       railties (>= 5.0.0)
     faker (3.4.2)
       i18n (>= 1.8.11, < 2)
+    falcon (0.52.3)
+      async
+      async-container (~> 0.20)
+      async-container-supervisor (~> 0.5.0)
+      async-http (~> 0.75)
+      async-http-cache (~> 0.4)
+      async-service (~> 0.10)
+      bundler
+      localhost (~> 1.1)
+      openssl (~> 3.0)
+      protocol-http (~> 0.31)
+      protocol-rack (~> 0.7)
+      samovar (~> 2.3)
+    falcon-rails (0.2.4)
+      async-cable
+      async-job-adapter-active_job
+      async-websocket
+      bake
+      console-adapter-rails
+      falcon
+      live
+      rails (>= 8.0)
     faraday (2.10.1)
       faraday-net_http (>= 2.0, < 3.2)
       logger
@@ -254,6 +338,9 @@ GEM
     ffi (1.17.1-x64-mingw-ucrt)
     ffi (1.17.1-x86_64-darwin)
     ffi (1.17.1-x86_64-linux-gnu)
+    fiber-annotation (0.2.0)
+    fiber-local (1.1.0)
+      fiber-storage
     fiber-storage (1.0.0)
     formatador (1.1.0)
     fuubar (2.5.1)
@@ -341,6 +428,9 @@ GEM
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
     io-console (0.8.0)
+    io-endpoint (0.15.2)
+    io-event (1.12.1)
+    io-stream (0.10.0)
     irb (1.15.2)
       pp (>= 0.6.0)
       rdoc (>= 4.0.0)
@@ -382,6 +472,11 @@ GEM
     listen (3.9.0)
       rb-fsevent (~> 0.10, >= 0.10.3)
       rb-inotify (~> 0.9, >= 0.9.10)
+    live (0.17.0)
+      async-websocket (~> 0.27)
+      protocol-websocket (~> 0.19)
+      xrb (~> 0.10)
+    localhost (1.6.0)
     logger (1.7.0)
     lograge (0.14.0)
       actionpack (>= 4)
@@ -398,8 +493,11 @@ GEM
       net-imap
       net-pop
       net-smtp
+    mapping (1.1.3)
     marcel (1.0.4)
+    memory-leak (0.5.2)
     method_source (1.1.0)
+    metrics (0.13.0)
     mini_mime (1.1.5)
     mini_portile2 (2.8.8)
     minitest (5.25.5)
@@ -452,6 +550,7 @@ GEM
       rack (>= 1.2, < 4)
       snaky_hash (~> 2.0)
       version_gem (~> 1.1)
+    openssl (3.3.0)
     opentelemetry-api (1.3.0)
     opentelemetry-common (0.21.0)
       opentelemetry-api (~> 1.0)
@@ -669,6 +768,19 @@ GEM
       prettyprint
     prettyprint (0.2.0)
     prism (1.4.0)
+    protocol-hpack (1.5.1)
+    protocol-http (0.51.0)
+    protocol-http1 (0.34.1)
+      protocol-http (~> 0.22)
+    protocol-http2 (0.22.1)
+      protocol-hpack (~> 1.4)
+      protocol-http (~> 0.47)
+    protocol-rack (0.16.0)
+      io-stream (>= 0.10)
+      protocol-http (~> 0.43)
+      rack (>= 1.0)
+    protocol-websocket (0.20.2)
+      protocol-http (~> 0.2)
     pry (0.14.2)
       coderay (~> 1.1)
       method_source (~> 1.0)
@@ -679,8 +791,6 @@ GEM
       date
       stringio
     public_suffix (5.1.1)
-    puma (6.5.0)
-      nio4r (~> 2.0)
     racc (1.8.1)
     rack (3.1.16)
     rack-cors (1.1.1)
@@ -833,6 +943,9 @@ GEM
     ruby-lsp-rails (0.3.30)
       ruby-lsp (>= 0.23.0, < 0.24.0)
     ruby-progressbar (1.13.0)
+    samovar (2.3.0)
+      console (~> 1.0)
+      mapping (~> 1.0)
     sass-rails (6.0.0)
       sassc-rails (~> 2.1, >= 2.1.1)
     sassc (2.4.0)
@@ -922,6 +1035,7 @@ GEM
     tilt (2.0.11)
     timecop (0.9.10)
     timeout (0.4.3)
+    traces (0.16.2)
     trailblazer-option (0.1.2)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
@@ -955,6 +1069,7 @@ GEM
     with_advisory_lock (5.1.0)
       activerecord (>= 6.1)
       zeitwerk (>= 2.6)
+    xrb (0.11.2)
     zeitwerk (2.7.2)
 
 PLATFORMS
@@ -996,6 +1111,7 @@ DEPENDENCIES
   dry-validation
   factory_bot_rails
   faker
+  falcon-rails (~> 0.2.4)
   fuubar
   gocardless_pro (~> 2.34)
   google-cloud-storage
@@ -1028,7 +1144,6 @@ DEPENDENCIES
   parallel_tests (~> 5.3)
   pg
   pry-byebug
-  puma (~> 6.5)
   rack-cors
   rails (~> 8.0)
   ransack
