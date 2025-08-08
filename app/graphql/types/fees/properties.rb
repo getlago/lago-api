@@ -5,8 +5,8 @@ module Types
     class Properties < Types::BaseObject
       graphql_name "FeeProperties"
 
-      field :from_datetime, GraphQL::Types::ISO8601DateTime, null: true
-      field :to_datetime, GraphQL::Types::ISO8601DateTime, null: true
+      field :from_datetime, GraphQL::Types::ISO8601DateTime, null: false
+      field :to_datetime, GraphQL::Types::ISO8601DateTime, null: false
 
       def from_datetime
         object.properties["from_datetime"]
