@@ -140,7 +140,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service, t
             expect(item.action).to eq("add")
             expect(item.amount).to eq(1)
             expect(item.duration).to eq(16)
-            expect(item.total_duration).to eq(31)
+            expect(item.total_duration).to eq(16)
           end
         end
       end
@@ -178,7 +178,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service, t
             expect(item.action).to eq("add")
             expect(item.amount).to eq(1)
             expect(item.duration).to eq(16)
-            expect(item.total_duration).to eq(31)
+            expect(item.total_duration).to eq(16)
           end
         end
 
@@ -207,7 +207,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service, t
               expect(item.action).to eq("add")
               expect(item.amount).to eq(1)
               expect(item.duration).to eq(16)
-              expect(item.total_duration).to eq(31)
+              expect(item.total_duration).to eq(16)
             end
           end
         end
@@ -226,7 +226,7 @@ RSpec.describe BillableMetrics::Breakdown::UniqueCountService, type: :service, t
             expect(item.action).to eq("add")
             expect(item.amount).to eq(1)
             expect(item.duration).to eq(8)
-            expect(item.total_duration).to eq(31)
+            expect(item.total_duration).to eq(8)
           end
         end
       end

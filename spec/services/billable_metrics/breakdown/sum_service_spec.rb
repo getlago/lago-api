@@ -10,7 +10,8 @@ RSpec.describe BillableMetrics::Breakdown::SumService, type: :service, transacti
       subscription:,
       boundaries: {
         from_datetime:,
-        to_datetime:
+        to_datetime:,
+        charges_duration: 31
       },
       filters: {
         matching_filters:,
