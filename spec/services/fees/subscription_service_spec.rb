@@ -31,11 +31,14 @@ RSpec.describe Fees::SubscriptionService do
   end
   let(:invoice) { create(:invoice, organization:, customer:) }
   let(:boundaries) do
-    {
+    BillingPeriodBoundaries.new(
       from_datetime: Time.zone.parse("2022-03-01 00:00:00"),
       to_datetime: Time.zone.parse("2022-03-31 23:59:59"),
+      charges_from_datetime: Time.zone.parse("2022-03-01 00:00:00"),
+      charges_to_datetime: Time.zone.parse("2022-03-31 23:59:59"),
+      charges_duration: 31.days,
       timestamp: Time.zone.parse("2022-04-02 00:00").end_of_month.to_i
-    }
+    )
   end
 
   let(:subscription) do
@@ -88,7 +91,7 @@ RSpec.describe Fees::SubscriptionService do
     context "when plan has a trial period" do
       before do
         plan.update(trial_period: trial_duration)
-        subscription.update(started_at: boundaries[:from_datetime])
+        subscription.update(started_at: boundaries.from_datetime)
       end
 
       context "when trial end in period" do
@@ -136,8 +139,8 @@ RSpec.describe Fees::SubscriptionService do
       end
       let(:properties) do
         {
-          from_datetime: boundaries[:from_datetime],
-          to_datetime: boundaries[:to_datetime]
+          from_datetime: boundaries.from_datetime,
+          to_datetime: boundaries.to_datetime
         }
       end
 
@@ -289,20 +292,26 @@ RSpec.describe Fees::SubscriptionService do
 
   context "when subscription has never been billed" do
     let(:boundaries) do
-      {
+      BillingPeriodBoundaries.new(
         from_datetime: subscription.started_at.beginning_of_day,
         to_datetime: subscription.started_at.end_of_month.end_of_day,
-        timestamp: (subscription.started_at.end_of_month + 1.day).to_i
-      }
+        timestamp: (subscription.started_at.end_of_month + 1.day).to_i,
+        charges_from_datetime: subscription.started_at.beginning_of_day,
+        charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 30.days
+      )
     end
 
     context "when plan is weekly" do
       let(:boundaries) do
-        {
+        BillingPeriodBoundaries.new(
           from_datetime: subscription.started_at.to_date.beginning_of_day,
           to_datetime: subscription.started_at.end_of_week.end_of_day,
+          charges_from_datetime: subscription.started_at.to_date.beginning_of_day,
+          charges_to_datetime: subscription.started_at.end_of_week.end_of_day,
+          charges_duration: 30.days,
           timestamp: (subscription.started_at.end_of_week + 1.day).to_i
-        }
+        )
       end
 
       before do
@@ -511,11 +520,14 @@ RSpec.describe Fees::SubscriptionService do
             let(:created_at) { subscription_at + 8.days }
 
             let(:boundaries) do
-              {
+              BillingPeriodBoundaries.new(
                 from_datetime: subscription.created_at.beginning_of_week.beginning_of_day,
                 to_datetime: subscription.created_at.end_of_week.end_of_day,
-                timestamp: (subscription.created_at.end_of_week + 1.day).to_i
-              }
+                timestamp: (subscription.created_at.end_of_week + 1.day).to_i,
+                charges_from_datetime: subscription.started_at.beginning_of_day,
+                charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+                charges_duration: 30.days
+              )
             end
 
             it "creates a full amount fee" do
@@ -584,11 +596,14 @@ RSpec.describe Fees::SubscriptionService do
 
         context "when plan is pay in advance" do
           let(:boundaries) do
-            {
+            BillingPeriodBoundaries.new(
               from_datetime: subscription.started_at.to_date.beginning_of_day,
               to_datetime: subscription.started_at.end_of_month.end_of_day,
+              charges_from_datetime: subscription.started_at.to_date.beginning_of_day,
+              charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+              charges_duration: 30.days,
               timestamp: (subscription.started_at + 1.day).to_i
-            }
+            )
           end
 
           before { plan.update(pay_in_advance: true) }
@@ -682,11 +697,14 @@ RSpec.describe Fees::SubscriptionService do
 
         context "when plan is pay in advance" do
           let(:boundaries) do
-            {
+            BillingPeriodBoundaries.new(
               from_datetime: subscription.started_at.to_date.beginning_of_day,
               to_datetime: subscription.started_at.end_of_month.end_of_day,
+              charges_from_datetime: subscription.started_at.to_date.beginning_of_day,
+              charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+              charges_duration: 30.days,
               timestamp: (subscription.started_at + 1.day).to_i
-            }
+            )
           end
 
           before { plan.update(pay_in_advance: true) }
@@ -756,11 +774,14 @@ RSpec.describe Fees::SubscriptionService do
         end
 
         let(:boundaries) do
-          {
+          BillingPeriodBoundaries.new(
             from_datetime: Time.zone.parse("2022-08-31 00:00:00"),
             to_datetime: Time.zone.parse("2022-09-30 23:59:59"),
+            charges_from_datetime: Time.zone.parse("2022-08-30 22:00:00"),
+            charges_to_datetime: Time.zone.parse("2022-09-30 21:59:59"),
+            charges_duration: 30.days,
             timestamp: Time.zone.parse("2022-10-01 00:00").to_i
-          }
+          )
         end
 
         context "when subscription is pay in advance" do
@@ -780,12 +801,16 @@ RSpec.describe Fees::SubscriptionService do
 
             context "with customer timezone" do
               let(:customer) { create(:customer, organization:, timezone: "Europe/Paris") }
+
               let(:boundaries) do
-                {
+                BillingPeriodBoundaries.new(
                   from_datetime: Time.zone.parse("2022-08-30 22:00:00"),
                   to_datetime: Time.zone.parse("2022-09-30 21:59:59"),
+                  charges_from_datetime: Time.zone.parse("2022-08-30 22:00:00"),
+                  charges_to_datetime: Time.zone.parse("2022-09-30 21:59:59"),
+                  charges_duration: 30.days,
                   timestamp: Time.zone.parse("2022-10-01 00:00").to_i
-                }
+                )
               end
 
               it "creates a fee with prorated amount based on trial" do
@@ -809,11 +834,14 @@ RSpec.describe Fees::SubscriptionService do
         let(:started_at) { Time.zone.now.beginning_of_year }
 
         let(:boundaries) do
-          {
+          BillingPeriodBoundaries.new(
             from_datetime: subscription.started_at.beginning_of_year.beginning_of_day,
             to_datetime: subscription.started_at.end_of_year.end_of_day,
+            charges_from_datetime: subscription.started_at.beginning_of_day,
+            charges_to_datetime: subscription.started_at.end_of_year.end_of_day,
+            charges_duration: 30.days,
             timestamp: (subscription.started_at.end_of_year + 1.day).to_i
-          }
+          )
         end
 
         it "creates a fee" do
@@ -833,11 +861,14 @@ RSpec.describe Fees::SubscriptionService do
 
         context "when plan is pay in advance" do
           let(:boundaries) do
-            {
+            BillingPeriodBoundaries.new(
               from_datetime: subscription.started_at.beginning_of_year.beginning_of_day,
               to_datetime: subscription.started_at.end_of_year.end_of_day,
+              charges_from_datetime: subscription.started_at.beginning_of_day,
+              charges_to_datetime: subscription.started_at.end_of_year.end_of_day,
+              charges_duration: 30.days,
               timestamp: subscription.started_at.beginning_of_year.beginning_of_day.to_i
-            }
+            )
           end
 
           before { plan.update(pay_in_advance: true) }
@@ -857,11 +888,14 @@ RSpec.describe Fees::SubscriptionService do
         let(:started_at) { Time.zone.parse("2022-03-15 00:00:00") }
 
         let(:boundaries) do
-          {
+          BillingPeriodBoundaries.new(
             from_datetime: subscription.started_at.beginning_of_day,
             to_datetime: subscription.started_at.end_of_year.end_of_day,
+            charges_from_datetime: subscription.started_at.beginning_of_day,
+            charges_to_datetime: subscription.started_at.end_of_year.end_of_day,
+            charges_duration: 30.days,
             timestamp: (subscription.started_at.end_of_year + 1.day).to_i
-          }
+          )
         end
 
         it "creates a fee" do
@@ -897,11 +931,14 @@ RSpec.describe Fees::SubscriptionService do
     let(:started_at) { Time.zone.parse("2022-01-01 00:00") }
 
     let(:boundaries) do
-      {
+      BillingPeriodBoundaries.new(
         from_datetime: subscription.started_at.beginning_of_day,
         to_datetime: subscription.started_at.end_of_month.end_of_day,
-        timestamp: (subscription.started_at.end_of_month + 1.day).to_i
-      }
+        timestamp: (subscription.started_at.end_of_month + 1.day).to_i,
+        charges_from_datetime: subscription.started_at.beginning_of_day,
+        charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 30.days
+      )
     end
 
     let(:invoice) do
@@ -949,11 +986,14 @@ RSpec.describe Fees::SubscriptionService do
 
           context "when plan is weekly" do
             let(:boundaries) do
-              {
+              BillingPeriodBoundaries.new(
                 from_datetime: subscription.started_at.to_date.end_of_week.beginning_of_day,
                 to_datetime: (subscription.started_at.end_of_week + 1.week).end_of_day,
-                timestamp: (subscription.started_at.end_of_week + 1.day).to_i
-              }
+                timestamp: (subscription.started_at.end_of_week + 1.day).to_i,
+                charges_from_datetime: subscription.started_at.beginning_of_day,
+                charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+                charges_duration: 30.days
+              )
             end
 
             let(:interval) { :weekly }
@@ -974,11 +1014,14 @@ RSpec.describe Fees::SubscriptionService do
             let(:trial_period) { 15 }
 
             let(:boundaries) do
-              {
+              BillingPeriodBoundaries.new(
                 from_datetime: subscription.started_at.beginning_of_day,
                 to_datetime: subscription.started_at.end_of_month.end_of_day,
-                timestamp: (subscription.started_at + 1.day).to_i
-              }
+                timestamp: (subscription.started_at + 1.day).to_i,
+                charges_from_datetime: subscription.started_at.beginning_of_day,
+                charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+                charges_duration: 30.days
+              )
             end
 
             it "creates a fee with prorated amount on trial period" do
@@ -993,11 +1036,14 @@ RSpec.describe Fees::SubscriptionService do
 
           context "when plan is yearly" do
             let(:boundaries) do
-              {
+              BillingPeriodBoundaries.new(
                 from_datetime: subscription.started_at.beginning_of_year.beginning_of_day,
                 to_datetime: subscription.started_at.end_of_year.end_of_day,
-                timestamp: (subscription.started_at.beginning_of_year + 1.day).to_i
-              }
+                timestamp: (subscription.started_at.beginning_of_year + 1.day).to_i,
+                charges_from_datetime: subscription.started_at.beginning_of_day,
+                charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+                charges_duration: 30.days
+              )
             end
 
             let(:interval) { :yearly }
@@ -1042,11 +1088,14 @@ RSpec.describe Fees::SubscriptionService do
     let(:started_at) { Time.zone.parse("2022-01-01 00:00:00") }
 
     let(:boundaries) do
-      {
+      BillingPeriodBoundaries.new(
         from_datetime: (subscription.started_at + 1.month).beginning_of_day,
         to_datetime: (subscription.started_at + 2.months).end_of_day,
-        timestamp: (subscription.started_at + 2.months + 1.day).to_i
-      }
+        timestamp: (subscription.started_at + 2.months + 1.day).to_i,
+        charges_from_datetime: subscription.started_at.beginning_of_day,
+        charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 30.days
+      )
     end
 
     before do
@@ -1074,11 +1123,14 @@ RSpec.describe Fees::SubscriptionService do
     end
 
     let(:boundaries) do
-      {
+      BillingPeriodBoundaries.new(
         from_datetime: subscription.started_at.beginning_of_month.beginning_of_day,
         to_datetime: (subscription.started_at + 5.days).end_of_day,
-        timestamp: (subscription.started_at + 6.days).to_i
-      }
+        timestamp: (subscription.started_at + 6.days).to_i,
+        charges_from_datetime: subscription.started_at.beginning_of_day,
+        charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 30.days
+      )
     end
 
     before do
@@ -1107,11 +1159,14 @@ RSpec.describe Fees::SubscriptionService do
         (subscription.started_at + 5.days).to_date.in_time_zone(customer.applicable_timezone).end_of_day.utc
       end
       let(:boundaries) do
-        {
+        BillingPeriodBoundaries.new(
           from_datetime:,
           to_datetime:,
-          timestamp: (subscription.started_at + 6.days).to_i
-        }
+          timestamp: (subscription.started_at + 6.days).to_i,
+          charges_from_datetime: subscription.started_at.beginning_of_day,
+          charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+          charges_duration: 30.days
+        )
       end
 
       it "creates a fee" do
@@ -1130,11 +1185,14 @@ RSpec.describe Fees::SubscriptionService do
 
     context "when plan is weekly" do
       let(:boundaries) do
-        {
+        BillingPeriodBoundaries.new(
           from_datetime: subscription.started_at.beginning_of_week.beginning_of_day,
           to_datetime: (subscription.started_at + 1.day).end_of_day,
-          timestamp: (subscription.started_at + 2.days).to_i
-        }
+          timestamp: (subscription.started_at + 2.days).to_i,
+          charges_from_datetime: subscription.started_at.beginning_of_day,
+          charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+          charges_duration: 30.days
+        )
       end
 
       before do
@@ -1235,11 +1293,14 @@ RSpec.describe Fees::SubscriptionService do
     end
 
     let(:boundaries) do
-      {
+      BillingPeriodBoundaries.new(
         from_datetime: subscription.started_at.beginning_of_day,
         to_datetime: subscription.started_at.end_of_month.end_of_day,
-        timestamp: (subscription.started_at.end_of_month + 1.day).to_i
-      }
+        timestamp: (subscription.started_at.end_of_month + 1.day).to_i,
+        charges_from_datetime: subscription.started_at.beginning_of_day,
+        charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+        charges_duration: 30.days
+      )
     end
 
     before { previous_plan.update!(pay_in_advance: false) }
@@ -1265,12 +1326,16 @@ RSpec.describe Fees::SubscriptionService do
       let(:to_datetime) do
         subscription.started_at.end_of_month.to_date.in_time_zone(customer.applicable_timezone).end_of_day.utc
       end
+
       let(:boundaries) do
-        {
+        BillingPeriodBoundaries.new(
           from_datetime:,
           to_datetime:,
-          timestamp: (subscription.started_at + 17.days).to_i
-        }
+          timestamp: (subscription.started_at + 17.days).to_i,
+          charges_from_datetime: subscription.started_at.beginning_of_day,
+          charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+          charges_duration: 30.days
+        )
       end
 
       it "creates a subscription fee" do
@@ -1326,11 +1391,14 @@ RSpec.describe Fees::SubscriptionService do
       end
 
       let(:boundaries) do
-        {
+        BillingPeriodBoundaries.new(
           from_datetime: subscription.started_at,
           to_datetime: subscription.started_at.end_of_month,
-          timestamp: subscription.started_at.to_i
-        }
+          timestamp: subscription.started_at.to_i,
+          charges_from_datetime: subscription.started_at.beginning_of_day,
+          charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+          charges_duration: 30.days
+        )
       end
 
       it "creates a subscription fee" do

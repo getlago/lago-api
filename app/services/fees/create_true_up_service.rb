@@ -6,7 +6,7 @@ module Fees
       @fee = fee
       @used_amount_cents = used_amount_cents
       @used_precise_amount_cents = used_precise_amount_cents
-      @boundaries = OpenStruct.new(fee&.properties)
+      @boundaries = BillingPeriodBoundaries.from_fee(fee)
 
       super
     end

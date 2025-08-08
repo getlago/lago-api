@@ -57,7 +57,7 @@ RSpec.describe Invoices::CreatePayInAdvanceChargeService, type: :service do
 
     before do
       allow(Charges::PayInAdvanceAggregationService).to receive(:call)
-        .with(charge:, boundaries: Hash, properties: Hash, event:, charge_filter:)
+        .with(charge:, boundaries: BillingPeriodBoundaries, properties: Hash, event:, charge_filter:)
         .and_return(aggregation_result)
 
       allow(Charges::ApplyPayInAdvanceChargeModelService).to receive(:call)

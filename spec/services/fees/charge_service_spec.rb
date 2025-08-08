@@ -25,7 +25,7 @@ RSpec.describe Fees::ChargeService do
   end
 
   let(:boundaries) do
-    {
+    BillingPeriodBoundaries.new(
       from_datetime: subscription.started_at.to_date.beginning_of_day,
       to_datetime: subscription.started_at.end_of_month.end_of_day,
       charges_from_datetime: subscription.started_at.beginning_of_day,
@@ -34,7 +34,7 @@ RSpec.describe Fees::ChargeService do
       charges_duration: (
         subscription.started_at.end_of_month.end_of_day - subscription.started_at.beginning_of_month
       ).fdiv(1.day).ceil
-    }
+    )
   end
 
   let(:invoice) do
@@ -68,7 +68,7 @@ RSpec.describe Fees::ChargeService do
             organization: subscription.organization,
             subscription:,
             code: billable_metric.code,
-            timestamp: boundaries[:charges_to_datetime] - 2.days
+            timestamp: boundaries.charges_to_datetime - 2.days
           )
         end
 
@@ -230,8 +230,8 @@ RSpec.describe Fees::ChargeService do
 
             let(:properties) do
               {
-                charges_from_datetime: boundaries[:charges_from_datetime],
-                charges_to_datetime: boundaries[:charges_to_datetime]
+                charges_from_datetime: boundaries.charges_from_datetime,
+                charges_to_datetime: boundaries.charges_to_datetime
               }
             end
 
@@ -426,8 +426,8 @@ RSpec.describe Fees::ChargeService do
 
             let(:properties) do
               {
-                charges_from_datetime: boundaries[:charges_from_datetime],
-                charges_to_datetime: boundaries[:charges_to_datetime]
+                charges_from_datetime: boundaries.charges_from_datetime,
+                charges_to_datetime: boundaries.charges_to_datetime
               }
             end
 
@@ -578,14 +578,14 @@ RSpec.describe Fees::ChargeService do
         end
 
         let(:boundaries) do
-          {
+          BillingPeriodBoundaries.new(
             from_datetime: Time.zone.parse("15 Apr 2022 00:01:00"),
             to_datetime: Time.zone.parse("30 Apr 2022 00:01:00"),
             charges_from_datetime: subscription.started_at,
             charges_to_datetime: Time.zone.parse("30 Apr 2022 00:01:00"),
             charges_duration: 30,
             timestamp: Time.zone.parse("2022-05-01T00:01:00")
-          }
+          )
         end
 
         before do
@@ -616,7 +616,7 @@ RSpec.describe Fees::ChargeService do
             code: billable_metric.code,
             organization: organization,
             external_subscription_id: subscription.external_id,
-            timestamp: boundaries[:charges_to_datetime] - 2.days,
+            timestamp: boundaries.charges_to_datetime - 2.days,
             properties: {"foo_bar" => 1}
           )
         end
@@ -712,8 +712,8 @@ RSpec.describe Fees::ChargeService do
         end
         let(:properties) do
           {
-            charges_from_datetime: boundaries[:charges_from_datetime],
-            charges_to_datetime: boundaries[:charges_to_datetime]
+            charges_from_datetime: boundaries.charges_from_datetime,
+            charges_to_datetime: boundaries.charges_to_datetime
           }
         end
 
@@ -2286,7 +2286,7 @@ RSpec.describe Fees::ChargeService do
           expect(cached_aggregation.external_subscription_id).to eq(subscription.external_id)
           expect(cached_aggregation.charge_filter_id).to be_nil
           expect(cached_aggregation.charge_id).to eq(charge.id)
-          expect(cached_aggregation.timestamp).to eq(boundaries[:from_datetime])
+          expect(cached_aggregation.timestamp).to eq(boundaries.from_datetime)
           expect(cached_aggregation.current_aggregation).to eq(0.0)
         end
       end
@@ -2455,7 +2455,7 @@ RSpec.describe Fees::ChargeService do
           organization: invoice.organization,
           subscription:,
           code: billable_metric.code,
-          timestamp: boundaries[:charges_to_datetime] - 2.days
+          timestamp: boundaries.charges_to_datetime - 2.days
         )
       end
 

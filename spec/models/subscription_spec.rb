@@ -692,10 +692,10 @@ RSpec.describe Subscription, type: :model do
         new_boundaries = subscription.adjusted_boundaries(billing_date, default_boundaries)
 
         expect(new_boundaries).not_to eq(default_boundaries)
-        expect(new_boundaries[:from_datetime].iso8601).to eq("2024-05-01T00:00:00Z")
-        expect(new_boundaries[:to_datetime].iso8601).to eq("2024-05-31T23:59:59Z")
-        expect(new_boundaries[:charges_from_datetime].iso8601).to eq("2024-05-01T00:00:00Z")
-        expect(new_boundaries[:charges_to_datetime].iso8601).to eq("2024-05-31T23:59:59Z")
+        expect(new_boundaries.from_datetime.iso8601).to eq("2024-05-01T00:00:00Z")
+        expect(new_boundaries.to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
+        expect(new_boundaries.charges_from_datetime.iso8601).to eq("2024-05-01T00:00:00Z")
+        expect(new_boundaries.charges_to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
       end
     end
   end

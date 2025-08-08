@@ -31,11 +31,11 @@ module Invoices
           organization: subscription.organization,
           invoice:,
           subscription:,
-          timestamp: boundaries[:timestamp],
-          from_datetime: boundaries[:from_datetime],
-          to_datetime: boundaries[:to_datetime],
-          charges_from_datetime: boundaries[:charges_from_datetime],
-          charges_to_datetime: boundaries[:charges_to_datetime],
+          timestamp: boundaries.timestamp,
+          from_datetime: boundaries.from_datetime,
+          to_datetime: boundaries.to_datetime,
+          charges_from_datetime: boundaries.charges_from_datetime,
+          charges_to_datetime: boundaries.charges_to_datetime,
           recurring: invoicing_reason.to_sym == :subscription_periodic,
           invoicing_reason: invoicing_reason_for_subscription(subscription)
         )
@@ -81,13 +81,14 @@ module Invoices
     def calculate_boundaries(subscription)
       date_service = date_service(subscription)
 
-      {
+      BillingPeriodBoundaries.new(
         from_datetime: date_service.from_datetime,
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
+        charges_duration: date_service.charges_duration_in_days,
         timestamp: datetime
-      }
+      )
     end
 
     def date_service(subscription)
@@ -120,14 +121,14 @@ module Invoices
       # We should calculate boundaries as if subscription was not terminated
       dates_service = Subscriptions::DatesService.new_instance(duplicate, datetime, current_usage: false)
 
-      previous_period_boundaries = {
+      previous_period_boundaries = BillingPeriodBoundaries.new(
         from_datetime: dates_service.from_datetime,
         to_datetime: dates_service.to_datetime,
         charges_from_datetime: dates_service.charges_from_datetime,
         charges_to_datetime: dates_service.charges_to_datetime,
         timestamp: datetime,
         charges_duration: dates_service.charges_duration_in_days
-      }
+      )
 
       InvoiceSubscription.matching?(subscription, previous_period_boundaries) ? boundaries : previous_period_boundaries
     end

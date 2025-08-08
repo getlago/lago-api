@@ -159,13 +159,14 @@ module Subscriptions
         current_usage: false
       )
 
-      boundaries = {
+      boundaries = BillingPeriodBoundaries.new(
         from_datetime: dates_service.from_datetime,
         to_datetime: dates_service.to_datetime,
         charges_from_datetime: dates_service.charges_from_datetime,
         charges_to_datetime: dates_service.charges_to_datetime,
-        charges_duration: dates_service.charges_duration_in_days
-      }
+        charges_duration: dates_service.charges_duration_in_days,
+        timestamp: beginning_of_period
+      )
 
       InvoiceSubscription.matching?(subscription, boundaries, recurring: false)
     end
