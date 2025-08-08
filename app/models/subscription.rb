@@ -233,14 +233,14 @@ class Subscription < ApplicationRecord
     # We should calculate boundaries as if subscription was not terminated
     dates_service = Subscriptions::DatesService.new_instance(duplicate, datetime, current_usage: false)
 
-    previous_period_boundaries = {
+    previous_period_boundaries = BillingPeriodBoundaries.new(
       from_datetime: dates_service.from_datetime,
       to_datetime: dates_service.to_datetime,
       charges_from_datetime: dates_service.charges_from_datetime,
       charges_to_datetime: dates_service.charges_to_datetime,
       timestamp: datetime,
       charges_duration: dates_service.charges_duration_in_days
-    }
+    )
 
     InvoiceSubscription.matching?(self, previous_period_boundaries) ? boundaries : previous_period_boundaries
   end

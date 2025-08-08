@@ -22,10 +22,14 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
   end
 
   let(:boundaries) do
-    {
+    BillingPeriodBoundaries.new(
+      from_datetime: subscription.started_at.beginning_of_day,
+      to_datetime: subscription.started_at.end_of_month.end_of_day,
       charges_from_datetime: subscription.started_at.beginning_of_day,
-      charges_to_datetime: subscription.started_at.end_of_month.end_of_day
-    }
+      charges_to_datetime: subscription.started_at.end_of_month.end_of_day,
+      charges_duration: subscription.started_at.end_of_month.end_of_day - subscription.started_at.beginning_of_day,
+      timestamp: subscription.started_at.end_of_month.to_i
+    )
   end
 
   let(:agg_result) { BaseService::Result.new }
@@ -45,9 +49,9 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             charge:,
             subscription:,
             boundaries: {
-              from_datetime: boundaries[:charges_from_datetime],
-              to_datetime: boundaries[:charges_to_datetime],
-              charges_duration: boundaries[:charges_duration]
+              from_datetime: boundaries.charges_from_datetime,
+              to_datetime: boundaries.charges_to_datetime,
+              charges_duration: boundaries.charges_duration
             },
             filters: {
               event:
@@ -90,9 +94,9 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               charge:,
               subscription:,
               boundaries: {
-                from_datetime: boundaries[:charges_from_datetime],
-                to_datetime: boundaries[:charges_to_datetime],
-                charges_duration: boundaries[:charges_duration]
+                from_datetime: boundaries.charges_from_datetime,
+                to_datetime: boundaries.charges_to_datetime,
+                charges_duration: boundaries.charges_duration
               },
               filters: {
                 event:,
@@ -136,9 +140,9 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               charge:,
               subscription:,
               boundaries: {
-                from_datetime: boundaries[:charges_from_datetime],
-                to_datetime: boundaries[:charges_to_datetime],
-                charges_duration: boundaries[:charges_duration]
+                from_datetime: boundaries.charges_from_datetime,
+                to_datetime: boundaries.charges_to_datetime,
+                charges_duration: boundaries.charges_duration
               },
               filters: {
                 event:,
@@ -178,9 +182,9 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
               charge:,
               subscription:,
               boundaries: {
-                from_datetime: boundaries[:charges_from_datetime],
-                to_datetime: boundaries[:charges_to_datetime],
-                charges_duration: boundaries[:charges_duration]
+                from_datetime: boundaries.charges_from_datetime,
+                to_datetime: boundaries.charges_to_datetime,
+                charges_duration: boundaries.charges_duration
               },
               filters: {
                 event:,
@@ -215,9 +219,9 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             charge:,
             subscription:,
             boundaries: {
-              from_datetime: boundaries[:charges_from_datetime],
-              to_datetime: boundaries[:charges_to_datetime],
-              charges_duration: boundaries[:charges_duration]
+              from_datetime: boundaries.charges_from_datetime,
+              to_datetime: boundaries.charges_to_datetime,
+              charges_duration: boundaries.charges_duration
             },
             filters: {
               event:
@@ -247,9 +251,9 @@ RSpec.describe Charges::PayInAdvanceAggregationService, type: :service do
             charge:,
             subscription:,
             boundaries: {
-              from_datetime: boundaries[:charges_from_datetime],
-              to_datetime: boundaries[:charges_to_datetime],
-              charges_duration: boundaries[:charges_duration]
+              from_datetime: boundaries.charges_from_datetime,
+              to_datetime: boundaries.charges_to_datetime,
+              charges_duration: boundaries.charges_duration
             },
             filters: {
               event:

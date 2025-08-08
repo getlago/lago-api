@@ -92,7 +92,7 @@ module Fees
         invoiceable: charge,
         units: charge_model_result.units,
         total_aggregated_units: charge_model_result.units,
-        properties: boundaries,
+        properties: boundaries.to_h,
         events_count: charge_model_result.count,
         charge_filter_id: charge_filter&.id,
         pay_in_advance_event_id: event.id,
@@ -143,14 +143,14 @@ module Fees
     end
 
     def boundaries
-      @boundaries ||= {
+      @boundaries ||= BillingPeriodBoundaries.new(
         from_datetime: date_service.from_datetime,
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
         charges_duration: date_service.charges_duration_in_days,
         timestamp: billing_at
-      }
+      )
     end
 
     def aggregate(properties:, charge_filter: nil)

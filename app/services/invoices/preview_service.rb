@@ -102,14 +102,14 @@ module Invoices
         current_usage: subscription.persisted? && subscription.terminated? && subscription.upgraded?
       )
 
-      boundaries = {
+      boundaries = BillingPeriodBoundaries.new(
         from_datetime: date_service.from_datetime,
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
         timestamp: billing_time,
         charges_duration: date_service.charges_duration_in_days
-      }
+      )
 
       subscription.adjusted_boundaries(billing_time, boundaries)
     end
@@ -175,7 +175,7 @@ module Invoices
               cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
                 subscription:,
                 charge:,
-                to_datetime: boundaries[:charges_to_datetime]
+                to_datetime: boundaries.charges_to_datetime
               )
 
               Fees::ChargeService
