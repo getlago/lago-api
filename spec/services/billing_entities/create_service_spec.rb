@@ -113,6 +113,7 @@ RSpec.describe BillingEntities::CreateService do
             document_number_prefix: "ENT-1234",
             document_numbering: "per_customer",
             email: "test@lago.com",
+            einvoicing: true,
             finalize_zero_amount_invoice: true,
             legal_name: "Legal Name",
             legal_number: "Legal Number",
@@ -149,6 +150,7 @@ RSpec.describe BillingEntities::CreateService do
           expect(result.billing_entity.document_number_prefix).to eq("ENT-1234")
           expect(result.billing_entity.document_numbering).to eq("per_customer")
           expect(result.billing_entity.email).to eq("test@lago.com")
+          expect(result.billing_entity.einvoicing).to eq(true)
           expect(result.billing_entity.finalize_zero_amount_invoice).to eq(true)
           expect(result.billing_entity.legal_name).to eq("Legal Name")
           expect(result.billing_entity.legal_number).to eq("Legal Number")

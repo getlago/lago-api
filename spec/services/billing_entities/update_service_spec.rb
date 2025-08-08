@@ -21,6 +21,7 @@ RSpec.describe BillingEntities::UpdateService do
       legal_number: "1234",
       tax_identification_number: "2246",
       email: "foo@bar.com",
+      einvoicing: true,
       address_line1: "Line 1",
       address_line2: "Line 2",
       state: "Foobar",
@@ -48,6 +49,7 @@ RSpec.describe BillingEntities::UpdateService do
       expect(result.billing_entity.legal_number).to eq("1234")
       expect(result.billing_entity.tax_identification_number).to eq("2246")
       expect(result.billing_entity.email).to eq("foo@bar.com")
+      expect(result.billing_entity.einvoicing).to eq(true)
       expect(result.billing_entity.address_line1).to eq("Line 1")
       expect(result.billing_entity.address_line2).to eq("Line 2")
       expect(result.billing_entity.state).to eq("Foobar")
