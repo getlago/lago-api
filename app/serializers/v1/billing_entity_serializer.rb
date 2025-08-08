@@ -17,6 +17,7 @@ module V1
         state: model.state,
         zipcode: model.zipcode,
         email: model.email,
+        einvoicing: model.einvoicing,
         legal_name: model.legal_name,
         legal_number: model.legal_number,
         timezone: model.timezone,

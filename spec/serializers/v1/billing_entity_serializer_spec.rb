@@ -31,6 +31,7 @@ RSpec.describe V1::BillingEntitySerializer do
     expect(billing_entity_serialized.fetch("state")).to eq(billing_entity.state)
     expect(billing_entity_serialized.fetch("zipcode")).to eq(billing_entity.zipcode)
     expect(billing_entity_serialized.fetch("email")).to eq(billing_entity.email)
+    expect(billing_entity_serialized.fetch("einvoicing")).to eq(billing_entity.einvoicing)
     expect(billing_entity_serialized.fetch("legal_name")).to eq(billing_entity.legal_name)
     expect(billing_entity_serialized.fetch("legal_number")).to eq(billing_entity.legal_number)
     expect(billing_entity_serialized.fetch("timezone")).to eq(billing_entity.timezone)
