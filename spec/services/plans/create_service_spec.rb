@@ -8,7 +8,7 @@ RSpec.describe Plans::CreateService, type: :service do
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  describe "create" do
+  describe "#call" do
     subject(:result) { plans_service.call }
 
     let(:plan_name) { "Some plan name" }
@@ -264,6 +264,22 @@ RSpec.describe Plans::CreateService, type: :service do
       )
     end
 
+    it "creates fixed charges" do
+      plan = result.plan
+      expect(plan.fixed_charges.count).to eq(1)
+
+      fixed_charge = plan.fixed_charges.first
+      expect(fixed_charge).to have_attributes(
+        organization_id: organization.id,
+        add_on_id: add_on.id,
+        charge_model: "standard",
+        pay_in_advance: false,
+        prorated: false,
+        units: 0,
+        properties: {"amount" => "0"}
+      )
+    end
+
     it "calls SegmentTrackJob" do
       plan = plans_service.call.plan
 
@@ -284,10 +300,49 @@ RSpec.describe Plans::CreateService, type: :service do
           nb_percentage_charges: 0,
           nb_graduated_charges: 1,
           nb_package_charges: 0,
+          nb_fixed_charges: 1,
+          nb_standard_fixed_charges: 1,
+          nb_graduated_fixed_charges: 0,
+          nb_volume_fixed_charges: 0,
           organization_id: plan.organization_id,
           parent_id: nil
         }
       )
+    end
+
+    describe "bill_fixed_charges_monthly" do
+      context "when plan is yearly" do
+        let(:create_args) do
+          super().merge(interval: "yearly", bill_fixed_charges_monthly: true)
+        end
+
+        it "persists bill_fixed_charges_monthly" do
+          plan = result.plan
+          expect(plan.bill_fixed_charges_monthly).to eq(true)
+        end
+
+        context "when not provided" do
+          let(:create_args) do
+            super().merge(interval: "yearly").except(:bill_fixed_charges_monthly)
+          end
+
+          it "defaults to false" do
+            plan = result.plan
+            expect(plan.bill_fixed_charges_monthly).to eq(false)
+          end
+        end
+      end
+
+      context "when plan is monthly" do
+        let(:create_args) do
+          super().merge(interval: "monthly", bill_fixed_charges_monthly: true)
+        end
+
+        it "ignores the flag and sets it to nil" do
+          plan = result.plan
+          expect(plan.bill_fixed_charges_monthly).to be_nil
+        end
+      end
     end
 
     it "produces an activity log" do
