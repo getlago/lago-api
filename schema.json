@@ -27132,6 +27132,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "forecasted_usage",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -39575,6 +39581,12 @@
             },
             {
               "name": "analytics_dashboards",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "forecasted_usage",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
