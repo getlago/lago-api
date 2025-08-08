@@ -195,7 +195,8 @@ RSpec.describe Fees::ProjectionService do
           charge: charge,
           aggregation_result: aggregation_result,
           properties: charge_properties,
-          period_ratio: expected_period_ratio
+          period_ratio: expected_period_ratio,
+          calculate_projected_usage: true
         )
       end
     end
@@ -223,6 +224,7 @@ RSpec.describe Fees::ProjectionService do
       end
 
       it "uses charge filter properties and filters" do
+        allow(service).to receive(:period_ratio).and_return(0.5)
         aggregator = instance_double("Aggregator", aggregate: aggregation_result)
         allow(BillableMetrics::AggregationFactory).to receive(:new_instance).and_return(aggregator)
         service.call
@@ -246,7 +248,8 @@ RSpec.describe Fees::ProjectionService do
           charge: charge,
           aggregation_result: aggregation_result,
           properties: {"key" => "value"},
-          period_ratio: anything
+          period_ratio: 0.5,
+          calculate_projected_usage: true
         )
 
         service.call

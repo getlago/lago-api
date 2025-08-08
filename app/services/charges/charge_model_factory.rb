@@ -2,13 +2,14 @@
 
 module Charges
   class ChargeModelFactory
-    def self.new_instance(charge:, aggregation_result:, properties:, period_ratio: nil)
+    def self.new_instance(charge:, aggregation_result:, properties:, period_ratio: nil, calculate_projected_usage: false)
       charge_model_class = charge_model_class(charge:)
       common_args = {
         charge:,
         aggregation_result:,
         properties:,
-        period_ratio:
+        period_ratio:,
+        calculate_projected_usage:
       }
 
       # TODO(pricing_group_keys): remove after deprecation of grouped_by
