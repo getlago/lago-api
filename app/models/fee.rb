@@ -118,6 +118,14 @@ class Fee < ApplicationRecord
     subscription.plan.name
   end
 
+  def item_source
+    return fixed_charge_add_on.code if fixed_charge?
+    return add_on.code if add_on?
+    return "consumed_credits" if credit?
+
+    subscription&.plan&.code.presence || billable_metric&.code
+  end
+
   def item_description
     return billable_metric.description if charge?
     return add_on.description if add_on?

@@ -327,6 +327,58 @@ RSpec.describe Fee, type: :model do
     end
   end
 
+  describe "#item_source" do
+    context "when it is a subscription fee" do
+      let(:subscription) { create(:subscription) }
+
+      it "returns subscription" do
+        expect(described_class.new(subscription:, fee_type: "subscription").item_source)
+          .to eq(subscription.plan.code)
+      end
+    end
+
+    context "when it is a charge fee" do
+      let(:charge) { create(:standard_charge) }
+
+      it "returns billable metric" do
+        expect(described_class.new(charge:, fee_type: "charge").item_source)
+          .to eq(charge.billable_metric.code)
+      end
+    end
+
+    context "when it is a fixed charge fee" do
+      let(:fee) { create(:fixed_charge_fee) }
+
+      it "returns fixed charge" do
+        expect(fee.item_source).to eq(fee.fixed_charge.add_on.code)
+      end
+    end
+
+    context "when it is a add-on fee" do
+      let(:applied_add_on) { create(:applied_add_on) }
+
+      it "returns add on" do
+        expect(described_class.new(applied_add_on:, fee_type: "add_on").item_source)
+          .to eq(applied_add_on.add_on.code)
+      end
+    end
+
+    context "when it is a credit fee" do
+      it "returns wallet transaction" do
+        expect(described_class.new(fee_type: "credit").item_source).to eq("consumed_credits")
+      end
+    end
+
+    context "when it is an pay_in_advance charge fee" do
+      let(:charge) { create(:standard_charge, :pay_in_advance) }
+
+      it "returns billable metric" do
+        expect(described_class.new(charge:, fee_type: "charge").item_source)
+          .to eq(charge.billable_metric.code)
+      end
+    end
+  end
+
   describe "#item_id" do
     context "when it is a subscription fee" do
       let(:subscription) { create(:subscription) }

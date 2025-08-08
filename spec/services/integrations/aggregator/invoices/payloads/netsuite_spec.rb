@@ -174,7 +174,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 "custcol_service_period_date_from" =>
                   fee_sub.properties["from_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
                 "custcol_service_period_date_to" => fee_sub.properties["to_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
-                "description" => fee_sub.item_name
+                "description" => fee_sub.item_name,
+                "item_source" => fee_sub.item_source
               },
               {
                 "item" => "4",
@@ -187,7 +188,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                   minimum_commitment_fee.properties["from_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
                 "custcol_service_period_date_to" =>
                   minimum_commitment_fee.properties["to_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
-                "description" => minimum_commitment_fee.item_name
+                "description" => minimum_commitment_fee.item_name,
+                "item_source" => minimum_commitment_fee.item_source
               },
               {
                 "item" => "m2",
@@ -200,7 +202,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                   charge_fee.properties["charges_from_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
                 "custcol_service_period_date_to" =>
                   charge_fee.properties["charges_to_datetime"]&.to_date&.strftime("%-m/%-d/%Y"),
-                "description" => charge_fee.item_name
+                "description" => charge_fee.item_name,
+                "item_source" => charge_fee.item_source
               },
               {
                 "item" => "2",
@@ -208,7 +211,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 "quantity" => 1,
                 "rate" => -20.0,
                 "taxdetailsreference" => "coupon_item",
-                "description" => invoice.credits.coupon_kind.map(&:item_name).join(",")
+                "description" => invoice.credits.coupon_kind.map(&:item_name).join(","),
+                "item_source" => "coupons"
               },
               {
                 "item" => "6",
@@ -216,7 +220,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 "quantity" => 1,
                 "rate" => -40.0,
                 "taxdetailsreference" => "credit_item",
-                "description" => "Prepaid credits"
+                "description" => "Prepaid credits",
+                "item_source" => "prepaid_credits"
               },
               {
                 "item" => "6",
@@ -224,7 +229,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 "quantity" => 1,
                 "rate" => -1.0,
                 "taxdetailsreference" => "credit_item_progressive_billing",
-                "description" => invoice.credits.progressive_billing_invoice_kind.map(&:item_name).join(",")
+                "description" => invoice.credits.progressive_billing_invoice_kind.map(&:item_name).join(","),
+                "item_source" => "progressive_billing_credits"
               },
               {
                 "item" => "1", # Fallback item instead of credit note
@@ -232,7 +238,8 @@ RSpec.describe Integrations::Aggregator::Invoices::Payloads::Netsuite do
                 "quantity" => 1,
                 "rate" => -60.0,
                 "taxdetailsreference" => "credit_note_item",
-                "description" => invoice.credits.credit_note_kind.map(&:item_name).join(",")
+                "description" => invoice.credits.credit_note_kind.map(&:item_name).join(","),
+                "item_source" => "credit_note_credits"
               }
             ]
           }
