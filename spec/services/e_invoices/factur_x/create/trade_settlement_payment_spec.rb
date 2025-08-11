@@ -35,12 +35,12 @@ RSpec.describe EInvoices::FacturX::Create::TradeSettlementPayment, type: :servic
       let(:type) { described_class::PREPAID }
 
       it "contains section name as comment" do
-        expect(subject).to contains_xml_comment("Payment Means: Prepaid credit")
+        expect(subject).to contains_xml_comment("Payment Means: Prepaid credits")
       end
 
       it "have the payment code and information" do
         expect(subject).to contains_xml_node("#{root}/ram:TypeCode").with_value(type)
-        expect(subject).to contains_xml_node("#{root}/ram:Information").with_value("Prepaid credit of USD 10.00 applied")
+        expect(subject).to contains_xml_node("#{root}/ram:Information").with_value("Prepaid credits of USD 10.00 applied")
       end
     end
 
@@ -48,12 +48,12 @@ RSpec.describe EInvoices::FacturX::Create::TradeSettlementPayment, type: :servic
       let(:type) { described_class::CREDIT_NOTE }
 
       it "contains section name as comment" do
-        expect(subject).to contains_xml_comment("Payment Means: Credit note")
+        expect(subject).to contains_xml_comment("Payment Means: Credit notes")
       end
 
       it "have the payment code and information" do
         expect(subject).to contains_xml_node("#{root}/ram:TypeCode").with_value(type)
-        expect(subject).to contains_xml_node("#{root}/ram:Information").with_value("Credit note of USD 10.00 applied")
+        expect(subject).to contains_xml_node("#{root}/ram:Information").with_value("Credit notes of USD 10.00 applied")
       end
     end
   end
