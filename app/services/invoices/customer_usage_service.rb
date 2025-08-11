@@ -2,7 +2,17 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    def initialize(customer:, subscription:, timestamp: Time.current, apply_taxes: true, with_cache: true, max_to_datetime: nil, calculate_projected_usage: false)
+
+    def initialize(
+      customer:,
+      subscription:,
+      timestamp: Time.current,
+      apply_taxes: true,
+      with_cache: true,
+      max_to_datetime: nil,
+      calculate_projected_usage: false,
+      with_zero_units_filters: true
+    )
       super
 
       @apply_taxes = apply_taxes
@@ -11,6 +21,7 @@ module Invoices
       @timestamp = timestamp # To not set this value if without disabling the cache
       @with_cache = with_cache
       @calculate_projected_usage = calculate_projected_usage
+      @with_zero_units_filters = with_zero_units_filters
 
       # NOTE: used to force charges_to_datetime boundary
       @max_to_datetime = max_to_datetime
@@ -45,7 +56,8 @@ module Invoices
 
     private
 
-    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime, :calculate_projected_usage
+    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime, :calculate_projected_usage, :with_zero_units_filters
+
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
     delegate :billing_entity, to: :customer
@@ -60,7 +72,7 @@ module Invoices
         organization:,
         billing_entity:,
         customer:,
-        issuing_date: boundaries[:issuing_date],
+        issuing_date: boundaries.issuing_date,
         currency: plan.amount_currency
       )
 
@@ -98,15 +110,24 @@ module Invoices
       cache_middleware = Subscriptions::ChargeCacheMiddleware.new(
         subscription:,
         charge:,
-        to_datetime: boundaries[:charges_to_datetime],
+        to_datetime: boundaries.charges_to_datetime,
         cache: with_cache
       )
 
       applied_boundaries = boundaries
-      applied_boundaries = applied_boundaries.merge(charges_to_datetime: max_to_datetime) if max_to_datetime
+      applied_boundaries = boundaries.dup.tap { it.charges_to_datetime = max_to_datetime } if max_to_datetime
 
       Fees::ChargeService
-        .call(invoice:, charge:, subscription:, boundaries: applied_boundaries, context: :current_usage, cache_middleware:, calculate_projected_usage:)
+        .call(
+          invoice:,
+          charge:,
+          subscription:,
+          boundaries: applied_boundaries,
+          context: :current_usage,
+          cache_middleware:,
+          calculate_projected_usage:,
+          with_zero_units_filters:
+        )
         .raise_if_error!
         .fees
     end
@@ -120,14 +141,15 @@ module Invoices
         current_usage: true
       )
 
-      @boundaries = {
+      @boundaries = BillingPeriodBoundaries.new(
         from_datetime: date_service.from_datetime,
         to_datetime: date_service.to_datetime,
         charges_from_datetime: date_service.charges_from_datetime,
         charges_to_datetime: date_service.charges_to_datetime,
         issuing_date: date_service.next_end_of_period,
-        charges_duration: date_service.charges_duration_in_days
-      }
+        charges_duration: date_service.charges_duration_in_days,
+        timestamp:
+      )
     end
 
     def compute_amounts
@@ -177,8 +199,8 @@ module Invoices
 
     def format_usage
       SubscriptionUsage.new(
-        from_datetime: boundaries[:charges_from_datetime].iso8601,
-        to_datetime: boundaries[:charges_to_datetime].iso8601,
+        from_datetime: boundaries.charges_from_datetime.iso8601,
+        to_datetime: boundaries.charges_to_datetime.iso8601,
         issuing_date: invoice.issuing_date.iso8601,
         currency: invoice.currency,
         amount_cents: invoice.fees_amount_cents,

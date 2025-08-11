@@ -2,19 +2,31 @@
 
 module Fees
   class ChargeService < BaseService
-    def initialize(invoice:, charge:, subscription:, boundaries:, context: nil, cache_middleware: nil, bypass_aggregation: false, apply_taxes: false, calculate_projected_usage: false)
+
+    def initialize(
+      invoice:,
+      charge:,
+      subscription:,
+      boundaries:,
+      context: nil,
+      cache_middleware: nil,
+      bypass_aggregation: false,
+      apply_taxes: false,
+      calculate_projected_usage: false,
+      with_zero_units_filters: true
+    )
       @invoice = invoice
       @charge = charge
       @subscription = subscription
-      @boundaries = OpenStruct.new(boundaries)
+      @boundaries = boundaries
       @currency = subscription.plan.amount.currency
       @apply_taxes = apply_taxes
       @calculate_projected_usage = calculate_projected_usage
-
+      @with_zero_units_filters = with_zero_units_filters
       @context = context
       @current_usage = context == :current_usage
       @cache_middleware = cache_middleware || Subscriptions::ChargeCacheMiddleware.new(
-        subscription:, charge:, to_datetime: boundaries[:charges_to_datetime], cache: false
+        subscription:, charge:, to_datetime: boundaries.charges_to_datetime, cache: false
       )
 
       # Allow the service to ignore events aggregation
@@ -57,7 +69,7 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes, :calculate_projected_usage
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -86,7 +98,11 @@ module Fees
           return []
         end
 
-        charge_model_result.grouped_results.map { |amount_result| init_fee(amount_result, properties:, charge_filter:) }
+        charge_model_result.grouped_results.map do |amount_result|
+          next if current_usage && charge_filter && amount_result.units.zero? && !with_zero_units_filters
+
+          init_fee(amount_result, properties:, charge_filter:)
+        end.compact
       end
 
       result.fees.concat(fees.compact)
