@@ -10,5 +10,3 @@ RSpec.describe Types::ChargeModels::VolumeRange do
   it { is_expected.to have_field(:flat_amount).of_type("String!") }
   it { is_expected.to have_field(:per_unit_amount).of_type("String!") }
 end
-
-

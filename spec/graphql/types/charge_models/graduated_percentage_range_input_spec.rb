@@ -10,5 +10,3 @@ RSpec.describe Types::ChargeModels::GraduatedPercentageRangeInput do
   it { is_expected.to accept_argument(:flat_amount).of_type("String!") }
   it { is_expected.to accept_argument(:rate).of_type("String!") }
 end
-
-
