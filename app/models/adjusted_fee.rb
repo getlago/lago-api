@@ -5,8 +5,18 @@ class AdjustedFee < ApplicationRecord
   belongs_to :subscription
   belongs_to :fee, optional: true
   belongs_to :charge, optional: true
+  belongs_to :charge_with_discarded,
+             -> { with_discarded },
+             class_name: 'Charge',
+             foreign_key: :charge_id,
+             optional: true
   belongs_to :group, optional: true
   belongs_to :charge_filter, optional: true
+  belongs_to :charge_filter_with_discarded,
+             -> { with_discarded },
+             class_name: 'ChargeFilter',
+             foreign_key: :charge_filter_id,
+             optional: true
   belongs_to :organization
 
   ADJUSTED_FEE_TYPES = [
