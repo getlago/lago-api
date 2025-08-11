@@ -20,10 +20,14 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
         units: 2,
         description: "desc-123",
         invoiceDisplayName: "fee-123",
-        taxCodes: [tax.code]
+        taxCodes: [tax.code],
+        fromDatetime: current_time.utc.iso8601(3),
+        toDatetime: current_time.utc.iso8601(3)
       },
       {
-        addOnId: add_on_second.id
+        addOnId: add_on_second.id,
+        fromDatetime: current_time.utc.iso8601(3),
+        toDatetime: current_time.utc.iso8601(3)
       }
     ]
   end
@@ -60,54 +64,52 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
   it_behaves_like "requires permission", "invoices:create"
 
   it "creates one-off invoice" do
-    travel_to(current_time) do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query: mutation,
-        variables: {
-          input: {
-            customerId: customer.id,
-            currency:,
-            fees:
+    result = execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: mutation,
+      variables: {
+        input: {
+          customerId: customer.id,
+          currency:,
+          fees:
+        }
+      }
+    )
+
+    result_data = result["data"]["createInvoice"]
+
+    aggregate_failures do
+      expect(result_data).to include(
+        "id" => String,
+        "issuingDate" => Time.current.to_date.to_s,
+        "invoiceType" => "one_off",
+        "feesAmountCents" => "2800",
+        "taxesAmountCents" => "560",
+        "totalAmountCents" => "3360",
+        "taxesRate" => 20,
+        "currency" => "EUR"
+      )
+      expect(result_data["appliedTaxes"].map { |t| t["taxCode"] }).to contain_exactly(tax.code)
+      expect(result_data["fees"]).to contain_exactly(
+        {
+          "units" => 2.0,
+          "preciseUnitAmount" => 12.0,
+          "properties" => {
+            "fromDatetime" => current_time.to_time.utc.iso8601,
+            "toDatetime" => current_time.to_time.utc.iso8601
+          }
+        },
+        {
+          "units" => 1.0,
+          "preciseUnitAmount" => 4.0,
+          "properties" => {
+            "fromDatetime" => current_time.to_time.utc.iso8601,
+            "toDatetime" => current_time.to_time.utc.iso8601
           }
         }
       )
-
-      result_data = result["data"]["createInvoice"]
-
-      aggregate_failures do
-        expect(result_data).to include(
-          "id" => String,
-          "issuingDate" => Time.current.to_date.to_s,
-          "invoiceType" => "one_off",
-          "feesAmountCents" => "2800",
-          "taxesAmountCents" => "560",
-          "totalAmountCents" => "3360",
-          "taxesRate" => 20,
-          "currency" => "EUR"
-        )
-        expect(result_data["appliedTaxes"].map { |t| t["taxCode"] }).to contain_exactly(tax.code)
-        expect(result_data["fees"]).to contain_exactly(
-          {
-            "units" => 2.0,
-            "preciseUnitAmount" => 12.0,
-            "properties" => {
-              "fromDatetime" => current_time.to_time.utc.iso8601,
-              "toDatetime" => current_time.to_time.utc.iso8601
-            }
-          },
-          {
-            "units" => 1.0,
-            "preciseUnitAmount" => 4.0,
-            "properties" => {
-              "fromDatetime" => current_time.to_time.utc.iso8601,
-              "toDatetime" => current_time.to_time.utc.iso8601
-            }
-          }
-        )
-      end
     end
   end
 end

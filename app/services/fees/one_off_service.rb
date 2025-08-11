@@ -146,7 +146,7 @@ module Fees
         fee[:to_datetime] &&
         Utils::Datetime.valid_format?(fee[:from_datetime]) &&
         Utils::Datetime.valid_format?(fee[:to_datetime]) &&
-        from_datetime(fee) < to_datetime(fee)
+        from_datetime(fee) <= to_datetime(fee)
     end
 
     def from_datetime(fee)
