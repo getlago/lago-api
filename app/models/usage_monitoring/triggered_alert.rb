@@ -5,6 +5,7 @@ module UsageMonitoring
     belongs_to :organization
     belongs_to :subscription
     belongs_to :alert,
+      -> { with_discarded },
       foreign_key: "usage_monitoring_alert_id",
       class_name: "UsageMonitoring::Alert"
   end
