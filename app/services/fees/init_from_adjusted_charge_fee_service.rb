@@ -25,7 +25,7 @@ module Fees
 
     attr_reader :adjusted_fee, :boundaries, :properties
 
-    delegate :charge, :charge_filter, :invoice, :subscription, to: :adjusted_fee
+    delegate :invoice, :subscription, to: :adjusted_fee
 
     def init_adjusted_fee
       currency = invoice.total_amount.currency
@@ -119,6 +119,20 @@ module Fees
         unit_amount:,
         applied_pricing_unit: charge.applied_pricing_unit
       )
+    end
+
+    def charge
+      return adjusted_fee.charge if adjusted_fee.charge
+      return adjusted_fee.charge_with_discarded if invoice.voided_invoice_id.present?
+
+      nil
+    end
+
+    def charge_filter
+      return adjusted_fee.charge_filter if adjusted_fee.charge_filter
+      return adjusted_fee.charge_filter_with_discarded if invoice.voided_invoice_id.present?
+
+      nil
     end
   end
 end
