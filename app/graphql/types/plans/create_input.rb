@@ -18,6 +18,7 @@ module Types
       argument :trial_period, Float, required: false
 
       argument :charges, [Types::Charges::Input]
+      argument :fixed_charges, [Types::FixedCharges::Input]
       argument :minimum_commitment, Types::Commitments::Input, required: false
       argument :usage_thresholds, [Types::UsageThresholds::Input], required: false
 
