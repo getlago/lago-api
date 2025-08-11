@@ -10,4 +10,3 @@ RSpec.describe Types::FixedCharges::ChargeModelEnum do
       .to match_array(%w[standard graduated volume])
   end
 end
-
