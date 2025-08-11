@@ -16,14 +16,14 @@ module Fees
       @invoice = invoice
       @charge = charge
       @subscription = subscription
-      @boundaries = OpenStruct.new(boundaries)
+      @boundaries = boundaries
       @currency = subscription.plan.amount.currency
       @apply_taxes = apply_taxes
       @with_zero_units_filters = with_zero_units_filters
       @context = context
       @current_usage = context == :current_usage
       @cache_middleware = cache_middleware || Subscriptions::ChargeCacheMiddleware.new(
-        subscription:, charge:, to_datetime: boundaries[:charges_to_datetime], cache: false
+        subscription:, charge:, to_datetime: boundaries.charges_to_datetime, cache: false
       )
 
       # Allow the service to ignore events aggregation

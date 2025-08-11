@@ -114,14 +114,14 @@ module Invoices
         current_usage: true
       )
 
-      @boundaries = {
+      @boundaries = BillingPeriodBoundaries.new(
         from_datetime: invoice_subscription.from_datetime,
         to_datetime: invoice_subscription.to_datetime,
         charges_from_datetime: invoice_subscription.charges_from_datetime,
         charges_to_datetime: invoice_subscription.charges_to_datetime,
         timestamp: timestamp,
         charges_duration: date_service.charges_duration_in_days
-      }
+      )
     end
 
     def create_applied_usage_thresholds

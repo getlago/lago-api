@@ -5,7 +5,7 @@ module Fees
     def initialize(invoice:, subscription:, boundaries:, context: nil)
       @invoice = invoice
       @subscription = subscription
-      @boundaries = OpenStruct.new(boundaries)
+      @boundaries = boundaries
       @context = context
 
       super(nil)
