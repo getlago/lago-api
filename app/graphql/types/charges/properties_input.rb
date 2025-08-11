@@ -26,7 +26,7 @@ module Types
       argument :rate, String, required: false
 
       # NOTE: Volume charge model
-      argument :volume_ranges, [Types::Charges::VolumeRangeInput], required: false
+      argument :volume_ranges, [Types::ChargeModels::VolumeRangeInput], required: false
 
       # NOTE: properties for the custom aggregation
       argument :custom_properties, GraphQL::Types::JSON, required: false
