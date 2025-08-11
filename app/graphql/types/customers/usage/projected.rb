@@ -64,7 +64,7 @@ module Types
         end
 
         def project_fees(fees)
-          ::Fees::ProjectionService.call(fees: fees).raise_if_error!.projected_amount_cents
+          ::Fees::ProjectionService.call!(fees: fees).projected_amount_cents
         end
       end
     end

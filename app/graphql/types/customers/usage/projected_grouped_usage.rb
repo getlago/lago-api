@@ -59,7 +59,7 @@ module Types
         private
 
         def projection_result
-          @projection_result ||= ::Fees::ProjectionService.call(fees: object).raise_if_error!
+          @projection_result ||= ::Fees::ProjectionService.call!(fees: object)
         end
       end
     end

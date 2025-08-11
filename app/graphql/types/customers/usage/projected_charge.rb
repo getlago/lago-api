@@ -92,7 +92,7 @@ module Types
           filter_groups.sum do |filter_fee_group|
             next zero_value unless filter_fee_group.first.charge_filter_id
 
-            result = ::Fees::ProjectionService.call(fees: filter_fee_group).raise_if_error!
+            result = ::Fees::ProjectionService.call!(fees: filter_fee_group)
             result.public_send(attribute)
           end
         end
@@ -101,7 +101,7 @@ module Types
           grouped_fees = object.group_by(&:grouped_by).values
 
           grouped_fees.sum do |group_fee_list|
-            result = ::Fees::ProjectionService.call(fees: group_fee_list).raise_if_error!
+            result = ::Fees::ProjectionService.call!(fees: group_fee_list)
             result.public_send(attribute)
           end
         end
@@ -111,7 +111,7 @@ module Types
         end
 
         def projection_result
-          @projection_result ||= ::Fees::ProjectionService.call(fees: object).raise_if_error!
+          @projection_result ||= ::Fees::ProjectionService.call!(fees: object)
         end
       end
     end
