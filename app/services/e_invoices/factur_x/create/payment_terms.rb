@@ -17,7 +17,7 @@ module EInvoices
         private
 
         def description
-          "#{I18n.t("invoice.payment_term")} #{I18n.t("invoice.payment_term_days", net_payment_term: invoice.billing_entity.net_payment_term)}"
+          "#{I18n.t("invoice.payment_term")} #{I18n.t("invoice.payment_term_days", net_payment_term: invoice.net_payment_term)}"
         end
       end
     end

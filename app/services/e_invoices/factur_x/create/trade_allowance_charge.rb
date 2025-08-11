@@ -34,7 +34,7 @@ module EInvoices
         attr_accessor :tax_rate, :amount
 
         def reason
-          "Discount #{percent(tax_rate)} portion"
+          I18n.t("invoice.e_invoicing.discount_reason", tax_rate: percent(tax_rate))
         end
       end
     end

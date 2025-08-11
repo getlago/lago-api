@@ -57,7 +57,7 @@ module Invoices
       return if invoice.billing_entity&.country != "FR"
 
       xml_file = Tempfile.new([invoice.number, ".xml"])
-      xml_file.write(EInvoices::FacturX::CreateService.call(invoice:))
+      xml_file.write(EInvoices::FacturX::CreateService.call(invoice:).xml)
       xml_file.flush
 
       Invoices::AddAttachmentToPdfService.call(file: pdf_file, attachment: xml_file)

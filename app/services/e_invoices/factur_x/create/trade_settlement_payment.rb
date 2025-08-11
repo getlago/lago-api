@@ -31,20 +31,20 @@ module EInvoices
         def information
           case type
           when STANDARD
-            "Standard payment"
+            payment_label
           when PREPAID, CREDIT_NOTE
-            "#{payment_label} of #{invoice.currency} #{amount} applied"
+            I18n.t("invoice.e_invoicing.payment_information", payment_label:, currency: invoice.currency, amount:)
           end
         end
 
         def payment_label
           case type
           when STANDARD
-            "Standard payment"
+            I18n.t("invoice.e_invoicing.standard_payment")
           when PREPAID
-            "Prepaid credit"
+            I18n.t("invoice.prepaid_credits")
           when CREDIT_NOTE
-            "Credit note"
+            I18n.t("invoice.credit_notes")
           end
         end
       end

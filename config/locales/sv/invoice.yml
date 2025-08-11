@@ -31,6 +31,10 @@ sv:
     document_name: Faktura
     document_tax_name: Skattefaktura
     due_date: Förfaller %{date}
+    e_invoicing:
+      discount_reason: Rabatt %{tax_rate} andel
+      payment_information: "%{payment_label} på %{currency} %{amount} tillämpad"
+      standard_payment: Standardbetaling
     fee_prorated: Avgiften är proraterad för användningsdagar, det visade enhetspriset är ett genomsnitt
     fees_from_to_date: Avgifter från %{from_date} till %{to_date}
     graduated:
