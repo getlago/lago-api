@@ -6,7 +6,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:, amount_cents: 500, description: "desc") }
-  let(:commitment_invoice_display_name) { "Overriden minimum commitment name" }
+  let(:commitment_invoice_display_name) { "Overridden minimum commitment name" }
   let(:commitment_amount_cents) { 1234 }
 
   around { |test| lago_premium!(&test) }
@@ -44,7 +44,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     end
 
     let(:override_amount_cents) { 777 }
-    let(:override_display_name) { "Overriden Threshold 12" }
+    let(:override_display_name) { "Overridden Threshold 12" }
 
     before { customer }
 
@@ -96,7 +96,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         organization.update!(premium_integrations: ["progressive_billing"])
       end
 
-      it "creates subscription with an overriden plan with usage thresholds" do
+      it "creates subscription with an overridden plan with usage thresholds" do
         subject
 
         expect(response).to have_http_status(:ok)
@@ -558,7 +558,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
     end
 
     let(:override_amount_cents) { 999 }
-    let(:override_display_name) { "Overriden Threshold 1" }
+    let(:override_display_name) { "Overridden Threshold 1" }
     let(:usage_threshold) { create(:usage_threshold, plan:) }
 
     before do
@@ -593,7 +593,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
         organization.update!(premium_integrations: ["progressive_billing"])
       end
 
-      it "updates subscription with an overriden plan with usage thresholds" do
+      it "updates subscription with an overridden plan with usage thresholds" do
         subject
 
         expect(response).to have_http_status(:success)

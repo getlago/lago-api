@@ -244,7 +244,7 @@ RSpec.describe SubscriptionsQuery, type: :query do
     end
   end
 
-  context "with overriden filter" do
+  context "with overridden filter" do
     let(:filters) { {} }
     let(:plan) { create(:plan, organization:, parent: parent_plan) }
     let(:parent_plan) { create(:plan, organization:) }
@@ -253,27 +253,27 @@ RSpec.describe SubscriptionsQuery, type: :query do
 
     before { [subscription, subscription_2] }
 
-    context "when overriden is true" do
-      let(:filters) { {overriden: true} }
+    context "when overridden is true" do
+      let(:filters) { {overridden: true} }
 
-      it "returns only overriden subscriptions" do
+      it "returns only overridden subscriptions" do
         expect(result).to be_success
         expect(result.subscriptions.count).to eq(1)
         expect(result.subscriptions).to eq([subscription])
       end
     end
 
-    context "when overriden is false" do
-      let(:filters) { {overriden: false} }
+    context "when overridden is false" do
+      let(:filters) { {overridden: false} }
 
-      it "returns only non-overriden subscriptions" do
+      it "returns only non-overridden subscriptions" do
         expect(result).to be_success
         expect(result.subscriptions.count).to eq(1)
         expect(result.subscriptions).to eq([subscription_2])
       end
     end
 
-    context "without overriden filter" do
+    context "without overridden filter" do
       it "returns all subscriptions" do
         expect(result).to be_success
         expect(result.subscriptions.count).to eq(2)

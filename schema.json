@@ -46700,7 +46700,7 @@
                   "deprecationReason": null
                 },
                 {
-                  "name": "overriden",
+                  "name": "overridden",
                   "description": null,
                   "type": {
                     "kind": "SCALAR",

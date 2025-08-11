@@ -11,7 +11,7 @@ module Resolvers
 
     argument :external_customer_id, String, required: false
     argument :limit, Integer, required: false
-    argument :overriden, Boolean, required: false
+    argument :overridden, Boolean, required: false
     argument :page, Integer, required: false
     argument :plan_code, String, required: false
     argument :search_term, String, required: false
@@ -19,12 +19,12 @@ module Resolvers
 
     type Types::Subscriptions::Object.collection_type, null: false
 
-    def resolve(page: nil, limit: nil, plan_code: nil, status: nil, external_customer_id: nil, overriden: nil, search_term: nil)
+    def resolve(page: nil, limit: nil, plan_code: nil, status: nil, external_customer_id: nil, overridden: nil, search_term: nil)
       # In FE we include next subscription in the list, so we need to exclude subscriptions with previous subscription from the list
       result = SubscriptionsQuery.call(
         organization: current_organization,
         pagination: {page:, limit:},
-        filters: {plan_code:, status:, external_customer_id:, overriden:, exclude_next_subscriptions: true},
+        filters: {plan_code:, status:, external_customer_id:, overridden:, exclude_next_subscriptions: true},
         search_term:
       )
 
