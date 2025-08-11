@@ -23,10 +23,10 @@ module BillableMetrics
         .where(billable_metrics: {id: metric.id}).distinct.pluck(:id)
 
       ActiveRecord::Base.transaction do
-        metric.alerts.discard_all!
         metric.discard!
 
         # rubocop:disable Rails/SkipsModelValidations
+        metric.alerts.update_all(deleted_at: Time.current)
         metric.charges.update_all(deleted_at: Time.current)
         Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true)
         # rubocop:enable Rails/SkipsModelValidations

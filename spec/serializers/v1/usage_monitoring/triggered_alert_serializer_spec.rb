@@ -46,5 +46,17 @@ RSpec.describe ::V1::UsageMonitoring::TriggeredAlertSerializer do
       payload = result["triggered_alert"]
       expect(payload["billable_metric_code"]).to eq alert.billable_metric.code
     end
+
+    context "when billable_metric and alert are deleted" do
+      it "retrieve te alert correctly" do
+        alert.billable_metric.discard!
+        alert.discard!
+        triggered_alert.reload
+        result = JSON.parse(serializer.to_json)
+        payload = result["triggered_alert"]
+        expect(payload["lago_alert_id"]).to eq alert.id
+        expect(payload["billable_metric_code"]).to eq alert.billable_metric.code
+      end
+    end
   end
 end

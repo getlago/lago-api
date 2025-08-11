@@ -21,7 +21,7 @@ module UsageMonitoring
     default_scope -> { kept }
 
     belongs_to :organization
-    belongs_to :billable_metric, optional: true
+    belongs_to :billable_metric, -> { with_discarded }, optional: true
 
     has_many :thresholds,
       foreign_key: :usage_monitoring_alert_id,
