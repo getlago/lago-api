@@ -2882,6 +2882,7 @@ input CreatePlanInput {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
+  billFixedChargesMonthly: Boolean
   charges: [ChargeInput!]!
 
   """

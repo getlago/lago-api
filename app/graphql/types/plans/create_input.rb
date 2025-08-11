@@ -8,6 +8,7 @@ module Types
       argument :amount_cents, GraphQL::Types::BigInt, required: true
       argument :amount_currency, Types::CurrencyEnum
       argument :bill_charges_monthly, Boolean, required: false
+      argument :bill_fixed_charges_monthly, Boolean, required: false
       argument :code, String, required: true
       argument :description, String, required: false
       argument :interval, Types::Plans::IntervalEnum, required: true

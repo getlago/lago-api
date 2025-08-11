@@ -8,6 +8,7 @@ RSpec.describe Types::Plans::CreateInput do
   it { is_expected.to accept_argument(:amount_cents).of_type("BigInt!") }
   it { is_expected.to accept_argument(:amount_currency).of_type("CurrencyEnum!") }
   it { is_expected.to accept_argument(:bill_charges_monthly).of_type("Boolean") }
+  it { is_expected.to accept_argument(:bill_fixed_charges_monthly).of_type("Boolean") }
   it { is_expected.to accept_argument(:code).of_type("String!") }
   it { is_expected.to accept_argument(:description).of_type("String") }
   it { is_expected.to accept_argument(:interval).of_type("PlanInterval!") }
