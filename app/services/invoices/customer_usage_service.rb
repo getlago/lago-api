@@ -2,7 +2,6 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-
     def initialize(
       customer:,
       subscription:,

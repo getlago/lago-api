@@ -2,7 +2,6 @@
 
 module Fees
   class ChargeService < BaseService
-
     def initialize(
       invoice:,
       charge:,
