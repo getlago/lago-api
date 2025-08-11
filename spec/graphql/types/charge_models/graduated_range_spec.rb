@@ -2,11 +2,11 @@
 
 require "rails_helper"
 
-RSpec.describe Types::ChargeModels::GraduatedRange, type: :graphql do
-  let(:object) { described_class }
+RSpec.describe Types::ChargeModels::GraduatedRange do
+  subject { described_class }
 
-  it { expect(object).to have_field(:from_value).of_type("BigInt!") }
-  it { expect(object).to have_field(:to_value).of_type("BigInt") }
-  it { expect(object).to have_field(:flat_amount).of_type("String!") }
-  it { expect(object).to have_field(:per_unit_amount).of_type("String!") }
+  it { is_expected.to have_field(:from_value).of_type("BigInt!") }
+  it { is_expected.to have_field(:to_value).of_type("BigInt") }
+  it { is_expected.to have_field(:flat_amount).of_type("String!") }
+  it { is_expected.to have_field(:per_unit_amount).of_type("String!") }
 end
