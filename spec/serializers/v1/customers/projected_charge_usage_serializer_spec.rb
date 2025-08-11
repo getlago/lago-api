@@ -319,6 +319,442 @@ RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
     end
   end
 
+  describe "multiple charge filters" do
+    let(:charge_filter_1) { create(:charge_filter, charge: charge, invoice_display_name: "Filter 1") }
+    let(:charge_filter_2) { create(:charge_filter, charge: charge, invoice_display_name: "Filter 2") }
+    let(:usage) do
+      [
+        OpenStruct.new(
+          charge_id: charge.id,
+          subscription: subscription,
+          billable_metric: billable_metric,
+          charge: charge,
+          units: "5.0",
+          events_count: 8,
+          amount_cents: 50,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          grouped_by: nil,
+          charge_filter: charge_filter_1,
+          charge_filter_id: charge_filter_1.id,
+          pricing_unit_usage:
+        ),
+        OpenStruct.new(
+          charge_id: charge.id,
+          subscription: subscription,
+          billable_metric: billable_metric,
+          charge: charge,
+          units: "7.0",
+          events_count: 10,
+          amount_cents: 70,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          grouped_by: nil,
+          charge_filter: charge_filter_2,
+          charge_filter_id: charge_filter_2.id,
+          pricing_unit_usage:
+        )
+      ]
+    end
+
+    it "handles multiple filters with different projection calculations" do
+      projection_result_1 = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("10"),
+        projected_amount_cents: 100,
+        projected_pricing_unit_amount_cents: 150
+      )
+
+      projection_result_2 = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("14"),
+        projected_amount_cents: 140,
+        projected_pricing_unit_amount_cents: 210
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[0]]).and_return(projection_result_1)
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[1]]).and_return(projection_result_2)
+
+      filters = result["charges"].first["filters"]
+
+      expect(filters.size).to eq(2)
+
+      expect(filters[0]).to include(
+        "units" => "5.0",
+        "projected_units" => "10.0",
+        "amount_cents" => 50,
+        "projected_amount_cents" => 100,
+        "events_count" => 8,
+        "invoice_display_name" => "Filter 1",
+        "values" => {}
+      )
+
+      expect(filters[1]).to include(
+        "units" => "7.0",
+        "projected_units" => "14.0",
+        "amount_cents" => 70,
+        "projected_amount_cents" => 140,
+        "events_count" => 10,
+        "invoice_display_name" => "Filter 2",
+        "values" => {}
+      )
+    end
+  end
+
+  describe "multiple grouped usage scenarios" do
+    let(:usage) do
+      [
+        OpenStruct.new(
+          charge_id: charge.id,
+          subscription: subscription,
+          billable_metric: billable_metric,
+          charge: charge,
+          units: "3.0",
+          events_count: 5,
+          amount_cents: 30,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          grouped_by: {"region" => "us-east", "tier" => "premium"},
+          charge_filter: nil,
+          pricing_unit_usage:
+        ),
+        OpenStruct.new(
+          charge_id: charge.id,
+          subscription: subscription,
+          billable_metric: billable_metric,
+          charge: charge,
+          units: "4.0",
+          events_count: 7,
+          amount_cents: 40,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          grouped_by: {"region" => "us-west", "tier" => "standard"},
+          charge_filter: nil,
+          pricing_unit_usage:
+        ),
+        OpenStruct.new(
+          charge_id: charge.id,
+          subscription: subscription,
+          billable_metric: billable_metric,
+          charge: charge,
+          units: "5.0",
+          events_count: 8,
+          amount_cents: 50,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          grouped_by: {"region" => "eu-central", "tier" => "premium"},
+          charge_filter: nil,
+          pricing_unit_usage:
+        )
+      ]
+    end
+
+    it "handles multiple groups with independent projection calculations" do
+      projection_result_1 = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("6"),
+        projected_amount_cents: 60,
+        projected_pricing_unit_amount_cents: 90
+      )
+
+      projection_result_2 = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("8"),
+        projected_amount_cents: 80,
+        projected_pricing_unit_amount_cents: 120
+      )
+
+      projection_result_3 = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("10"),
+        projected_amount_cents: 100,
+        projected_pricing_unit_amount_cents: 150
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[0]]).and_return(projection_result_1)
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[1]]).and_return(projection_result_2)
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[2]]).and_return(projection_result_3)
+
+      grouped_usage = result["charges"].first["grouped_usage"]
+
+      expect(grouped_usage.size).to eq(3)
+
+      expect(grouped_usage[0]).to include(
+        "units" => "3.0",
+        "projected_units" => "6.0",
+        "amount_cents" => 30,
+        "projected_amount_cents" => 60,
+        "events_count" => 5,
+        "grouped_by" => {"region" => "us-east", "tier" => "premium"}
+      )
+
+      expect(grouped_usage[1]).to include(
+        "units" => "4.0",
+        "projected_units" => "8.0",
+        "amount_cents" => 40,
+        "projected_amount_cents" => 80,
+        "events_count" => 7,
+        "grouped_by" => {"region" => "us-west", "tier" => "standard"}
+      )
+
+      expect(grouped_usage[2]).to include(
+        "units" => "5.0",
+        "projected_units" => "10.0",
+        "amount_cents" => 50,
+        "projected_amount_cents" => 100,
+        "events_count" => 8,
+        "grouped_by" => {"region" => "eu-central", "tier" => "premium"}
+      )
+    end
+  end
+
+  describe "mixed filtering and grouping" do
+    let(:charge_filter) { create(:charge_filter, charge: charge, invoice_display_name: "Mixed Filter") }
+    let(:usage) do
+      [
+        OpenStruct.new(
+          charge_id: charge.id,
+          subscription: subscription,
+          billable_metric: billable_metric,
+          charge: charge,
+          units: "2.0",
+          events_count: 3,
+          amount_cents: 20,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          grouped_by: {"datacenter" => "dc1"},
+          charge_filter: charge_filter,
+          charge_filter_id: charge_filter.id,
+          pricing_unit_usage:
+        ),
+        OpenStruct.new(
+          charge_id: charge.id,
+          subscription: subscription,
+          billable_metric: billable_metric,
+          charge: charge,
+          units: "3.0",
+          events_count: 4,
+          amount_cents: 30,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          grouped_by: {"datacenter" => "dc2"},
+          charge_filter: charge_filter,
+          charge_filter_id: charge_filter.id,
+          pricing_unit_usage:
+        )
+      ]
+    end
+
+    it "correctly handles fees with both filters and grouping" do
+      projection_result_1 = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("4"),
+        projected_amount_cents: 40,
+        projected_pricing_unit_amount_cents: 60
+      )
+
+      projection_result_2 = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("6"),
+        projected_amount_cents: 60,
+        projected_pricing_unit_amount_cents: 90
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[0]]).and_return(projection_result_1)
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[1]]).and_return(projection_result_2)
+
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[0]]).and_return(projection_result_1)
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[1]]).and_return(projection_result_2)
+
+      charge_result = result["charges"].first
+
+      expect(charge_result["filters"].size).to eq(1)
+      expect(charge_result["filters"].first).to include(
+        "units" => "5.0",
+        "projected_units" => "10.0",
+        "amount_cents" => 50,
+        "projected_amount_cents" => 100,
+        "events_count" => 7,
+        "invoice_display_name" => "Mixed Filter",
+        "values" => {}
+      )
+
+      expect(charge_result["grouped_usage"].size).to eq(2)
+      expect(charge_result["grouped_usage"][0]).to include(
+        "units" => "2.0",
+        "projected_units" => "4.0",
+        "amount_cents" => 20,
+        "projected_amount_cents" => 40,
+        "grouped_by" => {"datacenter" => "dc1"}
+      )
+      expect(charge_result["grouped_usage"][1]).to include(
+        "units" => "3.0",
+        "projected_units" => "6.0",
+        "amount_cents" => 30,
+        "projected_amount_cents" => 60,
+        "grouped_by" => {"datacenter" => "dc2"}
+      )
+    end
+  end
+
+  describe "multiple charges with different calculations" do
+    let(:charge_2) { create(:standard_charge) }
+    let(:usage) do
+      [
+        OpenStruct.new(
+          charge_id: charge.id,
+          subscription: subscription,
+          billable_metric: billable_metric,
+          charge: charge,
+          units: "10.0",
+          events_count: 15,
+          amount_cents: 100,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          grouped_by: nil,
+          charge_filter: nil,
+          pricing_unit_usage:
+        ),
+        OpenStruct.new(
+          charge_id: charge_2.id,
+          subscription: subscription,
+          billable_metric: charge_2.billable_metric,
+          charge: charge_2,
+          units: "20.0",
+          events_count: 25,
+          amount_cents: 200,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          grouped_by: nil,
+          charge_filter: nil,
+          pricing_unit_usage:
+        )
+      ]
+    end
+
+    it "handles multiple charges with independent calculations" do
+      projection_result_1 = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("20"),
+        projected_amount_cents: 200,
+        projected_pricing_unit_amount_cents: 300
+      )
+
+      projection_result_2 = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("40"),
+        projected_amount_cents: 400,
+        projected_pricing_unit_amount_cents: 600
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[0]]).and_return(projection_result_1)
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: [usage[1]]).and_return(projection_result_2)
+
+      charges = result["charges"]
+      expect(charges.size).to eq(2)
+
+      expect(charges[0]).to include(
+        "units" => "10.0",
+        "projected_units" => "20.0",
+        "amount_cents" => 100,
+        "projected_amount_cents" => 200,
+        "events_count" => 15
+      )
+      expect(charges[0]["charge"]["lago_id"]).to eq(charge.id)
+
+      expect(charges[1]).to include(
+        "units" => "20.0",
+        "projected_units" => "40.0",
+        "amount_cents" => 200,
+        "projected_amount_cents" => 400,
+        "events_count" => 25
+      )
+      expect(charges[1]["charge"]["lago_id"]).to eq(charge_2.id)
+    end
+  end
+
+  describe "memoization behavior" do
+    let(:usage) do
+      [
+        OpenStruct.new(
+          charge_id: charge.id,
+          subscription: subscription,
+          billable_metric: billable_metric,
+          charge: charge,
+          units: "5.0",
+          events_count: 8,
+          amount_cents: 50,
+          amount_currency: "EUR",
+          properties: {
+            "from_datetime" => from_datetime.to_s,
+            "to_datetime" => to_datetime.to_s,
+            "charges_duration" => charges_duration
+          },
+          grouped_by: nil,
+          charge_filter: nil,
+          pricing_unit_usage:
+        )
+      ]
+    end
+
+    it "calls projection service only once per unique fee set" do
+      projection_result = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("10"),
+        projected_amount_cents: 100,
+        projected_pricing_unit_amount_cents: 150
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call!).with(fees: usage).and_return(projection_result)
+
+      result
+
+      charge_result = result["charges"].first
+      expect(charge_result).to include(
+        "projected_units" => "10.0",
+        "projected_amount_cents" => 100
+      )
+
+      expect(::Fees::ProjectionService).to have_received(:call!).with(fees: usage).once
+    end
+  end
+
   describe "recurring charges" do
     let(:is_recurring) { true }
 

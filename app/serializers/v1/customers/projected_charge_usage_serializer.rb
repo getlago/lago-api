@@ -4,16 +4,18 @@ module V1
   module Customers
     class ProjectedChargeUsageSerializer < ModelSerializer
       def serialize
+        @grouped_data = precompute_groupings
+
         model.group_by(&:charge_id).map do |charge_id, fees|
           fee = fees.first
-          usage_data = calculate_usage_data(fees)
+          usage_data = memoized_usage_data(fees)
 
           {
             **usage_data,
             charge: charge_data(fee),
             billable_metric: billable_metric_data(fee),
-            filters: filters(fees),
-            grouped_usage: grouped_usage(fees)
+            filters: cached_filters(fees),
+            grouped_usage: cached_grouped_usage(fees)
           }
         end
       end
@@ -29,20 +31,26 @@ module V1
       end
 
       def current_usage_data(fees)
+        totals = fees.each_with_object({
+          units: BigDecimal("0"),
+          events_count: 0,
+          amount_cents: 0
+        }) do |fee, acc|
+          acc[:units] += BigDecimal(fee.units)
+          acc[:events_count] += fee.events_count.to_i
+          acc[:amount_cents] += fee.amount_cents
+        end
+
         {
-          units: current_units(fees).to_s,
-          events_count: fees.sum { |f| f.events_count.to_i },
-          amount_cents: fees.sum(&:amount_cents),
+          units: totals[:units].to_s,
+          events_count: totals[:events_count],
+          amount_cents: totals[:amount_cents],
           amount_currency: fees.first.amount_currency
         }
       end
 
-      def current_units(fees)
-        fees.sum { |f| BigDecimal(f.units) }
-      end
-
       def projected_usage_data(fees)
-        projection = calculate_projection(fees)
+        projection = memoized_projection(fees)
 
         {
           projected_units: projection[:units].to_s,
@@ -72,7 +80,7 @@ module V1
         fees_with_defined_filters = fees.select(&:charge_filter_id)
 
         fees_with_defined_filters.reduce(initial_projection_values) do |totals, fee|
-          result = ::Fees::ProjectionService.call(fees: [fee]).raise_if_error!
+          result = ::Fees::ProjectionService.call!(fees: [fee])
           accumulate_projection(totals, result)
         end
       end
@@ -81,13 +89,13 @@ module V1
         grouped_fees = fees.group_by(&:grouped_by).values
 
         grouped_fees.reduce(initial_projection_values) do |totals, group_fee_list|
-          result = ::Fees::ProjectionService.call(fees: group_fee_list).raise_if_error!
+          result = ::Fees::ProjectionService.call!(fees: group_fee_list)
           accumulate_projection(totals, result)
         end
       end
 
       def calculate_simple_projection(fees)
-        result = ::Fees::ProjectionService.call(fees: fees).raise_if_error!
+        result = ::Fees::ProjectionService.call!(fees: fees)
 
         {
           units: result.projected_units,
@@ -124,7 +132,7 @@ module V1
       end
 
       def projected_pricing_unit_amount_cents(fees)
-        calculate_projection(fees)[:pricing_unit_amount_cents]
+        memoized_projection(fees)[:pricing_unit_amount_cents]
       end
 
       def charge_data(fee)
@@ -153,9 +161,20 @@ module V1
           .filter_map { |grouped_fees| build_filter_data(grouped_fees) }
       end
 
+      def cached_filters(fees)
+        return [] unless fees.first.charge&.filters&.any?
+
+        @grouped_data[:by_charge_filter]
+          .values
+          .filter_map { |grouped_fees|
+            next unless grouped_fees.first.charge_id == fees.first.charge_id
+            build_filter_data(grouped_fees)
+          }
+      end
+
       def build_filter_data(grouped_fees)
         charge_filter = grouped_fees.first.charge_filter
-        usage_data = calculate_usage_data(grouped_fees)
+        usage_data = memoized_usage_data(grouped_fees)
 
         {
           **usage_data.except(:amount_currency),
@@ -172,14 +191,42 @@ module V1
           .map { |grouped_fees| build_grouped_usage_data(grouped_fees) }
       end
 
+      def cached_grouped_usage(fees)
+        return [] unless fees.any? { |f| f.grouped_by.present? }
+
+        @grouped_data[:by_grouped_by]
+          .values
+          .filter_map { |grouped_fees|
+            next unless grouped_fees.first.charge_id == fees.first.charge_id
+            build_grouped_usage_data(grouped_fees)
+          }
+      end
+
       def build_grouped_usage_data(grouped_fees)
-        usage_data = calculate_usage_data(grouped_fees)
+        usage_data = memoized_usage_data(grouped_fees)
 
         {
           **usage_data.except(:amount_currency),
           grouped_by: grouped_fees.first.grouped_by,
           filters: filters(grouped_fees)
         }
+      end
+
+      def precompute_groupings
+        {
+          by_charge_filter: model.group_by { |f| f.charge_filter&.id },
+          by_grouped_by: model.group_by(&:grouped_by)
+        }
+      end
+
+      def memoized_projection(fees)
+        @projections ||= {}
+        @projections[fees.object_id] ||= calculate_projection(fees)
+      end
+
+      def memoized_usage_data(fees)
+        @usage_data_cache ||= {}
+        @usage_data_cache[fees.object_id] ||= calculate_usage_data(fees)
       end
     end
   end
