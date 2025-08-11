@@ -2,7 +2,15 @@
 
 module Invoices
   class CustomerUsageService < BaseService
-    def initialize(customer:, subscription:, timestamp: Time.current, apply_taxes: true, with_cache: true, max_to_datetime: nil)
+    def initialize(
+      customer:,
+      subscription:,
+      timestamp: Time.current,
+      apply_taxes: true,
+      with_cache: true,
+      max_to_datetime: nil,
+      with_zero_units_filters: true
+    )
       super
 
       @apply_taxes = apply_taxes
@@ -10,6 +18,7 @@ module Invoices
       @subscription = subscription
       @timestamp = timestamp # To not set this value if without disabling the cache
       @with_cache = with_cache
+      @with_zero_units_filters = with_zero_units_filters
 
       # NOTE: used to force charges_to_datetime boundary
       @max_to_datetime = max_to_datetime
@@ -44,7 +53,7 @@ module Invoices
 
     private
 
-    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime
+    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime, :with_zero_units_filters
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
     delegate :billing_entity, to: :customer
@@ -105,7 +114,15 @@ module Invoices
       applied_boundaries = applied_boundaries.merge(charges_to_datetime: max_to_datetime) if max_to_datetime
 
       Fees::ChargeService
-        .call(invoice:, charge:, subscription:, boundaries: applied_boundaries, context: :current_usage, cache_middleware:)
+        .call(
+          invoice:,
+          charge:,
+          subscription:,
+          boundaries: applied_boundaries,
+          context: :current_usage,
+          cache_middleware:,
+          with_zero_units_filters:
+        )
         .raise_if_error!
         .fees
     end
