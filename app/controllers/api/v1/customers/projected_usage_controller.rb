@@ -30,7 +30,7 @@ module Api
         private
 
         def resource_name
-          "customer_projected_usage"
+          "customer_usage"
         end
       end
     end

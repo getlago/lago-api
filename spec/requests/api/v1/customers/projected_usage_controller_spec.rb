@@ -67,7 +67,7 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController, type: :request do
       end
     end
 
-    include_examples "requires API permission", "customer_projected_usage", "read"
+    include_examples "requires API permission", "customer_usage", "read"
 
     it "returns the projected usage for the customer" do
       travel_to(Time.parse("2025-07-03T10:00:00Z")) do
