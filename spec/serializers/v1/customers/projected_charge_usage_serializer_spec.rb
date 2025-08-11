@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe ::V1::Customers::ChargeUsageSerializer do
+RSpec.describe ::V1::Customers::ProjectedChargeUsageSerializer do
   subject(:serializer) { described_class.new(usage, root_name: "charges") }
 
   let(:charge) { create(:standard_charge) }
@@ -18,6 +18,35 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
   let(:days_passed) { (fixed_date - from_datetime).to_i + 1 }
   let(:ratio) { days_passed.to_f / charges_duration }
 
+  let(:is_recurring) { false }
+  let(:expected_projected_units) do
+    if is_recurring
+      BigDecimal("10")
+    else
+      (ratio > 0) ? (BigDecimal("10") / BigDecimal(ratio.to_s)).round(1) : BigDecimal("0")
+    end
+  end
+  let(:expected_projected_amount_cents) do
+    if is_recurring
+      100
+    else
+      (ratio > 0) ? (BigDecimal("100") / BigDecimal(ratio.to_s)).round.to_i : 0
+    end
+  end
+  let(:expected_pricing_unit_projected_amount_cents) do
+    if is_recurring
+      200
+    else
+      (ratio > 0) ? (BigDecimal("200") / BigDecimal(ratio.to_s)).round.to_i : 0
+    end
+  end
+  let(:greater_expected_pricing_unit_projected_amount_cents) do
+    if is_recurring
+      600
+    else
+      (ratio > 0) ? (BigDecimal("600") / BigDecimal(ratio.to_s)).round.to_i : 0
+    end
+  end
   let(:pricing_unit_usage) { nil }
 
   let(:usage) do
@@ -53,11 +82,24 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
     allow(Time).to receive(:current).and_return(fixed_date.to_time)
   end
 
-  it "serializes the fee" do
+  it "serializes the projected fee" do
+    projection_result = instance_double(
+      "ProjectionResult",
+      projected_units: expected_projected_units,
+      projected_amount_cents: expected_projected_amount_cents,
+      projected_pricing_unit_amount_cents: expected_pricing_unit_projected_amount_cents
+    )
+
+    allow(::Fees::ProjectionService).to receive(:call).and_return(
+      instance_double("ServiceResult", raise_if_error!: projection_result)
+    )
+
     expect(result["charges"].first).to include(
       "units" => "10.0",
+      "projected_units" => expected_projected_units.to_s,
       "events_count" => 12,
       "amount_cents" => 100,
+      "projected_amount_cents" => expected_projected_amount_cents,
       "pricing_unit_details" => nil,
       "amount_currency" => "EUR",
       "charge" => {
@@ -75,9 +117,11 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       "grouped_usage" => [
         {
           "amount_cents" => 100,
+          "projected_amount_cents" => expected_projected_amount_cents,
           "pricing_unit_details" => nil,
           "events_count" => 12,
           "units" => "10.0",
+          "projected_units" => expected_projected_units.to_s,
           "grouped_by" => {"card_type" => "visa"},
           "filters" => []
         }
@@ -90,13 +134,27 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       PricingUnitUsage.new(amount_cents: 200, conversion_rate: 0.5, short_name: "CR")
     end
 
-    it "serializes the fee" do
+    it "serializes the projected fee with pricing units" do
+      projection_result = instance_double(
+        "ProjectionResult",
+        projected_units: expected_projected_units,
+        projected_amount_cents: expected_projected_amount_cents,
+        projected_pricing_unit_amount_cents: expected_pricing_unit_projected_amount_cents
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call).and_return(
+        instance_double("ServiceResult", raise_if_error!: projection_result)
+      )
+
       expect(result["charges"].first).to include(
         "units" => "10.0",
+        "projected_units" => expected_projected_units.to_s,
         "events_count" => 12,
         "amount_cents" => 100,
+        "projected_amount_cents" => expected_projected_amount_cents,
         "pricing_unit_details" => {
           "amount_cents" => 200,
+          "projected_amount_cents" => expected_pricing_unit_projected_amount_cents,
           "short_name" => "CR",
           "conversion_rate" => "0.5"
         },
@@ -116,13 +174,16 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         "grouped_usage" => [
           {
             "amount_cents" => 100,
+            "projected_amount_cents" => expected_projected_amount_cents,
             "pricing_unit_details" => {
               "amount_cents" => 200,
+              "projected_amount_cents" => expected_pricing_unit_projected_amount_cents,
               "short_name" => "CR",
               "conversion_rate" => "0.5"
             },
             "events_count" => 12,
             "units" => "10.0",
+            "projected_units" => expected_projected_units.to_s,
             "grouped_by" => {"card_type" => "visa"},
             "filters" => []
           }
@@ -158,10 +219,38 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
       end
     end
 
-    it "returns filters array with projected values" do
+    let(:expected_filter_projected_units) do
+      if is_recurring
+        BigDecimal("30")
+      else
+        (ratio > 0) ? (BigDecimal("30") / BigDecimal(ratio.to_s)).round(2) : BigDecimal("0")
+      end
+    end
+    let(:expected_filter_projected_amount_cents) do
+      if is_recurring
+        300
+      else
+        (ratio > 0) ? (300 / BigDecimal(ratio.to_s)).round.to_i : 0
+      end
+    end
+
+    it "returns projected filters array" do
+      individual_projection_result = instance_double(
+        "ProjectionResult",
+        projected_units: expected_filter_projected_units / 3,
+        projected_amount_cents: expected_filter_projected_amount_cents / 3,
+        projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call).and_return(
+        instance_double("ServiceResult", raise_if_error!: individual_projection_result)
+      )
+
       expect(result["charges"].first["filters"].first).to include(
         "units" => "30.0",
+        "projected_units" => expected_filter_projected_units.to_s,
         "amount_cents" => 300,
+        "projected_amount_cents" => expected_filter_projected_amount_cents,
         "events_count" => 36,
         "invoice_display_name" => charge_filter.invoice_display_name,
         "values" => {}
@@ -169,7 +258,9 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
 
       expect(result["charges"].first["grouped_usage"].first["filters"].first).to include(
         "units" => "30.0",
+        "projected_units" => expected_filter_projected_units.to_s,
         "amount_cents" => 300,
+        "projected_amount_cents" => expected_filter_projected_amount_cents,
         "events_count" => 36,
         "invoice_display_name" => charge_filter.invoice_display_name,
         "values" => {}
@@ -181,12 +272,26 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         PricingUnitUsage.new(amount_cents: 200, conversion_rate: 0.5, short_name: "CR")
       end
 
-      it "returns filters array" do
+      it "returns projected filters array with pricing units" do
+        individual_projection_result = instance_double(
+          "ProjectionResult",
+          projected_units: expected_filter_projected_units / 3,
+          projected_amount_cents: expected_filter_projected_amount_cents / 3,
+          projected_pricing_unit_amount_cents: greater_expected_pricing_unit_projected_amount_cents / 3
+        )
+
+        allow(::Fees::ProjectionService).to receive(:call).and_return(
+          instance_double("ServiceResult", raise_if_error!: individual_projection_result)
+        )
+
         expect(result["charges"].first["filters"].first).to include(
           "units" => "30.0",
           "amount_cents" => 300,
+          "projected_units" => expected_filter_projected_units.to_s,
+          "projected_amount_cents" => expected_filter_projected_amount_cents,
           "pricing_unit_details" => {
             "amount_cents" => 600,
+            "projected_amount_cents" => greater_expected_pricing_unit_projected_amount_cents,
             "short_name" => "CR",
             "conversion_rate" => "0.5"
           },
@@ -198,8 +303,11 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
         expect(result["charges"].first["grouped_usage"].first["filters"].first).to include(
           "units" => "30.0",
           "amount_cents" => 300,
+          "projected_units" => expected_filter_projected_units.to_s,
+          "projected_amount_cents" => expected_filter_projected_amount_cents,
           "pricing_unit_details" => {
             "amount_cents" => 600,
+            "projected_amount_cents" => greater_expected_pricing_unit_projected_amount_cents,
             "short_name" => "CR",
             "conversion_rate" => "0.5"
           },
@@ -208,6 +316,33 @@ RSpec.describe ::V1::Customers::ChargeUsageSerializer do
           "values" => {}
         )
       end
+    end
+  end
+
+  describe "recurring charges" do
+    let(:is_recurring) { true }
+
+    before do
+      allow(charge.billable_metric).to receive(:recurring?).and_return(true)
+    end
+
+    it "returns current values for recurring charges" do
+      projection_result = instance_double(
+        "ProjectionResult",
+        projected_units: BigDecimal("10"),
+        projected_amount_cents: 100,
+        projected_pricing_unit_amount_cents: 200
+      )
+
+      allow(::Fees::ProjectionService).to receive(:call).and_return(
+        instance_double("ServiceResult", raise_if_error!: projection_result)
+      )
+
+      expect(result["charges"].first).to include(
+        "units" => "10.0",
+        "projected_units" => "10.0",
+        "projected_amount_cents" => 100
+      )
     end
   end
 end

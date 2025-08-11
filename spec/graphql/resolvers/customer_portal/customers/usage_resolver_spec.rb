@@ -14,25 +14,20 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
           currency
           issuingDate
           amountCents
-          projectedAmountCents
           totalAmountCents
           taxesAmountCents
           chargesUsage {
             billableMetric { name code aggregationType }
             charge { chargeModel }
-            filters { id units projectedUnits amountCents projectedAmountCents invoiceDisplayName values eventsCount }
+            filters { id units amountCents invoiceDisplayName values eventsCount }
             units
-            projectedUnits
             amountCents
-            projectedAmountCents
             groupedUsage {
               amountCents
-              projectedAmountCents
               units
-              projectedUnits
               eventsCount
               groupedBy
-              filters { id units projectedUnits amountCents projectedAmountCents invoiceDisplayName values eventsCount }
+              filters { id units amountCents invoiceDisplayName values eventsCount }
             }
           }
         }
@@ -149,7 +144,6 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
         expect(usage_response["currency"]).to eq("EUR")
         expect(usage_response["issuingDate"]).to eq(now.to_date.end_of_month.iso8601)
         expect(usage_response["amountCents"]).to eq("405")
-        expect(usage_response["projectedAmountCents"]).to eq("809")
         expect(usage_response["totalAmountCents"]).to eq("405")
         expect(usage_response["taxesAmountCents"]).to eq("0")
         charge_usage = usage_response["chargesUsage"].find { |usage| usage["billableMetric"]["code"] == metric.code }
@@ -157,22 +151,16 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
         expect(charge_usage["billableMetric"]["aggregationType"]).to eq("count_agg")
         expect(charge_usage["charge"]["chargeModel"]).to eq("graduated")
         expect(charge_usage["units"]).to eq(4.0)
-        expect(charge_usage["projectedUnits"]).to eq(8.0)
         expect(charge_usage["amountCents"]).to eq("5")
-        expect(charge_usage["projectedAmountCents"]).to eq("9")
         charge_usage = usage_response["chargesUsage"].find { |usage| usage["billableMetric"]["code"] == sum_metric.code }
         expect(charge_usage["billableMetric"]["name"]).to eq(sum_metric.name)
         expect(charge_usage["billableMetric"]["aggregationType"]).to eq("sum_agg")
         expect(charge_usage["charge"]["chargeModel"]).to eq("standard")
         expect(charge_usage["units"]).to eq(4.0)
-        expect(charge_usage["projectedUnits"]).to eq(8.0)
         expect(charge_usage["amountCents"]).to eq("400")
-        expect(charge_usage["projectedAmountCents"]).to eq("800")
         grouped_usage = charge_usage["groupedUsage"].first
         expect(grouped_usage["amountCents"]).to eq("400")
-        expect(grouped_usage["projectedAmountCents"]).to eq("800")
         expect(grouped_usage["units"]).to eq(4.0)
-        expect(grouped_usage["projectedUnits"]).to eq(8.0)
         expect(grouped_usage["eventsCount"]).to eq(4)
         expect(grouped_usage["groupedBy"]).to eq({"agent_name" => "frodo"})
       end
@@ -260,9 +248,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
             {
               "id" => nil,
               "units" => 4,
-              "projectedUnits" => 8,
               "amountCents" => "0",
-              "projectedAmountCents" => "0",
               "invoiceDisplayName" => nil,
               "values" => {},
               "eventsCount" => 4
@@ -270,9 +256,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
             {
               "id" => aws_filter.id,
               "units" => 3,
-              "projectedUnits" => 6,
               "amountCents" => "3000",
-              "projectedAmountCents" => "6000",
               "invoiceDisplayName" => nil,
               "values" => {
                 "cloud" => ["aws"]
@@ -282,9 +266,7 @@ RSpec.describe Resolvers::CustomerPortal::Customers::UsageResolver, type: :graph
             {
               "id" => google_filter.id,
               "units" => 1,
-              "projectedUnits" => 2,
               "amountCents" => "2000",
-              "projectedAmountCents" => "4000",
               "invoiceDisplayName" => nil,
               "values" => {
                 "cloud" => ["google"]

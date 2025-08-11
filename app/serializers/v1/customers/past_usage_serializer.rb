@@ -32,8 +32,7 @@ module V1
         {
           charges_usage: ::V1::Customers::ChargeUsageSerializer.new(
             fees,
-            root_name: "past_usage",
-            calculate_projected_usage: false
+            root_name: "past_usage"
           ).serialize
         }
       end

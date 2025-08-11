@@ -31,8 +31,11 @@ module ChargeModels
 
       result.amount = result.grouped_results.sum(&:amount)
       result.units = result.grouped_results.sum(&:units)
-      result.projected_amount = result.grouped_results.sum(&:projected_amount)
-      result.projected_units = result.grouped_results.sum(&:projected_units)
+
+      if calculate_projected_usage
+        result.projected_amount = result.grouped_results.sum(&:projected_amount)
+        result.projected_units = result.grouped_results.sum(&:projected_units)
+      end
 
       result
     end

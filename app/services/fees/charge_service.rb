@@ -2,13 +2,14 @@
 
 module Fees
   class ChargeService < BaseService
-    def initialize(invoice:, charge:, subscription:, boundaries:, context: nil, cache_middleware: nil, bypass_aggregation: false, apply_taxes: false)
+    def initialize(invoice:, charge:, subscription:, boundaries:, context: nil, cache_middleware: nil, bypass_aggregation: false, apply_taxes: false, calculate_projected_usage: false)
       @invoice = invoice
       @charge = charge
       @subscription = subscription
       @boundaries = OpenStruct.new(boundaries)
       @currency = subscription.plan.amount.currency
       @apply_taxes = apply_taxes
+      @calculate_projected_usage = calculate_projected_usage
 
       @context = context
       @current_usage = context == :current_usage
@@ -56,7 +57,7 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes, :calculate_projected_usage
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -251,7 +252,8 @@ module Fees
         charge:,
         aggregation_result:,
         properties:,
-        period_ratio: calculate_period_ratio
+        period_ratio: calculate_period_ratio,
+        calculate_projected_usage:
       ).apply
     end
 

@@ -2,7 +2,7 @@
 
 module V1
   module Customers
-    class ChargeUsageSerializer < ModelSerializer
+    class ProjectedChargeUsageSerializer < ModelSerializer
       def serialize
         model.group_by(&:charge_id).map do |charge_id, fees|
           fee = fees.first
@@ -23,6 +23,7 @@ module V1
       def calculate_usage_data(fees)
         {
           **current_usage_data(fees),
+          **projected_usage_data(fees),
           pricing_unit_details: pricing_unit_details(fees)
         }
       end
@@ -40,18 +41,90 @@ module V1
         fees.sum { |f| BigDecimal(f.units) }
       end
 
-      def past_usage?
-        root_name == "past_usage"
+      def projected_usage_data(fees)
+        projection = calculate_projection(fees)
+
+        {
+          projected_units: projection[:units].to_s,
+          projected_amount_cents: projection[:amount_cents].to_i
+        }
+      end
+
+      def calculate_projection(fees)
+        if charge_has_filters?(fees)
+          calculate_filtered_projection(fees)
+        elsif charge_has_grouping?(fees)
+          calculate_grouped_projection(fees)
+        else
+          calculate_simple_projection(fees)
+        end
+      end
+
+      def charge_has_filters?(fees)
+        fees.first.charge&.filters&.any?
+      end
+
+      def charge_has_grouping?(fees)
+        fees.any? { |f| f.grouped_by.present? }
+      end
+
+      def calculate_filtered_projection(fees)
+        fees_with_defined_filters = fees.select(&:charge_filter_id)
+
+        fees_with_defined_filters.reduce(initial_projection_values) do |totals, fee|
+          result = ::Fees::ProjectionService.call(fees: [fee]).raise_if_error!
+          accumulate_projection(totals, result)
+        end
+      end
+
+      def calculate_grouped_projection(fees)
+        grouped_fees = fees.group_by(&:grouped_by).values
+
+        grouped_fees.reduce(initial_projection_values) do |totals, group_fee_list|
+          result = ::Fees::ProjectionService.call(fees: group_fee_list).raise_if_error!
+          accumulate_projection(totals, result)
+        end
+      end
+
+      def calculate_simple_projection(fees)
+        result = ::Fees::ProjectionService.call(fees: fees).raise_if_error!
+
+        {
+          units: result.projected_units,
+          amount_cents: result.projected_amount_cents,
+          pricing_unit_amount_cents: result.projected_pricing_unit_amount_cents.to_i
+        }
+      end
+
+      def initial_projection_values
+        {
+          units: BigDecimal("0.0"),
+          amount_cents: 0,
+          pricing_unit_amount_cents: 0
+        }
+      end
+
+      def accumulate_projection(totals, result)
+        {
+          units: totals[:units] + result.projected_units,
+          amount_cents: totals[:amount_cents] + result.projected_amount_cents,
+          pricing_unit_amount_cents: totals[:pricing_unit_amount_cents] + result.projected_pricing_unit_amount_cents.to_i
+        }
       end
 
       def pricing_unit_details(fees)
         fees.first.pricing_unit_usage&.then do |pricing_unit|
           {
             amount_cents: fees.map(&:pricing_unit_usage).compact.sum(&:amount_cents),
+            projected_amount_cents: projected_pricing_unit_amount_cents(fees),
             short_name: pricing_unit.short_name,
             conversion_rate: pricing_unit.conversion_rate
           }
         end
+      end
+
+      def projected_pricing_unit_amount_cents(fees)
+        calculate_projection(fees)[:pricing_unit_amount_cents]
       end
 
       def charge_data(fee)
