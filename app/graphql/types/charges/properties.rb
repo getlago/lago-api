@@ -8,10 +8,10 @@ module Types
       field :pricing_group_keys, [String], null: true
 
       # NOTE: Graduated charge model
-      field :graduated_ranges, [Types::Charges::GraduatedRange], null: true
+      field :graduated_ranges, [Types::ChargeModels::GraduatedRange], null: true
 
       # NOTE: Graduated percentage modle
-      field :graduated_percentage_ranges, [Types::Charges::GraduatedPercentageRange], null: true
+      field :graduated_percentage_ranges, [Types::ChargeModels::GraduatedPercentageRange], null: true
 
       # NOTE: Package charge model
       field :free_units, GraphQL::Types::BigInt, null: true
