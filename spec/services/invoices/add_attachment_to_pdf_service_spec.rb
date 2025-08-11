@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Invoices::PdfAttachmentService, type: :service do
+RSpec.describe Invoices::AddAttachmentToPdfService, type: :service do
   let(:file) { instance_double(File, path: "/tmp/test.pdf") }
   let(:attachment) { instance_double(File, path: "/tmp/test.xml") }
 

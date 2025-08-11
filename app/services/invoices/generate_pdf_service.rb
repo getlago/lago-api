@@ -60,7 +60,7 @@ module Invoices
       xml_file.write(EInvoices::FacturX::CreateService.call(invoice:))
       xml_file.flush
 
-      Invoices::PdfAttachmentService.call(file: pdf_file, attachment: xml_file)
+      Invoices::AddAttachmentToPdfService.call(file: pdf_file, attachment: xml_file)
       xml_file
     end
 
