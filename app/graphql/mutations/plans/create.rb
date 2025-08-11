@@ -16,6 +16,7 @@ module Mutations
 
       def resolve(entitlements: nil, **args)
         args[:charges].map!(&:to_h)
+        args[:fixed_charges]&.map!(&:to_h)
 
         result = ::Plans::CreateService.call(args.merge(organization_id: current_organization.id))
 
