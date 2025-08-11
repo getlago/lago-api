@@ -2891,6 +2891,7 @@ input CreatePlanInput {
   code: String!
   description: String
   entitlements: [EntitlementInput!]
+  fixedCharges: [FixedChargeInput!]!
   interval: PlanInterval!
   invoiceDisplayName: String
   minimumCommitment: CommitmentInput
@@ -5249,6 +5250,29 @@ type FinalizedInvoiceCollectionCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+enum FixedChargeChargeModelEnum {
+  graduated
+  standard
+  volume
+}
+
+input FixedChargeInput {
+  addOnId: ID!
+  chargeModel: FixedChargeChargeModelEnum!
+  invoiceDisplayName: String
+  payInAdvance: Boolean
+  properties: FixedChargePropertiesInput
+  prorated: Boolean
+  taxCodes: [String!]
+  units: String
+}
+
+input FixedChargePropertiesInput {
+  amount: String
+  graduatedRanges: [GraduatedRangeInput!]
+  volumeRanges: [VolumeRangeInput!]
 }
 
 type FlutterwaveProvider {
