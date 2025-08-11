@@ -46,9 +46,6 @@ module ChargeModels
       if calculate_projected_usage
         result.projected_units = projected_units
         result.projected_amount = compute_projected_amount
-      else
-        result.projected_units = BigDecimal("0.0")
-        result.projected_amount = 0
       end
 
       result.grouped_results = [result]

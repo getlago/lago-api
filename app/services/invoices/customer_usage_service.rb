@@ -9,6 +9,7 @@ module Invoices
       apply_taxes: true,
       with_cache: true,
       max_to_datetime: nil,
+      calculate_projected_usage: false,
       with_zero_units_filters: true
     )
       super
@@ -18,24 +19,25 @@ module Invoices
       @subscription = subscription
       @timestamp = timestamp # To not set this value if without disabling the cache
       @with_cache = with_cache
+      @calculate_projected_usage = calculate_projected_usage
       @with_zero_units_filters = with_zero_units_filters
 
       # NOTE: used to force charges_to_datetime boundary
       @max_to_datetime = max_to_datetime
     end
 
-    def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true)
+    def self.with_external_ids(customer_external_id:, external_subscription_id:, organization_id:, apply_taxes: true, calculate_projected_usage: false)
       customer = Customer.find_by!(external_id: customer_external_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(external_id: external_subscription_id)
-      new(customer:, subscription:, apply_taxes:)
+      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
 
-    def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true)
+    def self.with_ids(organization_id:, customer_id:, subscription_id:, apply_taxes: true, calculate_projected_usage: false)
       customer = Customer.find_by(id: customer_id, organization_id:)
       subscription = customer&.active_subscriptions&.find_by(id: subscription_id)
-      new(customer:, subscription:, apply_taxes:)
+      new(customer:, subscription:, apply_taxes:, calculate_projected_usage:)
     rescue ActiveRecord::RecordNotFound
       result.not_found_failure!(resource: "customer")
     end
@@ -53,7 +55,8 @@ module Invoices
 
     private
 
-    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime, :with_zero_units_filters
+    attr_reader :customer, :invoice, :subscription, :timestamp, :apply_taxes, :with_cache, :max_to_datetime, :calculate_projected_usage, :with_zero_units_filters
+
     delegate :plan, to: :subscription
     delegate :organization, to: :subscription
     delegate :billing_entity, to: :customer
@@ -121,6 +124,7 @@ module Invoices
           boundaries: applied_boundaries,
           context: :current_usage,
           cache_middleware:,
+          calculate_projected_usage:,
           with_zero_units_filters:
         )
         .raise_if_error!

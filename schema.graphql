@@ -892,9 +892,6 @@ type ChargeFilterUsage {
   id: ID
   invoiceDisplayName: String
   pricingUnitAmountCents: BigInt
-  pricingUnitProjectedAmountCents: BigInt
-  projectedAmountCents: BigInt!
-  projectedUnits: Float!
   units: Float!
   values: ChargeFilterValues!
 }
@@ -948,9 +945,6 @@ type ChargeUsage {
   groupedUsage: [GroupedChargeUsage!]!
   id: ID!
   pricingUnitAmountCents: BigInt
-  pricingUnitProjectedAmountCents: BigInt
-  projectedAmountCents: BigInt!
-  projectedUnits: Float!
   units: Float!
 }
 
@@ -4188,6 +4182,18 @@ type CustomerPortalWalletTransactionCollection {
   metadata: CollectionMetadata!
 }
 
+type CustomerProjectedUsage {
+  amountCents: BigInt!
+  chargesUsage: [ProjectedChargeUsage!]!
+  currency: CurrencyEnum!
+  fromDatetime: ISO8601DateTime!
+  issuingDate: ISO8601Date!
+  projectedAmountCents: BigInt!
+  taxesAmountCents: BigInt!
+  toDatetime: ISO8601DateTime!
+  totalAmountCents: BigInt!
+}
+
 enum CustomerTypeEnum {
   company
   individual
@@ -4199,7 +4205,6 @@ type CustomerUsage {
   currency: CurrencyEnum!
   fromDatetime: ISO8601DateTime!
   issuingDate: ISO8601Date!
-  projectedAmountCents: BigInt!
   taxesAmountCents: BigInt!
   toDatetime: ISO8601DateTime!
   totalAmountCents: BigInt!
@@ -5405,9 +5410,6 @@ type GroupedChargeUsage {
   groupedBy: JSON
   id: ID!
   pricingUnitAmountCents: BigInt
-  pricingUnitProjectedAmountCents: BigInt
-  projectedAmountCents: BigInt!
-  projectedUnits: Float!
   units: Float!
 }
 
@@ -8049,6 +8051,47 @@ enum PrivilegeValueTypeEnum {
   string
 }
 
+type ProjectedChargeFilterUsage {
+  amountCents: BigInt!
+  eventsCount: Int!
+  id: ID
+  invoiceDisplayName: String
+  pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
+  units: Float!
+  values: ChargeFilterValues!
+}
+
+type ProjectedChargeUsage {
+  amountCents: BigInt!
+  billableMetric: BillableMetric!
+  charge: Charge!
+  eventsCount: Int!
+  filters: [ProjectedChargeFilterUsage!]
+  groupedUsage: [ProjectedGroupedChargeUsage!]!
+  id: ID!
+  pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
+  units: Float!
+}
+
+type ProjectedGroupedChargeUsage {
+  amountCents: BigInt!
+  eventsCount: Int!
+  filters: [ProjectedChargeFilterUsage!]
+  groupedBy: JSON
+  id: ID!
+  pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
+  units: Float!
+}
+
 type Properties {
   amount: String
   customProperties: JSON
@@ -8375,6 +8418,11 @@ type Query {
   Query wallets
   """
   customerPortalWallets(limit: Int, page: Int): CustomerPortalWalletCollection!
+
+  """
+  Query the projected usage of the customer on the current billing period
+  """
+  customerProjectedUsage(customerId: ID, subscriptionId: ID!): CustomerProjectedUsage!
 
   """
   Query the usage of the customer on the current billing period

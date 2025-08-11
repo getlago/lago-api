@@ -2,7 +2,7 @@
 
 module Charges
   class ChargeModelFactory
-    def self.new_instance(charge:, aggregation_result:, properties:, period_ratio: nil, calculate_projected_usage: false)
+    def self.new_instance(charge:, aggregation_result:, properties:, period_ratio: 1.0, calculate_projected_usage: false)
       charge_model_class = charge_model_class(charge:)
       common_args = {
         charge:,

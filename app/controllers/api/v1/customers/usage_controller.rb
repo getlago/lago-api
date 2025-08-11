@@ -19,8 +19,7 @@ module Api
               json: ::V1::Customers::UsageSerializer.new(
                 result.usage,
                 root_name: "customer_usage",
-                includes: %i[charges_usage],
-                calculate_projected_usage: true
+                includes: %i[charges_usage]
               )
             )
           else

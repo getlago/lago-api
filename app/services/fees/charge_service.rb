@@ -11,6 +11,7 @@ module Fees
       cache_middleware: nil,
       bypass_aggregation: false,
       apply_taxes: false,
+      calculate_projected_usage: false,
       with_zero_units_filters: true
     )
       @invoice = invoice
@@ -19,6 +20,7 @@ module Fees
       @boundaries = boundaries
       @currency = subscription.plan.amount.currency
       @apply_taxes = apply_taxes
+      @calculate_projected_usage = calculate_projected_usage
       @with_zero_units_filters = with_zero_units_filters
       @context = context
       @current_usage = context == :current_usage
@@ -66,7 +68,7 @@ module Fees
 
     private
 
-    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes, :with_zero_units_filters
+    attr_accessor :invoice, :charge, :subscription, :boundaries, :context, :current_usage, :currency, :cache_middleware, :bypass_aggregation, :apply_taxes, :calculate_projected_usage, :with_zero_units_filters
 
     delegate :billable_metric, to: :charge
     delegate :organization, to: :subscription
@@ -265,7 +267,8 @@ module Fees
         charge:,
         aggregation_result:,
         properties:,
-        period_ratio: calculate_period_ratio
+        period_ratio: calculate_period_ratio,
+        calculate_projected_usage:
       ).apply
     end
 

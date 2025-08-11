@@ -8,8 +8,7 @@ RSpec.describe ChargeModels::StandardService, type: :service do
       charge:,
       aggregation_result:,
       properties: charge.properties,
-      period_ratio: 1.0,
-      calculate_projected_usage: true
+      period_ratio: 1.0
     )
   end
 
@@ -37,8 +36,6 @@ RSpec.describe ChargeModels::StandardService, type: :service do
   it "applies the charge model to the value" do
     expect(apply_standard_service.amount).to eq(51.2345)
     expect(apply_standard_service.unit_amount).to eq(5.12345)
-    expect(apply_standard_service.projected_amount).to eq(51.2345)
-    expect(apply_standard_service.projected_units).to eq(10)
   end
 
   context "when aggregation result contains total_aggregated_units" do
