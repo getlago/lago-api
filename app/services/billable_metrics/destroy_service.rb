@@ -23,6 +23,7 @@ module BillableMetrics
         .where(billable_metrics: {id: metric.id}).distinct.pluck(:id)
 
       ActiveRecord::Base.transaction do
+        metric.alerts.discard_all!
         metric.discard!
 
         # rubocop:disable Rails/SkipsModelValidations
