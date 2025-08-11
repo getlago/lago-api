@@ -8,10 +8,10 @@ module Types
       argument :pricing_group_keys, [String], required: false
 
       # NOTE: Graduated charge model
-      argument :graduated_ranges, [Types::Charges::GraduatedRangeInput], required: false
+      argument :graduated_ranges, [Types::ChargeModels::GraduatedRangeInput], required: false
 
       # NOTE: Graduated percentage charge model
-      argument :graduated_percentage_ranges, [Types::Charges::GraduatedPercentageRangeInput], required: false
+      argument :graduated_percentage_ranges, [Types::ChargeModels::GraduatedPercentageRangeInput], required: false
 
       # NOTE: Package charge model
       argument :free_units, GraphQL::Types::BigInt, required: false
