@@ -262,6 +262,7 @@ end
 #  address_line1                :string
 #  address_line2                :string
 #  api_key                      :string
+#  audit_logs_period            :integer          default(30)
 #  authentication_methods       :string           default(["email_password", "google_oauth"]), not null, is an Array
 #  city                         :string
 #  clickhouse_events_store      :boolean          default(FALSE), not null

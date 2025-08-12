@@ -16,15 +16,14 @@ class ActivityLogsQuery < BaseQuery
     :resource_types
   ]
 
-  MAX_AGE = 30.days
-
   def call
     return result.forbidden_failure! unless Utils::ActivityLog.available?
 
-    activity_logs = Clickhouse::ActivityLog.where(organization_id: organization.id, logged_at: MAX_AGE.ago..)
+    activity_logs = Clickhouse::ActivityLog.where(organization_id: organization.id)
     activity_logs = paginate(activity_logs)
     activity_logs = activity_logs.order(logged_at: :desc)
 
+    activity_logs = within_retention_period(activity_logs) if organization.audit_logs_period.present?
     activity_logs = with_logged_at_range(activity_logs) if filters.from_date || filters.to_date
     activity_logs = with_api_key_ids(activity_logs) if filters.api_key_ids.present?
     activity_logs = with_activity_ids(activity_logs) if filters.activity_ids.present?
@@ -41,6 +40,11 @@ class ActivityLogsQuery < BaseQuery
   end
 
   private
+
+  def within_retention_period(scope)
+    period = organization.audit_logs_period.days
+    scope.where(logged_at: period.ago..)
+  end
 
   def with_logged_at_range(scope)
     scope = scope.where(logged_at: from_date..) if filters.from_date
