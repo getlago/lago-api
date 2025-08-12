@@ -166,16 +166,28 @@ RSpec.describe CustomersQuery, type: :query do
     let(:filters) do
       {active_subscriptions_count_from: from, active_subscriptions_count_to: to}
     end
+    let(:subscriptionless_customer) do
+      create(:customer, organization:, billing_entity: billing_entity1)
+    end
 
     before do
+      subscriptionless_customer
       create(:subscription, customer: customer_first)
-
       2.times do
         create(:subscription, customer: customer_second)
       end
-
       3.times do
         create(:subscription, customer: customer_third)
+      end
+    end
+
+    context "without subscriptions" do
+      let(:from) { 0 }
+      let(:to) { 0 }
+
+      it "returns customers" do
+        expect(returned_ids.count).to eq(1)
+        expect(returned_ids).to eq([subscriptionless_customer.id])
       end
     end
 
@@ -189,8 +201,8 @@ RSpec.describe CustomersQuery, type: :query do
       end
     end
 
-    context "with subscriptions count more or equal than a number" do
-      let(:from) { 2 }
+    context "with subscriptions count more than a number" do
+      let(:from) { 1 }
       let(:to) { nil }
 
       it "returns customers" do
@@ -211,13 +223,14 @@ RSpec.describe CustomersQuery, type: :query do
       end
     end
 
-    context "with subscriptions count less or equal than a number" do
+    context "with subscriptions count less than a number" do
       let(:from) { nil }
-      let(:to) { 1 }
+      let(:to) { 2 }
 
       it "returns customers" do
-        expect(returned_ids.count).to eq(1)
+        expect(returned_ids.count).to eq(2)
         expect(returned_ids).to include(customer_first.id)
+        expect(returned_ids).to include(subscriptionless_customer.id)
       end
     end
   end

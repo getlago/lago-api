@@ -60,9 +60,18 @@ class CustomersQuery < BaseQuery
   end
 
   def with_active_subscriptions_range(scope)
-    count_scope = scope.joins(:subscriptions).where(subscriptions: {status: "active"}).group("customers.id")
-    count_scope = count_scope.having("COUNT(subscriptions.id) >= ?", filters.active_subscriptions_count_from) if filters.active_subscriptions_count_from
-    count_scope = count_scope.having("COUNT(subscriptions.id) <= ?", filters.active_subscriptions_count_to) if filters.active_subscriptions_count_to
+    active_subscriptions_count = "COUNT(CASE WHEN subscriptions.status = 1 THEN 1 END)"
+    count_scope = scope.left_joins(:subscriptions).group("customers.id")
+
+    count_scope = if filters.active_subscriptions_count_from == filters.active_subscriptions_count_to
+      count_scope.having("#{active_subscriptions_count} = ?", filters.active_subscriptions_count_from)
+    elsif filters.active_subscriptions_count_from.present? && filters.active_subscriptions_count_to.nil?
+      count_scope.having("#{active_subscriptions_count} > ?", filters.active_subscriptions_count_from)
+    elsif filters.active_subscriptions_count_from.nil? && filters.active_subscriptions_count_to.present?
+      count_scope.having("#{active_subscriptions_count} < ?", filters.active_subscriptions_count_to)
+    else
+      count_scope.having("#{active_subscriptions_count} BETWEEN ? AND ?", filters.active_subscriptions_count_from, filters.active_subscriptions_count_to)
+    end
 
     scope.where(id: count_scope.pluck(:id))
   end
