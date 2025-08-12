@@ -18,7 +18,7 @@ module Credits
       return result if already_applied?
       return result unless fees.any?
 
-      credit_amount = AppliedCoupons::AmountService.call(applied_coupon:, base_amount_cents:).amount
+      credit_amount = AppliedCoupons::AmountService.call(applied_coupon:, base_amount_cents:, invoice:).amount
 
       new_credit = Credit.create!(
         organization_id: invoice.organization_id,
@@ -39,7 +39,8 @@ module Credits
         fee.save!
       end
 
-      applied_coupon.frequency_duration_remaining -= 1 if applied_coupon.recurring?
+      is_subscription_invoice = invoice.invoice_subscriptions.any? { |invoice_subscription| invoice_subscription.invoicing_reason.include?("subscription") }
+      applied_coupon.frequency_duration_remaining -= 1 if applied_coupon.recurring? && is_subscription_invoice
       if should_terminate_applied_coupon?(credit_amount)
         applied_coupon.mark_as_terminated!
       elsif applied_coupon.recurring?
