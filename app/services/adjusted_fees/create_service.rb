@@ -4,16 +4,19 @@ module AdjustedFees
   class CreateService < BaseService
     Result = BaseResult[:fee, :adjusted_fee]
 
-    def initialize(invoice:, params:)
+    # preview - if true, fee will not be saved to the database
+    # we use it for previewing fee on when frontend is regenerating invoice
+    def initialize(invoice:, params:, preview: false)
       @invoice = invoice
       @organization = invoice.organization
       @params = params
+      @preview = preview
 
       super
     end
 
     def call
-      return result.forbidden_failure! if !License.premium? || !invoice.draft?
+      return result.forbidden_failure! if forbidden?
 
       fee = find_or_create_fee
       return result unless result.success?
@@ -58,7 +61,11 @@ module AdjustedFees
 
     private
 
-    attr_reader :organization, :invoice, :params
+    attr_reader :organization, :invoice, :params, :preview
+
+    def forbidden?
+      !preview && (!License.premium? || !invoice.draft?)
+    end
 
     def find_or_create_fee
       return find_existing_fee if params.key?(:fee_id)

@@ -56,6 +56,7 @@ module Clickhouse
       invoice_payment_status_updated: "invoice.payment_status_updated",
       invoice_payment_overdue: "invoice.payment_overdue",
       invoice_voided: "invoice.voided",
+      invoice_regenerated: "invoice.regenerated",
       invoice_payment_failure: "invoice.payment_failure",
       payment_receipt_created: "payment_receipt.created",
       payment_receipt_generated: "payment_receipt.generated",

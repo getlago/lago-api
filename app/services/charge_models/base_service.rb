@@ -21,12 +21,13 @@ module ChargeModels
       new(...).apply
     end
 
-    def initialize(charge:, aggregation_result:, properties:, period_ratio: nil)
+    def initialize(charge:, aggregation_result:, properties:, period_ratio: nil, calculate_projected_usage: false)
       super(nil)
       @charge = charge
       @aggregation_result = aggregation_result
       @properties = properties
       @period_ratio = period_ratio
+      @calculate_projected_usage = calculate_projected_usage
     end
 
     def apply
@@ -42,8 +43,10 @@ module ChargeModels
         result.total_aggregated_units = aggregation_result.total_aggregated_units
       end
 
-      result.projected_units = projected_units
-      result.projected_amount = compute_projected_amount
+      if calculate_projected_usage
+        result.projected_units = projected_units
+        result.projected_amount = compute_projected_amount
+      end
 
       result.grouped_results = [result]
       result
@@ -51,7 +54,7 @@ module ChargeModels
 
     protected
 
-    attr_accessor :charge, :aggregation_result, :properties, :period_ratio
+    attr_accessor :charge, :aggregation_result, :properties, :period_ratio, :calculate_projected_usage
 
     delegate :units, to: :result
     delegate :grouped_by, to: :aggregation_result

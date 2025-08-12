@@ -41,6 +41,7 @@ module Types
     field :customer_portal_subscriptions, resolver: Resolvers::CustomerPortal::SubscriptionsResolver
     field :customer_portal_user, resolver: Resolvers::CustomerPortal::CustomerResolver
     field :customer_portal_wallets, resolver: Resolvers::CustomerPortal::WalletsResolver
+    field :customer_projected_usage, resolver: Resolvers::Customers::ProjectedUsageResolver
     field :customer_usage, resolver: Resolvers::Customers::UsageResolver
     field :customers, resolver: Resolvers::CustomersResolver
     field :dunning_campaign, resolver: Resolvers::DunningCampaignResolver

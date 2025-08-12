@@ -25,8 +25,8 @@ module Charges
         )
 
         properties = params[:properties].presence || ChargeModels::BuildDefaultPropertiesService.call(charge.charge_model)
-        charge.properties = Charges::FilterChargeModelPropertiesService.call(
-          charge:,
+        charge.properties = ChargeModels::FilterPropertiesService.call(
+          chargeable: charge,
           properties:
         ).properties
 

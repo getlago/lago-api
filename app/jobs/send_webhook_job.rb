@@ -15,6 +15,7 @@ class SendWebhookJob < ApplicationJob
 
   WEBHOOK_SERVICES = {
     "alert.triggered" => Webhooks::UsageMonitoring::AlertTriggeredService,
+    "dunning_campaign.finished" => Webhooks::DunningCampaigns::FinishedService,
     "invoice.created" => Webhooks::Invoices::CreatedService,
     "invoice.one_off_created" => Webhooks::Invoices::OneOffCreatedService,
     "invoice.add_on_added" => Webhooks::Invoices::AddOnCreatedService,

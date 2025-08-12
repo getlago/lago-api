@@ -49,7 +49,8 @@ module Fees
         charge: charge,
         aggregation_result: aggregation_result,
         properties: properties_for_charge_model,
-        period_ratio: period_ratio
+        period_ratio: period_ratio,
+        calculate_projected_usage: true
       ).apply
 
       return result.fail_with_error!(charge_model_result.error) unless charge_model_result.success?

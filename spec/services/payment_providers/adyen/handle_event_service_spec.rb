@@ -142,7 +142,7 @@ RSpec.describe PaymentProviders::Adyen::HandleEventService do
           .first&.dig("NotificationRequestItem").to_json
       end
 
-      %w[report_available recurring_contract].each do |event_type|
+      %w[report_available recurring_contract offer_closed].each do |event_type|
         let(:event_response_json) do
           path = Rails.root.join("spec/fixtures/adyen/webhook_#{event_type}_response.json")
           File.read(path)

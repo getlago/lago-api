@@ -198,6 +198,11 @@ enum ActivityTypeEnum {
   invoice_payment_status_updated
 
   """
+  invoice.regenerated
+  """
+  invoice_regenerated
+
+  """
   invoice.voided
   """
   invoice_voided
@@ -887,9 +892,6 @@ type ChargeFilterUsage {
   id: ID
   invoiceDisplayName: String
   pricingUnitAmountCents: BigInt
-  pricingUnitProjectedAmountCents: BigInt
-  projectedAmountCents: BigInt!
-  projectedUnits: Float!
   units: Float!
   values: ChargeFilterValues!
 }
@@ -943,9 +945,6 @@ type ChargeUsage {
   groupedUsage: [GroupedChargeUsage!]!
   id: ID!
   pricingUnitAmountCents: BigInt
-  pricingUnitProjectedAmountCents: BigInt
-  projectedAmountCents: BigInt!
-  projectedUnits: Float!
   units: Float!
 }
 
@@ -2371,6 +2370,7 @@ input CreateAdjustedFeeInput {
   feeId: ID
   invoiceDisplayName: String
   invoiceId: ID!
+  invoiceSubscriptionId: ID
   subscriptionId: ID
   unitPreciseAmount: String
   units: Float
@@ -2791,6 +2791,7 @@ input CreateInvoiceInput {
   currency: CurrencyEnum
   customerId: ID!
   fees: [FeeInput!]!
+  voidedInvoiceId: ID
 }
 
 """
@@ -4181,6 +4182,18 @@ type CustomerPortalWalletTransactionCollection {
   metadata: CollectionMetadata!
 }
 
+type CustomerProjectedUsage {
+  amountCents: BigInt!
+  chargesUsage: [ProjectedChargeUsage!]!
+  currency: CurrencyEnum!
+  fromDatetime: ISO8601DateTime!
+  issuingDate: ISO8601Date!
+  projectedAmountCents: BigInt!
+  taxesAmountCents: BigInt!
+  toDatetime: ISO8601DateTime!
+  totalAmountCents: BigInt!
+}
+
 enum CustomerTypeEnum {
   company
   individual
@@ -4192,7 +4205,6 @@ type CustomerUsage {
   currency: CurrencyEnum!
   fromDatetime: ISO8601DateTime!
   issuingDate: ISO8601Date!
-  projectedAmountCents: BigInt!
   taxesAmountCents: BigInt!
   toDatetime: ISO8601DateTime!
   totalAmountCents: BigInt!
@@ -5056,6 +5068,7 @@ type FeatureObjectCollection {
 }
 
 type Fee implements InvoiceItem {
+  addOn: AddOn
   adjustedFee: Boolean!
   adjustedFeeType: AdjustedFeeTypeEnum
   amountCents: BigInt!
@@ -5144,7 +5157,7 @@ type FeeAppliedTax implements AppliedTax {
 Fee input for creating invoice
 """
 input FeeInput {
-  addOnId: ID!
+  addOnId: ID
   description: String
   invoiceDisplayName: String
   name: String
@@ -5173,6 +5186,7 @@ input FetchDraftInvoiceTaxesInput {
   currency: CurrencyEnum
   customerId: ID!
   fees: [FeeInput!]!
+  voidedInvoiceId: ID
 }
 
 """
@@ -5401,9 +5415,6 @@ type GroupedChargeUsage {
   groupedBy: JSON
   id: ID!
   pricingUnitAmountCents: BigInt
-  pricingUnitProjectedAmountCents: BigInt
-  projectedAmountCents: BigInt!
-  projectedUnits: Float!
   units: Float!
 }
 
@@ -5620,6 +5631,7 @@ type Invoice {
   prepaidCreditAmountCents: BigInt!
   progressiveBillingCreditAmountCents: BigInt!
   refundableAmountCents: BigInt!
+  regeneratedInvoiceId: String
   selfBilled: Boolean!
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
@@ -5637,6 +5649,8 @@ type Invoice {
   updatedAt: ISO8601DateTime!
   versionNumber: Int!
   voidable: Boolean!
+  voidedAt: ISO8601DateTime
+  voidedInvoiceId: String
 }
 
 type InvoiceAppliedTax implements AppliedTax {
@@ -6815,6 +6829,16 @@ type Mutation {
   ): LoginUser
 
   """
+  Preview Adjusted Fee
+  """
+  previewAdjustedFee(
+    """
+    Parameters for PreviewAdjustedFee
+    """
+    input: PreviewAdjustedFeeInput!
+  ): Fee
+
+  """
   Refresh a draft invoice
   """
   refreshInvoice(
@@ -6822,6 +6846,16 @@ type Mutation {
     Parameters for RefreshInvoice
     """
     input: RefreshInvoiceInput!
+  ): Invoice
+
+  """
+  Regenerate an invoice from a voided invoice
+  """
+  regenerateFromVoided(
+    """
+    Parameters for RegenerateInvoice
+    """
+    input: RegenerateInvoiceInput!
   ): Invoice
 
   """
@@ -7929,6 +7963,26 @@ enum PremiumIntegrationTypeEnum {
   zero_amount_fees
 }
 
+"""
+Create Adjusted Fee Input
+"""
+input PreviewAdjustedFeeInput {
+  chargeFilterId: ID
+  chargeId: ID
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  feeId: ID
+  invoiceDisplayName: String
+  invoiceId: ID!
+  invoiceSubscriptionId: ID
+  subscriptionId: ID
+  unitPreciseAmount: String
+  units: Float
+}
+
 type PricingUnit {
   code: String!
   createdAt: ISO8601DateTime!
@@ -8000,6 +8054,47 @@ enum PrivilegeValueTypeEnum {
   integer
   select
   string
+}
+
+type ProjectedChargeFilterUsage {
+  amountCents: BigInt!
+  eventsCount: Int!
+  id: ID
+  invoiceDisplayName: String
+  pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
+  units: Float!
+  values: ChargeFilterValues!
+}
+
+type ProjectedChargeUsage {
+  amountCents: BigInt!
+  billableMetric: BillableMetric!
+  charge: Charge!
+  eventsCount: Int!
+  filters: [ProjectedChargeFilterUsage!]
+  groupedUsage: [ProjectedGroupedChargeUsage!]!
+  id: ID!
+  pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
+  units: Float!
+}
+
+type ProjectedGroupedChargeUsage {
+  amountCents: BigInt!
+  eventsCount: Int!
+  filters: [ProjectedChargeFilterUsage!]
+  groupedBy: JSON
+  id: ID!
+  pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
+  units: Float!
 }
 
 type Properties {
@@ -8328,6 +8423,11 @@ type Query {
   Query wallets
   """
   customerPortalWallets(limit: Int, page: Int): CustomerPortalWalletCollection!
+
+  """
+  Query the projected usage of the customer on the current billing period
+  """
+  customerProjectedUsage(customerId: ID, subscriptionId: ID!): CustomerProjectedUsage!
 
   """
   Query the usage of the customer on the current billing period
@@ -8841,6 +8941,18 @@ input RefreshInvoiceInput {
   """
   clientMutationId: String
   id: ID!
+}
+
+"""
+Autogenerated input type of RegenerateInvoice
+"""
+input RegenerateInvoiceInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  fees: [VoidedInvoiceFeeInput!]!
+  voidedInvoiceId: ID!
 }
 
 type RegisterUser {
@@ -10956,6 +11068,21 @@ input VoidInvoiceInput {
   generateCreditNote: Boolean
   id: ID!
   refundAmount: BigInt
+}
+
+"""
+Fee input for creating or updating invoice from voided invoice
+"""
+input VoidedInvoiceFeeInput {
+  addOnId: ID
+  chargeFilterId: ID
+  chargeId: ID
+  description: String
+  id: ID
+  invoiceDisplayName: String
+  subscriptionId: ID
+  unitAmountCents: BigInt
+  units: Float
 }
 
 type VolumeRange {

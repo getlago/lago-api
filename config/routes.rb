@@ -31,6 +31,7 @@ Rails.application.routes.draw do
         get :portal_url
 
         get :current_usage, to: "customers/usage#current"
+        get :projected_usage, to: "customers/projected_usage#current"
         get :past_usage, to: "customers/usage#past"
 
         post :checkout_url
