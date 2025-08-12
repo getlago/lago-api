@@ -41,6 +41,22 @@ module Invoices
 
     attr_accessor :initial_subscriptions, :billing_at, :customer, :organization, :currency
 
+    # Apply the charges_to_datetime upper-bound only for regular periodic billing
+    # (i.e., no upgrade/downgrade/termination context). We consider it regular when
+    # every initial subscription is active AND has no pending next subscription AND
+    # is not being terminated.
+    def apply_charges_to_datetime_condition?
+      initial_subscriptions.all? do |s|
+        s.active? && s.next_subscription.nil? && !s.terminated?
+      end
+    end
+
+    def filter_charges_to_datetime(relation)
+      return relation unless apply_charges_to_datetime_condition?
+
+      relation.where("(properties ->> 'charges_to_datetime') IS NULL OR (properties ->> 'charges_to_datetime')::timestamp <= ?", billing_at)
+    end
+
     def subscriptions
       return [] unless customer
 
@@ -50,6 +66,7 @@ module Invoices
           id: Fee.joins(:subscription)
             .where(invoice_id: nil, payment_status: :succeeded)
             .where("succeeded_at <= ?", billing_at)
+            .then { |rel| filter_charges_to_datetime(rel) }
             .where(subscriptions: {
               customer_id: customer.id,
               external_id: initial_subscriptions.pluck(:external_id).uniq,
@@ -83,6 +100,7 @@ module Invoices
           is.subscription.fees
             .where(invoice: nil, payment_status: :succeeded)
             .where("succeeded_at <= ?", is.timestamp)
+            .then { |rel| filter_charges_to_datetime(rel) }
             .update_all(invoice_id: invoice.id) # rubocop:disable Rails/SkipsModelValidations
         end
 
