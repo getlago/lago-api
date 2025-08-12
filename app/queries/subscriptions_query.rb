@@ -7,6 +7,8 @@ class SubscriptionsQuery < BaseQuery
   def call
     subscriptions = base_scope.result
     subscriptions = paginate(subscriptions)
+    # FE pulls next_subscription through Graphql object, which creates additional cases to handle when
+    # next_subscription should be excluded from the result to avoid duplicates.
     subscriptions = with_excluded_next_subscriptions(subscriptions) if filters.exclude_next_subscriptions
     subscriptions = subscriptions.where(status: filtered_statuses) if valid_status?
     subscriptions = apply_consistent_ordering(
@@ -73,15 +75,18 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def with_excluded_next_subscriptions(scope)
-    if filters.status.blank?
-      scope.where(previous_subscription_id: nil)
-    else
-      # Next subscription is included in previous by graphql object, but if their statuses do not match, previous
-      # subscription can be filtered out, while next subscription is not.
+    # If there is a status filter and statuses of previous subscription and next subscritpion do not match,
+    # previous subscription can be filtered out, while next subscription should be included.
+    prev_sub_excluded_next_included_in_statuses_clause = ""
+    if filters.status.present?
       status_values = filters.status.map { |s| Subscription.statuses[s] }
-      scope.joins("LEFT JOIN subscriptions AS prev_subscriptions ON subscriptions.previous_subscription_id = prev_subscriptions.id")
-        .where("subscriptions.previous_subscription_id IS NULL OR (prev_subscriptions.status NOT IN (#{status_values.join(",")}) AND subscriptions.status IN (#{status_values.join(",")}))")
+      prev_sub_excluded_next_included_in_statuses_clause = "OR prev_subscriptions.status NOT IN (#{status_values.join(",")}) AND subscriptions.status IN (#{status_values.join(",")})"
     end
+    # FE does not show next sub for terminated subscriptions, so we need to include them in the query.
+    prev_sub_terminated_clause = "OR prev_subscriptions.status = #{Subscription.statuses[:terminated]}"
+
+    scope.joins("LEFT JOIN subscriptions AS prev_subscriptions ON subscriptions.previous_subscription_id = prev_subscriptions.id")
+      .where("subscriptions.previous_subscription_id IS NULL #{prev_sub_terminated_clause} #{prev_sub_excluded_next_included_in_statuses_clause}")
   end
 
   def filtered_statuses

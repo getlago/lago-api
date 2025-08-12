@@ -398,5 +398,25 @@ RSpec.describe SubscriptionsQuery, type: :query do
         expect(result.subscriptions).not_to include(pending_with_pending_previous)
       end
     end
+
+    context "when previous subscription is terminated" do
+      let(:subscription) { create(:subscription, customer:, plan:, status: :terminated) }
+
+      it "returns all subscriptions" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(4)
+        expect(result.subscriptions).to match_array([subscription, next_subscription, pending_subscription, terminated_subscription])
+      end
+
+      context "when there is a search term" do
+        let(:search_term) { customer.name }
+
+        it "returns all subscriptions" do
+          expect(result).to be_success
+          expect(result.subscriptions.count).to eq(4)
+          expect(result.subscriptions).to match_array([subscription, next_subscription, pending_subscription, terminated_subscription])
+        end
+      end
+    end
   end
 end
