@@ -13,6 +13,7 @@ RSpec.describe BillingEntities::UpdateService do
   let(:invoice_grace_period) { 0 }
   let(:logo) { nil }
   let(:country) { "fr" }
+  let(:einvoicing) { true }
 
   let(:params) do
     {
@@ -21,7 +22,7 @@ RSpec.describe BillingEntities::UpdateService do
       legal_number: "1234",
       tax_identification_number: "2246",
       email: "foo@bar.com",
-      einvoicing: true,
+      einvoicing:,
       address_line1: "Line 1",
       address_line2: "Line 2",
       state: "Foobar",
@@ -188,14 +189,31 @@ RSpec.describe BillingEntities::UpdateService do
     end
 
     context "with validation errors" do
-      let(:country) { "---" }
+      context "when invalid country" do
+        let(:country) { "---" }
 
-      it "returns an error" do
-        result = update_service.call
+        it "returns an error" do
+          result = update_service.call
 
-        expect(result).not_to be_success
-        expect(result.error).to be_a(BaseService::ValidationFailure)
-        expect(result.error.messages[:country]).to eq(["not_a_valid_country_code"])
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:country]).to eq(["not_a_valid_country_code"])
+        end
+      end
+    end
+
+    context "when enable einvoicing" do
+      context "when country is not supported" do
+        let(:country) { "BR" }
+        let(:einvoicing) { true }
+
+        before { billing_entity.update(einvoicing: true) }
+
+        it "disable einvoicing" do
+          result = update_service.call
+          expect(result).to be_success
+          expect(billing_entity.reload.einvoicing).to be_falsey
+        end
       end
     end
 
