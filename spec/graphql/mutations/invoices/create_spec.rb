@@ -11,6 +11,7 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
   let(:tax) { create(:tax, :applied_to_billing_entity, organization:, rate: 20) }
   let(:add_on_first) { create(:add_on, organization:) }
   let(:add_on_second) { create(:add_on, amount_cents: 400, organization:) }
+  let(:current_time) { DateTime.new(2023, 7, 19, 12, 12) }
   let(:fees) do
     [
       {
@@ -19,10 +20,14 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
         units: 2,
         description: "desc-123",
         invoiceDisplayName: "fee-123",
-        taxCodes: [tax.code]
+        taxCodes: [tax.code],
+        fromDatetime: current_time.utc.iso8601(3),
+        toDatetime: current_time.utc.iso8601(3)
       },
       {
-        addOnId: add_on_second.id
+        addOnId: add_on_second.id,
+        fromDatetime: current_time.utc.iso8601(3),
+        toDatetime: current_time.utc.iso8601(3)
       }
     ]
   end
@@ -39,7 +44,14 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
           invoiceType,
           issuingDate,
           appliedTaxes { id taxCode taxRate },
-          fees { units preciseUnitAmount },
+          fees {
+            units
+            preciseUnitAmount
+            properties {
+              fromDatetime
+              toDatetime
+            }
+          },
         }
       }
     GQL
@@ -81,8 +93,22 @@ RSpec.describe Mutations::Invoices::Create, type: :graphql do
       )
       expect(result_data["appliedTaxes"].map { |t| t["taxCode"] }).to contain_exactly(tax.code)
       expect(result_data["fees"]).to contain_exactly(
-        {"units" => 2.0, "preciseUnitAmount" => 12.0},
-        {"units" => 1.0, "preciseUnitAmount" => 4.0}
+        {
+          "units" => 2.0,
+          "preciseUnitAmount" => 12.0,
+          "properties" => {
+            "fromDatetime" => current_time.to_time.utc.iso8601,
+            "toDatetime" => current_time.to_time.utc.iso8601
+          }
+        },
+        {
+          "units" => 1.0,
+          "preciseUnitAmount" => 4.0,
+          "properties" => {
+            "fromDatetime" => current_time.to_time.utc.iso8601,
+            "toDatetime" => current_time.to_time.utc.iso8601
+          }
+        }
       )
     end
   end

@@ -34,6 +34,7 @@ fr:
     due_date: Date d'échéance le %{date}
     fee_prorated: Les frais sont calculés au prorata des jours d'utilisation, le prix unitaire affiché est une moyenne
     fees_from_to_date: Frais de conso. du %{from_date} au %{to_date}
+    from_to_date: Du %{from_date} au %{to_date}
     graduated:
       fee_per_unit_for_the_first: Frais par unité pour les %{to} premières
       fee_per_unit_for_the_last: Frais par unité pour %{from} et plus
