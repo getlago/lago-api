@@ -176,6 +176,53 @@ RSpec.describe BillingEntity do
 
       expect(billing_entity).not_to be_valid
     end
+
+    context "when validate einvoicing" do
+      let(:einvoicing) { true }
+      let(:country) { "FR" }
+
+      before do
+        billing_entity.einvoicing = einvoicing
+        billing_entity.country = country
+      end
+
+      context "without country" do
+        let(:country) { nil }
+
+        it "is not valid" do
+          expect(billing_entity).not_to be_valid
+          expect(billing_entity.errors.first.attribute).to eq(:einvoicing)
+          expect(billing_entity.errors.first.type).to eq(:country_must_be_present)
+        end
+      end
+
+      context "with an unsupported country" do
+        let(:country) { "BR" }
+
+        it "is not valid" do
+          expect(billing_entity).not_to be_valid
+          expect(billing_entity.errors.first.attribute).to eq(:einvoicing)
+          expect(billing_entity.errors.first.type).to eq(:country_not_supported)
+        end
+      end
+
+      context "with a supported country" do
+        let(:country) { "fr" }
+
+        it "is not valid" do
+          expect(billing_entity).to be_valid
+        end
+      end
+
+      context "when einvoincing is false" do
+        let(:einvoicing) { false }
+        let(:country) { "BR" }
+
+        it "succeeds" do
+          expect(billing_entity).to be_valid
+        end
+      end
+    end
   end
 
   describe "#save" do
