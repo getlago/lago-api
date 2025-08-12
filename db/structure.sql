@@ -72,6 +72,7 @@ ALTER TABLE IF EXISTS ONLY public.daily_usages DROP CONSTRAINT IF EXISTS fk_rail
 ALTER TABLE IF EXISTS ONLY public.pricing_unit_usages DROP CONSTRAINT IF EXISTS fk_rails_aea6422e6a;
 ALTER TABLE IF EXISTS ONLY public.charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_ac146c9541;
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_subscription_activities DROP CONSTRAINT IF EXISTS fk_rails_ab16de0b32;
+ALTER TABLE IF EXISTS ONLY public.job_schedule_overrides DROP CONSTRAINT IF EXISTS fk_rails_aac280c4b7;
 ALTER TABLE IF EXISTS ONLY public.commitments_taxes DROP CONSTRAINT IF EXISTS fk_rails_aaa12f7d3e;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_aa34dd5db6;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges DROP CONSTRAINT IF EXISTS fk_rails_aa04ceacf6;
@@ -373,6 +374,8 @@ DROP INDEX IF EXISTS public.index_lifetime_usages_on_subscription_id;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_invoiced_usage;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_recalculate_current_usage;
 DROP INDEX IF EXISTS public.index_lifetime_usages_on_organization_id;
+DROP INDEX IF EXISTS public.index_job_schedule_overrides_on_organization_id_and_job_name;
+DROP INDEX IF EXISTS public.index_job_schedule_overrides_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_invoices_taxes_on_invoice_id_and_tax_id;
@@ -705,6 +708,7 @@ ALTER TABLE IF EXISTS ONLY public.password_resets DROP CONSTRAINT IF EXISTS pass
 ALTER TABLE IF EXISTS ONLY public.organizations DROP CONSTRAINT IF EXISTS organizations_pkey;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS memberships_pkey;
 ALTER TABLE IF EXISTS ONLY public.lifetime_usages DROP CONSTRAINT IF EXISTS lifetime_usages_pkey;
+ALTER TABLE IF EXISTS ONLY public.job_schedule_overrides DROP CONSTRAINT IF EXISTS job_schedule_overrides_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoices_taxes DROP CONSTRAINT IF EXISTS invoices_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS invoices_pkey;
 ALTER TABLE IF EXISTS ONLY public.invoices_payment_requests DROP CONSTRAINT IF EXISTS invoices_payment_requests_pkey;
@@ -802,6 +806,7 @@ DROP TABLE IF EXISTS public.password_resets;
 DROP TABLE IF EXISTS public.memberships;
 DROP TABLE IF EXISTS public.lifetime_usages;
 DROP MATERIALIZED VIEW IF EXISTS public.last_hour_events_mv;
+DROP TABLE IF EXISTS public.job_schedule_overrides;
 DROP TABLE IF EXISTS public.invoice_custom_sections;
 DROP TABLE IF EXISTS public.invoice_custom_section_selections;
 DROP TABLE IF EXISTS public.invites;
@@ -3604,6 +3609,23 @@ CREATE TABLE public.invoice_custom_sections (
 
 
 --
+-- Name: job_schedule_overrides; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.job_schedule_overrides (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    job_name character varying,
+    frequency_secods integer,
+    last_enqueued_at timestamp(6) without time zone,
+    enabled_at timestamp(6) without time zone,
+    deleted_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: last_hour_events_mv; Type: MATERIALIZED VIEW; Schema: public; Owner: -
 --
 
@@ -4633,6 +4655,14 @@ ALTER TABLE ONLY public.invoices
 
 ALTER TABLE ONLY public.invoices_taxes
     ADD CONSTRAINT invoices_taxes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: job_schedule_overrides job_schedule_overrides_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.job_schedule_overrides
+    ADD CONSTRAINT job_schedule_overrides_pkey PRIMARY KEY (id);
 
 
 --
@@ -6994,6 +7024,20 @@ CREATE INDEX index_invoices_taxes_on_tax_id ON public.invoices_taxes USING btree
 
 
 --
+-- Name: index_job_schedule_overrides_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_job_schedule_overrides_on_organization_id ON public.job_schedule_overrides USING btree (organization_id);
+
+
+--
+-- Name: index_job_schedule_overrides_on_organization_id_and_job_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_job_schedule_overrides_on_organization_id_and_job_name ON public.job_schedule_overrides USING btree (organization_id, job_name);
+
+
+--
 -- Name: index_lifetime_usages_on_organization_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9150,6 +9194,14 @@ ALTER TABLE ONLY public.commitments_taxes
 
 
 --
+-- Name: job_schedule_overrides fk_rails_aac280c4b7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.job_schedule_overrides
+    ADD CONSTRAINT fk_rails_aac280c4b7 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: usage_monitoring_subscription_activities fk_rails_ab16de0b32; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9665,6 +9717,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250820200921'),
 ('20250818154000'),
 ('20250812132802'),
+('20250812115632'),
 ('20250812082721'),
 ('20250806174150'),
 ('20250806173900'),
