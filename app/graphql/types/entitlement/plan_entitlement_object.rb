@@ -5,6 +5,8 @@ module Types
     class PlanEntitlementObject < Types::BaseObject
       graphql_name "PlanEntitlement"
 
+      field :id, ID, null: false
+
       field :code, String, null: false
       field :description, String, null: true
       field :feature, Types::Entitlement::FeatureObject, null: false

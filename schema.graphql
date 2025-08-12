@@ -7942,6 +7942,7 @@ type PlanEntitlement {
   code: String!
   description: String
   feature: FeatureObject!
+  id: ID!
   name: String!
   privileges: [PlanEntitlementPrivilegeObject!]!
 }
@@ -7964,6 +7965,7 @@ type PlanEntitlementCollection {
 type PlanEntitlementPrivilegeObject {
   code: String!
   config: PrivilegeConfigObject!
+  id: ID!
   name: String
   value: String!
   valueType: PrivilegeValueTypeEnum!
