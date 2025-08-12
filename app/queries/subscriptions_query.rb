@@ -61,14 +61,14 @@ class SubscriptionsQuery < BaseQuery
   end
 
   def with_plan_code(scope)
-    scope.joins(:plan).where(plan: {code: filters.plan_code})
+    scope.joins(:plan).where(plans: {code: filters.plan_code})
   end
 
   def with_overriden(scope)
     if filters.overriden
-      scope.joins(:plan).where.not(plan: {parent_id: nil})
+      scope.joins(:plan).where.not(plans: {parent_id: nil})
     else
-      scope.joins(:plan).where(plan: {parent_id: nil})
+      scope.joins(:plan).where(plans: {parent_id: nil})
     end
   end
 
