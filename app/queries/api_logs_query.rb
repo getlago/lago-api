@@ -14,14 +14,13 @@ class ApiLogsQuery < BaseQuery
     :clients
   ]
 
-  MAX_AGE = 30.days
-
   def call
     return result.forbidden_failure! unless Utils::ApiLog.available?
 
-    api_logs = Clickhouse::ApiLog.where(organization_id: organization.id, logged_at: MAX_AGE.ago..)
+    api_logs = Clickhouse::ApiLog.where(organization_id: organization.id)
     api_logs = api_logs.order(logged_at: :desc)
 
+    api_logs = within_retention_period(api_logs) if organization.audit_logs_period.present?
     api_logs = with_logged_at_range(api_logs) if filters.from_date || filters.to_date
     api_logs = with_api_key_ids(api_logs) if filters.api_key_ids.present?
     api_logs = with_request_ids(api_logs) if filters.request_ids.present?
@@ -37,6 +36,11 @@ class ApiLogsQuery < BaseQuery
   end
 
   private
+
+  def within_retention_period(scope)
+    period = organization.audit_logs_period.days
+    scope.where(logged_at: period.ago..)
+  end
 
   def with_logged_at_range(scope)
     scope = scope.where(logged_at: filters.from_date..) if filters.from_date
