@@ -25,7 +25,7 @@ module Clock
 
       override.job_klass.perform_later(organization: override.organization)
       override.update!(last_enqueued_at: Time.current)
-    rescue StandardError => e
+    rescue => e
       msg = "[DispatchJobOverridesJob] Error dispatching #{override.id}: #{e.message}"
       Rails.logger.error(msg)
       Sentry.capture_exception(e) if defined?(Sentry)
