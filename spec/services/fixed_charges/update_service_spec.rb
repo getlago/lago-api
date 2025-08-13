@@ -7,7 +7,7 @@ RSpec.describe FixedCharges::UpdateService, type: :service do
 
   let(:plan) { create(:plan) }
   let(:add_on) { create(:add_on, organization: plan.organization) }
-  let(:fixed_charge) { create(:fixed_charge, plan:, add_on:) }
+  let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, prorated: false, pay_in_advance: false) }
   let(:cascade_options) { {cascade: false} }
   let(:params) do
     {
@@ -15,6 +15,7 @@ RSpec.describe FixedCharges::UpdateService, type: :service do
       invoice_display_name: "Updated Display Name",
       units: 5,
       prorated: true,
+      pay_in_advance: true,
       properties: {amount: "200"}
     }
   end
@@ -26,19 +27,20 @@ RSpec.describe FixedCharges::UpdateService, type: :service do
       let(:fixed_charge) { nil }
 
       it "returns a not found failure" do
-        expect(result).to be_error
+        expect(result).not_to be_success
         expect(result.error.error_code).to eq("fixed_charge_not_found")
       end
     end
 
     context "when fixed_charge exists" do
-      it "updates the fixed charge" do
+      it "updates the fixed charge without updating pay_in_advance and prorated" do
         expect(result).to be_success
         expect(result.fixed_charge).to have_attributes(
           charge_model: "standard",
           invoice_display_name: "Updated Display Name",
           units: 5,
-          prorated: true,
+          prorated: false,
+          pay_in_advance: false,
           properties: {"amount" => "200"}
         )
       end
