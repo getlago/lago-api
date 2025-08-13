@@ -8,6 +8,10 @@ RUN apt update -qq && \
   curl https://sh.rustup.rs -sSf | bash -s -- -y && \
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -i -v $POSTGRES_VERSION
 
+RUN curl -L https://github.com/pdfcpu/pdfcpu/releases/download/v0.11.0/pdfcpu_0.11.0_Linux_arm64.tar.xz -o pdfcpu.tar.xz \
+    && tar -xf pdfcpu.tar.xz \
+    && install -m 755 pdfcpu_0.11.0_Linux_arm64/pdfcpu /usr/local/bin/ \
+    && rm -rf pdfcpu.tar.xz pdfcpu_0.11.0_Linux_arm64
 
 ENV BUNDLER_VERSION='2.6.8'
 ENV PATH="$PATH:/root/.cargo/bin/"
