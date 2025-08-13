@@ -29,7 +29,8 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
 
     {
       ubl_info: {name: "UBL Version and Customization", xpath: "//cbc:UBLVersionID"},
-      invoice_header: {name: "Invoice Header Information", xpath: "//cbc:ID"}
+      invoice_header: {name: "Invoice Header Information", xpath: "//cbc:ID"},
+      invoice_seller: {name: "Supplier Party", xpath: "//cac:AccountingSupplierParty"}
     }.each do |reference, section|
       it_behaves_like "xml section", section
     end

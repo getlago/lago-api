@@ -14,10 +14,6 @@ module EInvoices
 
         DATEFORMAT = "%Y%m%d"
 
-        # More taxations defined on UNTDID 5153 here
-        # https://service.unece.org/trade/untdid/d00a/tred/tred5153.htm
-        VAT = "VAT"
-
         # More categories for UNTDID 5305 here
         # https://service.unece.org/trade/untdid/d00a/tred/tred5305.htm
         S_CATEGORY = "S"
