@@ -29,8 +29,15 @@ module ApiLoggable
 
   def produce_api_log
     yield
-    Utils::ApiLog.produce(request, response, organization: current_organization)
-  ensure
-    request.body.rewind
+
+    begin
+      Utils::ApiLog.produce(request, response, organization: current_organization)
+    rescue => e
+      Sentry.capture_exception(e) if ENV["SENTRY_DSN"].present?
+      Rails.logger.error("[Audit Logs] Failed to produce API log: #{e.class} - #{e.message}")
+      Rails.logger.error { e.backtrace.join("\n") }
+    ensure
+      request.body.rewind
+    end
   end
 end
