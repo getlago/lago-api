@@ -32,6 +32,10 @@ nb:
     document_name: Faktura
     document_tax_name: Skattefaktura
     due_date: Forfallsdato %{date}
+    e_invoicing:
+      discount_reason: Rabatt %{tax_rate} andel
+      payment_information: "%{payment_label} på %{currency} %{amount} brukt"
+      standard_payment: Standardbetaling
     fee_prorated: Avgiften beregnes forholdsmessig etter brukerdager, den viste enhetsprisen er et gjennomsnitt
     fees_from_to_date: Gebyrer fra %{from_date} til %{to_date}
     from_to_date: Fra %{from_date} til %{to_date}

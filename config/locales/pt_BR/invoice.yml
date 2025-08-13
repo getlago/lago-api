@@ -32,6 +32,10 @@ pt_BR:
     document_name: Fatura
     document_tax_name: Nota fiscal
     due_date: Vencimento %{date}
+    e_invoicing:
+      discount_reason: Desconto da parte de %{tax_rate}
+      payment_information: "%{payment_label} de %{currency} %{amount} aplicado"
+      standard_payment: Pagamento padrão
     fee_prorated: A taxa é proporcional aos dias de uso, o preço unitário exibido é uma média
     fees_from_to_date: Taxas de %{from_date} até %{to_date}
     from_to_date: De %{from_date} até %{to_date}

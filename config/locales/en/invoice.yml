@@ -33,6 +33,10 @@ en:
     document_name: Invoice
     document_tax_name: Tax invoice
     due_date: Due %{date}
+    e_invoicing:
+      discount_reason: Discount %{tax_rate} portion
+      payment_information: "%{payment_label} of %{currency} %{amount} applied"
+      standard_payment: Standard payment
     fee_prorated: The fee is prorated on days of usage, the displayed unit price is an average
     fees_from_to_date: Fees from %{from_date} to %{to_date}
     from_to_date: From %{from_date} to %{to_date}
