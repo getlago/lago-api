@@ -16,6 +16,7 @@ RSpec.describe Types::ActivityLogs::ResourceTypeEnum do
         wallet
         coupon
         payment_request
+        feature
       ]
     )
   end

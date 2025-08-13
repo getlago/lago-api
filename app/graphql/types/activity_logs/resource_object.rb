@@ -16,7 +16,8 @@ module Types
         Types::Subscriptions::Object,
         Types::Wallets::Object,
         Types::Coupons::Object,
-        Types::PaymentRequests::Object
+        Types::PaymentRequests::Object,
+        Types::Entitlement::FeatureObject
 
       def self.resolve_type(object, _context)
         case object.class.to_s
@@ -40,6 +41,8 @@ module Types
           Types::Coupons::Object
         when "PaymentRequest"
           Types::PaymentRequests::Object
+        when "Entitlement::Feature"
+          Types::Entitlement::FeatureObject
         else
           raise "Unexpected activity log resource type: #{object.inspect}"
         end
