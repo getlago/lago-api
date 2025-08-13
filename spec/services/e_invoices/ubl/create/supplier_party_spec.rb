@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe EInvoices::Ubl::Create::Supplier, type: :service do
+RSpec.describe EInvoices::Ubl::Create::SupplierParty, type: :service do
   subject do
     xml_document(:ubl) do |xml|
       described_class.call(xml:, invoice:)
