@@ -69,6 +69,7 @@ RSpec.configure do |config|
   config.include PdfHelper
   config.include StripeHelper
   config.include QueuesHelper
+  config.include XMLHelper
   config.include ActiveSupport::Testing::TimeHelpers
   config.include ActiveStorageValidations::Matchers
   config.include Karafka::Testing::RSpec::Helpers
