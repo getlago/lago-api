@@ -16,11 +16,10 @@ module FixedCharges
       return result if cascade && fixed_charge.charge_model != params[:charge_model]
 
       ActiveRecord::Base.transaction do
+        # Note: when updating a fixed_charge, we can't update pay_in_advance and prorated,
         fixed_charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
-        # TODO: what should be cascaded, what - not?
-        fixed_charge.invoice_display_name = params[:invoice_display_name]
+        fixed_charge.invoice_display_name = params[:invoice_display_name] unless cascade
         fixed_charge.units = params[:units]
-        fixed_charge.prorated = params[:prorated]
         if !cascade || cascade_options[:equal_properties]
           properties = params.delete(:properties).presence || ChargeModels::BuildDefaultPropertiesService.call(
             params[:charge_model]
@@ -31,9 +30,8 @@ module FixedCharges
         fixed_charge.save!
         result.fixed_charge = fixed_charge
 
-        unless cascade
-          tax_codes = params.delete(:tax_codes)
-          if tax_codes && !plan.attached_to_subscriptions?
+        unless cascade || plan.attached_to_subscriptions?
+          if (tax_codes = params.delete(:tax_codes))
             taxes_result = FixedCharges::ApplyTaxesService.call(fixed_charge:, tax_codes:)
             taxes_result.raise_if_error!
           end

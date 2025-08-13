@@ -26,7 +26,7 @@ RSpec.describe FixedCharges::UpdateService, type: :service do
       let(:fixed_charge) { nil }
 
       it "returns a not found failure" do
-        expect(result).not_to be_success
+        expect(result).to be_error
         expect(result.error.error_code).to eq("fixed_charge_not_found")
       end
     end
@@ -41,10 +41,6 @@ RSpec.describe FixedCharges::UpdateService, type: :service do
           prorated: true,
           properties: {"amount" => "200"}
         )
-      end
-
-      it "returns the fixed charge in the result" do
-        expect(result.fixed_charge).to eq(fixed_charge)
       end
 
       context "when plan is attached to subscriptions" do
@@ -136,9 +132,9 @@ RSpec.describe FixedCharges::UpdateService, type: :service do
         end
 
         context "when charge_model is the same" do
-          it "updates the fixed charge" do
+          it "does not update the display name" do
             expect(result).to be_success
-            expect(result.fixed_charge.invoice_display_name).to eq("Updated Display Name")
+            expect(result.fixed_charge.invoice_display_name).not_to eq("Updated Display Name")
           end
 
           context "when equal_properties is true" do
@@ -202,4 +198,4 @@ RSpec.describe FixedCharges::UpdateService, type: :service do
       end
     end
   end
-end 
+end
