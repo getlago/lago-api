@@ -205,7 +205,7 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
       end
 
       context "when new privileges is provided" do
-        let(:new_privilege_code) { "new_privilege" }
+        let(:new_privilege_code) { "     new_privilege     " }
         let(:params) do
           {
             privileges: [
@@ -219,7 +219,7 @@ RSpec.describe Entitlement::FeatureUpdateService, type: :service do
 
           expect(result).to be_success
           expect(feature.privileges.reload.count).to eq(1)
-          expect(feature.privileges.sole.code).to eq(new_privilege_code)
+          expect(feature.privileges.sole.code).to eq("new_privilege")
           expect(feature.privileges.sole.name).to eq("New Privilege")
           expect(feature.privileges.sole.value_type).to eq("string")
         end
