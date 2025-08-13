@@ -1183,7 +1183,11 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
+<<<<<<< HEAD
     context "with bill_fixed_charges_monthly functionality" do
+=======
+    context "bill_fixed_charges_monthly functionality" do
+>>>>>>> fb38ad612 (update plan with bill_fixed_charges_monthly and validate fixed_charges_params)
       context "when interval is yearly and bill_fixed_charges_monthly is sent" do
         let(:update_args) do
           {
@@ -1232,7 +1236,11 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
+<<<<<<< HEAD
     context "with fixed_charges validation" do
+=======
+    context "fixed_charges validation" do
+>>>>>>> fb38ad612 (update plan with bill_fixed_charges_monthly and validate fixed_charges_params)
       context "when valid fixed_charges are provided" do
         let(:update_args) do
           {
