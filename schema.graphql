@@ -2892,7 +2892,7 @@ input CreatePlanInput {
   code: String!
   description: String
   entitlements: [EntitlementInput!]
-  fixedCharges: [FixedChargeInput!]!
+  fixedCharges: [FixedChargeInput!]
   interval: PlanInterval!
   invoiceDisplayName: String
   minimumCommitment: CommitmentInput
