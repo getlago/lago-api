@@ -4,10 +4,6 @@ module EInvoices
   module FacturX
     module Create
       class Header < Builder
-        COMMERCIAL_INVOICE = 380
-        PREPAID_INVOICE = 386
-        SELF_BILLED_INVOICE = 389
-
         def call
           xml.comment "Exchange Document Header"
           xml["rsm"].ExchangedDocument do
@@ -19,18 +15,6 @@ module EInvoices
             xml["ram"].IncludedNote do
               xml["ram"].Content "Invoice ID: #{invoice.id}"
             end
-          end
-        end
-
-        private
-
-        def invoice_type_code
-          if invoice.credit?
-            PREPAID_INVOICE
-          elsif invoice.self_billed?
-            SELF_BILLED_INVOICE
-          else
-            COMMERCIAL_INVOICE
           end
         end
       end

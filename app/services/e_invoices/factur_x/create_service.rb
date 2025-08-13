@@ -2,13 +2,7 @@
 
 module EInvoices
   module FacturX
-    class CreateService < BaseService
-      def initialize(invoice:)
-        super
-
-        @invoice = invoice
-      end
-
+    class CreateService < EInvoices::BaseService
       def call
         return result.not_found_failure!(resource: "invoice") unless invoice
 
@@ -18,10 +12,6 @@ module EInvoices
 
         result
       end
-
-      private
-
-      attr_accessor :invoice
     end
   end
 end
