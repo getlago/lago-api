@@ -66,7 +66,7 @@ module Credits
     delegate :balance_cents, to: :wallet
 
     def already_applied?
-      invoice&.wallet_transactions&.exists?
+      invoice&.wallet_transactions&.where(wallet_id: wallet.id)&.exists?
     end
 
     def compute_amount
