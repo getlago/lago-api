@@ -423,6 +423,34 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
     expect(volume_fixed_charge["properties"]["volumeRanges"].count).to eq(2)
   end
 
+  context "when fixed charges are not provided" do
+    it "creates a plan without fixed charges" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            name: "Plan Without Fixed Charges",
+            invoiceDisplayName: "No Fixed Charges Plan",
+            code: "no_fixed_charges_plan",
+            interval: "monthly",
+            payInAdvance: false,
+            amountCents: 100,
+            amountCurrency: "USD",
+            charges: []
+          }
+        }
+      )
+
+      result_data = result["data"]["createPlan"]
+
+      expect(result_data["id"]).to be_present
+      expect(result_data["fixedCharges"]).to be_empty
+    end
+  end
+
   context "when interval is yearly" do
     it "creates a plan with monthly billing for charges and fixed charges" do
       result = execute_graphql(

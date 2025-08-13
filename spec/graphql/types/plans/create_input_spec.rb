@@ -19,7 +19,7 @@ RSpec.describe Types::Plans::CreateInput do
   it { is_expected.to accept_argument(:trial_period).of_type("Float") }
 
   it { is_expected.to accept_argument(:charges).of_type("[ChargeInput!]!") }
-  it { is_expected.to accept_argument(:fixed_charges).of_type("[FixedChargeInput!]!") }
+  it { is_expected.to accept_argument(:fixed_charges).of_type("[FixedChargeInput!]") }
   it { is_expected.to accept_argument(:minimum_commitment).of_type("CommitmentInput") }
   it { is_expected.to accept_argument(:usage_thresholds).of_type("[UsageThresholdInput!]") }
 end
