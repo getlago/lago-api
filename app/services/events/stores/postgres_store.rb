@@ -11,7 +11,12 @@ module Events
         scope = scope.order(timestamp: :asc) if ordered
 
         scope = scope.from_datetime(from_datetime) if force_from || use_from_boundary
-        scope = scope.to_datetime(to_datetime) if to_datetime
+
+        if filters[:event]
+          scope = scope.to_datetime(filters[:event].timestamp)
+        elsif to_datetime
+          scope = scope.to_datetime(to_datetime)
+        end
 
         if numeric_property
           scope = scope.where(presence_condition)
