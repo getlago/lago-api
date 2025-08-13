@@ -42,6 +42,7 @@ RSpec.describe EInvoices::Ubl::Create::SupplierParty, type: :service do
 
         it "expects to have street name" do
           expect(subject).to contains_xml_node("#{xpath}/cbc:StreetName").with_value(billing_entity.address_line1)
+          expect(subject).to contains_xml_node("#{xpath}/cbc:AdditionalStreetName").with_value(billing_entity.address_line2)
         end
 
         it "expects to have city" do
