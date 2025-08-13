@@ -24,6 +24,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
           hasCharges
           hasCustomers
           hasDraftInvoices
+          hasFixedCharges
           hasOverriddenPlans
           hasSubscriptions
 
@@ -49,6 +50,11 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
               rate
             }
           }
+          fixedCharges {
+            id
+            taxes { id rate }
+            properties { amount }
+          }
           minimumCommitment {
             id
             amountCents
@@ -66,6 +72,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
 
+  let(:add_on) { create(:add_on, organization:) }
   let(:billable_metric) { create(:billable_metric, organization:) }
   let(:minimum_commitment) { create(:commitment, :minimum_commitment, plan:) }
 
@@ -85,6 +92,7 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
     expect(plan_response["hasCharges"]).to eq(false)
     expect(plan_response["hasCustomers"]).to eq(false)
     expect(plan_response["hasDraftInvoices"]).to eq(false)
+    expect(plan_response["hasFixedCharges"]).to eq(false)
     expect(plan_response["hasActiveSubscriptions"]).to eq(false)
     expect(plan_response["hasSubscriptions"]).to eq(false)
 
@@ -176,6 +184,19 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
       plan_response = result["data"]["plan"]
 
       expect(plan_response["hasCharges"]).to eq(true)
+    end
+  end
+
+  context "when plan has fixed charges" do
+    let(:fixed_charge) { create(:fixed_charge, add_on:, plan:) }
+
+    before { fixed_charge }
+
+    it "returns true for has charges" do
+      plan_response = result["data"]["plan"]
+
+      expect(plan_response["hasFixedCharges"]).to eq(true)
+      expect(plan_response["fixedCharges"].pluck("id")).to match_array([fixed_charge.id])
     end
   end
 

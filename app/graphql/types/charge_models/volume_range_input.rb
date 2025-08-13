@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Types
-  module Charges
-    class GraduatedRangeInput < Types::BaseInputObject
+  module ChargeModels
+    class VolumeRangeInput < Types::BaseInputObject
       argument :from_value, GraphQL::Types::BigInt, required: true
       argument :to_value, GraphQL::Types::BigInt, required: false
 

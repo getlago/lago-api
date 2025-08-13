@@ -2876,6 +2876,7 @@ input CreatePlanInput {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
+  billFixedChargesMonthly: Boolean
   charges: [ChargeInput!]!
 
   """
@@ -2885,6 +2886,7 @@ input CreatePlanInput {
   code: String!
   description: String
   entitlements: [EntitlementInput!]
+  fixedCharges: [FixedChargeInput!]
   interval: PlanInterval!
   invoiceDisplayName: String
   minimumCommitment: CommitmentInput
@@ -5262,6 +5264,49 @@ type FinalizedInvoiceCollectionCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type FixedCharge {
+  addOn: AddOn!
+  chargeModel: FixedChargeChargeModelEnum!
+  createdAt: ISO8601DateTime!
+  deletedAt: ISO8601DateTime
+  id: ID!
+  invoiceDisplayName: String
+  payInAdvance: Boolean!
+  properties: FixedChargeProperties
+  prorated: Boolean!
+  taxes: [Tax!]
+  updatedAt: ISO8601DateTime!
+}
+
+enum FixedChargeChargeModelEnum {
+  graduated
+  standard
+  volume
+}
+
+input FixedChargeInput {
+  addOnId: ID!
+  chargeModel: FixedChargeChargeModelEnum!
+  invoiceDisplayName: String
+  payInAdvance: Boolean
+  properties: FixedChargePropertiesInput
+  prorated: Boolean
+  taxCodes: [String!]
+  units: String
+}
+
+type FixedChargeProperties {
+  amount: String
+  graduatedRanges: [GraduatedRange!]
+  volumeRanges: [VolumeRange!]
+}
+
+input FixedChargePropertiesInput {
+  amount: String
+  graduatedRanges: [GraduatedRangeInput!]
+  volumeRanges: [VolumeRangeInput!]
 }
 
 type FlutterwaveProvider {
@@ -7836,6 +7881,7 @@ type Plan {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
+  billFixedChargesMonthly: Boolean
   charges: [Charge!]
 
   """
@@ -7853,10 +7899,12 @@ type Plan {
   description: String
   draftInvoicesCount: Int!
   entitlements: [PlanEntitlement!]
+  fixedCharges: [FixedCharge!]
   hasActiveSubscriptions: Boolean!
   hasCharges: Boolean!
   hasCustomers: Boolean!
   hasDraftInvoices: Boolean!
+  hasFixedCharges: Boolean!
   hasOverriddenPlans: Boolean
   hasSubscriptions: Boolean!
   id: ID!

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Types
-  module Charges
-    class GraduatedRange < Types::BaseObject
+  module ChargeModels
+    class VolumeRange < Types::BaseObject
       field :from_value, GraphQL::Types::BigInt, null: false
       field :to_value, GraphQL::Types::BigInt, null: true
 
