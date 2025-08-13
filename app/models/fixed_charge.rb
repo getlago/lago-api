@@ -36,6 +36,10 @@ class FixedCharge < ApplicationRecord
   validates :pay_in_advance, inclusion: {in: [true, false]}
   validates :prorated, inclusion: {in: [true, false]}
   validates :properties, presence: true
+
+  def equal_properties?(fixed_charge)
+    charge_model == fixed_charge.charge_model && properties == fixed_charge.properties
+  end
 end
 
 # == Schema Information
