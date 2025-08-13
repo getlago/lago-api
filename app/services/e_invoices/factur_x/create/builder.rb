@@ -3,7 +3,7 @@
 module EInvoices
   module FacturX
     module Create
-      class Builder < ::BaseService
+      class Builder < CreateService
         ROOT_NAMESPACES = {
           "xmlns:xs" => "http://www.w3.org/2001/XMLSchema",
           "xmlns:rsm" => "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100",
@@ -11,6 +11,8 @@ module EInvoices
           "xmlns:ram" => "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
           "xmlns:udt" => "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100"
         }.freeze
+
+        DATEFORMAT = "%Y%m%d"
 
         # More taxations defined on UNTDID 5153 here
         # https://service.unece.org/trade/untdid/d00a/tred/tred5153.htm
@@ -110,10 +112,6 @@ module EInvoices
           coupon_proportions.each do |tax_rate, amount|
             TradeAllowanceCharge.call(xml:, invoice:, tax_rate:, amount:)
           end
-        end
-
-        def formatted_date(date)
-          date.strftime("%Y%m%d")
         end
 
         def percent(value)
