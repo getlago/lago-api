@@ -3616,7 +3616,7 @@ CREATE TABLE public.job_schedule_overrides (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
     job_name character varying,
-    frequency_secods integer,
+    frequency_seconds integer,
     last_enqueued_at timestamp(6) without time zone,
     enabled_at timestamp(6) without time zone,
     deleted_at timestamp(6) without time zone,
