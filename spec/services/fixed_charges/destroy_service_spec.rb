@@ -39,11 +39,12 @@ RSpec.describe FixedCharges::DestroyService, type: :service do
 
     context "when fixed charge has associated records" do
       let(:tax) { create(:tax, organization:) }
-      let!(:applied_tax) { create(:fixed_charge_applied_tax, fixed_charge:, tax:) }
+      let(:applied_tax) { create(:fixed_charge_applied_tax, fixed_charge:, tax:) }
       let(:child_fixed_charge) { create(:fixed_charge, plan:, add_on:, parent: fixed_charge) }
-      let!(:fee) { create(:fee, fixed_charge:, organization:) }
+      let(:fee) { create(:fee, fixed_charge:, organization:) }
 
       before do
+        applied_tax
         child_fixed_charge
         fee
       end
@@ -56,7 +57,7 @@ RSpec.describe FixedCharges::DestroyService, type: :service do
       end
 
       it "does not delete associated applied taxes" do
-        expect { destroy_service.call }.not_to change { FixedCharge::AppliedTax.count }
+        expect { destroy_service.call }.not_to change(FixedCharge::AppliedTax, :count)
       end
 
       it "does not delete child fixed charges" do
@@ -71,8 +72,12 @@ RSpec.describe FixedCharges::DestroyService, type: :service do
     context "when fixed charge is already deleted" do
       let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, deleted_at: 1.day.ago) }
 
-      it "raises an error" do
-        expect { destroy_service.call }.to raise_error(Discard::RecordNotDiscarded)
+      it "returns error" do
+        result = destroy_service.call
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ServiceFailure)
+        expect(result.error.code).to eq("fixed_charge_already_deleted")
       end
     end
   end

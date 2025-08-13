@@ -21,6 +21,8 @@ module FixedCharges
       result.record_validation_failure!(record: e.record)
     rescue BaseService::FailedResult => e
       e.result
+    rescue Discard::RecordNotDiscarded => e
+      result.service_failure!(code: "fixed_charge_already_deleted", message: e.message)
     end
 
     private
