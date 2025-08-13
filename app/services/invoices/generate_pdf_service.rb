@@ -34,7 +34,7 @@ module Invoices
     def generate_pdf
       I18n.with_locale(invoice.customer.preferred_document_locale) do
         pdf_file = build_pdf_file
-        xml_file = attach_facturx_if_needed(pdf_file)
+        xml_file = attach_facturx(pdf_file) if should_generate_facturx_einvoice_xml?
         attach_pdf_to_invoice(pdf_file)
         invoice.save!
       ensure
@@ -53,9 +53,7 @@ module Invoices
       pdf_file
     end
 
-    def attach_facturx_if_needed(pdf_file)
-      return if invoice.billing_entity&.country != "FR"
-
+    def attach_facturx(pdf_file)
       xml_file = Tempfile.new([invoice.number, ".xml"])
       xml_file.write(EInvoices::FacturX::CreateService.call(invoice:).xml)
       xml_file.flush
@@ -72,7 +70,7 @@ module Invoices
       )
     end
 
-    def cleanup_tempfiles(pdf_file, xml_file = nil)
+    def cleanup_tempfiles(pdf_file, xml_file)
       pdf_file&.unlink
       xml_file&.unlink
     end
@@ -98,6 +96,10 @@ module Invoices
       return false if ActiveModel::Type::Boolean.new.cast(ENV["LAGO_DISABLE_PDF_GENERATION"])
 
       context == "admin" || invoice.file.blank?
+    end
+
+    def should_generate_facturx_einvoice_xml?
+      invoice.billing_entity.einvoicing && invoice.billing_entity&.country == "FR"
     end
 
     def charge?
