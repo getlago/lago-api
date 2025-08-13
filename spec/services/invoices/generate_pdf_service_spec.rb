@@ -11,6 +11,7 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
   let(:credit) { create(:credit, invoice:) }
   let(:fees) { create_list(:fee, 3, invoice:) }
   let(:invoice_subscription) { create(:invoice_subscription, :boundaries, invoice:, subscription:) }
+  let(:blank_pdf_path) { Rails.root.join("spec/fixtures/blank.pdf") }
 
   before do
     invoice_subscription
@@ -61,7 +62,7 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
     context "with already generated file" do
       before do
         invoice.file.attach(
-          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+          io: StringIO.new(File.read(blank_pdf_path)),
           filename: "invoice.pdf",
           content_type: "application/pdf"
         )
@@ -116,7 +117,7 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
         BaseService::Result.new.tap { |r| r.io = StringIO.new(pdf_content) }
       end
 
-      let(:pdf_content) { File.read(Rails.root.join("spec/fixtures/blank.pdf")) }
+      let(:pdf_content) { File.read(blank_pdf_path) }
 
       before do
         allow(Utils::PdfGenerator).to receive(:new).and_return(pdf_generator)
@@ -142,7 +143,7 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
 
       before do
         invoice.file.attach(
-          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+          io: StringIO.new(File.read(blank_pdf_path)),
           filename: "invoice.pdf",
           content_type: "application/pdf"
         )
@@ -152,6 +153,64 @@ RSpec.describe Invoices::GeneratePdfService, type: :service do
         result = described_class.call(invoice:, context:)
 
         expect(result.invoice.file.filename.to_s).not_to eq("invoice.pdf")
+      end
+    end
+
+    context "when create temp files" do
+      let(:pdf_tempfile) { instance_double(Tempfile).as_null_object }
+
+      before do
+        allow(pdf_tempfile).to receive(:path).and_return(blank_pdf_path)
+        allow(Tempfile).to receive(:new).with([invoice.number, ".pdf"]).and_return(pdf_tempfile)
+      end
+
+      it "unlink the pdf file at the end" do
+        described_class.call(invoice:, context:)
+
+        expect(pdf_tempfile).to have_received(:unlink)
+      end
+
+      context "with einvoicing enabled" do
+        let(:xml_tempfile) { instance_double(Tempfile).as_null_object }
+
+        before do
+          invoice.billing_entity.update(country: "FR", einvoicing: true)
+
+          allow(Tempfile).to receive(:new).with([invoice.number, ".xml"]).and_return(xml_tempfile)
+          allow(Invoices::AddAttachmentToPdfService).to receive(:call)
+        end
+
+        it "unlink all files at the end" do
+          described_class.call(invoice:, context:)
+
+          expect(pdf_tempfile).to have_received(:unlink)
+          expect(xml_tempfile).to have_received(:unlink)
+        end
+      end
+    end
+
+    context "when einvoicing is enabled" do
+      let(:fake_xml) { "<xml>content</xml>" }
+      let(:country) { nil }
+      let(:create_xml_result) { BaseService::Result.new.tap { |result| result.xml = fake_xml } }
+
+      before do
+        invoice.billing_entity.update(country:, einvoicing: true)
+
+        allow(EInvoices::FacturX::CreateService).to receive(:call).and_return(create_xml_result)
+        allow(Invoices::AddAttachmentToPdfService).to receive(:call)
+      end
+
+      context "with FR country" do
+        let(:country) { "FR" }
+
+        it "generates the invoice with attached facturx xml synchronously" do
+          result = described_class.call(invoice:, context:)
+
+          expect(Invoices::AddAttachmentToPdfService).to have_received(:call)
+          expect(EInvoices::FacturX::CreateService).to have_received(:call)
+          expect(result.invoice.file).to be_present
+        end
       end
     end
   end
