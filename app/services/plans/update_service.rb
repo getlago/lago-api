@@ -33,14 +33,15 @@ module Plans
         plan.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
         plan.trial_period = params[:trial_period] if params.key?(:trial_period)
         plan.bill_charges_monthly = bill_charges_monthly?
+        plan.bill_fixed_charges_monthly = bill_fixed_charges_monthly?
       end
 
-      if params[:charges].present?
-        metric_ids = params[:charges].map { |c| c[:billable_metric_id] }.uniq
-        if metric_ids.present? && organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.not_found_failure!(resource: "billable_metrics")
-        end
-      end
+       chargeables_validation_result = Plans::ChargeablesValidationService.call(
+        organization: plan.organization,
+        charges: params[:charges],
+        fixed_charges: params[:fixed_charges]
+      )
+      return chargeables_validation_result if chargeables_validation_result.failure?
 
       ActiveRecord::Base.transaction do
         plan.save!
@@ -51,6 +52,7 @@ module Plans
         end
 
         process_charges(plan, params[:charges]) if params[:charges]
+        process_fixed_charges(plan, params[:fixed_charges]) if params[:fixed_charges]
 
         if params.key?(:usage_thresholds) && License.premium?
           Plans::UpdateUsageThresholdsService.call(plan:, usage_thresholds_params: params[:usage_thresholds])
@@ -87,6 +89,12 @@ module Plans
       return unless params[:interval]&.to_sym == :yearly
 
       params[:bill_charges_monthly] || false
+    end
+
+    def bill_fixed_charges_monthly?
+      return unless params[:interval]&.to_sym == :yearly
+
+      params[:bill_fixed_charges_monthly] || false
     end
 
     def cascade_subscription_fee_update(old_amount_cents)
@@ -186,6 +194,10 @@ module Plans
         after_commit { cascade_charge_removal(charge) }
         Charges::DestroyService.call(charge:)
       end
+    end
+
+    def process_fixed_charges(plan, params_fixed_charges)
+      # TODO: Implement
     end
 
     # NOTE: We should remove pending subscriptions
