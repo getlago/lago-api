@@ -7,25 +7,34 @@ class JobScheduleOverride < ApplicationRecord
   belongs_to :organization
 
   validates :job_name, presence: true, uniqueness: {scope: :organization_id}
-  validates :frequency_secods, numericality: {only_integer: true, greater_than: 0}
+  validates :frequency_seconds, numericality: {only_integer: true, greater_than: 0}
 
   default_scope -> { kept }
   scope :enabled, -> { where.not(enabled_at: nil) }
+
+  def due_to_run?
+    last_at = last_enqueued_at || Time.zone.at(0)
+    Time.current >= last_at + frequency_seconds.seconds
+  end
+
+  def job_klass
+    job_name.safe_constantize
+  end
 end
 
 # == Schema Information
 #
 # Table name: job_schedule_overrides
 #
-#  id               :uuid             not null, primary key
-#  deleted_at       :datetime
-#  enabled_at       :datetime
-#  frequency_secods :integer
-#  job_name         :string
-#  last_enqueued_at :datetime
-#  created_at       :datetime         not null
-#  updated_at       :datetime         not null
-#  organization_id  :uuid             not null
+#  id                :uuid             not null, primary key
+#  deleted_at        :datetime
+#  enabled_at        :datetime
+#  frequency_seconds :integer
+#  job_name          :string
+#  last_enqueued_at  :datetime
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  organization_id   :uuid             not null
 #
 # Indexes
 #
