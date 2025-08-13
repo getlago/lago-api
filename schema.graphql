@@ -52,7 +52,7 @@ type ActivityLogCollection {
 """
 Activity log resource
 """
-union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | Invoice | PaymentRequest | Plan | Subscription | Wallet
+union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | FeatureObject | Invoice | PaymentRequest | Plan | Subscription | Wallet
 
 """
 Activity Logs source enums
@@ -151,6 +151,21 @@ enum ActivityTypeEnum {
   customer.updated
   """
   customer_updated
+
+  """
+  feature.created
+  """
+  feature_created
+
+  """
+  feature.deleted
+  """
+  feature_deleted
+
+  """
+  feature.updated
+  """
+  feature_updated
 
   """
   invoice.created
@@ -9104,6 +9119,11 @@ enum ResourceTypeEnum {
   Customer
   """
   customer
+
+  """
+  Feature
+  """
+  feature
 
   """
   Invoice
