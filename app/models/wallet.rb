@@ -28,6 +28,7 @@ class Wallet < ApplicationRecord
   validates :paid_top_up_min_amount_cents, numericality: {greater_than: 0}, allow_nil: true
   validates :paid_top_up_max_amount_cents, numericality: {greater_than: 0}, allow_nil: true
   validate :paid_top_up_max_greater_than_or_equal_min
+  validates :priority, inclusion: {in: 1..50}
 
   STATUSES = [
     :active,

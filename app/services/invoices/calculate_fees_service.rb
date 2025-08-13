@@ -294,7 +294,7 @@ module Invoices
     def wallets
       return @wallets if @wallets
 
-      @wallets = customer.wallets.active
+      @wallets = customer.wallets.active.order(:priority, :created_at)
     end
 
     def should_create_credit_note_credit?
