@@ -22,6 +22,8 @@ module EInvoices
             xml.comment "UBL Version and Customization"
             xml["cbc"].UBLVersionID "2.1"
             xml["cbc"].CustomizationID "urn:cen.eu:en16931:2017"
+
+            Header.call(xml:, invoice:)
           end
         end
 
