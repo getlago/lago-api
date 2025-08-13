@@ -24,6 +24,7 @@ module EInvoices
             xml["cbc"].CustomizationID "urn:cen.eu:en16931:2017"
 
             Header.call(xml:, invoice:)
+            Supplier.call(xml:, invoice:)
           end
         end
 

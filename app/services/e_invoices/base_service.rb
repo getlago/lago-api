@@ -6,6 +6,10 @@ module EInvoices
     PREPAID_INVOICE = 386
     SELF_BILLED_INVOICE = 389
 
+    # More taxations defined on UNTDID 5153 here
+    # https://service.unece.org/trade/untdid/d00a/tred/tred5153.htm
+    VAT = "VAT"
+
     def initialize(invoice:)
       super
 
