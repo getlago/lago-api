@@ -3,7 +3,7 @@
 module EInvoices
   module Ubl
     module Create
-      class Supplier < Builder
+      class SupplierParty < Builder
         delegate :billing_entity, to: :invoice
 
         def call
