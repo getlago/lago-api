@@ -2,6 +2,8 @@
 
 require "rails_helper"
 
+DummyDispatchTargetJob = Class.new(ApplicationJob)
+
 RSpec.describe JobScheduleOverride, type: :model do
   subject(:job_schedule_override) { build(:job_schedule_override) }
 
@@ -41,13 +43,13 @@ RSpec.describe JobScheduleOverride, type: :model do
     context "when last_enqueued_at is set" do
       before { job_schedule_override.last_enqueued_at = 1.hour.ago }
 
-      context "current time is greater than last_enqueued_at + frequency_seconds seconds" do
+      context "when current time is greater than last_enqueued_at + frequency_seconds seconds" do
         before { job_schedule_override.frequency_seconds = 1_800 }
 
         it { is_expected.to be true }
       end
 
-      context "current time is less than last_enqueued_at + frequency_seconds seconds" do
+      context "when current time is less than last_enqueued_at + frequency_seconds seconds" do
         before { job_schedule_override.frequency_seconds = 3_601 }
 
         it { is_expected.to be false }
@@ -56,8 +58,6 @@ RSpec.describe JobScheduleOverride, type: :model do
 
     describe "#job_klass" do
       subject { job_schedule_override.job_klass }
-
-      DummyDispatchTargetJob = Class.new(ApplicationJob)
 
       context "when job_name is a valid constant" do
         before { job_schedule_override.job_name = "DummyDispatchTargetJob" }

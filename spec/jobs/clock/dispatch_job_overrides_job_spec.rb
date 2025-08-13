@@ -5,7 +5,8 @@ require "rails_helper"
 class DummyDispatchTargetJob < ApplicationJob
   queue_as :default
 
-  def perform(organization: nil); end
+  def perform(organization: nil)
+  end
 end
 
 describe Clock::DispatchJobOverridesJob, type: :job do
@@ -68,7 +69,7 @@ describe Clock::DispatchJobOverridesJob, type: :job do
       it "does not raise an error and skips the record" do
         expect { job.perform_now }.not_to raise_error
         expect(Rails.logger).to have_received(:error).with(
-          "[DispatchJobOverridesJob] Error dispatching #{override.id}: "\
+          "[DispatchJobOverridesJob] Error dispatching #{override.id}: " \
           "[DispatchJobOverridesJob] Unknown job name: NonExistentJobClass"
         )
       end
