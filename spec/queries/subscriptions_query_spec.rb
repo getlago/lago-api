@@ -418,5 +418,16 @@ RSpec.describe SubscriptionsQuery, type: :query do
         end
       end
     end
+
+    context "when next subscription is canceled" do
+      let(:subscription) { create(:subscription, customer:, plan:, status: :active) }
+      let(:next_subscription) { create(:subscription, previous_subscription: subscription, customer:, plan:, status: :canceled) }
+
+      it "returns all subscriptions" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(4)
+        expect(result.subscriptions).to match_array([subscription, next_subscription, pending_subscription, terminated_subscription])
+      end
+    end
   end
 end

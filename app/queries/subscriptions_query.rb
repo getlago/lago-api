@@ -84,9 +84,11 @@ class SubscriptionsQuery < BaseQuery
     end
     # FE does not show next sub for terminated subscriptions, so we need to include them in the query.
     prev_sub_terminated_clause = "OR prev_subscriptions.status = #{Subscription.statuses[:terminated]}"
+    # FE does not show next canceled subscription, so it should be included
+    next_sub_canceled_clause = "OR subscriptions.status = #{Subscription.statuses[:canceled]}"
 
     scope.joins("LEFT JOIN subscriptions AS prev_subscriptions ON subscriptions.previous_subscription_id = prev_subscriptions.id")
-      .where("subscriptions.previous_subscription_id IS NULL #{prev_sub_terminated_clause} #{prev_sub_excluded_next_included_in_statuses_clause}")
+      .where("subscriptions.previous_subscription_id IS NULL #{prev_sub_terminated_clause} #{prev_sub_excluded_next_included_in_statuses_clause} #{next_sub_canceled_clause}")
   end
 
   def filtered_statuses
