@@ -4314,11 +4314,16 @@ type DataApiPrepaidCreditCollection {
 type DataApiRevenueStream {
   amountCurrency: CurrencyEnum!
   commitmentFeeAmountCents: BigInt!
+  contraRevenueAmountCents: BigInt
   couponsAmountCents: BigInt!
+  creditNotesCreditsAmountCents: BigInt
   endOfPeriodDt: ISO8601Date!
+  freeCreditsAmountCents: BigInt
   grossRevenueAmountCents: BigInt!
   netRevenueAmountCents: BigInt!
   oneOffFeeAmountCents: BigInt!
+  prepaidCreditsAmountCents: BigInt
+  progressiveBillingCreditAmountCents: BigInt
   startOfPeriodDt: ISO8601Date!
   subscriptionFeeAmountCents: BigInt!
   usageBasedFeeAmountCents: BigInt!
