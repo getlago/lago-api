@@ -25,6 +25,7 @@ module EInvoices
 
             Header.call(xml:, invoice:)
             SupplierParty.call(xml:, invoice:)
+            CustomerParty.call(xml:, invoice:)
           end
         end
 
