@@ -31,7 +31,7 @@ class CreateEventsEnrichedExpanded < ActiveRecord::Migration[8.0]
       t.datetime :timestamp, null: false, precision: 3
       t.string :transaction_id, null: false
       t.json :properties, null: false
-      t.string :sorted_properties, map: true, null: false, default: -> { "mapSort(JSONExtract(properties, 'Map(String, String)'))" }
+      t.string :sorted_properties, map: true, null: false, default: -> { "mapSort(JSONExtract(properties::String, 'Map(String, String)'))" }
       t.string :value
       t.decimal :decimal_value, precision: 38, scale: 26, default: -> { "toDecimal128OrZero(value, 26)" }
       t.datetime :enriched_at, null: false, precision: 3, default: -> { "now()" }
@@ -44,7 +44,7 @@ class CreateEventsEnrichedExpanded < ActiveRecord::Migration[8.0]
       t.datetime :charge_filter_version
       t.string :aggregation_type, null: false
       t.json :grouped_by, null: false
-      t.string :sorted_grouped_by, map: true, null: false, default: -> { "mapSort(JSONExtract(grouped_by, 'Map(String, String)'))" }
+      t.string :sorted_grouped_by, map: true, null: false, default: -> { "mapSort(JSONExtract(grouped_by::String, 'Map(String, String)'))" }
     end
   end
 end
