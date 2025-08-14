@@ -55,7 +55,9 @@ module EInvoices
               TradeAgreement.call(xml:, invoice:)
               TradeDelivery.call(xml:, invoice:)
               TradeSettlement.call(xml:, invoice:) do
-                build_settlement_payments(xml, invoice)
+                build_payments(invoice) do |type, amount|
+                  TradeSettlementPayment.call(xml:, invoice:, type:, amount:)
+                end
                 build_applied_taxes(xml, invoice)
                 build_allowance_charges(xml, invoice)
 
@@ -73,16 +75,6 @@ module EInvoices
         def build_line_items_for_fees(xml)
           invoice.fees.each_with_index do |fee, index|
             LineItem.call(xml:, line_id: index + 1, fee:)
-          end
-        end
-
-        def build_settlement_payments(xml, invoice)
-          {
-            TradeSettlementPayment::STANDARD => invoice.total_due_amount,
-            TradeSettlementPayment::PREPAID => invoice.prepaid_credit_amount,
-            TradeSettlementPayment::CREDIT_NOTE => invoice.credit_notes_amount
-          }.each do |type, amount|
-            TradeSettlementPayment.call(xml:, invoice:, type:, amount:) if amount.positive?
           end
         end
 
