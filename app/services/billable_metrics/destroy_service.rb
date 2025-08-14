@@ -26,6 +26,7 @@ module BillableMetrics
         metric.discard!
 
         # rubocop:disable Rails/SkipsModelValidations
+        metric.alerts.update_all(deleted_at: Time.current)
         metric.charges.update_all(deleted_at: Time.current)
         Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true)
         # rubocop:enable Rails/SkipsModelValidations
