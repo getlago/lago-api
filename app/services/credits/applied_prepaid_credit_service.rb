@@ -88,7 +88,7 @@ module Credits
       end
 
       if wallet.limited_fee_types? || wallet.limited_to_billable_metrics?
-        [balance_cents, limited_fees_total(bm_limited_fees + fee_type_limited_fees)].min
+        [balance_cents, limited_fees_total(bm_limited_fees + fee_type_limited_fees), invoice.total_amount_cents].min
       else
         [balance_cents, invoice.total_amount_cents].min
       end
