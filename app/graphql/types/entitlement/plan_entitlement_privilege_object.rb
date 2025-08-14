@@ -8,7 +8,7 @@ module Types
       field :name, String, null: true
       field :value_type, Types::Entitlement::PrivilegeValueTypeEnum, null: false
 
-      field :value, String, null: false
+      field :value, String, null: true
 
       def code
         object.privilege.code

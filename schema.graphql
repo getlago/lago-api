@@ -7981,7 +7981,7 @@ type PlanEntitlementPrivilegeObject {
   code: String!
   config: PrivilegeConfigObject!
   name: String
-  value: String!
+  value: String
   valueType: PrivilegeValueTypeEnum!
 }
 
