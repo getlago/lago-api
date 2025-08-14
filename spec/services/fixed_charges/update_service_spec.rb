@@ -7,7 +7,11 @@ RSpec.describe FixedCharges::UpdateService, type: :service do
 
   let(:plan) { create(:plan) }
   let(:add_on) { create(:add_on, organization: plan.organization) }
-  let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, prorated: false, pay_in_advance: false) }
+
+  let(:fixed_charge) do
+    create(:fixed_charge, plan:, add_on:, prorated: false, pay_in_advance: false, units: 10)
+  end
+
   let(:cascade_options) { {cascade: false} }
   let(:params) do
     {
@@ -116,6 +120,22 @@ RSpec.describe FixedCharges::UpdateService, type: :service do
         it "uses default properties for the charge model" do
           expect(result).to be_success
           expect(result.fixed_charge.properties).to eq({"amount" => "0"})
+        end
+      end
+
+      context "when units are not provided" do
+        let(:params) do
+          {
+            charge_model: "standard",
+            invoice_display_name: "Updated Display Name",
+            prorated: true,
+            properties: {amount: "200"}
+          }
+        end
+
+        it "updates the fixed charge without changing units" do
+          expect(result).to be_success
+          expect(result.fixed_charge.units).to eq(10)
         end
       end
 

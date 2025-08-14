@@ -19,7 +19,7 @@ module FixedCharges
         # Note: when updating a fixed_charge, we can't update pay_in_advance and prorated,
         fixed_charge.charge_model = params[:charge_model] unless plan.attached_to_subscriptions?
         fixed_charge.invoice_display_name = params[:invoice_display_name] unless cascade
-        fixed_charge.units = params[:units]
+        fixed_charge.units = params[:units] if params.key?(:units)
         if !cascade || cascade_options[:equal_properties]
           properties = params.delete(:properties).presence || ChargeModels::BuildDefaultPropertiesService.call(
             params[:charge_model]
