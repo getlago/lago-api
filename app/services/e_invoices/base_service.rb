@@ -10,6 +10,12 @@ module EInvoices
     # https://service.unece.org/trade/untdid/d00a/tred/tred5153.htm
     VAT = "VAT"
 
+    # You can see more payments codes UNTDID 4461 here
+    # https://service.unece.org/trade/untdid/d21b/tred/tred4461.htm
+    STANDARD = 1
+    PREPAID = 57
+    CREDIT_NOTE = 97
+
     def initialize(invoice:)
       super
 
@@ -43,6 +49,36 @@ module EInvoices
           ::Subscriptions::DatesService.new_instance(subscription, Time.current, current_usage: true)
             .charges_from_datetime
         end.min
+      end
+    end
+
+    def payment_information
+      case type
+      when STANDARD
+        payment_label
+      when PREPAID, CREDIT_NOTE
+        I18n.t("invoice.e_invoicing.payment_information", payment_label:, currency: invoice.currency, amount:)
+      end
+    end
+
+    def payment_label
+      case type
+      when STANDARD
+        I18n.t("invoice.e_invoicing.standard_payment")
+      when PREPAID
+        I18n.t("invoice.prepaid_credits")
+      when CREDIT_NOTE
+        I18n.t("invoice.credit_notes")
+      end
+    end
+
+    def build_payments(invoice, &block)
+      {
+        STANDARD => invoice.total_due_amount,
+        PREPAID => invoice.prepaid_credit_amount,
+        CREDIT_NOTE => invoice.credit_notes_amount
+      }.each do |type, amount|
+        yield(type, amount) if amount.positive?
       end
     end
   end
