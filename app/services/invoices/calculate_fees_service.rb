@@ -323,13 +323,17 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      total_credit_cents = wallets.sum do |wallet|
-        prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice:, wallet:)
-        prepaid_credit_result.raise_if_error!
-        prepaid_credit_result.prepaid_credit_amount_cents
-      end
+      wallets.each do |wallet|
+        break if invoice.total_amount_cents <= 0
 
-      refresh_amounts(credit_amount_cents: total_credit_cents)
+        prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice:, wallet: wallet)
+        prepaid_credit_result.raise_if_error!
+
+        applied = prepaid_credit_result.prepaid_credit_amount_cents
+        next if applied.zero?
+
+        refresh_amounts(credit_amount_cents: applied)
+      end
     end
 
     # NOTE: Since credit impact the invoice amount, we need to recompute the amount and the VAT amount
