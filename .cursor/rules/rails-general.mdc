@@ -54,9 +54,7 @@ Where:
 - The body should
   - Explain the context and rationale for the change
   - Explain the "why" and "what" at a conceptual level, not the "how" at a code level
-  - Be simple and direct
-  - Avoid verbose explanations
-  - Keep as many meaningful information as possible
+  - Be simple and direct using complete sentences without being verbose while keeping as much information as possible
 - Check the whole diff at once using `PAGER=cat git diff ...` to see all changes together
 - Generate the commit message based on the actual changes, not assumptions
 - Do not check previous commits or commit history

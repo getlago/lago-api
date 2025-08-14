@@ -7612,6 +7612,7 @@ input OktaLoginInput {
 
 enum OnTerminationCreditNoteEnum {
   credit
+  refund
   skip
 }
 
@@ -8754,6 +8755,7 @@ type Query {
     searchTerm: String
     selfBilled: Boolean
     status: [InvoiceStatusTypeEnum!]
+    subscriptionId: ID
   ): InvoiceCollection!
 
   """

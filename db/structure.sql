@@ -251,7 +251,8 @@ SELECT
     NULL::timestamp(6) without time zone AS charge_filter_updated_at,
     NULL::jsonb AS filters,
     NULL::jsonb AS properties,
-    NULL::jsonb AS pricing_group_keys;
+    NULL::jsonb AS pricing_group_keys,
+    NULL::boolean AS pay_in_advance;
 CREATE OR REPLACE VIEW public.billable_metrics_grouped_charges AS
 SELECT
     NULL::uuid AS organization_id,
@@ -1070,7 +1071,8 @@ CREATE TYPE public.subscription_invoicing_reason AS ENUM (
 
 CREATE TYPE public.subscription_on_termination_credit_note AS ENUM (
     'credit',
-    'skip'
+    'skip',
+    'refund'
 );
 
 
@@ -3431,7 +3433,8 @@ SELECT
     NULL::timestamp(6) without time zone AS charge_filter_updated_at,
     NULL::jsonb AS filters,
     NULL::jsonb AS properties,
-    NULL::jsonb AS pricing_group_keys;
+    NULL::jsonb AS pricing_group_keys,
+    NULL::boolean AS pay_in_advance;
 
 
 --
@@ -7824,7 +7827,8 @@ CREATE OR REPLACE VIEW public.flat_filters AS
             ELSE NULL::jsonb
         END AS filters,
     COALESCE(charge_filters.properties, charges.properties) AS properties,
-    (COALESCE(charge_filters.properties, charges.properties) -> 'pricing_group_keys'::text) AS pricing_group_keys
+    (COALESCE(charge_filters.properties, charges.properties) -> 'pricing_group_keys'::text) AS pricing_group_keys,
+    charges.pay_in_advance
    FROM ((((public.billable_metrics
      JOIN public.charges ON ((charges.billable_metric_id = billable_metrics.id)))
      LEFT JOIN public.charge_filters ON ((charge_filters.charge_id = charges.id)))
@@ -9689,6 +9693,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20250812132802'),
+('20250812082721'),
 ('20250806174150'),
 ('20250806173900'),
 ('20250801072722'),
@@ -9719,6 +9724,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250716123425'),
 ('20250715124108'),
 ('20250714131519'),
+('20250712000000'),
 ('20250710102337'),
 ('20250709171329'),
 ('20250709085218'),
