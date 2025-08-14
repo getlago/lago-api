@@ -112,6 +112,7 @@ end
 #  ongoing_usage_balance_cents         :bigint           default(0), not null
 #  paid_top_up_max_amount_cents        :bigint
 #  paid_top_up_min_amount_cents        :bigint
+#  priority                            :integer          default(50), not null
 #  rate_amount                         :decimal(30, 5)   default(0.0), not null
 #  ready_to_be_refreshed               :boolean          default(FALSE), not null
 #  status                              :integer          not null
