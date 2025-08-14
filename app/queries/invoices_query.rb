@@ -19,7 +19,8 @@ class InvoicesQuery < BaseQuery
     :metadata,
     :partially_paid,
     :positive_due_amount,
-    :self_billed
+    :self_billed,
+    :subscription_id
   ]
 
   def call
@@ -45,6 +46,7 @@ class InvoicesQuery < BaseQuery
     invoices = with_partially_paid(invoices) unless filters.partially_paid.nil?
     invoices = with_positive_due_amount(invoices) unless filters.positive_due_amount.nil?
     invoices = with_self_billed(invoices) unless filters.self_billed.nil?
+    invoices = with_subscription_id(invoices) if filters.subscription_id.present?
 
     result.invoices = invoices
     result
@@ -91,6 +93,10 @@ class InvoicesQuery < BaseQuery
 
   def with_customer_id(scope)
     scope.where(customer_id: filters.customer_id)
+  end
+
+  def with_subscription_id(scope)
+    scope.joins(:invoice_subscriptions).where(invoice_subscriptions: {subscription_id: filters.subscription_id})
   end
 
   def with_invoice_type(scope)
