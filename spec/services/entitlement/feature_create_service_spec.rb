@@ -34,6 +34,14 @@ RSpec.describe Entitlement::FeatureCreateService, type: :service do
       expect(result.feature.organization).to eq(organization)
     end
 
+    it "trims code" do
+      params[:code] = "  seats  "
+      params[:privileges] = [{code: "  test "}]
+      result = subject
+      expect(result.feature.code).to eq "seats"
+      expect(result.feature.privileges.sole.code).to eq "test"
+    end
+
     it "produces an activity log" do
       result = subject
       expect(Utils::ActivityLog).to have_produced("feature.created").after_commit.with(result.feature)

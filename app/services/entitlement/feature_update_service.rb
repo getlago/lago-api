@@ -88,7 +88,7 @@ module Entitlement
     def create_privilege(privilege_params)
       privilege = feature.privileges.new(
         organization: feature.organization,
-        code: privilege_params[:code],
+        code: privilege_params[:code]&.strip,
         name: privilege_params[:name]
       )
       privilege.value_type = privilege_params[:value_type] if privilege_params.has_key? :value_type
