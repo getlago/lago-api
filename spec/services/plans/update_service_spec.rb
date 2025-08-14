@@ -15,6 +15,41 @@ RSpec.describe Plans::UpdateService, type: :service do
   let(:tax1) { create(:tax, organization:) }
   let(:applied_tax) { create(:plan_applied_tax, plan:, tax: tax1) }
   let(:tax2) { create(:tax, organization:) }
+  let(:add_on) { create(:add_on, organization:) }
+  let(:fixed_charges_args) do
+    [
+      {
+        add_on_id: add_on.id,
+        charge_model: "standard",
+        invoice_display_name: "fixed_charge1",
+        units: 2,
+        properties: {amount: "150"},
+        tax_codes: [tax1.code]
+      },
+      {
+        add_on_id: add_on.id,
+        charge_model: "graduated",
+        invoice_display_name: "fixed_charge2",
+        units: 1,
+        properties: {
+          graduated_ranges: [
+            {
+              from_value: 0,
+              to_value: 10,
+              per_unit_amount: "2",
+              flat_amount: "0"
+            },
+            {
+              from_value: 11,
+              to_value: nil,
+              per_unit_amount: "3",
+              flat_amount: "3"
+            }
+          ]
+        }
+      }
+    ]
+  end
 
   let(:update_args) do
     {
@@ -1145,6 +1180,145 @@ RSpec.describe Plans::UpdateService, type: :service do
 
         expect(updated_plan.name).to eq("Updated plan name")
         expect(plan.charges.count).to eq(2)
+      end
+    end
+
+    context "with bill_fixed_charges_monthly functionality" do
+      context "when interval is yearly and bill_fixed_charges_monthly is sent" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "yearly",
+            bill_fixed_charges_monthly: true
+          }
+        end
+
+        it "updates bill_fixed_charges_monthly" do
+          result = plans_service.call
+
+          expect(result.plan.bill_fixed_charges_monthly).to eq(true)
+        end
+      end
+
+      context "when interval is yearly and bill_fixed_charges_monthly is not provided" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "yearly"
+          }
+        end
+
+        it "sets bill_fixed_charges_monthly to false" do
+          result = plans_service.call
+
+          expect(result.plan.bill_fixed_charges_monthly).to eq(false)
+        end
+      end
+
+      context "when interval is not yearly" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "monthly",
+            bill_fixed_charges_monthly: true
+          }
+        end
+
+        it "does not set bill_fixed_charges_monthly" do
+          result = plans_service.call
+
+          expect(result.plan.bill_fixed_charges_monthly).to be_nil
+        end
+      end
+    end
+
+    context "with fixed_charges validation" do
+      context "when valid fixed_charges are provided" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            fixed_charges: fixed_charges_args
+          }
+        end
+
+        it "validates fixed_charges successfully" do
+          result = plans_service.call
+
+          expect(result).to be_success
+        end
+      end
+
+      context "when fixed_charges add_on is not found" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            fixed_charges: [
+              {
+                add_on_id: add_on.code,
+                charge_model: "standard",
+                units: 1,
+                properties: {amount: "100"}
+              }
+            ]
+          }
+        end
+
+        it "returns validation error" do
+          result = plans_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("add_ons_not_found")
+        end
+      end
+
+      context "when no fixed_charges are provided" do
+        let(:update_args) do
+          {
+            name: plan_name
+          }
+        end
+
+        it "does not validate fixed_charges" do
+          result = plans_service.call
+
+          expect(result).to be_success
+        end
+      end
+
+      context "when both charges and fixed_charges are provided" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            charges: charges_args,
+            fixed_charges: fixed_charges_args
+          }
+        end
+
+        it "validates both successfully" do
+          result = plans_service.call
+
+          expect(result).to be_success
+        end
+      end
+    end
+
+    context "with complete fixed_charges flow" do
+      let(:update_args) do
+        {
+          name: plan_name,
+          interval: "yearly",
+          bill_fixed_charges_monthly: true,
+          fixed_charges: fixed_charges_args
+        }
+      end
+
+      it "handles complete fixed_charges flow successfully" do
+        result = plans_service.call
+
+        expect(result).to be_success
+        expect(result.plan.bill_fixed_charges_monthly).to eq(true)
+        # to be continued with fixed_charges management
       end
     end
   end
