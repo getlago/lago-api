@@ -34,6 +34,8 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
     end
   end
 
+  payment_tag = "//cac:PaymentMeans"
+
   describe ".call" do
     it { is_expected.not_to be_nil }
 
@@ -42,7 +44,8 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
       invoice_header: {name: "Invoice Header Information", xpath: "//cbc:ID"},
       invoice_seller: {name: "Supplier Party", xpath: "//cac:AccountingSupplierParty"},
       invoice_customer: {name: "Customer Party", xpath: "//cac:AccountingCustomerParty"},
-      delivery: {name: "Delivery Information", xpath: "//cac:Delivery"}
+      delivery: {name: "Delivery Information", xpath: "//cac:Delivery"},
+      payment_and_credits: {name: "Payment Means:", xpath: "//cac:PaymentMeans"}
     }.each do |reference, section|
       it_behaves_like "xml section", section
     end
@@ -51,6 +54,36 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
       it "have the document info" do
         expect(subject).to contains_xml_node("//cbc:UBLVersionID").with_value(2.1)
         expect(subject).to contains_xml_node("//cbc:CustomizationID").with_value("urn:cen.eu:en16931:2017")
+      end
+    end
+
+    context "when payments and credits" do
+      context "when something to pay" do
+        it_behaves_like "xml section", {name: "Payment Means: Standard payment", xpath: "(#{payment_tag})[1]"}
+      end
+
+      context "with prepaid and credit note" do
+        before do
+          invoice.update(
+            credit_notes_amount_cents: 10_00,
+            prepaid_credit_amount_cents: 10_00
+          )
+        end
+
+        it_behaves_like "xml section", {name: "Payment Means: Standard payment", xpath: "(#{payment_tag})[1]"}
+        it_behaves_like "xml section", {name: "Payment Means: Prepaid credit", xpath: "(#{payment_tag})[2]"}
+        it_behaves_like "xml section", {name: "Payment Means: Credit note", xpath: "(#{payment_tag})[3]"}
+      end
+
+      context "when nothing else to pay" do
+        before do
+          invoice.update(
+            total_paid_amount_cents: invoice.total_due_amount_cents,
+            credit_notes_amount_cents: invoice.total_due_amount_cents
+          )
+        end
+
+        it_behaves_like "xml section", {name: "Payment Means: Credit note", xpath: "(#{payment_tag})[1]"}
       end
     end
   end

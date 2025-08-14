@@ -27,6 +27,9 @@ module EInvoices
             SupplierParty.call(xml:, invoice:)
             CustomerParty.call(xml:, invoice:)
             Delivery.call(xml:, invoice:)
+            credits_and_payments do |type, amount|
+              PaymentMeans.call(xml:, invoice:, type:, amount:)
+            end
           end
         end
 

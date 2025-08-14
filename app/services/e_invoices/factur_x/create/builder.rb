@@ -55,7 +55,7 @@ module EInvoices
               TradeAgreement.call(xml:, invoice:)
               TradeDelivery.call(xml:, invoice:)
               TradeSettlement.call(xml:, invoice:) do
-                build_payments(invoice) do |type, amount|
+                credits_and_payments do |type, amount|
                   TradeSettlementPayment.call(xml:, invoice:, type:, amount:)
                 end
                 build_applied_taxes(xml, invoice)
