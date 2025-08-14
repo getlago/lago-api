@@ -11,7 +11,7 @@ module Webhooks
 
       def object_serializer
         ::V1::EventsValidationErrorsSerializer.new(
-          OpenStruct.new(options[:errors]),
+          (options[:errors] || {}).with_indifferent_access,
           root_name: "events_errors"
         )
       end
