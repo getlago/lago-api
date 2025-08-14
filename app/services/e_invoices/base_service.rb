@@ -72,7 +72,7 @@ module EInvoices
       end
     end
 
-    def build_payments(invoice, &block)
+    def credits_and_payments(&block)
       {
         STANDARD => invoice.total_due_amount,
         PREPAID => invoice.prepaid_credit_amount,
