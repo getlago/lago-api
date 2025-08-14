@@ -33,5 +33,9 @@ FactoryBot.define do
         }
       end
     end
+
+    trait :deleted do
+      deleted_at { Time.current }
+    end
   end
 end
