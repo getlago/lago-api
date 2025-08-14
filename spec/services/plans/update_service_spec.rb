@@ -1183,7 +1183,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "bill_fixed_charges_monthly functionality" do
+    context "with bill_fixed_charges_monthly functionality" do
       context "when interval is yearly and bill_fixed_charges_monthly is sent" do
         let(:update_args) do
           {
@@ -1232,7 +1232,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "fixed_charges validation" do
+    context "with fixed_charges validation" do
       context "when valid fixed_charges are provided" do
         let(:update_args) do
           {
@@ -1303,7 +1303,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "complete fixed_charges flow" do
+    context "with complete fixed_charges flow" do
       let(:update_args) do
         {
           name: plan_name,
@@ -1318,6 +1318,7 @@ RSpec.describe Plans::UpdateService, type: :service do
 
         expect(result).to be_success
         expect(result.plan.bill_fixed_charges_monthly).to eq(true)
+        # to be continued with fixed_charges management
       end
     end
   end

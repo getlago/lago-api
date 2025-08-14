@@ -36,7 +36,7 @@ module Plans
         plan.bill_fixed_charges_monthly = bill_fixed_charges_monthly?
       end
 
-       chargeables_validation_result = Plans::ChargeablesValidationService.call(
+      chargeables_validation_result = Plans::ChargeablesValidationService.call(
         organization: plan.organization,
         charges: params[:charges],
         fixed_charges: params[:fixed_charges]
