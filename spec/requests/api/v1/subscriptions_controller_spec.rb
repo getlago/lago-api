@@ -436,6 +436,14 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           end
         end
 
+        context "when on_termination_credit_note is refund" do
+          let(:params) { {on_termination_credit_note: "refund"} }
+
+          it "terminates subscription with refund behavior" do
+            test_termination(expected_on_termination_credit_note: "refund")
+          end
+        end
+
         context "with invalid on_termination_credit_note value" do
           let(:params) { {on_termination_credit_note: "invalid"} }
 
