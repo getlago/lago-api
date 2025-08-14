@@ -81,5 +81,9 @@ module EInvoices
         yield(type, amount) if amount.positive?
       end
     end
+
+    def payment_terms_description
+      "#{I18n.t("invoice.payment_term")} #{I18n.t("invoice.payment_term_days", net_payment_term: invoice.net_payment_term)}"
+    end
   end
 end
