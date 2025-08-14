@@ -18,6 +18,12 @@ module Clockwork
 
   # NOTE: All clocks run every hour to take customer timezones into account
 
+  every(1.minute, "schedule:dispatch_job_overrides") do
+    Clock::DispatchJobOverridesJob
+      .set(sentry: {"slug" => "lago_dispatch_job_overrides", "cron" => "*/1 * * * *"})
+      .perform_later
+  end
+
   every(5.minutes, "schedule:activate_subscriptions") do
     Clock::ActivateSubscriptionsJob
       .set(sentry: {"slug" => "lago_activate_subscriptions", "cron" => "*/5 * * * *"})
