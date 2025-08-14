@@ -3,8 +3,7 @@
 class DunningCampaignThreshold < ApplicationRecord
   include Currencies
   include PaperTrailTraceable
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   belongs_to :dunning_campaign
   belongs_to :organization
@@ -14,8 +13,6 @@ class DunningCampaignThreshold < ApplicationRecord
   validates :currency,
     uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :dunning_campaign_id},
     unless: :deleted_at
-
-  default_scope -> { kept }
 end
 
 # == Schema Information

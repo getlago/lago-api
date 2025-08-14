@@ -3,8 +3,7 @@
 class UsageThreshold < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   belongs_to :organization
   belongs_to :plan
@@ -20,8 +19,6 @@ class UsageThreshold < ApplicationRecord
 
   scope :recurring, -> { where(recurring: true) }
   scope :not_recurring, -> { where(recurring: false) }
-
-  default_scope -> { kept }
 
   def invoice_name
     threshold_display_name || I18n.t("invoice.usage_threshold")

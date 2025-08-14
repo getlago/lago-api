@@ -2,10 +2,7 @@
 
 module Entitlement
   class EntitlementValue < ApplicationRecord
-    include Discard::Model
-    self.discard_column = :deleted_at
-
-    default_scope -> { kept }
+    include SoftDeletable
 
     belongs_to :organization
     belongs_to :privilege, class_name: "Entitlement::Privilege", foreign_key: :entitlement_privilege_id

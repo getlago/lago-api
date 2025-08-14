@@ -7,8 +7,7 @@ class Customer < ApplicationRecord
   include CustomerTimezone
   include OrganizationTimezone
   include BillingEntityTimezone
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS = [
     :inherit,
@@ -97,7 +96,6 @@ class Customer < ApplicationRecord
 
   PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
 
-  default_scope -> { kept }
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
     lock_key: ->(customer) { customer.organization_id }
 

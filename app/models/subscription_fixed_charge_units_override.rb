@@ -1,10 +1,7 @@
 # frozen_string_literal: true
 
 class SubscriptionFixedChargeUnitsOverride < ApplicationRecord
-  include Discard::Model
   include PaperTrailTraceable
-  self.discard_column = :deleted_at
-  default_scope -> { kept }
 
   belongs_to :organization
   belongs_to :billing_entity

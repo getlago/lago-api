@@ -2,8 +2,7 @@
 
 class LifetimeUsage < ApplicationRecord
   include Currencies
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   belongs_to :organization
   belongs_to :subscription
@@ -16,8 +15,6 @@ class LifetimeUsage < ApplicationRecord
     :invoiced_usage_amount_cents,
     :historical_usage_amount_cents,
     with_currency: ->(lifetime_usage) { lifetime_usage.subscription.plan.amount_currency }
-
-  default_scope -> { kept }
 
   scope :needs_recalculation, -> { where(recalculate_current_usage: true).or(where(recalculate_invoiced_usage: true)) }
 

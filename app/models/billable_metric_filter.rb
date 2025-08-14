@@ -2,8 +2,7 @@
 
 class BillableMetricFilter < ApplicationRecord
   include PaperTrailTraceable
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   belongs_to :billable_metric, -> { with_discarded }
   belongs_to :organization
@@ -13,8 +12,6 @@ class BillableMetricFilter < ApplicationRecord
 
   validates :key, presence: true
   validates :values, presence: true
-
-  default_scope -> { kept }
 end
 
 # == Schema Information

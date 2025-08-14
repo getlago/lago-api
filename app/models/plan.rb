@@ -3,8 +3,7 @@
 class Plan < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   belongs_to :organization
   belongs_to :parent, class_name: "Plan", optional: true
@@ -50,7 +49,6 @@ class Plan < ApplicationRecord
   validates :pay_in_advance, inclusion: {in: [true, false]}
   validate :validate_code_unique
 
-  default_scope -> { kept }
   scope :parents, -> { where(parent_id: nil) }
 
   def self.ransackable_attributes(_auth_object = nil)

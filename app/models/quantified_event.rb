@@ -2,8 +2,7 @@
 
 class QuantifiedEvent < ApplicationRecord
   include PaperTrailTraceable
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   RECURRING_TOTAL_UNITS = "total_aggregated_units"
 
@@ -15,8 +14,6 @@ class QuantifiedEvent < ApplicationRecord
 
   validates :added_at, presence: true
   validates :external_subscription_id, presence: true
-
-  default_scope -> { kept }
 end
 
 # == Schema Information

@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 class Event < EventsRecord
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   include CustomerTimezone
   include OrganizationTimezone
@@ -11,7 +10,6 @@ class Event < EventsRecord
 
   validates :code, presence: true
 
-  default_scope -> { kept }
   scope :from_datetime, ->(from_datetime) { where("events.timestamp >= ?", from_datetime) }
   scope :to_datetime, ->(to_datetime) { where("events.timestamp <= ?", to_datetime) }
 

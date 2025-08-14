@@ -2,9 +2,7 @@
 
 module UsageMonitoring
   class Alert < ApplicationRecord
-    include Discard::Model
-
-    self.discard_column = :deleted_at
+    include SoftDeletable
     self.inheritance_column = :alert_type
 
     STI_MAPPING = {
@@ -17,8 +15,6 @@ module UsageMonitoring
 
     CURRENT_USAGE_TYPES = %w[current_usage_amount billable_metric_current_usage_amount billable_metric_current_usage_units]
     BILLABLE_METRIC_TYPES = %w[billable_metric_current_usage_amount billable_metric_current_usage_units]
-
-    default_scope -> { kept }
 
     belongs_to :organization
     belongs_to :billable_metric, optional: true

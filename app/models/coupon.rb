@@ -3,8 +3,7 @@
 class Coupon < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   belongs_to :organization
 
@@ -58,7 +57,6 @@ class Coupon < ApplicationRecord
 
   validates :percentage_rate, presence: true, if: :percentage?
 
-  default_scope -> { kept }
   scope :order_by_status_and_expiration,
     lambda {
       order(
