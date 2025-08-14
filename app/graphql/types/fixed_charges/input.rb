@@ -6,6 +6,7 @@ module Types
       graphql_name "FixedChargeInput"
 
       argument :add_on_id, ID, required: true
+      argument :apply_units_immediately, Boolean, required: false
       argument :charge_model, Types::FixedCharges::ChargeModelEnum, required: true
       argument :invoice_display_name, String, required: false
       argument :pay_in_advance, Boolean, required: false

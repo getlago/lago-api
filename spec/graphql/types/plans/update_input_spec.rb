@@ -9,6 +9,7 @@ RSpec.describe Types::Plans::UpdateInput do
   it { is_expected.to accept_argument(:amount_cents).of_type("BigInt!") }
   it { is_expected.to accept_argument(:amount_currency).of_type("CurrencyEnum!") }
   it { is_expected.to accept_argument(:bill_charges_monthly).of_type("Boolean") }
+  it { is_expected.to accept_argument(:bill_fixed_charges_monthly).of_type("Boolean") }
   it { is_expected.to accept_argument(:cascade_updates).of_type("Boolean") }
   it { is_expected.to accept_argument(:code).of_type("String!") }
   it { is_expected.to accept_argument(:description).of_type("String") }
@@ -20,6 +21,7 @@ RSpec.describe Types::Plans::UpdateInput do
   it { is_expected.to accept_argument(:trial_period).of_type("Float") }
 
   it { is_expected.to accept_argument(:charges).of_type("[ChargeInput!]!") }
+  it { is_expected.to accept_argument(:fixed_charges).of_type("[FixedChargeInput!]") }
   it { is_expected.to accept_argument(:minimum_commitment).of_type("CommitmentInput") }
   it { is_expected.to accept_argument(:usage_thresholds).of_type("[UsageThresholdInput!]") }
 
