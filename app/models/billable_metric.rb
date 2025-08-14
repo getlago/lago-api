@@ -2,9 +2,7 @@
 
 class BillableMetric < ApplicationRecord
   include PaperTrailTraceable
-  include Discard::Model
   include IntegrationMappable
-  self.discard_column = :deleted_at
 
   belongs_to :organization
 
@@ -57,8 +55,6 @@ class BillableMetric < ApplicationRecord
     if: :weighted_sum_agg?
   validates :custom_aggregator, presence: true, if: :custom_agg?
   validates :rounding_function, inclusion: {in: ROUNDING_FUNCTIONS.values}, allow_nil: true
-
-  default_scope -> { kept }
 
   scope :with_expression, -> { where("expression IS NOT NULL AND expression <> ''") }
 

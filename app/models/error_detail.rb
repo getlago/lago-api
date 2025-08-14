@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 class ErrorDetail < ApplicationRecord
-  include Discard::Model
-  self.discard_column = :deleted_at
-  default_scope -> { kept }
+  include SoftDeletable
 
   belongs_to :owner, polymorphic: true
   belongs_to :organization

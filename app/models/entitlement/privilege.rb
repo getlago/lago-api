@@ -2,10 +2,7 @@
 
 module Entitlement
   class Privilege < ApplicationRecord
-    include Discard::Model
-    self.discard_column = :deleted_at
-
-    default_scope -> { kept }
+    include SoftDeletable
 
     VALUE_TYPES = %w[integer string boolean select].freeze
 

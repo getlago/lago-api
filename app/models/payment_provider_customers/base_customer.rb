@@ -4,9 +4,7 @@ module PaymentProviderCustomers
   class BaseCustomer < ApplicationRecord
     include PaperTrailTraceable
     include SettingsStorable
-    include Discard::Model
-    self.discard_column = :deleted_at
-    default_scope -> { kept }
+    include SoftDeletable
 
     self.table_name = "payment_provider_customers"
 

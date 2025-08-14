@@ -4,8 +4,7 @@ class AddOn < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
   include IntegrationMappable
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   belongs_to :organization
 
@@ -25,8 +24,6 @@ class AddOn < ApplicationRecord
 
   validates :amount_cents, numericality: {greater_than: 0}
   validates :amount_currency, inclusion: {in: currency_list}
-
-  default_scope -> { kept }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

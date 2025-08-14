@@ -2,8 +2,7 @@
 
 class ChargeFilterValue < ApplicationRecord
   include PaperTrailTraceable
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   ALL_FILTER_VALUES = "__ALL_FILTER_VALUES__"
 

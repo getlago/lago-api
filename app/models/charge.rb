@@ -4,8 +4,7 @@ class Charge < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
   include ChargePropertiesValidation
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   belongs_to :organization
   belongs_to :plan, -> { with_discarded }, touch: true
@@ -52,8 +51,6 @@ class Charge < ApplicationRecord
   validate :validate_prorated
   validate :validate_min_amount_cents
   validate :validate_custom_model
-
-  default_scope -> { kept }
 
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
 

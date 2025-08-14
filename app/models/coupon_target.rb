@@ -2,15 +2,12 @@
 
 class CouponTarget < ApplicationRecord
   include PaperTrailTraceable
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   belongs_to :coupon
   belongs_to :plan, optional: true
   belongs_to :billable_metric, optional: true
   belongs_to :organization
-
-  default_scope -> { kept }
 end
 
 # == Schema Information

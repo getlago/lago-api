@@ -2,8 +2,7 @@
 
 class Group < ApplicationRecord
   include PaperTrailTraceable
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   belongs_to :billable_metric, -> { with_discarded }
   belongs_to :parent, -> { with_discarded }, class_name: "Group", foreign_key: "parent_group_id", optional: true
@@ -13,7 +12,6 @@ class Group < ApplicationRecord
 
   validates :key, :value, presence: true
 
-  default_scope -> { kept }
   scope :parents, -> { where(parent_group_id: nil) }
   scope :children, -> { where.not(parent_group_id: nil) }
 

@@ -4,9 +4,7 @@ class BillingEntity < ApplicationRecord
   include PaperTrailTraceable
   include OrganizationTimezone
   include Currencies
-  include Discard::Model
-
-  self.discard_column = :deleted_at
+  include SoftDeletable
 
   EMAIL_SETTINGS = [
     "invoice.finalized",
@@ -59,7 +57,6 @@ class BillingEntity < ApplicationRecord
 
   enum :document_numbering, DOCUMENT_NUMBERINGS
 
-  default_scope -> { kept }
   scope :active, -> { where(archived_at: nil).order(created_at: :asc) }
 
   validates :code,

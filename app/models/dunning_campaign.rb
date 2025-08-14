@@ -2,8 +2,7 @@
 
 class DunningCampaign < ApplicationRecord
   include PaperTrailTraceable
-  include Discard::Model
-  self.discard_column = :deleted_at
+  include SoftDeletable
   self.ignored_columns += %w[applied_to_organization]
 
   ORDERS = %w[name code].freeze
@@ -25,7 +24,6 @@ class DunningCampaign < ApplicationRecord
     uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id},
     unless: :deleted_at
 
-  default_scope -> { kept }
   scope :applied_to_organization, -> { where(applied_to_organization: true) }
   scope :with_currency_threshold, ->(currencies) {
     joins(:thresholds)
