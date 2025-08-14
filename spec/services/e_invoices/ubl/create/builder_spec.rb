@@ -45,7 +45,8 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
       invoice_seller: {name: "Supplier Party", xpath: "//cac:AccountingSupplierParty"},
       invoice_customer: {name: "Customer Party", xpath: "//cac:AccountingCustomerParty"},
       delivery: {name: "Delivery Information", xpath: "//cac:Delivery"},
-      payment_and_credits: {name: "Payment Means:", xpath: "//cac:PaymentMeans"}
+      payment_and_credits: {name: "Payment Means:", xpath: "//cac:PaymentMeans"},
+      payment_terms: {name: "Payment Terms", xpath: "//cac:PaymentTerms"}
     }.each do |reference, section|
       it_behaves_like "xml section", section
     end

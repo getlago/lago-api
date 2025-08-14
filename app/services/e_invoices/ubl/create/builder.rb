@@ -30,6 +30,7 @@ module EInvoices
             credits_and_payments do |type, amount|
               PaymentMeans.call(xml:, invoice:, type:, amount:)
             end
+            PaymentTerms.call(xml:, invoice:)
           end
         end
 
