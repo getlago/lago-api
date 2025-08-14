@@ -13,6 +13,7 @@ module Types
       field :pay_in_advance, Boolean, null: false
       field :properties, Types::FixedCharges::Properties, null: true
       field :prorated, Boolean, null: false
+      field :units, String, null: false
 
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :deleted_at, GraphQL::Types::ISO8601DateTime, null: true
