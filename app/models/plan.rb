@@ -39,6 +39,7 @@ class Plan < ApplicationRecord
     monthly
     yearly
     quarterly
+    semiannual
   ].freeze
 
   enum :interval, INTERVALS
@@ -80,6 +81,7 @@ class Plan < ApplicationRecord
     return amount_cents if yearly?
     return amount_cents * 12 if monthly?
     return amount_cents * 4 if quarterly?
+    return amount_cents * 2 if semiannual?
 
     amount_cents * 52
   end
