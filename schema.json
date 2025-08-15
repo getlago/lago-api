@@ -27738,6 +27738,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "projected_usage",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ]
         },
@@ -40235,6 +40241,12 @@
             },
             {
               "name": "analytics_dashboards",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "projected_usage",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null

@@ -5609,6 +5609,7 @@ enum IntegrationTypeEnum {
   okta
   preview
   progressive_billing
+  projected_usage
   remove_branding_watermark
   revenue_analytics
   revenue_share
@@ -8022,6 +8023,7 @@ enum PremiumIntegrationTypeEnum {
   okta
   preview
   progressive_billing
+  projected_usage
   remove_branding_watermark
   revenue_analytics
   revenue_share
