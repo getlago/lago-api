@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:14.18-alpine
+        image: postgres:15-alpine
         ports:
           - "5432:5432"
         env:
@@ -50,7 +50,7 @@ jobs:
       - name: Install pg 14
         uses: tj-actions/install-postgresql@v3
         with:
-          postgresql-version: "14.18"
+          postgresql-version: "15"
       - name: Start Clickhouse database
         run: |
           docker run -d --rm -p 8123:8123 -p 9000:9000 --ulimit nofile=262144:262144 -v ./clickhouse-s3:/var/lib/clickhouse-s3 -v ./ci/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml -e CLICKHOUSE_PASSWORD=password clickhouse/clickhouse-server
@@ -64,8 +64,11 @@ jobs:
         run: bin/rails db:migrate:primary
       - name: dump schema
         run: LAGO_DISABLE_SCHEMA_DUMP="" bin/rails db:schema:dump:primary
-      - name: Ensure no changes to structure.sql 
-        run: diff db/structure.sql db/structure-before-dump.sql
+      - name: Ensure no changes to structure.sql (excluding restrict/unrestrict)
+        run: |
+          grep -v '\\restrict' db/structure.sql | grep -v '\\unrestrict' | grep -v 'Dumped from database version' | grep -v 'Dumped by pg_dump version' > db/structure.sql.filtered
+          grep -v '\\restrict' db/structure-before-dump.sql | grep -v '\\unrestrict' | grep -v 'Dumped from database version' | grep -v 'Dumped by pg_dump version' > db/structure-before-dump.sql.filtered
+          diff db/structure.sql.filtered db/structure-before-dump.sql.filtered
       - name: Ensure annotations are up to date
         run: bundle exec annotaterb --frozen
       - name: Perform Clickhouse database migrations
