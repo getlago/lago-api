@@ -64,8 +64,11 @@ jobs:
         run: bin/rails db:migrate:primary
       - name: dump schema
         run: LAGO_DISABLE_SCHEMA_DUMP="" bin/rails db:schema:dump:primary
-      - name: Ensure no changes to structure.sql (excluding restrict/unrestrict)
-        run: diff db/structure.sql db/structure-before-dump.sql
+      - name: Ensure no changes to structure.sql (excluding restrict-unrestrict blocks)
+        run: |
+          sed '/\\restrict /, /\\unrestrict /d' db/structure.sql | grep -v 'Dumped from database version' | grep -v 'Dumped by pg_dump version' | sed '/^$/d' > db/structure.sql.filtered
+          sed '/\\restrict /, /\\unrestrict /d' db/structure-before-dump.sql | grep -v 'Dumped from database version' | grep -v 'Dumped by pg_dump version' | sed '/^$/d' > db/structure-before-dump.sql.filtered
+          diff db/structure.sql.filtered db/structure-before-dump.sql.filtered
       - name: Ensure annotations are up to date
         run: bundle exec annotaterb --frozen
       - name: Perform Clickhouse database migrations
