@@ -7988,6 +7988,7 @@ type PlanEntitlementPrivilegeObject {
 enum PlanInterval {
   monthly
   quarterly
+  semiannual
   weekly
   yearly
 }

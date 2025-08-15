@@ -62,28 +62,48 @@ RSpec.describe Plan, type: :model do
   end
 
   describe "#yearly_amount_cents" do
-    let(:plan) do
-      build(:plan, interval: :yearly, amount_cents: 100)
+    subject(:method_call) { plan.yearly_amount_cents }
+
+    let(:plan) { build_stubbed(:plan, interval:, amount_cents: 100) }
+
+    context "when plan is yearly" do
+      let(:interval) { :yearly }
+
+      it "returns the correct amount" do
+        expect(subject).to eq(100)
+      end
     end
 
-    it { expect(plan.yearly_amount_cents).to eq(100) }
-
     context "when plan is monthly" do
-      before { plan.interval = "monthly" }
+      let(:interval) { :monthly }
 
-      it { expect(plan.yearly_amount_cents).to eq(1200) }
+      it "returns the correct amount" do
+        expect(subject).to eq(1200)
+      end
     end
 
     context "when plan is weekly" do
-      before { plan.interval = "weekly" }
+      let(:interval) { :weekly }
 
-      it { expect(plan.yearly_amount_cents).to eq(5200) }
+      it "returns the correct amount" do
+        expect(subject).to eq(5200)
+      end
     end
 
     context "when plan is quarterly" do
-      before { plan.interval = "quarterly" }
+      let(:interval) { :quarterly }
 
-      it { expect(plan.yearly_amount_cents).to eq(400) }
+      it "returns the correct amount" do
+        expect(subject).to eq(400)
+      end
+    end
+
+    context "when plan is semiannual" do
+      let(:interval) { :semiannual }
+
+      it "returns the correct amount" do
+        expect(subject).to eq(200)
+      end
     end
   end
 
