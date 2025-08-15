@@ -35,6 +35,7 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
   end
 
   payment_tag = "//cac:PaymentMeans"
+  discount_tag = "//cac:AllowanceCharge"
 
   describe ".call" do
     it { is_expected.not_to be_nil }
@@ -46,7 +47,8 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
       invoice_customer: {name: "Customer Party", xpath: "//cac:AccountingCustomerParty"},
       delivery: {name: "Delivery Information", xpath: "//cac:Delivery"},
       payment_and_credits: {name: "Payment Means:", xpath: "//cac:PaymentMeans"},
-      payment_terms: {name: "Payment Terms", xpath: "//cac:PaymentTerms"}
+      payment_terms: {name: "Payment Terms", xpath: "//cac:PaymentTerms"},
+      allowances_and_charges: {name: "Allowances and Charges", xpath: "//cac:AllowanceCharge"}
     }.each do |reference, section|
       it_behaves_like "xml section", section
     end
@@ -85,6 +87,54 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
         end
 
         it_behaves_like "xml section", {name: "Payment Means: Credit note", xpath: "(#{payment_tag})[1]"}
+      end
+    end
+
+    context "when discounts" do
+      it_behaves_like "xml section", {name: "Allowances and Charges - Discount 20.00% portion", xpath: "(#{discount_tag})[1]"}
+
+      context "with multiple fees" do
+        let(:fee) { create(:fee, invoice:, amount_cents: 1551, taxes_rate: 19.00) }
+        let(:fee2) { create(:fee, invoice:, amount_cents: 88449, taxes_rate: 20.00) }
+        let(:fee3) { create(:fee, invoice:, amount_cents: 10000, taxes_rate: 21.00) }
+
+        before {
+          fee2
+          fee3
+        }
+
+        context "with 19% tax discount" do
+          xpath = "(#{discount_tag})[1]"
+
+          it_behaves_like "xml section", {name: "Allowances and Charges - Discount 19.00% portion", xpath:}
+
+          it "calculates the correct discount amount and tax" do
+            expect(subject).to contains_xml_node("#{xpath}/cbc:Amount").with_value("0.16")
+            expect(subject).to contains_xml_node("#{xpath}/cac:TaxCategory/cbc:Percent").with_value("19.00")
+          end
+        end
+
+        context "with 20% tax discount" do
+          xpath = "(#{discount_tag})[2]"
+
+          it_behaves_like "xml section", {name: "Allowances and Charges - Discount 20.00% portion", xpath:}
+
+          it "calculates the correct discount amount and tax" do
+            expect(subject).to contains_xml_node("#{xpath}/cbc:Amount").with_value("8.84")
+            expect(subject).to contains_xml_node("#{xpath}/cac:TaxCategory/cbc:Percent").with_value("20.00")
+          end
+        end
+
+        context "with 21% tax discount" do
+          xpath = "(#{discount_tag})[3]"
+
+          it_behaves_like "xml section", {name: "Allowances and Charges - Discount 21.00% portion", xpath:}
+
+          it "calculates the correct discount amount and tax" do
+            expect(subject).to contains_xml_node("#{xpath}/cbc:Amount").with_value("1.00")
+            expect(subject).to contains_xml_node("#{xpath}/cac:TaxCategory/cbc:Percent").with_value("21.00")
+          end
+        end
       end
     end
   end
