@@ -16,6 +16,15 @@ module EInvoices
     PREPAID = 57
     CREDIT_NOTE = 97
 
+    INVOICE_DISCOUNT = false
+    INVOICE_ADDITIONAL_CHARGE = true
+
+    # More categories for UNTDID 5305 here
+    # https://service.unece.org/trade/untdid/d00a/tred/tred5305.htm
+    S_CATEGORY = "S"
+    O_CATEGORY = "O"
+    Z_CATEGORY = "Z"
+
     def initialize(invoice:)
       super
 
@@ -84,6 +93,16 @@ module EInvoices
 
     def payment_terms_description
       "#{I18n.t("invoice.payment_term")} #{I18n.t("invoice.payment_term_days", net_payment_term: invoice.net_payment_term)}"
+    end
+
+    def discount_reason
+      I18n.t("invoice.e_invoicing.discount_reason", tax_rate: percent(tax_rate))
+    end
+
+    def tax_category_code(tax_rate:, type: nil)
+      return O_CATEGORY if type == "credit"
+
+      tax_rate.zero? ? Z_CATEGORY : S_CATEGORY
     end
   end
 end
