@@ -23,6 +23,168 @@ RSpec.describe InvoiceSubscription, type: :model do
 
   it { is_expected.to belong_to(:organization) }
 
+  describe ".matching?" do
+    subject(:matching_call) { described_class.matching?(subscription, boundaries, recurring:) }
+
+    let(:recurring) { true }
+    let(:subscription) { create(:subscription, plan:) }
+
+    let(:boundaries) do
+      OpenStruct.new(
+        from_datetime:,
+        to_datetime:,
+        charges_from_datetime:,
+        charges_to_datetime:
+      )
+    end
+
+    context "when plan is yearly and bills charges monthly" do
+      let(:plan) { create(:plan, :yearly, bill_charges_monthly: true) }
+
+      context "when an exact matching recurring invoice_subscription exists" do
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            from_datetime:,
+            to_datetime:,
+            charges_from_datetime:,
+            charges_to_datetime:,
+            recurring: true
+          )
+        end
+
+        it "returns true" do
+          expect(subject).to be true
+        end
+      end
+
+      context "when only from/to match but charge boundaries differ" do
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            from_datetime:,
+            to_datetime:,
+            charges_from_datetime: DateTime.parse(charges_from_datetime) - 2.days,
+            charges_to_datetime: DateTime.parse(charges_to_datetime) - 2.days,
+            recurring: true
+          )
+        end
+
+        it "returns false because charge boundaries must match" do
+          expect(subject).to be false
+        end
+      end
+
+      context "when matching invoice_subscription is non recurring and recurring flag is true" do
+        let(:recurring) { true }
+
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            from_datetime:,
+            to_datetime:,
+            charges_from_datetime:,
+            charges_to_datetime:,
+            recurring: false
+          )
+        end
+
+        it "returns false (filtered out by recurring scope)" do
+          expect(subject).to be false
+        end
+      end
+
+      context "when matching invoice_subscription is non recurring and recurring flag is false" do
+        let(:recurring) { false }
+
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            from_datetime:,
+            to_datetime:,
+            charges_from_datetime:,
+            charges_to_datetime:,
+            recurring: false
+          )
+        end
+
+        it "returns true (recurring scope not applied)" do
+          expect(subject).to be true
+        end
+      end
+    end
+
+    context "when plan is semiannual and bills charges monthly" do
+      let(:plan) { create(:plan, :semiannual, bill_charges_monthly: true) }
+
+      context "when only from/to match but charge boundaries differ" do
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            from_datetime:,
+            to_datetime:,
+            charges_from_datetime: DateTime.parse(charges_from_datetime) - 3.days,
+            charges_to_datetime: DateTime.parse(charges_to_datetime) - 3.days,
+            recurring: true
+          )
+        end
+
+        it "returns false (charge boundaries must match for semiannual plan)" do
+          expect(subject).to be false
+        end
+      end
+    end
+
+    context "when plan is monthly and bills charges monthly" do
+      let(:plan) { create(:plan, :monthly, bill_charges_monthly: true) }
+
+      context "when only from/to match and charge boundaries differ" do
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            from_datetime:,
+            to_datetime:,
+            charges_from_datetime: DateTime.parse(charges_from_datetime) - 5.days,
+            charges_to_datetime: DateTime.parse(charges_to_datetime) - 5.days,
+            recurring: true
+          )
+        end
+
+        it "returns true (charge boundaries ignored for monthly plan)" do
+          expect(subject).to be true
+        end
+      end
+    end
+
+    context "when plan does not bill charges monthly (yearly plan)" do
+      let(:plan) { create(:plan, :yearly, bill_charges_monthly: false) }
+
+      context "when only from/to match and charge boundaries differ" do
+        before do
+          create(
+            :invoice_subscription,
+            subscription:,
+            from_datetime:,
+            to_datetime:,
+            charges_from_datetime: DateTime.parse(charges_from_datetime) - 1.day,
+            charges_to_datetime: DateTime.parse(charges_to_datetime) - 1.day,
+            recurring: true
+          )
+        end
+
+        it "returns true (charges boundaries not applied if plan not billing charges monthly)" do
+          expect(subject).to be true
+        end
+      end
+    end
+  end
+
   describe "#fees" do
     it "returns corresponding fees" do
       first_fee = create(:fee, subscription_id: subscription.id, invoice_id: invoice.id)
