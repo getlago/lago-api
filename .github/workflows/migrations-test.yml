@@ -66,8 +66,8 @@ jobs:
         run: LAGO_DISABLE_SCHEMA_DUMP="" bin/rails db:schema:dump:primary
       - name: Ensure no changes to structure.sql (excluding restrict/unrestrict)
         run: |
-          grep -v '\\restrict' db/structure.sql | grep -v '\\unrestrict' | grep -v 'Dumped from database version' | grep -v 'Dumped by pg_dump version' > db/structure.sql.filtered
-          grep -v '\\restrict' db/structure-before-dump.sql | grep -v '\\unrestrict' | grep -v 'Dumped from database version' | grep -v 'Dumped by pg_dump version' > db/structure-before-dump.sql.filtered
+          grep -v '\\restrict' db/structure.sql | grep -v '\\unrestrict' | grep -v 'Dumped from database version' | grep -v 'Dumped by pg_dump version' | sed '/^[[:space:]]*$/d' > db/structure.sql.filtered
+          grep -v '\\restrict' db/structure-before-dump.sql | grep -v '\\unrestrict' | grep -v 'Dumped from database version' | grep -v 'Dumped by pg_dump version' | sed '/^[[:space:]]*$/d' > db/structure-before-dump.sql.filtered
           diff db/structure.sql.filtered db/structure-before-dump.sql.filtered
       - name: Ensure annotations are up to date
         run: bundle exec annotaterb --frozen
