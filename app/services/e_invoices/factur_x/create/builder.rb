@@ -14,12 +14,6 @@ module EInvoices
 
         DATEFORMAT = "%Y%m%d"
 
-        # More categories for UNTDID 5305 here
-        # https://service.unece.org/trade/untdid/d00a/tred/tred5305.htm
-        S_CATEGORY = "S"
-        O_CATEGORY = "O"
-        Z_CATEGORY = "Z"
-
         # More VAT exemptions codes
         # https://docs.peppol.eu/poacc/billing/3.0/codelist/vatex/
         O_VAT_EXEMPTION = "VATEX-EU-O"
@@ -108,12 +102,6 @@ module EInvoices
 
         def format_number(value, mask = "%.2f")
           format(mask, value)
-        end
-
-        def category_code(tax_rate:, type: nil)
-          return O_CATEGORY if type == "credit"
-
-          tax_rate.zero? ? Z_CATEGORY : S_CATEGORY
         end
       end
     end

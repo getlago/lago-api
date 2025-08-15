@@ -31,7 +31,7 @@ module EInvoices
             xml["ram"].SpecifiedLineTradeSettlement do
               xml["ram"].ApplicableTradeTax do
                 xml["ram"].TypeCode VAT
-                fee_category_code = category_code(type: fee.fee_type, tax_rate: fee.taxes_rate)
+                fee_category_code = tax_category_code(type: fee.fee_type, tax_rate: fee.taxes_rate)
                 xml["ram"].CategoryCode fee_category_code
                 unless fee_category_code == O_CATEGORY
                   xml["ram"].RateApplicablePercent fee.taxes_rate
