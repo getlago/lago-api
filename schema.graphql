@@ -7981,7 +7981,7 @@ type PlanEntitlementPrivilegeObject {
   code: String!
   config: PrivilegeConfigObject!
   name: String
-  value: String!
+  value: String
   valueType: PrivilegeValueTypeEnum!
 }
 
@@ -9374,13 +9374,14 @@ type SubscriptionCollection {
 type SubscriptionEntitlement {
   code: String!
   description: String
+  feature: FeatureObject!
   name: String!
   privileges: [SubscriptionEntitlementPrivilegeObject!]!
 }
 
 type SubscriptionEntitlementPrivilegeObject {
   code: String!
-  config: JSON!
+  config: PrivilegeConfigObject!
   name: String
   overrideValue: String
   planValue: String
