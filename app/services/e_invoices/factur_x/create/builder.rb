@@ -53,7 +53,9 @@ module EInvoices
                   TradeSettlementPayment.call(xml:, invoice:, type:, amount:)
                 end
                 build_applied_taxes(xml, invoice)
-                build_allowance_charges(xml, invoice)
+                allowance_charges do |tax_rate, amount|
+                  TradeAllowanceCharge.call(xml:, invoice:, tax_rate:, amount:)
+                end
 
                 PaymentTerms.call(xml:, invoice:)
                 MonetarySummation.call(xml:, invoice:)
@@ -81,27 +83,6 @@ module EInvoices
               ApplicableTradeTax.call(xml:, invoice:, applied_tax:)
             end
           end
-        end
-
-        def build_allowance_charges(xml, invoice)
-          return unless invoice.coupons_amount_cents.positive?
-
-          sum_by_taxes_rate = invoice.fees.group(:taxes_rate).order(taxes_rate: :asc).sum(:amount_cents)
-          total_without_taxes = sum_by_taxes_rate.values.sum
-          coupon_proportions = sum_by_taxes_rate.transform_values do |value|
-            Money.new((value.to_f / total_without_taxes) * invoice.coupons_amount_cents)
-          end
-          coupon_proportions.each do |tax_rate, amount|
-            TradeAllowanceCharge.call(xml:, invoice:, tax_rate:, amount:)
-          end
-        end
-
-        def percent(value)
-          format_number(value, "%.2f%%")
-        end
-
-        def format_number(value, mask = "%.2f")
-          format(mask, value)
         end
       end
     end

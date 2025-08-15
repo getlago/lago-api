@@ -31,6 +31,9 @@ module EInvoices
               PaymentMeans.call(xml:, invoice:, type:, amount:)
             end
             PaymentTerms.call(xml:, invoice:)
+            allowance_charges do |tax_rate, amount|
+              AllowanceCharge.call(xml:, invoice:, tax_rate:, amount:)
+            end
           end
         end
 
