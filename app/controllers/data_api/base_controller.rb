@@ -10,7 +10,7 @@ module DataApi
     private
 
     def authenticate
-      auth_header = request.headers["Authorization"]
+      request.headers["Authorization"]
 
       key_header = request.headers["X-Data-API-Key"]
       expected_key = ENV["LAGO_DATA_API_BEARER_TOKEN"]

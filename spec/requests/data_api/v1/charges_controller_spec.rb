@@ -72,6 +72,7 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
 
     context "when authenticated and premium" do
       around { |test| lago_premium!(&test) }
+
       context "when charges are found" do
         it "returns the bulk forecasted usage amounts" do
           subject
