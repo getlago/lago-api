@@ -52,7 +52,7 @@ type ActivityLogCollection {
 """
 Activity log resource
 """
-union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | Invoice | PaymentRequest | Plan | Subscription | Wallet
+union ActivityLogResourceObject = BillableMetric | BillingEntity | Coupon | CreditNote | Customer | FeatureObject | Invoice | PaymentRequest | Plan | Subscription | Wallet
 
 """
 Activity Logs source enums
@@ -153,6 +153,21 @@ enum ActivityTypeEnum {
   customer_updated
 
   """
+  feature.created
+  """
+  feature_created
+
+  """
+  feature.deleted
+  """
+  feature_deleted
+
+  """
+  feature.updated
+  """
+  feature_updated
+
+  """
   invoice.created
   """
   invoice_created
@@ -196,6 +211,11 @@ enum ActivityTypeEnum {
   invoice.payment_status_updated
   """
   invoice_payment_status_updated
+
+  """
+  invoice.regenerated
+  """
+  invoice_regenerated
 
   """
   invoice.voided
@@ -592,6 +612,7 @@ interface AppliedTax {
 }
 
 input AppliesToInput {
+  billableMetricIds: [ID!]
   feeTypes: [FeeTypesEnum!]
 }
 
@@ -622,6 +643,15 @@ type ApplyTaxesPayload {
 
 type AuthUrl {
   url: String!
+}
+
+"""
+Organization Authentication Methods Values
+"""
+enum AuthenticationMethodsEnum {
+  email_password
+  google_oauth
+  okta
 }
 
 type Authorize {
@@ -2355,6 +2385,7 @@ input CreateAdjustedFeeInput {
   feeId: ID
   invoiceDisplayName: String
   invoiceId: ID!
+  invoiceSubscriptionId: ID
   subscriptionId: ID
   unitPreciseAmount: String
   units: Float
@@ -2673,12 +2704,12 @@ input CreateFeatureInput {
   """
   The description of the feature
   """
-  description: String!
+  description: String
 
   """
   The name of the feature
   """
-  name: String!
+  name: String
 
   """
   The privileges configuration
@@ -2775,6 +2806,7 @@ input CreateInvoiceInput {
   currency: CurrencyEnum
   customerId: ID!
   fees: [FeeInput!]!
+  voidedInvoiceId: ID
 }
 
 """
@@ -2859,6 +2891,7 @@ input CreatePlanInput {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
+  billFixedChargesMonthly: Boolean
   charges: [ChargeInput!]!
 
   """
@@ -2867,6 +2900,8 @@ input CreatePlanInput {
   clientMutationId: String
   code: String!
   description: String
+  entitlements: [EntitlementInput!]
+  fixedCharges: [FixedChargeInput!]
   interval: PlanInterval!
   invoiceDisplayName: String
   minimumCommitment: CommitmentInput
@@ -2947,6 +2982,7 @@ input CreateSubscriptionInput {
   clientMutationId: String
   customerId: ID!
   endingAt: ISO8601DateTime
+  entitlements: [EntitlementInput!]
   externalId: String
   name: String
   planId: ID!
@@ -3827,11 +3863,14 @@ enum CurrencyEnum {
 Current Organization Type
 """
 type CurrentOrganization {
+  accessibleByCurrentSession: Boolean!
   addressLine1: String
   addressLine2: String
   adyenPaymentProviders: [AdyenProvider!]
   apiKey: String
   appliedDunningCampaign: DunningCampaign
+  authenticatedMethod: AuthenticationMethodsEnum!
+  authenticationMethods: [AuthenticationMethodsEnum!]!
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   cashfreePaymentProviders: [CashfreeProvider!]
@@ -4160,6 +4199,18 @@ type CustomerPortalWalletTransactionCollection {
   metadata: CollectionMetadata!
 }
 
+type CustomerProjectedUsage {
+  amountCents: BigInt!
+  chargesUsage: [ProjectedChargeUsage!]!
+  currency: CurrencyEnum!
+  fromDatetime: ISO8601DateTime!
+  issuingDate: ISO8601Date!
+  projectedAmountCents: BigInt!
+  taxesAmountCents: BigInt!
+  toDatetime: ISO8601DateTime!
+  totalAmountCents: BigInt!
+}
+
 enum CustomerTypeEnum {
   company
   individual
@@ -4295,9 +4346,9 @@ type DataApiRevenueStreamCustomer {
   customerName: String
   externalCustomerId: String!
   grossRevenueAmountCents: BigInt!
-  grossRevenueShare: Float!
+  grossRevenueShare: Float
   netRevenueAmountCents: BigInt!
-  netRevenueShare: Float!
+  netRevenueShare: Float
 }
 
 type DataApiRevenueStreamPlan {
@@ -4305,9 +4356,9 @@ type DataApiRevenueStreamPlan {
   customersCount: Int!
   customersShare: Float!
   grossRevenueAmountCents: BigInt!
-  grossRevenueShare: Float!
+  grossRevenueShare: Float
   netRevenueAmountCents: BigInt!
-  netRevenueShare: Float!
+  netRevenueShare: Float
   planCode: String!
   planDeletedAt: ISO8601DateTime
   planId: ID!
@@ -4936,6 +4987,26 @@ enum EmailSettingsEnum {
   payment_receipt_created
 }
 
+"""
+Input for updating a plan entitlement
+"""
+input EntitlementInput {
+  featureCode: String!
+
+  """
+  The privileges configuration
+  """
+  privileges: [EntitlementPrivilegeInput!]
+}
+
+"""
+Input for updating a plan entitlement privilege value
+"""
+input EntitlementPrivilegeInput {
+  privilegeCode: String!
+  value: String!
+}
+
 enum ErrorCodesEnum {
   invoice_generation_error
   not_provided
@@ -5009,6 +5080,7 @@ type FeatureObjectCollection {
 }
 
 type Fee implements InvoiceItem {
+  addOn: AddOn
   adjustedFee: Boolean!
   adjustedFeeType: AdjustedFeeTypeEnum
   amountCents: BigInt!
@@ -5031,6 +5103,7 @@ type Fee implements InvoiceItem {
   itemType: String!
   preciseUnitAmount: Float!
   pricingUnitUsage: PricingUnitUsage
+  properties: FeeProperties
   subscription: Subscription
   succeededAt: ISO8601DateTime
   taxesAmountCents: BigInt!
@@ -5097,13 +5170,20 @@ type FeeAppliedTax implements AppliedTax {
 Fee input for creating invoice
 """
 input FeeInput {
-  addOnId: ID!
+  addOnId: ID
   description: String
+  fromDatetime: ISO8601DateTime!
   invoiceDisplayName: String
   name: String
   taxCodes: [String!]
+  toDatetime: ISO8601DateTime!
   unitAmountCents: BigInt
   units: Float
+}
+
+type FeeProperties {
+  fromDatetime: ISO8601DateTime
+  toDatetime: ISO8601DateTime
 }
 
 enum FeeTypesEnum {
@@ -5111,6 +5191,7 @@ enum FeeTypesEnum {
   charge
   commitment
   credit
+  fixed_charge
   subscription
 }
 
@@ -5125,6 +5206,7 @@ input FetchDraftInvoiceTaxesInput {
   currency: CurrencyEnum
   customerId: ID!
   fees: [FeeInput!]!
+  voidedInvoiceId: ID
 }
 
 """
@@ -5199,6 +5281,49 @@ type FinalizedInvoiceCollectionCollection {
   metadata: CollectionMetadata!
 }
 
+type FixedCharge {
+  addOn: AddOn!
+  chargeModel: FixedChargeChargeModelEnum!
+  createdAt: ISO8601DateTime!
+  deletedAt: ISO8601DateTime
+  id: ID!
+  invoiceDisplayName: String
+  payInAdvance: Boolean!
+  properties: FixedChargeProperties
+  prorated: Boolean!
+  taxes: [Tax!]
+  updatedAt: ISO8601DateTime!
+}
+
+enum FixedChargeChargeModelEnum {
+  graduated
+  standard
+  volume
+}
+
+input FixedChargeInput {
+  addOnId: ID!
+  chargeModel: FixedChargeChargeModelEnum!
+  invoiceDisplayName: String
+  payInAdvance: Boolean
+  properties: FixedChargePropertiesInput
+  prorated: Boolean
+  taxCodes: [String!]
+  units: String
+}
+
+type FixedChargeProperties {
+  amount: String
+  graduatedRanges: [GraduatedRange!]
+  volumeRanges: [VolumeRange!]
+}
+
+input FixedChargePropertiesInput {
+  amount: String
+  graduatedRanges: [GraduatedRangeInput!]
+  volumeRanges: [VolumeRangeInput!]
+}
+
 type FlutterwaveProvider {
   code: String!
   id: ID!
@@ -5228,6 +5353,28 @@ type GenerateCustomerPortalUrlPayload {
   """
   clientMutationId: String
   url: String!
+}
+
+"""
+Autogenerated input type of GeneratePaymentUrl
+"""
+input GeneratePaymentUrlInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  invoiceId: ID!
+}
+
+"""
+Autogenerated return type of GeneratePaymentUrl.
+"""
+type GeneratePaymentUrlPayload {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  paymentUrl: String
 }
 
 type GocardlessProvider {
@@ -5548,6 +5695,7 @@ type Invoice {
   prepaidCreditAmountCents: BigInt!
   progressiveBillingCreditAmountCents: BigInt!
   refundableAmountCents: BigInt!
+  regeneratedInvoiceId: String
   selfBilled: Boolean!
   sequentialId: ID!
   status: InvoiceStatusTypeEnum!
@@ -5565,6 +5713,8 @@ type Invoice {
   updatedAt: ISO8601DateTime!
   versionNumber: Int!
   voidable: Boolean!
+  voidedAt: ISO8601DateTime
+  voidedInvoiceId: String
 }
 
 type InvoiceAppliedTax implements AppliedTax {
@@ -6661,6 +6811,16 @@ type Mutation {
   ): GenerateCustomerPortalUrlPayload
 
   """
+  Generates a payment URL for an invoice
+  """
+  generatePaymentUrl(
+    """
+    Parameters for GeneratePaymentUrl
+    """
+    input: GeneratePaymentUrlInput!
+  ): GeneratePaymentUrlPayload
+
+  """
   Accepts a membership invite with Google Oauth
   """
   googleAcceptInvite(
@@ -6733,6 +6893,16 @@ type Mutation {
   ): LoginUser
 
   """
+  Preview Adjusted Fee
+  """
+  previewAdjustedFee(
+    """
+    Parameters for PreviewAdjustedFee
+    """
+    input: PreviewAdjustedFeeInput!
+  ): Fee
+
+  """
   Refresh a draft invoice
   """
   refreshInvoice(
@@ -6740,6 +6910,16 @@ type Mutation {
     Parameters for RefreshInvoice
     """
     input: RefreshInvoiceInput!
+  ): Invoice
+
+  """
+  Regenerate an invoice from a voided invoice
+  """
+  regenerateFromVoided(
+    """
+    Parameters for RegenerateInvoice
+    """
+    input: RegenerateInvoiceInput!
   ): Invoice
 
   """
@@ -7428,6 +7608,12 @@ input OktaLoginInput {
 
 enum OnTerminationCreditNoteEnum {
   credit
+  refund
+  skip
+}
+
+enum OnTerminationInvoiceEnum {
+  generate
   skip
 }
 
@@ -7440,6 +7626,7 @@ enum OrderByEnum {
 Safe Organization Type
 """
 type Organization {
+  accessibleByCurrentSession: Boolean!
   billingConfiguration: OrganizationBillingConfiguration
   canCreateBillingEntity: Boolean!
   defaultCurrency: CurrencyEnum!
@@ -7610,6 +7797,8 @@ type Permissions {
   analyticsOverdueBalancesView: Boolean!
   analyticsView: Boolean!
   auditLogsView: Boolean!
+  authenticationMethodsUpdate: Boolean!
+  authenticationMethodsView: Boolean!
   billableMetricsCreate: Boolean!
   billableMetricsDelete: Boolean!
   billableMetricsUpdate: Boolean!
@@ -7709,6 +7898,7 @@ type Plan {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
+  billFixedChargesMonthly: Boolean
   charges: [Charge!]
 
   """
@@ -7726,10 +7916,12 @@ type Plan {
   description: String
   draftInvoicesCount: Int!
   entitlements: [PlanEntitlement!]
+  fixedCharges: [FixedCharge!]
   hasActiveSubscriptions: Boolean!
   hasCharges: Boolean!
   hasCustomers: Boolean!
   hasDraftInvoices: Boolean!
+  hasFixedCharges: Boolean!
   hasOverriddenPlans: Boolean
   hasSubscriptions: Boolean!
   id: ID!
@@ -7766,6 +7958,7 @@ type PlanCollection {
 type PlanEntitlement {
   code: String!
   description: String
+  feature: FeatureObject!
   name: String!
   privileges: [PlanEntitlementPrivilegeObject!]!
 }
@@ -7785,29 +7978,9 @@ type PlanEntitlementCollection {
   metadata: CollectionMetadata!
 }
 
-"""
-Input for updating a plan entitlement
-"""
-input PlanEntitlementInput {
-  featureCode: String!
-
-  """
-  The privileges configuration
-  """
-  privileges: [PlanEntitlementPrivilegeInput!]
-}
-
-"""
-Input for updating a plan entitlement privilege value
-"""
-input PlanEntitlementPrivilegeInput {
-  privilegeCode: String!
-  value: String!
-}
-
 type PlanEntitlementPrivilegeObject {
   code: String!
-  config: JSON!
+  config: PrivilegeConfigObject!
   name: String
   value: String!
   valueType: PrivilegeValueTypeEnum!
@@ -7859,6 +8032,26 @@ enum PremiumIntegrationTypeEnum {
   zero_amount_fees
 }
 
+"""
+Create Adjusted Fee Input
+"""
+input PreviewAdjustedFeeInput {
+  chargeFilterId: ID
+  chargeId: ID
+
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  feeId: ID
+  invoiceDisplayName: String
+  invoiceId: ID!
+  invoiceSubscriptionId: ID
+  subscriptionId: ID
+  unitPreciseAmount: String
+  units: Float
+}
+
 type PricingUnit {
   code: String!
   createdAt: ISO8601DateTime!
@@ -7897,9 +8090,29 @@ type PricingUnitUsage {
   updatedAt: ISO8601DateTime!
 }
 
+"""
+Input for privilege configuration
+"""
+input PrivilegeConfigInput {
+  """
+  Available options for select type privileges
+  """
+  selectOptions: [String!]
+}
+
+"""
+Configuration object for privileges
+"""
+type PrivilegeConfigObject {
+  """
+  Available options for select type privileges
+  """
+  selectOptions: [String!]
+}
+
 type PrivilegeObject {
   code: String!
-  config: JSON!
+  config: PrivilegeConfigObject!
   id: ID!
   name: String
   valueType: PrivilegeValueTypeEnum!
@@ -7910,6 +8123,47 @@ enum PrivilegeValueTypeEnum {
   integer
   select
   string
+}
+
+type ProjectedChargeFilterUsage {
+  amountCents: BigInt!
+  eventsCount: Int!
+  id: ID
+  invoiceDisplayName: String
+  pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
+  units: Float!
+  values: ChargeFilterValues!
+}
+
+type ProjectedChargeUsage {
+  amountCents: BigInt!
+  billableMetric: BillableMetric!
+  charge: Charge!
+  eventsCount: Int!
+  filters: [ProjectedChargeFilterUsage!]
+  groupedUsage: [ProjectedGroupedChargeUsage!]!
+  id: ID!
+  pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
+  units: Float!
+}
+
+type ProjectedGroupedChargeUsage {
+  amountCents: BigInt!
+  eventsCount: Int!
+  filters: [ProjectedChargeFilterUsage!]
+  groupedBy: JSON
+  id: ID!
+  pricingUnitAmountCents: BigInt
+  pricingUnitProjectedAmountCents: BigInt
+  projectedAmountCents: BigInt!
+  projectedUnits: Float!
+  units: Float!
 }
 
 type Properties {
@@ -8240,6 +8494,11 @@ type Query {
   customerPortalWallets(limit: Int, page: Int): CustomerPortalWalletCollection!
 
   """
+  Query the projected usage of the customer on the current billing period
+  """
+  customerProjectedUsage(customerId: ID, subscriptionId: ID!): CustomerProjectedUsage!
+
+  """
   Query the usage of the customer on the current billing period
   """
   customerUsage(customerId: ID, subscriptionId: ID!): CustomerUsage!
@@ -8247,7 +8506,7 @@ type Query {
   """
   Query customers of an organization
   """
-  customers(accountType: [CustomerAccountTypeEnum!], billingEntityIds: [ID!], limit: Int, page: Int, searchTerm: String, withDeleted: Boolean): CustomerCollection!
+  customers(accountType: [CustomerAccountTypeEnum!], activeSubscriptionsCountFrom: Int, activeSubscriptionsCountTo: Int, billingEntityIds: [ID!], limit: Int, page: Int, searchTerm: String, withDeleted: Boolean): CustomerCollection!
 
   """
   Query monthly recurring revenues of an organization
@@ -8493,6 +8752,7 @@ type Query {
     searchTerm: String
     selfBilled: Boolean
     status: [InvoiceStatusTypeEnum!]
+    subscriptionId: ID
   ): InvoiceCollection!
 
   """
@@ -8753,6 +9013,18 @@ input RefreshInvoiceInput {
   id: ID!
 }
 
+"""
+Autogenerated input type of RegenerateInvoice
+"""
+input RegenerateInvoiceInput {
+  """
+  A unique identifier for the client performing the mutation.
+  """
+  clientMutationId: String
+  fees: [VoidedInvoiceFeeInput!]!
+  voidedInvoiceId: ID!
+}
+
 type RegisterUser {
   membership: Membership!
   organization: Organization!
@@ -8851,6 +9123,11 @@ enum ResourceTypeEnum {
   Customer
   """
   customer
+
+  """
+  Feature
+  """
+  feature
 
   """
   Invoice
@@ -9059,6 +9336,7 @@ type Subscription {
   currentBillingPeriodStartedAt: ISO8601DateTime
   customer: Customer!
   endingAt: ISO8601DateTime
+  entitlements: [SubscriptionEntitlement!]!
   externalId: String!
   fees: [Fee!]
   id: ID!
@@ -9070,6 +9348,7 @@ type Subscription {
   nextSubscriptionAt: ISO8601DateTime
   nextSubscriptionType: NextSubscriptionTypeEnum
   onTerminationCreditNote: OnTerminationCreditNoteEnum
+  onTerminationInvoice: OnTerminationInvoiceEnum!
   periodEndDate: ISO8601Date
   plan: Plan!
   startedAt: ISO8601DateTime
@@ -9092,6 +9371,23 @@ type SubscriptionCollection {
   Pagination Metadata for navigating the Pagination
   """
   metadata: CollectionMetadata!
+}
+
+type SubscriptionEntitlement {
+  code: String!
+  description: String
+  name: String!
+  privileges: [SubscriptionEntitlementPrivilegeObject!]!
+}
+
+type SubscriptionEntitlementPrivilegeObject {
+  code: String!
+  config: JSON!
+  name: String
+  overrideValue: String
+  planValue: String
+  value: String
+  valueType: PrivilegeValueTypeEnum!
 }
 
 type SubscriptionLifetimeUsage {
@@ -9354,7 +9650,7 @@ input TerminateCustomerWalletInput {
 }
 
 """
-Autogenerated input type of TerminateSubscription
+Input for terminating a subscription
 """
 input TerminateSubscriptionInput {
   """
@@ -9363,6 +9659,7 @@ input TerminateSubscriptionInput {
   clientMutationId: String
   id: ID!
   onTerminationCreditNote: OnTerminationCreditNoteEnum
+  onTerminationInvoice: OnTerminationInvoiceEnum
 }
 
 input ThresholdInput {
@@ -10390,7 +10687,7 @@ input UpdateFeatureInput {
   """
   The description of the feature
   """
-  description: String!
+  description: String
 
   """
   The ID of the feature to update
@@ -10400,7 +10697,7 @@ input UpdateFeatureInput {
   """
   The name of the feature
   """
-  name: String!
+  name: String
 
   """
   The privileges configuration
@@ -10606,6 +10903,7 @@ Update Organization input arguments
 input UpdateOrganizationInput {
   addressLine1: String
   addressLine2: String
+  authenticationMethods: [AuthenticationMethodsEnum!]
   billingConfiguration: OrganizationBillingConfigurationInput
   city: String
 
@@ -10640,7 +10938,7 @@ input UpdatePlanEntitlementsInput {
   A unique identifier for the client performing the mutation.
   """
   clientMutationId: String
-  entitlements: [PlanEntitlementInput!]!
+  entitlements: [EntitlementInput!]!
   planId: ID!
 }
 
@@ -10660,6 +10958,7 @@ input UpdatePlanInput {
   clientMutationId: String
   code: String!
   description: String
+  entitlements: [EntitlementInput!]
   id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
@@ -10690,7 +10989,7 @@ Input for updating a privilege
 """
 input UpdatePrivilegeInput {
   code: String!
-  config: JSON
+  config: PrivilegeConfigInput
   name: String
   valueType: PrivilegeValueTypeEnum
 }
@@ -10764,6 +11063,7 @@ input UpdateSubscriptionInput {
   """
   clientMutationId: String
   endingAt: ISO8601DateTime
+  entitlements: [EntitlementInput!]
   id: ID!
   name: String
   planOverrides: PlanOverridesInput
@@ -10845,6 +11145,21 @@ input VoidInvoiceInput {
   refundAmount: BigInt
 }
 
+"""
+Fee input for creating or updating invoice from voided invoice
+"""
+input VoidedInvoiceFeeInput {
+  addOnId: ID
+  chargeFilterId: ID
+  chargeId: ID
+  description: String
+  id: ID
+  invoiceDisplayName: String
+  subscriptionId: ID
+  unitAmountCents: BigInt
+  units: Float
+}
+
 type VolumeRange {
   flatAmount: String!
   fromValue: BigInt!
@@ -10891,6 +11206,7 @@ type Wallet {
 }
 
 type WalletAppliesTo {
+  billableMetrics: [BillableMetric!]
   feeTypes: [FeeTypesEnum!]
 }
 

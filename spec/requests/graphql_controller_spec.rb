@@ -49,7 +49,7 @@ RSpec.describe GraphqlController, type: :request do
 
     context "with JWT token" do
       let(:token) do
-        UsersService.new.new_token(user).token
+        Auth::TokenService.encode(user:)
       end
       let(:near_expiration_token) do
         JWT.encode(
@@ -149,6 +149,54 @@ RSpec.describe GraphqlController, type: :request do
         )
 
         expect(response.status).to be(200)
+      end
+    end
+
+    context "with query length validation" do
+      let(:token) do
+        Auth::TokenService.encode(user:)
+      end
+
+      it "rejects queries that exceed maximum length" do
+        long_query = "query { " + "a" * (GraphqlController::MAX_QUERY_LENGTH + 1) + " }"
+
+        post "/graphql",
+          headers: {
+            "Authorization" => "Bearer #{token}"
+          },
+          params: {
+            query: long_query
+          }
+
+        expect(response.status).to be(200)
+
+        json = JSON.parse(response.body)
+        expect(json["errors"]).to be_present
+        expect(json["errors"].first["message"]).to include("Max query length is 15000")
+        expect(json["errors"].first["extensions"]["code"]).to eq("query_is_too_large")
+        expect(json["errors"].first["extensions"]["status"]).to eq(413)
+      end
+
+      it "accepts queries within maximum length" do
+        normal_query = mutation
+
+        post "/graphql",
+          headers: {
+            "Authorization" => "Bearer #{token}"
+          },
+          params: {
+            query: normal_query,
+            variables: {
+              input: {
+                email: user.email,
+                password: "ILoveLago"
+              }
+            }
+          }
+
+        expect(response.status).to be(200)
+
+        expect(json["errors"]).not_to be_present
       end
     end
   end

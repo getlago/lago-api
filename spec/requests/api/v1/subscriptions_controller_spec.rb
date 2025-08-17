@@ -384,7 +384,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
 
     include_examples "requires API permission", "subscription", "write"
 
-    def test_termination(expected_on_termination_credit_note: nil)
+    def test_termination(expected_on_termination_credit_note: nil, expected_on_termination_invoice: "generate")
       subject
 
       expect(response).to have_http_status(:success)
@@ -392,6 +392,7 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
       expect(json[:subscription][:status]).to eq("terminated")
       expect(json[:subscription][:terminated_at]).to be_present
       expect(json[:subscription][:on_termination_credit_note]).to eq(expected_on_termination_credit_note)
+      expect(json[:subscription][:on_termination_invoice]).to eq(expected_on_termination_invoice)
     end
 
     it "terminates a subscription" do
@@ -435,6 +436,14 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
           end
         end
 
+        context "when on_termination_credit_note is refund" do
+          let(:params) { {on_termination_credit_note: "refund"} }
+
+          it "terminates subscription with refund behavior" do
+            test_termination(expected_on_termination_credit_note: "refund")
+          end
+        end
+
         context "with invalid on_termination_credit_note value" do
           let(:params) { {on_termination_credit_note: "invalid"} }
 
@@ -446,6 +455,47 @@ RSpec.describe Api::V1::SubscriptionsController, type: :request do
               on_termination_credit_note: ["invalid_value"]
             )
           end
+        end
+      end
+    end
+
+    context "with on_termination_invoice parameter" do
+      context "when on_termination_invoice is generate" do
+        let(:params) { {on_termination_invoice: "generate"} }
+
+        it "terminates subscription with generate invoice behavior" do
+          test_termination(expected_on_termination_invoice: "generate")
+        end
+      end
+
+      context "when on_termination_invoice is skip" do
+        let(:params) { {on_termination_invoice: "skip"} }
+
+        it "terminates subscription with skip invoice behavior" do
+          test_termination(expected_on_termination_invoice: "skip")
+        end
+      end
+
+      context "with invalid on_termination_invoice value" do
+        let(:params) { {on_termination_invoice: "invalid"} }
+
+        it "returns validation error" do
+          subject
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(json[:error_details]).to include(
+            on_termination_invoice: ["invalid_value"]
+          )
+        end
+      end
+
+      context "with both on_termination_credit_note and on_termination_invoice parameters" do
+        let(:plan) { create(:plan, :pay_in_advance, organization:) }
+        let(:subscription) { create(:subscription, customer:, plan:) }
+        let(:params) { {on_termination_credit_note: "skip", on_termination_invoice: "skip"} }
+
+        it "terminates subscription with both behaviors" do
+          test_termination(expected_on_termination_credit_note: "skip", expected_on_termination_invoice: "skip")
         end
       end
     end

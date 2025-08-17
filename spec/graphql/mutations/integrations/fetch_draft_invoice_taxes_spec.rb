@@ -15,6 +15,7 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes, type: :graphql d
   let(:response) { instance_double(Net::HTTPOK) }
   let(:lago_client) { instance_double(LagoHttpClient::Client) }
   let(:endpoint) { "https://api.nango.dev/v1/anrok/draft_invoices" }
+  let(:current_time) { DateTime.new(2023, 7, 19, 12, 12) }
   let(:fees) do
     [
       {
@@ -22,14 +23,18 @@ RSpec.describe Mutations::Integrations::FetchDraftInvoiceTaxes, type: :graphql d
         unitAmountCents: 1200,
         units: 2,
         description: "desc-123",
-        invoiceDisplayName: "fee-123"
+        invoiceDisplayName: "fee-123",
+        fromDatetime: current_time.utc.iso8601(3),
+        toDatetime: current_time.utc.iso8601(3)
       },
       {
         addOnId: add_on_second.id,
         unitAmountCents: 400,
         units: 1,
         description: "desc-12345",
-        invoiceDisplayName: "fee-12345"
+        invoiceDisplayName: "fee-12345",
+        fromDatetime: current_time.utc.iso8601(3),
+        toDatetime: current_time.utc.iso8601(3)
       }
     ]
   end

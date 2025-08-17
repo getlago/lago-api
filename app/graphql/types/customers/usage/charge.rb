@@ -21,12 +21,12 @@ module Types
           SecureRandom.uuid
         end
 
-        def units
-          object.map { |f| BigDecimal(f.units) }.sum
-        end
-
         def events_count
           object.sum(&:events_count)
+        end
+
+        def units
+          object.map { |f| BigDecimal(f.units) }.sum
         end
 
         def amount_cents

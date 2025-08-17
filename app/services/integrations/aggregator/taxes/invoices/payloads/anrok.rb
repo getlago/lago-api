@@ -18,7 +18,7 @@ module Integrations
             def body
               [
                 {
-                  "issuing_date" => invoice.issuing_date,
+                  "issuing_date" => issuing_date,
                   "currency" => invoice.currency,
                   "contact" => {
                     "external_id" => integration_customer&.external_customer_id || customer.external_id,
@@ -61,6 +61,11 @@ module Integrations
 
             def empty_struct
               @empty_struct ||= OpenStruct.new
+            end
+
+            def issuing_date
+              # NOTE: Anrok API requires issuing date to be 30 days in the future at  most.
+              [invoice.issuing_date, 30.days.from_now.to_date].min
             end
           end
         end

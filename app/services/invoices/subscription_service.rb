@@ -54,30 +54,30 @@ module Invoices
       # Whenever the invoice is refreshed, the fees are not created again. (see `Fees::ChargeService.already_billed?`)
       # The webhook are sent whenever non-invoiceable fees are found in result.
       result.non_invoiceable_fees&.each do |fee|
-        SendWebhookJob.perform_later("fee.created", fee)
+        SendWebhookJob.perform_after_commit("fee.created", fee)
       end
 
       fill_daily_usage
 
       if tax_error?(fee_result)
         if grace_period?
-          SendWebhookJob.perform_later("invoice.drafted", invoice)
-          Utils::ActivityLog.produce(invoice, "invoice.drafted")
+          SendWebhookJob.perform_after_commit("invoice.drafted", invoice)
+          Utils::ActivityLog.produce_after_commit(invoice, "invoice.drafted")
         end
 
         return result
       end
 
       if grace_period?
-        SendWebhookJob.perform_later("invoice.drafted", invoice)
-        Utils::ActivityLog.produce(invoice, "invoice.drafted")
+        SendWebhookJob.perform_after_commit("invoice.drafted", invoice)
+        Utils::ActivityLog.produce_after_commit(invoice, "invoice.drafted")
       else
         unless invoice.closed? # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
-          SendWebhookJob.perform_later("invoice.created", invoice)
-          Utils::ActivityLog.produce(invoice, "invoice.created")
-          GeneratePdfAndNotifyJob.perform_later(invoice:, email: should_deliver_finalized_email?)
-          Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
-          Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
+          SendWebhookJob.perform_after_commit("invoice.created", invoice)
+          Utils::ActivityLog.produce_after_commit(invoice, "invoice.created")
+          GeneratePdfAndNotifyJob.perform_after_commit(invoice:, email: should_deliver_finalized_email?)
+          Integrations::Aggregator::Invoices::CreateJob.perform_after_commit(invoice:) if invoice.should_sync_invoice?
+          Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_after_commit(invoice:) if invoice.should_sync_hubspot_invoice?
           Invoices::Payments::CreateService.call_async(invoice:)
           Utils::SegmentTrack.invoice_created(invoice)
         end

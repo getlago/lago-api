@@ -8,6 +8,7 @@ module Types
       argument :amount_cents, GraphQL::Types::BigInt, required: true
       argument :amount_currency, Types::CurrencyEnum
       argument :bill_charges_monthly, Boolean, required: false
+      argument :bill_fixed_charges_monthly, Boolean, required: false
       argument :code, String, required: true
       argument :description, String, required: false
       argument :interval, Types::Plans::IntervalEnum, required: true
@@ -18,8 +19,11 @@ module Types
       argument :trial_period, Float, required: false
 
       argument :charges, [Types::Charges::Input]
+      argument :fixed_charges, [Types::FixedCharges::Input], required: false
       argument :minimum_commitment, Types::Commitments::Input, required: false
       argument :usage_thresholds, [Types::UsageThresholds::Input], required: false
+
+      argument :entitlements, [Types::Entitlement::EntitlementInput], required: false
     end
   end
 end

@@ -22,6 +22,7 @@ fr:
     breakdown_for_days: "%{breakdown_duration} sur %{breakdown_total_duration} jours"
     breakdown_of: Détails de consommation de %{fee_filter_display_name}
     clabe: CLABE
+    conversion_rate: Taux de conversion
     country: Pays
     coupons: Réduction(s)
     credit_notes: Avoir(s)
@@ -33,6 +34,7 @@ fr:
     due_date: Date d'échéance le %{date}
     fee_prorated: Les frais sont calculés au prorata des jours d'utilisation, le prix unitaire affiché est une moyenne
     fees_from_to_date: Frais de conso. du %{from_date} au %{to_date}
+    from_to_date: Du %{from_date} au %{to_date}
     graduated:
       fee_per_unit_for_the_first: Frais par unité pour les %{to} premières
       fee_per_unit_for_the_last: Frais par unité pour %{from} et plus

@@ -22,6 +22,7 @@ it:
     breakdown_for_days: Utilizzati %{breakdown_duration} su %{breakdown_total_duration} giorni
     breakdown_of: Ripartizione di %{fee_filter_display_name}
     clabe: CLABE
+    conversion_rate: Tasso di conversione
     country: Paese
     coupons: Coupon
     credit_notes: Note di Credito
@@ -33,6 +34,7 @@ it:
     due_date: Scadenza %{date}
     fee_prorated: La tariffa è calcolata in base ai giorni di utilizzo, il prezzo unitario visualizzato è una media
     fees_from_to_date: Tariffe dal %{from_date} al %{to_date}
+    from_to_date: Dal %{from_date} al %{to_date}
     graduated:
       fee_per_unit_for_the_first: Tariffa per unità per le prime %{to}
       fee_per_unit_for_the_last: Tariffa per unità per %{from} e oltre

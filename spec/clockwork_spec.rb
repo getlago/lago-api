@@ -84,7 +84,7 @@ describe Clockwork do
       )
 
       expect(Clockwork::Test).to be_ran_job(job)
-      expect(Clockwork::Test.times_run(job)).to eq(6)
+      expect(Clockwork::Test.times_run(job)).to eq(30)
 
       Clockwork::Test.block_for(job).call
       expect(Clock::ProcessAllSubscriptionActivitiesJob).to have_been_enqueued.once

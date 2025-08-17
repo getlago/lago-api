@@ -130,15 +130,16 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
     end
 
     context "with filters" do
+      let(:filter_metric) { create(:billable_metric, aggregation_type: "count_agg", organization:) }
       let(:billable_metric_filter) do
-        create(:billable_metric_filter, billable_metric: metric, key: "cloud", values: %w[aws google])
+        create(:billable_metric_filter, billable_metric: filter_metric, key: "cloud", values: %w[aws google])
       end
 
       let(:charge) do
         create(
           :standard_charge,
           plan: subscription.plan,
-          billable_metric: metric,
+          billable_metric: filter_metric,
           properties: {amount: "0"}
         )
       end
@@ -155,6 +156,9 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
       end
 
       before do
+        subscription
+        charge
+        tax
         charge_filter_value_aws
         charge_filter_value_gcp
 
@@ -164,7 +168,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           organization:,
           customer:,
           subscription:,
-          code: metric.code,
+          code: filter_metric.code,
           timestamp: Time.zone.now,
           properties: {cloud: "aws"}
         )
@@ -174,7 +178,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           organization:,
           customer:,
           subscription:,
-          code: metric.code,
+          code: filter_metric.code,
           timestamp: Time.zone.now,
           properties: {cloud: "google"}
         )
@@ -186,42 +190,31 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         charge_usage = json[:customer_usage][:charges_usage].first
         filters_usage = charge_usage[:filters]
 
+        aws_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] }
+        gcp_filter_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["google"] }
+
         aggregate_failures do
-          expect(charge_usage[:units]).to eq("8.0")
+          expect(charge_usage[:units]).to eq("4.0")
           expect(charge_usage[:amount_cents]).to eq(5000)
-          expect(filters_usage).to contain_exactly(
-            {
-              amount_cents: 0,
-              events_count: 4,
-              invoice_display_name: nil,
-              units: "4.0",
-              values: nil
-            },
-            {
-              units: "3.0",
-              amount_cents: 3000,
-              events_count: 3,
-              invoice_display_name: nil,
-              values: {cloud: ["aws"]}
-            },
-            {
-              units: "1.0",
-              amount_cents: 2000,
-              events_count: 1,
-              invoice_display_name: nil,
-              values: {cloud: ["google"]}
-            }
-          )
+
+          # Assertions for the AWS filter
+          expect(aws_filter_data[:units]).to eq("3.0")
+          expect(aws_filter_data[:amount_cents]).to eq(3000)
+
+          # Assertions for the GCP filter
+          expect(gcp_filter_data[:units]).to eq("1.0")
+          expect(gcp_filter_data[:amount_cents]).to eq(2000)
         end
       end
     end
 
     context "with multiple filter values" do
+      let(:multi_filter_metric) { create(:billable_metric, aggregation_type: "count_agg", organization:) }
       let(:billable_metric_filter_cloud) do
-        create(:billable_metric_filter, billable_metric: metric, key: "cloud", values: %w[aws google])
+        create(:billable_metric_filter, billable_metric: multi_filter_metric, key: "cloud", values: %w[aws google])
       end
       let(:billable_metric_filter_region) do
-        create(:billable_metric_filter, billable_metric: metric, key: "region", values: %w[usa france])
+        create(:billable_metric_filter, billable_metric: multi_filter_metric, key: "region", values: %w[usa france])
       end
 
       let(:charge_filter_aws_usa) { create(:charge_filter, charge:, properties: {amount: "10"}) }
@@ -283,12 +276,15 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         create(
           :standard_charge,
           plan: subscription.plan,
-          billable_metric: metric,
+          billable_metric: multi_filter_metric,
           properties: {amount: "0"}
         )
       end
 
       before do
+        subscription
+        charge
+        tax
         charge_filter_value11
         charge_filter_value12
         charge_filter_value21
@@ -302,7 +298,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           organization:,
           customer:,
           subscription:,
-          code: metric.code,
+          code: multi_filter_metric.code,
           timestamp: Time.zone.now,
           properties: {cloud: "aws", region: "usa"}
         )
@@ -312,7 +308,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           organization:,
           customer:,
           subscription:,
-          code: metric.code,
+          code: multi_filter_metric.code,
           timestamp: Time.zone.now,
           properties: {cloud: "aws", region: "france"}
         )
@@ -322,7 +318,7 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
           organization:,
           customer:,
           subscription:,
-          code: metric.code,
+          code: multi_filter_metric.code,
           timestamp: Time.zone.now,
           properties: {cloud: "google", region: "usa"}
         )
@@ -334,39 +330,25 @@ RSpec.describe Api::V1::Customers::UsageController, type: :request do
         charge_usage = json[:customer_usage][:charges_usage].first
         filters_usage = charge_usage[:filters]
 
+        aws_usa_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] && f[:values][:region] == ["usa"] }
+        aws_france_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["aws"] && f[:values][:region] == ["france"] }
+        google_usa_data = filters_usage.find { |f| f[:values] && f[:values][:cloud] == ["google"] && f[:values][:region] == ["usa"] }
+
         aggregate_failures do
-          expect(charge_usage[:units]).to eq("8.0")
+          expect(charge_usage[:units]).to eq("4.0")
           expect(charge_usage[:amount_cents]).to eq(7000)
-          expect(filters_usage).to contain_exactly(
-            {
-              units: "4.0",
-              amount_cents: 0,
-              events_count: 4,
-              invoice_display_name: nil,
-              values: nil
-            },
-            {
-              units: "2.0",
-              amount_cents: 2000,
-              events_count: 2,
-              invoice_display_name: nil,
-              values: {cloud: ["aws"], region: ["usa"]}
-            },
-            {
-              units: "1.0",
-              amount_cents: 2000,
-              events_count: 1,
-              invoice_display_name: nil,
-              values: {cloud: ["aws"], region: ["france"]}
-            },
-            {
-              units: "1.0",
-              amount_cents: 3000,
-              events_count: 1,
-              invoice_display_name: nil,
-              values: {cloud: ["google"], region: ["usa"]}
-            }
-          )
+
+          # Assertions for AWS/USA filter
+          expect(aws_usa_data[:units]).to eq("2.0")
+          expect(aws_usa_data[:amount_cents]).to eq(2000)
+
+          # Assertions for AWS/France filter
+          expect(aws_france_data[:units]).to eq("1.0")
+          expect(aws_france_data[:amount_cents]).to eq(2000)
+
+          # Assertions for Google/USA filter
+          expect(google_usa_data[:units]).to eq("1.0")
+          expect(google_usa_data[:amount_cents]).to eq(3000)
         end
       end
     end

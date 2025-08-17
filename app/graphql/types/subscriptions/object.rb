@@ -17,7 +17,8 @@ module Types
       field :billing_time, Types::Subscriptions::BillingTimeEnum
       field :canceled_at, GraphQL::Types::ISO8601DateTime
       field :ending_at, GraphQL::Types::ISO8601DateTime
-      field :on_termination_credit_note, Types::Subscriptions::OnTerminationCreditNoteEnum, null: true
+      field :on_termination_credit_note, Types::Subscriptions::OnTerminationCreditNoteEnum
+      field :on_termination_invoice, Types::Subscriptions::OnTerminationInvoiceEnum, null: false
       field :started_at, GraphQL::Types::ISO8601DateTime
       field :subscription_at, GraphQL::Types::ISO8601DateTime
       field :terminated_at, GraphQL::Types::ISO8601DateTime
@@ -38,6 +39,8 @@ module Types
       field :fees, [Types::Fees::Object], null: true
 
       field :lifetime_usage, Types::Subscriptions::LifetimeUsageObject, null: true
+
+      field :entitlements, [Types::Entitlement::SubscriptionEntitlementObject], null: false
 
       def next_plan
         object.next_subscription&.plan
@@ -80,6 +83,12 @@ module Types
 
       def dates_service
         @dates_service ||= ::Subscriptions::DatesService.new_instance(object, Time.current, current_usage: true)
+      end
+
+      def entitlements
+        entitlements = ::Entitlement::SubscriptionEntitlement.for_subscription(object)
+
+        ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(entitlements).serialize_models
       end
     end
   end

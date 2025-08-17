@@ -27,16 +27,29 @@ RSpec.describe ActivityLogsQuery, type: :query, clickhouse: true do
       create(:clickhouse_activity_log,
         organization: organization,
         resource: activity_log.resource,
-        logged_at: (ActivityLogsQuery::MAX_AGE + 3.days).ago)
+        logged_at: 33.days.ago)
     end
 
     before do
       old_activity_log
     end
 
-    it "returns only recent ones" do
-      expect(result.activity_logs.count).to eq(1)
-      expect(returned_ids).to eq([activity_log.activity_id])
+    context "with audit_logs_period value" do
+      before { organization.update(audit_logs_period: 30) }
+
+      it "returns only recent ones" do
+        expect(result.activity_logs.count).to eq(1)
+        expect(returned_ids).to eq([activity_log.activity_id])
+      end
+    end
+
+    context "without audit_logs_period value" do
+      before { organization.update(audit_logs_period: nil) }
+
+      it "returns all" do
+        expect(result.activity_logs.count).to eq(2)
+        expect(returned_ids).to eq([activity_log.activity_id, old_activity_log.activity_id])
+      end
     end
   end
 

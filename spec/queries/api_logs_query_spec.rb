@@ -27,7 +27,7 @@ RSpec.describe ApiLogsQuery, type: :query, clickhouse: true do
       create(
         :clickhouse_api_log,
         organization:,
-        logged_at: (ApiLogsQuery::MAX_AGE + 3.days).ago
+        logged_at: 33.days.ago
       )
     end
 
@@ -35,9 +35,22 @@ RSpec.describe ApiLogsQuery, type: :query, clickhouse: true do
       old_api_log
     end
 
-    it "returns only recent ones" do
-      expect(result.api_logs.count).to eq(1)
-      expect(returned_ids).to eq([api_log.request_id])
+    context "with audit_logs_period value" do
+      before { organization.update(audit_logs_period: 30) }
+
+      it "returns only recent ones" do
+        expect(result.api_logs.count).to eq(1)
+        expect(returned_ids).to eq([api_log.request_id])
+      end
+    end
+
+    context "without audit_logs_period value" do
+      before { organization.update(audit_logs_period: nil) }
+
+      it "returns all" do
+        expect(result.api_logs.count).to eq(2)
+        expect(returned_ids).to eq([api_log.request_id, old_api_log.request_id])
+      end
     end
   end
 

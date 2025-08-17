@@ -24,7 +24,8 @@ module Subscriptions
         plan: subscription.plan,
         subscription_at: params.key?(:subscription_at) ? params[:subscription_at] : subscription.subscription_at,
         ending_at: params[:ending_at],
-        on_termination_credit_note: params[:on_termination_credit_note]
+        on_termination_credit_note: params[:on_termination_credit_note],
+        on_termination_invoice: params[:on_termination_invoice]
       )
         return result
       end
@@ -35,6 +36,10 @@ module Subscriptions
 
       if pay_in_advance? && params.key?(:on_termination_credit_note)
         subscription.on_termination_credit_note = params[:on_termination_credit_note]
+      end
+
+      if params.key?(:on_termination_invoice)
+        subscription.on_termination_invoice = params[:on_termination_invoice]
       end
 
       if params.key?(:plan_overrides)

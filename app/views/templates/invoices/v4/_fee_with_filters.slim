@@ -1,4 +1,4 @@
-tr.charge-name
+tr.charge-name.fee
   td.body-1
     = self.invoice_name + FeeDisplayHelper.grouped_by_display(self) + ' • ' + self.filter_display_name(separator: ' • ')
     - if self.billable_metric.weighted_sum_agg?
@@ -23,3 +23,5 @@ tr.charge-name
   == SlimHelper.render('templates/invoices/v4/_volume', self)
 - when :package
   == SlimHelper.render('templates/invoices/v4/_package', self)
+
+== SlimHelper.render('templates/invoices/v4/_conversion_row', self)

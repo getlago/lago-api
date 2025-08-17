@@ -8,6 +8,8 @@ class PricingUnitUsage < ApplicationRecord
   validates :short_name, :conversion_rate, presence: true
   validates :conversion_rate, numericality: {greater_than: 0}
 
+  attr_accessor :projected_amount_cents
+
   def self.build_from_fiat_amounts(amount:, unit_amount:, applied_pricing_unit:)
     pricing_unit = applied_pricing_unit.pricing_unit
 
@@ -38,6 +40,10 @@ class PricingUnitUsage < ApplicationRecord
       unit_amount_cents: adjusted_unit_amount * currency.subunit_to_unit,
       precise_unit_amount: adjusted_unit_amount
     }
+  end
+
+  def currency
+    PricingUnit.new(short_name:)
   end
 end
 

@@ -10,7 +10,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
   around { |test| lago_premium!(&test) }
 
-  describe "GET #index" do
+  describe "GET /api/v1/plans/:plan_code/entitlements" do
     subject { get_with_token organization, "/api/v1/plans/#{plan.code}/entitlements" }
 
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
@@ -29,11 +29,11 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:entitlements]).to be_present
       expect(json[:entitlements].length).to eq(1)
-      expect(json[:entitlements].first[:privileges][:max][:value]).to eq(30)
+      expect(json[:entitlements].first[:privileges].sole[:value]).to eq(30)
     end
   end
 
-  describe "GET #show" do
+  describe "GET /api/v1/plans/:plan_code/entitlements/:feature_code" do
     subject { get_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}" }
 
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
@@ -51,7 +51,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
       expect(response).to have_http_status(:success)
       expect(json[:entitlement][:code]).to eq("seats")
-      expect(json[:entitlement][:privileges][:max][:value]).to eq(30)
+      expect(json[:entitlement][:privileges].sole[:value]).to eq(30)
     end
 
     it "returns not found error when plan does not exist" do
@@ -67,7 +67,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
     end
   end
 
-  describe "POST #create" do
+  describe "POST /api/v1/plans/:plan_code/entitlements" do
     subject { post_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params }
 
     let(:params) do
@@ -94,7 +94,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:entitlements]).to be_present
       expect(json[:entitlements].length).to eq(1)
-      expect(json[:entitlements].first[:privileges][:max][:value]).to eq(25)
+      expect(json[:entitlements].first[:privileges].sole[:value]).to eq(25)
     end
 
     context "when plan has existing entitlements" do
@@ -110,7 +110,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:entitlements].first[:privileges][:max][:value]).to eq(25)
+        expect(json[:entitlements].first[:privileges].sole[:value]).to eq(25)
       end
     end
 
@@ -239,14 +239,24 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
         expect { subject }.to change(Entitlement::EntitlementValue, :count).by(2)
 
         expect(response).to have_http_status(:success)
-        entitlements = json[:entitlements].first[:privileges]
-        expect(entitlements[:max][:value]).to eq(25)
-        expect(entitlements[:max_admins][:value]).to eq(5)
+        expect(json[:entitlements].first[:privileges]).to contain_exactly({
+          code: "max",
+          name: nil,
+          value_type: "integer",
+          value: 25,
+          config: {}
+        }, {
+          code: "max_admins",
+          name: nil,
+          value_type: "integer",
+          value: 5,
+          config: {}
+        })
       end
     end
   end
 
-  describe "PATCH #update" do
+  describe "PATCH /api/v1/plans/:plan_code/entitlements" do
     subject { patch_with_token organization, "/api/v1/plans/#{plan.code}/entitlements", params }
 
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
@@ -274,7 +284,7 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
       expect(response).to have_http_status(:success)
       expect(json[:entitlements]).to be_present
       expect(json[:entitlements].length).to eq(1)
-      expect(json[:entitlements].first[:privileges][:max][:value]).to eq(60)
+      expect(json[:entitlements].first[:privileges].sole[:value]).to eq(60)
     end
 
     it "does not create new entitlement" do
@@ -309,13 +319,13 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
         subject
 
         expect(response).to have_http_status(:success)
-        expect(json[:entitlements].first[:privileges][:max_admins][:value]).to eq(30)
+        expect(json[:entitlements].first[:privileges].find { it[:code] == "max_admins" }[:value]).to eq(30)
       end
     end
 
     context "when entitlement does not exist" do
       let(:new_feature) { create(:feature, organization:, code: "storage") }
-      let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_gb") }
+      let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_gb", value_type: "integer") }
       let(:params) do
         {
           "entitlements" => {
@@ -400,12 +410,12 @@ RSpec.describe Api::V1::Plans::EntitlementsController, type: :request do
 
         expect(response).to have_http_status(:success)
         expect(json[:entitlements]).to be_present
-        expect(json[:entitlements].first[:privileges][:max][:value]).to eq(10)
+        expect(json[:entitlements].first[:privileges].sole[:value]).to eq(10)
       end
     end
   end
 
-  describe "DELETE #destroy" do
+  describe "DELETE /api/v1/plans/:plan_code/entitlements/:feature_code" do
     subject { delete_with_token organization, "/api/v1/plans/#{plan.code}/entitlements/#{feature.code}" }
 
     let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }

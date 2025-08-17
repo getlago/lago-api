@@ -6,6 +6,9 @@ module Types
       graphql_name "Fee"
       implements Types::Invoices::InvoiceItem
 
+      field :id, ID, null: false
+
+      field :add_on, Types::AddOns::Object, null: true
       field :charge, Types::Charges::Object, null: true
       field :currency, Types::CurrencyEnum, null: false
       field :description, String, null: true
@@ -34,13 +37,18 @@ module Types
 
       field :charge_filter, Types::ChargeFilters::Object, null: true
       field :pricing_unit_usage, Types::PricingUnitUsages::Object, null: true
+      field :properties, Types::Fees::Properties, null: true, method: :itself
 
       def item_type
         object.fee_type
       end
 
       def applied_taxes
-        object.applied_taxes.order(tax_rate: :desc)
+        if object.applied_taxes.any? { |t| !t.persisted? }
+          object.applied_taxes.sort_by { |tax| -tax.tax_rate.to_f }
+        else
+          object.applied_taxes.order(tax_rate: :desc)
+        end
       end
 
       def adjusted_fee

@@ -17,9 +17,11 @@ class Fee < ApplicationRecord
   belongs_to :true_up_parent_fee, class_name: "Fee", optional: true
   belongs_to :organization
   belongs_to :billing_entity
+  belongs_to :fixed_charge, -> { with_discarded }, optional: true
 
   has_one :adjusted_fee, dependent: :nullify
   has_one :billable_metric, -> { with_discarded }, through: :charge
+  has_one :fixed_charge_add_on, -> { with_discarded }, class_name: "AddOn", through: :fixed_charge, source: :add_on
   has_one :customer, through: :subscription
   has_one :pricing_unit_usage, dependent: :destroy
   has_one :true_up_fee, class_name: "Fee", foreign_key: :true_up_parent_fee_id, dependent: :destroy
@@ -39,7 +41,7 @@ class Fee < ApplicationRecord
   monetize :unit_amount_cents, disable_validation: true, allow_nil: true, with_model_currency: :currency
 
   # TODO: Deprecate add_on type in the near future
-  FEE_TYPES = %i[charge add_on subscription credit commitment].freeze
+  FEE_TYPES = %i[charge add_on subscription credit commitment fixed_charge].freeze
   PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
 
   enum :fee_type, FEE_TYPES
@@ -75,6 +77,12 @@ class Fee < ApplicationRecord
   scope :from_customer_pay_in_advance, ->(org, external_customer_id) do
     from_organization_pay_in_advance(org).joins(subscription: :customer).where("customers.external_id = ?", external_customer_id)
   end
+  scope :ordered_by_period, -> do
+    from = Arel.sql("(properties->>'from_datetime')::timestamptz NULLS LAST")
+    to = Arel.sql("(properties->>'to_datetime')::timestamptz NULLS LAST")
+
+    order(from, to)
+  end
 
   def item_key
     id || object_id
@@ -84,6 +92,7 @@ class Fee < ApplicationRecord
     return billable_metric.id if charge?
     return add_on.id if add_on?
     return invoiceable_id if credit?
+    return fixed_charge_add_on.id if fixed_charge?
 
     subscription_id
   end
@@ -92,6 +101,7 @@ class Fee < ApplicationRecord
     return BillableMetric.name if charge?
     return AddOn.name if add_on?
     return WalletTransaction.name if credit?
+    return AddOn.name if fixed_charge?
 
     Subscription.name
   end
@@ -100,6 +110,7 @@ class Fee < ApplicationRecord
     return billable_metric.code if charge?
     return add_on.code if add_on?
     return fee_type if credit?
+    return fixed_charge_add_on.code if fixed_charge?
 
     subscription.plan.code
   end
@@ -108,14 +119,24 @@ class Fee < ApplicationRecord
     return billable_metric.name if charge?
     return add_on.name if add_on?
     return fee_type if credit?
+    return fixed_charge_add_on.name if fixed_charge?
 
     subscription.plan.name
+  end
+
+  def item_source
+    return fixed_charge_add_on.code if fixed_charge?
+    return add_on.code if add_on?
+    return "consumed_credits" if credit?
+
+    subscription&.plan&.code.presence || billable_metric&.code
   end
 
   def item_description
     return billable_metric.description if charge?
     return add_on.description if add_on?
     return fee_type if credit?
+    return fixed_charge_add_on.description if fixed_charge?
 
     subscription.plan.description
   end
@@ -125,6 +146,7 @@ class Fee < ApplicationRecord
     return charge.invoice_display_name.presence || billable_metric.name if charge?
     return add_on.invoice_name if add_on?
     return fee_type if credit?
+    return fixed_charge.invoice_display_name.presence || fixed_charge_add_on.invoice_name if fixed_charge?
 
     subscription.plan.invoice_display_name
   end
@@ -243,6 +265,7 @@ end
 #  billing_entity_id                   :uuid             not null
 #  charge_filter_id                    :uuid
 #  charge_id                           :uuid
+#  fixed_charge_id                     :uuid
 #  group_id                            :uuid
 #  invoice_id                          :uuid
 #  invoiceable_id                      :uuid
@@ -262,6 +285,7 @@ end
 #  index_fees_on_charge_id                                         (charge_id)
 #  index_fees_on_charge_id_and_invoice_id                          (charge_id,invoice_id) WHERE (deleted_at IS NULL)
 #  index_fees_on_deleted_at                                        (deleted_at)
+#  index_fees_on_fixed_charge_id                                   (fixed_charge_id)
 #  index_fees_on_group_id                                          (group_id)
 #  index_fees_on_invoice_id                                        (invoice_id)
 #  index_fees_on_invoiceable                                       (invoiceable_type,invoiceable_id)
@@ -276,6 +300,7 @@ end
 #  fk_rails_...  (applied_add_on_id => applied_add_ons.id)
 #  fk_rails_...  (billing_entity_id => billing_entities.id)
 #  fk_rails_...  (charge_id => charges.id)
+#  fk_rails_...  (fixed_charge_id => fixed_charges.id)
 #  fk_rails_...  (group_id => groups.id)
 #  fk_rails_...  (invoice_id => invoices.id)
 #  fk_rails_...  (organization_id => organizations.id)

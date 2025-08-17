@@ -54,12 +54,24 @@ module Types
       field :applied_dunning_campaign, Types::DunningCampaigns::Object
       field :can_create_billing_entity, Boolean, null: false, method: :can_create_billing_entity?
 
+      field :accessible_by_current_session, Boolean, null: false
+      field :authenticated_method, Types::Organizations::AuthenticationMethodsEnum, null: false
+      field :authentication_methods, [Types::Organizations::AuthenticationMethodsEnum], null: false
+
       def webhook_url
         object.webhook_endpoints.map(&:webhook_url).first
       end
 
       def api_key
         object.api_keys.first.value
+      end
+
+      def accessible_by_current_session
+        object.authentication_methods.include?(context[:login_method])
+      end
+
+      def authenticated_method
+        context[:login_method]
       end
     end
   end

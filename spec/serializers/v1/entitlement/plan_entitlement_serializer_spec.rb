@@ -35,14 +35,14 @@ RSpec.describe V1::Entitlement::PlanEntitlementSerializer do
         name: feature.name,
         description: feature.description
       )
-      expect(result[:privileges]).to eq({
-        "int" => {code: "int", name: nil, value_type: "integer", value: 30, config: {}},
-        "bool" => {code: "bool", name: nil, value_type: "boolean", value: false, config: {}},
-        "str" => {code: "str", name: nil, value_type: "string", value: "str", config: {}},
-        "opt" => {code: "opt", name: nil, value_type: "select", value: "option1", config: {
+      expect(result[:privileges]).to contain_exactly(
+        {code: "int", name: nil, value_type: "integer", value: 30, config: {}},
+        {code: "bool", name: nil, value_type: "boolean", value: false, config: {}},
+        {code: "str", name: nil, value_type: "string", value: "str", config: {}},
+        {code: "opt", name: nil, value_type: "select", value: "option1", config: {
           "select_options" => ["option1", "option2", "option3"]
         }}
-      })
+      )
     end
   end
 end

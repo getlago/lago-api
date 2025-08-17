@@ -276,6 +276,8 @@ module Api
                 :unit_amount_cents,
                 :units,
                 :description,
+                :from_datetime,
+                :to_datetime,
                 {tax_codes: []}
               ]
             ).to_h.deep_symbolize_keys

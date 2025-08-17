@@ -18,6 +18,10 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
     privilege2
   end
 
+  def indexed_privileges
+    json[:feature][:privileges].index_by { it[:code].to_sym }
+  end
+
   describe "POST /api/v1/features" do
     subject { post_with_token(organization, "/api/v1/features", params) }
 
@@ -27,10 +31,10 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
           code: "new_feature",
           name: "New Feature",
           description: "A new feature",
-          privileges: {
-            "priv1" => {value_type: "boolean"},
-            "priv2" => {name: "Maximum", value_type: "boolean"}
-          }
+          privileges: [
+            {code: "priv1", value_type: "boolean"},
+            {code: "priv2", name: "Maximum", value_type: "boolean"}
+          ]
         }
       }
     end
@@ -45,17 +49,9 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       expect(json[:feature][:code]).to eq("new_feature")
       expect(json[:feature][:name]).to eq("New Feature")
       expect(json[:feature][:description]).to eq("A new feature")
-      expect(json[:feature][:privileges]).to include(
-        priv1: {
-          code: "priv1",
-          name: nil,
-          value_type: "boolean"
-        },
-        priv2: {
-          code: "priv2",
-          name: "Maximum",
-          value_type: "boolean"
-        }
+      expect(json[:feature][:privileges]).to contain_exactly(
+        {code: "priv1", name: nil, value_type: "boolean", config: {}},
+        {code: "priv2", name: "Maximum", value_type: "boolean", config: {}}
       )
     end
 
@@ -101,9 +97,9 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
         {
           feature: {
             code: "new_feature",
-            privileges: {
-              "max_admins" => {value_type: "invalid_type"}
-            }
+            privileges: [
+              {code: "max_admins", value_type: "invalid_type"}
+            ]
           }
         }
       end
@@ -133,7 +129,7 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
 
         expect(response).to have_http_status(:success)
         expect(json[:feature][:code]).to eq("new_feature")
-        expect(json[:feature][:privileges]).to eq({})
+        expect(json[:feature][:privileges]).to eq([])
       end
     end
 
@@ -142,9 +138,9 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
         {
           feature: {
             code: "new_feature",
-            privileges: {
-              "max_admins" => {value_type: "integer"}
-            }
+            privileges: [
+              {code: "max_admins", value_type: "integer"}
+            ]
           }
         }
       end
@@ -180,17 +176,9 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
         description: "Number of users of the account"
       )
 
-      expect(feature_response[:privileges]).to include(
-        max_admins: {
-          code: "max_admins",
-          name: "",
-          value_type: "integer"
-        },
-        max: {
-          code: "max",
-          name: "Maximum",
-          value_type: "integer"
-        }
+      expect(feature_response[:privileges]).to contain_exactly(
+        {code: "max_admins", name: "", value_type: "integer", config: {}},
+        {code: "max", name: "Maximum", value_type: "integer", config: {}}
       )
     end
 
@@ -253,9 +241,9 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       expect(json[:feature][:code]).to eq("seats")
       expect(json[:feature][:name]).to eq("Number of seats")
       expect(json[:feature][:description]).to eq("Number of users of the account")
-      expect(json[:feature][:privileges]).to include(
-        max_admins: {code: "max_admins", name: "", value_type: "integer"},
-        max: {code: "max", name: "Maximum", value_type: "integer"}
+      expect(json[:feature][:privileges]).to contain_exactly(
+        {code: "max_admins", name: "", value_type: "integer", config: {}},
+        {code: "max", name: "Maximum", value_type: "integer", config: {}}
       )
     end
 
@@ -287,9 +275,9 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
         feature: {
           name: "Updated Feature Name",
           description: "Updated feature description",
-          privileges: {
-            "max" => {name: "Max."}
-          }
+          privileges: [
+            {code: "max", name: "Max."}
+          ]
         }
       }
     end
@@ -302,8 +290,8 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       expect(response).to have_http_status(:ok)
       expect(json[:feature][:name]).to eq("Updated Feature Name")
       expect(json[:feature][:description]).to eq("Updated feature description")
-      expect(json[:feature][:privileges][:max][:name]).to eq("Max.")
-      expect(json[:feature][:privileges][:max_admins][:name]).to eq("") # unchanged
+      expect(indexed_privileges[:max][:name]).to eq("Max.")
+      expect(indexed_privileges[:max_admins][:name]).to eq("") # unchanged
     end
 
     it "only updates provided attributes" do
@@ -318,13 +306,13 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
     end
 
     it "creates privilege non existent privilege" do
-      params[:feature][:privileges]["nonexistent"] = {name: "New Name"}
+      params[:feature][:privileges] << {code: "nonexistent", name: "New Name"}
 
       subject
 
       expect(response).to have_http_status(:ok)
-      expect(json[:feature][:privileges][:max][:name]).to eq("Max.")
-      expect(json[:feature][:privileges][:nonexistent][:name]).to eq("New Name")
+      expect(indexed_privileges[:max][:name]).to eq("Max.")
+      expect(indexed_privileges[:nonexistent][:name]).to eq("New Name")
     end
 
     context "when updating only feature attributes" do
@@ -343,7 +331,7 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
         expect(response).to have_http_status(:ok)
         expect(json[:feature][:name]).to eq("Updated Feature Name")
         expect(json[:feature][:description]).to eq("Updated feature description")
-        expect(json[:feature][:privileges][:max][:name]).to eq("Maximum") # unchanged
+        expect(indexed_privileges[:max][:name]).to eq("Maximum") # unchanged
       end
     end
 
@@ -351,10 +339,10 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       let(:params) do
         {
           feature: {
-            privileges: {
-              "max" => {name: "Max."},
-              "max_admins" => {name: "Max Admins"}
-            }
+            privileges: [
+              {code: "max", name: "Max."},
+              {code: "max_admins", name: "Max Admins"}
+            ]
           }
         }
       end
@@ -365,8 +353,8 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
         expect(response).to have_http_status(:ok)
         expect(json[:feature][:name]).to eq("Number of seats") # unchanged
         expect(json[:feature][:description]).to eq("Number of users of the account") # unchanged
-        expect(json[:feature][:privileges][:max][:name]).to eq("Max.")
-        expect(json[:feature][:privileges][:max_admins][:name]).to eq("Max Admins")
+        expect(indexed_privileges[:max][:name]).to eq("Max.")
+        expect(indexed_privileges[:max_admins][:name]).to eq("Max Admins")
       end
     end
 
@@ -394,9 +382,9 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
       let(:params) do
         {
           feature: {
-            privileges: {
-              "max" => {name: ""} # Empty name is allowed
-            }
+            privileges: [
+              {code: "max", name: ""} # Empty name is allowed
+            ]
           }
         }
       end
@@ -405,7 +393,7 @@ RSpec.describe Api::V1::FeaturesController, type: :request do
         subject
 
         expect(response).to have_http_status(:ok)
-        expect(json[:feature][:privileges][:max][:name]).to eq("")
+        expect(indexed_privileges[:max][:name]).to eq("")
       end
     end
 

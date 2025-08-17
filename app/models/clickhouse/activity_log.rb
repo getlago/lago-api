@@ -34,7 +34,8 @@ module Clickhouse
       subscription: "Subscription",
       wallet: "Wallet",
       coupon: "Coupon",
-      payment_request: "PaymentRequest"
+      payment_request: "PaymentRequest",
+      feature: "Feature"
     }.freeze
 
     ACTIVITY_TYPES = {
@@ -56,6 +57,7 @@ module Clickhouse
       invoice_payment_status_updated: "invoice.payment_status_updated",
       invoice_payment_overdue: "invoice.payment_overdue",
       invoice_voided: "invoice.voided",
+      invoice_regenerated: "invoice.regenerated",
       invoice_payment_failure: "invoice.payment_failure",
       payment_receipt_created: "payment_receipt.created",
       payment_receipt_generated: "payment_receipt.generated",
@@ -79,7 +81,10 @@ module Clickhouse
       coupon_deleted: "coupon.deleted",
       applied_coupon_created: "applied_coupon.created",
       applied_coupon_deleted: "applied_coupon.deleted",
-      payment_request_created: "payment_request.created"
+      payment_request_created: "payment_request.created",
+      feature_created: "feature.created",
+      feature_deleted: "feature.deleted",
+      feature_updated: "feature.updated"
     }
 
     before_save :ensure_activity_id

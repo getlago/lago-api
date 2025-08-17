@@ -2,6 +2,8 @@
 
 module Events
   class CalculateExpressionService < BaseService
+    Result = BaseResult[:event]
+
     def initialize(organization:, event:)
       @organization = organization
       @event = event

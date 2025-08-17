@@ -44,6 +44,7 @@ class Invoice < ApplicationRecord
   has_many :applied_usage_thresholds
   has_many :usage_thresholds, through: :applied_usage_thresholds
   has_many :applied_invoice_custom_sections
+  has_one :regenerated_invoice, class_name: "Invoice", foreign_key: :voided_invoice_id
 
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
@@ -328,7 +329,7 @@ class Invoice < ApplicationRecord
   end
 
   def payment_dispute_losable?
-    finalized?
+    finalized? || voided?
   end
 
   def voidable?

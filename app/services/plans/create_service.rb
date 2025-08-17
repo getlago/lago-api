@@ -24,16 +24,16 @@ module Plans
         amount_cents: args[:amount_cents],
         amount_currency: args[:amount_currency],
         trial_period: args[:trial_period],
-        bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil
+        bill_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_charges_monthly] || false : nil,
+        bill_fixed_charges_monthly: (args[:interval]&.to_sym == :yearly) ? args[:bill_fixed_charges_monthly] || false : nil
       )
 
-      # Validates billable metrics
-      if args[:charges].present?
-        metric_ids = args[:charges].map { |c| c[:billable_metric_id] }.uniq
-        if metric_ids.present? && plan.organization.billable_metrics.where(id: metric_ids).count != metric_ids.count
-          return result.not_found_failure!(resource: "billable_metrics")
-        end
-      end
+      chargeables_validation_result = Plans::ChargeablesValidationService.call(
+        organization: plan.organization,
+        charges: args[:charges],
+        fixed_charges: args[:fixed_charges]
+      )
+      return chargeables_validation_result if chargeables_validation_result.failure?
 
       ActiveRecord::Base.transaction do
         plan.save!
@@ -59,6 +59,12 @@ module Plans
               taxes_result = Charges::ApplyTaxesService.call(charge: new_charge, tax_codes: charge[:tax_codes])
               taxes_result.raise_if_error!
             end
+          end
+        end
+
+        if args[:fixed_charges].present?
+          args[:fixed_charges].each do |fixed_charge_args|
+            FixedCharges::CreateService.call!(plan:, params: fixed_charge_args)
           end
         end
 
@@ -120,9 +126,9 @@ module Plans
         prorated: args[:prorated] || false
       )
 
-      properties = args[:properties].presence || Charges::BuildDefaultPropertiesService.call(args[:charge_model])
-      charge.properties = Charges::FilterChargeModelPropertiesService.call(
-        charge:,
+      properties = args[:properties].presence || ChargeModels::BuildDefaultPropertiesService.call(args[:charge_model])
+      charge.properties = ChargeModels::FilterPropertiesService.call(
+        chargeable: charge,
         properties:
       ).properties
 
@@ -149,6 +155,7 @@ module Plans
 
     def track_plan_created(plan)
       count_by_charge_model = plan.charges.group(:charge_model).count
+      count_by_fixed_charge_model = plan.fixed_charges.group(:charge_model).count
 
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
@@ -167,6 +174,10 @@ module Plans
           nb_percentage_charges: count_by_charge_model["percentage"] || 0,
           nb_graduated_charges: count_by_charge_model["graduated"] || 0,
           nb_package_charges: count_by_charge_model["package"] || 0,
+          nb_fixed_charges: plan.fixed_charges.count,
+          nb_standard_fixed_charges: count_by_fixed_charge_model["standard"] || 0,
+          nb_graduated_fixed_charges: count_by_fixed_charge_model["graduated"] || 0,
+          nb_volume_fixed_charges: count_by_fixed_charge_model["volume"] || 0,
           organization_id: plan.organization_id,
           parent_id: plan.parent_id
         }

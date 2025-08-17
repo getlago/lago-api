@@ -4,6 +4,8 @@ module Events
   class CreateBatchService < BaseService
     MAX_LENGTH = ENV.fetch("LAGO_EVENTS_BATCH_MAX_LENGTH", 100).to_i
 
+    Result = BaseResult[:events, :errors]
+
     def initialize(organization:, events_params:, timestamp:, metadata:)
       @organization = organization
       @events_params = events_params[:events]
@@ -23,10 +25,10 @@ module Events
       end
 
       validate_events
-
       return result.validation_failure!(errors: result.errors) if result.errors.present?
 
       post_validate_events
+      return result.validation_failure!(errors: result.errors) if result.errors.present?
 
       result
     end
@@ -63,8 +65,16 @@ module Events
     def post_validate_events
       if organization.postgres_events_store?
         ActiveRecord::Base.transaction do
-          result.events.each(&:save!)
+          result.events.each_with_index do |event, index|
+            event.save!
+          rescue ActiveRecord::RecordNotUnique
+            result.errors[index] = {transaction_id: ["value_already_exist"]}
+          end
+
+          raise ActiveRecord::Rollback if result.errors.any?
         end
+
+        return if result.errors.any?
       end
 
       result.events.each do |event|

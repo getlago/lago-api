@@ -16,6 +16,7 @@ module Types
       argument :subscription_id, ID, required: false
 
       argument :invoice_display_name, String, required: false
+      argument :invoice_subscription_id, ID, required: false
       argument :unit_precise_amount, String, required: false
       argument :units, GraphQL::Types::Float, required: false
     end

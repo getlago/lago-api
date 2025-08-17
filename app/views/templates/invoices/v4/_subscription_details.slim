@@ -17,7 +17,7 @@
           td.body-2 = I18n.t('invoice.amount')
 
         - if FeeDisplayHelper.should_display_subscription_fee?(invoice_subscription)
-          tr
+          tr.fee
             - if subscription_fee&.invoice_display_name&.present?
               td.body-1 = subscription_fee&.invoice_display_name
             - else
@@ -90,7 +90,7 @@
 
       - if commitment_fee
         table.invoice-resume-table width="100%"
-          tr
+          tr.fee
             td.body-1 = commitment_fee.invoice_name
             td.body-2 = 1
             td.body-2 = MoneyHelper.format(commitment_fee.amount)

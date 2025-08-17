@@ -15,8 +15,11 @@ module Charges
       return result.not_found_failure!(resource: "charge") unless charge
 
       ActiveRecord::Base.transaction do
-        plan.children.where(id: child_ids).find_each do |child|
-          Charges::CreateService.call!(plan: child, params: payload.merge(parent_id: charge.id))
+        # skip touching to avoid deadlocks
+        Plan.no_touching do
+          plan.children.where(id: child_ids).find_each do |child|
+            Charges::CreateService.call!(plan: child, params: payload.merge(parent_id: charge.id))
+          end
         end
       end
 

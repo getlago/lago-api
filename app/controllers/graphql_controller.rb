@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class GraphqlController < ApplicationController
+  MAX_QUERY_LENGTH = 15_000
+
   include AuthenticableUser
   include CustomerPortalUser
   include OrganizationHeader
@@ -23,6 +25,7 @@ class GraphqlController < ApplicationController
     operation_name = params[:operationName]
     context = {
       current_user:,
+      login_method:,
       current_organization:,
       customer_portal_user:,
       request:,
@@ -30,6 +33,14 @@ class GraphqlController < ApplicationController
         current_user&.memberships&.find_by(organization: current_organization)&.permissions_hash ||
           Permission::EMPTY_PERMISSIONS_HASH
     }
+
+    if query.present? && query.length > MAX_QUERY_LENGTH
+      return render_graphql_error(
+        code: "query_is_too_large",
+        status: 413,
+        message: "Max query length is #{MAX_QUERY_LENGTH}, your query is #{query.length}"
+      )
+    end
 
     OpenTelemetry::Trace.current_span.add_attributes({"query" => query, "operation_name" => operation_name})
     result = LagoTracer.in_span("LagoApiSchema.execute") do

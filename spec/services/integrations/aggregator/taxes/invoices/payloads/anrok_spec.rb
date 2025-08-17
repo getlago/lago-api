@@ -100,5 +100,12 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::Payloads::Anrok do
     it "returns the payload body" do
       expect(call).to eq payload_body
     end
+
+    context "when invoice.issuing_date is too far in the future" do
+      it "uses issuing date 30 days in the future at most" do
+        invoice.issuing_date = 61.days.from_now.to_date
+        expect(call.sole["issuing_date"]).to eq 30.days.from_now.to_date
+      end
+    end
   end
 end

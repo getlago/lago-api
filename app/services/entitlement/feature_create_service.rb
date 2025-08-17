@@ -19,10 +19,14 @@ module Entitlement
       return result.forbidden_failure! unless License.premium?
       return result.not_found_failure!(resource: "organization") unless organization
 
+      if Utils::Entitlement.privilege_code_is_duplicated?(params[:privileges])
+        return result.single_validation_failure!(field: :"privilege.code", error_code: "value_is_duplicated")
+      end
+
       ActiveRecord::Base.transaction do
         feature = Feature.create!(
           organization:,
-          code: params[:code],
+          code: params[:code]&.strip,
           name: params[:name],
           description: params[:description]
         )
@@ -54,10 +58,10 @@ module Entitlement
     attr_reader :organization, :params
 
     def create_privileges(feature, privileges_params)
-      privileges_params.each do |code, privilege_params|
+      privileges_params.each do |privilege_params|
         privilege = feature.privileges.new(
           organization:,
-          code:,
+          code: privilege_params[:code]&.strip,
           name: privilege_params[:name]
         )
         privilege.value_type = privilege_params[:value_type] if privilege_params.has_key? :value_type

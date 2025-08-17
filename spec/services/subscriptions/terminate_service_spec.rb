@@ -27,7 +27,7 @@ RSpec.describe Subscriptions::TerminateService do
       let(:subscription) { create(:subscription, customer:) }
 
       it "calls the hubspot update job after commit" do
-        expect { subject }.to have_enqueued_job_after_commit(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).with(subscription:)
+        expect { subject }.to have_enqueued_job_after_commit(Integrations::Aggregator::Subscriptions::Hubspot::UpdateJob).with(subscription:).twice
       end
     end
 
@@ -210,6 +210,23 @@ RSpec.describe Subscriptions::TerminateService do
         end
       end
 
+      context "when on_termination_credit_note is refund" do
+        let(:on_termination_credit_note) { "refund" }
+
+        it "creates a credit note for the remaining days with refund" do
+          travel_to(Time.current.end_of_month - 4.days) do
+            expect { subject }.to change(CreditNote, :count).by(1)
+          end
+        end
+
+        it "updates the subscription termination behavior" do
+          travel_to(Time.current.end_of_month - 4.days) do
+            subject
+            expect(subscription.reload.on_termination_credit_note).to eq("refund")
+          end
+        end
+      end
+
       context "when on_termination_credit_note is not set" do
         subject(:result) { described_class.call(subscription:) }
 
@@ -256,6 +273,56 @@ RSpec.describe Subscriptions::TerminateService do
       it "updates the subscription termination behavior" do
         subject
         expect(subscription.reload.on_termination_credit_note).to eq(nil)
+      end
+    end
+
+    context "with on_termination_invoice parameter" do
+      subject(:result) { described_class.call(subscription:, on_termination_invoice:) }
+
+      context "when on_termination_invoice is generate" do
+        let(:on_termination_invoice) { "generate" }
+
+        it "enqueues a BillSubscriptionJob" do
+          freeze_time do
+            expect { subject }.to have_enqueued_job_after_commit(BillSubscriptionJob).with([subscription], Time.current, invoicing_reason: :subscription_terminating)
+          end
+        end
+
+        it "updates the subscription on_termination_invoice" do
+          subject
+          expect(subscription.reload.on_termination_invoice).to eq("generate")
+        end
+      end
+
+      context "when on_termination_invoice is skip" do
+        let(:on_termination_invoice) { "skip" }
+
+        it "does not enqueue a BillSubscriptionJob" do
+          expect { subject }.not_to have_enqueued_job(BillSubscriptionJob)
+        end
+
+        it "still enqueues a BillNonInvoiceableFeesJob" do
+          freeze_time do
+            expect { subject }.to have_enqueued_job_after_commit(BillNonInvoiceableFeesJob)
+              .with([subscription], Time.current)
+          end
+        end
+
+        it "updates the subscription on_termination_invoice" do
+          subject
+          expect(subscription.reload.on_termination_invoice).to eq("skip")
+        end
+      end
+
+      context "when on_termination_invoice is invalid" do
+        let(:on_termination_invoice) { "invalid" }
+
+        it "raises an error" do
+          subject
+
+          expect(result).to be_failure
+          expect(result.error.messages).to include({on_termination_invoice: ["invalid_value"]})
+        end
       end
     end
   end

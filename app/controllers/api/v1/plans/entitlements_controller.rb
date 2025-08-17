@@ -6,8 +6,6 @@ module Api
       class EntitlementsController < Api::BaseController
         include PremiumFeatureOnly
 
-        attr_reader :plan, :entitlement
-
         before_action :find_plan
         before_action :find_entitlement, only: %i[show destroy]
 
@@ -93,6 +91,8 @@ module Api
 
         private
 
+        attr_reader :plan, :entitlement
+
         def update_params
           params.fetch(:entitlements, {}).permit!
         end
@@ -102,7 +102,7 @@ module Api
         end
 
         def resource_name
-          "entitlement"
+          "plan"
         end
 
         def find_plan

@@ -31,7 +31,15 @@ module Auth
         return result.single_validation_failure!(error_code: "user_does_not_exist")
       end
 
-      UsersService.new.new_token(user)
+      unless user.active_organizations.pluck(:authentication_methods).flatten.uniq.include?(Organizations::AuthenticationMethods::GOOGLE_OAUTH)
+        return result.single_validation_failure!(
+          error_code: "login_method_not_authorized",
+          field: Organizations::AuthenticationMethods::GOOGLE_OAUTH
+        )
+      end
+
+      result.user = user
+      generate_token
     rescue Google::Auth::IDTokens::SignatureError
       result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
@@ -44,7 +52,7 @@ module Auth
 
       google_oidc = oidc_verifier(code:)
 
-      UsersService.new.register(google_oidc["email"], SecureRandom.hex, organization_name)
+      register(google_oidc["email"], organization_name)
     rescue Google::Auth::IDTokens::SignatureError
       result.single_validation_failure!(error_code: "invalid_google_token")
     rescue Signet::AuthorizationError
@@ -68,7 +76,8 @@ module Auth
         invite:,
         email: google_oidc["email"],
         token: invite_token,
-        password: SecureRandom.hex
+        password: SecureRandom.hex,
+        login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH
       )
     rescue Google::Auth::IDTokens::SignatureError
       result.single_validation_failure!(error_code: "invalid_google_token")
@@ -77,6 +86,60 @@ module Auth
     end
 
     private
+
+    def generate_token
+      result.token = Auth::TokenService.encode(user: result.user, login_method: Organizations::AuthenticationMethods::GOOGLE_OAUTH)
+      result
+    rescue => e
+      result.service_failure!(code: "token_encoding_error", message: e.message)
+    end
+
+    def register(email, organization_name)
+      if ENV.fetch("LAGO_DISABLE_SIGNUP", "false") == "true"
+        return result.not_allowed_failure!(code: "signup_disabled")
+      end
+
+      if User.exists?(email:)
+        result.single_validation_failure!(field: :email, error_code: "user_already_exists")
+
+        return result
+      end
+
+      ActiveRecord::Base.transaction do
+        result.user = User.create!(email:, password: SecureRandom.hex)
+
+        result.organization = Organizations::CreateService
+          .call(name: organization_name, document_numbering: "per_organization")
+          .raise_if_error!
+          .organization
+
+        result.membership = Membership.create!(
+          user: result.user,
+          organization: result.organization,
+          role: :admin
+        )
+
+        generate_token
+      rescue ActiveRecord::RecordInvalid => e
+        result.record_validation_failure!(record: e.record)
+      end
+
+      SegmentIdentifyJob.perform_later(membership_id: "membership/#{result.membership.id}")
+      track_organization_registered(result.organization, result.membership)
+
+      result
+    end
+
+    def track_organization_registered(organization, membership)
+      SegmentTrackJob.perform_later(
+        membership_id: "membership/#{membership.id}",
+        event: "organization_registered",
+        properties: {
+          organization_name: organization.name,
+          organization_id: organization.id
+        }
+      )
+    end
 
     def client_id
       @client_id ||= Google::Auth::ClientId.new(ENV["GOOGLE_AUTH_CLIENT_ID"], ENV["GOOGLE_AUTH_CLIENT_SECRET"])

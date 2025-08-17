@@ -4,6 +4,7 @@ class Organization < ApplicationRecord
   include PaperTrailTraceable
   include OrganizationTimezone
   include Currencies
+  include Organizations::AuthenticationMethods
 
   self.ignored_columns += [:clickhouse_aggregation]
 
@@ -25,7 +26,10 @@ class Organization < ApplicationRecord
   has_many :billing_entities, -> { active }
   has_many :all_billing_entities, class_name: "BillingEntity"
   has_many :memberships
+  has_many :active_memberships, -> { active }, class_name: "Membership"
+  has_many :admins_memberships, -> { active.admin }, class_name: "Membership"
   has_many :users, through: :memberships
+  has_many :admins, through: :admins_memberships, source: :user
   has_many :billable_metrics
   has_many :plans
   has_many :pricing_units
@@ -57,6 +61,7 @@ class Organization < ApplicationRecord
   has_many :privileges, class_name: "Entitlement::Privilege"
   has_many :entitlements, class_name: "Entitlement::Entitlement"
   has_many :entitlement_values, class_name: "Entitlement::EntitlementValue"
+  has_many :subscription_feature_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
 
   has_many :subscription_activities, class_name: "UsageMonitoring::SubscriptionActivity"
   has_many :alerts, class_name: "UsageMonitoring::Alert"
@@ -151,10 +156,6 @@ class Organization < ApplicationRecord
 
   def using_lifetime_usage?
     lifetime_usage_enabled? || progressive_billing_enabled?
-  end
-
-  def admins
-    users.joins(:memberships).merge!(memberships.admin)
   end
 
   def logo_url
@@ -262,6 +263,8 @@ end
 #  address_line1                :string
 #  address_line2                :string
 #  api_key                      :string
+#  audit_logs_period            :integer          default(30)
+#  authentication_methods       :string           default(["email_password", "google_oauth"]), not null, is an Array
 #  city                         :string
 #  clickhouse_events_store      :boolean          default(FALSE), not null
 #  country                      :string

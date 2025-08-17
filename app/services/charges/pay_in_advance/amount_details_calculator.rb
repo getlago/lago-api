@@ -33,7 +33,7 @@ module Charges
         details = PERCENTAGE_CHARGE_AMOUNT_DETAILS_KEYS.each_with_object(fixed_values) do |key, result|
           result[key] = (BigDecimal(all_charges_details[key].to_s) - BigDecimal(charges_details_without_last_event[key].to_s)).to_s
         end
-        # TODO: remove this when Charges::ChargeModels::PercentageService#free_units_value respects :exclude_event flag
+        # TODO: remove this when ChargeModels::PercentageService#free_units_value respects :exclude_event flag
         details[:free_units] = (BigDecimal(details[:units].to_s) - BigDecimal(details[:paid_units].to_s)).to_s
         details
       end

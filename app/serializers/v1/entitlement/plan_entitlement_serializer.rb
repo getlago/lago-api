@@ -20,20 +20,9 @@ module V1
             code: ev.privilege.code,
             name: ev.privilege.name,
             value_type: ev.privilege.value_type,
-            value: cast_value(ev.value, ev.privilege.value_type),
+            value: Utils::Entitlement.cast_value(ev.value, ev.privilege.value_type),
             config: ev.privilege.config
           }
-        end.index_by { it[:code] }
-      end
-
-      def cast_value(value, type)
-        case type
-        when "integer"
-          value.to_i
-        when "boolean"
-          ActiveModel::Type::Boolean.new.cast(value)
-        else
-          value
         end
       end
     end

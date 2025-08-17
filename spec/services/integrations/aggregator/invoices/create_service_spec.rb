@@ -150,7 +150,8 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
         "custbody_ava_disable_tax_calculation" => true,
         "custbody_lago_invoice_link" => invoice_url,
         "trandate" => anything,
-        "duedate" => due_date
+        "duedate" => due_date,
+        "lago_plan_codes" => invoice.invoice_subscriptions.map(&:subscription).map(&:plan).map(&:code).join(",")
       },
       "lines" => [
         {
@@ -165,7 +166,8 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               "taxdetailsreference" => anything,
               "custcol_service_period_date_from" => anything,
               "custcol_service_period_date_to" => anything,
-              "description" => anything
+              "description" => anything,
+              "item_source" => anything
             },
             {
               "item" => "4",
@@ -176,7 +178,8 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               "taxdetailsreference" => anything,
               "custcol_service_period_date_from" => anything,
               "custcol_service_period_date_to" => anything,
-              "description" => anything
+              "description" => anything,
+              "item_source" => anything
             },
             {
               "item" => "m2",
@@ -187,7 +190,8 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               "taxdetailsreference" => anything,
               "custcol_service_period_date_from" => anything,
               "custcol_service_period_date_to" => anything,
-              "description" => anything
+              "description" => anything,
+              "item_source" => anything
             },
             {
               "item" => "2",
@@ -195,7 +199,8 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               "quantity" => 1,
               "rate" => -20.0,
               "taxdetailsreference" => "coupon_item",
-              "description" => anything
+              "description" => anything,
+              "item_source" => anything
             },
             {
               "item" => "6",
@@ -203,7 +208,8 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               "quantity" => 1,
               "rate" => -40.0,
               "taxdetailsreference" => "credit_item",
-              "description" => anything
+              "description" => anything,
+              "item_source" => anything
             },
             {
               "item" => "1", # Fallback item instead of credit note
@@ -211,7 +217,8 @@ RSpec.describe Integrations::Aggregator::Invoices::CreateService do
               "quantity" => 1,
               "rate" => -60.0,
               "taxdetailsreference" => "credit_note_item",
-              "description" => anything
+              "description" => anything,
+              "item_source" => anything
             }
           ]
         }

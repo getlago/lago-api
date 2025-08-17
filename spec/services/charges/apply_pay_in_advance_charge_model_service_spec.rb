@@ -70,7 +70,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
     end
 
     describe "when standard charge model" do
-      let(:charge_model_class) { Charges::ChargeModels::StandardService }
+      let(:charge_model_class) { ChargeModels::StandardService }
 
       it_behaves_like "a charge model"
     end
@@ -92,21 +92,21 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
           }
         )
       end
-      let(:charge_model_class) { Charges::ChargeModels::GraduatedService }
+      let(:charge_model_class) { ChargeModels::GraduatedService }
 
       it_behaves_like "a charge model"
     end
 
     describe "when package charge model" do
       let(:charge) { create(:package_charge, :pay_in_advance) }
-      let(:charge_model_class) { Charges::ChargeModels::PackageService }
+      let(:charge_model_class) { ChargeModels::PackageService }
 
       it_behaves_like "a charge model"
     end
 
     describe "when percentage charge model" do
       let(:charge) { create(:percentage_charge, :pay_in_advance) }
-      let(:charge_model_class) { Charges::ChargeModels::PercentageService }
+      let(:charge_model_class) { ChargeModels::PercentageService }
 
       it_behaves_like "a charge model"
     end
@@ -129,7 +129,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
         )
       end
 
-      let(:charge_model_class) { Charges::ChargeModels::GraduatedPercentageService }
+      let(:charge_model_class) { ChargeModels::GraduatedPercentageService }
 
       around { |test| lago_premium!(&test) }
 
@@ -138,7 +138,7 @@ RSpec.describe Charges::ApplyPayInAdvanceChargeModelService, type: :service do
 
     describe "when dynamic charge model" do
       let(:charge) { create(:dynamic_charge, :pay_in_advance) }
-      let(:charge_model_class) { Charges::ChargeModels::DynamicService }
+      let(:charge_model_class) { ChargeModels::DynamicService }
 
       let(:aggregator) do
         BillableMetrics::Aggregations::SumService.new(

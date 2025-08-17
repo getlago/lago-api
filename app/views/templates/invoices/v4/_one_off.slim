@@ -6,15 +6,16 @@ table.invoice-resume-table width="100%"
     td.body-2 = I18n.t('invoice.tax_rate')
     td.body-2 = I18n.t('invoice.amount')
   - if one_off?
-    - fees.each do |fee|
+    - fees.ordered_by_period.each do |fee|
       tr
         td
           .body-1 = fee.invoice_name
           .body-3 = fee.description
-        td.body-2 = RoundingHelper.round_decimal_part(fee.units)
+          - if fee.properties["from_datetime"] && fee.properties["to_datetime"]
+            .body-3 #{I18n.t('invoice.from_to_date', from_date: I18n.l(fee.properties["from_datetime"]&.to_date, format: :default), to_date: I18n.l(fee.properties["to_datetime"]&.to_date, format: :default))}
         td.body-2 = MoneyHelper.format(fee.unit_amount)
         td.body-2 == TaxHelper.applied_taxes(fee)
-        td.body-2 = MoneyHelper.format(fee.amount)
+        td.body-2 = FeeDisplayHelper.format_amount(fee)
 
 table.total-table width="100%"
   tr

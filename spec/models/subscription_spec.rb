@@ -23,7 +23,12 @@ RSpec.describe Subscription, type: :model do
       )
       expect(subject).to define_enum_for(:on_termination_credit_note)
         .backed_by_column_of_type(:enum)
-        .with_values(credit: "credit", skip: "skip")
+        .with_values(credit: "credit", skip: "skip", refund: "refund")
+        .with_prefix(:on_termination_credit_note)
+      expect(subject).to define_enum_for(:on_termination_invoice)
+        .backed_by_column_of_type(:enum)
+        .with_values(generate: "generate", skip: "skip")
+        .with_prefix(:on_termination_invoice)
     end
   end
 
@@ -42,8 +47,13 @@ RSpec.describe Subscription, type: :model do
       expect(subject).to have_many(:fees)
       expect(subject).to have_many(:daily_usages)
       expect(subject).to have_many(:usage_thresholds).through(:plan)
+      expect(subject).to have_many(:subscription_fixed_charge_units_overrides).dependent(:destroy)
+      expect(subject).to have_many(:fixed_charges).through(:plan)
+      expect(subject).to have_many(:add_ons).through(:fixed_charges)
       expect(subject).to have_one(:lifetime_usage).autosave(true)
       expect(subject).to have_one(:subscription_activity).class_name("UsageMonitoring::SubscriptionActivity")
+      expect(subject).to have_many(:entitlements).class_name("Entitlement::Entitlement")
+      expect(subject).to have_many(:entitlement_removals).class_name("Entitlement::SubscriptionFeatureRemoval")
     end
   end
 
@@ -682,10 +692,10 @@ RSpec.describe Subscription, type: :model do
         new_boundaries = subscription.adjusted_boundaries(billing_date, default_boundaries)
 
         expect(new_boundaries).not_to eq(default_boundaries)
-        expect(new_boundaries[:from_datetime].iso8601).to eq("2024-05-01T00:00:00Z")
-        expect(new_boundaries[:to_datetime].iso8601).to eq("2024-05-31T23:59:59Z")
-        expect(new_boundaries[:charges_from_datetime].iso8601).to eq("2024-05-01T00:00:00Z")
-        expect(new_boundaries[:charges_to_datetime].iso8601).to eq("2024-05-31T23:59:59Z")
+        expect(new_boundaries.from_datetime.iso8601).to eq("2024-05-01T00:00:00Z")
+        expect(new_boundaries.to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
+        expect(new_boundaries.charges_from_datetime.iso8601).to eq("2024-05-01T00:00:00Z")
+        expect(new_boundaries.charges_to_datetime.iso8601).to eq("2024-05-31T23:59:59Z")
       end
     end
   end

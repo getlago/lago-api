@@ -114,6 +114,19 @@ RSpec.describe ::V1::SubscriptionSerializer do
       result = JSON.parse(serializer.to_json)
 
       expect(result["subscription"]["on_termination_credit_note"]).to eq("credit")
+      expect(result["subscription"]["on_termination_invoice"]).to eq("generate")
+      expect(result["subscription"]["terminated_at"]).to be_present
+      expect(result["subscription"]["status"]).to eq("terminated")
+    end
+  end
+
+  context "when terminated with skip invoice" do
+    let(:subscription) { create(:subscription, :terminated, on_termination_invoice: :skip) }
+
+    it "serializes the object with skip invoice behavior" do
+      result = JSON.parse(serializer.to_json)
+
+      expect(result["subscription"]["on_termination_invoice"]).to eq("skip")
       expect(result["subscription"]["terminated_at"]).to be_present
       expect(result["subscription"]["status"]).to eq("terminated")
     end

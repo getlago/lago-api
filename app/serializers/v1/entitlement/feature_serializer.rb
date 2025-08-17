@@ -20,9 +20,10 @@ module V1
           {
             code: privilege.code,
             name: privilege.name,
-            value_type: privilege.value_type
+            value_type: privilege.value_type,
+            config: privilege.config
           }
-        end.index_by { it[:code] }
+        end
       end
     end
   end

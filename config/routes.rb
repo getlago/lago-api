@@ -40,6 +40,7 @@ Rails.application.routes.draw do
         get :portal_url
 
         get :current_usage, to: "customers/usage#current"
+        get :projected_usage, to: "customers/projected_usage#current"
         get :past_usage, to: "customers/usage#past"
 
         post :checkout_url
@@ -52,6 +53,12 @@ Rails.application.routes.draw do
       resources :subscriptions, only: %i[create update show index], param: :external_id do
         resource :lifetime_usage, only: %i[show update], controller: "subscriptions/lifetime_usages"
         resources :alerts, only: %i[create index update show destroy], param: :code, controller: "subscriptions/alerts"
+        resources :entitlements, only: %i[index destroy], param: :code, code: /.*/, controller: "subscriptions/entitlements" do
+          resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "subscriptions/entitlements/privileges"
+          post :remove, on: :member
+          post :restore, on: :member
+        end
+        patch :entitlements, to: "subscriptions/entitlements#update"
       end
       delete "/subscriptions/:external_id", to: "subscriptions#terminate", as: :terminate
 
@@ -92,7 +99,7 @@ Rails.application.routes.draw do
         put :sync_salesforce_id, on: :member
       end
       resources :payment_receipts, only: %i[index show]
-      resources :payment_requests, only: %i[create index]
+      resources :payment_requests, only: %i[create index show]
       resources :payments, only: %i[create index show]
       resources :plans, param: :code, code: /.*/ do
         resources :entitlements, only: %i[index show create destroy], param: :code, code: /.*/, controller: "plans/entitlements" do

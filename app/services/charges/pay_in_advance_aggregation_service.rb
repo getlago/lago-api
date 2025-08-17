@@ -17,9 +17,9 @@ module Charges
         charge:,
         subscription:,
         boundaries: {
-          from_datetime: boundaries[:charges_from_datetime],
-          to_datetime: boundaries[:charges_to_datetime],
-          charges_duration: boundaries[:charges_duration]
+          from_datetime: boundaries.charges_from_datetime,
+          to_datetime: boundaries.charges_to_datetime,
+          charges_duration: boundaries.charges_duration
         },
         filters: aggregation_filters
       )

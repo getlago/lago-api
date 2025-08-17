@@ -45,7 +45,8 @@ module V1
     def limitations
       {
         applies_to: {
-          fee_types: model.allowed_fee_types
+          fee_types: model.allowed_fee_types,
+          billable_metric_codes: model.billable_metrics.pluck(:code)
         }
       }
     end

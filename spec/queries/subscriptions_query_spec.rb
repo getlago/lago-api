@@ -130,6 +130,21 @@ RSpec.describe SubscriptionsQuery, type: :query do
         expect(result.subscriptions).to match_array([subscription, subscription_2])
       end
     end
+
+    context "when has search_time and plan searchs" do
+      let(:search_term) { customer.firstname }
+      let(:filters) { {overriden: true} }
+      let(:plan2) { create(:plan, organization:, parent: plan) }
+      let(:subscription_3) { create(:subscription, customer:, plan: plan2, name: "Test Subscription 3") }
+
+      before { subscription_3 }
+
+      it "returns only subscriptions for the specified customer external_id" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(1)
+        expect(result.subscriptions).to match_array([subscription_3])
+      end
+    end
   end
 
   context "with customer filter" do

@@ -1,6 +1,9 @@
 ---
 audit_logs:
   view: false
+authentication_methods:
+  view: false
+  update: false
 analytics:
   overdue_balances:
     view: true

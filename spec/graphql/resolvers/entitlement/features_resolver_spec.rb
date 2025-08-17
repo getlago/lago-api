@@ -21,7 +21,7 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
               code
               name
               valueType
-              config
+              config { selectOptions }
             }
             createdAt
           }
@@ -55,17 +55,16 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
     expect(result["data"]["features"]["collection"].count).to eq(organization.features.count)
 
     # Check feature with privilege
-    feature_with_privilege_data = result["data"]["features"]["collection"].find { |f| f["id"] == feature_with_privilege.id }
+    feature_with_privilege_data = result["data"]["features"]["collection"].find { |f| f["code"] == feature_with_privilege.code }
     expect(feature_with_privilege_data["code"]).to eq(feature_with_privilege.code)
     expect(feature_with_privilege_data["name"]).to eq(feature_with_privilege.name)
     expect(feature_with_privilege_data["description"]).to eq(feature_with_privilege.description)
     expect(feature_with_privilege_data["privileges"].count).to eq(1)
-    expect(feature_with_privilege_data["privileges"].first["id"]).to eq(privilege.id)
     expect(feature_with_privilege_data["privileges"].first["code"]).to eq(privilege.code)
     expect(feature_with_privilege_data["privileges"].first["valueType"]).to eq(privilege.value_type)
 
     # Check feature without privilege
-    feature_without_privilege_data = result["data"]["features"]["collection"].find { |f| f["id"] == feature_without_privilege.id }
+    feature_without_privilege_data = result["data"]["features"]["collection"].find { |f| f["code"] == feature_without_privilege.code }
     expect(feature_without_privilege_data["code"]).to eq(feature_without_privilege.code)
     expect(feature_without_privilege_data["privileges"].count).to eq(0)
 
@@ -101,7 +100,7 @@ RSpec.describe Resolvers::Entitlement::FeaturesResolver, type: :graphql do
                 code
                 name
                 valueType
-                config
+                config { selectOptions }
               }
               createdAt
             }

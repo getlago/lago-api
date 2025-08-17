@@ -147,15 +147,15 @@ RSpec.describe ::V1::PlanSerializer do
         "code" => "seats",
         "name" => "Seats",
         "description" => "Nb users",
-        "privileges" => {
-          "max" => {
+        "privileges" => [
+          {
             "code" => "max",
             "name" => nil,
             "value" => 100,
             "config" => {},
             "value_type" => "integer"
           }
-        }
+        ]
       })
     end
   end

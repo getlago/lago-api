@@ -18,7 +18,11 @@ class Subscription < ApplicationRecord
   has_many :fees
   has_many :daily_usages
   has_many :usage_thresholds, through: :plan
-
+  has_many :entitlements, class_name: "Entitlement::Entitlement"
+  has_many :entitlement_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
+  has_many :subscription_fixed_charge_units_overrides, dependent: :destroy
+  has_many :fixed_charges, through: :plan
+  has_many :add_ons, through: :fixed_charges
   has_many :activity_logs,
     -> { order(logged_at: :desc) },
     class_name: "Clickhouse::ActivityLog",
@@ -43,11 +47,13 @@ class Subscription < ApplicationRecord
     anniversary
   ].freeze
 
-  ON_TERMINATION_CREDIT_NOTES = {credit: "credit", skip: "skip"}.freeze
+  ON_TERMINATION_CREDIT_NOTES = {credit: "credit", skip: "skip", refund: "refund"}.freeze
+  ON_TERMINATION_INVOICES = {generate: "generate", skip: "skip"}.freeze
 
   enum :status, STATUSES
   enum :billing_time, BILLING_TIME
-  enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES
+  enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES, prefix: true
+  enum :on_termination_invoice, ON_TERMINATION_INVOICES, prefix: true
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
 
@@ -227,14 +233,14 @@ class Subscription < ApplicationRecord
     # We should calculate boundaries as if subscription was not terminated
     dates_service = Subscriptions::DatesService.new_instance(duplicate, datetime, current_usage: false)
 
-    previous_period_boundaries = {
+    previous_period_boundaries = BillingPeriodBoundaries.new(
       from_datetime: dates_service.from_datetime,
       to_datetime: dates_service.to_datetime,
       charges_from_datetime: dates_service.charges_from_datetime,
       charges_to_datetime: dates_service.charges_to_datetime,
       timestamp: datetime,
       charges_duration: dates_service.charges_duration_in_days
-    }
+    )
 
     InvoiceSubscription.matching?(self, previous_period_boundaries) ? boundaries : previous_period_boundaries
   end
@@ -250,6 +256,7 @@ end
 #  ending_at                  :datetime
 #  name                       :string
 #  on_termination_credit_note :enum
+#  on_termination_invoice     :enum             default("generate"), not null
 #  started_at                 :datetime
 #  status                     :integer          not null
 #  subscription_at            :datetime

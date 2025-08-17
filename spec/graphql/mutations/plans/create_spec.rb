@@ -12,6 +12,13 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
   let(:minimum_commitment_invoice_display_name) { "Minimum spending" }
   let(:minimum_commitment_amount_cents) { 100 }
 
+  let(:feature) { create(:feature, code: :seats, organization:) }
+  let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
+  let(:entitlement) { create(:entitlement, feature:, plan:) }
+  let(:entitlement_value) { create(:entitlement_value, privilege:, entitlement:, value: "99") }
+
+  let(:feature2) { create(:feature, code: "sso", organization:) }
+
   let(:mutation) do
     <<~GQL
       mutation($input: CreatePlanInput!) {
@@ -24,6 +31,8 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
           payInAdvance,
           amountCents,
           amountCurrency,
+          billChargesMonthly,
+          billFixedChargesMonthly,
           taxes { id code rate }
           minimumCommitment {
             id,
@@ -61,11 +70,26 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               properties { amount }
             }
           }
+          fixedCharges {
+            id,
+            chargeModel,
+            addOn { id name code }
+            taxes { id code rate }
+            properties {
+              amount,
+              graduatedRanges { fromValue, toValue }
+              volumeRanges { fromValue, toValue }
+            }
+          }
           usageThresholds {
             id,
             amountCents,
             thresholdDisplayName,
             recurring
+          }
+          entitlements {
+            code
+            privileges { code value }
           }
         }
       }
@@ -74,6 +98,10 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
 
   let(:billable_metrics) do
     create_list(:billable_metric, 6, organization:)
+  end
+
+  let(:add_ons) do
+    create_list(:add_on, 3, organization:)
   end
 
   let(:billable_metric_filter) do
@@ -217,6 +245,54 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               }
             }
           ],
+          fixedCharges: [
+            {
+              addOnId: add_ons[0].id,
+              chargeModel: "standard",
+              properties: {amount: "100.00"},
+              taxCodes: [charge_tax.code]
+            },
+            {
+              addOnId: add_ons[1].id,
+              chargeModel: "graduated",
+              properties: {
+                graduatedRanges: [
+                  {
+                    fromValue: 0,
+                    toValue: 10,
+                    perUnitAmount: "2.00",
+                    flatAmount: "0"
+                  },
+                  {
+                    fromValue: 11,
+                    toValue: nil,
+                    perUnitAmount: "3.00",
+                    flatAmount: "3.00"
+                  }
+                ]
+              }
+            },
+            {
+              addOnId: add_ons[2].id,
+              chargeModel: "volume",
+              properties: {
+                volumeRanges: [
+                  {
+                    fromValue: 0,
+                    toValue: 10,
+                    perUnitAmount: "5.00",
+                    flatAmount: "0"
+                  },
+                  {
+                    fromValue: 11,
+                    toValue: nil,
+                    perUnitAmount: "1.00",
+                    flatAmount: "2.00"
+                  }
+                ]
+              }
+            }
+          ],
           usageThresholds: [
             {
               amountCents: 100,
@@ -231,6 +307,10 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
               thresholdDisplayName: "Threshold 3 Recurring",
               recurring: true
             }
+          ],
+          entitlements: [
+            {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]},
+            {featureCode: feature2.code, privileges: []}
           ]
         }
       }
@@ -245,8 +325,11 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
     expect(result_data["interval"]).to eq("monthly")
     expect(result_data["payInAdvance"]).to eq(false)
     expect(result_data["amountCents"]).to eq("200")
+    expect(result_data["billChargesMonthly"]).to be_nil
+    expect(result_data["billFixedChargesMonthly"]).to be_nil
     expect(result_data["taxes"][0]["code"]).to eq(plan_tax.code)
     expect(result_data["charges"].count).to eq(6)
+    expect(result_data["fixedCharges"].count).to eq(3)
     expect(result_data["usageThresholds"].count).to eq(3)
 
     standard_charge = result_data["charges"][0]
@@ -315,5 +398,87 @@ RSpec.describe Mutations::Plans::Create, type: :graphql do
       "amountCents" => "1",
       "recurring" => true
     )
+
+    expect(result_data["entitlements"]).to contain_exactly(
+      {
+        "code" => "seats",
+        "privileges" => [{"code" => "max", "value" => "22"}]
+      }, {
+        "code" => "sso",
+        "privileges" => []
+      }
+    )
+    standard_fixed_charge = result_data["fixedCharges"][0]
+    expect(standard_fixed_charge["properties"]["amount"]).to eq("100.00")
+    expect(standard_fixed_charge["chargeModel"]).to eq("standard")
+    expect(standard_fixed_charge["taxes"].count).to eq(1)
+    expect(standard_fixed_charge["taxes"].first["code"]).to eq(charge_tax.code)
+
+    graduated_fixed_charge = result_data["fixedCharges"][1]
+    expect(graduated_fixed_charge["chargeModel"]).to eq("graduated")
+    expect(graduated_fixed_charge["properties"]["graduatedRanges"].count).to eq(2)
+
+    volume_fixed_charge = result_data["fixedCharges"][2]
+    expect(volume_fixed_charge["chargeModel"]).to eq("volume")
+    expect(volume_fixed_charge["properties"]["volumeRanges"].count).to eq(2)
+  end
+
+  context "when fixed charges are not provided" do
+    it "creates a plan without fixed charges" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            name: "Plan Without Fixed Charges",
+            invoiceDisplayName: "No Fixed Charges Plan",
+            code: "no_fixed_charges_plan",
+            interval: "monthly",
+            payInAdvance: false,
+            amountCents: 100,
+            amountCurrency: "USD",
+            charges: []
+          }
+        }
+      )
+
+      result_data = result["data"]["createPlan"]
+
+      expect(result_data["id"]).to be_present
+      expect(result_data["fixedCharges"]).to be_empty
+    end
+  end
+
+  context "when interval is yearly" do
+    it "creates a plan with monthly billing for charges and fixed charges" do
+      result = execute_graphql(
+        current_user: membership.user,
+        current_organization: membership.organization,
+        permissions: required_permission,
+        query: mutation,
+        variables: {
+          input: {
+            name: "New Plan",
+            invoiceDisplayName: "New Plan Invoice Name",
+            code: "new_plan",
+            interval: "yearly",
+            payInAdvance: true,
+            amountCents: 200,
+            amountCurrency: "EUR",
+            billChargesMonthly: true,
+            billFixedChargesMonthly: true,
+            charges: [],
+            fixedCharges: []
+          }
+        }
+      )
+
+      result_data = result["data"]["createPlan"]
+
+      expect(result_data["billChargesMonthly"]).to be true
+      expect(result_data["billFixedChargesMonthly"]).to be true
+    end
   end
 end

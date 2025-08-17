@@ -147,8 +147,8 @@ module Events
 
             [
               groups,
-              "toDateTime64(:from_datetime, 5, 'UTC') AS timestamp",
-              "toDecimal128(#{initial_value[:value]}, :decimal_scale) AS difference"
+              "toDateTime64(:from_datetime, 5, 'UTC')",
+              "toDecimal128(#{initial_value[:value]}, :decimal_scale)"
             ].flatten.join(", ")
           end
 
@@ -169,8 +169,8 @@ module Events
 
             [
               groups,
-              "toDateTime64(:to_datetime, 5, 'UTC') AS timestamp",
-              "toDecimal128(0, :decimal_scale) AS difference"
+              "toDateTime64(:to_datetime, 5, 'UTC')",
+              "toDecimal128(0, :decimal_scale)"
             ].flatten.join(", ")
           end
 

@@ -43,6 +43,8 @@ RSpec.describe Mutations::Invites::Accept, type: :graphql do
 
         expect(data["user"]["email"]).to eq(invite.email)
         expect(data["token"]).to be_present
+
+        expect(Auth::TokenService.decode(token: data["token"])).to include("login_method" => "email_password")
       end
     end
 

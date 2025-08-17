@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# TODO: check with frontend after release if this is necessary
 module Mutations
   module Entitlement
     class UpdatePlanEntitlements < BaseMutation
@@ -12,7 +13,7 @@ module Mutations
 
       argument :plan_id, ID, required: true
 
-      argument :entitlements, [Types::Entitlement::PlanEntitlementInput], required: true
+      argument :entitlements, [Types::Entitlement::EntitlementInput], required: true
 
       type Types::Entitlement::PlanEntitlementObject.collection_type
 

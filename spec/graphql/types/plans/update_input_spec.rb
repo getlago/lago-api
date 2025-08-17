@@ -23,5 +23,7 @@ RSpec.describe Types::Plans::UpdateInput do
     expect(subject).to accept_argument(:charges).of_type("[ChargeInput!]!")
     expect(subject).to accept_argument(:minimum_commitment).of_type("CommitmentInput")
     expect(subject).to accept_argument(:usage_thresholds).of_type("[UsageThresholdInput!]")
+
+    expect(subject).to accept_argument(:entitlements).of_type("[EntitlementInput!]")
   end
 end

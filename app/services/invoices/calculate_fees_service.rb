@@ -25,14 +25,14 @@ module Invoices
             date_service: date_service(subscription)
           ).call
 
-          boundaries = {
+          boundaries = BillingPeriodBoundaries.new(
             from_datetime: invoice_subscription.from_datetime,
             to_datetime: invoice_subscription.to_datetime,
             charges_from_datetime: invoice_subscription.charges_from_datetime,
             charges_to_datetime: invoice_subscription.charges_to_datetime,
             timestamp: invoice_subscription.timestamp,
             charges_duration: date_service.charges_duration_in_days
-          }
+          )
 
           create_subscription_fee(subscription, boundaries) if should_create_subscription_fee?(subscription, boundaries)
           create_charges_fees(subscription, boundaries) if should_create_charge_fees?(subscription)
@@ -97,7 +97,7 @@ module Invoices
 
     def charge_boundaries_valid?(boundaries)
       # TODO: Investigate why invalid boundaries are even possible
-      boundaries[:charges_from_datetime] < boundaries[:charges_to_datetime]
+      boundaries.charges_from_datetime < boundaries.charges_to_datetime
     end
 
     def create_charges_fees(subscription, boundaries)
@@ -212,13 +212,15 @@ module Invoices
       # We want to prevent creating subscription fee if subscription creation already happened on billing day
       fee_exists = subscription.fees
         .subscription
+        .includes(:invoice)
         .where(created_at: issuing_date.beginning_of_day..issuing_date.end_of_day)
         .where.not(invoice_id: invoice.id)
+        .where.not(invoice_id: invoice.voided_invoice_id)
         .any?
 
       return false if subscription.plan.pay_in_advance? && fee_exists
       return false unless should_create_yearly_subscription_fee?(subscription)
-      return false if in_trial_period_not_ending_today?(subscription, boundaries[:timestamp])
+      return false if in_trial_period_not_ending_today?(subscription, boundaries.timestamp)
 
       # NOTE: When a subscription is terminated we still need to charge the subscription
       #       fee if the plan is in pay in arrears, otherwise this fee will never
@@ -328,7 +330,7 @@ module Invoices
         .store_class(organization: invoice.organization)
         .new(
           subscription:,
-          boundaries: {from_datetime: boundaries[:charges_from_datetime], to_datetime: boundaries[:charges_to_datetime]}
+          boundaries: {from_datetime: boundaries.charges_from_datetime, to_datetime: boundaries.charges_to_datetime}
         )
         .distinct_codes
     end

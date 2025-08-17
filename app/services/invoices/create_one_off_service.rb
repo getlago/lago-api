@@ -2,12 +2,13 @@
 
 module Invoices
   class CreateOneOffService < BaseService
-    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false)
+    def initialize(customer:, currency:, fees:, timestamp:, skip_psp: false, voided_invoice_id: nil)
       @customer = customer
       @currency = currency || customer&.currency
       @fees = fees
       @timestamp = timestamp
       @skip_psp = skip_psp
+      @voided_invoice_id = voided_invoice_id
 
       super(nil)
     end
@@ -48,6 +49,7 @@ module Invoices
         Invoices::ApplyInvoiceCustomSectionsService.call(invoice:)
         invoice.payment_status = invoice.total_amount_cents.positive? ? :pending : :succeeded
         Invoices::TransitionToFinalStatusService.call(invoice:)
+        invoice.voided_invoice_id = voided_invoice_id if voided_invoice_id.present?
         invoice.save!
       end
 
@@ -73,7 +75,7 @@ module Invoices
 
     private
 
-    attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_psp
+    attr_accessor :timestamp, :currency, :customer, :fees, :invoice, :skip_psp, :voided_invoice_id
 
     def create_generating_invoice
       invoice_result = Invoices::CreateGeneratingService.call(
@@ -88,7 +90,7 @@ module Invoices
     end
 
     def create_one_off_fees(invoice)
-      fees_result = Fees::OneOffService.new(invoice:, fees:).create
+      fees_result = Fees::OneOffService.new(invoice:, fees:).call
       fees_result.raise_if_error! unless tax_error?(fees_result)
 
       result.fees_taxes = fees_result.fees_taxes

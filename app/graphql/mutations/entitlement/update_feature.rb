@@ -22,7 +22,7 @@ module Mutations
           params: {
             name: args[:name],
             description: args[:description],
-            privileges: args[:privileges].map(&:to_h).index_by { |it| it[:code] }
+            privileges: args[:privileges].map(&:to_h)
           },
           partial: false
         )

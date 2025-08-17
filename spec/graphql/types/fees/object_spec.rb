@@ -7,6 +7,7 @@ RSpec.describe Types::Fees::Object do
 
   it do
     expect(subject).to have_field(:invoice_display_name).of_type("String")
+    expect(subject).to have_field(:add_on).of_type("AddOn")
     expect(subject).to have_field(:charge).of_type("Charge")
     expect(subject).to have_field(:currency).of_type("CurrencyEnum!")
     expect(subject).to have_field(:subscription).of_type("Subscription")
@@ -25,5 +26,6 @@ RSpec.describe Types::Fees::Object do
 
     expect(subject).to have_field(:charge_filter).of_type("ChargeFilter")
     expect(subject).to have_field(:pricing_unit_usage).of_type("PricingUnitUsage")
+    expect(subject).to have_field(:properties).of_type("FeeProperties")
   end
 end

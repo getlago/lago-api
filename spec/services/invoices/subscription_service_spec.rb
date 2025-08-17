@@ -18,7 +18,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
   let(:invoicing_reason) { :subscription_periodic }
 
-  describe "call" do
+  describe "#call" do
     let(:subscription) do
       create(
         :subscription,
@@ -114,19 +114,19 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     it "enqueues a SendWebhookJob" do
       expect do
         invoice_service.call
-      end.to have_enqueued_job(SendWebhookJob).with("invoice.created", Invoice)
+      end.to have_enqueued_job_after_commit(SendWebhookJob).with("invoice.created", Invoice)
     end
 
     it "produces an activity log" do
       invoice = described_class.call(subscriptions:, timestamp: timestamp.to_i, invoicing_reason:).invoice
 
-      expect(Utils::ActivityLog).to have_produced("invoice.created").with(invoice)
+      expect(Utils::ActivityLog).to have_produced("invoice.created").after_commit.with(invoice)
     end
 
     it "enqueues GeneratePdfAndNotifyJob with email false" do
       expect do
         invoice_service.call
-      end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+      end.to have_enqueued_job_after_commit(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
     end
 
     it "flags lifetime usage for refresh" do
@@ -181,10 +181,64 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
     context "with lago_premium" do
       around { |test| lago_premium!(&test) }
 
+      context "when there is a hubspot integration" do
+        let(:integration) { create(:hubspot_integration, organization:, sync_invoices:) }
+        let(:integration_customer) { create(:hubspot_customer, integration:, customer:) }
+
+        before { integration_customer }
+
+        context "when sync invoices is true" do
+          let(:sync_invoices) { true }
+
+          it "enqueues Integrations::Aggregator::Invoices::Hubspot::CreateJob" do
+            expect do
+              invoice_service.call
+            end.to have_enqueued_job_after_commit(Integrations::Aggregator::Invoices::Hubspot::CreateJob)
+          end
+        end
+
+        context "when sync invoices is false" do
+          let(:sync_invoices) { false }
+
+          it "does not enqueue Integrations::Aggregator::Invoices::Hubspot::CreateJob" do
+            expect do
+              invoice_service.call
+            end.not_to have_enqueued_job(Integrations::Aggregator::Invoices::Hubspot::CreateJob)
+          end
+        end
+      end
+
+      context "when there is a netsuite integration" do
+        let(:integration) { create(:netsuite_integration, organization:, sync_invoices:) }
+        let(:integration_customer) { create(:netsuite_customer, integration:, customer:) }
+
+        before { integration_customer }
+
+        context "when sync invoices is true" do
+          let(:sync_invoices) { true }
+
+          it "enqueues Integrations::Aggregator::Invoices::CreateJob" do
+            expect do
+              invoice_service.call
+            end.to have_enqueued_job_after_commit(Integrations::Aggregator::Invoices::CreateJob)
+          end
+        end
+
+        context "when sync invoices is false" do
+          let(:sync_invoices) { false }
+
+          it "does not enqueue Integrations::Aggregator::Invoices::CreateJob" do
+            expect do
+              invoice_service.call
+            end.not_to have_enqueued_job(Integrations::Aggregator::Invoices::CreateJob)
+          end
+        end
+      end
+
       it "enqueues GeneratePdfAndNotifyJob with email true" do
         expect do
           invoice_service.call
-        end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
+        end.to have_enqueued_job_after_commit(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
       end
 
       context "when organization does not have right email settings" do
@@ -193,7 +247,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         it "enqueues GeneratePdfAndNotifyJob with email false" do
           expect do
             invoice_service.call
-          end.to have_enqueued_job(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+          end.to have_enqueued_job_after_commit(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
         end
       end
     end
@@ -234,13 +288,13 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       it "enqueues a SendWebhookJob" do
         expect do
           invoice_service.call
-        end.to have_enqueued_job(SendWebhookJob).with("invoice.drafted", Invoice)
+        end.to have_enqueued_job_after_commit(SendWebhookJob).with("invoice.drafted", Invoice)
       end
 
       it "produces an activity log" do
         invoice = described_class.call(subscriptions:, timestamp: timestamp.to_i, invoicing_reason:).invoice
 
-        expect(Utils::ActivityLog).to have_produced("invoice.drafted").with(invoice)
+        expect(Utils::ActivityLog).to have_produced("invoice.drafted").after_commit.with(invoice)
       end
 
       it "does not flag lifetime usage for refresh" do
@@ -338,7 +392,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
       it "enqueues DailyUsages::FillFromInvoiceJob with email false" do
         expect { invoice_service.call }
-          .to have_enqueued_job(DailyUsages::FillFromInvoiceJob)
+          .to have_enqueued_job_after_commit(DailyUsages::FillFromInvoiceJob)
           .with(invoice: an_instance_of(Invoice), subscriptions: [subscription])
       end
 
@@ -347,7 +401,7 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
 
         it "enqueues DailyUsages::FillFromInvoiceJob with email false" do
           expect { invoice_service.call }
-            .to have_enqueued_job(DailyUsages::FillFromInvoiceJob)
+            .to have_enqueued_job_after_commit(DailyUsages::FillFromInvoiceJob)
             .with(invoice: an_instance_of(Invoice), subscriptions: [subscription])
         end
       end

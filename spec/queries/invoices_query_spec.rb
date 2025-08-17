@@ -803,4 +803,20 @@ RSpec.describe InvoicesQuery, type: :query do
       expect(returned_ids).not_to include(invoice_fourth.id, invoice_fifth.id, invoice_sixth.id)
     end
   end
+
+  context "when filtering by subscription_id" do
+    let(:invoice_with_subscription_1) { create(:invoice, :subscription, organization:) }
+    let(:invoice_with_subscription_2) { create(:invoice, :subscription, organization:) }
+
+    let(:filters) { {subscription_id: [invoice_with_subscription_1.subscriptions.first.id]} }
+
+    before do
+      invoice_with_subscription_1
+      invoice_with_subscription_2
+    end
+
+    it "returns invoices for the specified subscription" do
+      expect(returned_ids).to eq([invoice_with_subscription_1.id])
+    end
+  end
 end

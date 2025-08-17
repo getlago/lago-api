@@ -90,7 +90,7 @@ module Api
           query.active
         end.first
 
-        kwargs = params.permit(:on_termination_credit_note).to_h.symbolize_keys
+        kwargs = params.permit(:on_termination_credit_note, :on_termination_invoice).to_h.symbolize_keys
 
         result = ::Subscriptions::TerminateService.call(subscription:, **kwargs)
 
@@ -187,6 +187,7 @@ module Api
           :subscription_at,
           :ending_at,
           :on_termination_credit_note,
+          :on_termination_invoice,
           plan_overrides:
         )
       end
@@ -223,7 +224,13 @@ module Api
                   }
                 ]
               },
-              {tax_codes: []}
+              {tax_codes: []},
+              {
+                applied_pricing_unit: [
+                  :code,
+                  :conversion_rate
+                ]
+              }
             ],
             usage_thresholds: [
               :id,

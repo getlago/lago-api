@@ -10,7 +10,7 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
   end
 
   it "includes the correct possible types" do
-    expect(subject.possible_types).to include(
+    expect(subject.possible_types).to contain_exactly(
       Types::BillableMetrics::Object,
       Types::Plans::Object,
       Types::Customers::Object,
@@ -20,7 +20,8 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
       Types::Subscriptions::Object,
       Types::Wallets::Object,
       Types::Coupons::Object,
-      Types::PaymentRequests::Object
+      Types::PaymentRequests::Object,
+      Types::Entitlement::FeatureObject
     )
   end
 
@@ -35,6 +36,7 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
     let(:wallet) { create(:wallet) }
     let(:coupon) { create(:coupon) }
     let(:payment_request) { create(:payment_request) }
+    let(:feature) { create(:feature) }
 
     it "returns Types::BillableMetrics::Object for BillableMetric objects" do
       expect(subject.resolve_type(billable_metric, {})).to eq(Types::BillableMetrics::Object)
@@ -78,6 +80,10 @@ RSpec.describe Types::ActivityLogs::ResourceObject do
 
     it "returns Types::PaymentRequests::Object for PaymentRequest objects" do
       expect(subject.resolve_type(payment_request, {})).to eq(Types::PaymentRequests::Object)
+    end
+
+    it "returns Types::Entitlement::FeatureObject for Feature objects" do
+      expect(subject.resolve_type(feature, {})).to eq(Types::Entitlement::FeatureObject)
     end
   end
 end

@@ -228,7 +228,7 @@ html
       .invoice-information-table tr td:last-child {
         width: 55%;
       }
-      .invoice-information-table, tr td{
+      .invoice-information-table, tr td {
         text-wrap: normal;
         word-wrap: break-word;
         vertical-align: top;
@@ -244,15 +244,9 @@ html
         width: 50%;
       }
 
-      .invoice-resume-table tr.first_child td {
-        color: #66758F;
-      }
-      .invoice-resume-table tr {
-        border-bottom: 1px solid var(--border-color);
-      }
       .invoice-resume-table tr td {
-        padding-top: 8px;
-        padding-bottom: 8px;
+        padding-top: 4px;
+        padding-bottom: 4px;
         text-align: right;
         word-wrap: break-word;
       }
@@ -275,6 +269,52 @@ html
         width: 12.5%;
         max-width: 10vw;
       }
+
+      .invoice-resume-table tr.first_child td {
+        color: #66758F;
+      }
+
+      .invoice-resume-table tr.charge-name td {
+        padding-bottom: 0;
+        color: #19212e;
+      }
+
+      .invoice-resume-table tr.details td {
+        color: #66758F;
+        padding-top: 4px;
+        padding-bottom: 4px;
+      }
+
+      .invoice-resume-table tr.details td:first-child {
+        padding-left: 8px;
+      }
+
+      .invoice-resume-table tr.details.subtotal td {
+        color: #19212e;
+      }
+
+      .invoice-resume-table tr.fee:first-child {
+        border-top: none;
+      }
+      /* Each first tr representing fee draws border above it */
+      .invoice-resume-table tr.fee {
+        border-top: 1px solid var(--border-color);
+      }
+      .invoice-resume-table tr:last-child {
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .invoice-resume-table tr.fee td {
+        padding-top: 8px;
+      }
+      /* If tr has next element tr.fee means that current fee info ended and we need bigger padding */
+      .invoice-resume-table tr:has(+ tr.fee) td {
+        padding-bottom: 8px;
+      }
+      .invoice-resume-table tr:last-child td {
+        padding-bottom: 8px;
+      }
+
       .invoice-resume table {
         border-collapse: collapse;
       }
@@ -350,26 +390,6 @@ html
         gap: 16px;
         background: #F3F4F6;
         border-radius: 12px;
-      }
-      .invoice-resume-table tr.details, .invoice-resume-table tr.charge-name {
-        border: none;
-      }
-      .invoice-resume-table tr.charge-name td {
-        padding-bottom: 0;
-        color: #19212e;
-      }
-      .invoice-resume-table tr.details td {
-        color: #66758F;
-        padding-top: 4px;
-        padding-bottom: 4px;
-      }
-      .invoice-resume-table tr.details td:first-child {
-        padding-left: 8px;
-      }
-      .invoice-resume-table tr.details.subtotal td {
-        padding-bottom: 8px;
-        border-bottom: 1px solid var(--border-color);
-        color: #19212e;
       }
 
     .wrapper
