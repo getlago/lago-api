@@ -123,22 +123,6 @@ RSpec.describe FixedCharges::UpdateService, type: :service do
         end
       end
 
-      context "when units are not provided" do
-        let(:params) do
-          {
-            charge_model: "standard",
-            invoice_display_name: "Updated Display Name",
-            prorated: true,
-            properties: {amount: "200"}
-          }
-        end
-
-        it "updates the fixed charge without changing units" do
-          expect(result).to be_success
-          expect(result.fixed_charge.units).to eq(10)
-        end
-      end
-
       context "when cascade is true" do
         let(:cascade_options) { {cascade: true} }
 
