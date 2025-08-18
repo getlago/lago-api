@@ -122,6 +122,16 @@ module EInvoices
       end
     end
 
+    def applied_taxes(&block)
+      if invoice.applied_taxes.empty?
+        yield Invoice::AppliedTax.new(fees_amount: invoice.sub_total_excluding_taxes_amount)
+      else
+        invoice.applied_taxes.each do |applied_tax|
+          yield applied_tax
+        end
+      end
+    end
+
     def percent(value)
       format_number(value, "%.2f%%")
     end

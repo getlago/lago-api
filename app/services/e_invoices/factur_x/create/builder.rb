@@ -48,7 +48,9 @@ module EInvoices
                 credits_and_payments do |type, amount|
                   TradeSettlementPayment.call(xml:, invoice:, type:, amount:)
                 end
-                build_applied_taxes(xml, invoice)
+                applied_taxes do |applied_tax|
+                  ApplicableTradeTax.call(xml:, invoice:, applied_tax:)
+                end
                 allowance_charges do |tax_rate, amount|
                   TradeAllowanceCharge.call(xml:, invoice:, tax_rate:, amount:)
                 end
@@ -67,17 +69,6 @@ module EInvoices
         def build_line_items_for_fees(xml)
           invoice.fees.each_with_index do |fee, index|
             LineItem.call(xml:, line_id: index + 1, fee:)
-          end
-        end
-
-        def build_applied_taxes(xml, invoice)
-          if invoice.applied_taxes.empty?
-            zero_tax = Invoice::AppliedTax.new(fees_amount: invoice.sub_total_excluding_taxes_amount)
-            ApplicableTradeTax.call(xml:, invoice:, applied_tax: zero_tax)
-          else
-            invoice.applied_taxes.each do |applied_tax|
-              ApplicableTradeTax.call(xml:, invoice:, applied_tax:)
-            end
           end
         end
       end
