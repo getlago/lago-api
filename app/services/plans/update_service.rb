@@ -150,16 +150,12 @@ module Plans
     end
 
     def cascade_fixed_charge_update(fixed_charge, payload_fixed_charge)
+      return unless cascade_needed?
 
       old_parent_attrs = fixed_charge.attributes
-      old_parent_filters_attrs = fixed_charge.filters.map(&:attributes)
-      old_parent_applied_pricing_unit_attrs = fixed_charge.applied_pricing_unit&.attributes
-
       FixedCharges::UpdateChildrenJob.perform_later(
         params: payload_fixed_charge.deep_stringify_keys,
-        old_parent_attrs:,
-        old_parent_filters_attrs:,
-        old_parent_applied_pricing_unit_attrs:
+        old_parent_attrs:
       )
     end
 
