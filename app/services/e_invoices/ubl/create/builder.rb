@@ -44,6 +44,8 @@ module EInvoices
                 TaxSubtotal.call(xml:, invoice:, applied_tax:)
               end
             end
+
+            MonetaryTotal.call(xml:, invoice:)
           end
         end
 

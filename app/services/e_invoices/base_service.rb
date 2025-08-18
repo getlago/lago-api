@@ -132,6 +132,14 @@ module EInvoices
       end
     end
 
+    def total_prepaid_amount
+      invoice.prepaid_credit_amount + invoice.credit_notes_amount
+    end
+
+    def due_payable_amount
+      invoice.total_amount - total_prepaid_amount
+    end
+
     def percent(value)
       format_number(value, "%.2f%%")
     end
