@@ -34,12 +34,31 @@ module EInvoices
             allowance_charges do |tax_rate, amount|
               AllowanceCharge.call(xml:, invoice:, tax_rate:, amount:)
             end
+
+            xml.comment "Tax Total Information"
+            xml["cac"].TaxTotal do
+              xml["cbc"].TaxAmount \
+                format_number(Money.new(invoice.applied_taxes.sum(:amount_cents))),
+                currencyID: invoice.currency
+              build_applied_taxes(xml, invoice)
+            end
           end
         end
 
         protected
 
         attr_accessor :xml, :invoice
+
+        def build_applied_taxes(xml, invoice)
+          if invoice.applied_taxes.empty?
+            zero_tax = Invoice::AppliedTax.new(fees_amount: invoice.sub_total_excluding_taxes_amount)
+            TaxSubtotal.call(xml:, invoice:, applied_tax: zero_tax)
+          else
+            invoice.applied_taxes.each do |applied_tax|
+              TaxSubtotal.call(xml:, invoice:, applied_tax:)
+            end
+          end
+        end
       end
     end
   end

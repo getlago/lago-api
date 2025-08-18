@@ -14,10 +14,6 @@ module EInvoices
 
         DATEFORMAT = "%Y%m%d"
 
-        # More VAT exemptions codes
-        # https://docs.peppol.eu/poacc/billing/3.0/codelist/vatex/
-        O_VAT_EXEMPTION = "VATEX-EU-O"
-
         # More date formats for UNTDID 2379 here
         # https://service.unece.org/trade/untdid/d15a/tred/tred2379.htm
         CCYYMMDD = 102

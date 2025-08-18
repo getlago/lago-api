@@ -13,7 +13,7 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
   let(:subscription) { create(:subscription, started_at: "2025-03-16".to_date) }
   let(:invoice) { create(:invoice, total_amount_cents: 30_00, currency: "USD", coupons_amount_cents: 1000) }
   let(:fee) { create(:fee, invoice:, amount_cents: 10000, taxes_rate: 20.00) }
-  let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice:, tax_rate: 20.00) }
+  let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice:, fees_amount_cents: 40, tax_rate: 20.00) }
 
   before do
     fee
@@ -48,7 +48,8 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
       delivery: {name: "Delivery Information", xpath: "//cac:Delivery"},
       payment_and_credits: {name: "Payment Means:", xpath: "//cac:PaymentMeans"},
       payment_terms: {name: "Payment Terms", xpath: "//cac:PaymentTerms"},
-      allowances_and_charges: {name: "Allowances and Charges", xpath: "//cac:AllowanceCharge"}
+      allowances_and_charges: {name: "Allowances and Charges", xpath: "//cac:AllowanceCharge"},
+      tax_total: {name: "Tax Total Information", xpath: "//cac:TaxTotal"}
     }.each do |reference, section|
       it_behaves_like "xml section", section
     end
@@ -134,6 +135,35 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
             expect(subject).to contains_xml_node("#{xpath}/cbc:Amount").with_value("1.00")
             expect(subject).to contains_xml_node("#{xpath}/cac:TaxCategory/cbc:Percent").with_value("21.00")
           end
+        end
+      end
+    end
+
+    context "with taxes" do
+      taxes_xpath = "//cac:TaxTotal"
+
+      it "has the sum of all taxes" do
+        expect(subject).to contains_xml_node("#{taxes_xpath}/cbc:TaxAmount").with_value("2.00").with_attribute("currencyID", "USD")
+      end
+
+      context "with multiple taxes" do
+        let(:invoice_applied_tax2) { create(:invoice_applied_tax, invoice:, tax_rate: 19.00) }
+
+        before { invoice_applied_tax2 }
+
+        it "has the sum of all taxes" do
+          expect(subject).to contains_xml_node("#{taxes_xpath}/cbc:TaxAmount").with_value("4.00").with_attribute("currencyID", "USD")
+        end
+
+        it_behaves_like "xml section", {name: "Tax Information 20.00% VAT", xpath: "(#{taxes_xpath}/cac:TaxSubtotal)[1]"}
+        it_behaves_like "xml section", {name: "Tax Information 19.00% VAT", xpath: "(#{taxes_xpath}/cac:TaxSubtotal)[2]"}
+      end
+
+      context "with zero taxes" do
+        let(:invoice_applied_tax) { nil }
+
+        it "has the sum of all taxes" do
+          expect(subject).to contains_xml_node("#{taxes_xpath}/cbc:TaxAmount").with_value("0.00").with_attribute("currencyID", "USD")
         end
       end
     end

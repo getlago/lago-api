@@ -10,6 +10,10 @@ module EInvoices
     # https://service.unece.org/trade/untdid/d00a/tred/tred5153.htm
     VAT = "VAT"
 
+    # More VAT exemptions codes
+    # https://docs.peppol.eu/poacc/billing/3.0/codelist/vatex/
+    O_VAT_EXEMPTION = "VATEX-EU-O"
+
     # You can see more payments codes UNTDID 4461 here
     # https://service.unece.org/trade/untdid/d21b/tred/tred4461.htm
     STANDARD = 1
