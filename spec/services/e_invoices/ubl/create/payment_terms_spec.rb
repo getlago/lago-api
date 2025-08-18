@@ -23,5 +23,20 @@ RSpec.describe EInvoices::Ubl::Create::PaymentTerms, type: :service do
     it "have Note with payment term days" do
       expect(subject).to contains_xml_node("#{root}/cbc:Note").with_value("Payment term 1 days")
     end
+
+    context "when credit notes and prepaid credits" do
+      before do
+        invoice.update(
+          credit_notes_amount_cents: 10_00,
+          prepaid_credit_amount_cents: 11_86
+        )
+      end
+
+      it "has the Note" do
+        expect(subject).to contains_xml_node("#{root}/cbc:Note").with_value(
+          "Payment term 1 days, Prepaid credits of EUR 11.86 applied, and Credit notes of EUR 10.00 applied"
+        )
+      end
+    end
   end
 end

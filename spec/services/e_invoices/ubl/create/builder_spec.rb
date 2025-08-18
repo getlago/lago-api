@@ -77,12 +77,6 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
         end
 
         it_behaves_like "xml section", {name: "Payment Means: Standard payment", xpath: "(#{payment_tag})[1]"}
-
-        it "includes the value on Notes tag" do
-          expect(subject).to contains_xml_node("//cbc:Note").with_value(
-            "Prepaid credits of USD 10.00 applied and Credit notes of USD 10.00 applied"
-          )
-        end
       end
     end
 
