@@ -194,7 +194,7 @@ module Plans
 
         if charge
           cascade_charge_update(charge, payload_charge)
-          Charges::UpdateService.call(charge:, params: payload_charge).raise_if_error!
+          Charges::UpdateService.call!(charge:, params: payload_charge)
 
           next
         end
@@ -227,7 +227,7 @@ module Plans
 
         if fixed_charge
           cascade_fixed_charge_update(fixed_charge, payload_fixed_charge)
-          FixedCharges::UpdateService.call(fixed_charge:, params: payload_fixed_charge).raise_if_error!
+          FixedCharges::UpdateService.call!(fixed_charge:, params: payload_fixed_charge)
 
           next
         end
