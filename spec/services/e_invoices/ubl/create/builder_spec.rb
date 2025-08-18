@@ -77,19 +77,12 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
         end
 
         it_behaves_like "xml section", {name: "Payment Means: Standard payment", xpath: "(#{payment_tag})[1]"}
-        it_behaves_like "xml section", {name: "Payment Means: Prepaid credit", xpath: "(#{payment_tag})[2]"}
-        it_behaves_like "xml section", {name: "Payment Means: Credit note", xpath: "(#{payment_tag})[3]"}
-      end
 
-      context "when nothing else to pay" do
-        before do
-          invoice.update(
-            total_paid_amount_cents: invoice.total_due_amount_cents,
-            credit_notes_amount_cents: invoice.total_due_amount_cents
+        it "includes the value on Notes tag" do
+          expect(subject).to contains_xml_node("//cbc:Note").with_value(
+            "Prepaid credits of USD 10.00 applied and Credit notes of USD 10.00 applied"
           )
         end
-
-        it_behaves_like "xml section", {name: "Payment Means: Credit note", xpath: "(#{payment_tag})[1]"}
       end
     end
 

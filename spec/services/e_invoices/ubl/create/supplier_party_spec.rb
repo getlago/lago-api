@@ -54,7 +54,7 @@ RSpec.describe EInvoices::Ubl::Create::SupplierParty, type: :service do
         end
 
         it "expects to have country" do
-          expect(subject).to contains_xml_node("#{xpath}/cbc:Country/cbc:IdentificationCode")
+          expect(subject).to contains_xml_node("#{xpath}/cac:Country/cbc:IdentificationCode")
             .with_value(billing_entity.country)
         end
       end
@@ -67,7 +67,7 @@ RSpec.describe EInvoices::Ubl::Create::SupplierParty, type: :service do
         end
 
         it "expects to have tax scheme id" do
-          expect(subject).to contains_xml_node("#{xpath}/cbc:TaxScheme/cbc:ID").with_value("VAT")
+          expect(subject).to contains_xml_node("#{xpath}/cac:TaxScheme/cbc:ID").with_value("VAT")
         end
       end
 

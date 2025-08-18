@@ -27,7 +27,6 @@ RSpec.describe EInvoices::Ubl::Create::PaymentMeans, type: :service do
 
       it "have the payment code and information" do
         expect(subject).to contains_xml_node("#{root}/cbc:PaymentMeansCode").with_value(type)
-        expect(subject).to contains_xml_node("#{root}/cbc:PaymentID").with_value("Standard payment")
       end
     end
 
@@ -40,7 +39,6 @@ RSpec.describe EInvoices::Ubl::Create::PaymentMeans, type: :service do
 
       it "have the payment code and information" do
         expect(subject).to contains_xml_node("#{root}/cbc:PaymentMeansCode").with_value(type)
-        expect(subject).to contains_xml_node("#{root}/cbc:PaymentID").with_value("Prepaid credits of USD 10.00 applied")
       end
     end
 
@@ -53,7 +51,6 @@ RSpec.describe EInvoices::Ubl::Create::PaymentMeans, type: :service do
 
       it "have the payment code and information" do
         expect(subject).to contains_xml_node("#{root}/cbc:PaymentMeansCode").with_value(type)
-        expect(subject).to contains_xml_node("#{root}/cbc:PaymentID").with_value("Credit notes of USD 10.00 applied")
       end
     end
   end

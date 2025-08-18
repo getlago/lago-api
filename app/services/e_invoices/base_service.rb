@@ -69,16 +69,16 @@ module EInvoices
       end
     end
 
-    def payment_information
+    def payment_information(type, amount)
       case type
       when STANDARD
-        payment_label
+        payment_label(type)
       when PREPAID, CREDIT_NOTE
-        I18n.t("invoice.e_invoicing.payment_information", payment_label:, currency: invoice.currency, amount:)
+        I18n.t("invoice.e_invoicing.payment_information", payment_label: payment_label(type), currency: invoice.currency, amount:)
       end
     end
 
-    def payment_label
+    def payment_label(type)
       case type
       when STANDARD
         I18n.t("invoice.e_invoicing.standard_payment")

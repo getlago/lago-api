@@ -15,13 +15,13 @@ module EInvoices
                 xml["cbc"].AdditionalStreetName billing_entity.address_line2
                 xml["cbc"].CityName billing_entity.city
                 xml["cbc"].PostalZone billing_entity.zipcode
-                xml["cbc"].Country do
+                xml["cac"].Country do
                   xml["cbc"].IdentificationCode billing_entity.country
                 end
               end
               xml["cac"].PartyTaxScheme do
                 xml["cbc"].CompanyID billing_entity.tax_identification_number
-                xml["cbc"].TaxScheme do
+                xml["cac"].TaxScheme do
                   xml["cbc"].ID VAT
                 end
               end

@@ -27,11 +27,7 @@ module EInvoices
             SupplierParty.call(xml:, invoice:)
             CustomerParty.call(xml:, invoice:)
             Delivery.call(xml:, invoice:)
-
-            credits_and_payments do |type, amount|
-              PaymentMeans.call(xml:, invoice:, type:, amount:)
-            end
-
+            PaymentMeans.call(xml:, invoice:, type: STANDARD, amount: invoice.total_due_amount)
             PaymentTerms.call(xml:, invoice:)
 
             allowance_charges do |tax_rate, amount|

@@ -15,7 +15,7 @@ module EInvoices
                 xml["cbc"].AdditionalStreetName customer.address_line2
                 xml["cbc"].CityName customer.city
                 xml["cbc"].PostalZone customer.zipcode
-                xml["cbc"].Country do
+                xml["cac"].Country do
                   xml["cbc"].IdentificationCode customer.country
                 end
               end

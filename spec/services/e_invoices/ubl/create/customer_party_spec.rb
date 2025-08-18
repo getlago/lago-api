@@ -52,7 +52,7 @@ RSpec.describe EInvoices::Ubl::Create::CustomerParty, type: :service do
         end
 
         it "expects to have country" do
-          expect(subject).to contains_xml_node("#{xpath}/cbc:Country/cbc:IdentificationCode")
+          expect(subject).to contains_xml_node("#{xpath}/cac:Country/cbc:IdentificationCode")
             .with_value(customer.country)
         end
       end

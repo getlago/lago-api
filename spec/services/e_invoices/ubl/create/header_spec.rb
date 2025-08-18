@@ -56,6 +56,21 @@ RSpec.describe EInvoices::Ubl::Create::Header, type: :service do
         end
       end
 
+      context "when credit notes and prepaid credits" do
+        before do
+          invoice.update(
+            credit_notes_amount_cents: 10_00,
+            prepaid_credit_amount_cents: 11_86
+          )
+        end
+
+        it "has the Note" do
+          expect(subject).to contains_xml_node("//cbc:Note").with_value(
+            "Prepaid credits of USD 11.86 applied and Credit notes of USD 10.00 applied"
+          )
+        end
+      end
+
       it "expects to have currency" do
         expect(subject).to contains_xml_node("//cbc:DocumentCurrencyCode")
           .with_value(invoice.currency)

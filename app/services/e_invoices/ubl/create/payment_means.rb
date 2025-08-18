@@ -11,10 +11,9 @@ module EInvoices
         end
 
         def call
-          xml.comment "Payment Means: #{payment_label}"
+          xml.comment "Payment Means: #{payment_label(type)}"
           xml["cac"].PaymentMeans do
             xml["cbc"].PaymentMeansCode type
-            xml["cbc"].PaymentID payment_information
           end
         end
 
