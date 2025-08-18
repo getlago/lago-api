@@ -15,7 +15,8 @@ RSpec.describe FixedCharges::UpdateChildrenBatchJob, type: :job do
   let(:params) do
     {
       charge_model: "standard",
-      properties: {amount: "200"}
+      properties: {amount: "200"},
+      units: 1
     }
   end
 
