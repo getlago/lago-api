@@ -29,6 +29,10 @@ module EInvoices
     O_CATEGORY = "O"
     Z_CATEGORY = "Z"
 
+    # More measures codes defined in UNECE Recommendation 20 here
+    # https://docs.peppol.eu/pracc/catalogue/1.0/codelist/UNECERec20/
+    UNIT_CODE = "C62"
+
     def initialize(invoice:)
       super
 
@@ -99,6 +103,16 @@ module EInvoices
       "#{I18n.t("invoice.payment_term")} #{I18n.t("invoice.payment_term_days", net_payment_term: invoice.net_payment_term)}"
     end
 
+    def line_item_description
+      return fee.invoice_name if fee.invoice_name.present?
+
+      I18n.t(
+        "invoice.subscription_interval",
+        plan_interval: I18n.t("invoice.#{fee.subscription.plan.interval}"),
+        plan_name: fee.subscription.plan.invoice_name
+      )
+    end
+
     def discount_reason
       I18n.t("invoice.e_invoicing.discount_reason", tax_rate: percent(tax_rate))
     end
@@ -129,6 +143,12 @@ module EInvoices
         invoice.applied_taxes.each do |applied_tax|
           yield applied_tax
         end
+      end
+    end
+
+    def line_items(&block)
+      invoice.fees.each_with_index do |fee, index|
+        yield fee, index + 1
       end
     end
 

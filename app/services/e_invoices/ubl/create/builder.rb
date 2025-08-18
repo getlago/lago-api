@@ -27,10 +27,13 @@ module EInvoices
             SupplierParty.call(xml:, invoice:)
             CustomerParty.call(xml:, invoice:)
             Delivery.call(xml:, invoice:)
+
             credits_and_payments do |type, amount|
               PaymentMeans.call(xml:, invoice:, type:, amount:)
             end
+
             PaymentTerms.call(xml:, invoice:)
+
             allowance_charges do |tax_rate, amount|
               AllowanceCharge.call(xml:, invoice:, tax_rate:, amount:)
             end
@@ -40,12 +43,17 @@ module EInvoices
               xml["cbc"].TaxAmount \
                 format_number(Money.new(invoice.applied_taxes.sum(:amount_cents))),
                 currencyID: invoice.currency
+
               applied_taxes do |applied_tax|
                 TaxSubtotal.call(xml:, invoice:, applied_tax:)
               end
             end
 
             MonetaryTotal.call(xml:, invoice:)
+
+            line_items do |fee, line_id|
+              LineItem.call(xml:, fee:, line_id:)
+            end
           end
         end
 

@@ -18,10 +18,6 @@ module EInvoices
         # https://service.unece.org/trade/untdid/d15a/tred/tred2379.htm
         CCYYMMDD = 102
 
-        # More measures codes defined in UNECE Recommendation 20 here
-        # https://docs.peppol.eu/pracc/catalogue/1.0/codelist/UNECERec20/
-        UNIT_CODE = "C62"
-
         def initialize(xml:, invoice: nil)
           @xml = xml
           @invoice = invoice
@@ -40,17 +36,22 @@ module EInvoices
 
             xml.comment "Supply Chain Trade Transaction"
             xml["rsm"].SupplyChainTradeTransaction do
-              build_line_items_for_fees(xml)
+              line_items do |fee, line_id|
+                LineItem.call(xml:, line_id:, fee:)
+              end
 
               TradeAgreement.call(xml:, invoice:)
               TradeDelivery.call(xml:, invoice:)
+
               TradeSettlement.call(xml:, invoice:) do
                 credits_and_payments do |type, amount|
                   TradeSettlementPayment.call(xml:, invoice:, type:, amount:)
                 end
+
                 applied_taxes do |applied_tax|
                   ApplicableTradeTax.call(xml:, invoice:, applied_tax:)
                 end
+
                 allowance_charges do |tax_rate, amount|
                   TradeAllowanceCharge.call(xml:, invoice:, tax_rate:, amount:)
                 end
@@ -65,12 +66,6 @@ module EInvoices
         protected
 
         attr_accessor :xml, :invoice
-
-        def build_line_items_for_fees(xml)
-          invoice.fees.each_with_index do |fee, index|
-            LineItem.call(xml:, line_id: index + 1, fee:)
-          end
-        end
       end
     end
   end

@@ -50,7 +50,8 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
       payment_terms: {name: "Payment Terms", xpath: "//cac:PaymentTerms"},
       allowances_and_charges: {name: "Allowances and Charges", xpath: "//cac:AllowanceCharge"},
       tax_total: {name: "Tax Total Information", xpath: "//cac:TaxTotal"},
-      monetary_total: {name: "Legal Monetary Total", xpath: "//cac:LegalMonetaryTotal"}
+      monetary_total: {name: "Legal Monetary Total", xpath: "//cac:LegalMonetaryTotal"},
+      line_items: {name: /Line Item \d{1,}:.*/, xpath: "//cac:InvoiceLine"}
     }.each do |reference, section|
       it_behaves_like "xml section", section
     end
