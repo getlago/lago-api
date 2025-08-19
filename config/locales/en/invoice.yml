@@ -43,6 +43,7 @@ en:
       flat_fee_for_the_first: Flat fee for first %{to}
       flat_fee_for_the_last: Flat fee for %{from} and above
       flat_fee_for_the_next: Flat fee for the next %{from} to %{to}
+    half_year: half-year
     iban: IBAN
     invoice_number: Invoice Number
     issue_date: Issue Date
@@ -81,6 +82,7 @@ en:
     self_billed:
       document_name: Self-billing invoice
       footer: This self-billing invoice was issued by the client on behalf of the partner, with their consent. The partner has agreed not to issue their own invoice for this transaction.
+    semiannual: Semiannual
     sort_code: Sort code
     sub_total: Subtotal
     sub_total_with_tax: Subtotal (incl. tax)

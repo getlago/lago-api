@@ -42,6 +42,7 @@ fr:
       flat_fee_for_the_first: Frais fixes pour les %{to} premières
       flat_fee_for_the_last: Frais fixes pour %{from} et plus
       flat_fee_for_the_next: Frais fixes pour les suivantes de %{from} à %{to}
+    half_year: semestre
     iban: IBAN
     invoice_number: Nº de facture
     issue_date: Date d'émission
@@ -80,6 +81,7 @@ fr:
     self_billed:
       document_name: Facture d'autofacturation
       footer: Cette facture d'autofacturation a été émise par le client au nom du partenaire, avec son consentement. Le partenaire a accepté de ne pas établir sa propre facture pour cette transaction.
+    semiannual: Semestriel
     sort_code: Code de tri
     sub_total: Sous total
     sub_total_with_tax: Sous total (TTC)
