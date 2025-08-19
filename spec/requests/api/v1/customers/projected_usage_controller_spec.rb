@@ -3,8 +3,10 @@
 require "rails_helper"
 
 RSpec.describe Api::V1::Customers::ProjectedUsageController, type: :request do
+  around { |test| lago_premium!(&test) }
+
   let(:customer) { create(:customer, organization:) }
-  let(:organization) { create(:organization) }
+  let(:organization) { create(:organization, :premium) }
 
   let(:plan) { create(:plan, interval: "monthly") }
 
@@ -68,6 +70,34 @@ RSpec.describe Api::V1::Customers::ProjectedUsageController, type: :request do
     end
 
     include_examples "requires API permission", "customer_usage", "read"
+
+    describe "premium permissions" do
+      before do
+        organization.update!(premium_integrations:)
+        subject
+      end
+
+      context "when organization has 'projected_usage' premium integration" do
+        let(:premium_integrations) { organization.premium_integrations.including("projected_usage") }
+
+        context "when organization has 'projected_usage' premium integration" do
+          it "does not return 403 Forbidden" do
+            expect(response).not_to have_http_status(:forbidden)
+          end
+        end
+      end
+
+      context "when organization does not have 'projected_usage' premium integration" do
+        let(:premium_integrations) { organization.premium_integrations.excluding("projected_usage") }
+
+        context "when organization does not have 'projected_usage' premium integration" do
+          it "does not return 403 Forbidden" do
+            expect(response).to have_http_status(:forbidden)
+            expect(json).to match hash_including(code: "projected_usage_not_enabled")
+          end
+        end
+      end
+    end
 
     it "returns the projected usage for the customer" do
       travel_to(Time.parse("2025-07-03T10:00:00Z")) do
