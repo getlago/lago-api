@@ -37,5 +37,17 @@ FactoryBot.define do
     trait :deleted do
       deleted_at { Time.current }
     end
+
+    trait :with_applied_taxes do
+      transient do
+        taxes { [create(:tax)] }
+      end
+
+      after(:create) do |fixed_charge, evaluator|
+        evaluator.taxes.each do |tax|
+          create(:fixed_charge_applied_tax, fixed_charge:, tax:)
+        end
+      end
+    end
   end
 end
