@@ -33,6 +33,7 @@ module Types
     field :customer, resolver: Resolvers::CustomerResolver
     field :customer_invoices, resolver: Resolvers::Customers::InvoicesResolver
     field :customer_portal_customer_usage, resolver: Resolvers::CustomerPortal::Customers::UsageResolver
+    field :customer_portal_customer_projected_usage, resolver: Resolvers::CustomerPortal::Customers::ProjectedUsageResolver
     field :customer_portal_invoice_collections, resolver: Resolvers::CustomerPortal::Analytics::InvoiceCollectionsResolver
     field :customer_portal_invoices, resolver: Resolvers::CustomerPortal::InvoicesResolver
     field :customer_portal_organization, resolver: Resolvers::CustomerPortal::OrganizationResolver

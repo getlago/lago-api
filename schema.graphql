@@ -8444,6 +8444,11 @@ type Query {
   customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
 
   """
+  Query the projected usage of the customer on the current billing period
+  """
+  customerPortalCustomerProjectedUsage(subscriptionId: ID!): CustomerProjectedUsage!
+
+  """
   Query the usage of the customer on the current billing period
   """
   customerPortalCustomerUsage(subscriptionId: ID!): CustomerUsage!
