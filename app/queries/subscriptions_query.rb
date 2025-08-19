@@ -15,7 +15,7 @@ class SubscriptionsQuery < BaseQuery
       subscriptions,
       default_order: <<~SQL.squish
         subscriptions.subscription_at DESC NULLS LAST,
-        subscriptions.created_at ASC
+        subscriptions.created_at DESC
       SQL
     )
 

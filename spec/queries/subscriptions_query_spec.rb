@@ -24,6 +24,26 @@ RSpec.describe SubscriptionsQuery, type: :query do
     expect(result.subscriptions).to eq([subscription])
   end
 
+  context "when subscriptions have the same values for started_at" do
+    let(:subscription) { create(:subscription, customer:, plan:, started_at: 2.days.ago, created_at: 1.day.ago) }
+    let(:subscription_2) do
+      create(
+        :subscription,
+        customer:,
+        plan:,
+        id: "00000000-0000-0000-0000-000000000000",
+        started_at: subscription.started_at
+      )
+    end
+
+    before { subscription_2 }
+
+    it "returns a list sorted by created_at DESC" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([subscription_2.id, subscription.id])
+    end
+  end
+
   context "when subscriptions have the same values for the ordering criteria" do
     let(:subscription) { create(:subscription, customer:, plan:, started_at: 1.day.ago) }
     let(:subscription_2) do
