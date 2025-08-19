@@ -11,7 +11,8 @@ module V1
         charge_model: model.charge_model,
         pay_in_advance: model.pay_in_advance,
         prorated: model.prorated,
-        properties: model.properties
+        properties: model.properties,
+        units: model.units
       }
 
       payload.merge!(taxes) if include?(:taxes)
