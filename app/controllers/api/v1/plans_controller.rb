@@ -23,6 +23,7 @@ module Api
           # Reload to eager-load relationships, like :entitlements
           plan = Plan.includes(
             :usage_thresholds,
+            :fixed_charges,
             charges: {filters: {values: :billable_metric_filter}},
             entitlements: [:feature, values: :privilege]
           ).find(result.plan.id)
@@ -112,6 +113,7 @@ module Api
           :trial_period,
           :pay_in_advance,
           :bill_charges_monthly,
+          :bill_fixed_charges_monthly,
           :cascade_updates,
           tax_codes: [],
           minimum_commitment: [
@@ -150,6 +152,17 @@ module Api
               ]
             }
           ],
+          fixed_charges: [
+            :id,
+            :invoice_display_name,
+            :units,
+            :add_on_id,
+            :apply_units_immediately,
+            :charge_model,
+            :pay_in_advance,
+            :prorated,
+            { properties: {} },
+          ],
           usage_thresholds: [
             :id,
             :threshold_display_name,
@@ -164,7 +177,7 @@ module Api
           json: ::V1::PlanSerializer.new(
             plan,
             root_name: "plan",
-            includes: %i[charges usage_thresholds taxes minimum_commitment entitlements]
+            includes: %i[charges fixed_charges usage_thresholds taxes minimum_commitment entitlements]
           )
         )
       end
