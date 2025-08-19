@@ -440,6 +440,29 @@ RSpec.describe Plans::CreateService, type: :service do
         expect(result.error.messages[:name]).to eq(["value_is_mandatory"])
       end
 
+      context "with invalid charges" do
+        let(:plan_name) { "Some plan name" }
+
+        let(:charges_args) do
+          [
+            {
+              applied_pricing_unit: applied_pricing_unit_args,
+              billable_metric_id: billable_metric.id,
+              charge_model: "custom_properties",
+              min_amount_cents: 100,
+              tax_codes: [charge_tax.code],
+              filters: []
+            }
+          ]
+        end
+
+        it "returns an error" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ValidationFailure)
+          expect(result.error.messages[:charge_model]).to eq(["value_is_invalid"])
+        end
+      end
+
       context "with premium charge model" do
         let(:plan_name) { "foo" }
         let(:charges_args) do
