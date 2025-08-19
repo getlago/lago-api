@@ -157,4 +157,48 @@ describe "Daily Usages: Fill History", :time_travel, :scenarios, type: :request,
       expect(last_daily_usage.usage_diff["amount_cents"]).not_to eq(0)
     end
   end
+
+  context "with timezone" do
+    let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+    let(:billable_metric) { create(:sum_billable_metric, :recurring, organization:) }
+    let(:charge) { create(:standard_charge, billable_metric:, plan:, properties: {amount: "1"}, prorated: true) }
+
+    it "fills daily usage history" do
+      started_at = DateTime.new(2025, 4, 30, 3)
+      from = DateTime.new(2025, 4, 1, 3)
+      to = DateTime.new(2025, 5, 31, 3)
+
+      travel_to(started_at) do
+        create_subscription(
+          external_customer_id: customer.external_id,
+          external_id: customer.external_id,
+          plan_code: plan.code,
+          billing_time: "calendar"
+        )
+      end
+
+      travel_to(started_at + 1.hour) do
+        create_event(
+          {
+            code: billable_metric.code,
+            transaction_id: SecureRandom.uuid,
+            external_subscription_id: subscription.external_id,
+            properties: {"item_id" => 1}
+          }
+        )
+      end
+
+      travel_to(DateTime.new(2025, 5, 1, 10)) do
+        perform_billing
+      end
+
+      travel_back
+
+      DailyUsages::FillHistoryService.call!(subscription:, from_date: from.to_date, to_date: to.to_date)
+
+      expect(DailyUsage.count).to eq(32)
+      expect(DailyUsage.order(usage_date: :asc).first.usage_date).to eq(Date.new(2025, 4, 30))
+      expect(DailyUsage.order(usage_date: :asc).last.usage_date).to eq(Date.new(2025, 5, 31))
+    end
+  end
 end

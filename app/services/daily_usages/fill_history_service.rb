@@ -88,15 +88,22 @@ module DailyUsages
     delegate :organization, to: :subscription
 
     def from
-      @from ||= [subscription.started_at.to_date, from_date].max
+      @from ||= [
+        subscription.started_at.in_time_zone(timezone).to_date,
+        from_date
+      ].max
     end
 
     def to
       @to ||= if subscription.terminated?
-        subscription.terminated_at.to_date
+        subscription.terminated_at.in_time_zone(timezone).to_date
       else
-        to_date || Time.zone.yesterday
+        to_date || Time.zone.yesterday.in_time_zone(timezone).to_date
       end
+    end
+
+    def timezone
+      @timezone ||= subscription.customer.applicable_timezone
     end
   end
 end
