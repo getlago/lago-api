@@ -47,6 +47,19 @@ RSpec.describe Charges::Validators::GraduatedService, type: :service do
       end
     end
 
+    context "with no ranges" do
+      let(:ranges) { nil }
+
+      it "ensures the presence of ranges" do
+        aggregate_failures do
+          expect(validation_service).not_to be_valid
+          expect(validation_service.result.error).to be_a(BaseService::ValidationFailure)
+          expect(validation_service.result.error.messages.keys).to include(:graduated_ranges)
+          expect(validation_service.result.error.messages[:graduated_ranges]).to include("missing_graduated_ranges")
+        end
+      end
+    end
+
     context "when ranges does not starts at 0" do
       let(:ranges) do
         [{from_value: -1, to_value: 100}]
