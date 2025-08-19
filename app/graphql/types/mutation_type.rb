@@ -200,5 +200,7 @@ module Types
 
     field :remove_subscription_entitlement, mutation: Mutations::Entitlement::RemoveSubscriptionEntitlement
     field :update_subscription_entitlement, mutation: Mutations::Entitlement::UpdateSubscriptionEntitlement
+
+    field :create_ai_conversation, mutation: Mutations::AiConversations::Create
   end
 end
