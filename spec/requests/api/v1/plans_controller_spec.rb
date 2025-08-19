@@ -671,6 +671,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           }
         ]
       end
+
       before { fixed_charge }
 
       it "returns plan with updated fixed charges" do
