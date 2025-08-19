@@ -24,6 +24,7 @@ module V1
       }
 
       payload.merge!(charges) if include?(:charges)
+      payload.merge!(fixed_charges) if include?(:fixed_charges)
       payload.merge!(entitlements) if include?(:entitlements)
       payload.merge!(usage_thresholds) if include?(:usage_thresholds)
       payload.merge!(taxes) if include?(:taxes)
@@ -40,6 +41,14 @@ module V1
         ::V1::ChargeSerializer,
         collection_name: "charges",
         includes: include?(:taxes) ? %i[taxes] : []
+      ).serialize
+    end
+
+    def fixed_charges
+      ::CollectionSerializer.new(
+        model.fixed_charges,
+        ::V1::FixedChargeSerializer,
+        collection_name: "fixed_charges"
       ).serialize
     end
 
