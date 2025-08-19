@@ -23,7 +23,7 @@ class ErrorDetail < ApplicationRecord
       details: {
         backtrace: error.backtrace,
         error: error.inspect.to_json,
-        invoice: invoice.to_json(except: :file),
+        invoice: invoice.to_json(except: [:file, :xml_file]),
         subscriptions: invoice.subscriptions.to_json
       }
     )
