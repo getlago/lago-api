@@ -1233,7 +1233,7 @@ RSpec.describe Plans::UpdateService, type: :service do
     end
 
     context "with fixed_charges validation" do
-      context "when valid fixed_charges are provided" do
+      context "when fixed_charges are valid" do
         let(:update_args) do
           {
             name: plan_name,
@@ -1303,7 +1303,7 @@ RSpec.describe Plans::UpdateService, type: :service do
       end
     end
 
-    context "with complete fixed_charges flow" do
+    context "with fixed_charges flow" do
       let(:update_args) do
         {
           name: plan_name,
@@ -1313,12 +1313,95 @@ RSpec.describe Plans::UpdateService, type: :service do
         }
       end
 
-      it "handles complete fixed_charges flow successfully" do
-        result = plans_service.call
+      context "when plan has no fixed_charges" do
+        it "handles adding fixed_charges flow successfully" do
+          result = plans_service.call
 
-        expect(result).to be_success
-        expect(result.plan.bill_fixed_charges_monthly).to eq(true)
-        # to be continued with fixed_charges management
+          expect(result).to be_success
+          expect(result.plan.bill_fixed_charges_monthly).to eq(true)
+          expect(result.plan.fixed_charges.count).to eq(2)
+          expect(result.plan.fixed_charges.map(&:invoice_display_name)).to match_array(["fixed_charge1", "fixed_charge2"])
+        end
+      end
+
+      context "when plan has fixed_charges" do
+        let(:fixed_charge_to_update) { create(:fixed_charge, plan:, invoice_display_name: "fixed_charge_to_update", units: 1, add_on:) }
+        let(:fixed_charge_to_delete) { create(:fixed_charge, plan:, invoice_display_name: "fixed_charge_to_delete", units: 2) }
+        let(:fixed_charges_args) do
+          [
+            {
+              id: fixed_charge_to_update.id,
+              add_on_id: add_on.id,
+              charge_model: "standard",
+              invoice_display_name: "fixed_charge1",
+              units: 2,
+              properties: {amount: "150"},
+              tax_codes: [tax1.code]
+            },
+            {
+              add_on_id: add_on.id,
+              charge_model: "graduated",
+              invoice_display_name: "fixed_charge2",
+              units: 1,
+              properties: {
+                graduated_ranges: [
+                  {
+                    from_value: 0,
+                    to_value: 10,
+                    per_unit_amount: "2",
+                    flat_amount: "0"
+                  },
+                  {
+                    from_value: 11,
+                    to_value: nil,
+                    per_unit_amount: "3",
+                    flat_amount: "3"
+                  }
+                ]
+              }
+            }
+          ]
+        end
+
+        before do
+          fixed_charge_to_update
+          fixed_charge_to_delete
+          update_args[:cascade_updates] = true
+        end
+
+        it "handles update, edit and delete fixed_charges flow successfully" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.fixed_charges.count).to eq(2)
+          expect(result.plan.fixed_charges.map(&:id)).to include(fixed_charge_to_update.id)
+          expect(result.plan.fixed_charges.map(&:id)).not_to include(fixed_charge_to_delete.id)
+        end
+
+        context "when plan has children" do
+          let(:parent_id) { plan.id }
+          let(:child_plan) { create(:plan, organization:, parent_id:) }
+
+          before { child_plan }
+
+          it "schedules job to update fixed_charges of children plans" do
+            expect do
+              plans_service.call
+            end.to have_enqueued_job(FixedCharges::UpdateChildrenJob).exactly(1).times
+          end
+
+          it "schedules job to create fixed_charges of children plans" do
+            expect do
+              plans_service.call
+            end.to have_enqueued_job(FixedCharges::CreateChildrenJob).exactly(1).times
+          end
+
+          it "schedules job to delete fixed_charges of children plans" do
+            expect do
+              plans_service.call
+            end.to have_enqueued_job(FixedCharges::DestroyChildrenJob).exactly(1).times
+          end
+        end
       end
     end
   end
