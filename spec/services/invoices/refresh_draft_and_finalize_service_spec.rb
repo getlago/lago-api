@@ -311,7 +311,7 @@ RSpec.describe Invoices::RefreshDraftAndFinalizeService, type: :service do
           details: {
             backtrace: "[\"/app/app/models/invoice.rb:432:in 'generate_organization_sequential_id'\", \"/app/app/models/invoice.rb:395:in...",
             error: "\"#\\u003cSequenced::SequenceError: Unable to acquire lock on the database\\u003e\"",
-            invoice: invoice.to_json(except: :file),
+            invoice: invoice.to_json(except: [:file, :xml_file]),
             subscriptions: invoice.subscriptions.to_json
           }
         )
