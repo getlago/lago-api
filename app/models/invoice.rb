@@ -175,6 +175,17 @@ class Invoice < ApplicationRecord
     File.join(ENV["LAGO_API_URL"], blob_path)
   end
 
+  def xml_file_url
+    return if xml_file.blank?
+
+    blob_path = Rails.application.routes.url_helpers.rails_blob_path(
+      xml_file,
+      host: "void"
+    )
+
+    File.join(ENV["LAGO_API_URL"], blob_path)
+  end
+
   def fee_total_amount_cents
     amount_cents = fees.sum(:amount_cents)
     taxes_amount_cents = fees.sum { |f| f.amount_cents * f.taxes_rate }.fdiv(100).round
