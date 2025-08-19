@@ -39,9 +39,17 @@ class WalletTransaction < ApplicationRecord
   enum :transaction_type, TRANSACTION_TYPES
   enum :source, SOURCES
 
+  validates :priority, presence: true, inclusion: {in: 1..50}
+
   delegate :customer, to: :wallet
 
   scope :pending, -> { where(status: :pending) }
+
+  def self.order_by_priority
+    order(:priority)
+      .in_order_of(:transaction_status, [:granted, :purchased, :voided, :invoiced])
+      .order(:created_at)
+  end
 
   def amount_cents
     amount * wallet.currency_for_balance.subunit_to_unit
@@ -69,6 +77,7 @@ end
 #  invoice_requires_successful_payment :boolean          default(FALSE), not null
 #  lock_version                        :integer          default(0), not null
 #  metadata                            :jsonb
+#  priority                            :integer          default(50), not null
 #  settled_at                          :datetime
 #  source                              :integer          default("manual"), not null
 #  status                              :integer          not null

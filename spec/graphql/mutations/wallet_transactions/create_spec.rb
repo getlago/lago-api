@@ -16,6 +16,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
         collection {
           id
           status
+          priority
           invoiceRequiresSuccessfulPayment
           metadata {
             key
@@ -48,6 +49,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
           paidCredits: "5.00",
           grantedCredits: "5.00",
           invoiceRequiresSuccessfulPayment: true,
+          priority: 25,
           metadata: [
             {
               key: "fixed",
@@ -66,6 +68,7 @@ RSpec.describe Mutations::WalletTransactions::Create, type: :graphql do
     expect(result_data["collection"].map { |wt| wt["status"] })
       .to contain_exactly("pending", "settled")
     expect(result_data["collection"].map { |wt| wt["invoiceRequiresSuccessfulPayment"] }).to all be true
+    expect(result_data["collection"].map { |wt| wt["priority"] }).to all eq(25)
     expect(result_data["collection"]).to all(include(
       "metadata" => contain_exactly(
         {"key" => "fixed", "value" => "0"},

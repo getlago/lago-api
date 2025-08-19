@@ -65,8 +65,11 @@ module CreditNotes
         credit_note.save!
 
         if wallet_credit
-          WalletTransactions::VoidService.call(wallet: associated_wallet,
-            wallet_credit:, credit_note_id: credit_note.id)
+          WalletTransactions::VoidService.call(
+            wallet: associated_wallet,
+            wallet_credit:,
+            credit_note_id: credit_note.id
+          )
         end
       end
       return result if context == :preview
