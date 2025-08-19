@@ -1755,6 +1755,23 @@ RSpec.describe Invoice do
     end
   end
 
+  describe ".xml_file_url" do
+    before do
+      invoice.xml_file.attach(
+        io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
+        filename: "invoice.xml",
+        content_type: "application/xml"
+      )
+    end
+
+    it "returns the xml file url" do
+      xml_file_url = invoice.xml_file_url
+
+      expect(xml_file_url).to be_present
+      expect(xml_file_url).to include(ENV["LAGO_API_URL"])
+    end
+  end
+
   describe "#creditable_amount_cents" do
     let(:invoice) { create(:invoice, version_number:, status:, payment_status:, fees_amount_cents:, taxes_amount_cents:, coupons_amount_cents:, progressive_billing_credit_amount_cents:) }
     let(:fees_amount_cents) { 1000 }

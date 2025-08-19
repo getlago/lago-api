@@ -48,6 +48,7 @@ RSpec.describe ::V1::InvoiceSerializer do
         "total_amount_cents" => invoice.total_amount_cents,
         "total_due_amount_cents" => invoice.total_due_amount_cents,
         "file_url" => invoice.file_url,
+        "xml_url" => invoice.xml_file_url,
         "error_details" => [
           {
             "lago_id" => error_details1.id,
