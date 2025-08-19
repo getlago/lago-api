@@ -18,6 +18,7 @@ module Resolvers
       if current_organization.clickhouse_events_store?
         Clickhouse::EventsRaw.where(organization_id: current_organization.id)
           .order(ingested_at: :desc)
+          .limit_by(1, "transaction_id, timestamp, external_subscription_id, code")
           .page(page)
           .per((limit >= MAX_LIMIT) ? MAX_LIMIT : limit)
       else
