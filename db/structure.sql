@@ -1,5 +1,3 @@
-\restrict RdqRhgZRvW9yFESBvFzDStmFY7ifG3yRvWLMq71AhT5e5CLvRGN4yJ3GO9HwLDm
-
 -- Dumped from database version 14.0
 -- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
 
@@ -201,6 +199,7 @@ ALTER TABLE IF EXISTS ONLY public.credits DROP CONSTRAINT IF EXISTS fk_rails_2fd
 ALTER TABLE IF EXISTS ONLY public.payment_requests DROP CONSTRAINT IF EXISTS fk_rails_2fb2147151;
 ALTER TABLE IF EXISTS ONLY public.fees DROP CONSTRAINT IF EXISTS fk_rails_2ea4db3a4c;
 ALTER TABLE IF EXISTS ONLY public.refunds DROP CONSTRAINT IF EXISTS fk_rails_2dc6171f57;
+ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS fk_rails_2c06a74f41;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_2b35eef34b;
 ALTER TABLE IF EXISTS ONLY public.wallets DROP CONSTRAINT IF EXISTS fk_rails_28077d4aa2;
 ALTER TABLE IF EXISTS ONLY public.charge_filters DROP CONSTRAINT IF EXISTS fk_rails_27b55b8574;
@@ -236,6 +235,7 @@ ALTER TABLE IF EXISTS ONLY public.fees_taxes DROP CONSTRAINT IF EXISTS fk_rails_
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_triggered_alerts DROP CONSTRAINT IF EXISTS fk_rails_0f807322b1;
 ALTER TABLE IF EXISTS ONLY public.integration_mappings DROP CONSTRAINT IF EXISTS fk_rails_0f762162b0;
 ALTER TABLE IF EXISTS ONLY public.integration_customers DROP CONSTRAINT IF EXISTS fk_rails_0e464363cb;
+ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS fk_rails_0da056ac92;
 ALTER TABLE IF EXISTS ONLY public.invoices DROP CONSTRAINT IF EXISTS fk_rails_0d349e632f;
 ALTER TABLE IF EXISTS ONLY public.customers_taxes DROP CONSTRAINT IF EXISTS fk_rails_0d2be3d72c;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlements DROP CONSTRAINT IF EXISTS fk_rails_0c9773c34d;
@@ -616,6 +616,8 @@ DROP INDEX IF EXISTS public.index_applied_add_ons_on_add_on_id_and_customer_id;
 DROP INDEX IF EXISTS public.index_applied_add_ons_on_add_on_id;
 DROP INDEX IF EXISTS public.index_api_keys_on_value;
 DROP INDEX IF EXISTS public.index_api_keys_on_organization_id;
+DROP INDEX IF EXISTS public.index_ai_conversations_on_organization_id;
+DROP INDEX IF EXISTS public.index_ai_conversations_on_membership_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_subscription_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_organization_id;
 DROP INDEX IF EXISTS public.index_adjusted_fees_on_invoice_id;
@@ -784,6 +786,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_invoice_custom_sections DROP CONSTRAIN
 ALTER TABLE IF EXISTS ONLY public.applied_coupons DROP CONSTRAINT IF EXISTS applied_coupons_pkey;
 ALTER TABLE IF EXISTS ONLY public.applied_add_ons DROP CONSTRAINT IF EXISTS applied_add_ons_pkey;
 ALTER TABLE IF EXISTS ONLY public.api_keys DROP CONSTRAINT IF EXISTS api_keys_pkey;
+ALTER TABLE IF EXISTS ONLY public.ai_conversations DROP CONSTRAINT IF EXISTS ai_conversations_pkey;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS adjusted_fees_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS add_ons_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.add_ons DROP CONSTRAINT IF EXISTS add_ons_pkey;
@@ -914,6 +917,7 @@ DROP TABLE IF EXISTS public.applied_invoice_custom_sections;
 DROP TABLE IF EXISTS public.applied_coupons;
 DROP TABLE IF EXISTS public.applied_add_ons;
 DROP TABLE IF EXISTS public.api_keys;
+DROP TABLE IF EXISTS public.ai_conversations;
 DROP TABLE IF EXISTS public.adjusted_fees;
 DROP TABLE IF EXISTS public.add_ons_taxes;
 DROP TABLE IF EXISTS public.add_ons;
@@ -1274,6 +1278,22 @@ CREATE TABLE public.adjusted_fees (
     charge_filter_id uuid,
     unit_precise_amount_cents numeric(40,15) DEFAULT 0.0 NOT NULL,
     organization_id uuid NOT NULL
+);
+
+
+--
+-- Name: ai_conversations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_conversations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    membership_id uuid NOT NULL,
+    conversation_id character varying NOT NULL,
+    input_data character varying NOT NULL,
+    status character varying DEFAULT 'pending'::character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 
@@ -4173,6 +4193,14 @@ ALTER TABLE ONLY public.adjusted_fees
 
 
 --
+-- Name: ai_conversations ai_conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_conversations
+    ADD CONSTRAINT ai_conversations_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: api_keys api_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5444,6 +5472,20 @@ CREATE INDEX index_adjusted_fees_on_organization_id ON public.adjusted_fees USIN
 --
 
 CREATE INDEX index_adjusted_fees_on_subscription_id ON public.adjusted_fees USING btree (subscription_id);
+
+
+--
+-- Name: index_ai_conversations_on_membership_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_ai_conversations_on_membership_id ON public.ai_conversations USING btree (membership_id);
+
+
+--
+-- Name: index_ai_conversations_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_ai_conversations_on_organization_id ON public.ai_conversations USING btree (organization_id);
 
 
 --
@@ -8000,6 +8042,14 @@ ALTER TABLE ONLY public.invoices
 
 
 --
+-- Name: ai_conversations fk_rails_0da056ac92; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_conversations
+    ADD CONSTRAINT fk_rails_0da056ac92 FOREIGN KEY (membership_id) REFERENCES public.memberships(id);
+
+
+--
 -- Name: integration_customers fk_rails_0e464363cb; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8277,6 +8327,14 @@ ALTER TABLE ONLY public.wallets
 
 ALTER TABLE ONLY public.wallets
     ADD CONSTRAINT fk_rails_2b35eef34b FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+
+--
+-- Name: ai_conversations fk_rails_2c06a74f41; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_conversations
+    ADD CONSTRAINT fk_rails_2c06a74f41 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -9790,6 +9848,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20250911111448'),
 ('20250908085959'),
 ('20250903165724'),
+('20250901143217'),
 ('20250901141844'),
 ('20250828153138'),
 ('20250828144553'),
