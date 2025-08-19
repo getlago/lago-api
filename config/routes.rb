@@ -5,6 +5,7 @@ Rails.application.routes.draw do
   mount Karafka::Web::App, at: "/karafka" if ENV["LAGO_KARAFKA_WEB"]
   mount GraphiQL::Rails::Engine, at: "/graphiql", graphql_path: "/graphql" if Rails.env.development?
   mount Yabeda::Prometheus::Exporter, at: "/metrics"
+  mount ActionCable.server, at: "/cable"
 
   post "/graphql", to: "graphql#execute"
 

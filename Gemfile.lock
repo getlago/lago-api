@@ -250,6 +250,7 @@ GEM
       zeitwerk (~> 2.6)
     erb (5.0.1)
     erubi (1.13.1)
+    event_stream_parser (1.0.0)
     execjs (2.9.1)
     factory_bot (6.5.0)
       activesupport (>= 5.0.0)
@@ -1027,6 +1028,7 @@ DEPENDENCIES
   discard (~> 1.2)
   dotenv
   dry-validation
+  event_stream_parser
   factory_bot_rails
   faker
   fuubar
