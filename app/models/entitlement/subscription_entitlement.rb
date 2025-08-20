@@ -1,47 +1,33 @@
 # frozen_string_literal: true
 
 module Entitlement
-  class SubscriptionEntitlement < ApplicationRecord
-    self.table_name = "entitlement_subscription_entitlements_view"
+  class SubscriptionEntitlement
+    include ActiveModel::Model
+    include ActiveModel::Attributes
 
-    belongs_to :organization
-    belongs_to :feature, class_name: "Entitlement::Feature", foreign_key: :entitlement_feature_id
-    belongs_to :privilege, class_name: "Entitlement::Privilege", foreign_key: :entitlement_privilege_id, optional: true
+    attribute :organization_id, :string
+    attribute :entitlement_feature_id, :string
+    attribute :code, :string
+    attribute :name, :string
+    attribute :description, :string
+    attribute :plan_entitlement_id, :string
+    attribute :sub_entitlement_id, :string
+    attribute :plan_id, :string
+    attribute :subscription_id, :string
+    attribute :ordering_date, :datetime
 
-    scope :for_subscription, ->(sub) do
-      where(organization_id: sub.organization_id, removed: false)
-        .where("subscription_id = ? OR plan_id = ?", sub.id, sub.plan.parent_id || sub.plan.id)
+    attribute :privileges
+
+    def self.for_subscription(subscription)
+      SubscriptionEntitlementQuery.call(
+        organization: subscription.organization,
+        filters: {
+          subscription_id: subscription.id,
+          plan_id: subscription.plan.parent_id || subscription.plan.id
+        }
+      )
     end
 
-    def readonly?
-      true
-    end
+    private
   end
 end
-
-# == Schema Information
-#
-# Table name: entitlement_subscription_entitlements_view
-#
-#  feature_code                   :string
-#  feature_deleted_at             :datetime
-#  feature_description            :string
-#  feature_name                   :string
-#  privilege_code                 :string
-#  privilege_config               :jsonb
-#  privilege_deleted_at           :datetime
-#  privilege_name                 :string
-#  privilege_override_value       :string
-#  privilege_plan_value           :string
-#  privilege_value_type           :enum
-#  removed                        :boolean
-#  entitlement_feature_id         :uuid
-#  entitlement_privilege_id       :uuid
-#  organization_id                :uuid
-#  override_entitlement_id        :uuid
-#  override_entitlement_values_id :uuid
-#  plan_entitlement_id            :uuid
-#  plan_entitlement_values_id     :uuid
-#  plan_id                        :uuid
-#  subscription_id                :uuid
-#

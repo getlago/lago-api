@@ -2,11 +2,17 @@
 
 require "rails_helper"
 
-RSpec.describe V1::Entitlement::SubscriptionEntitlementsCollectionSerializer, type: :serializer do
-  subject(:serializer) { described_class.new(collection, collection_name: "entitlements") }
+RSpec.describe V1::Entitlement::SubscriptionEntitlementSerializer, type: :serializer do
+  subject(:serializer) do
+    ::CollectionSerializer.new(
+      collection,
+      described_class,
+      collection_name: "entitlements"
+    )
+  end
 
   let(:organization) { create(:organization) }
-  let(:collection) { Entitlement::SubscriptionEntitlement.for_subscription(subscription).where(removed: false) }
+  let(:collection) { Entitlement::SubscriptionEntitlement.for_subscription(subscription) }
   let(:customer) { create(:customer, organization:) }
   let(:plan) { create(:plan, organization:) }
   let(:subscription) { create(:subscription, organization:, customer:, plan:) }
@@ -106,7 +112,7 @@ RSpec.describe V1::Entitlement::SubscriptionEntitlementsCollectionSerializer, ty
     end
 
     context "when there are no entitlements" do
-      let(:collection) { Entitlement::SubscriptionEntitlement.none }
+      let(:collection) { [] }
 
       it "returns empty array" do
         expect(subject[:entitlements]).to eq([])
