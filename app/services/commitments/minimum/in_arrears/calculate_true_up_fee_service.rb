@@ -68,11 +68,11 @@ module Commitments
 
         def charge_in_advance_recurring_fees
           if !invoice_subscription.previous_invoice_subscription &&
-              (!subscription.plan.yearly? || !subscription.plan.bill_charges_monthly?)
+              ((!subscription.plan.yearly? && !subscription.plan.semiannual?) || !subscription.plan.bill_charges_monthly?)
             return Fee.none
           end
 
-          is = if subscription.plan.yearly? && subscription.plan.bill_charges_monthly?
+          is = if (subscription.plan.yearly? || subscription.plan.semiannual?) && subscription.plan.bill_charges_monthly?
             invoice_subscription
           else
             invoice_subscription.previous_invoice_subscription
@@ -99,7 +99,7 @@ module Commitments
             )
 
           # rubocop:disable Style/ConditionalAssignment
-          if subscription.plan.yearly? && subscription.plan.bill_charges_monthly?
+          if (subscription.plan.yearly? || subscription.plan.semiannual?) && subscription.plan.bill_charges_monthly?
             scope = scope
               .where(
                 "(fees.properties->>'charges_from_datetime') >= ?",
