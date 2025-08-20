@@ -13,6 +13,7 @@ module Types
       field :currency, Types::CurrencyEnum, null: false
       field :name, String, null: true
       field :status, Types::Wallets::StatusEnum, null: false
+      field :priority, Integer, null: false
 
       field :rate_amount, GraphQL::Types::Float, null: false
 
