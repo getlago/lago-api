@@ -16,8 +16,6 @@ module Types
 
       argument :billing_time, Types::Subscriptions::BillingTimeEnum, required: true
       argument :subscription_at, GraphQL::Types::ISO8601DateTime, required: false
-
-      argument :entitlements, [Types::Entitlement::EntitlementInput], required: false
     end
   end
 end

@@ -36,16 +36,6 @@ module Mutations
 
         subscription = result.subscription
 
-        entitlements = args.dig(:plan_overrides, :entitlements)
-        if entitlements.present? && License.premium?
-          result = ::Entitlement::SubscriptionEntitlementsUpdateService.call(
-            organization: subscription.organization,
-            subscription:,
-            entitlements_params: Utils::Entitlement.convert_gql_input_to_params(entitlements),
-            partial: false
-          )
-        end
-
         result.success? ? subscription.reload : result_error(result)
       end
     end

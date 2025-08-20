@@ -24,10 +24,6 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
           id
           name
           subscriptionAt
-          entitlements {
-            code
-            privileges { code value }
-          }
         }
       }
     GQL
@@ -50,54 +46,5 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
     result_data = result["data"]["updateSubscription"]
 
     expect(result_data["name"]).to eq("New name")
-    expect(result_data["entitlements"]).to eq []
-  end
-
-  context "when subscription has entitlement" do
-    let(:feature) { create(:feature, organization:, code: "seats") }
-    let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
-
-    let(:feature2) { create(:feature, code: "storage", organization:) }
-    let(:privilege2) { create(:privilege, feature: feature2, code: "limit", value_type: "integer") }
-    let(:privilege3) { create(:privilege, feature: feature2, code: "allow_overage", value_type: "boolean") }
-    let(:privilege4) { create(:privilege, feature: feature2, code: "type", value_type: "select", config: {select_options: ["rom", "ram"]}) }
-    let(:entitlement) { create(:entitlement, feature:, plan: subscription.plan) }
-    let(:entitlement_value2) { create(:entitlement_value, entitlement:, privilege: privilege2, value: "100") }
-    let(:entitlement_value3) { create(:entitlement_value, entitlement:, privilege: privilege3, value: true) }
-    let(:entitlement_value4) { create(:entitlement_value, entitlement:, privilege: privilege4, value: "ram") }
-
-    let(:input) do
-      {
-        id: subscription.id,
-        name: "New name",
-        planOverrides: {
-          entitlements: [
-            {featureCode: feature.code, privileges: [
-              {privilegeCode: privilege.code, value: "45"}
-            ]},
-            {featureCode: feature2.code, privileges: [
-              {privilegeCode: privilege2.code, value: "444"},
-              {privilegeCode: privilege3.code, value: "false"},
-              {privilegeCode: privilege4.code, value: "ram"}
-            ]}
-          ]
-        }
-      }
-    end
-
-    before do
-      privilege
-      entitlement_value2
-      entitlement_value3
-      entitlement_value4
-    end
-
-    it "updates the subscription and it's entitlements" do
-      result = subject
-
-      result_data = result["data"]["updateSubscription"]
-      expect(result_data["name"]).to eq("New name")
-      expect(result_data["entitlements"].size).to eq(2)
-    end
   end
 end

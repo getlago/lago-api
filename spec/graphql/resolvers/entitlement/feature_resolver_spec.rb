@@ -9,7 +9,7 @@ RSpec.describe Resolvers::Entitlement::FeatureResolver, type: :graphql do
   let(:required_permission) { "features:view" }
   let(:query) do
     <<~GQL
-      query($featureId: ID!) {
+      query($featureId: ID) {
         feature(id: $featureId) {
           id
           code
@@ -41,23 +41,48 @@ RSpec.describe Resolvers::Entitlement::FeatureResolver, type: :graphql do
   it_behaves_like "requires permission", "features:view"
   it_behaves_like "requires Premium license"
 
-  it "returns a single feature" do
-    privilege = create(:privilege, feature:, value_type: "boolean")
+  context "when the feature ID is provided" do
+    it "returns a single feature" do
+      privilege = create(:privilege, feature:, value_type: "boolean")
 
-    result = subject
+      result = subject
 
-    feature_response = result["data"]["feature"]
+      feature_response = result["data"]["feature"]
 
-    expect(feature_response["id"]).to eq(feature.id)
-    expect(feature_response["code"]).to eq(feature.code)
-    expect(feature_response["name"]).to eq(feature.name)
-    expect(feature_response["description"]).to eq(feature.description)
-    expect(feature_response["createdAt"]).to be_present
-    expect(feature_response["privileges"].count).to eq(1)
-    expect(feature_response["privileges"].first["id"]).to eq(privilege.id)
-    expect(feature_response["privileges"].first["code"]).to eq(privilege.code)
-    expect(feature_response["privileges"].first["valueType"]).to eq(privilege.value_type)
-    expect(feature_response["privileges"].first["config"]).to eq({"selectOptions" => nil})
+      expect(feature_response["id"]).to eq(feature.id)
+      expect(feature_response["code"]).to eq(feature.code)
+      expect(feature_response["name"]).to eq(feature.name)
+      expect(feature_response["description"]).to eq(feature.description)
+      expect(feature_response["createdAt"]).to be_present
+      expect(feature_response["privileges"].count).to eq(1)
+      expect(feature_response["privileges"].first["id"]).to eq(privilege.id)
+      expect(feature_response["privileges"].first["code"]).to eq(privilege.code)
+      expect(feature_response["privileges"].first["valueType"]).to eq(privilege.value_type)
+      expect(feature_response["privileges"].first["config"]).to eq({"selectOptions" => nil})
+    end
+  end
+
+  context "when the feature unique code is provided" do
+    let(:query) do
+      <<~GQL
+        query($featureCode: String) {
+          feature(code: $featureCode) {
+            id
+            code
+            createdAt
+          }
+        }
+      GQL
+    end
+    let(:variables) { {featureCode: feature.code} }
+
+    it "returns a single feature" do
+      result = subject
+      feature_response = result["data"]["feature"]
+      expect(feature_response["id"]).to eq(feature.id)
+      expect(feature_response["code"]).to eq(feature.code)
+      expect(feature_response["createdAt"]).to be_present
+    end
   end
 
   context "when feature is not found" do

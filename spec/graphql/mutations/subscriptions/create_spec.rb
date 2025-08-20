@@ -12,13 +12,6 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
   let(:ending_at) { Time.current.beginning_of_day + 1.year }
   let(:customer) { create(:customer, organization:) }
 
-  let(:feature) { create(:feature, code: :seats, organization:) }
-  let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
-  let(:entitlement) { create(:entitlement, feature:, plan:) }
-  let(:entitlement_value) { create(:entitlement_value, privilege:, entitlement:, value: "99") }
-
-  let(:feature2) { create(:feature, code: "sso", organization:) }
-
   let(:mutation) do
     <<~GQL
       mutation($input: CreateSubscriptionInput!) {
@@ -41,10 +34,6 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
               amountCents
               thresholdDisplayName
             }
-          }
-          entitlements {
-            code
-            privileges { code value }
           }
         }
       }
@@ -83,10 +72,6 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
             usageThresholds: [
               amountCents: 100,
               thresholdDisplayName: "threshold display name"
-            ],
-            entitlements: [
-              {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]},
-              {featureCode: feature2.code, privileges: []}
             ]
           }
         }
@@ -114,16 +99,6 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
     expect(result_data["plan"]["usageThresholds"].first).to include(
       "thresholdDisplayName" => "threshold display name",
       "amountCents" => "100"
-    )
-
-    expect(result_data["entitlements"]).to contain_exactly(
-      {
-        "code" => "seats",
-        "privileges" => [{"code" => "max", "value" => "22"}]
-      }, {
-        "code" => "sso",
-        "privileges" => []
-      }
     )
   end
 end
