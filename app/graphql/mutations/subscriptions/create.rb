@@ -15,7 +15,7 @@ module Mutations
 
       type Types::Subscriptions::Object
 
-      def resolve(entitlements: nil, **args)
+      def resolve(**args)
         customer = Customer.find_by(
           id: args[:customer_id],
           organization_id: current_organization.id
@@ -36,6 +36,7 @@ module Mutations
 
         subscription = result.subscription
 
+        entitlements = args.dig(:plan_overrides, :entitlements)
         if entitlements.present? && License.premium?
           result = ::Entitlement::SubscriptionEntitlementsUpdateService.call(
             organization: subscription.organization,

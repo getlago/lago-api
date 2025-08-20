@@ -26,7 +26,7 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
           subscriptionAt
           entitlements {
             code
-            privileges { code planValue overrideValue value }
+            privileges { code value }
           }
         }
       }
@@ -60,23 +60,28 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
     let(:feature2) { create(:feature, code: "storage", organization:) }
     let(:privilege2) { create(:privilege, feature: feature2, code: "limit", value_type: "integer") }
     let(:privilege3) { create(:privilege, feature: feature2, code: "allow_overage", value_type: "boolean") }
+    let(:privilege4) { create(:privilege, feature: feature2, code: "type", value_type: "select", config: {select_options: ["rom", "ram"]}) }
     let(:entitlement) { create(:entitlement, feature:, plan: subscription.plan) }
     let(:entitlement_value2) { create(:entitlement_value, entitlement:, privilege: privilege2, value: "100") }
     let(:entitlement_value3) { create(:entitlement_value, entitlement:, privilege: privilege3, value: true) }
+    let(:entitlement_value4) { create(:entitlement_value, entitlement:, privilege: privilege4, value: "ram") }
 
     let(:input) do
       {
         id: subscription.id,
         name: "New name",
-        entitlements: [
-          {featureCode: feature.code, privileges: [
-            {privilegeCode: privilege.code, value: "45"}
-          ]},
-          {featureCode: feature2.code, privileges: [
-            {privilegeCode: privilege2.code, value: "444"},
-            {privilegeCode: privilege3.code, value: "false"}
-          ]}
-        ]
+        planOverrides: {
+          entitlements: [
+            {featureCode: feature.code, privileges: [
+              {privilegeCode: privilege.code, value: "45"}
+            ]},
+            {featureCode: feature2.code, privileges: [
+              {privilegeCode: privilege2.code, value: "444"},
+              {privilegeCode: privilege3.code, value: "false"},
+              {privilegeCode: privilege4.code, value: "ram"}
+            ]}
+          ]
+        }
       }
     end
 
@@ -84,6 +89,7 @@ RSpec.describe Mutations::Subscriptions::Update, type: :graphql do
       privilege
       entitlement_value2
       entitlement_value3
+      entitlement_value4
     end
 
     it "updates the subscription and it's entitlements" do

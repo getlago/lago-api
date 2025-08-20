@@ -83,12 +83,12 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
             usageThresholds: [
               amountCents: 100,
               thresholdDisplayName: "threshold display name"
+            ],
+            entitlements: [
+              {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]},
+              {featureCode: feature2.code, privileges: []}
             ]
-          },
-          entitlements: [
-            {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]},
-            {featureCode: feature2.code, privileges: []}
-          ]
+          }
         }
       }
     )

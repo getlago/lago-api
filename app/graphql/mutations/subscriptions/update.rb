@@ -14,10 +14,11 @@ module Mutations
 
       type Types::Subscriptions::Object
 
-      def resolve(entitlements: nil, **args)
+      def resolve(**args)
         subscription = context[:current_user].subscriptions.find_by(id: args[:id])
         result = ::Subscriptions::UpdateService.call(subscription:, params: args)
 
+        entitlements = args.dig(:plan_overrides, :entitlements)
         if entitlements.present? && License.premium?
           result = ::Entitlement::SubscriptionEntitlementsUpdateService.call(
             organization: subscription.organization,
