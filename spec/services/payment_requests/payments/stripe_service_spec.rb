@@ -68,10 +68,17 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
               {
                 quantity: 1,
                 price_data: {
-                  currency: payment_request.currency.downcase,
-                  unit_amount: payment_request.total_amount_cents,
-                  product_data: {
-                    name: "Overdue invoices"
+                  currency: invoice_1.currency.downcase,
+                  unit_amount: invoice_1.total_amount_cents,
+                  product_data: { name: invoice_1.number }
+                }
+              },
+              {
+                quantity: 1,
+                price_data: {
+                  currency: invoice_2.currency.downcase,
+                  unit_amount: invoice_2.total_amount_cents,
+                  product_data: { name: invoice_2.number }
                   }
                 }
               }
@@ -92,6 +99,43 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
           },
           hash_including({api_key: an_instance_of(String)})
         )
+    end
+
+    context "when payment request is related to a single overdue invoice" do
+      let(:invoices) { [invoice_1] }
+
+      it "includes the invoice number in stripe data" do
+        stripe_service.generate_payment_url
+
+        expect(::Stripe::Checkout::Session)
+          .to have_received(:create)
+          .with(
+            {
+              line_items: [
+                {
+                  quantity: 1,
+                  price_data: {
+                    currency: invocie_1.currency.downcase,
+                    unit_amount: invoice_1.total_amount_cents,
+                    product_data: { name: invoice_1.number }
+                  }
+                }
+              ],
+              mode: "payment",
+              success_url: stripe_payment_provider.success_redirect_url,
+              customer: customer.stripe_customer.provider_customer_id,
+              payment_method_types: customer.stripe_customer.provider_payment_methods,
+              payment_intent_data: {
+                description: "#{billing_entity.name} - Overdue invoices #{invoice_1.number}",
+                metadata: {
+                  lago_customer_id: customer.id,
+                  lago_payable_id: payment_request.id,
+                  lago_payable_type: "PaymentRequest",
+                  payment_type: "one-time"
+                }
+              }
+            },
+      end
     end
 
     context "with an error on Stripe" do

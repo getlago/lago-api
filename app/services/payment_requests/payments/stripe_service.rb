@@ -92,7 +92,13 @@ module PaymentRequests
       end
 
       def description
-        "#{customer.billing_entity.name} - Overdue invoices"
+        desc = "#{customer.billing_entity.name} - Overdue invoices"
+
+        if payable.invoices.one?
+          "#{desc}: #{payable.invoices.first.number}"
+        else
+          desc
+        end
       end
 
       def update_payable_payment_status(payment_status:, deliver_webhook: true, processing: false)
@@ -121,20 +127,22 @@ module PaymentRequests
         end
       end
 
+      def line_items
+        payable.invoices.map do |invoice|
+          {
+            quantity: 1,
+            price_data: {
+              currency: invoice.currency.downcase,
+              unit_amount: invoice.total_due_amount_cents,
+              product_data: { name: invoice.number }
+            }
+          }
+        end
+      end
+
       def payment_url_payload
         {
-          line_items: [
-            {
-              quantity: 1,
-              price_data: {
-                currency: payable.currency.downcase,
-                unit_amount: payable.total_amount_cents,
-                product_data: {
-                  name: "Overdue invoices"
-                }
-              }
-            }
-          ],
+          line_items: line_items,
           mode: "payment",
           success_url: success_redirect_url,
           customer: customer.stripe_customer.provider_customer_id,
