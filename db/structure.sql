@@ -1,3 +1,6 @@
+-- Dumped from database version 14.0
+-- Dumped by pg_dump version 14.19 (Debian 14.19-1.pgdg13+1)
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -854,8 +857,8 @@ DROP VIEW IF EXISTS public.exports_billable_metrics;
 DROP VIEW IF EXISTS public.exports_applied_coupons;
 DROP TABLE IF EXISTS public.events;
 DROP TABLE IF EXISTS public.error_details;
-DROP VIEW IF EXISTS public.entitlement_subscription_entitlements_view;
 DROP TABLE IF EXISTS public.entitlement_subscription_feature_removals;
+DROP VIEW IF EXISTS public.entitlement_subscription_entitlements_view;
 DROP TABLE IF EXISTS public.entitlement_privileges;
 DROP TABLE IF EXISTS public.entitlement_features;
 DROP TABLE IF EXISTS public.entitlement_entitlements;
@@ -2031,6 +2034,75 @@ CREATE TABLE public.entitlement_privileges (
 
 
 --
+-- Name: entitlement_subscription_entitlements_view; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.entitlement_subscription_entitlements_view AS
+ WITH subscription_entitlements AS (
+         SELECT fe_1.entitlement_feature_id,
+            fe_1.plan_id,
+            fe_1.subscription_id,
+            fe_1.created_at,
+            fev.deleted_at,
+            fev.id,
+            fev.entitlement_privilege_id,
+            fev.entitlement_entitlement_id,
+            fev.value,
+            fev.created_at AS value_created_at
+           FROM (public.entitlement_entitlement_values fev
+             JOIN public.entitlement_entitlements fe_1 ON ((fe_1.id = fev.entitlement_entitlement_id)))
+          WHERE ((fev.deleted_at IS NULL) AND (fe_1.deleted_at IS NULL))
+        ), all_values AS (
+         SELECT ep.entitlement_feature_id,
+            COALESCE(ep.entitlement_privilege_id, es.entitlement_privilege_id) AS entitlement_privilege_id,
+            ep.entitlement_entitlement_id AS plan_entitlement_id,
+            es.entitlement_entitlement_id AS override_entitlement_id,
+            ep.id AS plan_entitlement_values_id,
+            es.id AS override_entitlement_values_id,
+            ep.value AS plan_value,
+            es.value AS override_value,
+            COALESCE(ep.created_at, es.created_at) AS entitlement_created_at,
+            COALESCE(ep.value_created_at, es.value_created_at) AS value_created_at
+           FROM (subscription_entitlements ep
+             FULL JOIN subscription_entitlements es ON (((ep.entitlement_privilege_id = es.entitlement_privilege_id) AND (ep.plan_id IS NOT NULL) AND (es.subscription_id IS NOT NULL))))
+          WHERE (((ep.plan_id IS NOT NULL) OR (es.subscription_id IS NOT NULL)) AND (ep.deleted_at IS NULL) AND (es.deleted_at IS NULL))
+        )
+ SELECT f.id AS entitlement_feature_id,
+    f.organization_id,
+    fe.plan_id,
+    fe.subscription_id,
+    COALESCE(avp.entitlement_created_at, avs.entitlement_created_at, fe.created_at) AS entitlement_created_at,
+    f.code AS feature_code,
+    f.name AS feature_name,
+    f.description AS feature_description,
+    f.created_at AS feature_created_at,
+    f.deleted_at AS feature_deleted_at,
+    pri.id AS entitlement_privilege_id,
+    pri.code AS privilege_code,
+    pri.name AS privilege_name,
+    pri.value_type AS privilege_value_type,
+    pri.config AS privilege_config,
+    pri.created_at AS privilege_created_at,
+    pri.deleted_at AS privilege_deleted_at,
+        CASE
+            WHEN (avs.override_entitlement_id IS NOT NULL) THEN COALESCE(avs.plan_entitlement_id, avp.plan_entitlement_id)
+            ELSE fe.id
+        END AS plan_entitlement_id,
+    avs.override_entitlement_id,
+    COALESCE(avs.plan_entitlement_values_id, avp.plan_entitlement_values_id) AS plan_entitlement_values_id,
+    avs.override_entitlement_values_id,
+    COALESCE(avs.plan_value, avp.plan_value) AS privilege_plan_value,
+    avs.override_value AS privilege_override_value,
+    COALESCE(avp.value_created_at, avs.value_created_at) AS privilege_value_created_at
+   FROM ((((public.entitlement_entitlements fe
+     LEFT JOIN all_values avp ON ((avp.plan_entitlement_id = fe.id)))
+     LEFT JOIN all_values avs ON ((avs.override_entitlement_id = fe.id)))
+     LEFT JOIN public.entitlement_features f ON ((f.id = fe.entitlement_feature_id)))
+     LEFT JOIN public.entitlement_privileges pri ON ((pri.id = COALESCE(avs.entitlement_privilege_id, avp.entitlement_privilege_id))))
+  WHERE (fe.deleted_at IS NULL);
+
+
+--
 -- Name: entitlement_subscription_feature_removals; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2043,65 +2115,6 @@ CREATE TABLE public.entitlement_subscription_feature_removals (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
-
-
---
--- Name: entitlement_subscription_entitlements_view; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.entitlement_subscription_entitlements_view AS
- WITH subscription_entitlements AS (
-         SELECT fe_1.entitlement_feature_id,
-            fe_1.plan_id,
-            fe_1.subscription_id,
-            fev.deleted_at,
-            fev.id,
-            fev.entitlement_privilege_id,
-            fev.entitlement_entitlement_id,
-            fev.value
-           FROM (public.entitlement_entitlement_values fev
-             JOIN public.entitlement_entitlements fe_1 ON ((fe_1.id = fev.entitlement_entitlement_id)))
-          WHERE ((fev.deleted_at IS NULL) AND (fe_1.deleted_at IS NULL))
-        ), all_values AS (
-         SELECT ep.entitlement_feature_id,
-            COALESCE(ep.entitlement_privilege_id, es.entitlement_privilege_id) AS entitlement_privilege_id,
-            ep.entitlement_entitlement_id AS plan_entitlement_id,
-            es.entitlement_entitlement_id AS override_entitlement_id,
-            ep.id AS plan_entitlement_values_id,
-            es.id AS override_entitlement_values_id,
-            ep.value AS plan_value,
-            es.value AS override_value
-           FROM (subscription_entitlements ep
-             FULL JOIN subscription_entitlements es ON (((ep.entitlement_privilege_id = es.entitlement_privilege_id) AND (ep.plan_id IS NOT NULL) AND (es.subscription_id IS NOT NULL))))
-          WHERE (((ep.plan_id IS NOT NULL) OR (es.subscription_id IS NOT NULL)) AND (ep.deleted_at IS NULL) AND (es.deleted_at IS NULL))
-        )
- SELECT f.id AS entitlement_feature_id,
-    f.organization_id,
-    f.code AS feature_code,
-    f.name AS feature_name,
-    f.description AS feature_description,
-    f.deleted_at AS feature_deleted_at,
-    pri.id AS entitlement_privilege_id,
-    pri.code AS privilege_code,
-    pri.name AS privilege_name,
-    pri.value_type AS privilege_value_type,
-    pri.config AS privilege_config,
-    pri.deleted_at AS privilege_deleted_at,
-    fe.plan_id,
-    fe.subscription_id,
-    (sfr.id IS NOT NULL) AS removed,
-    av.plan_entitlement_id,
-    av.override_entitlement_id,
-    av.plan_entitlement_values_id,
-    av.override_entitlement_values_id,
-    av.plan_value AS privilege_plan_value,
-    av.override_value AS privilege_override_value
-   FROM ((((public.entitlement_entitlements fe
-     LEFT JOIN public.entitlement_subscription_feature_removals sfr ON (((fe.entitlement_feature_id = sfr.entitlement_feature_id) AND (sfr.deleted_at IS NULL))))
-     LEFT JOIN all_values av ON ((COALESCE(av.override_entitlement_id, av.plan_entitlement_id) = fe.id)))
-     LEFT JOIN public.entitlement_features f ON ((f.id = fe.entitlement_feature_id)))
-     LEFT JOIN public.entitlement_privileges pri ON ((pri.id = av.entitlement_privilege_id)))
-  WHERE (fe.deleted_at IS NULL);
 
 
 --
@@ -9692,6 +9705,8 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250819164129'),
+('20250818082509'),
 ('20250812132802'),
 ('20250812082721'),
 ('20250806174150'),
@@ -10501,4 +10516,3 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20220530091046'),
 ('20220526101535'),
 ('20220525122759');
-
