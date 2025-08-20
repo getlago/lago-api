@@ -54,6 +54,8 @@ module Wallets
             UNION
             (#{quarterly_anniversary})
             UNION
+            (#{semiannual_anniversary})
+            UNION
             (#{yearly_anniversary})
           ),
           -- Filter wallets which rules are already applied today (in customer's applicable timezone)
@@ -84,7 +86,7 @@ module Wallets
           INNER JOIN wallets ON wallets.id = recurring_transaction_rules.wallet_id
           INNER JOIN customers ON customers.id = wallets.customer_id
           INNER JOIN billing_entities ON billing_entities.id = customers.billing_entity_id
-        WHERE wallets.status = #{Wallet.statuses[:active]} 
+        WHERE wallets.status = #{Wallet.statuses[:active]}
           AND recurring_transaction_rules.status = #{RecurringTransactionRule.statuses[:active]}
           AND recurring_transaction_rules.trigger = #{RecurringTransactionRule.triggers[:interval]}
           AND recurring_transaction_rules.interval = #{RecurringTransactionRule.intervals[interval]}
@@ -158,6 +160,42 @@ module Wallets
 
       base_recurring_transaction_rule_scope(
         interval: :quarterly,
+        conditions: [billing_month, billing_day]
+      )
+    end
+
+    # NOTE: Billed semiannually on anniversary date
+    def semiannual_anniversary
+      billing_day = <<-SQL
+        DATE_PART('day', (#{wallet_started_at})) = ANY (
+          -- Check if today is the last day of the month
+          CASE WHEN DATE_PART('day', (#{end_of_month})) = DATE_PART('day', :today#{at_time_zone})
+          THEN
+            -- If so and if it counts less than 31 days, we need to take all days up to 31 into account
+            (SELECT ARRAY(SELECT generate_series(DATE_PART('day', :today#{at_time_zone})::integer, 31)))
+          ELSE
+            -- Otherwise, we just need the current day
+            (SELECT ARRAY[DATE_PART('day', :today#{at_time_zone})])
+          END
+        )
+      SQL
+
+      billing_month = <<-SQL
+        (
+          -- We need to avoid zero and instead of it use 12. E.g.: (3 + 9) % 12 = 0 -> 12
+          CASE WHEN MOD(CAST(DATE_PART('month', (#{wallet_started_at})) AS INTEGER), 6) = 0
+          THEN
+            (DATE_PART('month', :today#{at_time_zone}) IN (6, 12))
+          ELSE (
+            DATE_PART('month', (#{wallet_started_at})) = DATE_PART('month', :today#{at_time_zone})
+              OR MOD(CAST(DATE_PART('month', (#{wallet_started_at})) + 6 AS INTEGER), 12) = DATE_PART('month', :today#{at_time_zone})
+          )
+          END
+        )
+      SQL
+
+      base_recurring_transaction_rule_scope(
+        interval: :semiannual,
         conditions: [billing_month, billing_day]
       )
     end
