@@ -69,7 +69,7 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
           invoice_requires_successful_payment: true,
           settled_at: Date.yesterday,
           credit_note_id: credit_note.id,
-          invoice_id: invoice.id,
+          invoice_id: invoice.id
         }
       end
 
