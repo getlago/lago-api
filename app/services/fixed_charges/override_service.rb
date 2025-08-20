@@ -19,12 +19,10 @@ module FixedCharges
         new_fixed_charge = fixed_charge.dup.tap do |c|
           if params.key?(:properties)
             properties = params[:properties].presence
-            filter_properties_result = ChargeModels::FilterPropertiesService.call(
+            c.properties = ChargeModels::FilterPropertiesService.call(
               chargeable: fixed_charge,
               properties:
-            )
-            return result.single_validation_failure!(field: :fixed_charge, error_code: "invalid_properties") if filter_properties_result.properties.blank?
-            c.properties = filter_properties_result.properties
+            ).properties
           end
           c.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
           c.units = params[:units] if params.key?(:units)
