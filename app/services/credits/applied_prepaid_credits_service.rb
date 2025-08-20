@@ -18,7 +18,6 @@ module Credits
 
       ApplicationRecord.transaction do
         wallets.each do |wallet|
-          byebug
           next if already_applied_for_wallet?(wallet)
 
           amount = distribute_from_buckets(wallet, remaining)
@@ -28,11 +27,11 @@ module Credits
           result.wallet_transactions << wallet_transaction
 
           invoice.prepaid_credit_amount_cents += amount
-          result.prepaid_credit_amount_cents  += amount
+          result.prepaid_credit_amount_cents += amount
         end
       end
 
-      #after_commit { SendWebhookJob.perform_later("wallet_transaction.created", result.wallet_transaction) }
+      # after_commit { SendWebhookJob.perform_later("wallet_transaction.created", result.wallet_transaction) }
       result
     end
 
@@ -45,8 +44,8 @@ module Credits
 
       invoice.fees.each do |f|
         cap = f.sub_total_excluding_taxes_amount_cents +
-              f.taxes_amount_cents -
-              f.precise_credit_notes_amount_cents
+          f.taxes_amount_cents -
+          f.precise_credit_notes_amount_cents
 
         key = [f.fee_type, f.charge&.billable_metric_id]
         remaining[key] += cap
@@ -87,7 +86,7 @@ module Credits
 
     def distribute_from_buckets(wallet, remaining)
       amount_left = wallet.balance_cents
-      applied     = 0
+      applied = 0
 
       eligible_buckets_for(wallet).each do |bucket|
         break if amount_left <= 0
@@ -95,8 +94,8 @@ module Credits
 
         take = [remaining[bucket], amount_left].min
         remaining[bucket] -= take
-        amount_left       -= take
-        applied           += take
+        amount_left -= take
+        applied += take
       end
 
       applied
