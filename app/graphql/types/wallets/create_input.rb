@@ -12,6 +12,7 @@ module Types
       argument :invoice_requires_successful_payment, Boolean, required: false
       argument :name, String, required: false
       argument :paid_credits, String, required: true
+      argument :priority, Integer, required: false
       argument :rate_amount, String, required: true
       argument :recurring_transaction_rules, [Types::Wallets::RecurringTransactionRules::CreateInput], required: false
 
