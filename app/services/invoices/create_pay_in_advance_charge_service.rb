@@ -131,17 +131,8 @@ module Invoices
     end
 
     def create_applied_prepaid_credit
-      wallets.each do |wallet|
-        break if invoice.total_amount_cents <= 0
-
-        prepaid_credit_result = Credits::AppliedPrepaidCreditService.call(invoice:, wallet: wallet)
-        prepaid_credit_result.raise_if_error!
-
-        applied = prepaid_credit_result.prepaid_credit_amount_cents
-        next if applied.zero?
-
-        refresh_amounts(credit_amount_cents: applied)
-      end
+      prepaid_credit_result = Credits::AppliedPrepaidCreditsService.call!(invoice:, wallets:)
+      refresh_amounts(credit_amount_cents: prepaid_credit_result.prepaid_credit_amount_cents)
     end
 
     def refresh_amounts(credit_amount_cents:)
