@@ -134,7 +134,7 @@ module PaymentRequests
             price_data: {
               currency: invoice.currency.downcase,
               unit_amount: invoice.total_due_amount_cents,
-              product_data: { name: invoice.number }
+              product_data: {name: invoice.number}
             }
           }
         end

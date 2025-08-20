@@ -70,7 +70,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
                 price_data: {
                   currency: invoice_1.currency.downcase,
                   unit_amount: invoice_1.total_amount_cents,
-                  product_data: { name: invoice_1.number }
+                  product_data: {name: invoice_1.number}
                 }
               },
               {
@@ -78,8 +78,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
                 price_data: {
                   currency: invoice_2.currency.downcase,
                   unit_amount: invoice_2.total_amount_cents,
-                  product_data: { name: invoice_2.number }
-                  }
+                  product_data: {name: invoice_2.number}
                 }
               }
             ],
@@ -117,7 +116,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
                   price_data: {
                     currency: invocie_1.currency.downcase,
                     unit_amount: invoice_1.total_amount_cents,
-                    product_data: { name: invoice_1.number }
+                    product_data: {name: invoice_1.number}
                   }
                 }
               ],
@@ -135,6 +134,8 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
                 }
               }
             },
+            hash_including({api_key: an_instance_of(String)})
+          )
       end
     end
 
