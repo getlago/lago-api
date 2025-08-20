@@ -103,9 +103,10 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
           expect(existing_override_value.reload.deleted_at).to be_present
           expect(subscription.entitlements.reload).to be_empty
 
-          final_ent = Entitlement::SubscriptionEntitlement.for_subscription(subscription).where(privilege_code: "max").sole
-          expect(final_ent.privilege_plan_value).to eq("25")
-          expect(final_ent.privilege_override_value).to be_nil
+          final_ent = Entitlement::SubscriptionEntitlement.for_subscription(subscription).find { it.code == "seats" }
+          priv = final_ent.privileges.find { it.code == "max" }
+          expect(priv.plan_value).to eq("25")
+          expect(priv.subscription_value).to be_nil
         end
       end
 
@@ -120,9 +121,10 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
           expect(removal.reload.deleted_at).to be_present
           expect(subscription.entitlements.reload).to be_empty
 
-          final_ent = Entitlement::SubscriptionEntitlement.for_subscription(subscription).where(privilege_code: "max").sole
-          expect(final_ent.privilege_plan_value).to eq("25")
-          expect(final_ent.privilege_override_value).to be_nil
+          final_ent = Entitlement::SubscriptionEntitlement.for_subscription(subscription).find { it.code == "seats" }
+          priv = final_ent.privileges.find { it.code == "max" }
+          expect(priv.plan_value).to eq("25")
+          expect(priv.subscription_value).to be_nil
         end
 
         context "when the value is different from plan" do
@@ -183,7 +185,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
         expect(existing_value.reload.deleted_at).to be_nil
         expect(Entitlement::SubscriptionFeatureRemoval.where(feature:, subscription:).count).to eq(1)
 
-        expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription).pluck(:feature_code)).to eq([feature2.code])
+        expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription).map(&:code)).to eq([feature2.code])
       end
     end
 
@@ -210,7 +212,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
         expect(existing_value.reload.deleted_at).to be_present
         expect(Entitlement::SubscriptionFeatureRemoval.where(feature:, subscription:).count).to eq(0)
 
-        expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription).pluck(:feature_code)).to eq([feature2.code])
+        expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription).map(&:code)).to eq([feature2.code])
       end
     end
 
