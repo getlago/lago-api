@@ -310,6 +310,63 @@ RSpec.describe Plans::CreateService, type: :service do
       )
     end
 
+    describe "bill_charges_monthly" do
+      context "when plan is yearly" do
+        let(:create_args) do
+          super().merge(interval: "yearly", bill_charges_monthly: true)
+        end
+
+        it "persists bill_charges_monthly" do
+          plan = result.plan
+          expect(plan.bill_charges_monthly).to eq(true)
+        end
+
+        context "when not provided" do
+          let(:create_args) do
+            super().merge(interval: "yearly").except(:bill_charges_monthly)
+          end
+
+          it "defaults to false" do
+            plan = result.plan
+            expect(plan.bill_charges_monthly).to eq(false)
+          end
+        end
+      end
+
+      context "when plan is semiannual" do
+        let(:create_args) do
+          super().merge(interval: "semiannual", bill_fixed_charges_monthly: true)
+        end
+
+        it "persists bill_fixed_charges_monthly" do
+          plan = result.plan
+          expect(plan.bill_fixed_charges_monthly).to eq(true)
+        end
+
+        context "when not provided" do
+          let(:create_args) do
+            super().merge(interval: "semiannual").except(:bill_fixed_charges_monthly)
+          end
+
+          it "defaults to false" do
+            plan = result.plan
+            expect(plan.bill_fixed_charges_monthly).to eq(false)
+          end
+        end
+      end
+
+      context "when plan is monthly" do
+        let(:create_args) do
+          super().merge(interval: "monthly", bill_fixed_charges_monthly: true)
+        end
+
+        it "ignores the flag and sets it to nil" do
+          plan = result.plan
+          expect(plan.bill_fixed_charges_monthly).to be_nil
+        end
+      end
+    end
+
     describe "bill_fixed_charges_monthly" do
       context "when plan is yearly" do
         let(:create_args) do
@@ -324,6 +381,28 @@ RSpec.describe Plans::CreateService, type: :service do
         context "when not provided" do
           let(:create_args) do
             super().merge(interval: "yearly").except(:bill_fixed_charges_monthly)
+          end
+
+          it "defaults to false" do
+            plan = result.plan
+            expect(plan.bill_fixed_charges_monthly).to eq(false)
+          end
+        end
+      end
+
+      context "when plan is semiannual" do
+        let(:create_args) do
+          super().merge(interval: "semiannual", bill_fixed_charges_monthly: true)
+        end
+
+        it "persists bill_fixed_charges_monthly" do
+          plan = result.plan
+          expect(plan.bill_fixed_charges_monthly).to eq(true)
+        end
+
+        context "when not provided" do
+          let(:create_args) do
+            super().merge(interval: "semiannual").except(:bill_fixed_charges_monthly)
           end
 
           it "defaults to false" do
