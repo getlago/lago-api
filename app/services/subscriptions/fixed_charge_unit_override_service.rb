@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Subscriptions
-  class FixedChargeUnitOverrideService < BaseService
+  class FixedChargeUnitOverrideService < BaseService 
     Result = BaseResult[:fixed_charge_unit_override]
 
     def initialize(subscription:, fixed_charge:, units:)
