@@ -4,12 +4,11 @@ module Types
   module Entitlement
     class SubscriptionEntitlementPrivilegeObject < Types::BaseObject
       field :code, String, null: false
-      field :config, GraphQL::Types::JSON, null: false
+      field :config, Types::Entitlement::PrivilegeConfigObject, null: false
       field :name, String, null: true
-      field :override_value, String, null: true
-      field :plan_value, String, null: true
-      field :value, String, null: true
       field :value_type, Types::Entitlement::PrivilegeValueTypeEnum, null: false
+
+      field :value, String, null: true
     end
   end
 end

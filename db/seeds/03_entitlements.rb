@@ -25,6 +25,19 @@ if sub.nil?
     plan:,
     customer:
   )
+
+  unless Subscription.where(external_id: "sub_entitlement_NO_OVERRIDE", customer:).exists?
+    Subscription.create!(
+      organization:,
+      external_id: "sub_entitlement_NO_OVERRIDE",
+      started_at: Time.current,
+      subscription_at: Time.current,
+      status: :active,
+      billing_time: :calendar,
+      plan:,
+      customer:
+    )
+  end
 end
 
 # SEATS - feature with privilege and subscription overrides
@@ -37,14 +50,14 @@ Entitlement::EntitlementValue.where(organization:, privilege: seats.privileges.w
 Entitlement::Entitlement.where(organization:, feature: seats).with_discarded.delete_all
 seats.privileges.with_discarded.delete_all
 
-max = seats.privileges.create!(organization:, code: "max", name: "Maximum", value_type: "integer")
-max_admins = seats.privileges.create!(organization:, code: "max_admins", name: "Max Admins", value_type: "integer")
-root = seats.privileges.create!(organization:, code: "root", name: "Allow root user", value_type: "boolean")
+max = seats.privileges.create!(organization:, code: "max", name: "Maximum", value_type: "integer", created_at: 20.minutes.ago)
+max_admins = seats.privileges.create!(organization:, code: "max_admins", name: "Max Admins", value_type: "integer", created_at: 10.minutes.ago)
+root = seats.privileges.create!(organization:, code: "root", name: "Allow root user", value_type: "boolean", created_at: 15.minutes.ago)
 
-fe = Entitlement::Entitlement.create!(organization:, feature: seats, plan:)
+fe = Entitlement::Entitlement.create!(organization:, feature: seats, plan:, created_at: 1.hour.ago)
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: max, value: 20)
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: max_admins, value: 3_000, deleted_at: Time.current)
-Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: max_admins, value: 3)
+Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: max_admins, value: 3, created_at: 8.minutes.ago)
 fe_sub = Entitlement::Entitlement.create!(organization:, feature: seats, subscription_id: sub.id)
 
 # Subscription override for max, root does not exist in the plan
@@ -59,7 +72,7 @@ analytics_api_feature = Entitlement::Feature.create_with(
 analytics_api_feature.privileges.with_discarded.delete_all
 
 Entitlement::Entitlement.where(organization:, feature: analytics_api_feature, plan:).with_discarded.delete_all
-Entitlement::Entitlement.create!(organization:, feature: analytics_api_feature, plan:)
+Entitlement::Entitlement.create!(organization:, feature: analytics_api_feature, plan:, created_at: 1.year.ago)
 
 # Feature was in the plan but deleted, and in subscription but deleted
 acls = Entitlement::Feature.create_with(
@@ -105,10 +118,10 @@ provider = sso.privileges.create!(organization:,
   config: {select_options: %w[okta ad google custom]})
 
 Entitlement::Entitlement.where(organization:, feature: sso).with_discarded.delete_all
-fe = Entitlement::Entitlement.create!(organization:, feature: sso, plan:)
+fe = Entitlement::Entitlement.create!(organization:, feature: sso, plan:, created_at: 10.days.ago)
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe, privilege: provider, value: "okta")
 
-fe_sub = Entitlement::Entitlement.create!(organization:, feature: sso, subscription: sub)
+fe_sub = Entitlement::Entitlement.create!(organization:, feature: sso, subscription: sub, created_at: 1.day.ago)
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe_sub, privilege: provider, value: "google")
 
 Entitlement::SubscriptionFeatureRemoval.create!(organization:, feature: sso, deleted_at: Time.current, subscription_id: sub.id)

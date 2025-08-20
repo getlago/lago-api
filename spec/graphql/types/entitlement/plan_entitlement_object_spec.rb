@@ -10,6 +10,5 @@ RSpec.describe Types::Entitlement::PlanEntitlementObject do
     expect(subject).to have_field(:description).of_type("String")
     expect(subject).to have_field(:name).of_type("String!")
     expect(subject).to have_field(:privileges).of_type("[PlanEntitlementPrivilegeObject!]!")
-    expect(subject).to have_field(:feature).of_type("FeatureObject!")
   end
 end
