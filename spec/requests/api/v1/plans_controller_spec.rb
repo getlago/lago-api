@@ -96,7 +96,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         expect(json[:plan][:invoice_display_name]).to eq(create_params[:invoice_display_name])
         expect(json[:plan][:created_at]).to be_present
         expect(json[:plan][:charges].first[:lago_id]).to be_present
-        # expect(json[:plan][:fixed_charges].first[:lago_id]).to be_present
+        expect(json[:plan][:fixed_charges].first[:lago_id]).to be_present
       end
 
       context "when license is not premium" do
@@ -285,7 +285,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           expect(json[:plan][:code]).to eq(create_params[:code])
           expect(json[:plan][:name]).to eq(create_params[:name])
           expect(json[:plan][:created_at]).to be_present
-          # expect(json[:plan][:fixed_charges].first[:lago_id]).to be_present
+          expect(json[:plan][:fixed_charges].first[:lago_id]).to be_present
         end
       end
 
@@ -313,7 +313,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           expect(json[:plan][:name]).to eq(create_params[:name])
           expect(json[:plan][:created_at]).to be_present
           expect(json[:plan][:charges].count).to eq(0)
-          # expect(json[:plan][:fixed_charges].count).to eq(0)
+          expect(json[:plan][:fixed_charges].count).to eq(0)
         end
       end
 
@@ -678,9 +678,9 @@ RSpec.describe Api::V1::PlansController, type: :request do
         subject
 
         expect(response).to have_http_status(:success)
-        # expect(json[:plan][:fixed_charges].count).to eq(2)
-        # expect(json[:plan][:fixed_charges].first[:invoice_display_name]).to eq("Fixed charge 1 updated")
-        # expect(json[:plan][:fixed_charges].last[:invoice_display_name]).to eq("Fixed charge 2")
+        expect(json[:plan][:fixed_charges].count).to eq(2)
+        expect(json[:plan][:fixed_charges].first[:invoice_display_name]).to eq("Fixed charge 1 updated")
+        expect(json[:plan][:fixed_charges].last[:invoice_display_name]).to eq("Fixed charge 2")
       end
     end
 

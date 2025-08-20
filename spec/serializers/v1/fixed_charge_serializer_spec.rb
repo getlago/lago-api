@@ -18,7 +18,7 @@ RSpec.describe ::V1::FixedChargeSerializer do
     expect(result["fixed_charge"]["pay_in_advance"]).to eq(fixed_charge.pay_in_advance)
     expect(result["fixed_charge"]["properties"]).to eq(fixed_charge.properties)
     expect(result["fixed_charge"]["taxes"]).to eq([])
-    expect(result["fixed_charge"]["units"]).to eq(fixed_charge.units)
+    expect(result["fixed_charge"]["units"]).to eq(fixed_charge.units.to_s)
   end
 
   context "when fixed charge has taxes" do
