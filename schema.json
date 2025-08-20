@@ -51863,6 +51863,12 @@
               "deprecationReason": null
             },
             {
+              "name": "TZ_AMERICA_GODTHAB",
+              "description": "America/Godthab",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "TZ_AMERICA_GUATEMALA",
               "description": "America/Guatemala",
               "isDeprecated": false,
@@ -52115,6 +52121,12 @@
               "deprecationReason": null
             },
             {
+              "name": "TZ_ASIA_RANGOON",
+              "description": "Asia/Rangoon",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "TZ_ASIA_RIYADH",
               "description": "Asia/Riyadh",
               "isDeprecated": false,
@@ -52363,6 +52375,12 @@
             {
               "name": "TZ_EUROPE_KALININGRAD",
               "description": "Europe/Kaliningrad",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TZ_EUROPE_KIEV",
+              "description": "Europe/Kiev",
               "isDeprecated": false,
               "deprecationReason": null
             },
