@@ -30,10 +30,9 @@ module Credits
           invoice.prepaid_credit_amount_cents += amount
           result.prepaid_credit_amount_cents  += amount
         end
-
-        invoice.save! if invoice.changed?
       end
 
+      #after_commit { SendWebhookJob.perform_later("wallet_transaction.created", result.wallet_transaction) }
       result
     end
 
