@@ -96,7 +96,7 @@ module WalletTransactions
         wallet_credit:,
         transaction_type: :inbound,
         status: :pending,
-        from_source: source,
+        source:,
         transaction_status: :purchased,
         invoice_requires_successful_payment:,
         metadata:
@@ -118,7 +118,7 @@ module WalletTransactions
           transaction_type: :inbound,
           status: :settled,
           settled_at: Time.current,
-          from_source: source,
+          source:,
           transaction_status: :granted,
           invoice_requires_successful_payment:,
           metadata:
