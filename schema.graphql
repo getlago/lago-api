@@ -2622,6 +2622,7 @@ input CreateCustomerWalletInput {
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
   paidCredits: String!
+  priority: Int
   rateAmount: String!
   recurringTransactionRules: [CreateRecurringTransactionRuleInput!]
 }
@@ -4152,6 +4153,7 @@ type CustomerPortalWallet {
   name: String
   ongoingBalanceCents: BigInt!
   ongoingUsageBalanceCents: BigInt!
+  priority: Int!
   rateAmount: Float!
   status: WalletStatusEnum!
 }
@@ -10650,6 +10652,7 @@ input UpdateCustomerWalletInput {
   id: ID!
   invoiceRequiresSuccessfulPayment: Boolean
   name: String
+  priority: Int
   recurringTransactionRules: [UpdateRecurringTransactionRuleInput!]
 }
 
@@ -11196,6 +11199,7 @@ type Wallet {
   name: String
   ongoingBalanceCents: BigInt!
   ongoingUsageBalanceCents: BigInt!
+  priority: Int!
   rateAmount: Float!
   recurringTransactionRules: [RecurringTransactionRule!]
   status: WalletStatusEnum!
