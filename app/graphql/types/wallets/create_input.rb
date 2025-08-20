@@ -13,7 +13,6 @@ module Types
       argument :name, String, required: false
       argument :priority, Integer, required: false
       argument :paid_credits, String, required: true
-      argument :priority, Integer, required: true
       argument :rate_amount, String, required: true
 
       argument :ignore_paid_top_up_limits_on_creation, Boolean, required: false
