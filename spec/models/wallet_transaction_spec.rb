@@ -3,6 +3,9 @@
 require "rails_helper"
 
 RSpec.describe WalletTransaction, type: :model do
+  it { is_expected.to validate_presence_of(:priority) }
+  it { is_expected.to validate_inclusion_of(:priority).in_range(1..50) }
+
   describe "associations" do
     it { is_expected.to belong_to(:wallet) }
     it { is_expected.to belong_to(:invoice).optional }
@@ -18,6 +21,29 @@ RSpec.describe WalletTransaction, type: :model do
         "transaction_type" => hash_including("inbound", "outbound"),
         "source" => hash_including("manual", "interval", "threshold")
       )
+    end
+  end
+
+  describe ".order_by_priority" do
+    subject { described_class.order_by_priority }
+
+    let(:wallet) { create(:wallet) }
+    let!(:purchased_10) { create(:wallet_transaction, wallet:, priority: 10, transaction_status: :purchased, created_at: 3.days.ago) }
+    let!(:granted_5) { create(:wallet_transaction, wallet:, priority: 5, transaction_status: :granted, created_at: 2.days.ago) }
+    let!(:granted_10) { create(:wallet_transaction, wallet:, priority: 10, transaction_status: :granted, created_at: 1.day.ago) }
+    let!(:voided_5) { create(:wallet_transaction, wallet:, priority: 5, transaction_status: :voided, created_at: 4.days.ago) }
+    let!(:invoiced_15) { create(:wallet_transaction, wallet:, priority: 15, transaction_status: :invoiced, created_at: 5.days.ago) }
+    let!(:granted_10_older) { create(:wallet_transaction, wallet:, priority: 10, transaction_status: :granted, created_at: 2.days.ago) }
+
+    it "orders by priority first, then by transaction_status, then by created_at" do
+      expect(subject.to_a).to eq([
+        granted_5,
+        voided_5,
+        granted_10_older, # priority 10, granted, 2 days ago
+        granted_10, # priority 10, granted, 1 day ago
+        purchased_10,
+        invoiced_15
+      ])
     end
   end
 

@@ -2,12 +2,13 @@
 
 module WalletTransactions
   class VoidService < BaseService
-    def initialize(wallet:, wallet_credit:, from_source: :manual, metadata: {}, credit_note_id: nil)
+    def initialize(wallet:, wallet_credit:, from_source: :manual, metadata: {}, credit_note_id: nil, priority: 50)
       @wallet = wallet
       @wallet_credit = wallet_credit
       @from_source = from_source
       @metadata = metadata
       @credit_note_id = credit_note_id
+      @priority = priority
 
       super
     end
@@ -25,7 +26,8 @@ module WalletTransactions
           source: from_source,
           transaction_status: :voided,
           metadata:,
-          credit_note_id:
+          credit_note_id:,
+          priority:
         ).wallet_transaction
         Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
         result.wallet_transaction = wallet_transaction
@@ -36,6 +38,6 @@ module WalletTransactions
 
     private
 
-    attr_reader :wallet, :wallet_credit, :from_source, :metadata, :credit_note_id
+    attr_reader :wallet, :wallet_credit, :from_source, :metadata, :credit_note_id, :priority
   end
 end

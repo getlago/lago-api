@@ -3267,7 +3267,8 @@ CREATE TABLE public.wallet_transactions (
     credit_note_id uuid,
     failed_at timestamp(6) without time zone,
     organization_id uuid NOT NULL,
-    lock_version integer DEFAULT 0 NOT NULL
+    lock_version integer DEFAULT 0 NOT NULL,
+    priority integer DEFAULT 50 NOT NULL
 );
 
 
@@ -9692,6 +9693,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250818154000'),
 ('20250812132802'),
 ('20250812082721'),
 ('20250806174150'),

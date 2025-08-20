@@ -2638,6 +2638,7 @@ input CreateCustomerWalletTransactionInput {
   invoiceRequiresSuccessfulPayment: Boolean
   metadata: [WalletTransactionMetadataInput!]
   paidCredits: String
+  priority: Int
   voidedCredits: String
   walletId: ID!
 }
@@ -11242,6 +11243,7 @@ type WalletTransaction {
   invoice: Invoice
   invoiceRequiresSuccessfulPayment: Boolean!
   metadata: [WalletTransactionMetadataObject!]
+  priority: Int!
   settledAt: ISO8601DateTime
   source: WalletTransactionSourceEnum!
   status: WalletTransactionStatusEnum!

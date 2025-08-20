@@ -47,9 +47,10 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
           .to be_a(WalletTransaction)
           .and be_persisted
           .and have_attributes(
-            source: "manual",
+            invoice_requires_successful_payment: false,
             metadata: [],
-            invoice_requires_successful_payment: false
+            priority: 50,
+            source: "manual"
           )
       end
     end
@@ -69,7 +70,8 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
           invoice_requires_successful_payment: true,
           settled_at: Date.yesterday,
           credit_note_id: credit_note.id,
-          invoice_id: invoice.id
+          invoice_id: invoice.id,
+          priority: 25
         }
       end
 
@@ -85,11 +87,12 @@ RSpec.describe WalletTransactions::CreateService, type: :service do
         expect(wallet_transaction.transaction_status).to eq("granted")
         expect(wallet_transaction.source).to eq("threshold")
         expect(wallet_transaction.metadata).to eq([{"key" => "value"}])
-        expect(wallet_transaction.invoice_requires_successful_payment).to be_truthy
+        expect(wallet_transaction.invoice_requires_successful_payment).to be true
         expect(wallet_transaction.settled_at).to eq(Date.yesterday)
         expect(wallet_transaction.credit_note_id).to eq(credit_note.id)
         expect(wallet_transaction.invoice_id).to eq(invoice.id)
         expect(wallet_transaction.credit_amount).to eq(credit_amount)
+        expect(wallet_transaction.priority).to eq 25
       end
     end
   end
