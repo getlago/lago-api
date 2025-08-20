@@ -23,7 +23,8 @@ module V1
         last_balance_sync_at: model.last_balance_sync_at&.iso8601,
         last_consumed_credit_at: model.last_consumed_credit_at&.iso8601,
         terminated_at: model.terminated_at,
-        invoice_requires_successful_payment: model.invoice_requires_successful_payment?
+        invoice_requires_successful_payment: model.invoice_requires_successful_payment?,
+        priority: model.priority
       }
 
       payload.merge!(recurring_transaction_rules) if include?(:recurring_transaction_rules)
