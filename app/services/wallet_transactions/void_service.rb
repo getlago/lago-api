@@ -22,7 +22,7 @@ module WalletTransactions
           transaction_type: :outbound,
           status: :settled,
           settled_at: Time.current,
-          from_source:,
+          source: from_source,
           transaction_status: :voided,
           metadata:,
           credit_note_id:
