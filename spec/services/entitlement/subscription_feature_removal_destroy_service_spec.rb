@@ -24,10 +24,9 @@ RSpec.describe Entitlement::SubscriptionFeatureRemovalDestroyService, type: :ser
     around { |test| lago_premium!(&test) }
 
     it "returns success" do
-      all_entitlements = Entitlement::SubscriptionEntitlement.for_subscription(subscription)
-      expect(all_entitlements).to be_empty
+      expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription)).to be_empty
       result
-      expect(all_entitlements.reload.pluck(:feature_code)).to eq ["seats"]
+      expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription).pluck(:feature_code)).to eq ["seats"]
 
       expect(result).to be_success
       expect(result.subscription_feature_removal).to eq(subscription_feature_removal)

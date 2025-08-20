@@ -8,19 +8,16 @@ module V1
       end
 
       def serialize_models
-        collection.group_by(&:feature_code).map do |feature_code, feature_entitlements|
+        collection.sort_by(&:entitlement_created_at).group_by(&:feature_code).map do |feature_code, feature_entitlements|
           first_entitlement = feature_entitlements.first
 
           {
             code: feature_code,
             name: first_entitlement.feature_name,
             description: first_entitlement.feature_description,
-            privileges: feature_entitlements.filter_map do |e|
-              # NOTE: this can happen when ALL privileges are overridden in the subscription.
-              #       In this case, the view will return an empty line for the plan entitlements. Because it's grouped per feature it's okay
-              #       but ideally the view should be improved to remove these lines
-              next if e.privilege_code.blank?
-
+            privileges: feature_entitlements.reject do |e|
+              e.privilege_code.blank?
+            end.sort_by(&:privilege_value_created_at).map do |e|
               {
                 code: e.privilege_code,
                 name: e.privilege_name,

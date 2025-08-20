@@ -39,12 +39,11 @@ RSpec.describe Entitlement::SubscriptionFeatureRemovalCreateService, type: :serv
     end
 
     it "creates the removal with correct attributes" do
-      all_entitlements = Entitlement::SubscriptionEntitlement.for_subscription(subscription)
-      expect(all_entitlements.pluck(:feature_code)).to eq ["seats"]
+      expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription).pluck(:feature_code)).to eq ["seats"]
 
       result
 
-      expect(all_entitlements.reload).to be_empty
+      expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription)).to be_empty
 
       removal = result.subscription_feature_removal
       expect(removal.organization).to eq(organization)
