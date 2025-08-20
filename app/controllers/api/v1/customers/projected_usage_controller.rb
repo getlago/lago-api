@@ -32,6 +32,14 @@ module Api
         def resource_name
           "customer_usage"
         end
+
+        def authorize
+          super
+
+          return if current_organization.projected_usage_enabled?
+
+          forbidden_error(code: "projected_usage_not_enabled")
+        end
       end
     end
   end

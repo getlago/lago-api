@@ -5615,6 +5615,7 @@ enum IntegrationTypeEnum {
   okta
   preview
   progressive_billing
+  projected_usage
   remove_branding_watermark
   revenue_analytics
   revenue_share
@@ -8028,6 +8029,7 @@ enum PremiumIntegrationTypeEnum {
   okta
   preview
   progressive_billing
+  projected_usage
   remove_branding_watermark
   revenue_analytics
   revenue_share
@@ -8446,6 +8448,11 @@ type Query {
   Query invoices of a customer
   """
   customerInvoices(customerId: ID!, limit: Int, page: Int, searchTerm: String, status: [InvoiceStatusTypeEnum!]): InvoiceCollection!
+
+  """
+  Query the projected usage of the customer on the current billing period
+  """
+  customerPortalCustomerProjectedUsage(subscriptionId: ID!): CustomerProjectedUsage!
 
   """
   Query the usage of the customer on the current billing period
