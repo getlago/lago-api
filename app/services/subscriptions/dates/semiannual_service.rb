@@ -3,7 +3,27 @@
 module Subscriptions
   module Dates
     class SemiannualService < Subscriptions::DatesService
+      def first_month_in_semiannual_period?
+        return billing_date.month == 1 || billing_date.month == 6 if calendar?
+
+        billing_from_date.month == subscription_at.month || billing_from_date.month == (subscription_at.month + 6) % 12
+      end
+
+      def first_month_in_first_semiannual_period?
+        return (billing_date.month == 1 || billing_date.month == 6) && billing_date.year == subscription_at.year if calendar?
+
+        billing_from_date.month == subscription_at.month && billing_from_date.year == subscription_at.year
+      end
+
       private
+
+      def monthly_service
+        @monthly_service ||= Subscriptions::Dates::MonthlyService.new(subscription, billing_date, current_usage)
+      end
+
+      def billing_from_date
+        @billing_from_date ||= monthly_service.compute_from_date(billing_date)
+      end
 
       def compute_from_date(date = base_date)
         if plan.pay_in_advance? || terminated_pay_in_arrears?
