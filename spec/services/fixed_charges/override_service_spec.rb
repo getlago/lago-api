@@ -224,9 +224,11 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
 
           expect(result).not_to be_success
           expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:fixed_charge]).to eq(["invalid_properties"])
+          # note: properties are being filtered for the matching charge model,
+          # and in case properties are not matching the charge model, they are fully filtered out
+          expect(result.error.messages[:properties]).to eq(["value_is_mandatory"])
         end
       end
     end
   end
-end 
+end
