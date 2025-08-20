@@ -36,6 +36,13 @@ module Plans
           Charges::OverrideService.call(charge:, params: charge_params)
         end
 
+        plan.fixed_charges.find_each do |fixed_charge|
+          fixed_charge_params = (
+            params[:fixed_charges]&.find { |p| p[:id] == fixed_charge.id } || {}
+          ).merge(plan_id: new_plan.id)
+          FixedCharges::OverrideService.call(fixed_charge:, params: fixed_charge_params)
+        end
+
         if params[:usage_thresholds].present? &&
             License.premium? &&
             plan.organization.progressive_billing_enabled?
@@ -71,6 +78,7 @@ module Plans
 
     def track_plan_created(plan)
       count_by_charge_model = plan.charges.group(:charge_model).count
+      fixed_charges_count_by_charge_model = plan.fixed_charges.group(:charge_model).count
 
       SegmentTrackJob.perform_later(
         membership_id: CurrentContext.membership,
@@ -85,10 +93,14 @@ module Plans
           plan_period: plan.pay_in_advance ? "advance" : "arrears",
           trial: plan.trial_period,
           nb_charges: plan.charges.count,
+          nb_fixed_charges: plan.fixed_charges.count,
           nb_standard_charges: count_by_charge_model["standard"] || 0,
           nb_percentage_charges: count_by_charge_model["percentage"] || 0,
           nb_graduated_charges: count_by_charge_model["graduated"] || 0,
           nb_package_charges: count_by_charge_model["package"] || 0,
+          nb_standard_fixed_charges: fixed_charges_count_by_charge_model["standard"] || 0,
+          nb_graduated_fixed_charges: fixed_charges_count_by_charge_model["graduated"] || 0,
+          nb_volume_fixed_charges: fixed_charges_count_by_charge_model["volume"] || 0,
           organization_id: plan.organization_id,
           parent_id: plan.parent_id
         }
