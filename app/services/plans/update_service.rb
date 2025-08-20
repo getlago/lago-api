@@ -97,10 +97,13 @@ module Plans
       params[:bill_fixed_charges_monthly] || false
     end
 
+    def cascade_needed?
+      cascade? && plan.children.present?
+    end
+
     def cascade_subscription_fee_update(old_amount_cents)
-      return unless cascade?
+      return unless cascade_needed?
       return if old_amount_cents == plan.amount_cents
-      return if plan.children.empty?
 
       plan.children.where(amount_cents: old_amount_cents).find_each do |p|
         Plans::UpdateAmountJob.perform_later(plan: p, amount_cents: plan.amount_cents, expected_amount_cents: old_amount_cents)
@@ -108,22 +111,19 @@ module Plans
     end
 
     def cascade_charge_creation(charge, payload_charge)
-      return unless cascade?
-      return if plan.children.empty?
+      return unless cascade_needed?
 
       Charges::CreateChildrenJob.perform_later(charge:, payload: payload_charge)
     end
 
     def cascade_charge_removal(charge)
-      return unless cascade?
-      return if plan.children.empty?
+      return unless cascade_needed?
 
       Charges::DestroyChildrenJob.perform_later(charge.id)
     end
 
     def cascade_charge_update(charge, payload_charge)
-      return unless cascade?
-      return if plan.children.empty?
+      return unless cascade_needed?
 
       old_parent_attrs = charge.attributes
       old_parent_filters_attrs = charge.filters.map(&:attributes)
@@ -134,6 +134,28 @@ module Plans
         old_parent_attrs:,
         old_parent_filters_attrs:,
         old_parent_applied_pricing_unit_attrs:
+      )
+    end
+
+    def cascade_fixed_charge_creation(fixed_charge, payload_fixed_charge)
+      return unless cascade_needed?
+
+      FixedCharges::CreateChildrenJob.perform_later(fixed_charge:, payload: payload_fixed_charge)
+    end
+
+    def cascade_fixed_charge_removal(fixed_charge)
+      return unless cascade_needed?
+
+      FixedCharges::DestroyChildrenJob.perform_later(fixed_charge.id)
+    end
+
+    def cascade_fixed_charge_update(fixed_charge, payload_fixed_charge)
+      return unless cascade_needed?
+
+      old_parent_attrs = fixed_charge.attributes
+      FixedCharges::UpdateChildrenJob.perform_later(
+        params: payload_fixed_charge.deep_stringify_keys,
+        old_parent_attrs:
       )
     end
 
@@ -172,7 +194,7 @@ module Plans
 
         if charge
           cascade_charge_update(charge, payload_charge)
-          Charges::UpdateService.call(charge:, params: payload_charge).raise_if_error!
+          Charges::UpdateService.call!(charge:, params: payload_charge)
 
           next
         end
@@ -197,7 +219,36 @@ module Plans
     end
 
     def process_fixed_charges(plan, params_fixed_charges)
-      # TODO: Implement
+      created_fixed_charges_ids = []
+
+      hash_fixed_charges = params_fixed_charges.map { |c| c.to_h.deep_symbolize_keys }
+      hash_fixed_charges.each do |payload_fixed_charge|
+        fixed_charge = plan.fixed_charges.find_by(id: payload_fixed_charge[:id])
+
+        if fixed_charge
+          cascade_fixed_charge_update(fixed_charge, payload_fixed_charge)
+          FixedCharges::UpdateService.call!(fixed_charge:, params: payload_fixed_charge)
+
+          next
+        end
+
+        create_fixed_charge_result = FixedCharges::CreateService.call!(plan:, params: payload_fixed_charge)
+
+        after_commit { cascade_fixed_charge_creation(create_fixed_charge_result.fixed_charge, payload_fixed_charge) }
+        created_fixed_charges_ids.push(create_fixed_charge_result.fixed_charge.id)
+      end
+
+      # NOTE: Delete fixed_charges that are no more linked to the plan
+      sanitize_fixed_charges(plan, hash_fixed_charges, created_fixed_charges_ids)
+    end
+
+    def sanitize_fixed_charges(plan, args_fixed_charges, created_fixed_charges_ids)
+      args_fixed_charges_ids = args_fixed_charges.map { |c| c[:id] }.compact
+      fixed_charges_ids = plan.fixed_charges.pluck(:id) - args_fixed_charges_ids - created_fixed_charges_ids
+      plan.fixed_charges.where(id: fixed_charges_ids).find_each do |fixed_charge|
+        after_commit { cascade_fixed_charge_removal(fixed_charge) }
+        FixedCharges::DestroyService.call(fixed_charge:)
+      end
     end
 
     # NOTE: We should remove pending subscriptions
