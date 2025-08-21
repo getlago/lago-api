@@ -9752,11 +9752,6 @@ enum TimezoneEnum {
   TZ_AMERICA_DENVER
 
   """
-  America/Godthab
-  """
-  TZ_AMERICA_GODTHAB
-
-  """
   America/Guatemala
   """
   TZ_AMERICA_GUATEMALA
@@ -9820,6 +9815,11 @@ enum TimezoneEnum {
   America/New_York
   """
   TZ_AMERICA_NEW_YORK
+
+  """
+  America/Nuuk
+  """
+  TZ_AMERICA_NUUK
 
   """
   America/Phoenix
@@ -9967,11 +9967,6 @@ enum TimezoneEnum {
   TZ_ASIA_NOVOSIBIRSK
 
   """
-  Asia/Rangoon
-  """
-  TZ_ASIA_RANGOON
-
-  """
   Asia/Riyadh
   """
   TZ_ASIA_RIYADH
@@ -10040,6 +10035,11 @@ enum TimezoneEnum {
   Asia/Yakutsk
   """
   TZ_ASIA_YAKUTSK
+
+  """
+  Asia/Yangon
+  """
+  TZ_ASIA_YANGON
 
   """
   Asia/Yekaterinburg
@@ -10177,9 +10177,9 @@ enum TimezoneEnum {
   TZ_EUROPE_KALININGRAD
 
   """
-  Europe/Kiev
+  Europe/Kyiv
   """
-  TZ_EUROPE_KIEV
+  TZ_EUROPE_KYIV
 
   """
   Europe/Lisbon
