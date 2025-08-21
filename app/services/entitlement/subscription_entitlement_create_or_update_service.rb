@@ -65,7 +65,7 @@ module Entitlement
         create_entitlement_and_values_for_subscription
       elsif plan_entitlement && privilege_params_same_as_plan?(plan_entitlement)
         # Restore the plan default by removing all overrides
-        sub_entitlement&.values&.update_all(deleted_at: Time.zone.now)
+        sub_entitlement&.values&.update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
         sub_entitlement&.discard!
         feature_removal = removals.find { it.entitlement_feature_id == feature.id }
         feature_removal&.discard!

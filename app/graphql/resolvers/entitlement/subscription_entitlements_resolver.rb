@@ -14,10 +14,10 @@ module Resolvers
 
       type Types::Entitlement::SubscriptionEntitlementObject.collection_type, null: false
 
-      def resolve(**args)
+      def resolve(subscription_id:)
         raise forbidden_error(code: "feature_unavailable") unless License.premium?
 
-        subscription = current_organization.subscriptions.find(args[:subscription_id])
+        subscription = current_organization.subscriptions.find(subscription_id)
 
         ::Entitlement::SubscriptionEntitlement.for_subscription(subscription)
       rescue ActiveRecord::RecordNotFound

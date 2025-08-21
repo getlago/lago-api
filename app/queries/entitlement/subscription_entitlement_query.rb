@@ -22,7 +22,7 @@ module Entitlement
       privileges_result = ActiveRecord::Base.connection.exec_query(
         privilege_sql,
         "subscription_entitlement_privileges",
-        ["{#{plan_entitlement_ids.join(",")}}", "{#{sub_entitlement_ids.join(",")}}"]
+        [prepare_ids(plan_entitlement_ids), prepare_ids(sub_entitlement_ids)]
       )
 
       privileges_by_feature_id = privileges_result.map do |row|
@@ -129,6 +129,10 @@ module Entitlement
             p.deleted_at IS NULL
         ORDER BY ordering_date
       SQL
+    end
+
+    def prepare_ids(ids)
+      "{#{ids.map { ActiveRecord::Base.connection.quote_string(it) }.join(",")}}"
     end
   end
 end

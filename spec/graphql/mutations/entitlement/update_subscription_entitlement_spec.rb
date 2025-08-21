@@ -41,10 +41,10 @@ RSpec.describe Mutations::Entitlement::UpdateSubscriptionEntitlement, type: :gra
 
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
-  it_behaves_like "requires permission", "plans:update"
+  it_behaves_like "requires permission", "subscriptions:update"
   it_behaves_like "requires Premium license"
 
-  context "feature is not on plan nor on subscription" do
+  context "when feature is not on plan nor on subscription" do
     it "adds the feature to the subscription" do
       result = subject
 
@@ -63,7 +63,7 @@ RSpec.describe Mutations::Entitlement::UpdateSubscriptionEntitlement, type: :gra
     end
   end
 
-  context "when feature is on plan" do
+  context "when feature is on plan but the privilege" do
     let(:privilege2) { create(:privilege, feature:, code: "reset", value_type: "select", config: {select_options: %w[email slack]}) }
     let(:input) do
       {
@@ -103,7 +103,7 @@ RSpec.describe Mutations::Entitlement::UpdateSubscriptionEntitlement, type: :gra
     end
   end
 
-  context "feature is on plan" do
+  context "when feature is on plan" do
     it "overrides the value" do
       entitlement = create(:entitlement, plan:, feature:)
       create(:entitlement_value, entitlement:, privilege:, value: "2")

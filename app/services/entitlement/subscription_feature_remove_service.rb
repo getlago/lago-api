@@ -43,7 +43,7 @@ module Entitlement
     def delete_feature_entitlement_if_exists
       entitlement = subscription.entitlements.find_by(feature: feature)
       return unless entitlement
-      entitlement.values.update_all(deleted_at: Time.zone.now)
+      entitlement.values.update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
       entitlement.discard!
     end
 
