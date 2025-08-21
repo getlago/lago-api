@@ -928,14 +928,100 @@ RSpec.describe Api::V1::InvoicesController, type: :request do
   end
 
   describe "POST /api/v1/invoices/:id/download" do
-    subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/download") }
+    ["download", "download_pdf"].each do |route|
+      subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/#{route}") }
 
-    let(:invoice) { create(:invoice, :draft, customer:, organization:) }
+      let(:invoice) { create(:invoice, customer:, organization:, status: invoice_status) }
+      let(:invoice_status) { :finalized }
+      let(:invoice_id) { invoice.id }
+
+      include_examples "requires API permission", "invoice", "write"
+
+      context "with /#{route}" do
+        context "without generated pdf" do
+          before do
+            allow(Invoices::GeneratePdfJob).to receive(:perform_later)
+          end
+
+          it "calls generate pdf async" do
+            subject
+
+            expect(Invoices::GeneratePdfJob).to have_received(:perform_later)
+          end
+        end
+
+        context "when generated pdf" do
+          before do
+            allow(Invoices::GeneratePdfJob).to receive(:perform_later)
+
+            invoice.file.attach(
+              io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.pdf"))),
+              filename: "invoice.pdf",
+              content_type: "application/pdf"
+            )
+          end
+
+          it "does not regenerate" do
+            subject
+
+            expect(Invoices::GeneratePdfJob).not_to have_received(:perform_later)
+          end
+        end
+
+        context "when invoice is draft" do
+          let(:invoice_status) { :draft }
+
+          it "returns not found" do
+            subject
+            expect(response).to have_http_status(:not_found)
+          end
+        end
+      end
+    end
+  end
+
+  describe "POST /api/v1/invoices/:id/download_xml" do
+    subject { post_with_token(organization, "/api/v1/invoices/#{invoice_id}/download_xml") }
+
+    let(:invoice) { create(:invoice, customer:, organization:, status: invoice_status) }
+    let(:invoice_status) { :finalized }
     let(:invoice_id) { invoice.id }
 
     include_examples "requires API permission", "invoice", "write"
 
+    context "without generated pdf" do
+      before do
+        allow(Invoices::GenerateXmlJob).to receive(:perform_later)
+      end
+
+      it "calls generate pdf async" do
+        subject
+
+        expect(Invoices::GenerateXmlJob).to have_received(:perform_later)
+      end
+    end
+
+    context "with generated pdf" do
+      before do
+        allow(Invoices::GenerateXmlJob).to receive(:perform_later)
+
+        invoice.xml_file.attach(
+          io: StringIO.new(File.read(Rails.root.join("spec/fixtures/blank.xml"))),
+          filename: "invoice.xml",
+          content_type: "application/xml"
+        )
+      end
+
+      it "does not regenerate" do
+        subject
+
+        expect(Invoices::GenerateXmlJob).not_to have_received(:perform_later)
+      end
+    end
+
     context "when invoice is draft" do
+      let(:invoice_status) { :draft }
+
       it "returns not found" do
         subject
         expect(response).to have_http_status(:not_found)
