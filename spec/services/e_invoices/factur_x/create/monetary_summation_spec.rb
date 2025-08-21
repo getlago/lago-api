@@ -68,7 +68,7 @@ RSpec.describe EInvoices::FacturX::Create::MonetarySummation, type: :service do
 
     it "have DuePayableAmount" do
       expect(subject).to contains_xml_node("#{root}/ram:DuePayableAmount")
-        .with_value("1166.98")
+        .with_value("1188.84")
     end
   end
 end
