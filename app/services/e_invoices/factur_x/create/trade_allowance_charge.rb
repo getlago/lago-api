@@ -4,9 +4,6 @@ module EInvoices
   module FacturX
     module Create
       class TradeAllowanceCharge < Builder
-        INVOICE_DISCOUNT = false
-        INVOICE_ADDITIONAL_CHARGE = true
-
         def initialize(xml:, invoice:, tax_rate:, amount:)
           @tax_rate = tax_rate
           @amount = amount
@@ -20,10 +17,10 @@ module EInvoices
               xml["udt"].Indicator INVOICE_DISCOUNT
             end
             xml["ram"].ActualAmount format_number(amount)
-            xml["ram"].Reason reason
+            xml["ram"].Reason discount_reason
             xml["ram"].CategoryTradeTax do
               xml["ram"].TypeCode VAT
-              xml["ram"].CategoryCode category_code(tax_rate:)
+              xml["ram"].CategoryCode tax_category_code(tax_rate:)
               xml["ram"].RateApplicablePercent format_number(tax_rate)
             end
           end
@@ -32,10 +29,6 @@ module EInvoices
         private
 
         attr_accessor :tax_rate, :amount
-
-        def reason
-          I18n.t("invoice.e_invoicing.discount_reason", tax_rate: percent(tax_rate))
-        end
       end
     end
   end
