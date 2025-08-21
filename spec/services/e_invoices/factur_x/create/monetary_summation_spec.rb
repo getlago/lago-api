@@ -56,6 +56,11 @@ RSpec.describe EInvoices::FacturX::Create::MonetarySummation, type: :service do
         .with_attribute("currencyID", "USD")
     end
 
+    it "have GrandTotalAmount" do
+      expect(subject).to contains_xml_node("#{root}/ram:GrandTotalAmount")
+        .with_value("1188.84")
+    end
+
     it "have TotalPrepaidAmount" do
       expect(subject).to contains_xml_node("#{root}/ram:TotalPrepaidAmount")
         .with_value("21.86")
