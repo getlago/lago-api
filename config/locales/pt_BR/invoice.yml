@@ -42,6 +42,7 @@ pt_BR:
       flat_fee_for_the_first: Taxa fixa para os primeiros %{to}
       flat_fee_for_the_last: Taxa fixa para %{from} e acima
       flat_fee_for_the_next: Taxa fixa para os próximos %{from} até %{to}
+    half_year: semestre
     iban: IBAN
     invoice_number: Número da Fatura
     issue_date: Data de Emissão
@@ -80,6 +81,7 @@ pt_BR:
     self_billed:
       document_name: Fatura de autofaturamento
       footer: Esta fatura de autofaturamento foi emitida pelo cliente em nome do parceiro, com seu consentimento. O parceiro concordou em não emitir sua própria fatura para esta transação.
+    semiannual: Semestral
     sort_code: Código de classificação
     sub_total: Subtotal
     sub_total_with_tax: Subtotal (incl. imposto)

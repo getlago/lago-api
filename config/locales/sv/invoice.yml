@@ -41,6 +41,7 @@ sv:
       flat_fee_for_the_first: Fast avgift för de första %{to}
       flat_fee_for_the_last: Fast avgift för %{from} och högre
       flat_fee_for_the_next: Fast avgift för de nästa %{from} till %{to}
+    half_year: halvår
     iban: IBAN
     invoice_number: Fakturanummer
     issue_date: Fakturadatum
@@ -79,6 +80,7 @@ sv:
     self_billed:
       document_name: Självfakturering
       footer: Denna självfaktura har utfärdats av kunden för partnerns räkning, med deras samtycke. Partnern har gått med på att inte utfärda en egen faktura för denna transaktion.
+    semiannual: Halvårsvis
     sort_code: Sorteringskod
     sub_total: Delsumma
     sub_total_with_tax: Delsumma (inkl. moms)

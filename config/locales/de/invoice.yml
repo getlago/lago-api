@@ -42,6 +42,7 @@ de:
       flat_fee_for_the_first: Pauschalgebühr für die ersten %{to}
       flat_fee_for_the_last: Pauschalgebühr für %{from} und höher
       flat_fee_for_the_next: Pauschalgebühr für die nächsten %{from} bis %{to}
+    half_year: Halbjahr
     iban: IBAN
     invoice_number: Rechnungsnummer
     issue_date: Ausgabedatum
@@ -80,6 +81,7 @@ de:
     self_billed:
       document_name: Gutschriftrechnung
       footer: Diese Gutschriftrechnung wurde vom Kunden im Namen des Partners mit dessen Zustimmung erstellt. Der Partner hat zugestimmt, keine eigene Rechnung für diese Transaktion auszustellen.
+    semiannual: Halbjährlich
     sort_code: Sortiercode
     sub_total: Zwischensumme
     sub_total_with_tax: Zwischensumme (inkl. Steuern)
