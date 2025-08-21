@@ -51968,12 +51968,6 @@
               "deprecationReason": null
             },
             {
-              "name": "TZ_AMERICA_GODTHAB",
-              "description": "America/Godthab",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "TZ_AMERICA_GUATEMALA",
               "description": "America/Guatemala",
               "isDeprecated": false,
@@ -52048,6 +52042,12 @@
             {
               "name": "TZ_AMERICA_NEW_YORK",
               "description": "America/New_York",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TZ_AMERICA_NUUK",
+              "description": "America/Nuuk",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -52226,12 +52226,6 @@
               "deprecationReason": null
             },
             {
-              "name": "TZ_ASIA_RANGOON",
-              "description": "Asia/Rangoon",
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "TZ_ASIA_RIYADH",
               "description": "Asia/Riyadh",
               "isDeprecated": false,
@@ -52312,6 +52306,12 @@
             {
               "name": "TZ_ASIA_YAKUTSK",
               "description": "Asia/Yakutsk",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "TZ_ASIA_YANGON",
+              "description": "Asia/Yangon",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -52484,8 +52484,8 @@
               "deprecationReason": null
             },
             {
-              "name": "TZ_EUROPE_KIEV",
-              "description": "Europe/Kiev",
+              "name": "TZ_EUROPE_KYIV",
+              "description": "Europe/Kyiv",
               "isDeprecated": false,
               "deprecationReason": null
             },
