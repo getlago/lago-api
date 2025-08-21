@@ -62,7 +62,7 @@ module Entitlement
       if plan_entitlement.nil? && sub_entitlement.nil?
         feature_removal = removals.find { it.entitlement_feature_id == feature.id }
         feature_removal&.discard!
-        sub_entitlement = create_entitlement_and_values_for_subscription
+        create_entitlement_and_values_for_subscription
       elsif plan_entitlement && privilege_params_same_as_plan?(plan_entitlement)
         # Restore the plan default by removing all overrides
         sub_entitlement&.values&.update_all(deleted_at: Time.zone.now)
@@ -75,8 +75,6 @@ module Entitlement
         sub_entitlement ||= create_entitlement_for_subscription
         update_values_for_subscription(plan_entitlement, sub_entitlement)
       end
-
-      pp plan_entitlement, sub_entitlement, removals
     end
 
     def create_entitlement_for_subscription

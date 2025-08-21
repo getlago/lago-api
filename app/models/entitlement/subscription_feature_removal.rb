@@ -17,23 +17,20 @@ end
 #
 # Table name: entitlement_subscription_feature_removals
 #
-#  id                       :uuid             not null, primary key
-#  deleted_at               :datetime
-#  created_at               :datetime         not null
-#  updated_at               :datetime         not null
-#  entitlement_feature_id   :uuid             not null
-#  entitlement_privilege_id :uuid
-#  organization_id          :uuid             not null
-#  subscription_id          :uuid             not null
+#  id                     :uuid             not null, primary key
+#  deleted_at             :datetime
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  entitlement_feature_id :uuid             not null
+#  organization_id        :uuid             not null
+#  subscription_id        :uuid             not null
 #
 # Indexes
 #
 #  idx_on_entitlement_feature_id_821ae72311                       (entitlement_feature_id)
-#  idx_on_entitlement_privilege_id_9946ccf514                     (entitlement_privilege_id)
 #  idx_on_organization_id_7020c3c43a                              (organization_id)
 #  idx_on_subscription_id_295edd8bb3                              (subscription_id)
 #  idx_on_subscription_id_entitlement_feature_id_02bee9883b       (subscription_id,entitlement_feature_id) UNIQUE WHERE (deleted_at IS NULL)
-#  idx_on_subscription_id_entitlement_privilege_id_2d1f5978da     (subscription_id,entitlement_privilege_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_entitlement_subscription_feature_removals_on_deleted_at  (deleted_at)
 #
 # Foreign Keys
