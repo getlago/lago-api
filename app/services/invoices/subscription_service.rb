@@ -75,7 +75,7 @@ module Invoices
         unless invoice.closed? # we dont need to send the webhooks if the invoice was closed ( skip 0 invoice setting )
           SendWebhookJob.perform_after_commit("invoice.created", invoice)
           Utils::ActivityLog.produce_after_commit(invoice, "invoice.created")
-          GeneratePdfAndNotifyJob.perform_after_commit(invoice:, email: should_deliver_finalized_email?)
+          GenerateFilesAndNotifyJob.perform_after_commit(invoice:, email: should_deliver_finalized_email?)
           Integrations::Aggregator::Invoices::CreateJob.perform_after_commit(invoice:) if invoice.should_sync_invoice?
           Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_after_commit(invoice:) if invoice.should_sync_hubspot_invoice?
           Invoices::Payments::CreateService.call_async(invoice:)
