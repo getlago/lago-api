@@ -26,7 +26,7 @@ module Invoices
         SendWebhookJob.perform_later("invoice.created", invoice)
         Utils::ActivityLog.produce(invoice, "invoice.created")
         create_manual_payment(invoice)
-        Invoices::GeneratePdfAndNotifyJob.perform_later(invoice:, email: false)
+        Invoices::GenerateFilesAndNotifyJob.perform_later(invoice:, email: false)
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice:) if invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::Hubspot::CreateJob.perform_later(invoice:) if invoice.should_sync_hubspot_invoice?
         Utils::SegmentTrack.invoice_created(invoice)

@@ -36,7 +36,7 @@ module Invoices
 
       Utils::SegmentTrack.invoice_created(result.invoice)
       SendWebhookJob.perform_later("invoice.add_on_added", result.invoice)
-      GeneratePdfAndNotifyJob.perform_later(invoice: result.invoice, email: should_deliver_email?)
+      GenerateFilesAndNotifyJob.perform_later(invoice: result.invoice, email: should_deliver_email?)
 
       if result.invoice.should_sync_invoice?
         Integrations::Aggregator::Invoices::CreateJob.perform_later(invoice: result.invoice)
