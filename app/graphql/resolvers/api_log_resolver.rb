@@ -14,7 +14,8 @@ module Resolvers
     type Types::ApiLogs::Object, null: true
 
     def resolve(request_id: nil)
-      raise unauthorized_error unless License.premium? && Utils::ApiLog.available?
+      raise unauthorized_error unless License.premium?
+      raise forbidden_error(code: "feature_unavailable") unless Utils::ApiLog.available?
 
       current_organization.api_logs.find_by!(request_id:)
     rescue ActiveRecord::RecordNotFound
