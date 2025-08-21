@@ -208,7 +208,7 @@
 
           h2.invoice-details-title.title-2.mb-24 = I18n.t('invoice.details', resource: subscription.invoice_name)
 
-          - number_of_days_in_period = 0
+          - number_of_days_in_period = 30
 
           / Fees for filters
           - if fees.all? { |f| f.charge_filter_id? }
