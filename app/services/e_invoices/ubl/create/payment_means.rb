@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Ubl
     module Create
-      class TradeSettlementPayment < Builder
+      class PaymentMeans < Builder
         def initialize(xml:, invoice:, type:, amount: nil)
           @type = type
           @amount = amount
@@ -12,9 +12,8 @@ module EInvoices
 
         def call
           xml.comment "Payment Means: #{payment_label(type)}"
-          xml["ram"].SpecifiedTradeSettlementPaymentMeans do
-            xml["ram"].TypeCode type
-            xml["ram"].Information payment_information(type, amount)
+          xml["cac"].PaymentMeans do
+            xml["cbc"].PaymentMeansCode type
           end
         end
 
