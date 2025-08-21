@@ -157,7 +157,7 @@ module EInvoices
     end
 
     def due_payable_amount
-      invoice.total_amount - total_prepaid_amount
+      invoice.total_amount
     end
 
     def percent(value)
