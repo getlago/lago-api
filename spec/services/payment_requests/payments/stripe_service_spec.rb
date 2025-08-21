@@ -22,9 +22,11 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
       customer:,
       amount_cents: 799,
       amount_currency: "EUR",
-      invoices: [invoice_1, invoice_2]
+      invoices:
     )
   end
+
+  let(:invoices) { [invoice_1, invoice_2] }
 
   let(:invoice_1) do
     create(
@@ -114,7 +116,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
                 {
                   quantity: 1,
                   price_data: {
-                    currency: invocie_1.currency.downcase,
+                    currency: invoice_1.currency.downcase,
                     unit_amount: invoice_1.total_amount_cents,
                     product_data: {name: invoice_1.number}
                   }
@@ -125,7 +127,7 @@ RSpec.describe PaymentRequests::Payments::StripeService, type: :service do
               customer: customer.stripe_customer.provider_customer_id,
               payment_method_types: customer.stripe_customer.provider_payment_methods,
               payment_intent_data: {
-                description: "#{billing_entity.name} - Overdue invoices #{invoice_1.number}",
+                description: "#{billing_entity.name} - Overdue invoices: #{invoice_1.number}",
                 metadata: {
                   lago_customer_id: customer.id,
                   lago_payable_id: payment_request.id,
