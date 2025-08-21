@@ -33,6 +33,7 @@ module Types
 
     field :create_customer_portal_wallet_transaction, mutation: Mutations::CustomerPortal::WalletTransactions::Create
     field :download_customer_portal_invoice, mutation: Mutations::CustomerPortal::DownloadInvoice
+    field :download_customer_portal_invoice_xml, mutation: Mutations::CustomerPortal::DownloadInvoiceXml
     field :generate_customer_portal_url, mutation: Mutations::CustomerPortal::GenerateUrl
     field :update_customer_portal_customer, mutation: Mutations::CustomerPortal::UpdateCustomer
 
