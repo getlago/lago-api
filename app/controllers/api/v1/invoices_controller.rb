@@ -51,7 +51,7 @@ module Api
         invoice_index(customer_external_id: customer_external_id)
       end
 
-      def download
+      def download_pdf
         invoice = current_organization.invoices.finalized.find_by(id: params[:id])
 
         return not_found_error(resource: "invoice") unless invoice
@@ -66,6 +66,25 @@ module Api
         end
 
         Invoices::GeneratePdfJob.perform_later(invoice)
+
+        head(:ok)
+      end
+
+      def download_xml
+        invoice = current_organization.invoices.finalized.find_by(id: params[:id])
+
+        return not_found_error(resource: "invoice") unless invoice
+
+        if invoice.xml_file.present?
+          return render(
+            json: ::V1::InvoiceSerializer.new(
+              invoice,
+              root_name: "invoice"
+            )
+          )
+        end
+
+        Invoices::GenerateXmlJob.perform_later(invoice)
 
         head(:ok)
       end
