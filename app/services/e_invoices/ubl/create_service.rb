@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module EInvoices
-  module FacturX
+  module Ubl
     class CreateService < EInvoices::BaseService
       def call
         return result.not_found_failure!(resource: "invoice") unless invoice
