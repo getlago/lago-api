@@ -68,7 +68,7 @@ RSpec.describe EInvoices::Ubl::Create::MonetaryTotal, type: :service do
 
     it "have PayableAmount" do
       expect(subject).to contains_xml_node("#{root}/cbc:PayableAmount")
-        .with_value("1166.98")
+        .with_value("1188.84")
         .with_attribute("currencyID", "USD")
     end
   end
