@@ -56,6 +56,7 @@ module Types
 
       field :file_url, String, null: true
       field :metadata, [Types::Invoices::Metadata::Object], null: true
+      field :xml_url, String, null: true
 
       field :activity_logs, [Types::ActivityLogs::Object], null: true
       field :applied_taxes, [Types::Invoices::AppliedTaxes::Object]
