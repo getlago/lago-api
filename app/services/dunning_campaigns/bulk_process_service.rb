@@ -69,8 +69,6 @@ module DunningCampaigns
       end
 
       def send_campaign_finished_webhook
-        return result unless customer.overdue_balance_cents.positive?
-
         SendWebhookJob.perform_later(
           "dunning_campaign.finished",
           customer,
