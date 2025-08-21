@@ -65,7 +65,7 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
       end
     end
 
-    context "when payments" do
+    context "when payments and credits" do
       context "when something to pay" do
         it_behaves_like "xml section", {name: "Payment Means: Standard payment", xpath: "(#{payment_tag})[1]"}
       end
