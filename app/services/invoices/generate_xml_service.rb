@@ -37,8 +37,7 @@ module Invoices
 
     def build_xml_file
       xml_file = Tempfile.new([invoice.number, ".xml"])
-      # TODO change to UBL instead of FacturX
-      xml_file.write(EInvoices::FacturX::CreateService.call(invoice:).xml)
+      xml_file.write(EInvoices::Ubl::CreateService.call(invoice:).xml)
       xml_file.flush
 
       xml_file
