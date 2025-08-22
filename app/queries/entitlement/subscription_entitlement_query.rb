@@ -22,7 +22,7 @@ module Entitlement
       privileges_result = ActiveRecord::Base.connection.exec_query(
         privilege_sql,
         "subscription_entitlement_privileges",
-        [prepare_ids(plan_entitlement_ids), prepare_ids(sub_entitlement_ids)]
+        [prepare_ids(plan_entitlement_ids), prepare_ids(sub_entitlement_ids), filters.subscription_id]
       )
 
       privileges_by_feature_id = privileges_result.map do |row|
@@ -74,11 +74,23 @@ module Entitlement
             plan_entitlements pe
             FULL OUTER JOIN sub_entitlements se ON pe.entitlement_feature_id = se.entitlement_feature_id
             JOIN entitlement_features f ON f.id = COALESCE(pe.entitlement_feature_id, se.entitlement_feature_id)
-            WHERE
+        WHERE
             f.deleted_at IS NULL
-            AND
-            (pe.entitlement_feature_id IS NULL OR pe.entitlement_feature_id NOT IN (SELECT entitlement_feature_id FROM entitlement_subscription_feature_removals WHERE subscription_id = $2 AND deleted_at IS NULL))
-            ORDER BY ordering_date
+            AND (
+                pe.entitlement_feature_id IS NULL           -- Feature is in sub but not in plan
+                OR pe.entitlement_feature_id NOT IN (       -- Feature is in plan but removed from sub
+                    SELECT
+                        entitlement_feature_id
+                    FROM
+                        entitlement_subscription_feature_removals
+                    WHERE
+                        subscription_id = $2
+                        AND entitlement_feature_id IS NOT NULL
+                        AND deleted_at IS NULL
+                )
+            )
+        ORDER BY
+            ordering_date
       SQL
     end
 
@@ -95,7 +107,7 @@ module Entitlement
                     entitlement_entitlement_values
                 WHERE
                     deleted_at IS NULL
-                    AND entitlement_entitlement_id = ANY($1::uuid[])
+                    AND entitlement_entitlement_id = ANY ($1::UUID [])
             ),
             sub_values AS (
                 SELECT
@@ -104,7 +116,7 @@ module Entitlement
                     entitlement_entitlement_values
                 WHERE
                     deleted_at IS NULL
-                    AND entitlement_entitlement_id = ANY($2::uuid[])
+                    AND entitlement_entitlement_id = ANY ($2::UUID [])
             )
         SELECT
             COALESCE(pv.organization_id, pv.organization_id) AS organization_id,
@@ -127,7 +139,21 @@ module Entitlement
             JOIN entitlement_privileges p ON p.id = COALESCE(pv.entitlement_privilege_id, sv.entitlement_privilege_id)
         WHERE
             p.deleted_at IS NULL
-        ORDER BY ordering_date
+            AND (
+                pv.entitlement_privilege_id IS NULL           -- Privilege is in sub but not in plan
+                OR pv.entitlement_privilege_id NOT IN (       -- Privilege is in plan but removed from sub
+                    SELECT
+                        entitlement_privilege_id
+                    FROM
+                        entitlement_subscription_feature_removals
+                    WHERE
+                        subscription_id = $3
+                        AND entitlement_privilege_id IS NOT NULL
+                        AND deleted_at IS NULL
+                )
+            )
+        ORDER BY
+            ordering_date
       SQL
     end
 

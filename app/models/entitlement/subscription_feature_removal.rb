@@ -8,8 +8,9 @@ module Entitlement
     default_scope -> { kept }
 
     belongs_to :organization
-    belongs_to :feature, class_name: "Entitlement::Feature", foreign_key: :entitlement_feature_id
     belongs_to :subscription
+    belongs_to :feature, optional: true, class_name: "Entitlement::Feature", foreign_key: :entitlement_feature_id
+    belongs_to :privilege, optional: true, class_name: "Entitlement::Privilege", foreign_key: :entitlement_privilege_id
   end
 end
 
@@ -32,7 +33,6 @@ end
 #  idx_on_entitlement_privilege_id_9946ccf514                     (entitlement_privilege_id)
 #  idx_on_organization_id_7020c3c43a                              (organization_id)
 #  idx_on_subscription_id_295edd8bb3                              (subscription_id)
-#  idx_on_subscription_id_entitlement_privilege_id_2d1f5978da     (subscription_id,entitlement_privilege_id) UNIQUE WHERE (deleted_at IS NULL)
 #  idx_unique_feature_removal_per_subscription                    (subscription_id,entitlement_feature_id) UNIQUE WHERE (deleted_at IS NULL)
 #  idx_unique_privilege_removal_per_subscription                  (subscription_id,entitlement_privilege_id) UNIQUE WHERE (deleted_at IS NULL)
 #  index_entitlement_subscription_feature_removals_on_deleted_at  (deleted_at)
