@@ -85,6 +85,7 @@ module Types
     field :pricing_unit, resolver: Resolvers::PricingUnitResolver
     field :pricing_units, resolver: Resolvers::PricingUnitsResolver
     field :subscription, resolver: Resolvers::SubscriptionResolver
+    field :subscription_entitlements, resolver: Resolvers::Entitlement::SubscriptionEntitlementsResolver
     field :subscriptions, resolver: Resolvers::SubscriptionsResolver
     field :tax, resolver: Resolvers::TaxResolver
     field :taxes, resolver: Resolvers::TaxesResolver

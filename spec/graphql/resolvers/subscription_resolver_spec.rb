@@ -19,7 +19,6 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
           }
           nextSubscriptionType
           nextSubscriptionAt
-          entitlements { code }
         }
       }
     GQL
@@ -69,7 +68,6 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
       subscription_response = result["data"]["subscription"]
       expect(subscription_response["id"]).to eq(subscription.id)
       expect(subscription_response["externalId"]).to eq(subscription.external_id)
-      expect(subscription_response["entitlements"]).to eq []
     end
   end
 
@@ -126,113 +124,6 @@ RSpec.describe Resolvers::SubscriptionResolver, type: :graphql do
       subscription_response = result["data"]["subscription"]
       expect(subscription_response["nextSubscriptionType"]).to eq "upgrade"
       expect(subscription_response["nextSubscriptionAt"]).to be_present
-    end
-  end
-
-  context "when subscription has entitlements" do
-    let(:query) do
-      <<~GQL
-        query($subscriptionId: ID, $externalId: ID) {
-          subscription(id: $subscriptionId, externalId: $externalId) {
-            id
-            externalId
-            name
-            startedAt
-            endingAt
-            plan {
-              id
-              code
-            }
-            nextSubscriptionType
-            nextSubscriptionAt
-            entitlements {
-              code
-              name
-              description
-              privileges {
-                code
-                name
-                valueType
-                config
-                value
-                planValue
-                overrideValue
-              }
-            }
-          }
-        }
-      GQL
-    end
-
-    let(:feature1) { create(:feature, organization:, code: "feature1", name: "Feature 1", description: "First feature") }
-    let(:privilege1) { create(:privilege, feature: feature1, code: "privilege1", name: "Privilege 1", value_type: "boolean") }
-    let(:entitlement1) { create(:entitlement, feature: feature1, plan: subscription.plan) }
-    let(:entitlement_value1) { create(:entitlement_value, entitlement: entitlement1, privilege: privilege1, value: "true") }
-
-    let(:feature2) { create(:feature, organization:, code: "feature2", name: "Feature 2", description: "Second feature") }
-    let(:privilege2) { create(:privilege, feature: feature2, code: "privilege2", name: "Privilege 2", value_type: "string") }
-    let(:entitlement2) { create(:entitlement, feature: feature2, plan: subscription.plan) }
-    let(:entitlement_value2) { create(:entitlement_value, entitlement: entitlement2, privilege: privilege2, value: "test_value") }
-
-    # Subscription override
-    let(:entitlement3) { create(:entitlement, feature: feature2, plan: nil, subscription:) }
-    let(:entitlement_value3) { create(:entitlement_value, entitlement: entitlement3, privilege: privilege2, value: "override_value") }
-
-    before do
-      entitlement_value1
-      entitlement_value2
-      entitlement_value3
-    end
-
-    it "returns all non-removed entitlements" do
-      result = execute_graphql(
-        current_user: membership.user,
-        current_organization: organization,
-        permissions: required_permission,
-        query:,
-        variables: {
-          subscriptionId: subscription.id
-        }
-      )
-
-      entitlements_response = result["data"]["subscription"]["entitlements"]
-
-      expect(entitlements_response).to be_an(Array)
-      expect(entitlements_response.size).to eq(2)
-
-      feature1_entitlement = entitlements_response.find { |e| e["code"] == "feature1" }
-      expect(feature1_entitlement).to include(
-        "code" => "feature1",
-        "name" => "Feature 1",
-        "description" => "First feature"
-      )
-      expect(feature1_entitlement["privileges"]).to be_an(Array)
-      expect(feature1_entitlement["privileges"].size).to eq(1)
-      expect(feature1_entitlement["privileges"].first).to include(
-        "code" => "privilege1",
-        "name" => "Privilege 1",
-        "valueType" => "boolean",
-        "value" => "true",
-        "planValue" => "true",
-        "overrideValue" => nil
-      )
-
-      feature2_entitlement = entitlements_response.find { |e| e["code"] == "feature2" }
-      expect(feature2_entitlement).to include(
-        "code" => "feature2",
-        "name" => "Feature 2",
-        "description" => "Second feature"
-      )
-      expect(feature2_entitlement["privileges"]).to be_an(Array)
-      expect(feature2_entitlement["privileges"].size).to eq(1)
-      expect(feature2_entitlement["privileges"].first).to include(
-        "code" => "privilege2",
-        "name" => "Privilege 2",
-        "valueType" => "string",
-        "value" => "override_value",
-        "planValue" => "test_value",
-        "overrideValue" => "override_value"
-      )
     end
   end
 end

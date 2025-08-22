@@ -49,6 +49,10 @@ module Types
       field :is_overridden, Boolean, null: false
       field :subscriptions_count, Integer, null: false
 
+      def entitlements
+        object.entitlements.order(:created_at)
+      end
+
       def usage_thresholds
         object.usage_thresholds.order(amount_cents: :asc)
       end

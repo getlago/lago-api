@@ -19,7 +19,7 @@ module Resolvers
       def resolve(**args)
         raise forbidden_error(code: "feature_unavailable") unless License.premium?
 
-        result = FeaturesQuery.call(
+        result = ::Entitlement::FeaturesQuery.call(
           organization: current_organization,
           search_term: args[:search_term],
           pagination: {

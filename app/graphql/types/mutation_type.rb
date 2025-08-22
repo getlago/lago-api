@@ -198,6 +198,7 @@ module Types
     field :destroy_feature, mutation: Mutations::Entitlement::DestroyFeature
     field :update_feature, mutation: Mutations::Entitlement::UpdateFeature
 
-    field :update_plan_entitlements, mutation: Mutations::Entitlement::UpdatePlanEntitlements
+    field :remove_subscription_entitlement, mutation: Mutations::Entitlement::RemoveSubscriptionEntitlement
+    field :update_subscription_entitlement, mutation: Mutations::Entitlement::UpdateSubscriptionEntitlement
   end
 end

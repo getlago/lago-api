@@ -71,7 +71,8 @@ module Entitlement
     end
 
     def remove_or_delete_missing_entitlements
-      missing_codes = SubscriptionEntitlement.for_subscription(subscription).where.not(feature_code: entitlements_params.keys).pluck(:feature_code).uniq
+      # TODO: Make dedicated query?
+      missing_codes = (SubscriptionEntitlement.for_subscription(subscription).map(&:code) - entitlements_params.keys).uniq
 
       # If the feature was added as a subscription override, delete it
       sub_entitlements = subscription.entitlements.joins(:feature).where(feature: {code: missing_codes})

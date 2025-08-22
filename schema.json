@@ -13151,26 +13151,6 @@
               "deprecationReason": null
             },
             {
-              "name": "entitlements",
-              "description": null,
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "INPUT_OBJECT",
-                    "name": "EntitlementInput",
-                    "ofType": null
-                  }
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
               "name": "clientMutationId",
               "description": "A unique identifier for the client performing the mutation.",
               "type": {
@@ -33867,6 +33847,35 @@
               ]
             },
             {
+              "name": "removeSubscriptionEntitlement",
+              "description": "Removes a feature entitlement from a subscription",
+              "type": {
+                "kind": "OBJECT",
+                "name": "RemoveSubscriptionEntitlementPayload",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for RemoveSubscriptionEntitlement",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "RemoveSubscriptionEntitlementInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "resetPassword",
               "description": "Reset password for user and log in",
               "type": {
@@ -35288,35 +35297,6 @@
               ]
             },
             {
-              "name": "updatePlanEntitlements",
-              "description": "Updates plan entitlements",
-              "type": {
-                "kind": "OBJECT",
-                "name": "PlanEntitlementCollection",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": [
-                {
-                  "name": "input",
-                  "description": "Parameters for UpdatePlanEntitlements",
-                  "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "INPUT_OBJECT",
-                      "name": "UpdatePlanEntitlementsInput",
-                      "ofType": null
-                    }
-                  },
-                  "defaultValue": null,
-                  "isDeprecated": false,
-                  "deprecationReason": null
-                }
-              ]
-            },
-            {
               "name": "updatePricingUnit",
               "description": null,
               "type": {
@@ -35452,6 +35432,35 @@
                     "ofType": {
                       "kind": "INPUT_OBJECT",
                       "name": "UpdateSubscriptionAlertInput",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
+              "name": "updateSubscriptionEntitlement",
+              "description": "Updates a subscription entitlement",
+              "type": {
+                "kind": "OBJECT",
+                "name": "SubscriptionEntitlement",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "input",
+                  "description": "Parameters for UpdateSubscriptionEntitlement",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "UpdateSubscriptionEntitlementInput",
                       "ofType": null
                     }
                   },
@@ -39789,22 +39798,6 @@
               "args": []
             },
             {
-              "name": "feature",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "FeatureObject",
-                  "ofType": null
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
               "name": "name",
               "description": null,
               "type": {
@@ -39838,57 +39831,6 @@
                       "ofType": null
                     }
                   }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            }
-          ],
-          "inputFields": null,
-          "enumValues": null
-        },
-        {
-          "kind": "OBJECT",
-          "name": "PlanEntitlementCollection",
-          "description": "PlanEntitlementCollection type",
-          "interfaces": [],
-          "possibleTypes": null,
-          "fields": [
-            {
-              "name": "collection",
-              "description": "A collection of paginated PlanEntitlementCollection",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "PlanEntitlement",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "metadata",
-              "description": "Pagination Metadata for navigating the Pagination",
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "CollectionMetadata",
-                  "ofType": null
                 }
               },
               "isDeprecated": false,
@@ -45608,16 +45550,24 @@
               "deprecationReason": null,
               "args": [
                 {
+                  "name": "code",
+                  "description": "Unique code of the feature",
+                  "type": {
+                    "kind": "SCALAR",
+                    "name": "String",
+                    "ofType": null
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                },
+                {
                   "name": "id",
                   "description": "Unique ID of the feature",
                   "type": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "SCALAR",
-                      "name": "ID",
-                      "ofType": null
-                    }
+                    "kind": "SCALAR",
+                    "name": "ID",
+                    "ofType": null
                   },
                   "defaultValue": null,
                   "isDeprecated": false,
@@ -47459,6 +47409,39 @@
               ]
             },
             {
+              "name": "subscriptionEntitlements",
+              "description": "Query entitlements of a subscriptions",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "SubscriptionEntitlementCollection",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": [
+                {
+                  "name": "subscriptionId",
+                  "description": null,
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "SCALAR",
+                      "name": "ID",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ]
+            },
+            {
               "name": "subscriptions",
               "description": "Query subscriptions of an organization",
               "type": {
@@ -48657,6 +48640,96 @@
               "deprecationReason": null
             }
           ]
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "RemoveSubscriptionEntitlementInput",
+          "description": "Autogenerated input type of RemoveSubscriptionEntitlement",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscriptionId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "featureCode",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
+          "name": "RemoveSubscriptionEntitlementPayload",
+          "description": "Autogenerated return type of RemoveSubscriptionEntitlement.",
+          "interfaces": [],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "featureCode",
+              "description": null,
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
         },
         {
           "kind": "INPUT_OBJECT",
@@ -49958,30 +50031,6 @@
               "args": []
             },
             {
-              "name": "entitlements",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "OBJECT",
-                      "name": "SubscriptionEntitlement",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
               "name": "externalId",
               "description": null,
               "type": {
@@ -50373,6 +50422,57 @@
         },
         {
           "kind": "OBJECT",
+          "name": "SubscriptionEntitlementCollection",
+          "description": "SubscriptionEntitlementCollection type",
+          "interfaces": [],
+          "possibleTypes": null,
+          "fields": [
+            {
+              "name": "collection",
+              "description": "A collection of paginated SubscriptionEntitlementCollection",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "SubscriptionEntitlement",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            },
+            {
+              "name": "metadata",
+              "description": "Pagination Metadata for navigating the Pagination",
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "OBJECT",
+                  "name": "CollectionMetadata",
+                  "ofType": null
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null,
+              "args": []
+            }
+          ],
+          "inputFields": null,
+          "enumValues": null
+        },
+        {
+          "kind": "OBJECT",
           "name": "SubscriptionEntitlementPrivilegeObject",
           "description": null,
           "interfaces": [],
@@ -50401,8 +50501,8 @@
                 "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "SCALAR",
-                  "name": "JSON",
+                  "kind": "OBJECT",
+                  "name": "PrivilegeConfigObject",
                   "ofType": null
                 }
               },
@@ -50412,30 +50512,6 @@
             },
             {
               "name": "name",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "overrideValue",
-              "description": null,
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "isDeprecated": false,
-              "deprecationReason": null,
-              "args": []
-            },
-            {
-              "name": "planValue",
               "description": null,
               "type": {
                 "kind": "SCALAR",
@@ -56695,69 +56771,6 @@
         },
         {
           "kind": "INPUT_OBJECT",
-          "name": "UpdatePlanEntitlementsInput",
-          "description": "Autogenerated input type of UpdatePlanEntitlements",
-          "interfaces": null,
-          "possibleTypes": null,
-          "fields": null,
-          "inputFields": [
-            {
-              "name": "clientMutationId",
-              "description": "A unique identifier for the client performing the mutation.",
-              "type": {
-                "kind": "SCALAR",
-                "name": "String",
-                "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "planId",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "SCALAR",
-                  "name": "ID",
-                  "ofType": null
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "entitlements",
-              "description": null,
-              "type": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "LIST",
-                  "name": null,
-                  "ofType": {
-                    "kind": "NON_NULL",
-                    "name": null,
-                    "ofType": {
-                      "kind": "INPUT_OBJECT",
-                      "name": "EntitlementInput",
-                      "ofType": null
-                    }
-                  }
-                }
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            }
-          ],
-          "enumValues": null
-        },
-        {
-          "kind": "INPUT_OBJECT",
           "name": "UpdatePlanInput",
           "description": "Autogenerated input type of UpdatePlan",
           "interfaces": null,
@@ -57603,6 +57616,61 @@
         },
         {
           "kind": "INPUT_OBJECT",
+          "name": "UpdateSubscriptionEntitlementInput",
+          "description": "Autogenerated input type of UpdateSubscriptionEntitlement",
+          "interfaces": null,
+          "possibleTypes": null,
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "clientMutationId",
+              "description": "A unique identifier for the client performing the mutation.",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "subscriptionId",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "SCALAR",
+                  "name": "ID",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "entitlement",
+              "description": null,
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "INPUT_OBJECT",
+                  "name": "EntitlementInput",
+                  "ofType": null
+                }
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "enumValues": null
+        },
+        {
+          "kind": "INPUT_OBJECT",
           "name": "UpdateSubscriptionInput",
           "description": "Update Subscription input arguments",
           "interfaces": null,
@@ -57668,26 +57736,6 @@
                 "kind": "SCALAR",
                 "name": "ISO8601DateTime",
                 "ofType": null
-              },
-              "defaultValue": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "entitlements",
-              "description": null,
-              "type": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "INPUT_OBJECT",
-                    "name": "EntitlementInput",
-                    "ofType": null
-                  }
-                }
               },
               "defaultValue": null,
               "isDeprecated": false,

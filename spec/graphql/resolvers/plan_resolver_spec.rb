@@ -230,14 +230,40 @@ RSpec.describe Resolvers::PlanResolver, type: :graphql do
   end
 
   context "when plan has entitlements" do
-    it "returns entitlements" do
+    before do
       feature = create(:feature, organization:, code: "seats")
       entitlement = create(:entitlement, plan:, feature:)
       create(:entitlement_value, entitlement:, privilege: create(:privilege, feature:, code: "max", value_type: "integer"), value: 10)
 
+      feature2 = create(:feature, organization:, code: "storage")
+      entitlement2 = create(:entitlement, plan:, feature: feature2, created_at: 1.day.ago)
+      create(:entitlement_value, entitlement: entitlement2, privilege: create(:privilege, feature: feature2, code: "curr"), value: 2)
+    end
+
+    it "returns entitlements" do
       entitlements = result["data"]["plan"]["entitlements"]
-      expect(entitlements.sole["code"]).to eq "seats"
-      expect(entitlements.sole["privileges"].sole["value"]).to eq "10"
+      expect(entitlements.first["code"]).to eq "storage"
+      expect(entitlements.first["privileges"].sole["value"]).to eq "2"
+      expect(entitlements.second["code"]).to eq "seats"
+      expect(entitlements.second["privileges"].sole["value"]).to eq "10"
+    end
+
+    context "when plan is an override" do
+      subject(:result) do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query:,
+          variables: {planId: child_plan.id}
+        )
+      end
+
+      let(:child_plan) { create(:plan, organization:, parent: plan) }
+
+      it "doesn't return entitlements to avoid confusion" do
+        expect(result["data"]["plan"]["entitlements"]).to be_empty
+      end
     end
   end
 
