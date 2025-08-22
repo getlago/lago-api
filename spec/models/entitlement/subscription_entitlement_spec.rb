@@ -3,10 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::SubscriptionEntitlement, type: :model do
-  let(:organization) { create(:organization) }
-  let(:parent) { create(:plan, organization:) }
-  let(:subscription) { create(:subscription, organization:, plan: create(:plan, parent:)) }
-
   describe "initialization" do
     it "creates an instance with no attributes" do
       entitlement = described_class.new
@@ -26,9 +22,6 @@ RSpec.describe Entitlement::SubscriptionEntitlement, type: :model do
   end
 
   describe "ActiveModel compliance" do
-    it "includes ActiveModel::Model" do
-    end
-
     it "includes ActiveModel::Attributes" do
       expect(described_class.ancestors).to include(ActiveModel::Model)
       expect(described_class.ancestors).to include(ActiveModel::Attributes)
@@ -36,6 +29,10 @@ RSpec.describe Entitlement::SubscriptionEntitlement, type: :model do
   end
 
   describe ".for_subscription" do
+    let(:organization) { create(:organization) }
+    let(:parent) { create(:plan, organization:) }
+    let(:subscription) { create(:subscription, organization:, plan: create(:plan, parent:)) }
+
     it "returns the result from SubscriptionEntitlementQuery" do
       allow(Entitlement::SubscriptionEntitlementQuery).to receive(:call).with(
         organization: subscription.organization,
@@ -45,6 +42,23 @@ RSpec.describe Entitlement::SubscriptionEntitlement, type: :model do
       result = described_class.for_subscription(subscription)
 
       expect(result).to eq("works")
+    end
+  end
+
+  describe "#to_h" do
+    it "returns a hash" do
+      privilege = Entitlement::SubscriptionEntitlementPrivilege.new(code: "max")
+      entitlement = described_class.new(code: "seats", privileges: [privilege])
+      hash = entitlement.to_h
+      expect(hash).to be_a(HashWithIndifferentAccess)
+      expect(hash[:privileges].values).to all be_a(HashWithIndifferentAccess)
+      expect(hash[:privileges].keys).to eq ["max"]
+
+      entitlement = described_class.new(code: "seats")
+      hash = entitlement.to_h
+
+      expect(hash).to be_a(HashWithIndifferentAccess)
+      expect(hash[:privileges]).to eq({})
     end
   end
 end

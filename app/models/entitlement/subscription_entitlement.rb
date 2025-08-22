@@ -27,5 +27,11 @@ module Entitlement
         }
       )
     end
+
+    def to_h
+      h = attributes
+      h["privileges"] = (h["privileges"] || []).map(&:to_h).index_by { |p| p[:code] }
+      h.with_indifferent_access
+    end
   end
 end

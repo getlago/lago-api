@@ -22,7 +22,14 @@ module Entitlement
     attribute :sub_entitlement_value_id, :string
 
     def config
-      JSON.parse(super)
+      v = super
+      JSON.parse(v) if v.is_a?(String)
+    end
+
+    def to_h
+      h = attributes
+      h["config"] = config
+      h.with_indifferent_access
     end
   end
 end
