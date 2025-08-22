@@ -5,8 +5,8 @@ require "rails_helper"
 RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false, clickhouse: true do
   let(:query) do
     <<~GQL
-      query {
-        events(limit: 5) {
+      query($page: Int) {
+        events(page: $page, limit: 5) {
           collection {
             id
             code
@@ -220,6 +220,20 @@ RSpec.describe Resolvers::EventsResolver, type: :graphql, transaction: false, cl
         expect(events_response["collection"].first["billableMetricName"]).to eq(billable_metric.name)
         expect(events_response["collection"].first["matchBillableMetric"]).to be_truthy
         expect(events_response["collection"].first["matchCustomField"]).to be_truthy
+      end
+    end
+
+    context "when querying an empty page" do
+      it "returns an empty list of events" do
+        result = execute_graphql(
+          current_user: user,
+          current_organization: organization,
+          query:,
+          variables: {page: 5}
+        )
+
+        events_response = result["data"]["events"]
+        expect(events_response["collection"].count).to be_zero
       end
     end
   end
