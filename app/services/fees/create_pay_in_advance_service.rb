@@ -234,7 +234,7 @@ module Fees
     def invoice
       result.invoice_id = SecureRandom.uuid
 
-      OpenStruct.new(
+      Invoice.new(
         id: result.invoice_id,
         issuing_date: Time.current.in_time_zone(customer.applicable_timezone).to_date,
         currency: subscription.plan.amount_currency,
