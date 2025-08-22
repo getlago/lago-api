@@ -137,6 +137,15 @@ RSpec.describe Subscriptions::ValidateService, type: :service do
         end
       end
 
+      context "when ending_at uses an invalid date format" do
+        let(:ending_at) { "2025-08-20T16:11:39.061+02:00" }
+
+        it "returns false and result has errors" do
+          expect(validate_service).not_to be_valid
+          expect(result.error.messages[:ending_at]).to eq(["invalid_date"])
+        end
+      end
+
       context "when ending_at is less than subscription_at and current time" do
         let(:ending_at) { (Time.current - 1.year).iso8601 }
 
