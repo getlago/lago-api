@@ -696,15 +696,15 @@ RSpec.describe Subscriptions::Dates::SemiannualService, type: :service do
         end
       end
 
-      context "when billing month is June" do
-        let(:billing_at) { Time.zone.parse("15 Jun 2022") }
+      context "when billing month is July" do
+        let(:billing_at) { Time.zone.parse("15 Jul 2022") }
 
         it "returns true" do
           expect(result).to be true
         end
       end
 
-      context "when billing month is not January or June" do
+      context "when billing month is not January or July" do
         let(:billing_at) { Time.zone.parse("15 Mar 2022") }
 
         it "returns false" do
@@ -758,8 +758,8 @@ RSpec.describe Subscriptions::Dates::SemiannualService, type: :service do
         end
       end
 
-      context "when in June of subscription year" do
-        let(:billing_at) { Time.zone.parse("15 Jun 2021") }
+      context "when in July of subscription year" do
+        let(:billing_at) { Time.zone.parse("15 Jul 2021") }
 
         it "returns true" do
           expect(result).to be true
@@ -774,7 +774,7 @@ RSpec.describe Subscriptions::Dates::SemiannualService, type: :service do
         end
       end
 
-      context "when not in January or June" do
+      context "when not in January or July" do
         let(:billing_at) { Time.zone.parse("15 Mar 2021") }
 
         it "returns false" do

@@ -4,13 +4,15 @@ module Subscriptions
   module Dates
     class SemiannualService < Subscriptions::DatesService
       def first_month_in_semiannual_period?
-        return billing_date.month == 1 || billing_date.month == 6 if calendar?
+        return billing_date.month == 1 || billing_date.month == 7 if calendar?
 
-        billing_from_date.month == subscription_at.month || billing_from_date.month == (subscription_at.month + 6) % 12
+        start_month = subscription_at.month
+        second_half_month = (start_month <= 6) ? start_month + 6 : start_month - 6
+        [start_month, second_half_month].include?(billing_from_date.month)
       end
 
       def first_month_in_first_semiannual_period?
-        return (billing_date.month == 1 || billing_date.month == 6) && billing_date.year == subscription_at.year if calendar?
+        return (billing_date.month == 1 || billing_date.month == 7) && billing_date.year == subscription_at.year if calendar?
 
         billing_from_date.month == subscription_at.month && billing_from_date.year == subscription_at.year
       end

@@ -190,6 +190,7 @@ module Invoices
 
       return false if subscription.plan.pay_in_advance? && !invoice_subscription.previous_invoice_subscription
       return false unless should_create_yearly_subscription_fee?(subscription)
+      return false unless should_create_semiannual_subscription_fee?(subscription)
 
       calculate_true_up_fee_result = Commitments::Minimum::CalculateTrueUpFeeService
         .new_instance(invoice_subscription:).call
@@ -220,6 +221,7 @@ module Invoices
 
       return false if subscription.plan.pay_in_advance? && fee_exists
       return false unless should_create_yearly_subscription_fee?(subscription)
+      return false unless should_create_semiannual_subscription_fee?(subscription)
       return false if in_trial_period_not_ending_today?(subscription, boundaries.timestamp)
 
       # NOTE: When a subscription is terminated we still need to charge the subscription
@@ -228,6 +230,24 @@ module Invoices
       subscription.active? ||
         (subscription.terminated? && subscription.plan.pay_in_arrears?) ||
         (subscription.terminated? && subscription.terminated_at > invoice.created_at)
+    end
+
+    def should_create_semiannual_subscription_fee?(subscription)
+      return true unless subscription.plan.semiannual?
+
+      if subscription.plan.pay_in_advance? && !subscription.started_in_past?
+        return date_service(subscription).first_month_in_semiannual_period? || !subscription.already_billed?
+      end
+
+      if subscription.plan.pay_in_advance? && subscription.started_in_past?
+        return !date_service(subscription).first_month_in_first_semiannual_period? && date_service(subscription).first_month_in_semiannual_period?
+      end
+
+      if subscription.plan.pay_in_arrears?
+        return subscription.terminated? || date_service(subscription).first_month_in_semiannual_period?
+      end
+
+      false
     end
 
     def should_create_yearly_subscription_fee?(subscription)
