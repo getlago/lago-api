@@ -1902,4 +1902,22 @@ RSpec.describe Invoice, type: :model do
       it { expect(subject).to be true }
     end
   end
+
+  describe "#allow_manual_payment?" do
+    subject { invoice.allow_manual_payment? }
+
+    let(:invoice) { create(:invoice, status:) }
+
+    context "when invoice is in statuses that allow manual payment" do
+      let(:status) { Invoice::MANUALLY_PAYABLE_INVOICE_STATUS.sample }
+
+      it { expect(subject).to be true }
+    end
+
+    context "when invoice is in statuses that do not allow manual payment" do
+      let(:status) { (Invoice::STATUS.keys - Invoice::MANUALLY_PAYABLE_INVOICE_STATUS).sample }
+
+      it { expect(subject).to be false }
+    end
+  end
 end
