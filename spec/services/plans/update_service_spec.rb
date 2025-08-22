@@ -61,7 +61,8 @@ RSpec.describe Plans::UpdateService, type: :service do
       amount_cents: 200,
       amount_currency: "EUR",
       tax_codes: [tax2.code],
-      charges: charges_args
+      charges: charges_args,
+      fixed_charges: fixed_charges_args
     }
   end
 
@@ -164,6 +165,9 @@ RSpec.describe Plans::UpdateService, type: :service do
       expect(plan.charges.count).to eq(2)
       expect(plan.charges.order(created_at: :asc).first.invoice_display_name).to eq("charge1")
       expect(plan.charges.order(created_at: :asc).second.invoice_display_name).to eq("charge2")
+      expect(plan.fixed_charges.count).to eq(2)
+      expect(plan.fixed_charges.order(created_at: :asc).first.invoice_display_name).to eq("fixed_charge1")
+      expect(plan.fixed_charges.order(created_at: :asc).second.invoice_display_name).to eq("fixed_charge2")
     end
 
     it "marks invoices as ready to be refreshed" do
