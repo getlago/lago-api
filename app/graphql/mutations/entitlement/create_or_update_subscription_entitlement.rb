@@ -2,7 +2,7 @@
 
 module Mutations
   module Entitlement
-    class UpdateSubscriptionEntitlement < BaseMutation
+    class CreateOrUpdateSubscriptionEntitlement < BaseMutation
       include AuthenticableApiUser
       include RequiredOrganization
 

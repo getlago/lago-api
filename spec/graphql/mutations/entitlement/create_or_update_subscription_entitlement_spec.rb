@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Mutations::Entitlement::UpdateSubscriptionEntitlement, type: :graphql do
+RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, type: :graphql do
   subject { execute_query(query:, input:) }
 
   let(:required_permission) { "subscriptions:update" }
@@ -15,8 +15,8 @@ RSpec.describe Mutations::Entitlement::UpdateSubscriptionEntitlement, type: :gra
 
   let(:query) do
     <<~GQL
-      mutation($input: UpdateSubscriptionEntitlementInput!) {
-        updateSubscriptionEntitlement(input: $input) {
+      mutation($input: CreateOrUpdateSubscriptionEntitlementInput!) {
+        createOrUpdateSubscriptionEntitlement(input: $input) {
           code
           name
           privileges { code value valueType }
@@ -48,7 +48,7 @@ RSpec.describe Mutations::Entitlement::UpdateSubscriptionEntitlement, type: :gra
     it "adds the feature to the subscription" do
       result = subject
 
-      result_data = result["data"]["updateSubscriptionEntitlement"]
+      result_data = result["data"]["createOrUpdateSubscriptionEntitlement"]
       expect(result_data).to eq({
         "code" => "seats",
         "name" => "SEATS",
@@ -83,7 +83,7 @@ RSpec.describe Mutations::Entitlement::UpdateSubscriptionEntitlement, type: :gra
 
       result = subject
 
-      result_data = result["data"]["updateSubscriptionEntitlement"]
+      result_data = result["data"]["createOrUpdateSubscriptionEntitlement"]
       expect(result_data).to eq({
         "code" => "seats",
         "name" => "SEATS",
@@ -109,7 +109,7 @@ RSpec.describe Mutations::Entitlement::UpdateSubscriptionEntitlement, type: :gra
       create(:entitlement_value, entitlement:, privilege:, value: "2")
       result = subject
 
-      result_data = result["data"]["updateSubscriptionEntitlement"]
+      result_data = result["data"]["createOrUpdateSubscriptionEntitlement"]
       expect(result_data).to eq({
         "code" => "seats",
         "name" => "SEATS",
