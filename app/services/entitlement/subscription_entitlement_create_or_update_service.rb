@@ -139,13 +139,5 @@ module Entitlement
         [v.privilege.code, v.value]
       end.to_h.eql? privilege_params
     end
-
-    # def subscription_plan_entitlements_as_params
-    #   @subscription_plan_entitlements_as_params ||= (subscription.plan.parent || subscription.plan)
-    #     .entitlements
-    #     .includes(:feature, values: :privilege)
-    #     .map { |entitlement| [entitlement.feature.code, entitlement.values.map { |v| [v.privilege.code, v.value] }.to_h] }
-    #     .to_h
-    # end
   end
 end

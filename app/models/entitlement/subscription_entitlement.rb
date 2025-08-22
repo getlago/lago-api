@@ -27,7 +27,5 @@ module Entitlement
         }
       )
     end
-
-    private
   end
 end
