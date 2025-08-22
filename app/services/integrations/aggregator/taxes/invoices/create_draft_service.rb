@@ -5,6 +5,8 @@ module Integrations
     module Taxes
       module Invoices
         class CreateDraftService < BaseService
+          ADDRESS_RESOLVE_ERROR = "customerAddressCouldNotResolve"
+
           def action_path
             "v1/#{provider}/draft_invoices"
           end
@@ -28,6 +30,8 @@ module Integrations
             code = code(e)
             message = message(e)
 
+            deliver_tax_error_webhook(customer:, code:, message:) if customer_address_error?(code)
+
             result.service_failure!(code:, message:)
           end
 
@@ -41,6 +45,10 @@ module Integrations
               integration_customer:,
               fees:
             ).body
+          end
+
+          def customer_address_error?(code)
+            code == ADDRESS_RESOLVE_ERROR
           end
         end
       end

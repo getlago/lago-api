@@ -1,0 +1,6 @@
+{
+  "type": "customerAddressCouldNotResolve",
+  "payload": {
+    "message": "Invalid address"
+  }
+}

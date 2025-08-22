@@ -270,9 +270,10 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
     end
 
     context "when service call is not successful" do
-      let(:body) do
-        path = Rails.root.join("spec/fixtures/integration_aggregator/error_response.json")
-        File.read(path)
+      let(:body) { File.read(path) }
+
+      let(:path) do
+        Rails.root.join("spec/fixtures/integration_aggregator/error_response.json")
       end
 
       let(:http_error) { LagoHttpClient::HttpError.new(error_code, body, nil) }
@@ -293,6 +294,36 @@ RSpec.describe Integrations::Aggregator::Taxes::Invoices::CreateDraftService do
             expect(result.error).to be_a(BaseService::ServiceFailure)
             expect(result.error.code).to eq("action_script_runtime_error")
           end
+        end
+      end
+
+      context "when it is a customer address error" do
+        let(:error_code) { 400 }
+        let(:path) do
+          Rails.root.join("spec/fixtures/integration_aggregator/address_error_response.json")
+        end
+
+        it "returns an error and delivers a webhook" do
+          allow(SendWebhookJob).to receive(:perform_later)
+
+          result = service_call
+
+          expect(result).not_to be_success
+          expect(result.fees).to be(nil)
+          expect(result.error).to be_a(BaseService::ServiceFailure)
+          expect(result.error.code).to eq("customerAddressCouldNotResolve")
+
+          expect(SendWebhookJob).to have_received(:perform_later)
+            .with(
+              "customer.tax_provider_error",
+              customer,
+              provider: "anrok",
+              provider_code: integration.code,
+              provider_error: {
+                message: "Invalid address",
+                error_code: "customerAddressCouldNotResolve"
+              }
+            )
         end
       end
     end
