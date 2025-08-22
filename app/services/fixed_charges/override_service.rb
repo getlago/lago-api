@@ -27,6 +27,7 @@ module FixedCharges
           c.invoice_display_name = params[:invoice_display_name] if params.key?(:invoice_display_name)
           c.units = params[:units] if params.key?(:units)
           c.parent_id = fixed_charge.id
+          c.plan_id = params[:plan_id]
         end
         new_fixed_charge.save!
 

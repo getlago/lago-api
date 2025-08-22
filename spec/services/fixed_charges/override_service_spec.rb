@@ -7,6 +7,7 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
 
   let(:organization) { create(:organization) }
   let(:plan) { create(:plan, organization:) }
+  let(:plan2) { create(:plan, organization:) }
   let(:add_on) { create(:add_on, organization:) }
   let(:tax) { create(:tax, organization:) }
 
@@ -18,7 +19,8 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
       add_on:,
       properties: {amount: "300"},
       invoice_display_name: "Original Display Name",
-      units: 5
+      units: 5,
+      plan_id: plan.id
     )
   end
 
@@ -27,7 +29,8 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
       properties: {amount: "200"},
       invoice_display_name: "Overridden Display Name",
       units: 10,
-      tax_codes: [tax.code]
+      tax_codes: [tax.code],
+      plan_id: plan2.id
     }
   end
 
@@ -49,7 +52,7 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
         new_fixed_charge = FixedCharge.order(:created_at).last
         expect(new_fixed_charge).to have_attributes(
           organization_id: organization.id,
-          plan_id: plan.id,
+          plan_id: plan2.id,
           add_on_id: add_on.id,
           charge_model: fixed_charge.charge_model,
           pay_in_advance: fixed_charge.pay_in_advance,
@@ -65,7 +68,7 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
       end
 
       context "when only properties are provided" do
-        let(:params) { {properties: {amount: "150"}} }
+        let(:params) { {properties: {amount: "150"}, plan_id: plan2.id} }
 
         it "creates a fixed charge with only properties overridden" do
           expect { override_service.call }.to change(FixedCharge, :count).by(1)
@@ -75,13 +78,14 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
             parent_id: fixed_charge.id,
             properties: {"amount" => "150"},
             invoice_display_name: fixed_charge.invoice_display_name,
-            units: fixed_charge.units
+            units: fixed_charge.units,
+            plan_id: plan2.id
           )
         end
       end
 
       context "when only invoice_display_name is provided" do
-        let(:params) { {invoice_display_name: "Custom Display Name"} }
+        let(:params) { {invoice_display_name: "Custom Display Name", plan_id: plan2.id} }
 
         it "creates a fixed charge with only invoice_display_name overridden" do
           expect { override_service.call }.to change(FixedCharge, :count).by(1)
@@ -91,14 +95,15 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
             parent_id: fixed_charge.id,
             properties: fixed_charge.properties,
             invoice_display_name: "Custom Display Name",
-            units: fixed_charge.units
+            units: fixed_charge.units,
+            plan_id: plan2.id
           )
         end
       end
 
       context "when tax_codes are provided" do
         let(:tax2) { create(:tax, organization:, code: "tax2") }
-        let(:params) { {tax_codes: [tax.code, tax2.code]} }
+        let(:params) { {tax_codes: [tax.code, tax2.code], plan_id: plan2.id} }
 
         before { tax2 }
 
@@ -110,10 +115,10 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
         end
       end
 
-      context "when no params are provided" do
-        let(:params) { {} }
+      context "when no params are provided but plan_id" do
+        let(:params) { {plan_id: plan2.id} }
 
-        it "creates a fixed charge with no overrides" do
+        it "creates a fixed charge with no overrides for the new plan" do
           expect { override_service.call }.to change(FixedCharge, :count).by(1)
 
           new_fixed_charge = FixedCharge.order(:created_at).last
@@ -121,7 +126,8 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
             parent_id: fixed_charge.id,
             properties: fixed_charge.properties,
             invoice_display_name: fixed_charge.invoice_display_name,
-            units: fixed_charge.units
+            units: fixed_charge.units,
+            plan_id: plan2.id
           )
         end
       end
@@ -143,7 +149,7 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
       end
 
       context "when validation fails" do
-        let(:params) { {units: -1} }
+        let(:params) { {units: -1, plan_id: plan2.id} }
 
         it "returns a validation failure" do
           result = override_service.call
@@ -155,7 +161,7 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
       end
 
       context "when tax is not found" do
-        let(:params) { {tax_codes: ["non_existent_tax"]} }
+        let(:params) { {tax_codes: ["non_existent_tax"], plan_id: plan2.id} }
 
         it "returns a failure" do
           result = override_service.call
@@ -188,7 +194,8 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
             properties: {amount: "200"},
             invoice_display_name: "Overridden Display Name",
             units: 10,
-            tax_codes: [tax.code]
+            tax_codes: [tax.code],
+            plan_id: plan2.id
           }
         end
 
@@ -217,7 +224,7 @@ RSpec.describe FixedCharges::OverrideService, type: :service do
             }
           )
         end
-        let(:params) { {properties: {amount: 100}} }
+        let(:params) { {properties: {amount: 100}, plan_id: plan2.id} }
 
         it "returns a validation failure" do
           result = override_service.call
