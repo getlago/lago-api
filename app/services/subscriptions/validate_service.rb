@@ -58,6 +58,9 @@ module Subscriptions
       add_error(field: :ending_at, error_code: "invalid_date")
 
       false
+    rescue Date::Error
+      add_error(field: :ending_at, error_code: "invalid_date")
+      false
     end
 
     def valid_on_termination_credit_note?
