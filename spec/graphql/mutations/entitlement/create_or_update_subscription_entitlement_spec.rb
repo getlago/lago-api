@@ -12,6 +12,7 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, ty
   let(:subscription) { create(:subscription, organization:, plan:) }
   let(:feature) { create(:feature, organization:, code: "seats", name: "SEATS") }
   let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
+  let(:privilege2) { create(:privilege, feature:, code: "reset", value_type: "select", config: {select_options: %w[email slack]}) }
 
   let(:query) do
     <<~GQL
@@ -64,7 +65,6 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, ty
   end
 
   context "when feature is on plan but not the privilege" do
-    let(:privilege2) { create(:privilege, feature:, code: "reset", value_type: "select", config: {select_options: %w[email slack]}) }
     let(:input) do
       {
         subscriptionId: subscription.id,
@@ -105,7 +105,6 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, ty
   end
 
   context "when removing privileges from the subscription" do
-    let(:privilege2) { create(:privilege, feature:, code: "reset", value_type: "select", config: {select_options: %w[email slack]}) }
     let(:plan_entitlement) { create(:entitlement, plan:, feature:) }
 
     let(:input) do
@@ -162,6 +161,66 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, ty
             }
           ]
         })
+      end
+    end
+
+    context "when privileges is from the plan. was removed but is restored" do
+      let(:input) do
+        {
+          subscriptionId: subscription.id,
+          entitlement: {
+            featureCode: feature.code,
+            privileges: [
+              {privilegeCode: privilege.code, value: value}
+            ]
+          }
+        }
+      end
+
+      before do
+        # create(:entitlement_value, entitlement: plan_entitlement, privilege: privilege2, value: "email")
+        create(:subscription_feature_removal, subscription:, privilege: privilege, deleted_at: 1.day.ago)
+        create(:subscription_feature_removal, subscription:, privilege: privilege)
+      end
+
+      context "when the value is the same as plan" do
+        let(:value) { "2" }
+
+        it "restores the privilege" do
+          result = subject
+          result_data = result["data"]["createOrUpdateSubscriptionEntitlement"]
+          expect(result_data).to eq({
+            "code" => "seats",
+            "name" => "SEATS",
+            "privileges" => [
+              {
+                "code" => "max",
+                "value" => "2",
+                "valueType" => "integer"
+              }
+            ]
+          })
+        end
+      end
+
+      context "when the value is different from plan" do
+        let(:value) { "100" }
+
+        it "restores the privilege with an override" do
+          result = subject
+          result_data = result["data"]["createOrUpdateSubscriptionEntitlement"]
+          expect(result_data).to eq({
+            "code" => "seats",
+            "name" => "SEATS",
+            "privileges" => [
+              {
+                "code" => "max",
+                "value" => "100",
+                "valueType" => "integer"
+              }
+            ]
+          })
+        end
       end
     end
 
