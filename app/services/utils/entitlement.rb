@@ -22,6 +22,10 @@ module Utils
       end
     end
 
+    def self.same_value?(type, value1, value2)
+      cast_value(value1, type) == cast_value(value2, type)
+    end
+
     def self.convert_gql_input_to_params(entitlements)
       Array.wrap(entitlements).map do |ent|
         [

@@ -57,8 +57,10 @@ module Entitlement
         # Restore the plan default by removing all overrides
         sub_entitlement&.values&.update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
         sub_entitlement&.discard!
-        feature_removal = removals.find { it.entitlement_feature_id == feature.id }
-        feature_removal&.discard!
+        SubscriptionFeatureRemoval.where(subscription: subscription).merge(
+          SubscriptionFeatureRemoval.where(feature:)
+            .or(SubscriptionFeatureRemoval.where(privilege: feature.privileges))
+        ).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
       else
         feature_removal = removals.find { it.entitlement_feature_id == feature.id }
         feature_removal&.discard!
@@ -91,7 +93,7 @@ module Entitlement
     def remove_missing_entitlement_values(plan_entitlement, sub_entitlement)
       plan_privilege_codes = plan_entitlement&.values&.map { it.privilege.code }
       sub_privilege_codes = sub_entitlement&.values&.map { it.privilege.code }
-      privilege_codes_to_remove = (plan_privilege_codes.to_a + sub_privilege_codes.to_a) - privilege_params.keys
+      privilege_codes_to_remove = ((plan_privilege_codes.to_a + sub_privilege_codes.to_a) - privilege_params.keys).uniq
 
       privilege_codes_to_remove.each do |privilege_code|
         sub_val = sub_entitlement&.values&.find { it.privilege.code == privilege_code }
@@ -116,6 +118,9 @@ module Entitlement
           sub_val&.discard!
         elsif sub_val.nil?
           # TODO: REMOVE PRIVILEGE REMOVAL
+          # Test
+          # TODO: Get removals from args in case of loops
+          SubscriptionFeatureRemoval.where(privilege:, subscription:).discard_all!
 
           create_entitlement_value(sub_entitlement, privilege, value)
         elsif sub_val && !value_is_the_same?(privilege.value_type, value, sub_val.value)
@@ -124,9 +129,8 @@ module Entitlement
       end
     end
 
-    # TODO: Etract to utils and fix
     def value_is_the_same?(type, value1, value2)
-      value1.to_s == value2.to_s
+      Utils::Entitlement.same_value?(type, value1, value2)
     end
 
     def create_entitlement_value(entitlement, privilege, value)

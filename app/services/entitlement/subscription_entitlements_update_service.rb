@@ -62,14 +62,6 @@ module Entitlement
       !partial?
     end
 
-    # def subscription_plan_entitlements_as_params
-    #   @subscription_plan_entitlements_as_params ||= (subscription.plan.parent || subscription.plan)
-    #     .entitlements
-    #     .includes(:feature, values: :privilege)
-    #     .map { |entitlement| [entitlement.feature.code, entitlement.values.map { |v| [v.privilege.code, v.value] }.to_h] }
-    #     .to_h
-    # end
-
     def remove_or_delete_missing_features
       # TODO: Make dedicated query?
       missing_codes = (SubscriptionEntitlement.for_subscription(subscription).map(&:code) - entitlements_params.keys).uniq
@@ -92,27 +84,6 @@ module Entitlement
       end
     end
 
-    # def delete_missing_entitlement_values(entitlement, privilege_values)
-    #   return if privilege_values.blank?
-    #
-    #   entitlement.values.joins(:privilege).where.not(privilege: {code: privilege_values.keys}).discard_all!
-    # end
-
-    def feature_config_same_as_plan?(feature_code, privilege_values)
-      return false if subscription_plan_entitlements_as_params[feature_code].nil?
-      return false if privilege_values.keys != subscription_plan_entitlements_as_params[feature_code].keys
-
-      subscription_plan_entitlements_as_params[feature_code].all? do |privilege_code, value|
-        if value == "t"
-          ["true", true, "t", 1].include? privilege_values[privilege_code]
-        elsif value == "f"
-          ["false", false, "f", 0].include? privilege_values[privilege_code]
-        else
-          privilege_values[privilege_code].to_s == value.to_s
-        end
-      end
-    end
-
     def update_entitlements
       return if entitlements_params.blank?
 
@@ -123,84 +94,9 @@ module Entitlement
           feature: organization.features.includes(:privileges).find { it.code == feature_code },
           privilege_params:,
           partial:
+          # TODO: add existing removals here
         )
       end
     end
-
-    # def update_entitlements_BK
-    #   return if entitlements_params.blank?
-    #
-    #   entitlements_params.each do |feature_code, privilege_values|
-    #     feature = organization.features.includes(:privileges).find { it.code == feature_code }
-    #
-    #     raise ActiveRecord::RecordNotFound.new("Entitlement::Feature") unless feature
-    #
-    #     # if the feature was previously removed, we restore it
-    #     removal = subscription.entitlement_removals.find { it.entitlement_feature_id == feature.id }
-    #     removal&.discard!
-    #
-    #     entitlement = subscription.entitlements.includes(:values).find { it.entitlement_feature_id == feature.id }
-    #
-    #     # When the params contains the same info as the plan, we delete the override if found or don't create overrides
-    #     if full? && feature_config_same_as_plan?(feature_code, privilege_values)
-    #       if entitlement
-    #         entitlement.values.discard_all!
-    #         entitlement.discard!
-    #       end
-    #
-    #       next
-    #     end
-    #
-    #     if entitlement.nil?
-    #       entitlement = Entitlement.create!(
-    #         organization: organization,
-    #         feature: feature,
-    #         subscription_id: subscription.id
-    #       )
-    #     elsif full?
-    #       delete_missing_entitlement_values(entitlement, privilege_values)
-    #     end
-    #
-    #     update_entitlement_values(entitlement, feature, privilege_values)
-    #   end
-    # end
-
-    # def create_entitlement_values(entitlement, feature, privilege_values)
-    #   privilege_values.each do |privilege_code, value|
-    #     privilege = find_privilege!(feature.privileges, privilege_code)
-    #
-    #     create_entitlement_value(entitlement, privilege, value)
-    #   end
-    # end
-
-    # def update_entitlement_values(entitlement, feature, privilege_values)
-    #   return if privilege_values.blank?
-    #
-    #   privilege_values.each do |privilege_code, value|
-    #     privilege = find_privilege!(feature.privileges, privilege_code)
-    #
-    #     entitlement_value = entitlement.values.find { it.entitlement_privilege_id == privilege.id }
-    #
-    #     if entitlement_value
-    #       entitlement_value.update!(value: validate_value(value, privilege))
-    #     else
-    #       create_entitlement_value(entitlement, privilege, value)
-    #     end
-    #   end
-    # end
-
-    # def create_entitlement_value(entitlement, privilege, value)
-    #   EntitlementValue.create!(
-    #     organization: organization,
-    #     entitlement: entitlement,
-    #     privilege: privilege,
-    #     value: validate_value(value, privilege)
-    #   )
-    # end
-
-    # def find_privilege!(privileges, privilege_code)
-    #   privilege = privileges.find { it.code == privilege_code }
-    #   privilege || raise(ActiveRecord::RecordNotFound.new("Entitlement::Privilege"))
-    # end
   end
 end
