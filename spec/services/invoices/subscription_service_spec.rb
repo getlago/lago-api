@@ -123,10 +123,10 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
       expect(Utils::ActivityLog).to have_produced("invoice.created").after_commit.with(invoice)
     end
 
-    it "enqueues GeneratePdfAndNotifyJob with email false" do
+    it "enqueues GenerateFilesAndNotifyJob with email false" do
       expect do
         invoice_service.call
-      end.to have_enqueued_job_after_commit(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+      end.to have_enqueued_job_after_commit(Invoices::GenerateFilesAndNotifyJob).with(hash_including(email: false))
     end
 
     it "flags lifetime usage for refresh" do
@@ -235,19 +235,19 @@ RSpec.describe Invoices::SubscriptionService, type: :service do
         end
       end
 
-      it "enqueues GeneratePdfAndNotifyJob with email true" do
+      it "enqueues GenerateFilesAndNotifyJob with email true" do
         expect do
           invoice_service.call
-        end.to have_enqueued_job_after_commit(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: true))
+        end.to have_enqueued_job_after_commit(Invoices::GenerateFilesAndNotifyJob).with(hash_including(email: true))
       end
 
       context "when organization does not have right email settings" do
         before { customer.billing_entity.update!(email_settings: []) }
 
-        it "enqueues GeneratePdfAndNotifyJob with email false" do
+        it "enqueues GenerateFilesAndNotifyJob with email false" do
           expect do
             invoice_service.call
-          end.to have_enqueued_job_after_commit(Invoices::GeneratePdfAndNotifyJob).with(hash_including(email: false))
+          end.to have_enqueued_job_after_commit(Invoices::GenerateFilesAndNotifyJob).with(hash_including(email: false))
         end
       end
     end
