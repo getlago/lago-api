@@ -16,7 +16,6 @@ namespace :customers do
     new_be = cust.organization.billing_entities.find_by(code: billing_entity_code)
 
     # wallets are now implemented, but require a change in the codebase
-    # raise "Wallets not implemented" if cust.wallets.any?
     # taxes should be easy to implement, but current customers do not have taxes, so we're not getting into it
     raise "Taxes not implemented" if cust.taxes.any?
     # current customer do not have coupons. when implementing coupons, pay attention on currencies
@@ -86,9 +85,6 @@ namespace :customers do
 
       # do we want to create wallet with 0 values, and create an inbound transaction of granted credits???
       cust.wallets.each do |wallet|
-        # new_wallet = wallet.dup
-        # new_wallet.customer = new_cust
-        # new_wallet.save!
         wallet_params = {
           organization_id: new_cust.organization_id,
           customer: new_cust,
@@ -100,9 +96,9 @@ namespace :customers do
           applies_to: {
             fee_types: wallet.allowed_fee_types
           },
-          granted_credits: wallet.credits_balance
+          granted_credits: wallet.credits_balance.to_s
         }
-        new_wallet = Wallets::CreateService.call!(wallet_params)
+        new_wallet = Wallets::CreateService.call!(params: wallet_params).wallet
 
         wallet.recurring_transaction_rules.each do |rule|
           new_rule = rule.dup
