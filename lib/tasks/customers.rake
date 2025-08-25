@@ -8,7 +8,7 @@ namespace :customers do
 
   # WARNING! Potentially dangerous task
   desc "Migrate customer to a new billing entity. This version is actual on August 2025, please, check before running if anything needs to be updated"
-  task migrate_to_new_entity: :environment, [:customer_external_id, :billing_entity_code] do |t, args|
+  task :migrate_to_new_entity, [:organization_id, :customer_external_id, :billing_entity_code] => :environment do |_task, args|
     customer_external_id = args[:customer_external_id]
     billing_entity_code = args[:billing_entity_code]
 
@@ -45,6 +45,8 @@ namespace :customers do
       new_cust.payment_receipt_counter = 0
       new_cust.sequential_id = nil
       new_cust.slug = nil
+      new_cust.last_dunning_campaign_attempt = 0
+      new_cust.last_dunning_campaign_attempt_at = nil
       new_cust.save!
 
       cust.subscriptions.each do |sub|
@@ -82,7 +84,7 @@ namespace :customers do
         new_payment_provider_cust.save!
       end
 
-      # wallets can have top up rules
+      # do we want to create wallet with 0 values, and create an inbound transaction of granted credits???
       cust.wallets.each do |wallet|
         new_wallet = wallet.dup
         new_wallet.customer = new_cust
