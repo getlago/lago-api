@@ -6,7 +6,8 @@ namespace :customers do
     Customer.unscoped.order(:created_at).find_each(&:save)
   end
 
-  desc "Migrate customer to a new billing entity"
+  # WARNING! Potentially dangerous task
+  desc "Migrate customer to a new billing entity. This version is actual on August 2025, please, check before running if anything needs to be updated"
   task migrate_to_new_entity: :environment, [:customer_external_id, :billing_entity_code] do |t, args|
     customer_external_id = args[:customer_external_id]
     billing_entity_code = args[:billing_entity_code]
@@ -14,20 +15,26 @@ namespace :customers do
     cust = Customer.find_by(external_id: customer_external_id)
     new_be = cust.organization.billing_entities.find_by(code: billing_entity_code)
 
-    raise "Wallets not implemented" if cust.wallets.any?
+    # wallets are now implemented, but require a change in the codebase
+    # raise "Wallets not implemented" if cust.wallets.any?
+    # taxes should be easy to implement, but current customers do not have taxes, so we're not getting into it
     raise "Taxes not implemented" if cust.taxes.any?
+    # current customer do not have coupons. when implementing coupons, pay attention on currencies
     raise "Coupons not implemented" if cust.coupons.any?
 
+    # triggered dunning_campaign can be not a problem if all payments and payment_requests are managed - to figure it out with the organization
     raise "Customer has dunning campaigns triggered" if  cust.last_dunning_campaign_attempt != 0
     raise "Customer has dunning campaigns triggered" unless cust.last_dunning_campaign_attempt_at.nil?
-    # we need tests on usage
-    raise "Customer has a subscription with lifetime usage" if cust.subscriptions.any? { |sub| sub.lifetime_usage&.current_usage_amount_cents.to_i > 0 }
+    raise "Customer should not have payment requests" if cust.payment_requests.any?
+    # pay_in_advance will immediately trigger the invoice, which is not a desired behaviour
     raise "customer has a subscription with a plan that is pay_in_advance" if cust.subscriptions.any? { |sub| sub.plan.pay_in_advance? }
     raise "Customer has an unknown integration customer" if cust.integration_customers.any? { |int_cust| int_cust.type != "IntegrationCustomers::AnrokCustomer" && int_cust.type != "IntegrationCustomers::NetsuiteCustomer" }
+    # customers this script was created for, did not have credit_notes, metadata, invoice custom sections
     raise "Customer should not have any credit notes" if cust.credit_notes.any?
-    raise "Customer should not have payment requests" if cust.payment_requests.any?
     raise "Metadata is not implemented" if cust.metadata.any?
     raise "Invoice custom sections are not implemented" if cust.applied_invoice_custom_sections.any?
+    # progressively billed usage cannot be shared and we're risking to trigger again the tresholds
+    raise "Customer has progressive billing invoices" if cust.invoices.progressive_billing.any?
 
     ActiveRecord::Base.transaction do
       cust.discard
@@ -50,7 +57,6 @@ namespace :customers do
           new_ltu = sub.lifetime_usage.dup
           new_ltu.subscription = new_sub
           new_ltu.save!
-          # LifetimeUsages::RecalculateAndCheckJob.perform_now(sub.reload.lifetime_usage)
         else
           new_sub = sub.dup
           new_sub.customer = new_cust
@@ -97,6 +103,3 @@ namespace :customers do
     end
   end
 end
-
-
-# now when sending new usage, wallet is not being pdated as ready_to_be_refreshed
