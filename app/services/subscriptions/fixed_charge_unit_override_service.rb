@@ -15,7 +15,7 @@ module Subscriptions
     def call
       return result.not_found_failure!(resource: "subscription") unless subscription
 
-      result.fixed_charge_unit_override = build_fixed_charge_unit_override
+      result.fixed_charge_unit_override = create_or_update_fixed_charge_unit_override
       result
     rescue ActiveRecord::RecordInvalid => e
       result.record_validation_failure!(record: e.record)
@@ -25,14 +25,13 @@ module Subscriptions
 
     attr_reader :subscription, :fixed_charge, :units
 
-    def build_fixed_charge_unit_override
-      SubscriptionFixedChargeUnitsOverride.create!(
-        organization: subscription.organization,
-        billing_entity: subscription.billing_entity,
-        subscription:,
-        fixed_charge:,
-        units:
-      )
+    def create_or_update_fixed_charge_unit_override
+      fixed_charges_units_overrides = subscription.fixed_charges_units_overrides.
+        find_or_initialize_by(fixed_charge:, subscription:, billing_entity: subscription.billing_entity,
+        organization: subscription.organization)
+      fixed_charges_units_overrides.units = units
+      fixed_charges_units_overrides.save!
+      fixed_charges_units_overrides
     end
   end
 end
