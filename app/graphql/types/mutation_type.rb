@@ -202,5 +202,6 @@ module Types
     field :update_subscription_entitlement, mutation: Mutations::Entitlement::UpdateSubscriptionEntitlement
 
     field :create_ai_conversation, mutation: Mutations::AiConversations::Create
+    field :start_ai_conversation_stream, mutation: Mutations::AiConversations::StartStream
   end
 end

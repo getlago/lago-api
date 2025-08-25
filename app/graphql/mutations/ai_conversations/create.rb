@@ -22,7 +22,7 @@ module Mutations
           input_data: "Content: "
         )
       
-        ::AiConversations::StreamJob.perform_later(ai_conversation.id)
+        #::AiConversations::StreamJob.perform_later(ai_conversation.id)
       
         ai_conversation
       end
