@@ -48,8 +48,8 @@ module EInvoices
                   TradeSettlementPayment.call(xml:, invoice:, type:, amount:)
                 end
 
-                applied_taxes do |applied_tax|
-                  ApplicableTradeTax.call(xml:, invoice:, applied_tax:)
+                taxes do |tax_rate, amount, tax|
+                  ApplicableTradeTax.call(xml:, invoice:, tax_rate:, amount:, tax:)
                 end
 
                 allowance_charges do |tax_rate, amount|

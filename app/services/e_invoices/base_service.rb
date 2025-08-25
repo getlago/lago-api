@@ -126,23 +126,28 @@ module EInvoices
     def allowance_charges(&block)
       return unless invoice.coupons_amount_cents.positive?
 
-      sum_by_taxes_rate = invoice.fees.group(:taxes_rate).order(taxes_rate: :asc).sum(:amount_cents)
-      total_without_taxes = sum_by_taxes_rate.values.sum
-      coupon_proportions = sum_by_taxes_rate.transform_values do |value|
-        Money.new((value.to_f / total_without_taxes) * invoice.coupons_amount_cents)
-      end
-      coupon_proportions.each do |tax_rate, amount|
+      discount_by_tax_rates.each do |tax_rate, amount|
         yield(tax_rate, amount)
       end
     end
 
-    def applied_taxes(&block)
-      if invoice.applied_taxes.empty?
-        yield Invoice::AppliedTax.new(fees_amount: invoice.sub_total_excluding_taxes_amount)
-      else
-        invoice.applied_taxes.each do |applied_tax|
-          yield applied_tax
-        end
+    def discount_by_tax_rates
+      sum_by_taxes_rate = invoice.fees.group(:taxes_rate).order(taxes_rate: :asc).sum(:amount_cents)
+      total_taxable = sum_by_taxes_rate.values.sum
+      sum_by_taxes_rate.transform_values do |value|
+        Money.new((value.to_f / total_taxable) * invoice.coupons_amount_cents)
+      end
+    end
+
+    def taxable_by_tax_rate
+      discounts = discount_by_tax_rates
+      taxable_amounts = invoice.fees.group(:taxes_rate).sum(:amount_cents)
+      taxable_amounts.merge(discounts) { |_, amount, discount| Money.new(amount) - Money.new(discount) }
+    end
+
+    def taxes(&block)
+      taxable_by_tax_rate.each do |tax_rate, amount|
+        yield tax_rate, amount, amount * (tax_rate / 100)
       end
     end
 

@@ -13,12 +13,10 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
   let(:subscription) { create(:subscription, started_at: "2025-03-16".to_date) }
   let(:invoice) { create(:invoice, total_amount_cents: 30_00, currency: "USD", coupons_amount_cents: 1000) }
   let(:fee) { create(:fee, invoice:, amount_cents: 10000, taxes_rate: 20.00) }
-  let(:invoice_applied_tax) { create(:invoice_applied_tax, invoice:, tax_rate: 20.00) }
 
   before do
     fee
     invoice_subscription
-    invoice_applied_tax
   end
 
   shared_examples "xml section" do |section|
@@ -101,17 +99,17 @@ RSpec.describe EInvoices::FacturX::Create::Builder, type: :service do
       it_behaves_like "xml section", {name: "Tax Information 20.00% VAT", xpath: "(#{applied_taxes_tag})[1]"}
 
       context "with multiple taxes" do
-        let(:invoice_applied_tax2) { create(:invoice_applied_tax, invoice:, tax_rate: 19.00) }
+        let(:fee2) { create(:fee, invoice:, amount_cents: 1050, taxes_rate: 19.00) }
 
-        before { invoice_applied_tax2 }
+        before { fee2 }
 
-        it_behaves_like "xml section", {name: "Tax Information 20.00% VAT", xpath: "(#{applied_taxes_tag})[1]"}
-        it_behaves_like "xml section", {name: "Tax Information 19.00% VAT", xpath: "(#{applied_taxes_tag})[2]"}
+        it_behaves_like "xml section", {name: "Tax Information 19.00% VAT", xpath: "(#{applied_taxes_tag})[1]"}
+        it_behaves_like "xml section", {name: "Tax Information 20.00% VAT", xpath: "(#{applied_taxes_tag})[2]"}
       end
     end
 
     context "without applied taxes" do
-      let(:invoice_applied_tax) { nil }
+      let(:fee) { create(:fee, invoice:, amount_cents: 10000, taxes_rate: 0) }
 
       it_behaves_like "xml section", {name: "Tax Information 0.00% VAT", xpath: "(#{applied_taxes_tag})[1]"}
     end
