@@ -6,6 +6,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
   let(:tax) { create(:tax, organization:) }
   let(:organization) { create(:organization) }
   let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:add_on) { create(:add_on, organization:) }
   let(:plan) { create(:plan, code: "plan_code") }
 
   describe "POST /api/v1/plans" do
@@ -41,6 +42,20 @@ RSpec.describe Api::V1::PlansController, type: :request do
               code: pricing_unit.code,
               conversion_rate: 1.25
             }
+          }
+        ],
+        fixed_charges: [
+          {
+            invoice_display_name: "Fixed charge 1",
+            units: 1,
+            add_on_id: add_on.id,
+            charge_model: "standard",
+            pay_in_advance: true,
+            prorated: true,
+            properties: {
+              amount: "10"
+            },
+            tax_codes:
           }
         ],
         usage_thresholds: [
@@ -81,6 +96,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         expect(json[:plan][:invoice_display_name]).to eq(create_params[:invoice_display_name])
         expect(json[:plan][:created_at]).to be_present
         expect(json[:plan][:charges].first[:lago_id]).to be_present
+        expect(json[:plan][:fixed_charges].first[:lago_id]).to be_present
       end
 
       context "when license is not premium" do
@@ -222,6 +238,57 @@ RSpec.describe Api::V1::PlansController, type: :request do
         end
       end
 
+      context "with graduated fixed charges" do
+        let(:create_params) do
+          {
+            name: "P1",
+            code: "plan_code",
+            interval: "weekly",
+            description: "description",
+            amount_cents: 100,
+            amount_currency: "EUR",
+            trial_period: 1,
+            pay_in_advance: false,
+            fixed_charges: [
+              {
+                invoice_display_name: "Fixed charge 1",
+                units: 1,
+                add_on_id: add_on.id,
+                charge_model: "graduated",
+                properties: {
+                  graduated_ranges: [
+                    {
+                      to_value: 1,
+                      from_value: 0,
+                      flat_amount: "0",
+                      per_unit_amount: "0"
+                    },
+                    {
+                      to_value: nil,
+                      from_value: 2,
+                      flat_amount: "0",
+                      per_unit_amount: "3200"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        end
+
+        it "creates a plan" do
+          subject
+
+          expect(response).to have_http_status(:success)
+
+          expect(json[:plan][:lago_id]).to be_present
+          expect(json[:plan][:code]).to eq(create_params[:code])
+          expect(json[:plan][:name]).to eq(create_params[:name])
+          expect(json[:plan][:created_at]).to be_present
+          expect(json[:plan][:fixed_charges].first[:lago_id]).to be_present
+        end
+      end
+
       context "without charges" do
         let(:create_params) do
           {
@@ -246,6 +313,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
           expect(json[:plan][:name]).to eq(create_params[:name])
           expect(json[:plan][:created_at]).to be_present
           expect(json[:plan][:charges].count).to eq(0)
+          expect(json[:plan][:fixed_charges].count).to eq(0)
         end
       end
 
@@ -255,6 +323,26 @@ RSpec.describe Api::V1::PlansController, type: :request do
         it "returns a 404 response" do
           subject
           expect(response).to be_not_found_error("tax")
+        end
+      end
+
+      context "with not found models for charges and fixed charges" do
+        context "when billable_metric for charge is not found" do
+          before { create_params[:charges].first[:billable_metric_id] = "unknown" }
+
+          it "returns a 404 response" do
+            subject
+            expect(response).to be_not_found_error("billable_metrics")
+          end
+        end
+
+        context "when add_on for fixed charge is not found" do
+          before { create_params[:fixed_charges].first[:add_on_id] = "unknown" }
+
+          it "returns a 404 response" do
+            subject
+            expect(response).to be_not_found_error("add_ons")
+          end
         end
       end
     end
@@ -286,6 +374,7 @@ RSpec.describe Api::V1::PlansController, type: :request do
         trial_period: 1,
         pay_in_advance: false,
         charges: charges_params,
+        fixed_charges: fixed_charges_params,
         usage_thresholds: usage_thresholds_params
       }
     end
@@ -307,6 +396,20 @@ RSpec.describe Api::V1::PlansController, type: :request do
           charge_model: "standard",
           properties: {
             amount: "0.22"
+          },
+          tax_codes:
+        }
+      ]
+    end
+
+    let(:fixed_charges_params) do
+      [
+        {
+          units: 1,
+          add_on_id: add_on.id,
+          charge_model: "standard",
+          properties: {
+            amount: "10"
           },
           tax_codes:
         }
@@ -538,6 +641,46 @@ RSpec.describe Api::V1::PlansController, type: :request do
             expect(json[:plan][:minimum_commitment][:amount_cents]).to eq(minimum_commitment.amount_cents)
           end
         end
+      end
+    end
+
+    context "when plan has fixed charges" do
+      let(:fixed_charge) { create(:fixed_charge, plan:, invoice_display_name: "Fixed charge 1") }
+      let(:fixed_charges_params) do
+        [
+          {
+            id: fixed_charge.id,
+            invoice_display_name: "Fixed charge 1 updated",
+            units: 1,
+            add_on_id: add_on.id,
+            charge_model: "standard",
+            properties: {
+              amount: "15"
+            },
+            tax_codes:
+          },
+          {
+            invoice_display_name: "Fixed charge 2",
+            units: 1,
+            add_on_id: add_on.id,
+            charge_model: "standard",
+            properties: {
+              amount: "10"
+            },
+            tax_codes:
+          }
+        ]
+      end
+
+      before { fixed_charge }
+
+      it "returns plan with updated fixed charges" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan][:fixed_charges].count).to eq(2)
+        expect(json[:plan][:fixed_charges].first[:invoice_display_name]).to eq("Fixed charge 1 updated")
+        expect(json[:plan][:fixed_charges].last[:invoice_display_name]).to eq("Fixed charge 2")
       end
     end
 

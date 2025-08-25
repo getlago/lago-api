@@ -17,6 +17,7 @@ module Mutations
       argument :invoice_requires_successful_payment, Boolean, required: false
       argument :metadata, [Types::WalletTransactions::MetadataInput], required: false
       argument :paid_credits, String, required: false
+      argument :priority, Integer, required: false
       argument :voided_credits, String, required: false
 
       type Types::WalletTransactions::Object.collection_type

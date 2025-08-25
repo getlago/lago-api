@@ -10,14 +10,21 @@ module Resolvers
 
       description "Query a single feature"
 
-      argument :id, ID, required: true, description: "Unique ID of the feature"
+      argument :code, String, required: false, description: "Unique code of the feature"
+      argument :id, ID, required: false, description: "Unique ID of the feature"
+
+      validates required: {one_of: [:id, :code]}
 
       type Types::Entitlement::FeatureObject, null: false
 
-      def resolve(id:)
+      def resolve(id: nil, code: nil)
         raise forbidden_error(code: "feature_unavailable") unless License.premium?
 
-        current_organization.features.find(id)
+        if id
+          current_organization.features.find(id)
+        elsif code
+          current_organization.features.find_by!(code:)
+        end
       rescue ActiveRecord::RecordNotFound
         not_found_error(resource: "feature")
       end

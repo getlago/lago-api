@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class DailyUsage < ApplicationRecord
+  DEFAULT_HISTORY_DAYS = 120
+
   belongs_to :organization
   belongs_to :customer
   belongs_to :subscription

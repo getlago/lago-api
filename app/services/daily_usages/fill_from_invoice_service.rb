@@ -2,6 +2,8 @@
 
 module DailyUsages
   class FillFromInvoiceService < BaseService
+    Usage = Struct.new(:from_datetime, :to_datetime, :issuing_date, :currency, :amount_cents, :total_amount_cents, :taxes_amount_cents, :fees)
+
     def initialize(invoice:, subscriptions:)
       @invoice = invoice
       @subscriptions = subscriptions
@@ -57,7 +59,7 @@ module DailyUsages
       taxes_amount_cents = in_adv_fees.sum(:taxes_amount_cents) + invoice.fees.charge.sum(:taxes_amount_cents)
       total_amount_cents = amount_cents + taxes_amount_cents
 
-      OpenStruct.new(
+      Usage.new(
         from_datetime: invoice_subscription.charges_from_datetime.change(usec: 0),
         to_datetime: invoice_subscription.charges_to_datetime.change(usec: 0),
         issuing_date: invoice.issuing_date.iso8601,

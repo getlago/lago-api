@@ -2,7 +2,7 @@
 
 module Types
   class TimezoneEnum < Types::BaseEnum
-    ActiveSupport::TimeZone.all
+    Timezones.all
       .uniq { |tz| tz.tzinfo.identifier }
       .each_with_object([]) { |tz, result| result << tz.tzinfo.identifier }
       .sort_by { |tz| tz.split("/") }

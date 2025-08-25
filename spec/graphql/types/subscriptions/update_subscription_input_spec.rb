@@ -11,6 +11,5 @@ RSpec.describe Types::Subscriptions::UpdateSubscriptionInput do
     expect(subject).to accept_argument(:name).of_type("String")
     expect(subject).to accept_argument(:plan_overrides).of_type("PlanOverridesInput")
     expect(subject).to accept_argument(:subscription_at).of_type("ISO8601DateTime")
-    expect(subject).to accept_argument(:entitlements).of_type("[EntitlementInput!]")
   end
 end

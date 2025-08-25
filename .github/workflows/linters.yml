@@ -1,6 +1,6 @@
 name: Linters
 on: [pull_request]
-permissions: { }
+permissions: {}
 jobs:
   linters:
     name: Linters
@@ -17,6 +17,9 @@ jobs:
           fetch-depth: 0
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4.5"
+          bundler-cache: true
       - name: Setup Rubocop
         # A bug requires the use of `bundle install` to use `rubocop-rails`. A fix is coming to Rubocop.
         # See: https://github.com/rubocop/rubocop/issues/12823

@@ -2,8 +2,10 @@
 
 FactoryBot.define do
   factory :subscription_feature_removal, class: "Entitlement::SubscriptionFeatureRemoval" do
-    organization { feature&.organization || association(:organization) }
-    association :feature, factory: :feature
+    organization { feature&.organization || privilege&.organization || association(:organization) }
     subscription { association(:subscription, organization:) }
+
+    entitlement_feature_id { nil }
+    entitlement_privilege_id { nil }
   end
 end

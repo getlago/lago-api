@@ -324,7 +324,7 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
   describe "POST /api/v1/subscriptions/external_id/entitlements/:feature_code/restore" do
     subject { post_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}/restore" }
 
-    let(:subscription_feature_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_id: subscription.id) }
+    let(:subscription_feature_removal) { create(:subscription_feature_removal, organization:, feature:, subscription: subscription) }
 
     before do
       subscription_feature_removal

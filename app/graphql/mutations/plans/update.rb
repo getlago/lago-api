@@ -15,6 +15,7 @@ module Mutations
 
       def resolve(entitlements: nil, **args)
         args[:charges].map!(&:to_h)
+        args[:fixed_charges]&.map!(&:to_h)
         plan = context[:current_user].plans.find_by(id: args[:id])
 
         result = ::Plans::UpdateService.call(plan:, params: args)

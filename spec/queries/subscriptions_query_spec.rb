@@ -24,6 +24,26 @@ RSpec.describe SubscriptionsQuery, type: :query do
     expect(result.subscriptions).to eq([subscription])
   end
 
+  context "when subscriptions have the same values for started_at" do
+    let(:subscription) { create(:subscription, customer:, plan:, started_at: 2.days.ago, created_at: 1.day.ago) }
+    let(:subscription_2) do
+      create(
+        :subscription,
+        customer:,
+        plan:,
+        id: "00000000-0000-0000-0000-000000000000",
+        started_at: subscription.started_at
+      )
+    end
+
+    before { subscription_2 }
+
+    it "returns a list sorted by created_at DESC" do
+      expect(result).to be_success
+      expect(returned_ids).to eq([subscription_2.id, subscription.id])
+    end
+  end
+
   context "when subscriptions have the same values for the ordering criteria" do
     let(:subscription) { create(:subscription, customer:, plan:, started_at: 1.day.ago) }
     let(:subscription_2) do
@@ -396,6 +416,37 @@ RSpec.describe SubscriptionsQuery, type: :query do
 
       it "excludes subscriptions with matching previous status" do
         expect(result.subscriptions).not_to include(pending_with_pending_previous)
+      end
+    end
+
+    context "when previous subscription is terminated" do
+      let(:subscription) { create(:subscription, customer:, plan:, status: :terminated) }
+
+      it "returns all subscriptions" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(4)
+        expect(result.subscriptions).to match_array([subscription, next_subscription, pending_subscription, terminated_subscription])
+      end
+
+      context "when there is a search term" do
+        let(:search_term) { customer.name }
+
+        it "returns all subscriptions" do
+          expect(result).to be_success
+          expect(result.subscriptions.count).to eq(4)
+          expect(result.subscriptions).to match_array([subscription, next_subscription, pending_subscription, terminated_subscription])
+        end
+      end
+    end
+
+    context "when next subscription is canceled" do
+      let(:subscription) { create(:subscription, customer:, plan:, status: :active) }
+      let(:next_subscription) { create(:subscription, previous_subscription: subscription, customer:, plan:, status: :canceled) }
+
+      it "returns all subscriptions" do
+        expect(result).to be_success
+        expect(result.subscriptions.count).to eq(4)
+        expect(result.subscriptions).to match_array([subscription, next_subscription, pending_subscription, terminated_subscription])
       end
     end
   end

@@ -25,6 +25,7 @@ module WalletTransactions
       wallet_transactions = []
       @source = params[:source] || :manual
       @metadata = params[:metadata] || []
+      @priority = params[:priority] || 50
       invoice_requires_successful_payment = if params.key?(:invoice_requires_successful_payment)
         ActiveModel::Type::Boolean.new.cast(params[:invoice_requires_successful_payment])
       else
@@ -54,11 +55,7 @@ module WalletTransactions
 
         if params[:voided_credits]
           wallet_credit = WalletCredit.new(wallet:, credit_amount: BigDecimal(params[:voided_credits]).floor(5), invoiceable: false)
-          void_result = WalletTransactions::VoidService.call(
-            wallet:,
-            wallet_credit:,
-            from_source: source, metadata:
-          )
+          void_result = WalletTransactions::VoidService.call(**params, wallet:, wallet_credit:)
           wallet_transactions << void_result.wallet_transaction
         end
       end
@@ -85,7 +82,7 @@ module WalletTransactions
 
     private
 
-    attr_reader :organization, :params, :source, :metadata
+    attr_reader :organization, :params, :source, :metadata, :priority
 
     def handle_paid_credits(wallet:, credits_amount:, invoice_requires_successful_payment:)
       return if credits_amount.zero?
@@ -96,10 +93,11 @@ module WalletTransactions
         wallet_credit:,
         transaction_type: :inbound,
         status: :pending,
-        from_source: source,
+        source:,
         transaction_status: :purchased,
         invoice_requires_successful_payment:,
-        metadata:
+        metadata:,
+        priority:
       ).wallet_transaction
 
       BillPaidCreditJob.perform_after_commit(wallet_transaction, Time.current.to_i)
@@ -118,10 +116,11 @@ module WalletTransactions
           transaction_type: :inbound,
           status: :settled,
           settled_at: Time.current,
-          from_source: source,
+          source:,
           transaction_status: :granted,
           invoice_requires_successful_payment:,
-          metadata:
+          metadata:,
+          priority:
         ).wallet_transaction
 
         Wallets::Balance::IncreaseService.new(

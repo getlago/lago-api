@@ -11,10 +11,11 @@ module Api
 
         def index
           render(
-            json: ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(
+            json: ::CollectionSerializer.new(
               Entitlement::SubscriptionEntitlement.for_subscription(subscription),
+              ::V1::Entitlement::SubscriptionEntitlementSerializer,
               collection_name: "entitlements"
-            ).serialize
+            )
           )
         end
 
@@ -28,10 +29,11 @@ module Api
 
           if result.success?
             render(
-              json: ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(
+              json: ::CollectionSerializer.new(
                 Entitlement::SubscriptionEntitlement.for_subscription(subscription),
+                ::V1::Entitlement::SubscriptionEntitlementSerializer,
                 collection_name: "entitlements"
-              ).serialize
+              )
             )
           else
             render_error_response(result)
@@ -43,10 +45,11 @@ module Api
 
           if result.success?
             render(
-              json: ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(
+              json: ::CollectionSerializer.new(
                 Entitlement::SubscriptionEntitlement.for_subscription(subscription),
+                ::V1::Entitlement::SubscriptionEntitlementSerializer,
                 collection_name: "entitlements"
-              ).serialize
+              )
             )
           else
             render_error_response(result)
@@ -60,10 +63,11 @@ module Api
 
           if result.success?
             render(
-              json: ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(
+              json: ::CollectionSerializer.new(
                 Entitlement::SubscriptionEntitlement.for_subscription(subscription),
+                ::V1::Entitlement::SubscriptionEntitlementSerializer,
                 collection_name: "entitlements"
-              ).serialize
+              )
             )
           else
             render_error_response(result)
@@ -78,10 +82,11 @@ module Api
 
           if result.success?
             render(
-              json: ::V1::Entitlement::SubscriptionEntitlementsCollectionSerializer.new(
+              json: ::CollectionSerializer.new(
                 Entitlement::SubscriptionEntitlement.for_subscription(subscription),
+                ::V1::Entitlement::SubscriptionEntitlementSerializer,
                 collection_name: "entitlements"
-              ).serialize
+              )
             )
           else
             render_error_response(result)

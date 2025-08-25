@@ -3,89 +3,62 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::SubscriptionEntitlement, type: :model do
-  subject { described_class.first }
+  describe "initialization" do
+    it "creates an instance with no attributes" do
+      entitlement = described_class.new
 
-  let(:organization) { create(:organization) }
-  let(:feature) { create(:feature, organization:) }
-  let(:subscription) { create(:subscription, organization:) }
-  let(:entitlement) { create(:entitlement, feature:, plan: subscription.plan) }
-  let(:privilege) { create(:privilege, feature:) }
-  let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: "10") }
-
-  before do
-    entitlement
-    entitlement_value
-  end
-
-  describe "associations" do
-    it do
-      expect(subject).to belong_to(:organization)
-      expect(subject).to belong_to(:feature).class_name("Entitlement::Feature")
-      expect(subject).to belong_to(:privilege).class_name("Entitlement::Privilege").optional
+      expect(entitlement.organization_id).to be_nil
+      expect(entitlement.entitlement_feature_id).to be_nil
+      expect(entitlement.code).to be_nil
+      expect(entitlement.name).to be_nil
+      expect(entitlement.description).to be_nil
+      expect(entitlement.plan_entitlement_id).to be_nil
+      expect(entitlement.sub_entitlement_id).to be_nil
+      expect(entitlement.plan_id).to be_nil
+      expect(entitlement.subscription_id).to be_nil
+      expect(entitlement.ordering_date).to be_nil
+      expect(entitlement.privileges).to be_nil
     end
   end
 
-  describe "scopes" do
-    describe ".for_subscription" do
-      let(:subscription) { create(:subscription) }
-
-      it "sets hash-based where conditions correctly" do
-        scope = described_class.for_subscription(subscription)
-
-        expect(scope.where_values_hash).to include(
-          "organization_id" => subscription.organization_id,
-          "removed" => false
-        )
-        expect(scope.to_sql).to match(/subscription_id = '#{subscription.id}' OR plan_id = '#{subscription.plan.id}'/)
-      end
-
-      context "when the plan is an override" do
-        let(:subscription) do
-          create(:subscription, organization:, plan: create(:plan, organization:, parent: create(:plan, organization:)))
-        end
-
-        it "sets hash-based where conditions correctly" do
-          scope = described_class.for_subscription(subscription)
-
-          expect(scope.where_values_hash).to include(
-            "organization_id" => subscription.organization_id,
-            "removed" => false
-          )
-          expect(scope.to_sql).to match(/subscription_id = '#{subscription.id}' OR plan_id = '#{subscription.plan.parent_id}'/)
-        end
-      end
+  describe "ActiveModel compliance" do
+    it "includes ActiveModel::Attributes" do
+      expect(described_class.ancestors).to include(ActiveModel::Model)
+      expect(described_class.ancestors).to include(ActiveModel::Attributes)
     end
   end
 
-  describe "#readonly?" do
-    it do
-      expect(subject).to be_readonly
+  describe ".for_subscription" do
+    let(:organization) { create(:organization) }
+    let(:parent) { create(:plan, organization:) }
+    let(:subscription) { create(:subscription, organization:, plan: create(:plan, parent:)) }
+
+    it "returns the result from SubscriptionEntitlementQuery" do
+      allow(Entitlement::SubscriptionEntitlementQuery).to receive(:call).with(
+        organization: subscription.organization,
+        filters: {subscription_id: subscription.id, plan_id: parent.id}
+      ).and_return("works")
+
+      result = described_class.for_subscription(subscription)
+
+      expect(result).to eq("works")
     end
   end
 
-  it do
-    expect(subject.attributes).to eq({
-      "entitlement_feature_id" => feature.id,
-      "organization_id" => organization.id,
-      "feature_code" => feature.code,
-      "feature_name" => feature.name,
-      "feature_description" => feature.description,
-      "feature_deleted_at" => nil,
-      "entitlement_privilege_id" => privilege.id,
-      "privilege_code" => privilege.code,
-      "privilege_name" => nil,
-      "privilege_value_type" => "string",
-      "privilege_config" => {},
-      "privilege_deleted_at" => nil,
-      "plan_id" => entitlement.plan_id,
-      "subscription_id" => nil,
-      "removed" => false,
-      "plan_entitlement_id" => entitlement.id,
-      "override_entitlement_id" => nil,
-      "plan_entitlement_values_id" => entitlement_value.id,
-      "override_entitlement_values_id" => nil,
-      "privilege_plan_value" => "10",
-      "privilege_override_value" => nil
-    })
+  describe "#to_h" do
+    it "returns a hash" do
+      privilege = Entitlement::SubscriptionEntitlementPrivilege.new(code: "max")
+      entitlement = described_class.new(code: "seats", privileges: [privilege])
+      hash = entitlement.to_h
+      expect(hash).to be_a(HashWithIndifferentAccess)
+      expect(hash[:privileges].values).to all be_a(HashWithIndifferentAccess)
+      expect(hash[:privileges].keys).to eq ["max"]
+
+      entitlement = described_class.new(code: "seats")
+      hash = entitlement.to_h
+
+      expect(hash).to be_a(HashWithIndifferentAccess)
+      expect(hash[:privileges]).to eq({})
+    end
   end
 end

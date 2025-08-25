@@ -16,8 +16,13 @@ module Resolvers
 
     def resolve(page: nil, limit: nil)
       if current_organization.clickhouse_events_store?
-        Clickhouse::EventsRaw.where(organization_id: current_organization.id)
+        cte = Clickhouse::EventsRaw
+          .where(organization_id: current_organization.id)
+          .limit_by(1, "transaction_id, timestamp, external_subscription_id, code")
           .order(ingested_at: :desc)
+
+        Clickhouse::EventsRaw
+          .from("(#{cte.to_sql}) as events_raw")
           .page(page)
           .per((limit >= MAX_LIMIT) ? MAX_LIMIT : limit)
       else

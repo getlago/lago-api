@@ -42,10 +42,6 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
               thresholdDisplayName
             }
           }
-          entitlements {
-            code
-            privileges { code value }
-          }
         }
       }
     GQL
@@ -84,11 +80,7 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
               amountCents: 100,
               thresholdDisplayName: "threshold display name"
             ]
-          },
-          entitlements: [
-            {featureCode: feature.code, privileges: [{privilegeCode: privilege.code, value: "22"}]},
-            {featureCode: feature2.code, privileges: []}
-          ]
+          }
         }
       }
     )
@@ -114,16 +106,6 @@ RSpec.describe Mutations::Subscriptions::Create, type: :graphql do
     expect(result_data["plan"]["usageThresholds"].first).to include(
       "thresholdDisplayName" => "threshold display name",
       "amountCents" => "100"
-    )
-
-    expect(result_data["entitlements"]).to contain_exactly(
-      {
-        "code" => "seats",
-        "privileges" => [{"code" => "max", "value" => "22"}]
-      }, {
-        "code" => "sso",
-        "privileges" => []
-      }
     )
   end
 end

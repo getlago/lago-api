@@ -49,12 +49,20 @@ module Types
       field :is_overridden, Boolean, null: false
       field :subscriptions_count, Integer, null: false
 
+      def entitlements
+        object.entitlements.order(:created_at)
+      end
+
       def usage_thresholds
         object.usage_thresholds.order(amount_cents: :asc)
       end
 
       def charges
         object.charges.includes(filters: {values: :billable_metric_filter}).order(created_at: :asc)
+      end
+
+      def fixed_charges
+        object.fixed_charges.order(created_at: :asc)
       end
 
       def charges_count

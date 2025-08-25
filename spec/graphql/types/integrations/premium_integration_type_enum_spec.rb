@@ -28,6 +28,7 @@ RSpec.describe Types::Integrations::PremiumIntegrationTypeEnum do
       multi_entities_enterprise
       analytics_dashboards
       forecasted_usage
+      projected_usage
     ]
   end
 

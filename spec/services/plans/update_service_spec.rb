@@ -15,6 +15,41 @@ RSpec.describe Plans::UpdateService, type: :service do
   let(:tax1) { create(:tax, organization:) }
   let(:applied_tax) { create(:plan_applied_tax, plan:, tax: tax1) }
   let(:tax2) { create(:tax, organization:) }
+  let(:add_on) { create(:add_on, organization:) }
+  let(:fixed_charges_args) do
+    [
+      {
+        add_on_id: add_on.id,
+        charge_model: "standard",
+        invoice_display_name: "fixed_charge1",
+        units: 2,
+        properties: {amount: "150"},
+        tax_codes: [tax1.code]
+      },
+      {
+        add_on_id: add_on.id,
+        charge_model: "graduated",
+        invoice_display_name: "fixed_charge2",
+        units: 1,
+        properties: {
+          graduated_ranges: [
+            {
+              from_value: 0,
+              to_value: 10,
+              per_unit_amount: "2",
+              flat_amount: "0"
+            },
+            {
+              from_value: 11,
+              to_value: nil,
+              per_unit_amount: "3",
+              flat_amount: "3"
+            }
+          ]
+        }
+      }
+    ]
+  end
 
   let(:update_args) do
     {
@@ -26,7 +61,8 @@ RSpec.describe Plans::UpdateService, type: :service do
       amount_cents: 200,
       amount_currency: "EUR",
       tax_codes: [tax2.code],
-      charges: charges_args
+      charges: charges_args,
+      fixed_charges: fixed_charges_args
     }
   end
 
@@ -129,6 +165,9 @@ RSpec.describe Plans::UpdateService, type: :service do
       expect(plan.charges.count).to eq(2)
       expect(plan.charges.order(created_at: :asc).first.invoice_display_name).to eq("charge1")
       expect(plan.charges.order(created_at: :asc).second.invoice_display_name).to eq("charge2")
+      expect(plan.fixed_charges.count).to eq(2)
+      expect(plan.fixed_charges.order(created_at: :asc).first.invoice_display_name).to eq("fixed_charge1")
+      expect(plan.fixed_charges.order(created_at: :asc).second.invoice_display_name).to eq("fixed_charge2")
     end
 
     it "marks invoices as ready to be refreshed" do
@@ -1145,6 +1184,228 @@ RSpec.describe Plans::UpdateService, type: :service do
 
         expect(updated_plan.name).to eq("Updated plan name")
         expect(plan.charges.count).to eq(2)
+      end
+    end
+
+    context "with bill_fixed_charges_monthly functionality" do
+      context "when interval is yearly and bill_fixed_charges_monthly is sent" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "yearly",
+            bill_fixed_charges_monthly: true
+          }
+        end
+
+        it "updates bill_fixed_charges_monthly" do
+          result = plans_service.call
+
+          expect(result.plan.bill_fixed_charges_monthly).to eq(true)
+        end
+      end
+
+      context "when interval is yearly and bill_fixed_charges_monthly is not provided" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "yearly"
+          }
+        end
+
+        it "sets bill_fixed_charges_monthly to false" do
+          result = plans_service.call
+
+          expect(result.plan.bill_fixed_charges_monthly).to eq(false)
+        end
+      end
+
+      context "when interval is not yearly" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            interval: "monthly",
+            bill_fixed_charges_monthly: true
+          }
+        end
+
+        it "does not set bill_fixed_charges_monthly" do
+          result = plans_service.call
+
+          expect(result.plan.bill_fixed_charges_monthly).to be_nil
+        end
+      end
+    end
+
+    context "with fixed_charges validation" do
+      context "when fixed_charges are valid" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            fixed_charges: fixed_charges_args
+          }
+        end
+
+        it "validates fixed_charges successfully" do
+          result = plans_service.call
+
+          expect(result).to be_success
+        end
+      end
+
+      context "when fixed_charges add_on is not found" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            fixed_charges: [
+              {
+                add_on_id: add_on.code,
+                charge_model: "standard",
+                units: 1,
+                properties: {amount: "100"}
+              }
+            ]
+          }
+        end
+
+        it "returns validation error" do
+          result = plans_service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.message).to eq("add_ons_not_found")
+        end
+      end
+
+      context "when no fixed_charges are provided" do
+        let(:update_args) do
+          {
+            name: plan_name
+          }
+        end
+
+        it "does not validate fixed_charges" do
+          result = plans_service.call
+
+          expect(result).to be_success
+        end
+      end
+
+      context "when both charges and fixed_charges are provided" do
+        let(:update_args) do
+          {
+            name: plan_name,
+            charges: charges_args,
+            fixed_charges: fixed_charges_args
+          }
+        end
+
+        it "validates both successfully" do
+          result = plans_service.call
+
+          expect(result).to be_success
+        end
+      end
+    end
+
+    context "with fixed_charges flow" do
+      let(:update_args) do
+        {
+          name: plan_name,
+          interval: "yearly",
+          bill_fixed_charges_monthly: true,
+          fixed_charges: fixed_charges_args
+        }
+      end
+
+      context "when plan has no fixed_charges" do
+        it "handles adding fixed_charges flow successfully" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.bill_fixed_charges_monthly).to eq(true)
+          expect(result.plan.fixed_charges.count).to eq(2)
+          expect(result.plan.fixed_charges.map(&:invoice_display_name)).to match_array(["fixed_charge1", "fixed_charge2"])
+        end
+      end
+
+      context "when plan has fixed_charges" do
+        let(:fixed_charge_to_update) { create(:fixed_charge, plan:, invoice_display_name: "fixed_charge_to_update", units: 1, add_on:) }
+        let(:fixed_charge_to_delete) { create(:fixed_charge, plan:, invoice_display_name: "fixed_charge_to_delete", units: 2) }
+        let(:fixed_charges_args) do
+          [
+            {
+              id: fixed_charge_to_update.id,
+              add_on_id: add_on.id,
+              charge_model: "standard",
+              invoice_display_name: "fixed_charge1",
+              units: 2,
+              properties: {amount: "150"},
+              tax_codes: [tax1.code]
+            },
+            {
+              add_on_id: add_on.id,
+              charge_model: "graduated",
+              invoice_display_name: "fixed_charge2",
+              units: 1,
+              properties: {
+                graduated_ranges: [
+                  {
+                    from_value: 0,
+                    to_value: 10,
+                    per_unit_amount: "2",
+                    flat_amount: "0"
+                  },
+                  {
+                    from_value: 11,
+                    to_value: nil,
+                    per_unit_amount: "3",
+                    flat_amount: "3"
+                  }
+                ]
+              }
+            }
+          ]
+        end
+
+        before do
+          fixed_charge_to_update
+          fixed_charge_to_delete
+          update_args[:cascade_updates] = true
+        end
+
+        it "handles update, edit and delete fixed_charges flow successfully" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.fixed_charges.count).to eq(2)
+          expect(result.plan.fixed_charges.map(&:id)).to include(fixed_charge_to_update.id)
+          expect(result.plan.fixed_charges.map(&:id)).not_to include(fixed_charge_to_delete.id)
+        end
+
+        context "when plan has children" do
+          let(:parent_id) { plan.id }
+          let(:child_plan) { create(:plan, organization:, parent_id:) }
+
+          before { child_plan }
+
+          it "schedules job to update fixed_charges of children plans" do
+            expect do
+              plans_service.call
+            end.to have_enqueued_job(FixedCharges::UpdateChildrenJob).exactly(1).times
+          end
+
+          it "schedules job to create fixed_charges of children plans" do
+            expect do
+              plans_service.call
+            end.to have_enqueued_job(FixedCharges::CreateChildrenJob).exactly(1).times
+          end
+
+          it "schedules job to delete fixed_charges of children plans" do
+            expect do
+              plans_service.call
+            end.to have_enqueued_job(FixedCharges::DestroyChildrenJob).exactly(1).times
+          end
+        end
       end
     end
   end

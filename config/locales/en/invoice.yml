@@ -43,6 +43,7 @@ en:
       flat_fee_for_the_first: Flat fee for first %{to}
       flat_fee_for_the_last: Flat fee for %{from} and above
       flat_fee_for_the_next: Flat fee for the next %{from} to %{to}
+    half_year: half-year
     iban: IBAN
     invoice_number: Invoice Number
     issue_date: Issue Date
@@ -51,7 +52,7 @@ en:
     month: month
     monthly: Monthly
     notice_full: Regardless of when an event is received, the unit is not prorated, we charge the full price.
-    notice_prorated: If a unit is added or removed during the monthly plan, we calculate the prorated price based on the ratio of days remaining or used to the total number of days in the plan. For instance, if 15 days are left in the plan, we multiply the price by 15/%{days_in_month}, and if a unit was used for 10 days, we multiply the price by 10/%{days_in_month}.
+    notice_prorated: If a unit is added or removed during the monthly plan, we calculate the prorated price based on the ratio of days remaining or used to the total number of days in the plan. For example, if 15 days are left in a %{days_in_month}-day period, we charge 15/%{days_in_month} of the period price. If a unit was used for 10 days, we charge 10/%{days_in_month} of the period price.
     package:
       fee_per_package: Fee per package
       fee_per_package_unit_price: "%{amount} per %{package_size}"
@@ -81,6 +82,7 @@ en:
     self_billed:
       document_name: Self-billing invoice
       footer: This self-billing invoice was issued by the client on behalf of the partner, with their consent. The partner has agreed not to issue their own invoice for this transaction.
+    semiannual: Semiannual
     sort_code: Sort code
     sub_total: Subtotal
     sub_total_with_tax: Subtotal (incl. tax)

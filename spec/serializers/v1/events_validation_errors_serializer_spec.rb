@@ -6,12 +6,12 @@ RSpec.describe ::V1::EventsValidationErrorsSerializer do
   subject(:serializer) { described_class.new(errors, root_name: "events_errors") }
 
   let(:errors) do
-    OpenStruct.new(
+    {
       invalid_code: [SecureRandom.uuid],
       missing_aggregation_property: [SecureRandom.uuid],
       missing_group_key: [SecureRandom.uuid],
       invalid_filter_values: [SecureRandom.uuid]
-    )
+    }.with_indifferent_access
   end
 
   let(:result) { JSON.parse(serializer.to_json) }

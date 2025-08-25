@@ -6,7 +6,7 @@ module Api
       include PremiumFeatureOnly
 
       def index
-        result = FeaturesQuery.call(
+        result = ::Entitlement::FeaturesQuery.call(
           organization: current_organization,
           pagination: {
             page: params[:page],
