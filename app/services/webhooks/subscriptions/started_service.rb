@@ -2,23 +2,9 @@
 
 module Webhooks
   module Subscriptions
-    class StartedService < Webhooks::BaseService
-      private
-
-      def object_serializer
-        ::V1::SubscriptionSerializer.new(
-          object,
-          root_name: "subscription",
-          includes: %i[plan customer]
-        )
-      end
-
+    class StartedService < BaseService
       def webhook_type
         "subscription.started"
-      end
-
-      def object_type
-        "subscription"
       end
     end
   end
