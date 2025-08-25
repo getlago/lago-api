@@ -5309,6 +5309,7 @@ type FixedCharge {
   properties: FixedChargeProperties
   prorated: Boolean!
   taxes: [Tax!]
+  units: String!
   updatedAt: ISO8601DateTime!
 }
 
@@ -5320,6 +5321,7 @@ enum FixedChargeChargeModelEnum {
 
 input FixedChargeInput {
   addOnId: ID!
+  applyUnitsImmediately: Boolean
   chargeModel: FixedChargeChargeModelEnum!
   invoiceDisplayName: String
   payInAdvance: Boolean
@@ -11003,6 +11005,7 @@ input UpdatePlanInput {
   amountCents: BigInt!
   amountCurrency: CurrencyEnum!
   billChargesMonthly: Boolean
+  billFixedChargesMonthly: Boolean
   cascadeUpdates: Boolean
   charges: [ChargeInput!]!
 
@@ -11013,6 +11016,7 @@ input UpdatePlanInput {
   code: String!
   description: String
   entitlements: [EntitlementInput!]
+  fixedCharges: [FixedChargeInput!]
   id: ID!
   interval: PlanInterval!
   invoiceDisplayName: String
