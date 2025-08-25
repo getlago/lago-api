@@ -33,6 +33,9 @@ module Entitlement
         )
       end
 
+      # NOTE: The webhooks is sent even if no changes were made to the subscription
+      SendWebhookJob.perform_after_commit("subscription.updated", subscription)
+
       result.entitlement = SubscriptionEntitlement.for_subscription(subscription).find { it.code == feature_code }
 
       result
