@@ -26,9 +26,9 @@ module Subscriptions
     attr_reader :subscription, :fixed_charge, :units
 
     def create_or_update_fixed_charge_unit_override
-      fixed_charges_units_overrides = subscription.fixed_charges_units_overrides.
-        find_or_initialize_by(fixed_charge:, subscription:, billing_entity: subscription.billing_entity,
-        organization: subscription.organization)
+      fixed_charges_units_overrides = subscription.subscription_fixed_charge_units_overrides
+        .find_or_initialize_by(fixed_charge:, subscription:, billing_entity: subscription.billing_entity,
+          organization: subscription.organization)
       fixed_charges_units_overrides.units = units
       fixed_charges_units_overrides.save!
       fixed_charges_units_overrides
