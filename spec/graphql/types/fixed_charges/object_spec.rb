@@ -13,6 +13,7 @@ RSpec.describe Types::FixedCharges::Object do
   it { is_expected.to have_field(:pay_in_advance).of_type("Boolean!") }
   it { is_expected.to have_field(:properties).of_type("FixedChargeProperties") }
   it { is_expected.to have_field(:prorated).of_type("Boolean!") }
+  it { is_expected.to have_field(:units).of_type("String!") }
 
   it { is_expected.to have_field(:created_at).of_type("ISO8601DateTime!") }
   it { is_expected.to have_field(:deleted_at).of_type("ISO8601DateTime") }
