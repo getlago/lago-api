@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe ::V1::SubscriptionSerializer do
-  subject(:serializer) { described_class.new(subscription, root_name: "subscription", includes: %i[customer plan]) }
+  subject(:serializer) { described_class.new(subscription, root_name: "subscription", includes: %i[customer plan entitlements]) }
 
   let(:started_at) { Time.zone.parse("2024-04-23 10:00") }
   let(:ending_at) { Time.zone.parse("2024-06-30") }
@@ -129,6 +129,42 @@ RSpec.describe ::V1::SubscriptionSerializer do
       expect(result["subscription"]["on_termination_invoice"]).to eq("skip")
       expect(result["subscription"]["terminated_at"]).to be_present
       expect(result["subscription"]["status"]).to eq("terminated")
+    end
+  end
+
+  context "when subscription has entitlements" do
+    let(:feature) { create(:feature, organization: subscription.organization, code: "seats", name: "Seats", description: "Nb users") }
+    let(:privilege) { create(:privilege, feature:, code: "max", value_type: "integer") }
+    let(:plan_entitlement) { create(:entitlement, feature:, plan: subscription.plan) }
+    let(:plan_entitlement_value) { create(:entitlement_value, entitlement: plan_entitlement, privilege:, value: 12) }
+    let(:sub_entitlement) { create(:entitlement, feature:, plan: nil, subscription:) }
+    let(:sub_entitlement_value) { create(:entitlement_value, entitlement: sub_entitlement, privilege:, value: 99) }
+
+    before {
+      plan_entitlement_value
+      sub_entitlement_value
+    }
+
+    it "serializes the entitlements" do
+      result = JSON.parse(serializer.to_json)
+      expect(result["subscription"]["entitlements"].count).to eq 1
+      expect(result["subscription"]["entitlements"].first).to eq({
+        "code" => "seats",
+        "name" => "Seats",
+        "description" => "Nb users",
+        "privileges" => [
+          {
+            "code" => "max",
+            "name" => nil,
+            "value" => 99,
+            "plan_value" => 12,
+            "override_value" => 99,
+            "config" => {},
+            "value_type" => "integer"
+          }
+        ],
+        "overrides" => {"max" => 99}
+      })
     end
   end
 end
