@@ -98,7 +98,18 @@ module Entitlement
     end
 
     def update_values_for_subscription(plan_entitlement, sub_entitlement)
-      # TODO: REMOVE MISSING VALUES when possible
+      plan_privilege_codes = plan_entitlement.values.map { it.privilege.code }
+      sub_privilege_codes = sub_entitlement.values.map { it.privilege.code }
+      privilege_codes_to_remove = (plan_privilege_codes + sub_privilege_codes) - privilege_params.keys
+
+      privilege_codes_to_remove.each do |privilege_code|
+        sub_val = sub_entitlement.values.find { it.privilege.code == privilege_code }
+        sub_val&.discard!
+        plan_val = plan_entitlement.values.find { it.privilege.code == privilege_code }
+        if plan_val
+          SubscriptionFeatureRemoval.create!(organization:, privilege: plan_val.privilege, subscription: subscription)
+        end
+      end
 
       privilege_params.each do |privilege_code, value|
         privilege = find_privilege!(feature.privileges, privilege_code)

@@ -63,7 +63,7 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, ty
     end
   end
 
-  context "when feature is on plan but the privilege" do
+  context "when feature is on plan but not the privilege" do
     let(:privilege2) { create(:privilege, feature:, code: "reset", value_type: "select", config: {select_options: %w[email slack]}) }
     let(:input) do
       {
@@ -71,6 +71,7 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, ty
         entitlement: {
           featureCode: feature.code,
           privileges: [
+            {privilegeCode: privilege.code, value: "2"},
             {privilegeCode: privilege2.code, value: "slack"}
           ]
         }
@@ -100,6 +101,68 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, ty
           }
         ]
       })
+    end
+  end
+
+  context "when removing privileges from the subscription" do
+    let(:privilege2) { create(:privilege, feature:, code: "reset", value_type: "select", config: {select_options: %w[email slack]}) }
+    let(:plan_entitlement) { create(:entitlement, plan:, feature:) }
+
+    let(:input) do
+      {
+        subscriptionId: subscription.id,
+        entitlement: {
+          featureCode: feature.code,
+          privileges: [
+            {privilegeCode: privilege.code, value: "100"}
+          ]
+        }
+      }
+    end
+
+    before do
+      create(:entitlement_value, entitlement: plan_entitlement, privilege:, value: "2")
+    end
+
+    context "when privileges is from the plan" do
+      it "removes the privileges" do
+        create(:entitlement_value, entitlement: plan_entitlement, privilege: privilege2, value: "email")
+
+        result = subject
+        result_data = result["data"]["createOrUpdateSubscriptionEntitlement"]
+        expect(result_data).to eq({
+          "code" => "seats",
+          "name" => "SEATS",
+          "privileges" => [
+            {
+              "code" => "max",
+              "value" => "100",
+              "valueType" => "integer"
+            }
+          ]
+        })
+      end
+    end
+
+    context "when privileges is from the subscrption (previous override)" do
+      it "removes the privileges" do
+        sub_entitlement = create(:entitlement, feature:, plan: nil, subscription:)
+        create(:entitlement_value, entitlement: sub_entitlement, privilege: privilege2, value: "email")
+
+        result = subject
+        result_data = result["data"]["createOrUpdateSubscriptionEntitlement"]
+        expect(result_data).to eq({
+          "code" => "seats",
+          "name" => "SEATS",
+          "privileges" => [
+            {
+              "code" => "max",
+              "value" => "100",
+              "valueType" => "integer"
+            }
+          ]
+        })
+      end
     end
   end
 
