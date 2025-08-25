@@ -86,9 +86,24 @@ namespace :customers do
 
       # do we want to create wallet with 0 values, and create an inbound transaction of granted credits???
       cust.wallets.each do |wallet|
-        new_wallet = wallet.dup
-        new_wallet.customer = new_cust
-        new_wallet.save!
+        # new_wallet = wallet.dup
+        # new_wallet.customer = new_cust
+        # new_wallet.save!
+        wallet_params = {
+          organization_id: new_cust.organization_id,
+          customer: new_cust,
+          name: wallet.name,
+          rate_amount: wallet.rate_amount,
+          currency: wallet.currency,
+          expiration_at: wallet.expiration_at,
+          invoice_requires_successful_payment: wallet.invoice_requires_successful_payment,
+          applies_to: {
+            fee_types: wallet.allowed_fee_types
+          },
+          granted_credits: wallet.credits_balance
+        }
+        new_wallet = Wallets::CreateService.call!(wallet_params)
+
         wallet.recurring_transaction_rules.each do |rule|
           new_rule = rule.dup
           new_rule.wallet = new_wallet
