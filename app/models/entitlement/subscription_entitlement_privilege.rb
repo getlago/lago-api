@@ -22,8 +22,7 @@ module Entitlement
     attribute :sub_entitlement_value_id, :string
 
     def config
-      v = super
-      JSON.parse(v) if v.is_a?(String)
+      super.then { it.is_a?(String) ? JSON.parse(it) : it }
     end
 
     def to_h
