@@ -87,6 +87,7 @@ ALTER TABLE IF EXISTS ONLY public.applied_usage_thresholds DROP CONSTRAINT IF EX
 ALTER TABLE IF EXISTS ONLY public.active_storage_variant_records DROP CONSTRAINT IF EXISTS fk_rails_993965df05;
 ALTER TABLE IF EXISTS ONLY public.memberships DROP CONSTRAINT IF EXISTS fk_rails_99326fb65d;
 ALTER TABLE IF EXISTS ONLY public.adjusted_fees DROP CONSTRAINT IF EXISTS fk_rails_98980b326b;
+ALTER TABLE IF EXISTS ONLY public.entitlement_subscription_feature_removals DROP CONSTRAINT IF EXISTS fk_rails_95df3194c5;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_94cc21031f;
 ALTER TABLE IF EXISTS ONLY public.data_export_parts DROP CONSTRAINT IF EXISTS fk_rails_9298b8fdad;
 ALTER TABLE IF EXISTS ONLY public.subscription_fixed_charge_units_overrides DROP CONSTRAINT IF EXISTS fk_rails_90fd72ac8f;
@@ -623,6 +624,8 @@ DROP INDEX IF EXISTS public.index_active_storage_attachments_on_blob_id;
 DROP INDEX IF EXISTS public.index_active_metric_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filters;
 DROP INDEX IF EXISTS public.index_active_charge_filter_values;
+DROP INDEX IF EXISTS public.idx_unique_privilege_removal_per_subscription;
+DROP INDEX IF EXISTS public.idx_unique_feature_removal_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_subscription;
 DROP INDEX IF EXISTS public.idx_unique_feature_per_plan;
 DROP INDEX IF EXISTS public.idx_subscription_unique;
@@ -633,7 +636,6 @@ DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_78eb24d06c;
 DROP INDEX IF EXISTS public.idx_on_usage_monitoring_alert_id_4290c95dec;
 DROP INDEX IF EXISTS public.idx_on_timestamp_charge_id_external_subscription_id;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_fixed_charge_id_d85b30a9bf;
-DROP INDEX IF EXISTS public.idx_on_subscription_id_entitlement_feature_id_02bee9883b;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_bd763c5aa3;
 DROP INDEX IF EXISTS public.idx_on_subscription_id_295edd8bb3;
 DROP INDEX IF EXISTS public.idx_on_plan_id_billable_metric_id_pay_in_advance_4a205974cb;
@@ -651,6 +653,7 @@ DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_7edbcef7b5;
 DROP INDEX IF EXISTS public.idx_on_invoice_custom_section_id_5f37496c8c;
 DROP INDEX IF EXISTS public.idx_on_fixed_charge_id_06503ae1a5;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a;
+DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_9946ccf514;
 DROP INDEX IF EXISTS public.idx_on_entitlement_privilege_id_6a228dc433;
 DROP INDEX IF EXISTS public.idx_on_entitlement_feature_id_821ae72311;
 DROP INDEX IF EXISTS public.idx_on_entitlement_entitlement_id_48c0b3356a;
@@ -2036,11 +2039,13 @@ CREATE TABLE public.entitlement_privileges (
 CREATE TABLE public.entitlement_subscription_feature_removals (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     organization_id uuid NOT NULL,
-    entitlement_feature_id uuid NOT NULL,
+    entitlement_feature_id uuid,
     subscription_id uuid NOT NULL,
     deleted_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    entitlement_privilege_id uuid,
+    CONSTRAINT check_exactly_one_feature_or_privilege_removal CHECK (((entitlement_feature_id IS NOT NULL) <> (entitlement_privilege_id IS NOT NULL)))
 );
 
 
@@ -5022,6 +5027,13 @@ CREATE INDEX idx_on_entitlement_privilege_id_6a228dc433 ON public.entitlement_en
 
 
 --
+-- Name: idx_on_entitlement_privilege_id_9946ccf514; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_entitlement_privilege_id_9946ccf514 ON public.entitlement_subscription_feature_removals USING btree (entitlement_privilege_id);
+
+
+--
 -- Name: idx_on_entitlement_privilege_id_entitlement_entitle_9d0542eb1a; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5141,13 +5153,6 @@ CREATE INDEX idx_on_subscription_id_bd763c5aa3 ON public.subscription_fixed_char
 
 
 --
--- Name: idx_on_subscription_id_entitlement_feature_id_02bee9883b; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX idx_on_subscription_id_entitlement_feature_id_02bee9883b ON public.entitlement_subscription_feature_removals USING btree (subscription_id, entitlement_feature_id) WHERE (deleted_at IS NULL);
-
-
---
 -- Name: idx_on_subscription_id_fixed_charge_id_d85b30a9bf; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -5215,6 +5220,20 @@ CREATE UNIQUE INDEX idx_unique_feature_per_plan ON public.entitlement_entitlemen
 --
 
 CREATE UNIQUE INDEX idx_unique_feature_per_subscription ON public.entitlement_entitlements USING btree (entitlement_feature_id, subscription_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_unique_feature_removal_per_subscription; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_feature_removal_per_subscription ON public.entitlement_subscription_feature_removals USING btree (subscription_id, entitlement_feature_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: idx_unique_privilege_removal_per_subscription; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_unique_privilege_removal_per_subscription ON public.entitlement_subscription_feature_removals USING btree (subscription_id, entitlement_privilege_id) WHERE (deleted_at IS NULL);
 
 
 --
@@ -9003,6 +9022,14 @@ ALTER TABLE ONLY public.customers
 
 
 --
+-- Name: entitlement_subscription_feature_removals fk_rails_95df3194c5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entitlement_subscription_feature_removals
+    ADD CONSTRAINT fk_rails_95df3194c5 FOREIGN KEY (entitlement_privilege_id) REFERENCES public.entitlement_privileges(id);
+
+
+--
 -- Name: adjusted_fees fk_rails_98980b326b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9633,6 +9660,7 @@ ALTER TABLE ONLY public.fixed_charges_taxes
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20250822100111'),
 ('20250821094638'),
 ('20250820200921'),
 ('20250818154000'),

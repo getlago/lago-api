@@ -10,8 +10,9 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoval, type: :model do
   describe "associations" do
     it do
       expect(subject).to belong_to(:organization)
-      expect(subject).to belong_to(:feature).class_name("Entitlement::Feature")
       expect(subject).to belong_to(:subscription)
+      expect(subject).to belong_to(:feature).class_name("Entitlement::Feature").optional
+      expect(subject).to belong_to(:privilege).class_name("Entitlement::Privilege").optional
     end
   end
 end
