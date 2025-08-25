@@ -36,12 +36,11 @@ module EInvoices
 
             xml.comment "Tax Total Information"
             xml["cac"].TaxTotal do
-              xml["cbc"].TaxAmount \
-                format_number(Money.new(invoice.applied_taxes.sum(:amount_cents))),
-                currencyID: invoice.currency
+              total_taxes = taxable_by_tax_rate.sum { |tax_rate, amount| amount * (tax_rate / 100) }
+              xml["cbc"].TaxAmount format_number(Money.new(total_taxes)), currencyID: invoice.currency
 
-              applied_taxes do |applied_tax|
-                TaxSubtotal.call(xml:, invoice:, applied_tax:)
+              taxes do |tax_rate, amount, tax|
+                TaxSubtotal.call(xml:, invoice:, tax_rate:, amount:, tax:)
               end
             end
 
