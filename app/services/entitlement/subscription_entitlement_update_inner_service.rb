@@ -1,56 +1,46 @@
 # frozen_string_literal: true
 
 module Entitlement
-  class SubscriptionEntitlementCreateOrUpdateService < BaseService
+  class SubscriptionEntitlementUpdateInnerService < BaseService
     include ::Entitlement::Concerns::CreateOrUpdateConcern
 
-    Result = BaseResult[:entitlement]
+    Result = BaseResult
 
-    def initialize(subscription:, feature_code:, privilege_params:)
+    def initialize(subscription:, plan:, feature:, privilege_params:, partial:)
       @subscription = subscription
-      @feature_code = feature_code
+      @plan = plan
+      @feature = feature
       @privilege_params = privilege_params.to_h.with_indifferent_access
+      @partial = partial
       super
     end
 
-    activity_loggable(
-      action: "subscription.updated",
-      record: -> { subscription }
-    )
-
     def call
-      return result.forbidden_failure! unless License.premium?
-      return result.not_found_failure!(resource: "subscription") unless subscription
       return result.not_found_failure!(resource: "feature") unless feature
 
       ActiveRecord::Base.transaction do
         process_single_entitlement
       end
 
-      result.entitlement = SubscriptionEntitlement.for_subscription(subscription).find { it.code == feature_code }
-
       result
-    rescue ActiveRecord::RecordNotFound => e
-      if e.message.include?("Entitlement::Feature")
-        result.not_found_failure!(resource: "feature")
-      elsif e.message.include?("Entitlement::Privilege")
-        result.not_found_failure!(resource: "privilege")
-      else
-        result.not_found_failure!(resource: "record")
-      end
+      # rescue ActiveRecord::RecordNotFound => e
+      #   if e.message.include?("Entitlement::Feature")
+      #     result.not_found_failure!(resource: "feature")
+      #   elsif e.message.include?("Entitlement::Privilege")
+      #     result.not_found_failure!(resource: "privilege")
+      #   else
+      #     result.not_found_failure!(resource: "record")
+      #   end
     end
 
     private
 
-    attr_reader :subscription, :feature_code, :privilege_params
+    attr_reader :subscription, :plan, :feature, :privilege_params, :partial
     delegate :organization, to: :subscription
+    alias_method :partial?, :partial
 
-    def feature
-      @feature ||= organization.features.includes(:privileges).find_by(code: feature_code)
-    end
-
-    def plan
-      @plan ||= subscription.plan.parent || subscription.plan
+    def full?
+      !partial?
     end
 
     def process_single_entitlement
@@ -73,6 +63,7 @@ module Entitlement
         feature_removal = removals.find { it.entitlement_feature_id == feature.id }
         feature_removal&.discard!
         sub_entitlement ||= create_entitlement_for_subscription
+        remove_missing_entitlement_values(plan_entitlement, sub_entitlement) if full?
         update_values_for_subscription(plan_entitlement, sub_entitlement)
       end
     end
@@ -89,7 +80,7 @@ module Entitlement
       entitlement = create_entitlement_for_subscription
 
       privilege_params.each do |privilege_code, value|
-        privilege = find_privilege!(feature.privileges, privilege_code)
+        privilege = find_privilege!(privilege_code)
 
         create_entitlement_value(entitlement, privilege, value)
       end
@@ -97,37 +88,45 @@ module Entitlement
       entitlement
     end
 
-    def update_values_for_subscription(plan_entitlement, sub_entitlement)
-      plan_privilege_codes = plan_entitlement.values.map { it.privilege.code }
-      sub_privilege_codes = sub_entitlement.values.map { it.privilege.code }
-      privilege_codes_to_remove = (plan_privilege_codes + sub_privilege_codes) - privilege_params.keys
+    def remove_missing_entitlement_values(plan_entitlement, sub_entitlement)
+      plan_privilege_codes = plan_entitlement&.values&.map { it.privilege.code }
+      sub_privilege_codes = sub_entitlement&.values&.map { it.privilege.code }
+      privilege_codes_to_remove = (plan_privilege_codes.to_a + sub_privilege_codes.to_a) - privilege_params.keys
 
       privilege_codes_to_remove.each do |privilege_code|
-        sub_val = sub_entitlement.values.find { it.privilege.code == privilege_code }
+        sub_val = sub_entitlement&.values&.find { it.privilege.code == privilege_code }
         sub_val&.discard!
-        plan_val = plan_entitlement.values.find { it.privilege.code == privilege_code }
-        if plan_val
+        plan_val = plan_entitlement&.values&.find { it.privilege.code == privilege_code }
+
+        # TODO: Pass all removals to service
+        if plan_val && !SubscriptionFeatureRemoval.where(organization:, privilege: plan_val.privilege, subscription:).exists?
           SubscriptionFeatureRemoval.create!(organization:, privilege: plan_val.privilege, subscription: subscription)
         end
       end
+    end
 
+    def update_values_for_subscription(plan_entitlement, sub_entitlement)
       privilege_params.each do |privilege_code, value|
-        privilege = find_privilege!(feature.privileges, privilege_code)
+        privilege = find_privilege!(privilege_code)
 
-        plan_val = plan_entitlement.values.find { it.privilege.code == privilege_code }
-        sub_val = sub_entitlement.values.find { it.privilege.code == privilege_code }
+        plan_val = plan_entitlement&.values&.find { it.privilege.code == privilege_code }
+        sub_val = sub_entitlement&.values&.find { it.privilege.code == privilege_code }
 
-        # TODO: FIX VALUE COMPARISON
-        if plan_val && value == plan_val.value
+        if plan_val && value_is_the_same?(privilege.value_type, value, plan_val.value)
           sub_val&.discard!
         elsif sub_val.nil?
           # TODO: REMOVE PRIVILEGE REMOVAL
 
           create_entitlement_value(sub_entitlement, privilege, value)
-        elsif sub_val && value != sub_val.value
+        elsif sub_val && !value_is_the_same?(privilege.value_type, value, sub_val.value)
           sub_val.update!(value: validate_value(value, privilege))
         end
       end
+    end
+
+    # TODO: Etract to utils and fix
+    def value_is_the_same?(type, value1, value2)
+      value1.to_s == value2.to_s
     end
 
     def create_entitlement_value(entitlement, privilege, value)
@@ -138,17 +137,17 @@ module Entitlement
       )
     end
 
-    def find_privilege!(privileges, privilege_code)
-      privilege = privileges.find { it.code == privilege_code }
+    def find_privilege!(privilege_code)
+      privilege = feature.privileges.find { it.code == privilege_code }
       privilege || raise(ActiveRecord::RecordNotFound.new("Entitlement::Privilege"))
     end
 
     def privilege_params_same_as_plan?(plan_entitlement)
-      # TODO: Fix this to ensure "9" == 9 (see )
-      #     See: SubscriptionEntitlementsUpdateService.feature_config_same_as_plan?
-      plan_entitlement.values.map do |v|
-        [v.privilege.code, v.value]
-      end.to_h.eql? privilege_params
+      return false if privilege_params.keys != plan_entitlement.values.map(&:privilege).map(&:code)
+
+      plan_entitlement.values.all? do |v|
+        value_is_the_same?(v.privilege.value_type, v.value, privilege_params[v.privilege.code])
+      end
     end
   end
 end
