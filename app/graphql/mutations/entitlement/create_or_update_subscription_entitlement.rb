@@ -19,10 +19,11 @@ module Mutations
       def resolve(subscription_id:, entitlement: nil)
         subscription = current_organization.subscriptions.find_by(id: subscription_id)
 
-        result = ::Entitlement::SubscriptionEntitlementCreateOrUpdateService.call(
+        result = ::Entitlement::SubscriptionEntitlementUpdateService.call(
           subscription:,
           feature_code: entitlement[:feature_code],
-          privilege_params: entitlement[:privileges]&.map { [it.privilege_code, it.value] }.to_h
+          privilege_params: entitlement[:privileges]&.map { [it.privilege_code, it.value] }.to_h,
+          partial: false
         )
 
         result.success? ? result.entitlement : result_error(result)

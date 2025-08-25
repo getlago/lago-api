@@ -144,7 +144,28 @@ RSpec.describe Mutations::Entitlement::CreateOrUpdateSubscriptionEntitlement, ty
       end
     end
 
-    context "when privileges is from the subscrption (previous override)" do
+    context "when privileges is from the plan and is already removed" do
+      it "removes the privileges" do
+        create(:entitlement_value, entitlement: plan_entitlement, privilege: privilege2, value: "email")
+        create(:subscription_feature_removal, subscription:, privilege: privilege2)
+
+        result = subject
+        result_data = result["data"]["createOrUpdateSubscriptionEntitlement"]
+        expect(result_data).to eq({
+          "code" => "seats",
+          "name" => "SEATS",
+          "privileges" => [
+            {
+              "code" => "max",
+              "value" => "100",
+              "valueType" => "integer"
+            }
+          ]
+        })
+      end
+    end
+
+    context "when privileges is from the subscription (previous override)" do
       it "removes the privileges" do
         sub_entitlement = create(:entitlement, feature:, plan: nil, subscription:)
         create(:entitlement_value, entitlement: sub_entitlement, privilege: privilege2, value: "email")

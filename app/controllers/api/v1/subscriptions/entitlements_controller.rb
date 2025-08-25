@@ -21,7 +21,6 @@ module Api
 
         def update
           result = ::Entitlement::SubscriptionEntitlementsUpdateService.call(
-            organization: current_organization,
             subscription: subscription,
             entitlements_params: update_params,
             partial: true
