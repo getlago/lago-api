@@ -16,6 +16,7 @@ module V1
         trial_period: model.trial_period,
         pay_in_advance: model.pay_in_advance,
         bill_charges_monthly: model.bill_charges_monthly,
+        bill_fixed_charges_monthly: model.bill_fixed_charges_monthly,
         customers_count: 0,
         active_subscriptions_count: 0,
         draft_invoices_count: 0,
