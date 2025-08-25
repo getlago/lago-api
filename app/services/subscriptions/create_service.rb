@@ -117,7 +117,31 @@ module Subscriptions
         new_subscription.mark_as_active!
       end
       create_fixed_charge_units_override(new_subscription) if overrides_only_fixed_charge_units?
-      after_commited_created_subscription(new_subscription)
+
+      if should_be_billed_today?(new_subscription)
+        # NOTE: Since job is launched from inside a db transaction
+        #       we must wait for it to be committed before processing the job.
+        #       We do not set offset anymore but instead retry jobs
+        after_commit do
+          BillSubscriptionJob.perform_later(
+            [new_subscription],
+            Time.zone.now.to_i,
+            invoicing_reason: :subscription_starting,
+            skip_charges: true
+          )
+        end
+      end
+
+      if new_subscription.active?
+        after_commit do
+          SendWebhookJob.perform_later("subscription.started", new_subscription)
+          Utils::ActivityLog.produce(new_subscription, "subscription.started")
+        end
+      end
+
+      if new_subscription.should_sync_hubspot_subscription?
+        after_commit { Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription: new_subscription) }
+      end
 
       new_subscription
     end
@@ -125,9 +149,9 @@ module Subscriptions
     def after_commited_created_subscription(subscription)
       after_commit do
         if should_be_billed_today?(subscription)
-        # NOTE: Since job is launched from inside a db transaction
-        #       we must wait for it to be committed before processing the job.
-        #       We do not set offset anymore but instead retry jobs
+          # NOTE: Since job is launched from inside a db transaction
+          #       we must wait for it to be committed before processing the job.
+          #       We do not set offset anymore but instead retry jobs
           BillSubscriptionJob.perform_later(
             [subscription],
             Time.zone.now.to_i,
