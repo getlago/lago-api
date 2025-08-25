@@ -5,19 +5,16 @@ require "rails_helper"
 RSpec.describe EInvoices::FacturX::Create::ApplicableTradeTax, type: :service do
   subject do
     xml_document(:factur_x) do |xml|
-      described_class.call(xml:, invoice:, applied_tax:)
+      described_class.call(xml:, invoice:, tax_rate:, amount:, tax:)
     end
   end
 
   let(:invoice) { create(:invoice, invoice_type:) }
-  let(:applied_tax) { create(:invoice_applied_tax, invoice:, tax_rate:, fees_amount_cents: 1000) }
   let(:tax_rate) { 20.00 }
+  let(:amount) { 10 }
+  let(:tax) { amount * (tax_rate / 100) }
   let(:invoice_type) { "subscription" }
   let(:root) { "//ram:ApplicableTradeTax" }
-
-  before do
-    applied_tax
-  end
 
   describe ".call" do
     it { is_expected.not_to be_nil }
