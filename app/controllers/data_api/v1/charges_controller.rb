@@ -27,6 +27,7 @@ module DataApi
           charge = charges_lookup[charge_data[:charge_id]]
           charge_filter = charge_data[:charge_filter_id].present? ?
                          charge_filters_lookup[charge_data[:charge_filter_id]] : nil
+          record_id = charge_data[:record_id]
 
           unless charge
             raise ActiveRecord::RecordNotFound, "Charge not found: #{charge_data[:charge_id]}"
@@ -57,12 +58,14 @@ module DataApi
           end
 
           results << {
+            record_id: record_id,
             charge_id: charge_data[:charge_id],
             charge_filter_id: charge_data[:charge_filter_id],
             **percentile_results
           }
         rescue => e
           failed_charges << {
+            record_id: record_id,
             charge_id: charge_data[:charge_id],
             error: e.message
           }
@@ -75,7 +78,7 @@ module DataApi
           failed_count: failed_charges.length
         }
 
-        Rails.logger.info "[ChargesController] Response summary: #{response_data}"
+        Rails.logger.info "[ChargesController] Response summary: #{response_data.except(:results)}"
 
         render json: response_data
       end

@@ -41,6 +41,7 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
       {
         charges: [
           {
+            record_id: 1,
             charge_id: charge1.id,
             charge_filter_id: charge_filter.id,
             units_10th: 100,
@@ -48,6 +49,7 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
             units_90th: 1000
           },
           {
+            record_id: 2,
             charge_id: charge2.id,
             units_10th: 200,
             units_50th: 600,
@@ -87,6 +89,7 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
           expect(json_response[:failed_charges]).to be_empty
 
           first_result = json_response[:results].first
+          expect(first_result[:record_id]).to eq(1)
           expect(first_result[:charge_id]).to eq(charge1.id)
           expect(first_result[:charge_filter_id]).to eq(charge_filter.id)
           expect(first_result).to have_key(:charge_amount_cents_10th_percentile)
@@ -94,6 +97,7 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
           expect(first_result).to have_key(:charge_amount_cents_90th_percentile)
 
           second_result = json_response[:results].second
+          expect(second_result[:record_id]).to eq(2)
           expect(second_result[:charge_id]).to eq(charge2.id)
           expect(second_result[:charge_filter_id]).to be_nil
 
@@ -123,6 +127,7 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
           {
             charges: [
               {
+                record_id: 3,
                 charge_id: "nonexistent",
                 units_10th: 100
               }
@@ -138,6 +143,7 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
           json_response = json
           expect(json_response[:results]).to be_empty
           expect(json_response[:failed_charges].size).to eq(1)
+          expect(json_response[:failed_charges].first[:record_id]).to eq(3)
           expect(json_response[:failed_charges].first[:charge_id]).to eq("nonexistent")
           expect(json_response[:failed_charges].first[:error]).to include("Charge not found")
           expect(json_response[:processed_count]).to eq(0)
@@ -150,6 +156,7 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
           {
             charges: [
               {
+                record_id: 4,
                 charge_id: charge1.id,
                 charge_filter_id: "nonexistent",
                 units_10th: 100
@@ -166,6 +173,7 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
           json_response = json
           expect(json_response[:results]).to be_empty
           expect(json_response[:failed_charges].size).to eq(1)
+          expect(json_response[:failed_charges].first[:record_id]).to eq(4)
           expect(json_response[:failed_charges].first[:charge_id]).to eq(charge1.id)
           expect(json_response[:failed_charges].first[:error]).to include("ChargeFilter not found")
           expect(json_response[:processed_count]).to eq(0)
@@ -189,10 +197,12 @@ RSpec.describe DataApi::V1::ChargesController, type: :request do # rubocop:disab
           {
             charges: [
               {
+                record_id: 5,
                 charge_id: charge1.id,
                 units_10th: 100
               },
               {
+                record_id: 6,
                 charge_id: "nonexistent",
                 units_10th: 200
               }
