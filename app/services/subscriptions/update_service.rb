@@ -43,10 +43,15 @@ module Subscriptions
       end
 
       if params.key?(:plan_overrides)
-        plan_result = handle_plan_override
-        return plan_result unless plan_result.success?
+        if overrides_only_fixed_charge_units?
+          subscription.plan = plan
+          create_fixed_charge_units_override(subscription)
+        else
+          plan_result = handle_plan_override
+          return plan_result unless plan_result.success?
 
-        subscription.plan = plan_result.plan
+          subscription.plan = plan_result.plan
+        end
       end
 
       if subscription.starting_in_the_future? && params.key?(:subscription_at)
@@ -87,6 +92,21 @@ module Subscriptions
       return unless subscription.plan.pay_in_advance? && subscription.subscription_at.today?
 
       BillSubscriptionJob.perform_after_commit([subscription], Time.current.to_i, invoicing_reason: :subscription_starting)
+    end
+
+    def overrides_only_fixed_charge_units?
+      params[:plan_overrides] && params[:plan_overrides].keys == [:fixed_charges] &&
+        params[:plan_overrides][:fixed_charges].map(&:keys).flatten.uniq.sort == [:id, :units]
+    end
+
+    def create_fixed_charge_units_override(subscription)
+      params[:plan_overrides][:fixed_charges].each do |fixed_charge|
+        FixedChargeUnitOverrideService.call!(
+          subscription:,
+          fixed_charge: subscription.plan.fixed_charges.find(fixed_charge[:id]),
+          units: fixed_charge[:units]
+        )
+      end
     end
 
     def handle_plan_override

@@ -101,7 +101,7 @@ module Subscriptions
       new_subscription = Subscription.new(
         organization_id: customer.organization_id,
         customer:,
-        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
+        plan: params.key?(:plan_overrides) ? plan_for_override_params(plan) : plan,
         subscription_at:,
         name:,
         external_id:,
@@ -116,33 +116,35 @@ module Subscriptions
       else
         new_subscription.mark_as_active!
       end
+      create_fixed_charge_units_override(new_subscription) if overrides_only_fixed_charge_units?
+      after_commited_created_subscription(new_subscription)
 
-      if should_be_billed_today?(new_subscription)
+      new_subscription
+    end
+
+    def after_commited_created_subscription(subscription)
+      after_commit do
+        if should_be_billed_today?(subscription)
         # NOTE: Since job is launched from inside a db transaction
         #       we must wait for it to be committed before processing the job.
         #       We do not set offset anymore but instead retry jobs
-        after_commit do
           BillSubscriptionJob.perform_later(
-            [new_subscription],
+            [subscription],
             Time.zone.now.to_i,
             invoicing_reason: :subscription_starting,
             skip_charges: true
           )
         end
-      end
 
-      if new_subscription.active?
-        after_commit do
-          SendWebhookJob.perform_later("subscription.started", new_subscription)
-          Utils::ActivityLog.produce(new_subscription, "subscription.started")
+        if subscription.active?
+          SendWebhookJob.perform_later("subscription.started", subscription)
+          Utils::ActivityLog.produce(subscription, "subscription.started")
+        end
+
+        if subscription.should_sync_hubspot_subscription?
+          Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription:)
         end
       end
-
-      if new_subscription.should_sync_hubspot_subscription?
-        after_commit { Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription: new_subscription) }
-      end
-
-      new_subscription
     end
 
     def upgrade_subscription
@@ -162,10 +164,10 @@ module Subscriptions
 
       # NOTE: When downgrading a subscription, we keep the current one active
       #       until the next billing day. The new subscription will become active at this date
-      current_subscription.next_subscriptions.create!(
+      new_subscription = current_subscription.next_subscriptions.create!(
         organization_id: customer.organization_id,
         customer:,
-        plan: params.key?(:plan_overrides) ? override_plan(plan) : plan,
+        plan: params.key?(:plan_overrides) ? plan_for_override_params(plan) : plan,
         name:,
         external_id: current_subscription.external_id,
         subscription_at: current_subscription.subscription_at,
@@ -173,6 +175,7 @@ module Subscriptions
         billing_time: current_subscription.billing_time,
         ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
       )
+      create_fixed_charge_units_override(new_subscription) if overrides_only_fixed_charge_units?
 
       after_commit do
         SendWebhookJob.perform_later("subscription.updated", current_subscription)
@@ -223,8 +226,27 @@ module Subscriptions
         .order(started_at: :desc)
     end
 
-    def override_plan(plan)
+    def plan_for_override_params(plan)
+      if overrides_only_fixed_charge_units?
+        return plan
+      end
+
       Plans::OverrideService.call(plan:, params: params[:plan_overrides].to_h.with_indifferent_access).plan
+    end
+
+    def overrides_only_fixed_charge_units?
+      params[:plan_overrides] && params[:plan_overrides].keys == [:fixed_charges] &&
+        params[:plan_overrides][:fixed_charges].map(&:keys).flatten.uniq.sort == [:id, :units]
+    end
+
+    def create_fixed_charge_units_override(subscription)
+      params[:plan_overrides][:fixed_charges].each do |fixed_charge|
+        FixedChargeUnitOverrideService.call!(
+          subscription:,
+          fixed_charge: subscription.plan.fixed_charges.find(fixed_charge[:id]),
+          units: fixed_charge[:units]
+        )
+      end
     end
   end
 end
