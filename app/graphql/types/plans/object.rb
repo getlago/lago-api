@@ -61,6 +61,10 @@ module Types
         object.charges.includes(filters: {values: :billable_metric_filter}).order(created_at: :asc)
       end
 
+      def fixed_charges
+        object.fixed_charges.order(created_at: :asc)
+      end
+
       def charges_count
         object.charges.count
       end

@@ -69,7 +69,11 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
             units,
             addOn { id name code },
             chargeModel,
-            properties { amount }
+            properties {
+             amount
+             graduatedRanges { fromValue, toValue },
+             volumeRanges { fromValue, toValue }
+            }
           },
           usageThresholds {
             id,
@@ -488,19 +492,19 @@ RSpec.describe Mutations::Plans::Update, type: :graphql do
       expect(result_data["fixedCharges"].count).to eq(3)
 
       expect(result_data["fixedCharges"].first["chargeModel"]).to eq("standard")
-      expect(result_data["fixedCharges"].first["units"]).to eq(10)
+      expect(result_data["fixedCharges"].first["units"]).to eq("10.0")
       expect(result_data["fixedCharges"].first["properties"]["amount"]).to eq("100.00")
       expect(result_data["fixedCharges"].first["addOn"]["id"]).to eq(add_on_1.id)
       expect(result_data["fixedCharges"].first["addOn"]["name"]).to eq(add_on_1.name)
 
       expect(result_data["fixedCharges"].second["chargeModel"]).to eq("graduated")
-      expect(result_data["fixedCharges"].second["units"]).to eq(5)
+      expect(result_data["fixedCharges"].second["units"]).to eq("5.0")
       expect(result_data["fixedCharges"].second["properties"]["graduatedRanges"].count).to eq(2)
       expect(result_data["fixedCharges"].second["addOn"]["id"]).to eq(add_on_2.id)
       expect(result_data["fixedCharges"].second["addOn"]["name"]).to eq(add_on_2.name)
 
       expect(result_data["fixedCharges"].third["chargeModel"]).to eq("volume")
-      expect(result_data["fixedCharges"].third["units"]).to eq(1)
+      expect(result_data["fixedCharges"].third["units"]).to eq("1.0")
       expect(result_data["fixedCharges"].third["properties"]["volumeRanges"].count).to eq(1)
       expect(result_data["fixedCharges"].third["addOn"]["id"]).to eq(add_on_3.id)
       expect(result_data["fixedCharges"].third["addOn"]["name"]).to eq(add_on_3.name)
