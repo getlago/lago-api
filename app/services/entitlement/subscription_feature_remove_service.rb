@@ -21,7 +21,8 @@ module Entitlement
       return result.not_found_failure!(resource: "feature") unless feature
 
       ActiveRecord::Base.transaction do
-        delete_feature_entitlement_if_exists
+        delete_subscription_entitlement_if_exists
+        delete_privilege_removals_if_exists
         add_feature_removal_if_feature_is_in_plan
       end
 
@@ -40,11 +41,15 @@ module Entitlement
       @feature ||= subscription.organization.features.find_by(code: feature_code)
     end
 
-    def delete_feature_entitlement_if_exists
-      entitlement = subscription.entitlements.find_by(feature: feature)
+    def delete_subscription_entitlement_if_exists
+      entitlement = subscription.entitlements.find_by(feature:)
       return unless entitlement
       entitlement.values.update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
       entitlement.discard!
+    end
+
+    def delete_privilege_removals_if_exists
+      subscription.entitlement_removals.where(privilege: feature.privileges).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def add_feature_removal_if_feature_is_in_plan
