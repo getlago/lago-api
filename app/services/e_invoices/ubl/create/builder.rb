@@ -36,8 +36,7 @@ module EInvoices
 
             xml.comment "Tax Total Information"
             xml["cac"].TaxTotal do
-              total_taxes = taxable_by_tax_rate.sum { |tax_rate, amount| amount * (tax_rate / 100) }
-              xml["cbc"].TaxAmount format_number(Money.new(total_taxes)), currencyID: invoice.currency
+              xml["cbc"].TaxAmount format_number(Money.new(invoice.taxes_amount_cents)), currencyID: invoice.currency
 
               taxes do |tax_rate, amount, tax|
                 TaxSubtotal.call(xml:, invoice:, tax_rate:, amount:, tax:)
