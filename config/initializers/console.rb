@@ -33,8 +33,10 @@ Rails.application.console do
 
   def enable_premium_integration!(org_id, integration_name)
     org = Organization.find(org_id)
-    org.premium_integrations << integration_name
-    org.save!
+    if org.premium_integrations.exclude?(integration_name)
+      org.premium_integrations << integration_name
+      org.save!
+    end
     org.reload.premium_integrations
   end
 

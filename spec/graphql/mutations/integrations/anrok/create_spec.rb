@@ -24,8 +24,6 @@ RSpec.describe Mutations::Integrations::Anrok::Create, type: :graphql do
 
   around { |test| lago_premium!(&test) }
 
-  before { membership.organization.update!(premium_integrations: ["anrok"]) }
-
   it_behaves_like "requires current user"
   it_behaves_like "requires current organization"
   it_behaves_like "requires permission", "organization:integrations:create"

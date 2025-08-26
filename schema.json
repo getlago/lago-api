@@ -27737,6 +27737,12 @@
           "inputFields": null,
           "enumValues": [
             {
+              "name": "anrok",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "beta_payment_authorization",
               "description": null,
               "isDeprecated": false,
@@ -27750,12 +27756,6 @@
             },
             {
               "name": "okta",
-              "description": null,
-              "isDeprecated": false,
-              "deprecationReason": null
-            },
-            {
-              "name": "anrok",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
