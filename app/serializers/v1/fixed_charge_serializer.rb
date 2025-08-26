@@ -5,8 +5,9 @@ module V1
     def serialize
       payload = {
         lago_id: model.id,
-        add_on_id: model.add_on_id,
+        lago_add_on_id: model.add_on_id,
         invoice_display_name: model.invoice_display_name,
+        add_on_code: model.add_on.code,
         created_at: model.created_at.iso8601,
         charge_model: model.charge_model,
         pay_in_advance: model.pay_in_advance,
