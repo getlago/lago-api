@@ -49174,7 +49174,7 @@
             },
             {
               "name": "feature",
-              "description": "Feature",
+              "description": "Entitlement::Feature",
               "isDeprecated": false,
               "deprecationReason": null
             }
