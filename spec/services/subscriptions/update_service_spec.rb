@@ -355,6 +355,87 @@ RSpec.describe Subscriptions::UpdateService, type: :service do
       end
     end
 
+    context "when plan_overrides contains only fixed_charges with units" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:add_on) { create(:add_on, organization:) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, organization:, units: 2) }
+      let(:fixed_charge2) { create(:fixed_charge, plan:, add_on:, organization:, units: 3) }
+      let(:subscription) { create(:subscription, customer:, plan:) }
+      let(:params) do
+        {
+          plan_overrides: {
+            fixed_charges: [
+              {id: fixed_charge.id, units: 5},
+              {id: fixed_charge2.id, units: 7}
+            ]
+          }
+        }
+      end
+
+      before do
+        fixed_charge
+        fixed_charge2
+      end
+
+      it "updates subscription with original plan and creates fixed charge unit overrides" do
+        result = update_service.call
+
+        expect(result).to be_success
+        expect(result.subscription.plan).to eq(plan)
+        expect(result.subscription.fixed_charge_unit_overrides.count).to eq(2)
+        expect(result.subscription.fixed_charge_unit_overrides.map(&:units)).to match_array([5, 7])
+      end
+
+      it "calls FixedChargeUnitOverrideService for each fixed charge" do
+        expect(Subscriptions::FixedChargeUnitOverrideService).to receive(:call!).twice
+
+        update_service.call
+      end
+
+      it "does not call handle_plan_override" do
+        expect(update_service).not_to receive(:handle_plan_override)
+
+        update_service.call
+      end
+
+      it "sends updated subscription webhook" do
+        expect { update_service.call }.to have_enqueued_job_after_commit(SendWebhookJob).with("subscription.updated", subscription)
+      end
+    end
+
+    context "when plan_overrides contains other fields changes, but only units are changed for fixed_charges" do
+      let(:organization) { create(:organization) }
+      let(:customer) { create(:customer, organization:) }
+      let(:plan) { create(:plan, organization:) }
+      let(:add_on) { create(:add_on, organization:) }
+      let(:fixed_charge) { create(:fixed_charge, plan:, add_on:, organization:, units: 2) }
+      let(:params) do
+        {
+          plan_overrides: {
+            fixed_charges: [
+              {id: fixed_charge.id, units: 5}
+            ],
+            amount_cents: 200
+          }
+        }
+      end
+
+      before do
+        fixed_charge
+      end
+
+      it "calls creates plan override instead of creating unit overrides" do
+        expect(update_service).to receive(:handle_plan_override).and_return(
+          double(success?: true, plan: plan)
+        )
+        expect(Subscriptions::FixedChargeUnitOverrideService).not_to receive(:call!)
+
+        update_service.call
+      end
+    end
+
     context "with empty params" do
       let(:params) { {} }
 
