@@ -34,6 +34,8 @@ module Subscriptions
         )
 
         new_subscription.mark_as_active!
+        create_fixed_charge_units_override(new_subscription) if overrides_only_fixed_charge_units?
+
         after_commit do
           SendWebhookJob.perform_later("subscription.started", new_subscription)
           Utils::ActivityLog.produce(new_subscription, "subscription.started")
@@ -66,7 +68,6 @@ module Subscriptions
         billing_time: current_subscription.billing_time,
         ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
       )
-      create_fixed_charge_units_override(new_subscription) if overrides_only_fixed_charge_units?
 
       new_subscription
     end
