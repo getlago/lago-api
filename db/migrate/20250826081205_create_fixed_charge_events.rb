@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateFixedChargeEvents < ActiveRecord::Migration[8.0]
   def change
     create_table :fixed_charge_events, id: :uuid do |t|
