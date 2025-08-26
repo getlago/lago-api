@@ -82,7 +82,7 @@ module Invoices
       def call_async
         return result unless provider
 
-        Invoices::Payments::CreateJob.perform_later(invoice:, payment_provider: provider)
+        Invoices::Payments::CreateJob.perform_after_commit(invoice:, payment_provider: provider)
 
         result.payment_provider = provider
         result
