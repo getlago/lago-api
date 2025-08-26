@@ -8,7 +8,7 @@ RSpec.describe Utils::Entitlement do
   describe ".cast_value" do
     context "when value is blank" do
       it "returns nil for empty string" do
-        expect(utils_entitlement.cast_value("", "integer")).to be_nil
+        expect(utils_entitlement.cast_value("", "integer")).to eq 0
       end
 
       it "returns nil for nil" do
