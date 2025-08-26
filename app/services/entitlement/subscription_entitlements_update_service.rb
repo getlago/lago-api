@@ -63,15 +63,12 @@ module Entitlement
     end
 
     def remove_or_delete_missing_features
-      # TODO: Make dedicated query?
       missing_codes = (SubscriptionEntitlement.for_subscription(subscription).map(&:code) - entitlements_params.keys).uniq
-
-      # TODO: Ensure delete privilege removals :think:
 
       # If the feature was added as a subscription override, delete it
       sub_entitlements = subscription.entitlements.joins(:feature).where(feature: {code: missing_codes})
-      EntitlementValue.where(entitlement: sub_entitlements).discard_all!
-      sub_entitlements.discard_all!
+      EntitlementValue.where(entitlement: sub_entitlements).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      sub_entitlements.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
       # If the feature is from the plan, create a SubscriptionFeatureRemoval
       plan_entitlements = subscription.plan.entitlements.joins(:feature).where(feature: {code: missing_codes})
@@ -82,6 +79,11 @@ module Entitlement
           subscription: subscription
         )
       end
+
+      # If there was any privilege removal for a removed feature, we clean them up
+      subscription.entitlement_removals.where(
+        privilege: Privilege.joins(:feature).where(feature: {code: missing_codes})
+      ).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def update_entitlements
@@ -94,7 +96,6 @@ module Entitlement
           feature: organization.features.includes(:privileges).find { it.code == feature_code },
           privilege_params:,
           partial:
-          # TODO: add existing removals here
         )
       end
     end
