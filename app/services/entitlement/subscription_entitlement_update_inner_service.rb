@@ -15,6 +15,9 @@ module Entitlement
       super
     end
 
+    # This inner service is used to update a single entitlement
+    # It intentionally doesn't add any activity log entries, doesn't return any data, doesn't send any webhooks
+    # The outer services will handle that
     def call
       return result.not_found_failure!(resource: "feature") unless feature
 
@@ -23,14 +26,6 @@ module Entitlement
       end
 
       result
-      # rescue ActiveRecord::RecordNotFound => e
-      #   if e.message.include?("Entitlement::Feature")
-      #     result.not_found_failure!(resource: "feature")
-      #   elsif e.message.include?("Entitlement::Privilege")
-      #     result.not_found_failure!(resource: "privilege")
-      #   else
-      #     result.not_found_failure!(resource: "record")
-      #   end
     end
 
     private
@@ -46,12 +41,9 @@ module Entitlement
     def process_single_entitlement
       plan_entitlement = plan.entitlements.includes(values: :privilege).find_by(feature: feature)
       sub_entitlement = subscription.entitlements.includes(values: :privilege).find_by(feature: feature)
-      # TODO: add .or.where(privilege: feature.privileges)
-      removals = SubscriptionFeatureRemoval.where(subscription: subscription, feature: feature).to_a
 
       if plan_entitlement.nil? && sub_entitlement.nil?
-        feature_removal = removals.find { it.entitlement_feature_id == feature.id }
-        feature_removal&.discard!
+        subscription.entitlement_removals.where(feature:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
         create_entitlement_and_values_for_subscription
       elsif plan_entitlement && privilege_params_same_as_plan?(plan_entitlement)
         # Restore the plan default by removing all overrides
@@ -62,8 +54,8 @@ module Entitlement
             .or(SubscriptionFeatureRemoval.where(privilege: feature.privileges))
         ).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
       else
-        feature_removal = removals.find { it.entitlement_feature_id == feature.id }
-        feature_removal&.discard!
+        subscription.entitlement_removals.where(feature:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
+
         sub_entitlement ||= create_entitlement_for_subscription
         remove_missing_entitlement_values(plan_entitlement, sub_entitlement) if full?
         update_values_for_subscription(plan_entitlement, sub_entitlement)
@@ -100,7 +92,6 @@ module Entitlement
         sub_val&.discard!
         plan_val = plan_entitlement&.values&.find { it.privilege.code == privilege_code }
 
-        # TODO: Pass all removals to service
         if plan_val && !SubscriptionFeatureRemoval.where(organization:, privilege: plan_val.privilege, subscription:).exists?
           SubscriptionFeatureRemoval.create!(organization:, privilege: plan_val.privilege, subscription: subscription)
         end
@@ -117,10 +108,7 @@ module Entitlement
         if plan_val && value_is_the_same?(privilege.value_type, value, plan_val.value)
           sub_val&.discard!
         elsif sub_val.nil?
-          # TODO: REMOVE PRIVILEGE REMOVAL
-          # Test
-          # TODO: Get removals from args in case of loops
-          SubscriptionFeatureRemoval.where(privilege:, subscription:).discard_all!
+          subscription.entitlement_removals.where(privilege:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
 
           create_entitlement_value(sub_entitlement, privilege, value)
         elsif sub_val && !value_is_the_same?(privilege.value_type, value, sub_val.value)
