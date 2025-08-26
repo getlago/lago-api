@@ -123,31 +123,37 @@ module EInvoices
       tax_rate.zero? ? Z_CATEGORY : S_CATEGORY
     end
 
+    def allowances
+      invoice.coupons_amount_cents + invoice.progressive_billing_credit_amount_cents
+    end
+
     def allowance_charges(&block)
-      return unless invoice.coupons_amount_cents.positive?
+      return unless allowances.positive?
 
-      discount_by_tax_rates.each do |tax_rate, amount|
-        yield(tax_rate, amount)
+      invoice.fees.group_by(&:taxes_rate).map do |tax_rate, fees|
+        total_amount = fees.sum(&:precise_amount_cents)
+
+        if tax_rate > 0
+          total_taxes = fees.sum(&:taxes_precise_amount_cents)
+          charged_amount = (total_taxes * 100).fdiv(tax_rate)
+
+          yield tax_rate, Money.new(total_amount - charged_amount)
+        else
+          yield tax_rate, Money.new(total_amount)
+        end
       end
-    end
-
-    def discount_by_tax_rates
-      sum_by_taxes_rate = invoice.fees.group(:taxes_rate).order(taxes_rate: :asc).sum(:amount_cents)
-      total_taxable = sum_by_taxes_rate.values.sum
-      sum_by_taxes_rate.transform_values do |value|
-        Money.new((value.to_f / total_taxable) * invoice.coupons_amount_cents)
-      end
-    end
-
-    def taxable_by_tax_rate
-      discounts = discount_by_tax_rates
-      taxable_amounts = invoice.fees.group(:taxes_rate).sum(:amount_cents)
-      taxable_amounts.merge(discounts) { |_, amount, discount| Money.new(amount) - Money.new(discount) }
     end
 
     def taxes(&block)
-      taxable_by_tax_rate.each do |tax_rate, amount|
-        yield tax_rate, amount, amount * (tax_rate / 100)
+      invoice.fees.group_by(&:taxes_rate).map do |tax_rate, fees|
+        total_taxes = fees.sum(&:taxes_precise_amount_cents)
+        charged_amount = if tax_rate > 0
+          (total_taxes * 100).fdiv(tax_rate)
+        else
+          fees.sum(&:precise_amount_cents)
+        end
+
+        yield tax_rate, Money.new(charged_amount), Money.new(total_taxes)
       end
     end
 
