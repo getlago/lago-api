@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :service do
-  subject(:result) { described_class.call(organization:, subscription:, entitlements_params:, partial: true) }
+  subject(:result) { described_class.call(subscription:, entitlements_params:, partial: true) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }

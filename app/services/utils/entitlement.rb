@@ -10,7 +10,7 @@ module Utils
     end
 
     def self.cast_value(value, type)
-      return nil if value.blank?
+      return nil if value.nil?
 
       case type
       when "integer"
@@ -20,6 +20,10 @@ module Utils
       else
         value
       end
+    end
+
+    def self.same_value?(type, value1, value2)
+      cast_value(value1, type) == cast_value(value2, type)
     end
 
     def self.convert_gql_input_to_params(entitlements)

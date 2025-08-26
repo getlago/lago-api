@@ -8,7 +8,7 @@ RSpec.describe Utils::Entitlement do
   describe ".cast_value" do
     context "when value is blank" do
       it "returns nil for empty string" do
-        expect(utils_entitlement.cast_value("", "integer")).to be_nil
+        expect(utils_entitlement.cast_value("", "integer")).to eq 0
       end
 
       it "returns nil for nil" do
@@ -35,6 +35,10 @@ RSpec.describe Utils::Entitlement do
         expect(utils_entitlement.cast_value("false", "boolean")).to be(false)
       end
 
+      it "casts false to boolean" do
+        expect(utils_entitlement.cast_value(false, "boolean")).to be(false)
+      end
+
       it "casts 1 to boolean" do
         expect(utils_entitlement.cast_value("1", "boolean")).to be(true)
       end
@@ -52,6 +56,28 @@ RSpec.describe Utils::Entitlement do
       it "returns value as-is for unknown type" do
         expect(utils_entitlement.cast_value("hello", "unknown")).to eq("hello")
       end
+    end
+  end
+
+  describe ".same_value?" do
+    it do
+      expect(utils_entitlement.same_value?("boolean", "t", true)).to eq true
+      expect(utils_entitlement.same_value?("boolean", "t", "true")).to eq true
+      expect(utils_entitlement.same_value?("boolean", "t", 1)).to eq true
+      expect(utils_entitlement.same_value?("boolean", "t", "1")).to eq true
+      expect(utils_entitlement.same_value?("boolean", "f", false)).to eq true
+      expect(utils_entitlement.same_value?("boolean", "f", "false")).to eq true
+      expect(utils_entitlement.same_value?("boolean", "f", 0)).to eq true
+      expect(utils_entitlement.same_value?("boolean", "f", "0")).to eq true
+
+      expect(utils_entitlement.same_value?("integer", "1", 1)).to eq true
+      expect(utils_entitlement.same_value?("integer", "any", "0")).to eq true
+
+      expect(utils_entitlement.same_value?("string", "str", "str")).to eq true
+      expect(utils_entitlement.same_value?("string", "str", "str2")).to eq false
+
+      # Notice that the same values with "boolean" would be considered equal
+      expect(utils_entitlement.same_value?("string", "f", "0")).to eq false
     end
   end
 
