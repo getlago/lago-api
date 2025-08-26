@@ -193,6 +193,23 @@ RSpec.describe Organization, type: :model do
         it { is_expected.to validate_presence_of(:hmac_key) }
       end
     end
+
+    describe "of premium_integrations inclusion" do
+      context "when it includes an invalid integration" do
+        subject(:organization) { build(:organization, premium_integrations: ["invalid_integration"]) }
+
+        it do
+          expect(subject).not_to be_valid
+          expect(organization.errors.to_hash).to eq(premium_integrations: ["value_is_invalid"])
+        end
+      end
+
+      context "when it includes a valid integration" do
+        subject(:organization) { build(:organization, :premium) }
+
+        it { is_expected.to be_valid }
+      end
+    end
   end
 
   describe "#save" do
@@ -234,14 +251,14 @@ RSpec.describe Organization, type: :model do
 
   describe ".with_any_premium_integrations" do
     it do
-      create(:organization, premium_integrations: %w[okta xero anrok])
+      create(:organization, premium_integrations: %w[okta xero from_email])
       create(:organization, premium_integrations: %w[okta])
-      create(:organization, premium_integrations: %w[salesforce anrok])
+      create(:organization, premium_integrations: %w[salesforce from_email])
       create(:organization, premium_integrations: %w[salesforce])
 
       expect(described_class.with_any_premium_integrations([]).count).to eq(0)
       expect(described_class.with_any_premium_integrations("okta").count).to eq(2)
-      expect(described_class.with_any_premium_integrations(%w[okta anrok]).count).to eq(3)
+      expect(described_class.with_any_premium_integrations(%w[okta from_email]).count).to eq(3)
       expect(described_class.with_any_premium_integrations(%w[okta salesforce]).count).to eq(4)
     end
   end
