@@ -9,7 +9,6 @@ class FixedChargeEvent < ApplicationRecord
   belongs_to :fixed_charge
 
   validates :units, numericality: {greater_than_or_equal_to: 0}
-  validates :properties, presence: true
 
   default_scope -> { kept }
 end
@@ -20,7 +19,6 @@ end
 #
 #  id              :uuid             not null, primary key
 #  deleted_at      :datetime
-#  properties      :jsonb            not null
 #  timestamp       :datetime
 #  units           :decimal(30, 10)  default(0.0), not null
 #  created_at      :datetime         not null

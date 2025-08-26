@@ -7,7 +7,6 @@ class CreateFixedChargeEvents < ActiveRecord::Migration[8.0]
       t.belongs_to :subscription, null: false, foreign_key: true, type: :uuid
       t.belongs_to :fixed_charge, null: false, foreign_key: true, type: :uuid
 
-      t.jsonb :properties, null: false, default: {}
       t.decimal :units, precision: 30, scale: 10, null: false, default: 0.0
       t.datetime :timestamp
       t.datetime :deleted_at, index: true

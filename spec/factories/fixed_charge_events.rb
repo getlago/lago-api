@@ -5,7 +5,6 @@ FactoryBot.define do
     organization { subscription&.organization || association(:organization) }
     subscription
     fixed_charge
-    properties { {amount: Faker::Number.between(from: 100, to: 200).to_s} }
     units { "9.99" }
     timestamp { Time.current }
     deleted_at { nil }

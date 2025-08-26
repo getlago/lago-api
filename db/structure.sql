@@ -3346,7 +3346,6 @@ CREATE TABLE public.fixed_charge_events (
     organization_id uuid NOT NULL,
     subscription_id uuid NOT NULL,
     fixed_charge_id uuid NOT NULL,
-    properties jsonb DEFAULT '{}'::jsonb NOT NULL,
     units numeric(30,10) DEFAULT 0.0 NOT NULL,
     "timestamp" timestamp(6) without time zone,
     deleted_at timestamp(6) without time zone,
