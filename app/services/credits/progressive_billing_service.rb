@@ -63,7 +63,7 @@ module Credits
         fee = invoice.fees.find_by(
           charge_id: progressive_fee.charge_id,
           charge_filter_id: progressive_fee.charge_filter_id,
-          grouped_by: progressive_fee.grouped_by,
+          grouped_by: progressive_fee.grouped_by
         )
         next unless fee
 
