@@ -141,6 +141,25 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
       end
     end
 
+    context "when feature was removed via entitlement removal" do
+      let(:params) do
+        {
+          "entitlements" => {
+            "seats" => {
+              "max" => 10
+            }
+          }
+        }
+      end
+
+      it "removes the removal to restore the feature" do
+        removal = create(:subscription_feature_removal, feature:, subscription:)
+        subject
+        expect(removal.reload).to be_discarded
+        expect(subscription.entitlements).to be_empty
+      end
+    end
+
     context "when entitlement does not exist" do
       let(:new_feature) { create(:feature, organization:, code: "storage") }
       let(:new_privilege) { create(:privilege, organization:, feature: new_feature, code: "max_gb", value_type: "integer") }
@@ -159,16 +178,12 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
         new_privilege
       end
 
-      it "creates new entitlement" do
+      it "creates new entitlement with value" do
         expect {
           subject
-        }.to change(Entitlement::Entitlement, :count).by(1)
-      end
-
-      it "creates new entitlement value" do
-        expect {
-          subject
-        }.to change(Entitlement::EntitlementValue, :count).by(1)
+        }.to change(subscription.entitlements, :count).by(1)
+        sub_ent = subscription.entitlements.sole
+        expect(sub_ent.values.sole.value).to eq("100")
       end
     end
 
@@ -253,111 +268,44 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController, type: :request do
       expect(response).to have_http_status(:success)
     end
 
+    context "when feature is on plan too" do
+      let(:plan_entitlement) { create(:entitlement, plan:, feature:) }
+
+      before do
+        plan_entitlement
+      end
+
+      it "also add a feature removal" do
+        subject
+        expect(entitlement.reload).to be_discarded
+        expect(entitlement_value.reload).to be_discarded
+        expect(subscription.entitlement_removals.where(feature:)).to exist
+      end
+
+      context "when subscription had privilege removal" do
+        it "cleans up the privilege removal" do
+          create(:entitlement_value, entitlement: plan_entitlement, privilege: privilege2, value: false)
+          privilege_removal = create(:subscription_feature_removal, privilege: privilege2, subscription:)
+          subject
+          expect(privilege_removal.reload).to be_discarded
+          expect(entitlement.reload).to be_discarded
+          expect(entitlement_value.reload).to be_discarded
+          pp subscription.entitlement_removals.pluck(:entitlement_feature_id)
+          expect(subscription.entitlement_removals.where(feature:)).to exist
+        end
+      end
+    end
+
     it "returns not found error when subscription does not exist" do
       delete_with_token organization, "/api/v1/subscriptions/invalid_subscription/entitlements/#{feature.code}"
 
       expect(response).to be_not_found_error("subscription")
     end
 
-    it "returns not found error when entitlement does not exist" do
+    it "returns not found error when feature does not exist" do
       delete_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/invalid_feature"
 
-      expect(response).to be_not_found_error("entitlement")
-    end
-  end
-
-  describe "POST /api/v1/subscriptions/external_id/entitlements/:feature_code/remove" do
-    subject { post_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}/remove" }
-
-    let(:entitlement) { create(:entitlement, plan:, feature:) }
-
-    before do
-      entitlement
-    end
-
-    it_behaves_like "a Premium API endpoint"
-
-    it "creates a subscription feature removal" do
-      expect { subject }.to change(Entitlement::SubscriptionFeatureRemoval, :count).by(1)
-
-      expect(response).to have_http_status(:success)
-    end
-
-    it "returns not found error when subscription does not exist" do
-      post_with_token organization, "/api/v1/subscriptions/invalid_subscription/entitlements/#{feature.code}/remove"
-
-      expect(response).to be_not_found_error("subscription")
-    end
-
-    it "returns not found error when feature does not exist" do
-      post_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/invalid_feature/remove"
-
       expect(response).to be_not_found_error("feature")
-    end
-
-    context "when feature is not available in the plan" do
-      let(:other_feature) { create(:feature, organization:, code: "other_feature") }
-
-      it "returns validation error" do
-        post_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{other_feature.code}/remove"
-
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:code]).to eq("validation_errors")
-        expect(json[:error_details][:feature]).to eq ["feature_not_available_in_plan"]
-      end
-    end
-
-    context "when removal already exists" do
-      let(:existing_removal) { create(:subscription_feature_removal, organization:, feature:, subscription_id: subscription.id) }
-
-      it "returns validation error" do
-        existing_removal
-        subject
-
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(json[:code]).to eq("validation_errors")
-        expect(json[:error_details][:feature]).to eq ["feature_already_removed"]
-      end
-    end
-  end
-
-  describe "POST /api/v1/subscriptions/external_id/entitlements/:feature_code/restore" do
-    subject { post_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}/restore" }
-
-    let(:subscription_feature_removal) { create(:subscription_feature_removal, organization:, feature:, subscription: subscription) }
-
-    before do
-      subscription_feature_removal
-    end
-
-    it_behaves_like "a Premium API endpoint"
-
-    it "discards the subscription feature removal" do
-      expect { subject }.to change { subscription_feature_removal.reload.discarded? }.from(false).to(true)
-
-      expect(response).to have_http_status(:success)
-    end
-
-    it "returns not found error when subscription does not exist" do
-      post_with_token organization, "/api/v1/subscriptions/invalid_subscription/entitlements/#{feature.code}/restore"
-
-      expect(response).to be_not_found_error("subscription")
-    end
-
-    it "returns not found error when feature does not exist" do
-      post_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/invalid_feature/restore"
-
-      expect(response).to be_not_found_error("feature")
-    end
-
-    context "when removal does not exist" do
-      let(:other_feature) { create(:feature, organization:, code: "other_feature") }
-
-      it "returns not found error" do
-        post_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{other_feature.code}/restore"
-
-        expect(response).to be_not_found_error("subscription_feature_removal")
-      end
     end
   end
 end

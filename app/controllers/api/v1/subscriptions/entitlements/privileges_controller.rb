@@ -10,7 +10,7 @@ module Api
           before_action :find_subscription
 
           def destroy
-            result = ::Entitlement::SubscriptionEntitlementPrivilegeDestroyService.call(
+            result = ::Entitlement::SubscriptionFeaturePrivilegeRemoveService.call(
               subscription:,
               feature_code: params[:entitlement_code],
               privilege_code: params[:code]

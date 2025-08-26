@@ -9,8 +9,8 @@ RSpec.describe Api::V1::Subscriptions::Entitlements::PrivilegesController, type:
   let(:subscription) { create(:subscription, organization:, customer:, plan:) }
   let(:feature) { create(:feature, organization:, code: "seats") }
   let(:privilege) { create(:privilege, organization:, feature:, code: "max", value_type: "integer") }
-  let(:entitlement) { create(:entitlement, subscription_id: subscription.id, plan: nil, feature:) }
-  let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: 30, organization:) }
+  let(:entitlement) { create(:entitlement, subscription: subscription, plan: nil, feature:) }
+  let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: 30) }
 
   around { |test| lago_premium!(&test) }
 
@@ -40,16 +40,26 @@ RSpec.describe Api::V1::Subscriptions::Entitlements::PrivilegesController, type:
       expect(response).to be_not_found_error("subscription")
     end
 
-    it "returns not found error when entitlement does not exist" do
+    it "returns not found error when feature does not exist" do
       delete_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/invalid_feature/privileges/#{privilege.code}"
 
-      expect(response).to be_not_found_error("entitlement")
+      expect(response).to be_not_found_error("feature")
     end
 
     it "returns not found error when privilege does not exist" do
       delete_with_token organization, "/api/v1/subscriptions/#{subscription.external_id}/entitlements/#{feature.code}/privileges/invalid_privilege"
 
       expect(response).to be_not_found_error("privilege")
+    end
+
+    context "when privilege is from the plan" do
+      let(:plan_entitlement) { create(:entitlement, plan:, feature:) }
+      let(:plan_entitlement_value) { create(:entitlement_value, entitlement: plan_entitlement, privilege:, value: 10) }
+
+      it "adds a privilege removal" do
+        plan_entitlement_value
+        expect { subject }.to change(subscription.entitlement_removals.where(privilege:), :count).from(0).to(1)
+      end
     end
   end
 end
