@@ -10,7 +10,7 @@ module Utils
     end
 
     def self.cast_value(value, type)
-      return nil if value.blank?
+      return nil if value.nil?
 
       case type
       when "integer"
