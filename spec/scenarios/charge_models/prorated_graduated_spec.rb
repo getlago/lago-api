@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :request, transaction: false do
+describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :request, transaction: false, clickhouse: true do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, name: "aaaaaabcd") }
   let(:tax) { create(:tax, organization:, rate: 0) }
@@ -1043,6 +1043,171 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
               expect(invoice.issuing_date.iso8601).to eq("2023-12-07")
             end
           end
+        end
+      end
+    end
+
+    context "with clickhouse" do
+      let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: true) }
+      let(:field_name) { "user_id" }
+
+      let(:charge) do
+        create(
+          :graduated_charge,
+          billable_metric:,
+          prorated: true,
+          plan:,
+          properties: {
+            graduated_ranges: [
+              {
+                from_value: 0,
+                to_value: 3,
+                per_unit_amount: "0",
+                flat_amount: "0"
+              },
+              {
+                from_value: 4,
+                to_value: nil,
+                per_unit_amount: "10",
+                flat_amount: "0"
+              }
+            ]
+          }
+        )
+      end
+
+      before { charge }
+
+      it "should work" do
+        travel_to(Time.zone.parse("2025-05-21 04:31:39")) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code,
+              billing_time: "anniversary"
+            }
+          )
+        end
+
+        Event.create!(
+          organization_id: organization.id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: customer.external_id,
+          properties: {
+            user_id: "49303", operation_type: "add"
+          },
+          timestamp: Time.zone.parse("2025-05-21 04:31:40.000")
+        )
+
+        Event.create!(
+          organization_id: organization.id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: customer.external_id,
+          properties: {
+            user_id: "49067", operation_type: "add"
+          },
+          timestamp: Time.zone.parse("2025-05-31 08:33:35.000")
+        )
+
+        Event.create!(
+          organization_id: organization.id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: customer.external_id,
+          properties: {
+            user_id: "49067", operation_type: "remove"
+          },
+          timestamp: Time.zone.parse("2025-07-24 07:21:27.000")
+        )
+
+        Event.create!(
+          organization_id: organization.id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: customer.external_id,
+          properties: {
+            user_id: "62741", operation_type: "add"
+          },
+          timestamp: Time.zone.parse("2025-07-23 14:59:49.000")
+        )
+
+        Event.create!(
+          organization_id: organization.id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: customer.external_id,
+          properties: {
+            user_id: "63011", operation_type: "add"
+          },
+          timestamp: Time.zone.parse("2025-07-24 18:56:28.000")
+        )
+
+        Clickhouse::EventsEnriched.create!(
+          organization_id: organization.id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: customer.external_id,
+          properties: {
+            user_id: "49303", operation_type: "add"
+          },
+          value: "49303",
+          timestamp: Time.zone.parse("2025-05-21 04:31:40.000")
+        )
+
+        Clickhouse::EventsEnriched.create!(
+          organization_id: organization.id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: customer.external_id,
+          properties: {
+            user_id: "49067", operation_type: "add"
+          },
+          value: "49067",
+          timestamp: Time.zone.parse("2025-05-31 08:33:35.000")
+        )
+
+        Clickhouse::EventsEnriched.create!(
+          organization_id: organization.id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: customer.external_id,
+          properties: {
+            user_id: "49067", operation_type: "remove"
+          },
+          value: "49067",
+          timestamp: Time.zone.parse("2025-07-24 07:21:27.000")
+        )
+
+        Clickhouse::EventsEnriched.create!(
+          organization_id: organization.id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: customer.external_id,
+          properties: {
+            user_id: "62741", operation_type: "add"
+          },
+          value: "62741",
+          timestamp: Time.zone.parse("2025-07-23 14:59:49.000")
+        )
+
+        Clickhouse::EventsEnriched.create!(
+          organization_id: organization.id,
+          code: billable_metric.code,
+          transaction_id: SecureRandom.uuid,
+          external_subscription_id: customer.external_id,
+          properties: {
+            user_id: "63011", operation_type: "add"
+          },
+          value: "63011",
+          timestamp: Time.zone.parse("2025-07-24 18:56:28.000")
+        )
+
+        travel_to(Time.zone.parse("2025-08-19 18:00:00")) do
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(0) # got 903, but not sure if it's correct or not
         end
       end
     end
