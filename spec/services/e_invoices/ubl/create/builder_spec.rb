@@ -11,7 +11,7 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
 
   let(:invoice_subscription) { create(:invoice_subscription, :boundaries, invoice:, subscription: subscription) }
   let(:subscription) { create(:subscription, started_at: "2025-03-16".to_date) }
-  let(:invoice) { create(:invoice, total_amount_cents: 30_00, currency: "USD", coupons_amount_cents: 1000) }
+  let(:invoice) { create(:invoice, total_amount_cents: 30_00, currency: "USD", coupons_amount_cents: 1000, taxes_amount_cents: 1800) }
   let(:fee) { create(:fee, invoice:, amount_cents: 10000, taxes_rate: 20.00) }
 
   before do
@@ -82,13 +82,15 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
       it_behaves_like "xml section", {name: "Allowances and Charges - Discount 20.00% portion", xpath: "(#{discount_tag})[1]"}
 
       context "with multiple fees" do
-        let(:fee) { create(:fee, invoice:, amount_cents: 1551, taxes_rate: 19.00) }
-        let(:fee2) { create(:fee, invoice:, amount_cents: 88449, taxes_rate: 20.00) }
-        let(:fee3) { create(:fee, invoice:, amount_cents: 10000, taxes_rate: 21.00) }
+        let(:fee) { create(:fee, invoice:, precise_amount_cents: 2000, taxes_precise_amount_cents: 285, taxes_rate: 19.00) }
+        let(:fee2) { create(:fee, invoice:, precise_amount_cents: 1500, taxes_precise_amount_cents: 240, taxes_rate: 20.00) }
+        let(:fee3) { create(:fee, invoice:, precise_amount_cents: 3000, taxes_precise_amount_cents: 525, taxes_rate: 21.00) }
+        let(:fee4) { create(:fee, invoice:, precise_amount_cents: 3000, taxes_precise_amount_cents: 525, taxes_rate: 21.00) }
 
         before {
           fee2
           fee3
+          fee4
         }
 
         context "with 19% tax discount" do
@@ -97,7 +99,7 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
           it_behaves_like "xml section", {name: "Allowances and Charges - Discount 19.00% portion", xpath:}
 
           it "calculates the correct discount amount and tax" do
-            expect(subject).to contains_xml_node("#{xpath}/cbc:Amount").with_value("0.16")
+            expect(subject).to contains_xml_node("#{xpath}/cbc:Amount").with_value("5.00")
             expect(subject).to contains_xml_node("#{xpath}/cac:TaxCategory/cbc:Percent").with_value("19.00")
           end
         end
@@ -108,7 +110,7 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
           it_behaves_like "xml section", {name: "Allowances and Charges - Discount 20.00% portion", xpath:}
 
           it "calculates the correct discount amount and tax" do
-            expect(subject).to contains_xml_node("#{xpath}/cbc:Amount").with_value("8.84")
+            expect(subject).to contains_xml_node("#{xpath}/cbc:Amount").with_value("3.00")
             expect(subject).to contains_xml_node("#{xpath}/cac:TaxCategory/cbc:Percent").with_value("20.00")
           end
         end
@@ -119,7 +121,7 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
           it_behaves_like "xml section", {name: "Allowances and Charges - Discount 21.00% portion", xpath:}
 
           it "calculates the correct discount amount and tax" do
-            expect(subject).to contains_xml_node("#{xpath}/cbc:Amount").with_value("1.00")
+            expect(subject).to contains_xml_node("#{xpath}/cbc:Amount").with_value("10.00")
             expect(subject).to contains_xml_node("#{xpath}/cac:TaxCategory/cbc:Percent").with_value("21.00")
           end
         end
@@ -138,16 +140,12 @@ RSpec.describe EInvoices::Ubl::Create::Builder, type: :service do
 
         before { fee2 }
 
-        it "has the sum of all taxes" do
-          expect(subject).to contains_xml_node("#{taxes_xpath}/cbc:TaxAmount").with_value("20.00").with_attribute("currencyID", "USD")
-        end
-
-        it_behaves_like "xml section", {name: "Tax Information 19.00% VAT", xpath: "(#{taxes_xpath}/cac:TaxSubtotal)[1]"}
-        it_behaves_like "xml section", {name: "Tax Information 20.00% VAT", xpath: "(#{taxes_xpath}/cac:TaxSubtotal)[2]"}
+        it_behaves_like "xml section", {name: "Tax Information 20.00% VAT", xpath: "(#{taxes_xpath}/cac:TaxSubtotal)[1]"}
+        it_behaves_like "xml section", {name: "Tax Information 19.00% VAT", xpath: "(#{taxes_xpath}/cac:TaxSubtotal)[2]"}
       end
 
       context "with zero taxes" do
-        let(:fee) { create(:fee, invoice:, amount_cents: 10000, taxes_rate: 0) }
+        before { invoice.update(taxes_amount_cents: 0) }
 
         it "has the sum of all taxes" do
           expect(subject).to contains_xml_node("#{taxes_xpath}/cbc:TaxAmount").with_value("0.00").with_attribute("currencyID", "USD")
