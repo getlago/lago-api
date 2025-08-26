@@ -9,6 +9,7 @@ module ChargeModels
     end
 
     def compute_amount
+      byebug
       full_units = per_event_aggregation_result.event_aggregation
 
       prorated_units = if per_event_aggregation_result.respond_to?(:event_prorated_aggregation)
@@ -78,7 +79,7 @@ module ChargeModels
 
     def compute_projected_amount
       current_amount = compute_amount
-      return BigDecimal("0") if current_amount.zero? || period_ratio.nil? || period_ratio.zero?
+      return BigDecimal(0) if current_amount.zero? || period_ratio.nil? || period_ratio.zero?
 
       current_amount / BigDecimal(period_ratio.to_s)
     end
