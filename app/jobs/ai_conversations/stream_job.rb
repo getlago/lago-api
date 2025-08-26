@@ -13,12 +13,12 @@ module AiConversations
       chunks = ["Albert ", "Einstein ", "was ", "a ", "physicist."]
 
       chunks.each do |chunk|
-        stream = AiConversationStream.new(chunk:, done: false)
+        # stream = AiConversationStream.new(chunk:, done: false)
 
         LagoApiSchema.subscriptions.trigger(
           :ai_conversation_streamed,
-          { conversation_id: ai_conversation.id },
-          stream
+          { conversation_id: ai_conversation.conversation_id },
+          OpenStruct.new(chunk: chunk, done: false)
         )
 
         sleep 0.5 # simule le streaming temps réel
@@ -27,11 +27,8 @@ module AiConversations
       # dernier event pour clore le flux
       LagoApiSchema.subscriptions.trigger(
         :ai_conversation_streamed,
-        { conversation_id: ai_conversation.id },
-        AiConversationStream.new(
-          chunk: nil,
-          done: true
-        )
+        { conversation_id: ai_conversation.conversation_id },
+        OpenStruct.new(chunk: nil, done: true)
       )
     end
   end

@@ -16,13 +16,13 @@ module Mutations
       type Types::AiConversations::Object
 
       def resolve(input_data:)
-        ai_conversation = current_organization.ai_conversations.create!(
+        ai_conversation = current_organization.ai_conversations.find_or_create_by!(
           conversation_id: SecureRandom.uuid,
           membership: current_organization.memberships.find_by(user_id: context[:current_user].id),
           input_data: "Content: "
         )
       
-        #::AiConversations::StreamJob.perform_later(ai_conversation.id)
+        ::AiConversations::StreamJob.perform_later(ai_conversation.reload.id)
       
         ai_conversation
       end
