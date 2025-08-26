@@ -146,31 +146,6 @@ module Subscriptions
       new_subscription
     end
 
-    def after_commited_created_subscription(subscription)
-      after_commit do
-        if should_be_billed_today?(subscription)
-          # NOTE: Since job is launched from inside a db transaction
-          #       we must wait for it to be committed before processing the job.
-          #       We do not set offset anymore but instead retry jobs
-          BillSubscriptionJob.perform_later(
-            [subscription],
-            Time.zone.now.to_i,
-            invoicing_reason: :subscription_starting,
-            skip_charges: true
-          )
-        end
-
-        if subscription.active?
-          SendWebhookJob.perform_later("subscription.started", subscription)
-          Utils::ActivityLog.produce(subscription, "subscription.started")
-        end
-
-        if subscription.should_sync_hubspot_subscription?
-          Integrations::Aggregator::Subscriptions::Hubspot::CreateJob.perform_later(subscription:)
-        end
-      end
-    end
-
     def upgrade_subscription
       PlanUpgradeService.call(current_subscription:, plan:, params:).tap do |result|
         result.raise_if_error!

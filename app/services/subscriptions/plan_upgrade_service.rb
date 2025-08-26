@@ -57,7 +57,7 @@ module Subscriptions
     attr_reader :current_subscription, :plan, :params, :name
 
     def new_subscription_with_overrides
-      new_subscription = Subscription.new(
+      Subscription.new(
         organization_id: current_subscription.customer.organization_id,
         customer: current_subscription.customer,
         plan: params.key?(:plan_overrides) ? plan_for_override_params(plan) : plan,
@@ -68,8 +68,6 @@ module Subscriptions
         billing_time: current_subscription.billing_time,
         ending_at: params.key?(:ending_at) ? params[:ending_at] : current_subscription.ending_at
       )
-
-      new_subscription
     end
 
     def update_pending_subscription
