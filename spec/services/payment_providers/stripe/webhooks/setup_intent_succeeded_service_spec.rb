@@ -119,15 +119,28 @@ RSpec.describe PaymentProviders::Stripe::Webhooks::SetupIntentSucceededService, 
           end
         end
 
-        context "when customer in metadata exists in this org but has a different provider_customer_id" do
+        context "when customer in metadata exists in this org" do
           let(:metadata) { {lago_customer_id: customer.id} }
 
-          it "returns a not found error" do
-            result = webhook_service.call
+          context "when is linked to another stripe customer" do
+            it "returns an empty result" do
+              result = webhook_service.call
 
-            expect(result).not_to be_success
-            expect(result.error).to be_a(BaseService::NotFoundFailure)
-            expect(result.error.message).to eq("stripe_customer_not_found")
+              expect(result).to be_success
+              expect(result.payment_method).to be_nil
+            end
+          end
+
+          context "when is not linked to another stripe customer" do
+            let(:stripe_customer) { nil }
+
+            it "returns a not found error" do
+              result = webhook_service.call
+
+              expect(result).not_to be_success
+              expect(result.error).to be_a(BaseService::NotFoundFailure)
+              expect(result.error.message).to eq("stripe_customer_not_found")
+            end
           end
         end
       end

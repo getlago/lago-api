@@ -25,14 +25,29 @@ module PaymentProviders
         end
 
         def handle_missing_customer
-          # NOTE: Stripe customer was not created from lago
-          return result unless metadata&.key?(:lago_customer_id)
+          return result if stripe_customer_created_outside_lago?
 
-          # NOTE: Customer does not exist or exists but does not belong to the organizations
-          #       (Happens when the Stripe API key is shared between organizations)
-          return result if Customer.find_by(id: metadata[:lago_customer_id], organization_id: organization.id).nil?
+          # NOTE: Lago customer either:
+          #         - does not exist
+          #         - exists but does not belong to the organization (Happens when the Stripe API key is shared between organizations)
+          #         - exists but was updated to be linked to another stripe customer
+          return result if metadata_does_not_match_lago_customer?
 
           result.not_found_failure!(resource: "stripe_customer")
+        end
+
+        def metadata_does_not_match_lago_customer?
+          lago_customer = Customer.find_by(id: metadata[:lago_customer_id], organization_id: organization.id)
+
+          lago_customer.nil? || linked_to_another_stripe_customer?(lago_customer)
+        end
+
+        def linked_to_another_stripe_customer?(lago_customer)
+          lago_customer.stripe_customer.present?
+        end
+
+        def stripe_customer_created_outside_lago?
+          metadata.nil? || !metadata.key?(:lago_customer_id)
         end
 
         # TODO: Move this to a proper factory
