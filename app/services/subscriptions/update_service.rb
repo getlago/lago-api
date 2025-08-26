@@ -44,7 +44,6 @@ module Subscriptions
 
       if params.key?(:plan_overrides)
         if overrides_only_fixed_charge_units?
-          subscription.plan = plan
           create_fixed_charge_units_override(subscription)
         else
           plan_result = handle_plan_override
