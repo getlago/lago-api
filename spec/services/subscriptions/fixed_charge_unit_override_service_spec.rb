@@ -64,15 +64,13 @@ RSpec.describe Subscriptions::FixedChargeUnitOverrideService, type: :service do
         create(:subscription_fixed_charge_units_override,
           subscription:,
           fixed_charge:,
-          units: 3
-        )
+          units: 3)
       end
       let(:existing_override2) do
         create(:subscription_fixed_charge_units_override,
           subscription:,
           fixed_charge: fixed_charge2,
-          units: 7
-        )
+          units: 7)
       end
 
       before do
