@@ -24,7 +24,7 @@ module Entitlement
       return result.not_found_failure!(resource: "subscription") unless subscription
 
       ActiveRecord::Base.transaction do
-        SubscriptionEntitlementUpdateInnerService.call!(
+        SubscriptionEntitlementCoreUpdateService.call!(
           subscription:,
           plan: subscription.plan.parent || subscription.plan,
           feature: organization.features.includes(:privileges).find_by!(code: feature_code),

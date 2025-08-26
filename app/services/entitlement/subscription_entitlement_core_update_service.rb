@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Entitlement
-  class SubscriptionEntitlementUpdateInnerService < BaseService
+  class SubscriptionEntitlementCoreUpdateService < BaseService
     include ::Entitlement::Concerns::CreateOrUpdateConcern
 
     Result = BaseResult

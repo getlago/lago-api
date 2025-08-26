@@ -90,7 +90,7 @@ module Entitlement
       return if entitlements_params.blank?
 
       entitlements_params.each do |feature_code, privilege_params|
-        SubscriptionEntitlementUpdateInnerService.call!(
+        SubscriptionEntitlementCoreUpdateService.call!(
           subscription:,
           plan: subscription.plan.parent || subscription.plan,
           feature: organization.features.includes(:privileges).find { it.code == feature_code },

@@ -39,13 +39,13 @@ RSpec.describe Entitlement::SubscriptionEntitlementUpdateService, type: :service
         # Ensure result.entitlement can be resolved even if inner service is mocked
         create(:entitlement, organization:, plan:, feature: feature)
 
-        allow(Entitlement::SubscriptionEntitlementUpdateInnerService).to receive(:call!).and_return(true)
+        allow(Entitlement::SubscriptionEntitlementCoreUpdateService).to receive(:call!).and_return(true)
       end
 
       it "calls the inner service with expected arguments" do
         result
 
-        expect(Entitlement::SubscriptionEntitlementUpdateInnerService).to have_received(:call!).with(
+        expect(Entitlement::SubscriptionEntitlementCoreUpdateService).to have_received(:call!).with(
           subscription: subscription,
           plan: plan, # no parent plan created here, so it's the subscription plan
           feature: feature,
@@ -81,16 +81,16 @@ RSpec.describe Entitlement::SubscriptionEntitlementUpdateService, type: :service
       let(:feature_code) { "nonexistent_feature" }
 
       it "returns not found failure for feature and does not call inner service" do
-        allow(Entitlement::SubscriptionEntitlementUpdateInnerService).to receive(:call!).and_return(true)
+        allow(Entitlement::SubscriptionEntitlementCoreUpdateService).to receive(:call!).and_return(true)
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("feature_not_found")
-        expect(Entitlement::SubscriptionEntitlementUpdateInnerService).not_to have_received(:call!)
+        expect(Entitlement::SubscriptionEntitlementCoreUpdateService).not_to have_received(:call!)
       end
     end
 
     context "when privilege is not found" do
       before do
-        allow(Entitlement::SubscriptionEntitlementUpdateInnerService).to receive(:call!).and_raise(
+        allow(Entitlement::SubscriptionEntitlementCoreUpdateService).to receive(:call!).and_raise(
           ActiveRecord::RecordNotFound.new("Couldn't find Entitlement::Privilege")
         )
       end
