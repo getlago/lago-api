@@ -35,7 +35,7 @@ module Clickhouse
       wallet: "Wallet",
       coupon: "Coupon",
       payment_request: "PaymentRequest",
-      feature: "Feature"
+      feature: "Entitlement::Feature"
     }.freeze
 
     ACTIVITY_TYPES = {

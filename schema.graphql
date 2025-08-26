@@ -9181,7 +9181,7 @@ enum ResourceTypeEnum {
   customer
 
   """
-  Feature
+  Entitlement::Feature
   """
   feature
 
