@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :request, transaction: false, clickhouse: true do
+describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :request, transaction: false do
   let(:organization) { create(:organization, webhook_url: nil) }
   let(:customer) { create(:customer, organization:, name: "aaaaaabcd") }
   let(:tax) { create(:tax, organization:, rate: 0) }
@@ -717,8 +717,8 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           )
 
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:amount_cents].round(2)).to eq(15_383)
-          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(15_383)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(10_667)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(10_667)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
         end
 
@@ -733,8 +733,8 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           )
 
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:amount_cents].round(2)).to eq(15_650)
-          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(15_650)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(15_933)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(15_933)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2.0")
         end
 
@@ -749,8 +749,8 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           )
 
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:amount_cents].round(2)).to eq(15_650)
-          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(15_650)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(15_933)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(15_933)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("2.0")
         end
 
@@ -765,8 +765,8 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           )
 
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:amount_cents].round(2)).to eq(15_833)
-          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(15_833)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(16_117)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(16_117)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("3.0")
         end
 
@@ -777,7 +777,7 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           invoice = subscription.invoices.first
 
           aggregate_failures do
-            expect(invoice.total_amount_cents).to eq(15_833)
+            expect(invoice.total_amount_cents).to eq(16_117)
             expect(subscription.reload.invoices.count).to eq(1)
           end
         end
@@ -803,6 +803,139 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_242)
           expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_242)
           expect(json[:customer_usage][:charges_usage][0][:units]).to eq("4.0")
+        end
+
+        travel_to(DateTime.new(2023, 11, 5)) do
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(17_500) # 100 + 10 + 50 + 5 + 5
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(17_500)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("4.0")
+        end
+      end
+    end
+
+    describe "two ranges and removal in another interval" do
+      it "returns the expected invoice and usage amounts" do
+        Organization.update_all(webhook_url: nil) # rubocop:disable Rails/SkipsModelValidations
+        WebhookEndpoint.destroy_all
+
+        travel_to(DateTime.new(2023, 9, 1)) do
+          create_subscription(
+            {
+              external_customer_id: customer.external_id,
+              external_id: customer.external_id,
+              plan_code: plan.code
+            }
+          )
+        end
+
+        create(
+          :graduated_charge,
+          billable_metric:,
+          prorated: true,
+          plan:,
+          properties: {
+            graduated_ranges: [
+              {
+                from_value: 0,
+                to_value: 1,
+                per_unit_amount: "10",
+                flat_amount: "100"
+              },
+              {
+                from_value: 2,
+                to_value: nil,
+                per_unit_amount: "5",
+                flat_amount: "50"
+              }
+            ]
+          }
+        )
+
+        travel_to(DateTime.new(2023, 9, 10)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {amount: "1111", operation_type: "add"}
+            }
+          )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(10_700)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(10_700)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
+        end
+
+        travel_to(DateTime.new(2023, 10, 1)) do
+          perform_billing
+
+          subscription = customer.subscriptions.first
+          invoice = subscription.invoices.first
+
+          aggregate_failures do
+            expect(invoice.total_amount_cents).to eq(10_700)
+            expect(subscription.reload.invoices.count).to eq(1)
+          end
+        end
+
+        travel_to(DateTime.new(2023, 10, 5)) do
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(11_000)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(11_000)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
+        end
+
+        travel_to(DateTime.new(2023, 10, 17)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {amount: "1111", operation_type: "remove"}
+            }
+          )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(10_548)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(10_548)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("0.0")
+        end
+
+        travel_to(DateTime.new(2023, 10, 19, 0, 0, 0)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {amount: "2222", operation_type: "add"}
+            }
+          )
+
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(10_968)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(10_968)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
+        end
+
+        travel_to(DateTime.new(2023, 11, 1)) do
+          perform_billing
+
+          subscription = customer.subscriptions.first
+          invoice = subscription.invoices.order(created_at: :desc).first
+
+          aggregate_failures do
+            expect(invoice.total_amount_cents).to eq(10_968)
+            expect(subscription.reload.invoices.count).to eq(2)
+          end
+        end
+
+        travel_to(DateTime.new(2023, 11, 5)) do
+          fetch_current_usage(customer:)
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(11_000)
+          expect(json[:customer_usage][:total_amount_cents].round(2)).to eq(11_000)
+          expect(json[:customer_usage][:charges_usage][0][:units]).to eq("1.0")
         end
       end
     end
@@ -1047,8 +1180,9 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
       end
     end
 
-    context "with clickhouse" do
-      let(:organization) { create(:organization, webhook_url: nil, clickhouse_events_store: true) }
+    # Customer use-case
+    context "with combinations of add and remove" do
+      let(:organization) { create(:organization, webhook_url: nil) }
       let(:field_name) { "user_id" }
 
       let(:charge) do
@@ -1078,7 +1212,7 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
 
       before { charge }
 
-      it "should work" do
+      it "returns expected usage" do
         travel_to(Time.zone.parse("2025-05-21 04:31:39")) do
           create_subscription(
             {
@@ -1090,124 +1224,64 @@ describe "Charge Models - Prorated Graduated Scenarios", :scenarios, type: :requ
           )
         end
 
-        Event.create!(
-          organization_id: organization.id,
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: customer.external_id,
-          properties: {
-            user_id: "49303", operation_type: "add"
-          },
-          timestamp: Time.zone.parse("2025-05-21 04:31:40.000")
-        )
+        travel_to(DateTime.new(2025, 5, 21)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {user_id: "49303", operation_type: "add"}
+            }
+          )
+        end
 
-        Event.create!(
-          organization_id: organization.id,
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: customer.external_id,
-          properties: {
-            user_id: "49067", operation_type: "add"
-          },
-          timestamp: Time.zone.parse("2025-05-31 08:33:35.000")
-        )
+        travel_to(DateTime.new(2025, 5, 31)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {user_id: "49067", operation_type: "add"}
+            }
+          )
+        end
 
-        Event.create!(
-          organization_id: organization.id,
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: customer.external_id,
-          properties: {
-            user_id: "49067", operation_type: "remove"
-          },
-          timestamp: Time.zone.parse("2025-07-24 07:21:27.000")
-        )
+        travel_to(DateTime.new(2025, 7, 23)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {user_id: "62741", operation_type: "add"}
+            }
+          )
+        end
 
-        Event.create!(
-          organization_id: organization.id,
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: customer.external_id,
-          properties: {
-            user_id: "62741", operation_type: "add"
-          },
-          timestamp: Time.zone.parse("2025-07-23 14:59:49.000")
-        )
+        travel_to(DateTime.new(2025, 7, 24)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {user_id: "49067", operation_type: "remove"}
+            }
+          )
+        end
 
-        Event.create!(
-          organization_id: organization.id,
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: customer.external_id,
-          properties: {
-            user_id: "63011", operation_type: "add"
-          },
-          timestamp: Time.zone.parse("2025-07-24 18:56:28.000")
-        )
-
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: customer.external_id,
-          properties: {
-            user_id: "49303", operation_type: "add"
-          },
-          value: "49303",
-          timestamp: Time.zone.parse("2025-05-21 04:31:40.000")
-        )
-
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: customer.external_id,
-          properties: {
-            user_id: "49067", operation_type: "add"
-          },
-          value: "49067",
-          timestamp: Time.zone.parse("2025-05-31 08:33:35.000")
-        )
-
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: customer.external_id,
-          properties: {
-            user_id: "49067", operation_type: "remove"
-          },
-          value: "49067",
-          timestamp: Time.zone.parse("2025-07-24 07:21:27.000")
-        )
-
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: customer.external_id,
-          properties: {
-            user_id: "62741", operation_type: "add"
-          },
-          value: "62741",
-          timestamp: Time.zone.parse("2025-07-23 14:59:49.000")
-        )
-
-        Clickhouse::EventsEnriched.create!(
-          organization_id: organization.id,
-          code: billable_metric.code,
-          transaction_id: SecureRandom.uuid,
-          external_subscription_id: customer.external_id,
-          properties: {
-            user_id: "63011", operation_type: "add"
-          },
-          value: "63011",
-          timestamp: Time.zone.parse("2025-07-24 18:56:28.000")
-        )
+        travel_to(DateTime.new(2025, 7, 24)) do
+          create_event(
+            {
+              code: billable_metric.code,
+              transaction_id: SecureRandom.uuid,
+              external_subscription_id: customer.external_id,
+              properties: {user_id: "63011", operation_type: "add"}
+            }
+          )
+        end
 
         travel_to(Time.zone.parse("2025-08-19 18:00:00")) do
           fetch_current_usage(customer:)
-          expect(json[:customer_usage][:amount_cents].round(2)).to eq(0) # got 903, but not sure if it's correct or not
+          expect(json[:customer_usage][:amount_cents].round(2)).to eq(0)
         end
       end
     end

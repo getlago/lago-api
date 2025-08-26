@@ -9,7 +9,6 @@ module ChargeModels
     end
 
     def compute_amount
-      byebug
       full_units = per_event_aggregation_result.event_aggregation
 
       prorated_units = if per_event_aggregation_result.respond_to?(:event_prorated_aggregation)
