@@ -57,5 +57,47 @@ RSpec.describe Subscriptions::FixedChargeUnitOverrideService, type: :service do
         end
       end
     end
+
+    context "when subscription already has existing overrides" do
+      let(:fixed_charge2) { create(:fixed_charge, plan:, add_on:, organization:) }
+      let(:existing_override) do
+        create(:subscription_fixed_charge_units_override,
+          subscription:,
+          fixed_charge:,
+          units: 3
+        )
+      end
+      let(:existing_override2) do
+        create(:subscription_fixed_charge_units_override,
+          subscription:,
+          fixed_charge: fixed_charge2,
+          units: 7
+        )
+      end
+
+      before do
+        existing_override
+        existing_override2
+      end
+
+      it "updates existing override and returns it" do
+        result = service.call
+
+        expect(result).to be_success
+        expect(existing_override.reload.units).to eq(5)
+        expect(existing_override2.reload.units).to eq(7)
+        override = result.fixed_charge_unit_override
+        expect(override).to eq(existing_override)
+        expect(override.organization).to eq(subscription.organization)
+        expect(override.billing_entity).to eq(subscription.billing_entity)
+        expect(override.subscription).to eq(subscription)
+        expect(override.fixed_charge).to eq(fixed_charge)
+        expect(override.units).to eq(5)
+      end
+
+      it "does not create a new override record" do
+        expect { service.call }.not_to change(SubscriptionFixedChargeUnitsOverride, :count)
+      end
+    end
   end
 end
