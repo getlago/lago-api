@@ -60,7 +60,13 @@ module Credits
 
     def apply_credit_to_fees(progressive_billing_invoice)
       progressive_billing_invoice.fees.charge.each do |progressive_fee|
-        fee = invoice.fees.find_by(charge_id: progressive_fee.charge_id)
+        fee = invoice.fees.find_by(
+          charge_id: progressive_fee.charge_id,
+          charge_filter_id: progressive_fee.charge_filter_id,
+          grouped_by: progressive_fee.grouped_by,
+        )
+        next unless fee
+
         fee.precise_coupons_amount_cents += progressive_fee.amount_cents
         fee.save!
       end
