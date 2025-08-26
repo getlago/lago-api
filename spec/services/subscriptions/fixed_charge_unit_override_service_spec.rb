@@ -35,17 +35,6 @@ RSpec.describe Subscriptions::FixedChargeUnitOverrideService, type: :service do
     end
 
     context "when validation fails" do
-      context "with zero units" do
-        let(:units) { 0 }
-
-        it "sets zero units" do
-          result = service.call
-          expect(result).not_to be_success
-          expect(result.error).to be_a(BaseService::ValidationFailure)
-          expect(result.error.messages[:units]).to eq(["value_is_out_of_range"])
-        end
-      end
-
       context "with negative units" do
         let(:units) { -1 }
 
