@@ -232,6 +232,15 @@ module Api
                 ]
               }
             ],
+            fixed_charges: [
+              :id,
+              :add_on_id,
+              :invoice_display_name,
+              :charge_model,
+              {properties: {}},
+              :units,
+              {tax_codes: []}
+            ],
             usage_thresholds: [
               :id,
               :threshold_display_name,
@@ -253,7 +262,7 @@ module Api
           json: ::V1::SubscriptionSerializer.new(
             subscription,
             root_name: "subscription",
-            includes: %i[plan]
+            includes: %i[plan units_overrides]
           )
         )
       end

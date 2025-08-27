@@ -31,6 +31,7 @@ module V1
       payload = payload.merge(customer:) if include?(:customer)
       payload.merge!(entitlements) if include?(:entitlements)
       payload = payload.merge(plan:) if include?(:plan)
+      payload = payload.merge(subscription_fixed_charge_units_overrides:) if include?(:units_overrides)
       payload = payload.merge(usage_threshold:) if include?(:usage_threshold)
 
       payload
@@ -53,7 +54,15 @@ module V1
     def plan
       ::V1::PlanSerializer.new(
         model.plan,
-        includes: %i[charges usage_thresholds taxes minimum_commitment]
+        includes: %i[charges fixed_charges usage_thresholds taxes minimum_commitment]
+      ).serialize
+    end
+
+    def subscription_fixed_charge_units_overrides
+      ::CollectionSerializer.new(
+        model.subscription_fixed_charge_units_overrides,
+        ::V1::SubscriptionFixedChargeUnitsOverrideSerializer,
+        collection_name: "subscription_fixed_charge_units_overrides"
       ).serialize
     end
 
