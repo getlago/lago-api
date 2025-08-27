@@ -27,8 +27,18 @@ RSpec.describe EInvoices::Ubl::Create::TaxSubtotal, type: :service do
       expect(subject).to contains_xml_node("#{root}/cbc:TaxAmount").with_value("2.00").with_attribute("currencyID", "EUR")
     end
 
-    it "has the tax taxable amount" do
-      expect(subject).to contains_xml_node("#{root}/cbc:TaxableAmount").with_value("10.00").with_attribute("currencyID", "EUR")
+    context "when TaxableAmount" do
+      it "has the tax taxable amount" do
+        expect(subject).to contains_xml_node("#{root}/cbc:TaxableAmount").with_value("10.00").with_attribute("currencyID", "EUR")
+      end
+
+      context "when taxes are zero" do
+        let(:tax_rate) { 0.00 }
+
+        it "zero the taxable amount" do
+          expect(subject).to contains_xml_node("#{root}/cbc:TaxableAmount").with_value("0.00").with_attribute("currencyID", "EUR")
+        end
+      end
     end
 
     it "has the tax type scheme" do

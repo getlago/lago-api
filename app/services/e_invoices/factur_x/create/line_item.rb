@@ -6,6 +6,7 @@ module EInvoices
       class LineItem < Builder
         def initialize(xml:, line_id:, fee:)
           super(xml:)
+
           @line_id = line_id
           @fee = fee
         end
@@ -31,11 +32,8 @@ module EInvoices
             xml["ram"].SpecifiedLineTradeSettlement do
               xml["ram"].ApplicableTradeTax do
                 xml["ram"].TypeCode VAT
-                fee_category_code = tax_category_code(type: fee.fee_type, tax_rate: fee.taxes_rate)
-                xml["ram"].CategoryCode fee_category_code
-                unless fee_category_code == O_CATEGORY
-                  xml["ram"].RateApplicablePercent fee.taxes_rate
-                end
+                xml["ram"].CategoryCode category_code
+                xml["ram"].RateApplicablePercent fee.taxes_rate unless outside_scope_of_tax?
               end
               xml["ram"].SpecifiedTradeSettlementLineMonetarySummation do
                 xml["ram"].LineTotalAmount format_number(fee.amount)
@@ -47,6 +45,14 @@ module EInvoices
         private
 
         attr_accessor :line_id, :fee
+
+        def category_code
+          @_category_code ||= tax_category_code(type: fee.fee_type, tax_rate: fee.taxes_rate)
+        end
+
+        def outside_scope_of_tax?
+          category_code == O_CATEGORY
+        end
       end
     end
   end
