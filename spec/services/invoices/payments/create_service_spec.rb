@@ -371,8 +371,11 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
 
   describe "#call_async" do
     it "enqueues a job to create a stripe payment" do
-      expect { create_service.call_async }
-        .to have_enqueued_job(Invoices::Payments::CreateJob)
+      expect {
+        result = create_service.call_async
+        expect(result).to be_success
+        expect(result.payment_provider).to eq(provider.to_sym)
+      }.to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
         .with(invoice:, payment_provider: :stripe)
     end
 
@@ -381,7 +384,7 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
 
       it "enqueues a job to create a gocardless payment" do
         expect { create_service.call_async }
-          .to have_enqueued_job(Invoices::Payments::CreateJob)
+          .to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
           .with(invoice:, payment_provider: :gocardless)
       end
     end
@@ -391,8 +394,20 @@ RSpec.describe Invoices::Payments::CreateService, type: :service do
 
       it "enqueues a job to create a gocardless payment" do
         expect { create_service.call_async }
-          .to have_enqueued_job(Invoices::Payments::CreateJob)
+          .to have_enqueued_job_after_commit(Invoices::Payments::CreateJob)
           .with(invoice:, payment_provider: :adyen)
+      end
+    end
+
+    context "when payment provider is not set" do
+      let(:provider) { nil }
+
+      it "does not enqueue a job" do
+        expect {
+          result = create_service.call_async
+          expect(result).to be_success
+          expect(result.payment_provider).to be_nil
+        }.not_to have_enqueued_job(Invoices::Payments::CreateJob)
       end
     end
   end
