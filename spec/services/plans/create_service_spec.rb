@@ -3,131 +3,130 @@
 require "rails_helper"
 
 RSpec.describe Plans::CreateService, type: :service do
-  subject(:plans_service) { described_class.new(create_args) }
-
+  let(:plans_service) { described_class.new(create_args) }
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
 
-  describe "#call" do
-    subject(:result) { plans_service.call }
+  let(:create_args) do
+    {
+      name: plan_name,
+      invoice_display_name: plan_invoice_display_name,
+      organization_id: organization.id,
+      code: "new_plan",
+      interval: "monthly",
+      pay_in_advance: false,
+      amount_cents: 200,
+      amount_currency: "EUR",
+      tax_codes: [plan_tax.code],
+      charges: charges_args,
+      fixed_charges: fixed_charges_args,
+      usage_thresholds: usage_thresholds_args,
+      minimum_commitment: minimum_commitment_args
+    }
+  end
 
-    let(:plan_name) { "Some plan name" }
-    let(:plan_invoice_display_name) { "Some plan invoice name" }
-    let(:billable_metric) { create(:billable_metric, organization:) }
-    let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
-    let(:add_on) { create(:add_on, organization:) }
-    let(:plan_tax) { create(:tax, organization:) }
-    let(:charge_tax) { create(:tax, organization:) }
-    let(:pricing_unit) { create(:pricing_unit, organization:) }
+  let(:plan_name) { "Some plan name" }
+  let(:plan_invoice_display_name) { "Some plan invoice name" }
+  let(:billable_metric) { create(:billable_metric, organization:) }
+  let(:sum_billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+  let(:add_on) { create(:add_on, organization:) }
+  let(:plan_tax) { create(:tax, organization:) }
+  let(:charge_tax) { create(:tax, organization:) }
+  let(:pricing_unit) { create(:pricing_unit, organization:) }
 
-    let(:billable_metric_filter) do
-      create(:billable_metric_filter, billable_metric:, key: "payment_method", values: %w[card physical])
-    end
+  let(:billable_metric_filter) do
+    create(:billable_metric_filter, billable_metric:, key: "payment_method", values: %w[card physical])
+  end
 
-    let(:create_args) do
+  let(:minimum_commitment_args) do
+    {
+      amount_cents: minimum_commitment_amount_cents,
+      invoice_display_name: minimum_commitment_invoice_display_name,
+      tax_codes: [plan_tax.code]
+    }
+  end
+
+  let(:minimum_commitment_invoice_display_name) { "Minimum spending" }
+  let(:minimum_commitment_amount_cents) { 100 }
+
+  let(:charges_args) do
+    [
       {
-        name: plan_name,
-        invoice_display_name: plan_invoice_display_name,
-        organization_id: organization.id,
-        code: "new_plan",
-        interval: "monthly",
-        pay_in_advance: false,
-        amount_cents: 200,
-        amount_currency: "EUR",
-        tax_codes: [plan_tax.code],
-        charges: charges_args,
-        fixed_charges: fixed_charges_args,
-        usage_thresholds: usage_thresholds_args,
-        minimum_commitment: minimum_commitment_args
-      }
-    end
-
-    let(:minimum_commitment_args) do
+        applied_pricing_unit: applied_pricing_unit_args,
+        billable_metric_id: billable_metric.id,
+        charge_model: "standard",
+        min_amount_cents: 100,
+        tax_codes: [charge_tax.code],
+        filters: [
+          {
+            values: {billable_metric_filter.key => ["card"]},
+            invoice_display_name: "Card filter",
+            properties: {amount: "90"}
+          }
+        ]
+      },
       {
-        amount_cents: minimum_commitment_amount_cents,
-        invoice_display_name: minimum_commitment_invoice_display_name,
-        tax_codes: [plan_tax.code]
-      }
-    end
-
-    let(:minimum_commitment_invoice_display_name) { "Minimum spending" }
-    let(:minimum_commitment_amount_cents) { 100 }
-
-    let(:charges_args) do
-      [
-        {
-          applied_pricing_unit: applied_pricing_unit_args,
-          billable_metric_id: billable_metric.id,
-          charge_model: "standard",
-          min_amount_cents: 100,
-          tax_codes: [charge_tax.code],
-          filters: [
+        applied_pricing_unit: applied_pricing_unit_args,
+        billable_metric_id: sum_billable_metric.id,
+        charge_model: "graduated",
+        pay_in_advance: true,
+        invoiceable: false,
+        properties: {
+          graduated_ranges: [
             {
-              values: {billable_metric_filter.key => ["card"]},
-              invoice_display_name: "Card filter",
-              properties: {amount: "90"}
+              from_value: 0,
+              to_value: 10,
+              per_unit_amount: "2",
+              flat_amount: "0"
+            },
+            {
+              from_value: 11,
+              to_value: nil,
+              per_unit_amount: "3",
+              flat_amount: "3"
             }
           ]
-        },
-        {
-          applied_pricing_unit: applied_pricing_unit_args,
-          billable_metric_id: sum_billable_metric.id,
-          charge_model: "graduated",
-          pay_in_advance: true,
-          invoiceable: false,
-          properties: {
-            graduated_ranges: [
-              {
-                from_value: 0,
-                to_value: 10,
-                per_unit_amount: "2",
-                flat_amount: "0"
-              },
-              {
-                from_value: 11,
-                to_value: nil,
-                per_unit_amount: "3",
-                flat_amount: "3"
-              }
-            ]
-          }
         }
-      ]
-    end
-
-    let(:fixed_charges_args) do
-      [
-        {
-          add_on_id: add_on.id,
-          charge_model: "standard"
-        }
-      ]
-    end
-
-    let(:applied_pricing_unit_args) do
-      {
-        code: pricing_unit.code,
-        conversion_rate: rand(0.1..5.0)
       }
-    end
+    ]
+  end
 
-    let(:usage_thresholds_args) do
-      [
-        {
-          threshold_display_name: "Threshold 1",
-          amount_cents: 1_000
-        },
-        {
-          threshold_display_name: "Threshold 2",
-          amount_cents: 10_000
-        },
-        {
-          threshold_display_name: "Threshold 3",
-          amount_cents: 100,
-          recurring: true
-        }
-      ]
-    end
+  let(:fixed_charges_args) do
+    [
+      {
+        add_on_id: add_on.id,
+        charge_model: "standard"
+      }
+    ]
+  end
+
+  let(:applied_pricing_unit_args) do
+    {
+      code: pricing_unit.code,
+      conversion_rate: rand(0.1..5.0)
+    }
+  end
+
+  let(:usage_thresholds_args) do
+    [
+      {
+        threshold_display_name: "Threshold 1",
+        amount_cents: 1_000
+      },
+      {
+        threshold_display_name: "Threshold 2",
+        amount_cents: 10_000
+      },
+      {
+        threshold_display_name: "Threshold 3",
+        amount_cents: 100,
+        recurring: true
+      }
+    ]
+  end
+
+  describe "#call" do
+    subject(:result) { plans_service.call }
 
     before do
       allow(SegmentTrackJob).to receive(:perform_later)
@@ -310,7 +309,7 @@ RSpec.describe Plans::CreateService, type: :service do
       )
     end
 
-    describe "bill_charges_monthly" do
+    context "when bill_charges_monthly is true" do
       context "when plan is yearly" do
         let(:create_args) do
           super().merge(interval: "yearly", bill_charges_monthly: true)
@@ -335,39 +334,39 @@ RSpec.describe Plans::CreateService, type: :service do
 
       context "when plan is semiannual" do
         let(:create_args) do
-          super().merge(interval: "semiannual", bill_fixed_charges_monthly: true)
+          super().merge(interval: "semiannual", bill_charges_monthly: true)
         end
 
-        it "persists bill_fixed_charges_monthly" do
+        it "persists bill_charges_monthly" do
           plan = result.plan
-          expect(plan.bill_fixed_charges_monthly).to eq(true)
+          expect(plan.bill_charges_monthly).to eq(true)
         end
 
         context "when not provided" do
           let(:create_args) do
-            super().merge(interval: "semiannual").except(:bill_fixed_charges_monthly)
+            super().merge(interval: "semiannual").except(:bill_charges_monthly)
           end
 
           it "defaults to false" do
             plan = result.plan
-            expect(plan.bill_fixed_charges_monthly).to eq(false)
+            expect(plan.bill_charges_monthly).to eq(false)
           end
         end
       end
 
       context "when plan is monthly" do
         let(:create_args) do
-          super().merge(interval: "monthly", bill_fixed_charges_monthly: true)
+          super().merge(interval: "monthly", bill_charges_monthly: true)
         end
 
         it "ignores the flag and sets it to nil" do
           plan = result.plan
-          expect(plan.bill_fixed_charges_monthly).to be_nil
+          expect(plan.bill_charges_monthly).to be_nil
         end
       end
     end
 
-    describe "bill_fixed_charges_monthly" do
+    describe "when bill_fixed_charges_monthly is true" do
       context "when plan is yearly" do
         let(:create_args) do
           super().merge(interval: "yearly", bill_fixed_charges_monthly: true)
@@ -617,6 +616,250 @@ RSpec.describe Plans::CreateService, type: :service do
       it "returns an error" do
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("add_ons_not_found")
+      end
+    end
+  end
+
+  describe "#bill_charges_monthly" do
+    subject(:method_call) { plans_service.send(:bill_charges_monthly, create_args) }
+
+    let(:create_args) do
+      super().merge(interval:, bill_charges_monthly:)
+    end
+
+    context "when bill_charges_monthly is false" do
+      let(:bill_charges_monthly) { false }
+
+      context "when plan is yearly" do
+        let(:interval) { "yearly" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is semiannual" do
+        let(:interval) { "semiannual" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is monthly" do
+        let(:interval) { "monthly" }
+
+        it "ignores the flag and sets it to nil" do
+          expect(subject).to be_nil
+        end
+      end
+    end
+
+    context "when bill_charges_monthly is true" do
+      let(:bill_charges_monthly) { true }
+
+      context "when plan is yearly" do
+        let(:interval) { "yearly" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(true)
+        end
+      end
+
+      context "when plan is semiannual" do
+        let(:interval) { "semiannual" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(true)
+        end
+      end
+
+      context "when plan is monthly" do
+        let(:interval) { "monthly" }
+
+        it "ignores the flag and sets it to nil" do
+          expect(subject).to be_nil
+        end
+      end
+    end
+
+    context "when bill_charges_monthly is nil" do
+      let(:bill_charges_monthly) { nil }
+
+      context "when plan is yearly" do
+        let(:interval) { "yearly" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is semiannual" do
+        let(:interval) { "semiannual" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is monthly" do
+        let(:interval) { "monthly" }
+
+        it "ignores the flag and sets it to nil" do
+          expect(subject).to be_nil
+        end
+      end
+    end
+
+    context "when bill_charges_monthly is not set" do
+      let(:bill_charges_monthly) { nil }
+
+      before { create_args.delete(:bill_charges_monthly) }
+
+      context "when plan is yearly" do
+        let(:interval) { "yearly" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is semiannual" do
+        let(:interval) { "semiannual" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is monthly" do
+        let(:interval) { "monthly" }
+
+        it "ignores the flag and sets it to nil" do
+          expect(subject).to be_nil
+        end
+      end
+    end
+  end
+
+  describe "#bill_fixed_charges_monthly" do
+    subject(:method_call) { plans_service.send(:bill_fixed_charges_monthly, create_args) }
+
+    let(:create_args) do
+      super().merge(interval:, bill_fixed_charges_monthly:)
+    end
+
+    context "when bill_fixed_charges_monthly is false" do
+      let(:bill_fixed_charges_monthly) { false }
+
+      context "when plan is yearly" do
+        let(:interval) { "yearly" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is semiannual" do
+        let(:interval) { "semiannual" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is monthly" do
+        let(:interval) { "monthly" }
+
+        it "ignores the flag and sets it to nil" do
+          expect(subject).to be_nil
+        end
+      end
+    end
+
+    context "when bill_fixed_charges_monthly is true" do
+      let(:bill_fixed_charges_monthly) { true }
+
+      context "when plan is yearly" do
+        let(:interval) { "yearly" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(true)
+        end
+      end
+
+      context "when plan is semiannual" do
+        let(:interval) { "semiannual" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(true)
+        end
+      end
+
+      context "when plan is monthly" do
+        let(:interval) { "monthly" }
+
+        it "ignores the flag and sets it to nil" do
+          expect(subject).to be_nil
+        end
+      end
+    end
+
+    context "when bill_fixed_charges_monthly is nil" do
+      let(:bill_fixed_charges_monthly) { nil }
+
+      context "when plan is yearly" do
+        let(:interval) { "yearly" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is semiannual" do
+        let(:interval) { "semiannual" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is monthly" do
+        let(:interval) { "monthly" }
+
+        it "ignores the flag and sets it to nil" do
+          expect(subject).to be_nil
+        end
+      end
+    end
+
+    context "when bill_fixed_charges_monthly is not set" do
+      let(:bill_fixed_charges_monthly) { nil }
+
+      before { create_args.delete(:bill_fixed_charges_monthly) }
+
+      context "when plan is yearly" do
+        let(:interval) { "yearly" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is semiannual" do
+        let(:interval) { "semiannual" }
+
+        it "returns the correct value" do
+          expect(subject).to eq(false)
+        end
+      end
+
+      context "when plan is monthly" do
+        let(:interval) { "monthly" }
+
+        it "ignores the flag and sets it to nil" do
+          expect(subject).to be_nil
+        end
       end
     end
   end
