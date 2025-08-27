@@ -5,7 +5,6 @@ require "rails_helper"
 RSpec.describe FixedChargeEvents::CreateService, type: :service do
   subject(:create_service) do
     described_class.new(
-      organization:,
       subscription:,
       fixed_charge:,
       units:,
