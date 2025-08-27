@@ -62,7 +62,16 @@ module Types
       end
 
       def fixed_charges
-        object.fixed_charges.order(created_at: :asc)
+        charges = object.fixed_charges.order(created_at: :asc)
+        
+        # If we have subscription context, pass it to each fixed charge
+        if subscription_context = instance_variable_get(:@subscription_context)
+          charges.each do |charge|
+            charge.instance_variable_set(:@subscription_context, subscription_context)
+          end
+        end
+        
+        charges
       end
 
       def charges_count

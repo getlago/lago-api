@@ -6,6 +6,7 @@ module Types
       argument :amount_cents, GraphQL::Types::BigInt, required: false
       argument :amount_currency, Types::CurrencyEnum, required: false
       argument :charges, [Types::Subscriptions::ChargeOverridesInput], required: false
+      argument :fixed_charges, [Types::Subscriptions::FixedChargeOverridesInput], required: false
       argument :description, String, required: false
       argument :invoice_display_name, String, required: false
       argument :minimum_commitment, Types::Commitments::Input, required: false
