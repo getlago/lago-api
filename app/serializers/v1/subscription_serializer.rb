@@ -29,6 +29,7 @@ module V1
       }
 
       payload = payload.merge(customer:) if include?(:customer)
+      payload.merge!(entitlements) if include?(:entitlements)
       payload = payload.merge(plan:) if include?(:plan)
       payload = payload.merge(usage_threshold:) if include?(:usage_threshold)
 
@@ -39,6 +40,14 @@ module V1
 
     def customer
       ::V1::CustomerSerializer.new(model.customer).serialize
+    end
+
+    def entitlements
+      ::CollectionSerializer.new(
+        ::Entitlement::SubscriptionEntitlement.for_subscription(model),
+        ::V1::Entitlement::SubscriptionEntitlementSerializer,
+        collection_name: "entitlements"
+      ).serialize
     end
 
     def plan

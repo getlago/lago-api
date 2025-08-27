@@ -91,11 +91,14 @@ class Organization < ApplicationRecord
     :per_organization
   ].freeze
 
-  INTEGRATIONS = %w[
+  NON_PREMIUM_INTEGRATIONS = %w[
+    anrok
+  ].freeze
+
+  PREMIUM_INTEGRATIONS = %w[
     beta_payment_authorization
     netsuite
     okta
-    anrok
     avalara
     xero
     progressive_billing
@@ -118,7 +121,8 @@ class Organization < ApplicationRecord
     forecasted_usage
     projected_usage
   ].freeze
-  PREMIUM_INTEGRATIONS = INTEGRATIONS - %w[anrok]
+
+  INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
   enum :document_numbering, DOCUMENT_NUMBERINGS
 
@@ -140,6 +144,7 @@ class Organization < ApplicationRecord
   validates :hmac_key, uniqueness: true
   validates :hmac_key, presence: true, on: :update
 
+  validate :validate_premium_integrations
   validate :validate_email_settings
 
   before_create :set_hmac_key
@@ -239,6 +244,12 @@ class Organization < ApplicationRecord
     return if email_settings.all? { |v| EMAIL_SETTINGS.include?(v) }
 
     errors.add(:email_settings, :unsupported_value)
+  end
+
+  def validate_premium_integrations
+    return if premium_integrations.all? { |v| PREMIUM_INTEGRATIONS.include?(v) }
+
+    errors.add(:premium_integrations, :inclusion, value: premium_integrations)
   end
 
   def set_hmac_key

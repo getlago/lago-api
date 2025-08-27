@@ -55,8 +55,6 @@ Rails.application.routes.draw do
         resources :alerts, only: %i[create index update show destroy], param: :code, controller: "subscriptions/alerts"
         resources :entitlements, only: %i[index destroy], param: :code, code: /.*/, controller: "subscriptions/entitlements" do
           resources :privileges, only: %i[destroy], param: :code, code: /.*/, controller: "subscriptions/entitlements/privileges"
-          post :remove, on: :member
-          post :restore, on: :member
         end
         patch :entitlements, to: "subscriptions/entitlements#update"
       end

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :service do
-  subject(:result) { described_class.call(organization:, subscription:, entitlements_params:, partial: false) }
+  subject(:result) { described_class.call(subscription:, entitlements_params:, partial: false) }
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -238,6 +238,64 @@ RSpec.describe Entitlement::SubscriptionEntitlementsUpdateService, type: :servic
         result
         expect(entitlement_value2.reload.deleted_at).to be_present
         expect(entitlement_value3.reload.value).to eq("f")
+      end
+    end
+
+    context "when subscription has a feature from plan but one privilege is missing" do
+      let(:entitlement) { create(:entitlement, feature: feature2, plan:) }
+      let(:entitlement_value2) { create(:entitlement_value, entitlement:, privilege: privilege2, value: "100") }
+      let(:entitlement_value3) { create(:entitlement_value, entitlement:, privilege: privilege3, value: true) }
+
+      let(:entitlements_params) do
+        {
+          feature2.code => {
+            privilege3.code => false
+          }
+        }
+      end
+
+      before do
+        entitlement_value2
+        entitlement_value3
+      end
+
+      it "creates a privilege removal" do
+        expect(subscription.entitlements.where(feature: feature2)).not_to exist
+        result
+        expect(subscription.entitlement_removals.where(privilege: privilege2)).to exist
+
+        sub_ent = subscription.entitlements.where(feature: feature2).sole
+        expect(sub_ent.values.sole.value).to eq("f")
+      end
+    end
+
+    context "when plan has a feature with privilege but subscriptions has privilege removals" do
+      let(:entitlement) { create(:entitlement, feature: feature2, plan:) }
+      let(:entitlement_value2) { create(:entitlement_value, entitlement:, privilege: privilege2, value: "100") }
+      let(:entitlement_value3) { create(:entitlement_value, entitlement:, privilege: privilege3, value: true) }
+
+      let(:privilege2_removal) { create(:subscription_feature_removal, subscription:, privilege: privilege2) }
+      let(:privilege3_removal) { create(:subscription_feature_removal, subscription:, privilege: privilege3) }
+
+      before do
+        entitlement_value2
+        entitlement_value3
+        privilege2_removal
+        privilege3_removal
+      end
+
+      context "when the entire feature is removed" do
+        let(:entitlements_params) { {} }
+
+        it "discard the privilege removals and add the feature removal" do
+          expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription).sole.privileges).to be_empty
+          result
+          expect(Entitlement::SubscriptionEntitlement.for_subscription(subscription)).to be_empty
+          expect(subscription.entitlements).to be_empty
+          expect(privilege2_removal.reload).to be_discarded
+          expect(privilege3_removal.reload).to be_discarded
+          expect(subscription.entitlement_removals.where(feature: feature2)).to exist
+        end
       end
     end
 

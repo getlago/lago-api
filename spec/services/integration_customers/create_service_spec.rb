@@ -120,8 +120,6 @@ RSpec.describe IntegrationCustomers::CreateService, type: :service do
               }
             end
 
-            before { organization.update!(premium_integrations: ["anrok"]) }
-
             it "creates integration customer" do
               expect { service_call }.to change(IntegrationCustomers::AnrokCustomer, :count).by(1)
             end
