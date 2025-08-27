@@ -23,9 +23,7 @@ module Commitments
         end
 
         def fetch_invoices
-          plan = subscription.plan
-
-          if (!subscription.plan.yearly? && !subscription.plan.semiannual?) || !plan.bill_charges_monthly?
+          unless subscription.plan.billed_in_monthly_split_intervals?
             return Invoice.where(id: invoice_subscription.invoice_id)
           end
 

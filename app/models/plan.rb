@@ -70,6 +70,10 @@ class Plan < ApplicationRecord
     trial_period.present? && trial_period.positive?
   end
 
+  def charges_billed_in_monthly_split_intervals?
+    bill_charges_monthly? && (yearly? || semiannual?)
+  end
+
   def invoice_name
     invoice_display_name.presence || name
   end
