@@ -5,9 +5,10 @@ module EInvoices
     module Create
       class TradeSettlementPayment < Builder
         def initialize(xml:, invoice:, type:, amount: nil)
+          super(xml:, invoice:)
+
           @type = type
           @amount = amount
-          super(xml:, invoice:)
         end
 
         def call

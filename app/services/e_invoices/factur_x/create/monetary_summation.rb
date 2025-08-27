@@ -9,7 +9,7 @@ module EInvoices
           xml["ram"].SpecifiedTradeSettlementHeaderMonetarySummation do
             xml["ram"].LineTotalAmount format_number(invoice.fees_amount)
             xml["ram"].ChargeTotalAmount format_number(0)
-            xml["ram"].AllowanceTotalAmount format_number(invoice.coupons_amount)
+            xml["ram"].AllowanceTotalAmount format_number(Money.new(allowances))
             xml["ram"].TaxBasisTotalAmount format_number(invoice.sub_total_excluding_taxes_amount)
             xml["ram"].TaxTotalAmount format_number(invoice.taxes_amount), currencyID: invoice.currency
             xml["ram"].GrandTotalAmount format_number(invoice.sub_total_including_taxes_amount)

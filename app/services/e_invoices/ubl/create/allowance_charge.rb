@@ -5,9 +5,10 @@ module EInvoices
     module Create
       class AllowanceCharge < Builder
         def initialize(xml:, invoice:, tax_rate:, amount:)
+          super(xml:, invoice:)
+
           @tax_rate = tax_rate
           @amount = amount
-          super(xml:, invoice:)
         end
 
         def call
