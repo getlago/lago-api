@@ -234,8 +234,8 @@ module Subscriptions
     end
 
     def overrides_only_fixed_charge_units?
-      params[:plan_overrides] && params[:plan_overrides].keys == [:fixed_charges] &&
-        params[:plan_overrides][:fixed_charges].map(&:keys).flatten.uniq.sort == [:id, :units]
+      params[:plan_overrides] && params[:plan_overrides].keys.map(&:to_sym) == [:fixed_charges] &&
+        params[:plan_overrides][:fixed_charges].map(&:keys).flatten.uniq.map(&:to_sym).sort == [:id, :units]
     end
 
     def create_fixed_charge_units_override(subscription)

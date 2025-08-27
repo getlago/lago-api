@@ -72,7 +72,7 @@ module Api
 
         if result.success?
           response[:subscription] = ::V1::SubscriptionSerializer.new(
-            result.subscription, includes: %i[plan]
+            result.subscription, includes: %i[plan units_overrides]
           ).serialize
 
           render(json: response)
