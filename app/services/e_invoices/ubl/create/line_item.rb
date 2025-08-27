@@ -5,10 +5,10 @@ module EInvoices
     module Create
       class LineItem < Builder
         def initialize(xml:, fee:, line_id:)
+          super(xml:)
+
           @fee = fee
           @line_id = line_id
-
-          super(xml:)
         end
 
         def call
@@ -20,9 +20,8 @@ module EInvoices
             xml["cac"].Item do
               xml["cbc"].Name fee.item_name
               xml["cac"].ClassifiedTaxCategory do
-                fee_category_code = tax_category_code(type: fee.fee_type, tax_rate: fee.taxes_rate)
-                xml["cbc"].ID fee_category_code
-                xml["cbc"].Percent fee.taxes_rate
+                xml["cbc"].ID category_code
+                xml["cbc"].Percent fee.taxes_rate unless outside_scope_of_tax?
                 xml["cac"].TaxScheme do
                   xml["cbc"].ID VAT
                 end
@@ -41,6 +40,14 @@ module EInvoices
         private
 
         attr_accessor :fee, :line_id
+
+        def category_code
+          @_category_code ||= tax_category_code(type: fee.fee_type, tax_rate: fee.taxes_rate)
+        end
+
+        def outside_scope_of_tax?
+          category_code == O_CATEGORY
+        end
       end
     end
   end
