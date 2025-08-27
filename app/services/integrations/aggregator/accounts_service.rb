@@ -11,7 +11,7 @@ module Integrations
       end
 
       def call
-        @cursor = ""
+        @cursor = nil
         @items = []
 
         ActiveRecord::Base.transaction do
@@ -61,10 +61,9 @@ module Integrations
       end
 
       def params
-        {
-          limit: LIMIT,
-          cursor:
-        }
+        return {limit: LIMIT} if cursor.blank?
+
+        {limit: LIMIT, cursor:}
       end
     end
   end
