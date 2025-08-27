@@ -24,7 +24,7 @@ module EInvoices
         end
 
         def call
-          xml["rsm"].CrossIndustryInvoice(ROOT_NAMESPACES) {
+          xml["rsm"].CrossIndustryInvoice(ROOT_NAMESPACES) do
             xml.comment "Exchange Document Context"
             xml["rsm"].ExchangedDocumentContext do
               xml["ram"].GuidelineSpecifiedDocumentContextParameter do
@@ -60,7 +60,7 @@ module EInvoices
                 MonetarySummation.call(xml:, invoice:)
               end
             end
-          }
+          end
         end
 
         protected

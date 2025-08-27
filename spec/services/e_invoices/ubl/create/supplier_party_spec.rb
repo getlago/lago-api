@@ -11,7 +11,8 @@ RSpec.describe EInvoices::Ubl::Create::SupplierParty, type: :service do
 
   let(:membership) { create(:membership) }
   let(:organization) { membership.organization }
-  let(:invoice) { create(:invoice, organization:, billing_entity:) }
+  let(:invoice) { create(:invoice, organization:, billing_entity:, invoice_type:) }
+  let(:invoice_type) { :subscription }
   let(:billing_entity) do
     create(:billing_entity,
       organization:,
@@ -69,6 +70,14 @@ RSpec.describe EInvoices::Ubl::Create::SupplierParty, type: :service do
         it "expects to have tax scheme id" do
           expect(subject).to contains_xml_node("#{xpath}/cac:TaxScheme/cbc:ID").with_value("VAT")
         end
+
+        context "when invoice is credit" do
+          let(:invoice_type) { :credit }
+
+          it "is not rendered" do
+            expect(subject).not_to contains_xml_node(xpath)
+          end
+        end
       end
 
       context "with PartyLegalEntity" do
@@ -76,6 +85,10 @@ RSpec.describe EInvoices::Ubl::Create::SupplierParty, type: :service do
 
         it "expects to have registration name" do
           expect(subject).to contains_xml_node("#{xpath}/cbc:RegistrationName").with_value(billing_entity.legal_name)
+        end
+
+        it "expects to have company id" do
+          expect(subject).to contains_xml_node("#{xpath}/cbc:CompanyID").with_value(billing_entity.tax_identification_number)
         end
       end
     end
