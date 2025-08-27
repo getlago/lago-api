@@ -1728,7 +1728,7 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         )
       end
       let(:progressive_fee) do
-        create(:charge_fee, amount_cents: 3_000, invoice: progressive_invoice)
+        create(:charge_fee, amount_cents: 3_000, charge: charge3, invoice: progressive_invoice)
       end
       let(:credit_note) do
         create(
@@ -1774,11 +1774,11 @@ RSpec.describe Invoices::CalculateFeesService, type: :service do
         aggregate_failures do
           expect(result).to be_success
           expect(result.invoice.fees_amount_cents).to eq(20_000)
-          expect(result.invoice.taxes_amount_cents).to eq(1_565)
-          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(15_650)
-          expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(17_215)
+          expect(result.invoice.taxes_amount_cents).to eq(1_550)
+          expect(result.invoice.sub_total_excluding_taxes_amount_cents).to eq(15_500)
+          expect(result.invoice.sub_total_including_taxes_amount_cents).to eq(17_050)
           expect(result.invoice.progressive_billing_credit_amount_cents).to eq(3_000)
-          expect(result.invoice.total_amount_cents).to eq(9_738) # 17_215 - 1_000 (credit note) - 6_477 (wallet)
+          expect(result.invoice.total_amount_cents).to eq(9_726) # 17_050 - 1_000 (credit note) - 6_323 (wallet)
         end
       end
     end
