@@ -98,7 +98,7 @@ module Commitments
             )
 
           # rubocop:disable Style/ConditionalAssignment
-          if subscription.plan.billed_in_monthly_split_intervals?
+          if subscription.plan.charges_billed_in_monthly_split_intervals?
             scope = scope
               .where(
                 "(fees.properties->>'charges_from_datetime') >= ?",
