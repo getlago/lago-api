@@ -57,10 +57,9 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
 
     let(:progressive_billing_fee) {
       create(:charge_fee,
-             amount_cents: 20,
-             charge: subscription_fee1.charge,
-             invoice: progressive_billing_invoice
-      )
+        amount_cents: 20,
+        charge: subscription_fee1.charge,
+        invoice: progressive_billing_invoice)
     }
 
     before do
@@ -426,10 +425,9 @@ Rspec.describe Credits::ProgressiveBillingService, type: :service do
 
     let(:progressive_billing_fee) {
       create(:charge_fee,
-             amount_cents: 20,
-             charge: subscription_fee1.charge,
-             invoice: progressive_billing_invoice
-      )
+        amount_cents: 20,
+        charge: subscription_fee1.charge,
+        invoice: progressive_billing_invoice)
     }
 
     let(:dummy_result) do
